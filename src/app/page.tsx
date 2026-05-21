@@ -1,27 +1,39 @@
+import { Suspense } from "react";
 import { PageShell } from "@/components/layout/PageShell";
+import { LiveNewsSkeleton } from "@/components/live/LiveNewsSkeleton";
 import { ConceptBanner } from "@/components/institution/ConceptBanner";
 import { ContinueRibbon } from "@/components/editorial";
 import { BreakingNews } from "@/sections/BreakingNews";
 import { Footer } from "@/sections/Footer";
-import {
-  CategoryNewsSections,
-  CityUpdatesStrip,
-  HomeHeroBlock,
-  HomeInvestigations,
-  HomeNewsGrid,
-  HomeOpinion,
-  LiveDeskFeed,
-  QuickReadList,
-  TrendingStrip,
-} from "@/sections/home";
+import { EditorialHomeSections } from "@/sections/live/EditorialHomeSections";
+import { LiveNewsHome } from "@/sections/live/LiveNewsHome";
+import { getLiveNewsFeed } from "@/lib/news-db";
 import { BRAND } from "@/lib/brand";
 
 export const metadata = {
   title: `${BRAND.nameEn} — Today's Edition`,
   description:
-    "Top headlines, live desk, city updates, and investigations from Chhattisgarh — CG Bhaskar concept digital edition.",
+    "Live headlines and regional journalism from Chhattisgarh — CG Bhaskar digital edition.",
   alternates: { canonical: "/" },
 };
+
+/** Revalidate homepage every 5 minutes (ISR) */
+export const revalidate = 300;
+
+async function LiveNewsSection() {
+  const feed = await getLiveNewsFeed();
+
+  if (!feed?.hero) {
+    return <EditorialHomeSections />;
+  }
+
+  return (
+    <>
+      <LiveNewsHome feed={feed} />
+      <EditorialHomeSections />
+    </>
+  );
+}
 
 export default function Home() {
   return (
@@ -35,15 +47,9 @@ export default function Home() {
         role="main"
       >
         <BreakingNews />
-        <HomeHeroBlock />
-        <TrendingStrip />
-        <LiveDeskFeed />
-        <HomeNewsGrid />
-        <CityUpdatesStrip />
-        <CategoryNewsSections />
-        <QuickReadList />
-        <HomeInvestigations />
-        <HomeOpinion />
+        <Suspense fallback={<LiveNewsSkeleton />}>
+          <LiveNewsSection />
+        </Suspense>
         <Footer />
       </main>
     </PageShell>
