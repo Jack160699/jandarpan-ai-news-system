@@ -18,15 +18,26 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 function isAuthorized(request: Request): boolean {
+  const url = new URL(request.url);
   const cronSecret = process.env.CRON_SECRET;
+
   if (cronSecret) {
     const auth = request.headers.get("authorization");
     if (auth === `Bearer ${cronSecret}`) return true;
   }
 
-  // Allow manual dev trigger with optional secret query in development
+  // TEMPORARY DEVELOPMENT OVERRIDE — production manual smoke test only.
+  // Requires BOTH ?dev=1 AND ALLOW_DEV_FETCH=1 in Vercel env. Remove when done testing.
+  if (
+    url.searchParams.get("dev") === "1" &&
+    process.env.ALLOW_DEV_FETCH === "1"
+  ) {
+    console.log("[DEV FETCH OVERRIDE ENABLED]");
+    return true;
+  }
+
+  // Local development: ?dev=1 without extra env
   if (process.env.NODE_ENV === "development") {
-    const url = new URL(request.url);
     if (url.searchParams.get("dev") === "1") return true;
   }
 
