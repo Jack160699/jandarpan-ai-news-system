@@ -1,5 +1,6 @@
 /**
- * POST/GET /api/fetch-news
+ * App Router API: GET/POST /api/fetch-news
+ * Path: src/app/api/fetch-news/route.ts
  *
  * Ingestion pipeline:
  * 1. NewsAPI → headlines per category
