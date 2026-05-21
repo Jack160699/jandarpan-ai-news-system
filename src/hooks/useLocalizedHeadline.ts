@@ -1,38 +1,36 @@
-import { useReaderPreferencesOptional } from "@/providers/ReaderPreferencesProvider";
+import { localizeFeedStory } from "@/lib/i18n/localize-content";
+import { useLanguageOptional } from "@/providers/LanguageProvider";
 
 type LocalizedFields = {
   title: string;
   titleHi?: string;
   kicker: string;
   kickerHi?: string;
+  excerpt?: string;
 };
 
 export function useLocalizedHeadline(fields: LocalizedFields) {
-  const reader = useReaderPreferencesOptional();
-  const lang = reader?.prefs.language ?? "hi";
+  const lang = useLanguageOptional()?.language ?? "hi";
 
-  if (lang === "en") {
-    return {
+  const localized = localizeFeedStory(
+    {
+      slug: "",
       title: fields.title,
+      titleHi: fields.titleHi,
       kicker: fields.kicker,
-      showHindiSub: Boolean(fields.titleHi),
-      hindiSub: fields.titleHi,
-    };
-  }
-
-  if (lang === "cg") {
-    return {
-      title: fields.titleHi ?? fields.title,
-      kicker: fields.kickerHi ?? fields.kicker,
-      showHindiSub: true,
-      hindiSub: fields.title,
-    };
-  }
+      kickerHi: fields.kickerHi,
+      excerpt: fields.excerpt ?? "",
+      image: "",
+      readTime: "",
+      filedAt: "",
+    },
+    lang
+  );
 
   return {
-    title: fields.titleHi ?? fields.title,
-    kicker: fields.kickerHi ?? fields.kicker,
-    showHindiSub: Boolean(fields.title),
-    hindiSub: fields.title,
+    title: localized.title,
+    kicker: localized.kicker,
+    showHindiSub: localized.showSecondary,
+    hindiSub: localized.secondaryTitle,
   };
 }

@@ -1,10 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { EditionLineage } from "@/components/institution";
 import { BRAND } from "@/lib/brand";
 import { INSTITUTION, NEWSROOM_DESKS, getPublishingLineage } from "@/lib/institution";
 import { Rule } from "@/components/ui/Rule";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 export function Footer() {
+  const { t } = useLanguage();
+
   return (
     <footer
       id="footer"
@@ -20,18 +25,18 @@ export function Footer() {
 
         <div className="grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <p className="archive-marker">Institution</p>
+            <p className="archive-marker">{t.footer.institution}</p>
             <EditionLineage className="mt-4" />
             <p className="editorial-body mt-6 max-w-sm text-sm text-[var(--ink-muted)]">
               {getPublishingLineage()}
             </p>
             <p className="meta-label mt-6 text-[var(--ink-faint)]">
-              {BRAND.conceptLabel}
+              {t.brand.conceptNote}
             </p>
           </div>
 
           <div className="lg:col-span-4">
-            <p className="archive-marker">Newsroom · छत्तीसगढ़</p>
+            <p className="archive-marker">{t.footer.newsroom}</p>
             <ul className="mt-4 space-y-2">
               {NEWSROOM_DESKS.map((d) => (
                 <li key={d.id} className="meta-label text-[var(--ink-muted)]">
@@ -42,24 +47,24 @@ export function Footer() {
           </div>
 
           <div className="lg:col-span-3">
-            <p className="archive-marker">Record</p>
+            <p className="archive-marker">{t.footer.record}</p>
             <ul className="mt-4 space-y-3">
               <li>
                 <Link
                   href="/archive"
                   className="editorial-body text-sm transition-opacity hover:opacity-60"
                 >
-                  Living archive
+                  {t.footer.livingArchive}
                 </Link>
               </li>
               <li>
                 <span className="editorial-body text-sm text-[var(--ink-muted)]">
-                  Ethics & standards
+                  {t.footer.ethics}
                 </span>
               </li>
               <li>
                 <span className="editorial-body text-sm text-[var(--ink-muted)]">
-                  Subscribe (concept)
+                  {t.footer.contact}
                 </span>
               </li>
             </ul>
@@ -70,9 +75,8 @@ export function Footer() {
 
         <div className="flex flex-col gap-3 text-[var(--ink-faint)] sm:flex-row sm:justify-between">
           <p className="meta-label">
-            © {new Date().getFullYear()} {INSTITUTION.name} · Concept showcase
+            © {new Date().getFullYear()} {INSTITUTION.name} · {t.footer.copyright}
           </p>
-          <p className="meta-label">Privacy · Terms · Accessibility</p>
         </div>
       </div>
     </footer>

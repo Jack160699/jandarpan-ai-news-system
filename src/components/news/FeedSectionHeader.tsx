@@ -1,29 +1,30 @@
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type FeedSectionHeaderProps = {
   title: string;
-  titleHi?: string;
   href?: string;
   actionLabel?: string;
 };
 
 export function FeedSectionHeader({
   title,
-  titleHi,
   href,
-  actionLabel = "सभी",
+  actionLabel,
 }: FeedSectionHeaderProps) {
+  const { t } = useLanguage();
+  const more = actionLabel ?? t.common.all;
+
   return (
     <div className="feed-section-header">
       <div className="feed-section-header__titles">
-        {titleHi ? (
-          <span className="feed-section-header__hi">{titleHi}</span>
-        ) : null}
         <h2 className="feed-section-header__title">{title}</h2>
       </div>
       {href ? (
         <Link href={href} className="feed-section-header__more tap-target">
-          {actionLabel} →
+          {more} →
         </Link>
       ) : null}
     </div>

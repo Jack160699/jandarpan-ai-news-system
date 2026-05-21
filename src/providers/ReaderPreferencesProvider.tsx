@@ -14,23 +14,23 @@ import {
   loadPreferences,
   savePreferences,
   type EditionChoice,
-  type ReaderLanguage,
   type ReaderPreferences,
   type ReaderTheme,
   type ReadingMode,
 } from "@/lib/reader-preferences";
+import {
+  LANGUAGE_STORAGE_KEY,
+  loadStoredLanguage,
+} from "@/lib/i18n/storage";
+import type { ReaderLanguage } from "@/lib/reader-preferences";
 
 type ReaderPreferencesContextValue = {
   prefs: ReaderPreferences;
-  setLanguage: (language: ReaderLanguage) => void;
-  confirmLanguage: (language: ReaderLanguage) => void;
   setTheme: (theme: ReaderTheme) => void;
   toggleTheme: () => void;
   setReadingMode: (mode: ReadingMode) => void;
   toggleReadingMode: () => void;
   setEdition: (edition: EditionChoice) => void;
-  showLanguageGate: boolean;
-  dismissLanguageGate: () => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
 };
@@ -49,8 +49,14 @@ export function ReaderPreferencesProvider({
 
   useEffect(() => {
     const loaded = loadPreferences();
-    setPrefs(loaded);
-    applyPreferencesToDocument(loaded);
+    const langState = loadStoredLanguage();
+    const merged = {
+      ...loaded,
+      language: langState.language,
+      languageChosen: langState.chosen,
+    };
+    setPrefs(merged);
+    applyPreferencesToDocument(merged);
     setHydrated(true);
   }, []);
 
@@ -65,6 +71,18 @@ export function ReaderPreferencesProvider({
     }
   }, [prefs.theme, hydrated]);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === LANGUAGE_STORAGE_KEY && e.newValue) {
+        const lang = e.newValue as ReaderLanguage;
+        setPrefs((prev) => ({ ...prev, language: lang }));
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [hydrated]);
+
   const update = useCallback((partial: Partial<ReaderPreferences>) => {
     setPrefs((prev) => {
       const next = { ...prev, ...partial };
@@ -72,17 +90,6 @@ export function ReaderPreferencesProvider({
       return next;
     });
   }, []);
-
-  const setLanguage = useCallback(
-    (language: ReaderLanguage) => update({ language }),
-    [update]
-  );
-
-  const confirmLanguage = useCallback(
-    (language: ReaderLanguage) =>
-      update({ language, languageChosen: true }),
-    [update]
-  );
 
   const setTheme = useCallback(
     (theme: ReaderTheme) => update({ theme }),
@@ -114,38 +121,24 @@ export function ReaderPreferencesProvider({
     [update]
   );
 
-  const dismissLanguageGate = useCallback(() => {
-    if (!prefs.languageChosen) {
-      update({ languageChosen: true });
-    }
-  }, [prefs.languageChosen, update]);
-
   const value = useMemo(
     () => ({
       prefs,
-      setLanguage,
-      confirmLanguage,
       setTheme,
       toggleTheme,
       setReadingMode,
       toggleReadingMode,
       setEdition,
-      showLanguageGate: hydrated && !prefs.languageChosen,
-      dismissLanguageGate,
       searchOpen,
       setSearchOpen,
     }),
     [
       prefs,
-      setLanguage,
-      confirmLanguage,
       setTheme,
       toggleTheme,
       setReadingMode,
       toggleReadingMode,
       setEdition,
-      hydrated,
-      dismissLanguageGate,
       searchOpen,
     ]
   );

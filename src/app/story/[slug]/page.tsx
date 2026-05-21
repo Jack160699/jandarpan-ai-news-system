@@ -3,7 +3,6 @@ import { ContinueRibbon } from "@/components/editorial";
 import { PageShell } from "@/components/layout/PageShell";
 import { ArticleJsonLd } from "@/components/seo/ArticleJsonLd";
 import { ArticleView } from "@/sections/ArticleView";
-import { LanguageGate } from "@/components/reader/LanguageGate";
 import { ConceptBanner } from "@/components/institution/ConceptBanner";
 import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { SITE_URL } from "@/lib/seo";
@@ -51,7 +50,6 @@ export default async function StoryPage({ params }: PageProps) {
   return (
     <PageShell variant="news">
       <ArticleJsonLd article={article} />
-      <LanguageGate />
       <ConceptBanner />
       <ContinueRibbon />
       <main

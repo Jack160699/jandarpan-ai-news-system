@@ -1,7 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import type { FeedStory } from "@/lib/home-feed";
+import { localizeFeedStory } from "@/lib/i18n/localize-content";
 import { IMAGE_BLUR } from "@/lib/image-placeholder";
+import type { FeedStory } from "@/lib/home-feed";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type NewsCardProps = {
   story: FeedStory;
@@ -11,16 +15,19 @@ type NewsCardProps = {
 };
 
 function Badges({ story }: { story: FeedStory }) {
+  const { t } = useLanguage();
   return (
     <div className="feed-card__badges">
       {story.isLive ? (
         <span className="feed-badge feed-badge--live">
           <span className="feed-badge__dot" aria-hidden />
-          LIVE
+          {t.common.live}
         </span>
       ) : null}
       {story.isBreaking && !story.isLive ? (
-        <span className="feed-badge feed-badge--breaking">Breaking</span>
+        <span className="feed-badge feed-badge--breaking">
+          {t.common.breakingLabel}
+        </span>
       ) : null}
     </div>
   );
@@ -32,12 +39,17 @@ export function NewsCard({
   priority = false,
   showExcerpt = false,
 }: NewsCardProps) {
+  const { language } = useLanguage();
+  const localized = localizeFeedStory(story, language);
   const href = `/story/${story.slug}`;
 
   if (variant === "featured") {
     return (
       <article className="feed-card feed-card--featured">
-        <Link href={href} className="story-link feed-card__link feed-card__link--featured tap-target group">
+        <Link
+          href={href}
+          className="story-link feed-card__link feed-card__link--featured tap-target group"
+        >
           <div className="feed-card__media feed-card__media--featured">
             <Image
               src={story.image}
@@ -52,17 +64,19 @@ export function NewsCard({
           </div>
           <div className="feed-card__body">
             <div className="feed-card__meta-row">
-              <span className="feed-card__category">{story.kicker}</span>
+              <span className="feed-card__category">{localized.kicker}</span>
               <Badges story={story} />
             </div>
-            {story.titleHi ? (
-              <p className="feed-card__title-hi headline-hi">{story.titleHi}</p>
+            {localized.showSecondary && localized.secondaryTitle ? (
+              <p className="feed-card__title-hi headline-hi">
+                {localized.secondaryTitle}
+              </p>
             ) : null}
             <h2 className="feed-card__title feed-card__title--featured">
-              {story.title}
+              {localized.title}
             </h2>
             {showExcerpt ? (
-              <p className="feed-card__excerpt">{story.excerpt}</p>
+              <p className="feed-card__excerpt">{localized.excerpt}</p>
             ) : null}
             <p className="feed-card__time">
               {story.filedAt}
@@ -77,7 +91,10 @@ export function NewsCard({
   if (variant === "compact") {
     return (
       <article className="feed-card feed-card--compact">
-        <Link href={href} className="story-link feed-card__link feed-card__link--compact tap-target group">
+        <Link
+          href={href}
+          className="story-link feed-card__link feed-card__link--compact tap-target group"
+        >
           <div className="feed-card__media feed-card__media--compact shrink-0">
             <Image
               src={story.image}
@@ -91,9 +108,9 @@ export function NewsCard({
             />
           </div>
           <div className="feed-card__body min-w-0 flex-1 py-0.5">
-            <span className="feed-card__category">{story.kicker}</span>
+            <span className="feed-card__category">{localized.kicker}</span>
             <h3 className="feed-card__title feed-card__title--compact line-clamp-2">
-              {story.title}
+              {localized.title}
             </h3>
             <p className="feed-card__time">{story.filedAt}</p>
           </div>
@@ -104,7 +121,10 @@ export function NewsCard({
 
   return (
     <article className="feed-card feed-card--horizontal">
-      <Link href={href} className="story-link feed-card__link feed-card__link--horizontal tap-target group">
+      <Link
+        href={href}
+        className="story-link feed-card__link feed-card__link--horizontal tap-target group"
+      >
         <div className="feed-card__media feed-card__media--horizontal shrink-0">
           <Image
             src={story.image}
@@ -120,12 +140,12 @@ export function NewsCard({
         </div>
         <div className="feed-card__body min-w-0 flex-1">
           <div className="feed-card__meta-row">
-            <span className="feed-card__category">{story.kicker}</span>
+            <span className="feed-card__category">{localized.kicker}</span>
             <Badges story={story} />
           </div>
-          <h3 className="feed-card__title line-clamp-2">{story.title}</h3>
+          <h3 className="feed-card__title line-clamp-2">{localized.title}</h3>
           {showExcerpt ? (
-            <p className="feed-card__excerpt line-clamp-1">{story.excerpt}</p>
+            <p className="feed-card__excerpt line-clamp-1">{localized.excerpt}</p>
           ) : null}
           <p className="feed-card__time">
             {story.filedAt}

@@ -1,5 +1,4 @@
 import { PageShell } from "@/components/layout/PageShell";
-import { LanguageGate } from "@/components/reader/LanguageGate";
 import { ConceptBanner } from "@/components/institution/ConceptBanner";
 import { ContinueRibbon } from "@/components/editorial";
 import { BreakingNews } from "@/sections/BreakingNews";
@@ -27,7 +26,6 @@ export const metadata = {
 export default function Home() {
   return (
     <PageShell variant="news">
-      <LanguageGate />
       <ConceptBanner />
       <ContinueRibbon />
       <main

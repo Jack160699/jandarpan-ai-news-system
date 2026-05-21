@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { BRAND } from "@/lib/brand";
 import { HEADER_LOCATION } from "@/lib/navigation";
-import { LANGUAGE_OPTIONS, type ReaderLanguage } from "@/lib/reader-preferences";
+import type { AppLanguage } from "@/lib/i18n/types";
+import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { SearchOverlay } from "@/components/reader/SearchOverlay";
 import { CategoryTabs } from "./CategoryTabs";
@@ -13,15 +14,15 @@ import { MobileSheet } from "./MobileSheet";
 import { IconMoon, IconSearch, IconSun } from "./NavIcons";
 
 export function AppHeader() {
-  const { prefs, setLanguage, toggleTheme, setSearchOpen } = useReaderPreferences();
+  const { language, setLanguage, t, languageOptions } = useLanguage();
+  const { prefs, toggleTheme, setSearchOpen } = useReaderPreferences();
   const [langOpen, setLangOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const showHi = prefs.language === "hi" || prefs.language === "cg";
+  const showLocalizedBrand = language !== "en";
 
   const langShort =
-    LANGUAGE_OPTIONS.find((l) => l.id === prefs.language)?.native.slice(0, 2) ??
-    "हि";
+    languageOptions.find((l) => l.id === language)?.native.slice(0, 2) ?? "हि";
 
   useEffect(() => {
     if (!langOpen || isMobile) return;
@@ -40,11 +41,13 @@ export function AppHeader() {
         <div className="app-header__row">
           <div className="app-header__brand">
             <Link href="/" className="app-header__logo shrink-0">
-              {showHi ? BRAND.nameHi : BRAND.nameEn}
+              {showLocalizedBrand ? BRAND.nameHi : BRAND.nameEn}
             </Link>
             <div className="app-header__locale hidden min-[380px]:flex">
               <span className="app-header__city">
-                {showHi ? HEADER_LOCATION.cityHi : HEADER_LOCATION.city}
+                {showLocalizedBrand
+                  ? HEADER_LOCATION.cityHi
+                  : HEADER_LOCATION.city}
               </span>
               <span className="app-header__weather">
                 {HEADER_LOCATION.temp} · {HEADER_LOCATION.condition}
@@ -67,7 +70,7 @@ export function AppHeader() {
             <button
               type="button"
               className="header-icon-btn tap-target"
-              aria-label="Search"
+              aria-label={t.header.search}
               onClick={() => setSearchOpen(true)}
             >
               <IconSearch />
@@ -79,21 +82,21 @@ export function AppHeader() {
                 className="header-icon-btn tap-target header-icon-btn--lang"
                 aria-expanded={langOpen}
                 aria-haspopup="listbox"
-                aria-label="Change language"
+                aria-label={t.header.changeLanguage}
                 onClick={() => setLangOpen((o) => !o)}
               >
                 {langShort}
               </button>
               {langOpen && !isMobile ? (
                 <div className="header-menu" role="listbox">
-                  {LANGUAGE_OPTIONS.map((opt) => (
+                  {languageOptions.map((opt) => (
                     <button
                       key={opt.id}
                       type="button"
                       role="option"
-                      aria-selected={prefs.language === opt.id}
+                      aria-selected={language === opt.id}
                       onClick={() => {
-                        setLanguage(opt.id as ReaderLanguage);
+                        setLanguage(opt.id as AppLanguage);
                         setLangOpen(false);
                       }}
                     >
@@ -107,7 +110,11 @@ export function AppHeader() {
             <button
               type="button"
               className="header-icon-btn tap-target"
-              aria-label={prefs.theme === "light" ? "Dark mode" : "Light mode"}
+              aria-label={
+                prefs.theme === "light"
+                  ? t.header.darkMode
+                  : t.header.lightMode
+              }
               onClick={toggleTheme}
             >
               {prefs.theme === "light" ? <IconMoon /> : <IconSun />}
@@ -121,17 +128,17 @@ export function AppHeader() {
       <MobileSheet
         open={langOpen && isMobile}
         onClose={() => setLangOpen(false)}
-        title="भाषा · Language"
+        title={t.header.languageSheetTitle}
       >
-        {LANGUAGE_OPTIONS.map((opt) => (
+        {languageOptions.map((opt) => (
           <button
             key={opt.id}
             type="button"
-            className="mobile-sheet__option"
+            className="mobile-sheet__option tap-target"
             role="option"
-            aria-selected={prefs.language === opt.id}
+            aria-selected={language === opt.id}
             onClick={() => {
-              setLanguage(opt.id as ReaderLanguage);
+              setLanguage(opt.id as AppLanguage);
               setLangOpen(false);
             }}
           >
@@ -139,7 +146,7 @@ export function AppHeader() {
               <span className="mobile-sheet__option-hi block">{opt.native}</span>
               <span className="text-sm text-[var(--ink-muted)]">{opt.label}</span>
             </span>
-            {prefs.language === opt.id ? (
+            {language === opt.id ? (
               <span className="text-[var(--brand-maroon)]">✓</span>
             ) : null}
           </button>

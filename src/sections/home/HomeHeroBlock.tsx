@@ -1,16 +1,27 @@
+"use client";
+
 import { FeedSectionHeader } from "@/components/news/FeedSectionHeader";
 import { NewsCard } from "@/components/news/NewsCard";
 import { getFeedStory, HERO_FEED } from "@/lib/home-feed";
+import { useLanguage } from "@/providers/LanguageProvider";
 
-const SIDE_SLUGS = ["coal-auction-transparency", "bastar-health-camp", "raipur-metro-debate"];
+const SIDE_SLUGS = [
+  "coal-auction-transparency",
+  "bastar-health-camp",
+  "raipur-metro-debate",
+];
 
 export function HomeHeroBlock() {
+  const { t } = useLanguage();
   const sideStories = SIDE_SLUGS.map((slug) => getFeedStory(slug)!).filter(Boolean);
 
   return (
     <section id="top-news" className="news-scroll-target feed-section feed-section--flush">
       <div className="feed-section__inner">
-        <FeedSectionHeader title="Top headlines" titleHi="मुख्य खबरें" href="#editorial" />
+        <FeedSectionHeader
+          title={t.home.topHeadlines}
+          href="#editorial"
+        />
         <div className="home-hero">
           <div className="home-hero__main px-0">
             <NewsCard story={HERO_FEED} variant="featured" priority showExcerpt />

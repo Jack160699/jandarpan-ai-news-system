@@ -2,10 +2,12 @@
 
 import { useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 
 export function SearchOverlay() {
   const { searchOpen, setSearchOpen } = useReaderPreferences();
+  const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
 
@@ -31,7 +33,7 @@ export function SearchOverlay() {
       className={`search-overlay ${isMobile ? "search-overlay--sheet" : ""}`}
       role="dialog"
       aria-modal="true"
-      aria-label="Search edition"
+      aria-label={t.search.title}
       onClick={() => setSearchOpen(false)}
     >
       <div
@@ -39,23 +41,23 @@ export function SearchOverlay() {
         onClick={(e) => e.stopPropagation()}
       >
         {isMobile ? <div className="mobile-sheet__handle mb-3" aria-hidden /> : null}
-        <p className="meta-label text-[var(--ink-faint)]">खोजें · Search</p>
+        <p className="meta-label text-[var(--ink-faint)]">{t.search.title}</p>
         <input
           ref={inputRef}
           type="search"
-          placeholder="Headlines, Raipur, Bastar…"
-          aria-label="Search"
+          placeholder={t.search.placeholder}
+          aria-label={t.search.title}
           className="mt-2"
         />
         <p className="editorial-body mt-3 text-sm text-[var(--ink-muted)]">
-          Try &quot;Raipur&quot;, &quot;Politics&quot;, or &quot;Investigation&quot;.
+          {t.search.hint}
         </p>
         <button
           type="button"
-          className="meta-label mt-5 min-h-[44px] text-[var(--ink-faint)]"
+          className="meta-label mt-5 min-h-[44px] text-[var(--ink-faint)] tap-target"
           onClick={() => setSearchOpen(false)}
         >
-          बंद करें · Close
+          {t.ribbon.dismiss}
         </button>
       </div>
     </div>

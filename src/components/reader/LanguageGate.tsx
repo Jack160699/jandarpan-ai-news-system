@@ -1,75 +1,93 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BRAND } from "@/lib/brand";
-import { LANGUAGE_OPTIONS, type ReaderLanguage } from "@/lib/reader-preferences";
-import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
+import type { AppLanguage } from "@/lib/i18n/types";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 export function LanguageGate() {
-  const { showLanguageGate, prefs, confirmLanguage } = useReaderPreferences();
-  const [selected, setSelected] = useState<ReaderLanguage>(prefs.language);
+  const { showLanguageGate, language, confirmLanguage, t, ready } = useLanguage();
+  const [selected, setSelected] = useState<AppLanguage>(language);
+  const [visible, setVisible] = useState(false);
 
-  if (!showLanguageGate) return null;
+  useEffect(() => {
+    if (showLanguageGate) {
+      setSelected(language);
+      document.body.style.overflow = "hidden";
+      const id = requestAnimationFrame(() => setVisible(true));
+      return () => {
+        cancelAnimationFrame(id);
+        document.body.style.overflow = "";
+      };
+    }
+    setVisible(false);
+    document.body.style.overflow = "";
+  }, [showLanguageGate, language]);
+
+  if (!ready || !showLanguageGate) return null;
 
   return (
     <div
-      className="language-gate"
+      className={`language-gate ${visible ? "language-gate--visible" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="language-gate-title"
     >
       <div className="language-gate__panel">
         <p className="meta-label text-[var(--ink-faint)]">
-          {BRAND.nameEn} · Concept Edition
+          {BRAND.nameEn} · {t.gate.editionLabel}
         </p>
         <h2
           id="language-gate-title"
           className="headline-sm mt-3 text-[var(--ink-primary)]"
         >
-          Choose your reading language
+          {t.gate.title}
         </h2>
         <p
           className="mt-2 text-sm text-[var(--ink-muted)]"
           style={{ fontFamily: "var(--font-hindi)" }}
         >
-          अपनी पढ़ाई की भाषा चुनें
+          {t.gate.subtitle}
         </p>
         <p className="editorial-body mt-3 text-[15px] text-[var(--ink-muted)]">
-          The edition opens in the language you prefer. You may change this
-          anytime from the masthead.
+          {t.gate.description}
         </p>
 
         <div className="language-gate__options" role="listbox">
-          {LANGUAGE_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              role="option"
-              aria-pressed={selected === opt.id}
-              className="language-gate__option"
-              onClick={() => setSelected(opt.id)}
-            >
-              <span>
-                <span className="block text-[var(--ink-primary)] text-base font-medium">
-                  {opt.native}
+          {(["en", "hi", "cg"] as const).map((id) => {
+            const opt = { en: "English", hi: "हिन्दी", cg: "छत्तीसगढ़ी" }[id];
+            const label = { en: "English", hi: "Hindi", cg: "Chhattisgarhi" }[id];
+            return (
+              <button
+                key={id}
+                type="button"
+                role="option"
+                aria-selected={selected === id}
+                className="language-gate__option tap-target"
+                onClick={() => setSelected(id)}
+              >
+                <span>
+                  <span className="block text-base font-medium text-[var(--ink-primary)]">
+                    {opt}
+                  </span>
+                  <span className="meta-label mt-1 text-[var(--ink-faint)]">
+                    {label}
+                  </span>
                 </span>
-                <span className="meta-label mt-1 text-[var(--ink-faint)]">
-                  {opt.label}
-                </span>
-              </span>
-              {selected === opt.id ? (
-                <span className="meta-label text-[var(--brand-maroon)]">✓</span>
-              ) : null}
-            </button>
-          ))}
+                {selected === id ? (
+                  <span className="meta-label text-[var(--accent-category)]">✓</span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
 
         <button
           type="button"
-          className="mt-6 w-full border border-[var(--brand-maroon-deep)] bg-[var(--brand-maroon-deep)] py-3.5 text-[var(--paper-elevated)] meta-label tracking-[0.2em] transition-opacity hover:opacity-90"
+          className="language-gate__confirm tap-target"
           onClick={() => confirmLanguage(selected)}
         >
-          Open edition
+          {t.gate.confirm}
         </button>
       </div>
     </div>

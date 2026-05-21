@@ -18,31 +18,33 @@ import {
   FilingReference,
   StoryLegacyMarker,
 } from "@/components/institution";
+import { localizeArticle } from "@/lib/i18n/localize-content";
 import { getStoryLegacy } from "@/lib/story-legacy";
-import { useLocalizedHeadline } from "@/hooks/useLocalizedHeadline";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type ArticleViewProps = {
   article: Article;
 };
 
 export function ArticleView({ article }: ArticleViewProps) {
+  const { language, t } = useLanguage();
   const legacy = getStoryLegacy(article.slug);
-  const localized = useLocalizedHeadline(article);
+  const localized = localizeArticle(article, language);
   const mid = Math.floor(article.paragraphs.length / 2);
   const beforeQuote = article.paragraphs.slice(0, mid);
   const afterQuote = article.paragraphs.slice(mid);
 
   return (
     <>
-      <ArticleMemoryTracker slug={article.slug} title={article.title} />
+      <ArticleMemoryTracker slug={article.slug} title={localized.title} />
       <ReadingProgress target="article" />
 
       <ArticleUnfold>
         <article data-reading="article" className="article-page article-flow">
           <div className="editorial-container">
             <div className="article-page__toolbar">
-              <Link href="/" className="article-page__back">
-                ← Back to edition
+              <Link href="/" className="article-page__back tap-target">
+                {t.article.back}
               </Link>
               <EditorialBookmark slug={article.slug} />
             </div>
@@ -62,13 +64,13 @@ export function ArticleView({ article }: ArticleViewProps) {
                   className="mb-2"
                 />
               ) : null}
-              {localized.showHindiSub && localized.hindiSub ? (
+              {localized.showSecondary && localized.secondaryTitle ? (
                 <p className="headline-hi headline-hi--primary mb-2">
-                  {localized.hindiSub}
+                  {localized.secondaryTitle}
                 </p>
               ) : null}
               <h1 className="article-header__title">{localized.title}</h1>
-              <p className="article-header__deck">{article.deck}</p>
+              <p className="article-header__deck">{localized.deck}</p>
             </header>
 
             <ArticleMetaBar article={article} />
@@ -109,15 +111,15 @@ export function ArticleView({ article }: ArticleViewProps) {
               />
               <CuriosityTrail
                 currentSlug={article.slug}
-                title="Related from the desk"
+                title={t.article.related}
               />
               <p className="article-footer__end">
-                End of filing ·{" "}
+                {t.article.endOfFiling} ·{" "}
                 <Link
                   href="/"
                   className="text-[var(--accent-category)] hover:underline"
                 >
-                  Return to edition
+                  {t.article.returnToEdition}
                 </Link>
               </p>
             </footer>

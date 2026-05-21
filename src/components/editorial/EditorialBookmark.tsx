@@ -1,6 +1,7 @@
 "use client";
 
 import { useEditorialIntelligenceOptional } from "@/providers/EditorialIntelligenceProvider";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type EditorialBookmarkProps = {
   slug: string;
@@ -8,6 +9,7 @@ type EditorialBookmarkProps = {
 
 export function EditorialBookmark({ slug }: EditorialBookmarkProps) {
   const ctx = useEditorialIntelligenceOptional();
+  const { t } = useLanguage();
   if (!ctx) return null;
 
   const saved = ctx.isBookmarked(slug);
@@ -16,10 +18,10 @@ export function EditorialBookmark({ slug }: EditorialBookmarkProps) {
     <button
       type="button"
       onClick={() => ctx.toggleArticleBookmark(slug)}
-      className={`bookmark-control meta-label border border-[var(--rule)] px-3 py-1.5 transition-colors hover:border-[var(--rule-strong)] ${saved ? "is-saved" : ""}`}
+      className={`bookmark-control meta-label border border-[var(--rule)] px-3 py-1.5 transition-colors hover:border-[var(--rule-strong)] tap-target ${saved ? "is-saved" : ""}`}
       aria-pressed={saved}
     >
-      {saved ? "Bookmarked" : "Bookmark filing"}
+      {saved ? t.article.bookmarked : t.article.bookmark}
     </button>
   );
 }

@@ -8,6 +8,7 @@ import {
 import { AppChrome } from "@/components/navigation/AppChrome";
 import { ThemeScript } from "@/components/reader/ThemeScript";
 import { EditorialIntelligenceProvider } from "@/providers/EditorialIntelligenceProvider";
+import { LanguageProvider } from "@/providers/LanguageProvider";
 import { ReaderPreferencesProvider } from "@/providers/ReaderPreferencesProvider";
 import { BRAND } from "@/lib/brand";
 import { SITE_URL, organizationJsonLd } from "@/lib/seo";
@@ -99,9 +100,11 @@ export default function RootLayout({
         />
         <ThemeScript />
         <ReaderPreferencesProvider>
-          <EditorialIntelligenceProvider>
-            <AppChrome>{children}</AppChrome>
-          </EditorialIntelligenceProvider>
+          <LanguageProvider>
+            <EditorialIntelligenceProvider>
+              <AppChrome>{children}</AppChrome>
+            </EditorialIntelligenceProvider>
+          </LanguageProvider>
         </ReaderPreferencesProvider>
       </body>
     </html>

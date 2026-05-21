@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getContinueTarget } from "@/lib/reading-memory";
 import { useEditorialIntelligenceOptional } from "@/providers/EditorialIntelligenceProvider";
+import { useLanguage } from "@/providers/LanguageProvider";
 import { usePathname } from "next/navigation";
 
 export function ContinueRibbon() {
   const ctx = useEditorialIntelligenceOptional();
+  const { t } = useLanguage();
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -30,12 +32,12 @@ export function ContinueRibbon() {
 
   return (
     <aside
-      className={`continue-ribbon is-visible thumb-zone`}
-      aria-label="Continue reading"
+      className="continue-ribbon is-visible thumb-zone"
+      aria-label={t.ribbon.continue}
     >
       <div className="continue-ribbon__inner flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="meta-label text-[var(--ink-faint)]">Continue where you left off</p>
+          <p className="meta-label text-[var(--ink-faint)]">{t.ribbon.continue}</p>
           <p className="mt-1 truncate font-[family-name:var(--font-display)] text-base tracking-tight">
             {target.label}
           </p>
@@ -52,15 +54,15 @@ export function ContinueRibbon() {
         <div className="flex shrink-0 items-center gap-3">
           <Link
             href={target.href}
-            className="meta-label border border-[var(--rule-strong)] px-4 py-2 transition-opacity hover:opacity-60"
+            className="meta-label border border-[var(--rule-strong)] px-4 py-2 transition-opacity hover:opacity-60 tap-target"
           >
-            Resume
+            {t.ribbon.resume}
           </Link>
           <button
             type="button"
             onClick={() => setDismissed(true)}
-            className="meta-label text-[var(--ink-faint)] hover:opacity-60"
-            aria-label="Dismiss"
+            className="meta-label text-[var(--ink-faint)] hover:opacity-60 tap-target"
+            aria-label={t.ribbon.dismiss}
           >
             ×
           </button>
