@@ -1,0 +1,68 @@
+# =============================================================================
+# Automated News Pipeline — GitHub Actions (free tier)
+# =============================================================================
+# Architecture:
+#   GitHub Actions (schedule / manual) → curl → Vercel /api/fetch-news
+#   → NewsAPI fetch → Supabase news_articles → Next.js reads on deploy
+#
+# Secrets required (Repository → Settings → Secrets and variables → Actions):
+#   CRON_SECRET — must match CRON_SECRET in Vercel environment variables
+# =============================================================================
+
+name: News ingestion cron
+
+on:
+  # Every 30 minutes (UTC)
+  schedule:
+    - cron: "*/30 * * * *"
+  # Manual run from Actions tab → "Run workflow"
+  workflow_dispatch:
+
+concurrency:
+  group: news-ingestion
+  cancel-in-progress: false
+
+jobs:
+  fetch-news:
+    name: Trigger /api/fetch-news
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Call ingestion API on Vercel
+        id: ingest
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_URL: https://newspaper-motion.vercel.app/api/fetch-news
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::CRON_SECRET is not set in GitHub repository secrets."
+            exit 1
+          fi
+
+          echo "Calling ${API_URL} …"
+          http_code=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
+            -X GET \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            --max-time 120 \
+            "${API_URL}")
+
+          echo "HTTP status: ${http_code}"
+          echo "Response body:"
+          cat /tmp/response.json || true
+          echo ""
+
+          if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
+            echo "::error::Ingestion API failed with HTTP ${http_code}"
+            exit 1
+          fi
+
+          if ! grep -q '"ok"[[:space:]]*:[[:space:]]*true' /tmp/response.json; then
+            echo "::error::API returned non-success payload (ok !== true)"
+            exit 1
+          fi
+
+          echo "Ingestion completed successfully."

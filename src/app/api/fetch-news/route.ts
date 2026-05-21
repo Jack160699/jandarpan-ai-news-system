@@ -2,12 +2,12 @@
  * App Router API: GET/POST /api/fetch-news
  * Path: src/app/api/fetch-news/route.ts
  *
- * Ingestion pipeline:
+ * GitHub Actions driven ingestion — scheduled via .github/workflows/news-cron.yml
+ *
+ * Pipeline:
  * 1. NewsAPI → headlines per category
  * 2. Normalize & validate
  * 3. Upsert into Supabase `news_articles` (dedupe on article_url)
- *
- * Triggered manually or by Vercel Cron every 30 minutes.
  */
 
 import { NextResponse } from "next/server";
@@ -18,7 +18,6 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 function isAuthorized(request: Request): boolean {
-  const url = new URL(request.url);
   const cronSecret = process.env.CRON_SECRET;
 
   if (cronSecret) {
@@ -26,28 +25,14 @@ function isAuthorized(request: Request): boolean {
     if (auth === `Bearer ${cronSecret}`) return true;
   }
 
-  // TEMPORARY DEVELOPMENT OVERRIDE — production manual smoke test only.
-  // Requires BOTH ?dev=1 AND ALLOW_DEV_FETCH=1 in Vercel env. Remove when done testing.
-  if (
-    url.searchParams.get("dev") === "1" &&
-    process.env.ALLOW_DEV_FETCH === "1"
-  ) {
-    console.log("[DEV FETCH OVERRIDE ENABLED]");
-    return true;
-  }
-
-  // Local development: ?dev=1 without extra env
+  // Local development only — optional ?dev=1 when CRON_SECRET is unset
   if (process.env.NODE_ENV === "development") {
+    const url = new URL(request.url);
     if (url.searchParams.get("dev") === "1") return true;
+    if (!cronSecret) return true;
   }
 
-  // Vercel Cron sends this header when CRON_SECRET is configured
-  const vercelCron = request.headers.get("x-vercel-cron");
-  if (vercelCron === "1" && process.env.VERCEL === "1") {
-    return true;
-  }
-
-  return !cronSecret && process.env.NODE_ENV === "development";
+  return false;
 }
 
 export async function GET(request: Request) {
