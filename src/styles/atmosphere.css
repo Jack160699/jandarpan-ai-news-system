@@ -1,0 +1,65 @@
+/* Newspaper atmosphere — ink, fiber, quiet depth */
+
+.ink-vignette {
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 120% 80% at 50% 0%,
+    transparent 55%,
+    color-mix(in srgb, var(--ink-primary) 3%, transparent) 100%
+  );
+}
+
+.editorial-shadow {
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--ink-primary) 8%, transparent),
+    0 24px 48px -12px color-mix(in srgb, var(--ink-primary) 12%, transparent);
+}
+
+.paper-elevated {
+  background: var(--paper-elevated);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent),
+    0 2px 0 var(--rule),
+    0 20px 40px -24px color-mix(in srgb, var(--ink-primary) 18%, transparent);
+}
+
+.paper-edge {
+  position: relative;
+}
+
+.paper-edge::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--rule-strong) 20%,
+    var(--rule-strong) 80%,
+    transparent
+  );
+}
+
+.column-rule {
+  border-right: 1px solid var(--rule);
+}
+
+@media (max-width: 1023px) {
+  .column-rule {
+    border-right: none;
+  }
+}
+
+.image-ink {
+  filter: contrast(1.01) saturate(0.96) brightness(1.01);
+}
+
+.image-reveal-mask {
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path 1.6s var(--ease-paper);
+}
+
+.image-reveal-mask.is-revealed {
+  clip-path: inset(0 0 0 0);
+}

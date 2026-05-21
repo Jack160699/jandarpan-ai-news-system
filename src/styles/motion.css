@@ -1,0 +1,76 @@
+/* Motion & scroll behavior — cinematic, restrained */
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+html.lenis-reduced {
+  scroll-behavior: smooth;
+}
+
+[data-reveal] {
+  will-change: transform, opacity;
+}
+
+.paper-fold,
+.article-unfold {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.parallax-wrap {
+  isolation: isolate;
+}
+
+.continue-reading:focus-visible {
+  outline: 2px solid var(--ink-primary);
+  outline-offset: 4px;
+}
+
+.reading-progress {
+  mix-blend-mode: multiply;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  .paper-fold,
+  .parallax-image,
+  .article-unfold {
+    will-change: auto;
+    transform: none !important;
+    filter: none !important;
+  }
+
+  .image-reveal-mask {
+    clip-path: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .touch-scroll-zone {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-story-flow {
+    scroll-snap-type: y proximity;
+  }
+
+  .mobile-story-flow > section,
+  .mobile-story-flow > [data-section] {
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+  }
+
+  .hero-cinematic {
+    scroll-snap-align: start;
+  }
+}

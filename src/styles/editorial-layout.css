@@ -1,0 +1,136 @@
+/* Newspaper column rhythm & reading measure */
+
+.reading-measure {
+  max-width: 36rem;
+}
+
+.reading-measure-wide {
+  max-width: 40rem;
+}
+
+.article-flow {
+  --article-para-gap: 1.625rem;
+}
+
+.newspaper-columns {
+  column-count: 1;
+  column-gap: clamp(1.5rem, 4vw, 3rem);
+}
+
+@media (min-width: 768px) {
+  .newspaper-columns--2 {
+    column-count: 2;
+  }
+}
+
+.section-breath {
+  padding-block: clamp(5rem, 14vh, 10rem);
+}
+
+.section-breath--tight {
+  padding-block: clamp(3rem, 8vh, 5rem);
+}
+
+.section-pause {
+  min-height: clamp(8vh, 12vh, 16vh);
+}
+
+.drop-cap::first-letter {
+  float: left;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 3.4em;
+  line-height: 0.82;
+  padding-right: 0.08em;
+  margin-top: 0.06em;
+  font-weight: 500;
+  color: var(--ink-primary);
+}
+
+.lede {
+  font-size: clamp(1.125rem, 2vw, 1.25rem);
+  line-height: 1.65;
+  color: var(--ink-secondary);
+}
+
+.excerpt-fade {
+  position: relative;
+  max-height: 4.5em;
+  overflow: hidden;
+}
+
+.excerpt-fade::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2.5em;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--paper) 85%
+  );
+}
+
+.excerpt-fade--warm::after {
+  background: linear-gradient(to bottom, transparent, var(--paper-warm) 85%);
+}
+
+.excerpt-fade--investigation::after {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--accent-investigation) 88%
+  );
+}
+
+/* Mobile: intimate reading rhythm */
+@media (max-width: 767px) {
+  .mobile-story-flow > section,
+  .mobile-story-flow > article,
+  .mobile-story-flow > [data-section] {
+    scroll-snap-align: start;
+    scroll-snap-stop: normal;
+  }
+
+  .hero-cinematic,
+  .pinned-hero-wrap {
+    scroll-snap-align: start;
+  }
+
+  .thumb-zone {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+
+  .mobile-comfort {
+    padding-inline: max(1.125rem, var(--space-gutter));
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .editorial-body {
+    font-size: 1.0625rem;
+    line-height: 1.8;
+  }
+
+  .headline-sm {
+    font-size: 1.2rem;
+    line-height: 1.28;
+  }
+
+  .deck {
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+
+  .section-pad {
+    padding-block: clamp(3.5rem, 10vh, 6rem);
+  }
+
+  .touch-scroll-zone {
+    scroll-padding-top: 3.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .editorial-grid-feature {
+    padding-right: clamp(1.5rem, 3vw, 2.5rem);
+  }
+}

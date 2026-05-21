@@ -1,0 +1,269 @@
+/* Cinematic storytelling — atmosphere, bridges, folio, frames */
+
+html {
+  --atmosphere-warmth: 0;
+  --atmosphere-depth: 0.04;
+  --atmosphere-ink: 0;
+  --cinema-fade: 0;
+}
+
+html[data-atmosphere="neutral"] {
+  --atmosphere-warmth: 0;
+  --atmosphere-depth: 0.06;
+  --paper-live: var(--paper);
+}
+
+html[data-atmosphere="warm"] {
+  --atmosphere-warmth: 0.35;
+  --atmosphere-depth: 0.1;
+  --paper-live: color-mix(in srgb, var(--paper) 92%, var(--paper-warm));
+}
+
+html[data-atmosphere="editorial"] {
+  --atmosphere-warmth: 0.15;
+  --atmosphere-depth: 0.14;
+  --paper-live: var(--paper-elevated);
+}
+
+html[data-atmosphere="cool"] {
+  --atmosphere-warmth: -0.12;
+  --atmosphere-depth: 0.18;
+  --paper-live: color-mix(in srgb, var(--paper) 94%, #e8ecef);
+}
+
+html[data-atmosphere="deep"] {
+  --atmosphere-warmth: -0.08;
+  --atmosphere-depth: 0.1;
+  --atmosphere-ink: 0.04;
+  --paper-live: color-mix(in srgb, var(--paper-warm) 88%, var(--accent-investigation));
+}
+
+.page-shell {
+  background: var(--paper-live, var(--paper));
+  transition: background-color 1.2s var(--ease-breath);
+}
+
+.atmosphere-veil {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  opacity: calc(0.12 + var(--atmosphere-depth) * 0.35);
+  background: radial-gradient(
+    ellipse 90% 60% at 50% 0%,
+    color-mix(
+      in srgb,
+      var(--ink-primary) calc(2% + var(--atmosphere-ink) * 100%),
+      transparent
+    ),
+    transparent 72%
+  );
+  transition: opacity 1.4s var(--ease-breath);
+}
+
+/* Section bridges — editorial dissolves */
+.cinematic-bridge {
+  position: relative;
+  height: clamp(4rem, 12vh, 9rem);
+  margin-block: calc(clamp(2rem, 6vh, 4rem) * -0.5);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.cinematic-bridge__veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--paper-live, var(--paper)) 40%, transparent) 35%,
+    color-mix(in srgb, var(--paper-live, var(--paper)) 85%, transparent) 65%,
+    var(--paper-live, var(--paper)) 100%
+  );
+  opacity: 0.9;
+}
+
+.cinematic-bridge--deep .cinematic-bridge__veil {
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--paper-warm) 30%, transparent) 40%,
+    var(--accent-investigation) 100%
+  );
+}
+
+.cinematic-bridge--light .cinematic-bridge__veil {
+  background: linear-gradient(
+    to bottom,
+    var(--paper-elevated) 0%,
+    transparent 50%,
+    var(--paper) 100%
+  );
+}
+
+/* Pinned narrative hero */
+.pinned-hero-wrap {
+  position: relative;
+}
+
+.pinned-hero-panel {
+  height: 100vh;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.pinned-hero-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.pinned-hero-handoff {
+  opacity: 0;
+  transform: translateY(24px);
+}
+
+/* Folio — chapters, not carousel */
+.folio-sequence {
+  position: relative;
+}
+
+.folio-pin {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.folio-rail {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.folio-chapter {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-gutter);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  scroll-snap-align: start;
+}
+
+@media (max-width: 767px) {
+  .folio-sequence--native .folio-pin {
+    height: auto;
+    overflow: visible;
+  }
+
+  .folio-sequence--native .folio-rail {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    will-change: auto;
+    width: 100% !important;
+    gap: 0;
+  }
+
+  .folio-sequence--native .folio-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .folio-sequence--native .folio-chapter {
+    flex: 0 0 92% !important;
+    min-height: 82svh;
+    min-height: 82dvh;
+    scroll-snap-align: center;
+    margin-right: 4%;
+  }
+}
+
+/* Typography cinema */
+.type-cinema {
+  will-change: transform, opacity;
+}
+
+.editorial-frame {
+  padding-block: clamp(4rem, 14vh, 9rem);
+  text-align: center;
+}
+
+.editorial-frame__statement {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(2rem, 6vw, 4.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  max-width: 14ch;
+  margin-inline: auto;
+  color: var(--ink-primary);
+}
+
+.visual-decompression {
+  min-height: clamp(6rem, 18vh, 14rem);
+}
+
+/* Narrative sections */
+.narrative-section {
+  position: relative;
+  isolation: isolate;
+}
+
+.narrative-section__dissolve-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: clamp(3rem, 8vh, 6rem);
+  background: linear-gradient(
+    to bottom,
+    var(--paper-live, var(--paper)),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 3;
+  opacity: var(--section-fade-in, 0);
+}
+
+.chapter-separator {
+  padding-block: clamp(3rem, 10vh, 6rem);
+  text-align: center;
+}
+
+.chapter-separator__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.chapter-separator__line {
+  width: clamp(2rem, 8vw, 4rem);
+  height: 1px;
+  background: var(--rule-strong);
+}
+
+.cinematic-quote {
+  padding-block: clamp(2.5rem, 8vh, 5rem);
+}
+
+.cinematic-quote__text {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.75rem, 4.5vw, 3rem);
+  line-height: 1.2;
+  font-style: italic;
+  letter-spacing: -0.02em;
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.article-paragraph--pause {
+  margin-top: clamp(2rem, 6vh, 3.5rem);
+}
+
+.article-paragraph--breathe {
+  margin-top: clamp(1rem, 3vh, 1.75rem);
+}

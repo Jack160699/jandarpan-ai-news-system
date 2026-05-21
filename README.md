@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CG Bhaskar — Concept Redesign
 
-## Getting Started
+**Speculative premium redesign** for presentation and pitching purposes only.  
+Not affiliated with CG Bhaskar. Not an official product.
 
-First, run the development server:
+## Experience
+
+- Cinematic editorial newspaper (Next.js App Router)
+- Lenis smooth scroll + GSAP ScrollTrigger
+- Mobile-first reading ritual
+- Living archive, investigations threads, longform immersion
+- Editorial intelligence (reading memory, adaptive pacing)
+
+## Stack
+
+- Next.js 16 · TypeScript · Tailwind CSS v4
+- Framer Motion · GSAP · Lenis
+
+## Develop
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy (Vercel)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+```
 
-## Learn More
+Deploy the `newspaper-motion` directory as the project root. No extra env vars required.
 
-To learn more about Next.js, take a look at the following resources:
+**Note:** Use only `src/app/` for routes. Do not add a root-level `app/` folder — an empty root `app/` will shadow `src/app/` and break the build.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Recommended Vercel settings:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Framework Preset: Next.js
+- Build Command: `npm run build`
+- Output: default
 
-## Deploy on Vercel
+## Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+  app/              # Routes (home, archive, story/[slug])
+  components/       # cinema, editorial, institution, motion
+  lib/              # articles, brand, archive, institution
+  sections/         # Page sections
+  styles/           # globals, brand-cgb, institution
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Concept notes
+
+- Sample headlines and Hindi/English editorial copy are **reimagined placeholders**
+- Images via Unsplash (remote patterns in `next.config.ts`)
+- `robots: noindex` on concept build — remove in production pitch fork if indexing is desired

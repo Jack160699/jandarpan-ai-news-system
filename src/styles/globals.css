@@ -1,0 +1,163 @@
+@import "tailwindcss";
+@import "./typography.css";
+@import "./motion.css";
+@import "./cinema.css";
+@import "./intelligence.css";
+@import "./institution.css";
+@import "./brand-cgb.css";
+@import "./atmosphere.css";
+@import "./editorial-layout.css";
+@import "./reader.css";
+
+:root {
+  /* Indian newspaper warmth — soft ink on newsprint */
+  --paper: #f7f4ed;
+  --paper-warm: #efe9dc;
+  --paper-elevated: #fcfaf6;
+  --paper-shadow: #e0d9cc;
+  --ink-primary: #2a2824;
+  --ink-secondary: #454138;
+  --ink-muted: #6e675c;
+  --ink-faint: #9a9286;
+  --rule: rgba(42, 40, 36, 0.1);
+  --rule-strong: rgba(42, 40, 36, 0.2);
+  --brand-maroon: #8b2e2e;
+  --brand-maroon-deep: #6e2424;
+  --brand-gold: #8a7344;
+  --accent-breaking: var(--brand-maroon);
+  --accent-investigation: #3d4a52;
+  --selection-bg: color-mix(in srgb, var(--brand-maroon) 18%, var(--paper-warm));
+  --selection-fg: var(--ink-primary);
+
+  --ease-cinematic: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-editorial: cubic-bezier(0.45, 0, 0.15, 1);
+  --ease-paper: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-breath: cubic-bezier(0.33, 0, 0.2, 1);
+
+  --space-section: clamp(5rem, 12vh, 9rem);
+  --space-section-tight: clamp(3rem, 7vh, 5rem);
+  --space-gutter: clamp(1.125rem, 4.5vw, 2.75rem);
+  --space-column: clamp(1.25rem, 3vw, 2rem);
+  --max-editorial: 90rem;
+
+  --background: var(--paper);
+  --foreground: var(--ink-primary);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+  --font-mono: var(--font-meta);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink-primary);
+  font-family: var(--font-body), Georgia, "Times New Roman", serif;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--paper-warm);
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink-primary) 28%, transparent);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--ink-primary) 42%, transparent);
+}
+
+.page-shell {
+  background: var(--paper);
+  color: var(--ink-primary);
+}
+
+.paper-grain {
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+.paper-fiber {
+  opacity: 0.018;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    color-mix(in srgb, var(--ink-primary) 4%, transparent) 2px,
+    color-mix(in srgb, var(--ink-primary) 4%, transparent) 3px
+  );
+}
+
+.rule-hairline {
+  height: 1px;
+  background: var(--rule);
+}
+
+.rule-medium {
+  height: 2px;
+  background: var(--rule-strong);
+}
+
+.rule-heavy {
+  height: 3px;
+  background: var(--ink-primary);
+}
+
+.story-link {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.editorial-container {
+  width: min(100% - var(--space-gutter) * 2, var(--max-editorial));
+  margin-inline: auto;
+}
+
+.section-pad {
+  padding-block: var(--space-section);
+}
+
+.section-pad-tight {
+  padding-block: var(--space-section-tight);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--ink-primary);
+  outline-offset: 3px;
+}
