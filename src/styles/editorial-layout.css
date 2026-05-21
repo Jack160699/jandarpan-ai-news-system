@@ -24,15 +24,15 @@
 }
 
 .section-breath {
-  padding-block: clamp(5rem, 14vh, 10rem);
+  padding-block: clamp(2rem, 4vh, 3rem);
 }
 
 .section-breath--tight {
-  padding-block: clamp(3rem, 8vh, 5rem);
+  padding-block: clamp(1.25rem, 2.5vh, 2rem);
 }
 
 .section-pause {
-  min-height: clamp(8vh, 12vh, 16vh);
+  min-height: clamp(2rem, 4vh, 3rem);
 }
 
 .drop-cap::first-letter {
@@ -82,18 +82,12 @@
   );
 }
 
-/* Mobile: intimate reading rhythm */
+/* Mobile: fast scan — no scroll snap on news feed */
 @media (max-width: 767px) {
   .mobile-story-flow > section,
   .mobile-story-flow > article,
   .mobile-story-flow > [data-section] {
-    scroll-snap-align: start;
-    scroll-snap-stop: normal;
-  }
-
-  .hero-cinematic,
-  .pinned-hero-wrap {
-    scroll-snap-align: start;
+    scroll-snap-align: none;
   }
 
   .thumb-zone {

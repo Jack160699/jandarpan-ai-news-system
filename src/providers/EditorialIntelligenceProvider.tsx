@@ -21,13 +21,11 @@ import {
   toggleBookmark,
   type ReadingMemory,
 } from "@/lib/reading-memory";
-import { useAdaptivePacing, type PacingProfile } from "@/hooks/useAdaptivePacing";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type EditorialIntelligenceContextValue = {
   memory: ReadingMemory;
   live: LiveEditionState;
-  pacing: PacingProfile;
   saveArticleProgress: (
     slug: string,
     progress: number,
@@ -63,7 +61,6 @@ export function EditorialIntelligenceProvider({ children }: Props) {
   const [live, setLive] = useState<LiveEditionState>(() =>
     getLiveEditionState()
   );
-  const pacing = useAdaptivePacing();
   const reduced = useReducedMotion();
 
   useEffect(() => {
@@ -79,20 +76,13 @@ export function EditorialIntelligenceProvider({ children }: Props) {
 
   useEffect(() => {
     if (reduced) return;
-    const phase = live.phase;
-    const atm = PHASE_ATMOSPHERE[phase];
+    const atm = PHASE_ATMOSPHERE[live.phase];
     const root = document.documentElement;
-    root.setAttribute("data-day-phase", phase);
-    root.style.setProperty(
-      "--day-warmth",
-      String(atm.warmth + pacing.motionDensity * 0.02)
-    );
+    root.setAttribute("data-day-phase", live.phase);
+    root.style.setProperty("--day-warmth", String(atm.warmth));
     root.style.setProperty("--day-depth", String(atm.depth));
-    root.style.setProperty(
-      "--day-tempo",
-      String(atm.tempo * pacing.typographyTempo)
-    );
-  }, [live.phase, pacing.motionDensity, pacing.typographyTempo, reduced]);
+    root.style.setProperty("--day-tempo", String(atm.tempo));
+  }, [live.phase, reduced]);
 
   const saveArticleProgress = useCallback(
     (slug: string, progress: number, scrollY: number, title: string) => {
@@ -127,7 +117,6 @@ export function EditorialIntelligenceProvider({ children }: Props) {
     () => ({
       memory,
       live,
-      pacing,
       saveArticleProgress,
       markSection,
       toggleArticleBookmark,
@@ -136,7 +125,6 @@ export function EditorialIntelligenceProvider({ children }: Props) {
     [
       memory,
       live,
-      pacing,
       saveArticleProgress,
       markSection,
       toggleArticleBookmark,

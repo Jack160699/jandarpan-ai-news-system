@@ -1,0 +1,58 @@
+/* Production polish — spacing, icons, rhythm */
+
+html.native-scroll {
+  scroll-behavior: auto;
+}
+
+/* Consistent feed rhythm */
+.feed-section + .feed-section {
+  margin-top: 0;
+}
+
+.feed-card__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Image load — subtle fade */
+.feed-card__media img,
+.article-figure__media img {
+  transition: opacity 0.2s ease;
+}
+
+.feed-card__media img[data-loaded="false"] {
+  opacity: 0;
+}
+
+/* Icon alignment in header */
+.app-header__actions {
+  align-items: center;
+}
+
+.bottom-nav__item {
+  justify-content: center;
+}
+
+.bottom-nav__icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Section headers — baseline lock */
+.feed-section-header__titles {
+  align-items: baseline;
+}
+
+/* Archive list stability */
+.archive-list-item {
+  min-height: var(--touch-min, 44px);
+}
+
+/* Reduce dead CSS hooks */
+[data-reveal],
+[data-cinema],
+[data-folio] {
+  opacity: 1;
+  transform: none;
+}

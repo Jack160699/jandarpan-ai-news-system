@@ -1,78 +1,89 @@
-/* Editorial typography system */
+/* Typography scale — readability-first */
 
 .display-xl {
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(3.25rem, 11vw, 7.5rem);
-  font-weight: 500;
-  line-height: 0.92;
-  letter-spacing: -0.03em;
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ink-headline);
 }
 
 .display-lg {
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(2.25rem, 6vw, 4.5rem);
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: -0.025em;
+  font-size: clamp(1.5rem, 5vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink-headline);
 }
 
 .headline-lg {
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(1.75rem, 4vw, 3rem);
-  font-weight: 500;
-  line-height: 1.08;
-  letter-spacing: -0.02em;
+  font-size: clamp(1.375rem, 3.5vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--ink-headline);
 }
 
 .headline-md {
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(1.35rem, 2.5vw, 2rem);
-  font-weight: 500;
-  line-height: 1.12;
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--ink-headline);
 }
 
 .headline-sm {
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(1.125rem, 2vw, 1.5rem);
-  font-weight: 500;
-  line-height: 1.2;
-}
-
-.editorial-body {
-  font-family: var(--font-body), Georgia, serif;
-  font-size: clamp(1.03125rem, 1.35vw, 1.125rem);
-  line-height: 1.78;
-  color: var(--ink-secondary);
-  letter-spacing: 0.01em;
-}
-
-.deck {
-  font-family: var(--font-body), Georgia, serif;
-  font-size: clamp(1.0625rem, 1.8vw, 1.25rem);
-  line-height: 1.62;
-  color: var(--ink-secondary);
-}
-
-.meta-label {
-  font-family: var(--font-meta), ui-monospace, monospace;
-  font-size: 0.6875rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  line-height: 1.4;
-}
-
-.pull-quote {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(1.625rem, 3.5vw, 2.75rem);
-  line-height: 1.22;
-  font-style: italic;
-  letter-spacing: -0.02em;
+  font-size: clamp(1.0625rem, 2vw, 1.25rem);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: var(--ink-headline);
 }
 
 .headline-hero-line {
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(2rem, 5.5vw, 3.25rem);
-  font-weight: 500;
-  line-height: 1.05;
-  letter-spacing: -0.025em;
+  font-size: clamp(1.375rem, 4vw, 2rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ink-headline);
+}
+
+.editorial-body {
+  font-family: var(--font-body), Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--ink-body);
+}
+
+.deck {
+  font-family: var(--font-body), Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink-body);
+}
+
+.meta-label {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  color: var(--accent-category);
+}
+
+.pull-quote {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.375rem, 3vw, 1.75rem);
+  line-height: 1.35;
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: -0.01em;
+  color: var(--ink-headline);
 }

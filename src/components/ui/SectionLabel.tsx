@@ -14,9 +14,9 @@ export function SectionLabel({
   return (
     <span
       className={cn(
-        "meta-label inline-block tracking-[0.28em] uppercase",
-        variant === "breaking" && "text-[var(--accent-breaking)]",
-        variant === "muted" && "text-[var(--ink-muted)]",
+        "meta-label inline-block",
+        variant === "breaking" && "!text-[var(--accent-orange)]",
+        variant === "muted" && "meta-label--muted",
         className
       )}
     >

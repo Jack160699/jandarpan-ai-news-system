@@ -66,5 +66,5 @@ export function applyPreferencesToDocument(prefs: ReaderPreferences) {
 }
 
 export function getThemeColor(theme: ReaderTheme): string {
-  return theme === "dark" ? "#1e1c18" : "#f7f4ed";
+  return theme === "dark" ? "#121212" : "#ffffff";
 }

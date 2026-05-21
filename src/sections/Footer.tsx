@@ -7,8 +7,9 @@ import { Rule } from "@/components/ui/Rule";
 export function Footer() {
   return (
     <footer
+      id="footer"
       data-section="footer"
-      className="relative z-10 border-t border-[var(--rule-strong)] bg-[var(--paper-elevated)] pb-14 pt-16"
+      className="news-scroll-target relative z-10 border-t border-[var(--rule-strong)] bg-[var(--paper-elevated)] pb-10 pt-8"
     >
       <div className="editorial-container">
         <p className="masthead-title-en pointer-events-none !text-[clamp(2rem,8vw,4rem)] opacity-[0.07]">

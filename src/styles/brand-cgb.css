@@ -1,4 +1,4 @@
-/* CG Bhaskar concept — regional authority, restrained maroon */
+/* CG Bhaskar — high-contrast regional news chrome */
 
 .masthead-cgb {
   background: var(--paper-elevated);
@@ -8,72 +8,57 @@
   height: 3px;
   background: linear-gradient(
     90deg,
-    var(--brand-maroon-deep),
-    var(--brand-maroon) 40%,
-    var(--brand-maroon-deep)
+    var(--accent-red-deep),
+    var(--accent-orange) 50%,
+    var(--accent-red-deep)
   );
 }
 
 .masthead-title-en {
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(2.75rem, 12vw, 6.5rem);
-  font-weight: 500;
+  font-size: clamp(2.25rem, 9vw, 5rem);
+  font-weight: 600;
   line-height: 0.95;
-  letter-spacing: -0.03em;
-  color: var(--brand-maroon-deep);
+  letter-spacing: -0.02em;
+  color: var(--accent-red-deep);
 }
 
 .masthead-title-hi {
   font-family: var(--font-hindi), var(--font-display), serif;
   font-size: clamp(1.5rem, 5vw, 2.75rem);
-  font-weight: 500;
-  line-height: 1.15;
-  color: var(--ink-secondary);
-  opacity: 0.88;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink-body);
 }
 
 .regional-badge {
-  font-family: var(--font-meta), monospace;
-  font-size: 0.625rem;
-  letter-spacing: 0.18em;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--brand-maroon);
-  border: 1px solid color-mix(in srgb, var(--brand-maroon) 35%, transparent);
-  padding: 0.35rem 0.65rem;
+  color: var(--accent-category);
+  border: 1px solid var(--rule-strong);
+  padding: 0.25rem 0.5rem;
 }
 
 .concept-banner {
-  background: color-mix(in srgb, var(--ink-primary) 4%, var(--paper-warm));
+  background: var(--paper-muted);
   border-bottom: 1px solid var(--rule);
 }
 
 .concept-banner__text {
-  font-family: var(--font-meta), monospace;
-  font-size: 0.625rem;
-  letter-spacing: 0.16em;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--ink-muted);
   text-align: center;
-  padding: 0.5rem var(--space-gutter);
+  padding: 0.375rem var(--space-gutter);
 }
 
 .category-nav a.is-active,
 .category-nav a:hover {
-  color: var(--brand-maroon-deep);
-}
-
-@media (max-width: 767px) {
-  .masthead-title-en {
-    letter-spacing: -0.02em;
-  }
-
-  .mobile-edition-bar {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    background: color-mix(in srgb, var(--paper-elevated) 96%, transparent);
-    backdrop-filter: blur(6px);
-    border-bottom: 1px solid var(--rule);
-    padding: 0.5rem var(--space-gutter);
-  }
+  color: var(--accent-red-deep);
 }

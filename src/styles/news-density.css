@@ -1,0 +1,60 @@
+/* Regional news platform — scan speed, density, active rhythm */
+
+.news-headline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.news-headline-item {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.news-headline-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+@media (min-width: 640px) {
+  .news-headline-item {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+}
+
+.folio-compact-card {
+  transition: border-color 0.25s ease;
+}
+
+.folio-compact-card:hover {
+  border-color: color-mix(in srgb, var(--brand-maroon) 30%, var(--rule));
+}
+
+/* Tighter homepage flow — no portfolio pauses */
+.home-news-flow > section {
+  scroll-snap-align: none;
+}
+
+.home-news-flow .section-pad {
+  padding-block: var(--space-section-tight);
+}
+
+.home-news-flow .section-pad-tight {
+  padding-block: clamp(0.5rem, 1.5vh, 0.75rem);
+}
+
+.home-news-flow > section,
+.home-news-flow > .feed-section {
+  margin: 0;
+}
+
+@media (max-width: 767px) {
+  .thumb-zone {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .home-news-flow .section-pad {
+    padding-block: clamp(0.75rem, 2vh, 1.25rem);
+  }
+}

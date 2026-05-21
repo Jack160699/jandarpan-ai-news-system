@@ -1,8 +1,8 @@
 /* Cultural institution — authority, archive, ritual */
 
 :root {
-  --space-institution: clamp(5.5rem, 14vh, 10rem);
-  --space-gravitas: clamp(7rem, 18vh, 12rem);
+  --space-institution: clamp(2.5rem, 5vh, 4rem);
+  --space-gravitas: clamp(2.5rem, 5vh, 4rem);
 }
 
 .section-gravitas {
@@ -21,17 +21,19 @@
 }
 
 .archive-marker {
-  font-family: var(--font-meta), monospace;
-  font-size: 0.625rem;
-  letter-spacing: 0.2em;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-muted);
 }
 
 .filing-ref {
-  font-family: var(--font-meta), monospace;
-  font-size: 0.6875rem;
-  letter-spacing: 0.14em;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--ink-muted);
 }
 

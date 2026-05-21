@@ -21,10 +21,10 @@ export function LivingArchive({ preview = false }: LivingArchiveProps) {
     >
       <div className="editorial-container">
         <SectionLabel>Living archive</SectionLabel>
-        <h2 className="headline-md mt-4 max-w-[22ch]">
+        <h2 className="headline-sm mt-2 max-w-[22ch]">
           CG Bhaskar remembers what it files
         </h2>
-        <p className="deck mt-6 max-w-xl text-[var(--ink-secondary)]">
+        <p className="editorial-body mt-3 max-w-xl text-sm text-[var(--ink-secondary)]">
           Investigations persist across editions. Dispatches return when the desk
           reopens a thread. The record belongs to Chhattisgarh — not to a feed.
         </p>

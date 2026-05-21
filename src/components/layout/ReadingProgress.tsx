@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useLenis } from "@/providers/SmoothScrollProvider";
 
 type ReadingProgressProps = {
   target?: string;
@@ -9,7 +8,6 @@ type ReadingProgressProps = {
 
 export function ReadingProgress({ target = "article" }: ReadingProgressProps) {
   const [progress, setProgress] = useState(0);
-  const lenis = useLenis();
 
   useEffect(() => {
     const el = document.querySelector(`[data-reading="${target}"]`);
@@ -22,24 +20,19 @@ export function ReadingProgress({ target = "article" }: ReadingProgressProps) {
         setProgress(0);
         return;
       }
-      const scrolled = Math.min(
-        Math.max(-rect.top, 0),
-        scrollable
-      );
+      const scrolled = Math.min(Math.max(-rect.top, 0), scrollable);
       setProgress(scrolled / scrollable);
     };
 
     update();
-    const unsub = lenis?.on?.("scroll", update);
     window.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
 
     return () => {
-      unsub?.();
       window.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
-  }, [lenis, target]);
+  }, [target]);
 
   return (
     <div
@@ -51,7 +44,7 @@ export function ReadingProgress({ target = "article" }: ReadingProgressProps) {
       aria-label="Reading progress"
     >
       <div
-        className="h-full origin-left bg-[var(--ink-primary)] transition-transform duration-150 ease-out"
+        className="reading-progress__bar h-full origin-left bg-[var(--ink-primary)]"
         style={{ transform: `scaleX(${progress})` }}
       />
     </div>

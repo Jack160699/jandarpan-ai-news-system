@@ -5,11 +5,12 @@ import {
   Playfair_Display,
   Source_Serif_4,
 } from "next/font/google";
+import { AppChrome } from "@/components/navigation/AppChrome";
 import { ThemeScript } from "@/components/reader/ThemeScript";
 import { EditorialIntelligenceProvider } from "@/providers/EditorialIntelligenceProvider";
 import { ReaderPreferencesProvider } from "@/providers/ReaderPreferencesProvider";
-import { SmoothScrollProvider } from "@/providers/SmoothScrollProvider";
 import { BRAND } from "@/lib/brand";
+import { SITE_URL, organizationJsonLd } from "@/lib/seo";
 import { getThemeColor } from "@/lib/reader-preferences";
 import "@/styles/globals.css";
 
@@ -40,21 +41,40 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: `${BRAND.nameEn} — Concept Edition · Future of Regional Journalism`,
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${BRAND.nameEn} — Chhattisgarh News`,
+    template: `%s · ${BRAND.nameEn}`,
+  },
   description:
-    "Speculative premium redesign concept for CG Bhaskar. Immersive mobile-first editorial experience — presentation only.",
+    "CG Bhaskar concept edition — premium regional digital news for Chhattisgarh. Politics, Raipur, Bastar, sports, business, and investigations.",
+  keywords: [
+    "CG Bhaskar",
+    "Chhattisgarh news",
+    "Raipur news",
+    "Hindi news",
+    "regional news India",
+  ],
   openGraph: {
-    title: "CG Bhaskar — Concept Redesign",
-    description:
-      "The future evolution of regional digital journalism in Chhattisgarh. Concept showcase.",
+    title: `${BRAND.nameEn} — Chhattisgarh News`,
+    description: BRAND.taglineEn,
     type: "website",
+    locale: "hi_IN",
+    siteName: BRAND.nameEn,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: BRAND.nameEn,
+    description: BRAND.taglineEn,
   },
   robots: { index: false, follow: false },
+  alternates: { canonical: "/" },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
   themeColor: getThemeColor("light"),
 };
 
@@ -68,16 +88,20 @@ export default function RootLayout({
       lang="hi"
       dir="ltr"
       suppressHydrationWarning
-      className={`${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${dmMono.variable} h-full`}
+      className={`${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${dmMono.variable} native-scroll h-full`}
     >
       <body className="min-h-full antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(organizationJsonLd()),
+          }}
+        />
         <ThemeScript />
         <ReaderPreferencesProvider>
-          <SmoothScrollProvider>
-            <EditorialIntelligenceProvider>
-              {children}
-            </EditorialIntelligenceProvider>
-          </SmoothScrollProvider>
+          <EditorialIntelligenceProvider>
+            <AppChrome>{children}</AppChrome>
+          </EditorialIntelligenceProvider>
         </ReaderPreferencesProvider>
       </body>
     </html>

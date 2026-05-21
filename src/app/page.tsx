@@ -1,103 +1,52 @@
 import { PageShell } from "@/components/layout/PageShell";
 import { LanguageGate } from "@/components/reader/LanguageGate";
 import { ConceptBanner } from "@/components/institution/ConceptBanner";
+import { ContinueRibbon } from "@/components/editorial";
+import { BreakingNews } from "@/sections/BreakingNews";
+import { Footer } from "@/sections/Footer";
 import {
-  ContinueRibbon,
-  CuriosityTrail,
-  ReadingJourneyTracker,
-} from "@/components/editorial";
-import {
-  EditionClosure,
-  EditionOpening,
-  RitualEntry,
-} from "@/components/institution";
-import {
-  AtmosphereController,
-  CinematicBridge,
-  EditorialFrame,
-  FolioSequence,
-  NarrativeSection,
-  VisualDecompression,
-} from "@/components/cinema";
-import { folioChapters } from "@/lib/folio-chapters";
-import {
-  BreakingNews,
-  EditorialGrid,
-  Footer,
-  Investigations,
-  LivingArchive,
-  Masthead,
-  OpinionSection,
-  PinnedNarrativeHero,
-} from "@/sections";
+  CategoryNewsSections,
+  CityUpdatesStrip,
+  HomeHeroBlock,
+  HomeInvestigations,
+  HomeNewsGrid,
+  HomeOpinion,
+  LiveDeskFeed,
+  QuickReadList,
+  TrendingStrip,
+} from "@/sections/home";
+import { BRAND } from "@/lib/brand";
+
+export const metadata = {
+  title: `${BRAND.nameEn} — Today's Edition`,
+  description:
+    "Top headlines, live desk, city updates, and investigations from Chhattisgarh — CG Bhaskar concept digital edition.",
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (
-    <PageShell>
+    <PageShell variant="news">
       <LanguageGate />
       <ConceptBanner />
-      <EditionOpening />
-      <AtmosphereController />
-      <ReadingJourneyTracker />
       <ContinueRibbon />
       <main
+        id="main-content"
         data-narrative-root
-        className="mobile-story-flow mobile-comfort thumb-zone relative z-[2] touch-scroll-zone pb-28"
+        className="home-news-flow mobile-comfort thumb-zone relative z-[2]"
+        role="main"
       >
-        <NarrativeSection atmosphere="neutral" dissolve={false}>
-          <Masthead />
-        </NarrativeSection>
-
-        <RitualEntry />
-
-        <CinematicBridge variant="light" />
-
-        <NarrativeSection atmosphere="warm">
-          <BreakingNews />
-        </NarrativeSection>
-
-        <PinnedNarrativeHero />
-
-        <CinematicBridge />
-
-        <VisualDecompression />
-
-        <EditorialFrame
-          statement="छत्तीसगढ़ के लिए, रिकॉर्ड के लिए।"
-          subline="For Chhattisgarh · For the record · Since 1958"
-        />
-
-        <FolioSequence chapters={folioChapters} />
-
-        <CinematicBridge />
-
-        <NarrativeSection atmosphere="editorial">
-          <EditorialGrid />
-        </NarrativeSection>
-
-        <VisualDecompression />
-
-        <NarrativeSection atmosphere="warm">
-          <OpinionSection />
-        </NarrativeSection>
-
-        <CinematicBridge variant="light" />
-
-        <NarrativeSection atmosphere="warm">
-          <Investigations />
-        </NarrativeSection>
-
-        <LivingArchive preview />
-
-        <CuriosityTrail variant="home" title="Editorial trails" />
-
-        <EditionClosure />
-
-        <CinematicBridge />
-
-        <NarrativeSection atmosphere="neutral">
-          <Footer />
-        </NarrativeSection>
+        <BreakingNews />
+        <HomeHeroBlock />
+        <TrendingStrip />
+        <LiveDeskFeed />
+        <HomeNewsGrid />
+        <CityUpdatesStrip />
+        <CategoryNewsSections />
+        <QuickReadList />
+        <HomeInvestigations />
+        <HomeOpinion />
+        <Footer />
       </main>
     </PageShell>
   );
