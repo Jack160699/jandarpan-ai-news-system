@@ -49,7 +49,7 @@ jobs:
         id: ingest
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
-          API_URL: https://newspaper-motion-vsky.vercel.app/api/fetch-news
+         API_URL: https://newspaper-motion.vercel.app/api/fetch-news
         run: |
           set -euo pipefail
 
