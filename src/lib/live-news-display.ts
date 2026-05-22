@@ -1,7 +1,9 @@
 import { isArticleLive } from "@/lib/news/home-ranking";
+import { resolveStorySlug } from "@/lib/news/related-stories";
 import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
 import { formatPublishedAt } from "@/lib/news-db";
 import { resolveCardImage } from "@/lib/news/images/display";
+import { storyPath } from "@/lib/news/slug";
 
 /** Display props shared by live news cards */
 export type LiveCardModel = {
@@ -46,7 +48,7 @@ export function liveArticleToCard(article: NewsArticleRow): LiveCardModel {
     category: article.category,
     source: article.source,
     filedAt: formatPublishedAt(article.published_at),
-    href: `/article/${article.id}`,
+    href: storyPath(resolveStorySlug(article)),
     isLive: isArticleLive(article.published_at),
     isBreaking: BREAKING_RE.test(text),
   };

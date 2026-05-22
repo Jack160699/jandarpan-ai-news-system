@@ -6,7 +6,9 @@ import {
   categoryLabel,
   liveArticleToCard,
 } from "@/lib/live-news-display";
-import type { LiveNewsFeed, NewsCategory } from "@/lib/types/news-article";
+import { resolveStorySlug } from "@/lib/news/related-stories";
+import { storyPath } from "@/lib/news/slug";
+import type { LiveNewsFeed, NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
 import { NEWS_INGEST_CATEGORIES } from "@/lib/types/news-article";
 
 type LiveNewsHomeProps = {
@@ -19,6 +21,7 @@ export function LiveNewsHome({ feed }: LiveNewsHomeProps) {
   const trending = feed.trending.map(liveArticleToCard);
   const latest = feed.latest.map(liveArticleToCard);
   const topicTrends = feed.topicTrends;
+  const slugById = buildSlugMap(feed);
 
   return (
     <>
@@ -89,7 +92,7 @@ export function LiveNewsHome({ feed }: LiveNewsHomeProps) {
               {topicTrends.map((t, i) => (
                 <Link
                   key={`${t.topic}-${t.articleId}`}
-                  href={`/article/${t.articleId}`}
+                  href={storyPath(slugById.get(t.articleId) ?? t.topic)}
                   className="trending-chip story-link tap-target"
                 >
                   <span className="trending-chip__rank">{i + 1}</span>
@@ -130,6 +133,18 @@ export function LiveNewsHome({ feed }: LiveNewsHomeProps) {
       </section>
     </>
   );
+}
+
+function buildSlugMap(feed: LiveNewsFeed): Map<string, string> {
+  const articles: NewsArticleRow[] = [];
+  if (feed.hero) articles.push(feed.hero);
+  articles.push(
+    ...feed.trending,
+    ...feed.justIn,
+    ...feed.latest,
+    ...Object.values(feed.byCategory).flat()
+  );
+  return new Map(articles.map((a) => [a.id, resolveStorySlug(a)]));
 }
 
 function LiveCategorySection({

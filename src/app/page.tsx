@@ -5,13 +5,32 @@ import { BreakingNews } from "@/sections/BreakingNews";
 import { Footer } from "@/sections/Footer";
 import { LiveNewsHome } from "@/sections/live/LiveNewsHome";
 import { getLiveNewsFeed } from "@/lib/news-db";
+import type { Metadata } from "next";
 import { BRAND } from "@/lib/brand";
+import { PRODUCTION_ROBOTS, REGIONAL_KEYWORDS, SITE_URL } from "@/lib/seo";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: `${BRAND.nameEn} — Live Edition`,
   description:
     "Live Chhattisgarh regional headlines — ranked wire from RSS and national sources.",
+  keywords: REGIONAL_KEYWORDS,
   alternates: { canonical: "/" },
+  robots: PRODUCTION_ROBOTS,
+  openGraph: {
+    title: `${BRAND.nameEn} — Live Edition`,
+    description:
+      "Live Chhattisgarh regional headlines — ranked wire from RSS and national sources.",
+    type: "website",
+    url: SITE_URL,
+    locale: "hi_IN",
+    siteName: BRAND.nameEn,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${BRAND.nameEn} — Live Edition`,
+    description:
+      "Live Chhattisgarh regional headlines — ranked wire from RSS and national sources.",
+  },
 };
 
 /** ISR — aligns with 60s client refresh */

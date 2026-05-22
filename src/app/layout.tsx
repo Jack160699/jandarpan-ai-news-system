@@ -11,7 +11,12 @@ import { EditorialIntelligenceProvider } from "@/providers/EditorialIntelligence
 import { LanguageProvider } from "@/providers/LanguageProvider";
 import { ReaderPreferencesProvider } from "@/providers/ReaderPreferencesProvider";
 import { BRAND } from "@/lib/brand";
-import { SITE_URL, organizationJsonLd } from "@/lib/seo";
+import {
+  PRODUCTION_ROBOTS,
+  REGIONAL_KEYWORDS,
+  SITE_URL,
+  organizationJsonLd,
+} from "@/lib/seo";
 import { getThemeColor } from "@/lib/reader-preferences";
 import "@/styles/globals.css";
 
@@ -48,18 +53,13 @@ export const metadata: Metadata = {
     template: `%s · ${BRAND.nameEn}`,
   },
   description:
-    "CG Bhaskar concept edition — premium regional digital news for Chhattisgarh. Politics, Raipur, Bastar, sports, business, and investigations.",
-  keywords: [
-    "CG Bhaskar",
-    "Chhattisgarh news",
-    "Raipur news",
-    "Hindi news",
-    "regional news India",
-  ],
+    "Live Chhattisgarh regional newsroom — ranked headlines from Raipur, Bastar, Bilaspur, and statewide sources. Politics, sports, business, and breaking wire.",
+  keywords: REGIONAL_KEYWORDS,
   openGraph: {
     title: `${BRAND.nameEn} — Chhattisgarh News`,
     description: BRAND.taglineEn,
     type: "website",
+    url: SITE_URL,
     locale: "hi_IN",
     siteName: BRAND.nameEn,
   },
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
     title: BRAND.nameEn,
     description: BRAND.taglineEn,
   },
-  robots: { index: false, follow: false },
+  robots: PRODUCTION_ROBOTS,
   alternates: { canonical: "/" },
 };
 

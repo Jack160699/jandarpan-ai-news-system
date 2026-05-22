@@ -8,6 +8,8 @@ import {
   buildHomepageFeed,
   LIVE_NEWS_CACHE_TAG,
 } from "@/lib/news/home-ranking";
+import { pickRelatedStories, resolveStorySlug } from "@/lib/news/related-stories";
+import { buildArticleSlug } from "@/lib/news/slug";
 import type {
   LiveNewsFeed,
   NewsArticleRow,
@@ -17,7 +19,7 @@ import type {
 const POOL_LIMIT = 280;
 const PER_CATEGORY = 4;
 
-async function fetchArticlePool(): Promise<NewsArticleRow[]> {
+export async function fetchArticlePool(): Promise<NewsArticleRow[]> {
   if (!isSupabaseConfigured()) return [];
 
   const supabase = createServerAnonClient();
@@ -57,6 +59,63 @@ export async function getLiveNewsFeed(): Promise<LiveNewsFeed | null> {
     console.error("[news-db] getLiveNewsFeed:", err);
     return buildLiveNewsFeed();
   }
+}
+
+export async function getArticleBySlug(
+  slug: string
+): Promise<NewsArticleRow | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  const decoded = decodeURIComponent(slug);
+  const supabase = createServerAnonClient();
+
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select("*")
+    .eq("slug", decoded)
+    .maybeSingle();
+
+  if (data) return data;
+
+  if (error) {
+    console.error("[news-db] getArticleBySlug:", error.message);
+  }
+
+  const { data: recent } = await supabase
+    .from("news_articles")
+    .select("*")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(400);
+
+  return (
+    recent?.find(
+      (row) =>
+        row.slug === decoded ||
+        resolveStorySlug(row) === decoded ||
+        buildArticleSlug(row.title, row.id, row.article_url) === decoded
+    ) ?? null
+  );
+}
+
+export async function getLiveStorySlugs(limit = 500): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const supabase = createServerAnonClient();
+  const { data } = await supabase
+    .from("news_articles")
+    .select("slug, title, id, article_url")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  return (data ?? []).map((row) => resolveStorySlug(row as NewsArticleRow));
+}
+
+export async function getRelatedStoriesForArticle(
+  article: NewsArticleRow,
+  limit = 6
+): Promise<NewsArticleRow[]> {
+  const pool = await fetchArticlePool();
+  return pickRelatedStories(article, pool, limit);
 }
 
 export async function getArticleById(

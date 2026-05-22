@@ -1,9 +1,44 @@
+import type { Metadata } from "next";
 import type { Article } from "@/lib/articles";
 import { BRAND } from "@/lib/brand";
 
-/** Set NEXT_PUBLIC_SITE_URL in production deploys */
+/** Production deploy — override via NEXT_PUBLIC_SITE_URL */
 export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://cgbhaskar-concept.example";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://newspaper-motion.vercel.app";
+
+/** Regional + brand keywords for layout defaults */
+export const REGIONAL_KEYWORDS = [
+  BRAND.nameEn,
+  "Chhattisgarh news",
+  "Raipur news",
+  "Bastar news",
+  "Bilaspur news",
+  "Durg news",
+  "CG news Hindi",
+  "छत्तीसगढ़ समाचार",
+  "regional news India",
+  "live news Chhattisgarh",
+];
+
+/** Default robots for public pages (homepage, archive, live stories) */
+export const PRODUCTION_ROBOTS: NonNullable<Metadata["robots"]> = {
+  index: true,
+  follow: true,
+  googleBot: {
+    index: true,
+    follow: true,
+    "max-video-preview": -1,
+    "max-image-preview": "large",
+    "max-snippet": -1,
+  },
+};
+
+/** Admin, API, legacy redirects, concept-only editorial */
+export const NOINDEX_ROBOTS: NonNullable<Metadata["robots"]> = {
+  index: false,
+  follow: false,
+  googleBot: { index: false, follow: false },
+};
 
 export function organizationJsonLd() {
   return {

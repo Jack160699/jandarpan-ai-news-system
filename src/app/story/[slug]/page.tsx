@@ -1,62 +1,107 @@
 import { notFound } from "next/navigation";
-import { ContinueRibbon } from "@/components/editorial";
 import { PageShell } from "@/components/layout/PageShell";
-import { ArticleJsonLd } from "@/components/seo/ArticleJsonLd";
 import { ArticleView } from "@/sections/ArticleView";
-import { ConceptBanner } from "@/components/institution/ConceptBanner";
+import { LiveStoryPage } from "@/sections/story/LiveStoryPage";
 import { getAllArticleSlugs, getArticle } from "@/lib/articles";
-import { SITE_URL } from "@/lib/seo";
+import {
+  getArticleBySlug,
+  getLiveStorySlugs,
+  getRelatedStoriesForArticle,
+  fetchArticlePool,
+} from "@/lib/news-db";
+import { liveStoryMetadata } from "@/lib/news/story-seo";
+import { NOINDEX_ROBOTS, SITE_URL, articleJsonLd } from "@/lib/seo";
 
-export function generateStaticParams() {
-  return getAllArticleSlugs().map((slug) => ({ slug }));
-}
+export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
+export async function generateStaticParams() {
+  const editorial = getAllArticleSlugs().map((slug) => ({ slug }));
+  try {
+    const live = await getLiveStorySlugs(200);
+    const liveParams = live.map((slug) => ({ slug }));
+    return [...editorial, ...liveParams];
+  } catch {
+    return editorial;
+  }
+}
+
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const article = getArticle(slug);
-  if (!article) return { title: "Story not found" };
+  const live = await getArticleBySlug(slug);
+  if (live) return liveStoryMetadata(live);
+
+  const editorial = getArticle(slug);
+  if (!editorial) return { title: "Story not found" };
 
   const url = `${SITE_URL}/story/${slug}`;
-
   return {
-    title: article.title,
-    description: article.deck,
+    title: editorial.title,
+    description: editorial.deck,
     alternates: { canonical: `/story/${slug}` },
+    robots: NOINDEX_ROBOTS,
     openGraph: {
-      title: article.title,
-      description: article.deck,
+      title: editorial.title,
+      description: editorial.deck,
       type: "article",
       url,
-      images: [{ url: article.image, alt: article.title }],
+      images: [{ url: editorial.image }],
     },
     twitter: {
       card: "summary_large_image",
-      title: article.title,
-      description: article.deck,
-      images: [article.image],
+      title: editorial.title,
+      description: editorial.deck,
+      images: [editorial.image],
     },
   };
 }
 
 export default async function StoryPage({ params }: PageProps) {
   const { slug } = await params;
-  const article = getArticle(slug);
-  if (!article) notFound();
+
+  const liveArticle = await getArticleBySlug(slug);
+
+  if (liveArticle) {
+    const [related, topicPool] = await Promise.all([
+      getRelatedStoriesForArticle(liveArticle, 6),
+      fetchArticlePool(),
+    ]);
+
+    return (
+      <PageShell variant="news">
+        <main
+          data-narrative-root
+          className="home-news-flow mobile-comfort thumb-zone relative z-[2]"
+        >
+          <LiveStoryPage
+            article={liveArticle}
+            related={related}
+            topicPool={topicPool}
+          />
+        </main>
+      </PageShell>
+    );
+  }
+
+  const editorial = getArticle(slug);
+  if (!editorial) notFound();
 
   return (
     <PageShell variant="news">
-      <ArticleJsonLd article={article} />
-      <ConceptBanner />
-      <ContinueRibbon />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(articleJsonLd(editorial)),
+        }}
+      />
       <main
         data-narrative-root
         className="home-news-flow mobile-comfort thumb-zone relative z-[2]"
       >
-        <ArticleView article={article} />
+        <ArticleView article={editorial} />
       </main>
     </PageShell>
   );

@@ -9,6 +9,7 @@ export type NewsArticleRow = {
   author: string | null;
   category: string;
   article_url: string;
+  slug: string | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
@@ -53,6 +54,7 @@ export type NewsArticleInsert = {
   author: string | null;
   category: string;
   article_url: string;
+  slug?: string | null;
   published_at: string | null;
   provider?: string | null;
   language?: string | null;

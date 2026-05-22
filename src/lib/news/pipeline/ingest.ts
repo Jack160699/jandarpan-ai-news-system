@@ -4,6 +4,7 @@
 
 import { createAdminClient } from "@/lib/supabase";
 import { titleHash, urlHash, validateArticle } from "@/lib/news/normalize";
+import { assignSlugsToRows } from "@/lib/news/slug";
 import type { NormalizedArticle } from "@/lib/news/types";
 import type { NewsArticleInsert } from "@/lib/types/news-article";
 import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
@@ -18,7 +19,7 @@ export type PipelineResult = IngestionStats & {
   logId: string | null;
 };
 
-function toInsertRow(article: NormalizedArticle): NewsArticleInsert {
+function toInsertRow(article: NormalizedArticle & { slug?: string }): NewsArticleInsert {
   return {
     title: article.title,
     description: article.description,
@@ -34,6 +35,7 @@ function toInsertRow(article: NormalizedArticle): NewsArticleInsert {
     region: article.region,
     title_hash: titleHash(article.title),
     url_hash: urlHash(article.article_url),
+    slug: article.slug,
   };
 }
 
@@ -59,7 +61,7 @@ export async function runIngestionPipeline(
   const startedAt = Date.now();
   const supabase = createAdminClient();
 
-  const validRows: NewsArticleInsert[] = [];
+  const validated: NormalizedArticle[] = [];
   const failures: PipelineResult["failures"] = [];
   const categoryStats: Record<string, number> = {};
   const providerStats: Record<string, number> = {};
@@ -75,10 +77,18 @@ export async function runIngestionPipeline(
       continue;
     }
 
-    validRows.push(toInsertRow(article));
+    validated.push(article);
     categoryStats[article.category] = (categoryStats[article.category] ?? 0) + 1;
     providerStats[article.provider] = (providerStats[article.provider] ?? 0) + 1;
   }
+
+  const slugged = assignSlugsToRows(
+    validated.map((a) => ({ title: a.title, article_url: a.article_url }))
+  );
+
+  const validRows: NewsArticleInsert[] = validated.map((article, i) =>
+    toInsertRow({ ...article, slug: slugged[i].slug })
+  );
 
   let inserted = 0;
   let skippedDuplicates = 0;

@@ -17,6 +17,7 @@ export type NormalizedArticle = {
   category: string;
   published_at: string | null;
   article_url: string;
+  slug?: string | null;
   provider: NewsProviderId;
   language: string | null;
   region: NewsRegion;
