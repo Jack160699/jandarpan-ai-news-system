@@ -1,15 +1,3 @@
-# =============================================================================
-# Hybrid News Pipeline — GitHub Actions (free tier)
-# =============================================================================
-# Architecture:
-#   GitHub Actions (schedule / manual)
-#     → GET /api/health (preflight)
-#     → GET /api/fetch-news (Bearer CRON_SECRET)
-#   → GNews + NewsData.io + RSS → Supabase → Next.js live wire
-#
-# Secrets: CRON_SECRET (must match Vercel)
-# =============================================================================
-
 name: News ingestion cron
 
 on:
@@ -31,10 +19,64 @@ jobs:
       - name: Preflight health check
         env:
           HEALTH_URL: https://newspaper-motion.vercel.app/api/health
+
         run: |
           set -euo pipefail
+
           echo "Health check: ${HEALTH_URL}"
+
           http_code=$(curl -sS -o /tmp/health.json -w "%{http_code}" \
+            -H "Accept: application/json" \
+            --max-time 30 \
+            "${HEALTH_URL}")
+
+          echo "Health HTTP: ${http_code}"
+
+          cat /tmp/health.json || true
+
+          echo ""
+
+          if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
+            echo "::warning::Health check returned ${http_code} — continuing ingestion"
+          fi
+
+      - name: Trigger hybrid ingestion API
+        id: ingest
+
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_URL: https://newspaper-motion.vercel.app/api/fetch-news
+
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "::error::CRON_SECRET is not set in GitHub repository secrets."
+            exit 1
+          fi
+
+          echo "Calling ${API_URL} ..."
+
+          http_code=$(curl -sS -o /tmp/response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            --max-time 120 \
+            "${API_URL}")
+
+          echo "HTTP status: ${http_code}"
+
+          echo "Response body:"
+
+          cat /tmp/response.json || true
+
+          echo ""
+
+          if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
+            echo "::error::Ingestion API failed with HTTP ${http_code}"
+            exit 1
+          fi
+
+          echo "Ingestion completed successfully."          http_code=$(curl -sS -o /tmp/health.json -w "%{http_code}" \
             -H "Accept: application/json" \
             --max-time 30 \
             "${HEALTH_URL}")
