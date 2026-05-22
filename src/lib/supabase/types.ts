@@ -1,8 +1,7 @@
 /**
- * Supabase clients — hybrid news ingestion
+ * Supabase database types
  */
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { NewsArticleRow, NewsArticleInsert } from "@/lib/types/news-article";
 
 export type IngestionLogRow = {
@@ -91,51 +90,9 @@ export type Database = {
   };
 };
 
-function getSupabaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!url) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
-  }
-  return url;
-}
+/** Safe column list for anon reads (matches minimal + extended schemas) */
+export const CORE_ARTICLE_SELECT =
+  "id,title,description,content,image_url,source,author,category,article_url,slug,published_at,created_at";
 
-function getAnonKey(): string {
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!key) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  }
-  return key;
-}
-
-function getServiceRoleKey(): string {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) {
-    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY (server only)");
-  }
-  return key;
-}
-
-export function createBrowserClient(): SupabaseClient<Database> {
-  return createClient<Database>(getSupabaseUrl(), getAnonKey(), {
-    auth: { persistSession: false },
-  });
-}
-
-export function createServerAnonClient(): SupabaseClient<Database> {
-  return createClient<Database>(getSupabaseUrl(), getAnonKey(), {
-    auth: { persistSession: false },
-  });
-}
-
-export function createAdminClient(): SupabaseClient<Database> {
-  return createClient<Database>(getSupabaseUrl(), getServiceRoleKey(), {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
-export function isSupabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-}
+export const EXTENDED_ARTICLE_SELECT =
+  `${CORE_ARTICLE_SELECT},updated_at,provider,language,region,title_hash,url_hash,ai_summary,ai_headline,ai_processed_at`;

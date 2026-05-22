@@ -1,14 +1,20 @@
 /**
- * Health endpoint for GitHub Actions / monitoring
+ * Health endpoint — provider + Supabase anon read diagnostics
  */
 
 import { NextResponse } from "next/server";
-import { fetchArticlePool } from "@/lib/news-db";
-import { createServerAnonClient, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  CORE_ARTICLE_SELECT,
+  createAnonServerClient,
+  getSupabaseEnvDiagnostics,
+  isSupabaseConfigured,
+} from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
 export async function GET() {
+  const supabaseEnv = getSupabaseEnvDiagnostics();
+
   const providers = {
     gnews: Boolean(process.env.GNEWS_API_KEY?.trim()),
     newsdata: Boolean(process.env.NEWSDATA_API_KEY?.trim()),
@@ -21,37 +27,78 @@ export async function GET() {
   let homepageReadable = false;
   let articlePoolSize = 0;
   let anonReadError: string | null = null;
+  let anonReadDetails: Record<string, unknown> | null = null;
+  let tableRowCount: number | null = null;
 
   if (providers.supabase) {
     try {
-      const pool = await fetchArticlePool();
-      articlePoolSize = pool.length;
-      homepageReadable = pool.length > 0;
-    } catch (err) {
-      anonReadError = err instanceof Error ? err.message : "fetch_failed";
-    }
+      const supabase = createAnonServerClient();
 
-    if (!homepageReadable && !anonReadError) {
-      try {
-        const supabase = createServerAnonClient();
-        const { count, error } = await supabase
-          .from("news_articles")
-          .select("id", { count: "exact", head: true });
-        if (error) anonReadError = error.message;
-        else if ((count ?? 0) > 0) {
-          anonReadError =
-            "rows_exist_but_pool_empty — check RLS SELECT policy for anon on news_articles";
-        }
-      } catch (err) {
-        anonReadError =
-          err instanceof Error ? err.message : "anon_count_failed";
+      const { count, error: countError } = await supabase
+        .from("news_articles")
+        .select("id", { count: "exact", head: true });
+
+      tableRowCount = count ?? null;
+
+      if (countError) {
+        anonReadError = countError.message;
+        anonReadDetails = {
+          code: countError.code,
+          details: countError.details,
+          hint: countError.hint,
+        };
       }
+
+      const { data, error: selectError } = await supabase
+        .from("news_articles")
+        .select(CORE_ARTICLE_SELECT)
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .limit(5);
+
+      if (selectError) {
+        anonReadError = selectError.message;
+        anonReadDetails = {
+          code: selectError.code,
+          details: selectError.details,
+          hint: selectError.hint,
+          stage: "select",
+        };
+      } else {
+        articlePoolSize = data?.length ?? 0;
+        homepageReadable = articlePoolSize > 0 || (tableRowCount ?? 0) > 0;
+
+        if ((tableRowCount ?? 0) > 0 && articlePoolSize === 0) {
+          anonReadError =
+            "rows_exist_but_select_empty — check RLS SELECT on news_articles for anon";
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "fetch_failed";
+      anonReadError = message;
+      anonReadDetails = {
+        cause:
+          err instanceof Error && err.cause
+            ? String(err.cause)
+            : undefined,
+        stack: err instanceof Error ? err.stack?.split("\n").slice(0, 3) : undefined,
+      };
+      console.error("[health] anon Supabase test failed:", err);
     }
+  } else {
+    anonReadError = "supabase_not_configured_or_invalid_url";
   }
+
+  console.log("[health] Supabase diagnostics", {
+    env: supabaseEnv,
+    tableRowCount,
+    articlePoolSize,
+    anonReadError,
+  });
 
   const healthy =
     providers.supabase &&
     homepageReadable &&
+    !anonReadError &&
     (providers.gnews || providers.newsdata || providers.rss);
 
   return NextResponse.json(
@@ -60,11 +107,19 @@ export async function GET() {
       service: "newspaper-motion",
       timestamp: new Date().toISOString(),
       providers,
+      supabase_env: supabaseEnv,
       news_articles: {
         homepage_pool_size: articlePoolSize,
         homepage_readable: homepageReadable,
+        table_row_count: tableRowCount,
         anon_read_error: anonReadError,
+        anon_read_details: anonReadDetails,
         table: "news_articles",
+        client: "createAnonServerClient",
+        env_keys: {
+          url: "NEXT_PUBLIC_SUPABASE_URL",
+          anon: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        },
       },
     },
     { status: healthy ? 200 : 503 }

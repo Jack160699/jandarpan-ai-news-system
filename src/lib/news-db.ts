@@ -2,7 +2,12 @@
  * Supabase read layer — ranked live homepage feed
  */
 
-import { createServerAnonClient, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  CORE_ARTICLE_SELECT,
+  EXTENDED_ARTICLE_SELECT,
+  createAnonServerClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase";
 import { buildHomepageFeed } from "@/lib/news/home-ranking";
 import { normalizeArticlePool } from "@/lib/news/normalize-pool";
 import { pickRelatedStories, resolveStorySlug } from "@/lib/news/related-stories";
@@ -16,19 +21,15 @@ import type {
 const POOL_LIMIT = 280;
 const PER_CATEGORY = 4;
 
-/** Columns required for homepage — avoids select(*) schema drift */
-const POOL_SELECT =
-  "id,title,description,content,image_url,source,author,category,article_url,slug,published_at,created_at,updated_at,provider,language,region,title_hash,url_hash,ai_summary,ai_headline,ai_processed_at";
-
 export async function fetchArticlePool(): Promise<NewsArticleRow[]> {
   if (!isSupabaseConfigured()) {
     console.warn(
-      "[news-db] fetchArticlePool skipped — missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
+      "[news-db] fetchArticlePool skipped — missing or invalid NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
     return [];
   }
 
-  const supabase = createServerAnonClient();
+  const supabase = createAnonServerClient();
 
   let data: NewsArticleRow[] | null = null;
   let error: { message: string; code?: string; details?: string; hint?: string } | null =
@@ -37,7 +38,7 @@ export async function fetchArticlePool(): Promise<NewsArticleRow[]> {
 
   const primary = await supabase
     .from("news_articles")
-    .select(POOL_SELECT, { count: "exact" })
+    .select(EXTENDED_ARTICLE_SELECT, { count: "exact" })
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(POOL_LIMIT);
 
@@ -45,16 +46,19 @@ export async function fetchArticlePool(): Promise<NewsArticleRow[]> {
   error = primary.error;
   count = primary.count;
 
-  if (error?.message?.includes("slug")) {
-    const fallbackSelect = POOL_SELECT.replace(",slug", "");
+  if (error) {
     const retry = await supabase
       .from("news_articles")
-      .select(fallbackSelect, { count: "exact" })
+      .select(CORE_ARTICLE_SELECT, { count: "exact" })
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(POOL_LIMIT);
-    data = (retry.data ?? []) as unknown as NewsArticleRow[];
-    error = retry.error;
-    count = retry.count;
+    if (!retry.error) {
+      data = (retry.data ?? []) as unknown as NewsArticleRow[];
+      error = null;
+      count = retry.count;
+    } else {
+      error = retry.error;
+    }
   }
 
   const articles = normalizeArticlePool(data ?? []);
@@ -113,11 +117,11 @@ export async function getArticleBySlug(
   if (!isSupabaseConfigured()) return null;
 
   const decoded = decodeURIComponent(slug);
-  const supabase = createServerAnonClient();
+  const supabase = createAnonServerClient();
 
   const { data, error } = await supabase
     .from("news_articles")
-    .select("*")
+    .select(EXTENDED_ARTICLE_SELECT)
     .eq("slug", decoded)
     .maybeSingle();
 
@@ -129,7 +133,7 @@ export async function getArticleBySlug(
 
   const { data: recent } = await supabase
     .from("news_articles")
-    .select("*")
+    .select(EXTENDED_ARTICLE_SELECT)
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(400);
 
@@ -146,7 +150,7 @@ export async function getArticleBySlug(
 export async function getLiveStorySlugs(limit = 500): Promise<string[]> {
   if (!isSupabaseConfigured()) return [];
 
-  const supabase = createServerAnonClient();
+  const supabase = createAnonServerClient();
   const { data } = await supabase
     .from("news_articles")
     .select("slug, title, id, article_url")
@@ -169,10 +173,10 @@ export async function getArticleById(
 ): Promise<NewsArticleRow | null> {
   if (!isSupabaseConfigured()) return null;
 
-  const supabase = createServerAnonClient();
+  const supabase = createAnonServerClient();
   const { data, error } = await supabase
     .from("news_articles")
-    .select("*")
+    .select(EXTENDED_ARTICLE_SELECT)
     .eq("id", id)
     .maybeSingle();
 

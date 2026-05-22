@@ -43,8 +43,8 @@ async function LiveNewsSection() {
 
   if (!feed?.hero) {
     const hint = !configured
-      ? "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on this deployment (Vercel → Environment Variables)."
-      : "Ingestion wrote rows with the service role, but the homepage reads with the anon key. Run migration 005_news_articles_public_read.sql in Supabase, then re-run /api/fetch-news.";
+      ? "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on this deployment. Check GET /api/health → supabase_env.urlHostname matches your Supabase dashboard Project URL exactly."
+      : "Homepage cannot reach Supabase. Open /api/health — if anon_read_error is TypeError: fetch failed / ENOTFOUND, fix a typo in NEXT_PUBLIC_SUPABASE_URL. If rows exist but pool is empty, run migration 005 for RLS.";
 
     return (
       <section className="feed-section py-16 text-center px-4">
