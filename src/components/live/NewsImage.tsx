@@ -3,22 +3,24 @@
 import Image from "next/image";
 import { useState } from "react";
 import { IMAGE_BLUR } from "@/lib/image-placeholder";
-import { EDITORIAL_IMAGES } from "@/lib/editorial-images";
-
-const FALLBACK_SRC = EDITORIAL_IMAGES.newsroomDesk;
+import { NEWSROOM_PLACEHOLDER } from "@/lib/news/images/fallbacks";
+import { optimizeImageUrlForNext } from "@/lib/news/images/display";
 
 type NewsImageProps = {
+  /** Pre-resolved URL from liveArticleToCard, or raw URL with fallbacks */
   src: string | null | undefined;
   alt: string;
   fill?: boolean;
   priority?: boolean;
   sizes?: string;
   className?: string;
+  /** Card width hint for Unsplash/CDN optimization */
+  width?: number;
 };
 
 /**
- * Live news images come from arbitrary publisher domains.
- * Uses unoptimized loading + fallback to editorial placeholder on error.
+ * Live news images — always renders a valid editorial visual.
+ * Uses unoptimized remote URLs + tiered fallback on load error.
  */
 export function NewsImage({
   src,
@@ -27,9 +29,13 @@ export function NewsImage({
   priority = false,
   sizes = "100vw",
   className = "image-ink object-cover",
+  width = 640,
 }: NewsImageProps) {
   const [failed, setFailed] = useState(false);
-  const resolved = failed || !src ? FALLBACK_SRC : src;
+  const primary = src
+    ? optimizeImageUrlForNext(src, width)
+    : NEWSROOM_PLACEHOLDER;
+  const resolved = failed ? NEWSROOM_PLACEHOLDER : primary;
 
   return (
     <Image

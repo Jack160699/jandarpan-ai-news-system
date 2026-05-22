@@ -12,6 +12,7 @@
 
 import { NextResponse } from "next/server";
 import { processRecentArticlesWithAi } from "@/lib/news/ai/process";
+import { enrichArticleImages } from "@/lib/news/images/enrich";
 import { fetchAllNewsProviders } from "@/lib/news/providers";
 import { runIngestionPipeline } from "@/lib/news/pipeline/ingest";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -94,7 +95,10 @@ async function handleFetchNews(request: Request) {
       );
     }
 
-    const pipeline = await runIngestionPipeline(fetchResult.articles, {
+    const { articles: enrichedArticles, analytics: imageAnalytics } =
+      await enrichArticleImages(fetchResult.articles);
+
+    const pipeline = await runIngestionPipeline(enrichedArticles, {
       providers: fetchResult.providers.map((p) => ({
         provider: p.provider,
         fetched: p.fetched,
@@ -104,6 +108,7 @@ async function handleFetchNews(request: Request) {
       fetchDurationMs: fetchResult.durationMs,
       errors: fetchResult.errors,
       rssAnalytics: fetchResult.rssAnalytics,
+      imageAnalytics,
     });
 
     const ai = await processRecentArticlesWithAi();
@@ -124,6 +129,7 @@ async function handleFetchNews(request: Request) {
       providerStats: pipeline.providerStats,
       providers: fetchResult.providers,
       rssSourceAnalytics: fetchResult.rssAnalytics,
+      imageAnalytics,
       errors: [...fetchResult.errors, ...ai.errors],
       failures: pipeline.failures,
       logId: pipeline.logId,

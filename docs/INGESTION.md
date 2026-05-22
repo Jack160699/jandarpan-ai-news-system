@@ -29,6 +29,13 @@ src/lib/news/
   rss-health.ts              # Feed health / auto-disable dead feeds
   rss-fetch.ts               # Timeout + UTF-8 + malformed XML recovery
   language.ts                # Hindi / English detection
+  images/
+    extract.ts               # og/twitter/RSS/HTML extraction + scoring
+    validate.ts              # Reject logos, ads, tiny placeholders
+    enrich.ts                # Batch enrich during ingestion
+    display.ts               # Card fallbacks (always valid URL)
+    cache.ts                 # Per-run TTL cache
+    fallbacks.ts             # Source → category → newsroom hierarchy
   pipeline/
     ingest.ts                # Batch upsert, logs, failures
   ai/

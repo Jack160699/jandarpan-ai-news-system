@@ -6,9 +6,13 @@
 import type Parser from "rss-parser";
 import { detectLanguage } from "@/lib/news/language";
 import {
+  extractImagesFromRssItem,
+  normalizeImageUrl,
+  pickBestImageCandidate,
+} from "@/lib/news/images/extract";
+import {
   canonicalArticleUrl,
   dedupeArticles,
-  isPlaceholderImage,
   isValidHttpUrl,
   parsePublishedAt,
   validateArticle,
@@ -35,39 +39,6 @@ import type {
 export type RssFetchResult = ProviderFetchResult & {
   sourceAnalytics: RssSourceAnalytics[];
 };
-
-function extractImage(item: Parser.Item & Record<string, unknown>): string | null {
-  const enclosure = item.enclosure?.url;
-  if (enclosure && isValidHttpUrl(enclosure) && !isPlaceholderImage(enclosure)) {
-    return enclosure;
-  }
-
-  const mediaContent = item.mediaContent as { $?: { url?: string } } | undefined;
-  if (
-    mediaContent?.$?.url &&
-    isValidHttpUrl(mediaContent.$.url) &&
-    !isPlaceholderImage(mediaContent.$.url)
-  ) {
-    return mediaContent.$.url;
-  }
-
-  const mediaThumbnail = item.mediaThumbnail as { $?: { url?: string } } | undefined;
-  if (
-    mediaThumbnail?.$?.url &&
-    isValidHttpUrl(mediaThumbnail.$.url) &&
-    !isPlaceholderImage(mediaThumbnail.$.url)
-  ) {
-    return mediaThumbnail.$.url;
-  }
-
-  const encoded = item.contentEncoded ?? item.content ?? item["content:encoded"] ?? "";
-  const imgMatch = String(encoded).match(/<img[^>]+src=["']([^"']+)["']/i);
-  if (imgMatch?.[1] && isValidHttpUrl(imgMatch[1]) && !isPlaceholderImage(imgMatch[1])) {
-    return imgMatch[1];
-  }
-
-  return null;
-}
 
 function stripHtml(html: string): string {
   return html
@@ -102,7 +73,13 @@ function mapRssItem(
   const textForLang = `${title} ${description ?? ""}`;
   const language = detectLanguage(textForLang, source.language);
 
-  const imageUrl = extractImage(item as Parser.Item & Record<string, unknown>);
+  const rssCandidates = extractImagesFromRssItem(
+    item as Parser.Item & Record<string, unknown>
+  );
+  const bestImage = pickBestImageCandidate(rssCandidates);
+  const imageUrl = bestImage
+    ? normalizeImageUrl(bestImage.url, articleUrl)
+    : null;
 
   return {
     title,

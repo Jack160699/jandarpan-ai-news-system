@@ -6,6 +6,7 @@ import { ConceptBanner } from "@/components/institution/ConceptBanner";
 import { getArticleById } from "@/lib/news-db";
 import { formatPublishedAt } from "@/lib/news-db";
 import { categoryLabel } from "@/lib/live-news-display";
+import { resolveCardImage } from "@/lib/news/images/display";
 import type { NewsCategory } from "@/lib/types/news-article";
 import { BRAND } from "@/lib/brand";
 
@@ -38,6 +39,15 @@ export default async function LiveArticlePage({ params }: PageProps) {
   if (!article) notFound();
 
   const category = article.category as NewsCategory;
+  const heroImage = resolveCardImage(
+    {
+      imageUrl: article.image_url,
+      category: article.category,
+      source: article.source,
+      articleUrl: article.article_url,
+    },
+    960
+  );
   const body =
     article.content?.trim() ||
     article.description?.trim() ||
@@ -98,10 +108,11 @@ export default async function LiveArticlePage({ params }: PageProps) {
             <figure className="article-figure">
               <div className="article-figure__media relative">
                 <NewsImage
-                  src={article.image_url}
+                  src={heroImage}
                   alt=""
                   priority
                   sizes="(max-width: 768px) 100vw, 48rem"
+                  width={960}
                 />
               </div>
               {article.source ? (

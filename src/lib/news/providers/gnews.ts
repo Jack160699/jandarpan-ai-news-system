@@ -4,6 +4,7 @@
  */
 
 import { fetchJson } from "@/lib/news/http";
+import { normalizeImageUrl, pickBestImageCandidate } from "@/lib/news/images/extract";
 import { isValidHttpUrl, parsePublishedAt } from "@/lib/news/normalize";
 import type { NormalizedArticle, ProviderFetchResult } from "@/lib/news/types";
 
@@ -54,13 +55,16 @@ function mapArticle(
 
   if (!title || !articleUrl || !isValidHttpUrl(articleUrl)) return null;
 
-  const imageUrl = raw.image?.trim();
+  const imageRaw = raw.image?.trim();
+  const imagePick = imageRaw
+    ? pickBestImageCandidate([{ url: imageRaw, source: "provider" }])
+    : null;
 
   return {
     title,
     description: raw.description?.trim() ?? null,
     content: raw.content?.trim() ?? null,
-    image_url: imageUrl && isValidHttpUrl(imageUrl) ? imageUrl : null,
+    image_url: imagePick ? normalizeImageUrl(imagePick.url, articleUrl) : null,
     source: raw.source?.name?.trim() ?? null,
     author: null,
     category: mapCategory(gnewsCategory),

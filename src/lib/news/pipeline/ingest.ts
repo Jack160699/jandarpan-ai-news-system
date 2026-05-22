@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase";
 import { titleHash, urlHash, validateArticle } from "@/lib/news/normalize";
 import type { NormalizedArticle } from "@/lib/news/types";
 import type { NewsArticleInsert } from "@/lib/types/news-article";
+import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
 import type { IngestionStats } from "@/lib/news/types";
 
 const BATCH_SIZE = 40;
@@ -49,6 +50,7 @@ export async function runIngestionPipeline(
       rejected: number;
       duplicates: number;
     }>;
+    imageAnalytics?: ImageEnrichmentAnalytics;
   }
 ): Promise<PipelineResult> {
   const startedAt = Date.now();
@@ -127,6 +129,7 @@ export async function runIngestionPipeline(
       metadata: {
         providers: meta.providers,
         rss_source_analytics: meta.rssAnalytics ?? [],
+        image_analytics: meta.imageAnalytics ?? null,
       },
     })
     .select("id")
