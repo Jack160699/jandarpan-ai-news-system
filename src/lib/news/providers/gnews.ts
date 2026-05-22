@@ -6,6 +6,10 @@
 import { fetchJson } from "@/lib/news/http";
 import { normalizeImageUrl, pickBestImageCandidate } from "@/lib/news/images/extract";
 import { isValidHttpUrl, parsePublishedAt } from "@/lib/news/normalize";
+import {
+  normalizeNewsEncoding,
+  safeParsePublishedAt,
+} from "@/lib/news/sanitize-article";
 import type { NormalizedArticle, ProviderFetchResult } from "@/lib/news/types";
 
 const GNEWS_BASE = "https://gnews.io/api/v4/top-headlines";
@@ -50,8 +54,8 @@ function mapArticle(
   raw: GNewsArticle,
   gnewsCategory: GNewsCategory
 ): NormalizedArticle | null {
-  const title = raw.title?.trim();
-  const articleUrl = raw.url?.trim();
+  const title = normalizeNewsEncoding(raw.title);
+  const articleUrl = normalizeNewsEncoding(raw.url);
 
   if (!title || !articleUrl || !isValidHttpUrl(articleUrl)) return null;
 
@@ -68,7 +72,7 @@ function mapArticle(
     source: raw.source?.name?.trim() ?? null,
     author: null,
     category: mapCategory(gnewsCategory),
-    published_at: parsePublishedAt(raw.publishedAt),
+    published_at: safeParsePublishedAt(parsePublishedAt(raw.publishedAt)),
     article_url: articleUrl,
     provider: "gnews",
     language: "en",

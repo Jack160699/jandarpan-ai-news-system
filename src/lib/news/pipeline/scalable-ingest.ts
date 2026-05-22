@@ -5,7 +5,11 @@
 import { createAdminClient } from "@/lib/supabase";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
 import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
-import { ingestProviderArticles } from "@/lib/news/pipeline/ingest-provider-batch";
+import {
+  ingestProviderArticles,
+  mergeValidationStats,
+} from "@/lib/news/pipeline/ingest-provider-batch";
+import type { ArticleValidationStats } from "@/lib/news/sanitize-article";
 import { runParallelApiProviders } from "@/lib/news/providers/run-provider";
 import { runRssBatched } from "@/lib/news/providers/rss-batch";
 import type { ExecutionDeadline } from "@/lib/serverless/deadline";
@@ -39,6 +43,8 @@ export type ScalableIngestResult = {
   failedSources: string[];
   articlesRecoveredByFallback: number;
   imageAnalytics: ImageEnrichmentAnalytics | null;
+  validationStats: ArticleValidationStats;
+  normalized: number;
 };
 
 export async function runScalableIngestion(
@@ -57,6 +63,13 @@ export async function runScalableIngestion(
   let totalFetched = 0;
   let queuedForAI = 0;
   let imageAnalytics: ImageEnrichmentAnalytics | null = null;
+  const validationStats: ArticleValidationStats = {
+    total: 0,
+    sanitized: 0,
+    softFixed: 0,
+    rejected: 0,
+    reasons: {},
+  };
 
   const apiResults = await runParallelApiProviders();
 
@@ -84,10 +97,13 @@ export async function runScalableIngestion(
     queuedForAI += ingested.queuedForAI;
     failures.push(...ingested.failures);
     imageAnalytics = ingested.imageAnalytics ?? imageAnalytics;
+    mergeValidationStats(validationStats, ingested.validationStats);
     Object.assign(categoryStats, ingested.categoryStats);
     providerStats[run.provider] =
       (providerStats[run.provider] ?? 0) + ingested.inserted;
-    completedProviders.push(run.provider);
+    if (ingested.inserted > 0 || ingested.totalFetched > 0) {
+      completedProviders.push(run.provider);
+    }
   }
 
   let rssSummary: Awaited<ReturnType<typeof runRssBatched>> = {
@@ -119,6 +135,7 @@ export async function runScalableIngestion(
         queuedForAI += ingested.queuedForAI;
         failures.push(...ingested.failures);
         imageAnalytics = ingested.imageAnalytics ?? imageAnalytics;
+        mergeValidationStats(validationStats, ingested.validationStats);
         Object.assign(categoryStats, ingested.categoryStats);
         providerStats.rss = (providerStats.rss ?? 0) + ingested.inserted;
       },
@@ -176,11 +193,30 @@ export async function runScalableIngestion(
         rss_failed_sources: rssSummary.failedSources,
         articles_recovered_by_fallback: rssSummary.articlesRecoveredByFallback,
         image_analytics: imageAnalytics,
+        validation_stats: validationStats,
         scalable: true,
       },
     })
     .select("id")
     .single();
+
+  const normalized = validationStats.sanitized;
+
+  console.log("INGESTION_FINAL_REPORT", {
+    fetched: totalFetched,
+    normalized,
+    sanitized: validationStats.sanitized,
+    softFixed: validationStats.softFixed,
+    inserted,
+    rejected: validationStats.rejected,
+    failedValidation,
+    queuedForAI: pendingAi,
+    durationMs,
+    completedProviders,
+    skippedProviders,
+    timedOutSafely: deadline.timedOutSafely,
+    validationReasons: validationStats.reasons,
+  });
 
   return {
     ok: inserted > 0 || totalFetched > 0,
@@ -203,6 +239,8 @@ export async function runScalableIngestion(
     failedSources: rssSummary.failedSources,
     articlesRecoveredByFallback: rssSummary.articlesRecoveredByFallback,
     imageAnalytics,
+    validationStats,
+    normalized,
   };
 }
 

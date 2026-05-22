@@ -117,13 +117,14 @@ async function handleFetchNews(request: Request) {
       `[fetch-news] Done: inserted=${result.inserted} queuedAI=${result.queuedForAI} timedOut=${result.timedOutSafely} duration=${durationMs}ms`
     );
 
-    if (!result.ok && result.inserted === 0) {
+    if (result.inserted === 0 && result.totalFetched === 0) {
       return NextResponse.json(
         {
           ok: false,
-          error: "No articles ingested",
+          error: "No articles fetched from providers",
           completedProviders: result.completedProviders,
           skippedProviders: result.skippedProviders,
+          validationStats: result.validationStats,
           errors: result.errors,
           durationMs,
           timedOutSafely: result.timedOutSafely,
@@ -137,6 +138,8 @@ async function handleFetchNews(request: Request) {
       inserted: result.inserted,
       skippedDuplicates: result.skippedDuplicates,
       failedValidation: result.failedValidation,
+      validationStats: result.validationStats,
+      normalized: result.normalized,
       totalFetched: result.totalFetched,
       queuedForAI: result.queuedForAI,
       completedProviders: result.completedProviders,

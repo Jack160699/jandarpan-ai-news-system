@@ -14,8 +14,12 @@ import {
   dedupeArticles,
   isValidHttpUrl,
   parsePublishedAt,
-  validateArticle,
 } from "@/lib/news/normalize";
+import {
+  isValidNewsArticle,
+  normalizeNewsEncoding,
+  safeParsePublishedAt,
+} from "@/lib/news/sanitize-article";
 import { enrichRssArticlesBatch } from "@/lib/news/rss-enrich";
 import { parseFeedResilient } from "@/lib/news/rss-fetch";
 import {
@@ -25,7 +29,6 @@ import {
   recordSourceSuccess,
 } from "@/lib/news/rss-health";
 import {
-  isGoogleNewsSource,
   regionToDbRegion,
   RSS_PAGE_ENRICH_LIMIT,
   RSS_PARALLEL_BATCH,
@@ -60,12 +63,26 @@ function mapRssItem(
   source: RSSSource
 ): NormalizedArticle | null {
   try {
-    const title = item.title?.trim();
-    const rawLink = item.link?.trim() || item.guid?.trim();
-    if (!title || title.length < 8 || !rawLink) return null;
+    const title = normalizeNewsEncoding(item.title);
+    const rawLink =
+      normalizeNewsEncoding(item.link) ||
+      normalizeNewsEncoding(item.guid) ||
+      "";
+    if (!title || title.length < 4) return null;
+    if (!rawLink) return null;
 
-    const articleUrl = canonicalArticleUrl(rawLink);
-    if (!isValidHttpUrl(articleUrl)) return null;
+    let articleUrl = rawLink;
+    try {
+      if (isValidHttpUrl(rawLink)) {
+        articleUrl = canonicalArticleUrl(rawLink);
+      } else if (rawLink.startsWith("//")) {
+        articleUrl = canonicalArticleUrl(`https:${rawLink}`);
+      } else if (!rawLink.includes("://") && rawLink.includes(".")) {
+        articleUrl = canonicalArticleUrl(`https://${rawLink}`);
+      }
+    } catch {
+      articleUrl = rawLink;
+    }
 
     const rawContent =
       item.contentSnippet ??
@@ -77,7 +94,7 @@ function mapRssItem(
       (item.summary ? stripHtml(String(item.summary)).slice(0, 600) : null) ??
       (rawContent ? String(rawContent).slice(0, 600) : null);
 
-    if (!description || description.length < 20) {
+    if (!description || description.length < 4) {
       description = title;
     }
 
@@ -89,9 +106,11 @@ function mapRssItem(
       ? normalizeImageUrl(bestImage.url, articleUrl)
       : null;
 
-    const published_at =
+    const published_at = safeParsePublishedAt(
       parsePublishedAt(item.isoDate ?? item.pubDate ?? null) ??
-      new Date().toISOString();
+        item.isoDate ??
+        item.pubDate
+    );
 
     return {
       title,
@@ -112,23 +131,8 @@ function mapRssItem(
   }
 }
 
-function validateRssArticle(
-  article: NormalizedArticle,
-  sourceId: string
-): { valid: boolean; reason?: string } {
-  const relaxed = isGoogleNewsSource(sourceId);
-  const check = validateArticle(article, {
-    strictRss: !relaxed,
-    maxAgeDays: relaxed ? 14 : undefined,
-  });
-
-  if (check.valid) return check;
-
-  if (relaxed && article.title.length >= 10 && article.description) {
-    return { valid: true };
-  }
-
-  return check;
+function validateRssArticle(article: NormalizedArticle): boolean {
+  return isValidNewsArticle(article).valid;
 }
 
 export async function fetchRssSourceBatch(
@@ -183,8 +187,7 @@ export async function fetchRssSourceBatch(
 
     const validated: (NormalizedArticle & { _priority: number })[] = [];
     for (const a of enriched) {
-      const check = validateRssArticle(a, source.id);
-      if (!check.valid) {
+      if (!validateRssArticle(a)) {
         rejected++;
         continue;
       }

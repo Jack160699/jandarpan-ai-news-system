@@ -5,7 +5,7 @@
 import { createHash } from "crypto";
 import type { NormalizedArticle } from "@/lib/news/types";
 import { detectLanguage } from "@/lib/news/language";
-import { RSS_MAX_ARTICLE_AGE_DAYS } from "@/lib/news/providers/rss-sources";
+import { isValidNewsArticle } from "@/lib/news/sanitize-article";
 
 export function isValidHttpUrl(value: string): boolean {
   try {
@@ -124,48 +124,14 @@ export type ValidateOptions = {
   maxAgeDays?: number;
 };
 
+/** @deprecated Prefer isValidNewsArticle — sanitizes first, soft failures only */
 export function validateArticle(
   article: NormalizedArticle,
-  options: ValidateOptions = {}
+  _options: ValidateOptions = {}
 ): { valid: boolean; reason?: string } {
-  const title = article.title?.trim();
-  const url = article.article_url?.trim();
-  const minTitle = options.strictRss ? 12 : 8;
-
-  if (!title || title.length < minTitle) {
-    return { valid: false, reason: "title_too_short" };
-  }
-
-  if (REMOVED_TITLES.has(title.toLowerCase()) || DEMO_TITLE_RE.test(title)) {
-    return { valid: false, reason: "demo_or_removed_title" };
-  }
-
-  if (!url || !isValidHttpUrl(url)) {
-    return { valid: false, reason: "invalid_url" };
-  }
-
-  if (options.strictRss) {
-    const desc = (article.description ?? article.content ?? "").trim();
-    if (desc.length < 20) {
-      return { valid: false, reason: "missing_description" };
-    }
-
-    if (!article.published_at) {
-      return { valid: false, reason: "missing_publish_date" };
-    }
-
-    const maxDays = options.maxAgeDays ?? RSS_MAX_ARTICLE_AGE_DAYS;
-    const ageMs = Date.now() - new Date(article.published_at).getTime();
-    if (ageMs > maxDays * 24 * 60 * 60 * 1000) {
-      return { valid: false, reason: "stale_article" };
-    }
-
-    if (article.image_url && isPlaceholderImage(article.image_url)) {
-      return { valid: false, reason: "placeholder_image" };
-    }
-  }
-
-  return { valid: true };
+  const result = isValidNewsArticle(article);
+  if (result.valid) return { valid: true };
+  return { valid: false, reason: result.fatalErrors[0] ?? "invalid" };
 }
 
 export type DedupeResult = {

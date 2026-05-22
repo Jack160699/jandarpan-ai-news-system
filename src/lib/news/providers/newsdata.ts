@@ -6,6 +6,10 @@
 import { fetchJson } from "@/lib/news/http";
 import { normalizeImageUrl, pickBestImageCandidate } from "@/lib/news/images/extract";
 import { isValidHttpUrl, parsePublishedAt } from "@/lib/news/normalize";
+import {
+  normalizeNewsEncoding,
+  safeParsePublishedAt,
+} from "@/lib/news/sanitize-article";
 import type { NormalizedArticle, ProviderFetchResult } from "@/lib/news/types";
 
 const NEWSDATA_BASE = "https://newsdata.io/api/1/news";
@@ -41,8 +45,8 @@ function mapArticle(
   defaultCategory: string,
   region: "india" | "global"
 ): NormalizedArticle | null {
-  const title = raw.title?.trim();
-  const articleUrl = raw.link?.trim();
+  const title = normalizeNewsEncoding(raw.title);
+  const articleUrl = normalizeNewsEncoding(raw.link);
 
   if (!title || !articleUrl || !isValidHttpUrl(articleUrl)) return null;
 
@@ -68,7 +72,7 @@ function mapArticle(
     source: raw.source_name?.trim() ?? raw.source_id?.trim() ?? null,
     author: creator,
     category: category === "top" ? defaultCategory : category,
-    published_at: parsePublishedAt(raw.pubDate),
+    published_at: safeParsePublishedAt(parsePublishedAt(raw.pubDate)),
     article_url: articleUrl,
     provider: "newsdata",
     language: raw.language ?? (region === "india" ? "en" : "en"),
