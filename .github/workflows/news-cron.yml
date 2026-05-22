@@ -1,21 +1,20 @@
 # =============================================================================
-# Automated News Pipeline — GitHub Actions (free tier)
+# Hybrid News Pipeline — GitHub Actions (free tier)
 # =============================================================================
 # Architecture:
-#   GitHub Actions (schedule / manual) → curl → Vercel /api/fetch-news
-#   → NewsAPI fetch → Supabase news_articles → Next.js reads on deploy
+#   GitHub Actions (schedule / manual)
+#     → GET /api/health (preflight)
+#     → GET /api/fetch-news (Bearer CRON_SECRET)
+#   → GNews + NewsData.io + RSS → Supabase → Next.js live wire
 #
-# Secrets required (Repository → Settings → Secrets and variables → Actions):
-#   CRON_SECRET — must match CRON_SECRET in Vercel environment variables
+# Secrets: CRON_SECRET (must match Vercel)
 # =============================================================================
 
 name: News ingestion cron
 
 on:
-  # Every 30 minutes (UTC)
   schedule:
     - cron: "*/30 * * * *"
-  # Manual run from Actions tab → "Run workflow"
   workflow_dispatch:
 
 concurrency:
@@ -24,12 +23,29 @@ concurrency:
 
 jobs:
   fetch-news:
-    name: Trigger /api/fetch-news
+    name: Hybrid news ingestion
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
 
     steps:
-      - name: Call ingestion API on Vercel
+      - name: Preflight health check
+        env:
+          HEALTH_URL: https://newspaper-motion.vercel.app/api/health
+        run: |
+          set -euo pipefail
+          echo "Health check: ${HEALTH_URL}"
+          http_code=$(curl -sS -o /tmp/health.json -w "%{http_code}" \
+            -H "Accept: application/json" \
+            --max-time 30 \
+            "${HEALTH_URL}")
+          echo "Health HTTP: ${http_code}"
+          cat /tmp/health.json || true
+          echo ""
+          if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
+            echo "::warning::Health check returned ${http_code} — continuing ingestion"
+          fi
+
+      - name: Trigger hybrid ingestion API
         id: ingest
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -47,13 +63,14 @@ jobs:
             -X GET \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Accept: application/json" \
-            --max-time 120 \
+            --max-time 180 \
             "${API_URL}")
 
           echo "HTTP status: ${http_code}"
-          echo "Response body:"
-          cat /tmp/response.json || true
+          echo "── Response preview ──"
+          head -c 4000 /tmp/response.json || true
           echo ""
+          echo "── End preview ──"
 
           if [ "${http_code}" -lt 200 ] || [ "${http_code}" -ge 300 ]; then
             echo "::error::Ingestion API failed with HTTP ${http_code}"
@@ -63,6 +80,16 @@ jobs:
           if ! grep -q '"ok"[[:space:]]*:[[:space:]]*true' /tmp/response.json; then
             echo "::error::API returned non-success payload (ok !== true)"
             exit 1
+          fi
+
+          if command -v jq >/dev/null 2>&1; then
+            echo "── Category stats ──"
+            jq -r '.categoryStats // {} | to_entries[] | "\(.key): \(.value)"' /tmp/response.json 2>/dev/null || true
+            echo "── Provider stats ──"
+            jq -r '.providerStats // {} | to_entries[] | "\(.key): \(.value)"' /tmp/response.json 2>/dev/null || true
+            inserted=$(jq -r '.inserted // 0' /tmp/response.json 2>/dev/null || echo "0")
+            total=$(jq -r '.totalFetched // 0' /tmp/response.json 2>/dev/null || echo "0")
+            echo "Inserted: ${inserted} / fetched: ${total}"
           fi
 
           echo "Ingestion completed successfully."

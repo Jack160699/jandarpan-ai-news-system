@@ -7,16 +7,16 @@ Not affiliated with CG Bhaskar. Not an official product.
 
 - Production-ready regional news platform (Next.js App Router)
 - Mobile-first reading experience
-- Live wire from NewsAPI + Supabase
-- Static editorial desk content (Chhattisgarh concept stories)
+- **Hybrid live wire** — GNews + NewsData.io + Chhattisgarh RSS → Supabase
+- Static editorial desk content (concept stories)
 - Multilingual UI (English, Hindi, Chhattisgarhi)
 
 ## Stack
 
 - Next.js 16 · TypeScript · Tailwind CSS v4
 - Supabase (PostgreSQL)
-- NewsAPI
-- Vercel (frontend hosting)
+- GNews · NewsData.io · RSS (Chhattisgarh)
+- Vercel (frontend + API)
 - GitHub Actions (free scheduled ingestion)
 
 ## Develop
@@ -28,7 +28,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Local ingestion test (no GitHub/Vercel cron):
+Local ingestion:
 
 ```bash
 curl "http://localhost:3000/api/fetch-news?dev=1"
@@ -41,29 +41,30 @@ curl "http://localhost:3000/api/fetch-news?dev=1"
 ```
 GitHub Actions (every 30 min)
         │
+        ├─► GET /api/health
+        │
         ▼  Authorization: Bearer CRON_SECRET
 Vercel  /api/fetch-news
         │
-        ├── NewsAPI (business, technology, sports, entertainment, health)
+        ├── GNews (India: business, tech, sports, entertainment, health, politics)
+        ├── NewsData.io (India hi/en + world)
+        └── RSS (Chhattisgarh: Bhaskar, Patrika, Haribhoomi, NaiDunia, …)
         │
         ▼
-Supabase  news_articles  (unique: article_url)
+Supabase  news_articles + ingestion_logs
         │
         ▼
-Next.js homepage (Server Components, ISR 5 min)
-        └── Hero, categories, latest grid → /article/[id]
+Next.js homepage (Server Components) → /article/[id]
 ```
 
-1. **GitHub Actions** — `.github/workflows/news-cron.yml` runs on a cron schedule and can be triggered manually (`workflow_dispatch`). Free on public repos.
-2. **Ingestion API** — `src/app/api/fetch-news/route.ts` fetches headlines, validates them, and upserts into Supabase. Duplicates are skipped via `article_url` unique constraint.
-3. **Supabase** — `news_articles` table stores title, description, content, image, source, author, category, `article_url`, `published_at`.
-4. **Vercel frontend** — `app/page.tsx` reads the latest rows from Supabase and renders the live wire. Editorial sections below remain static concept content.
+See **[docs/INGESTION.md](docs/INGESTION.md)** for full folder structure, migrations, and hardening notes.
 
 ### Database setup
 
-Run once in Supabase SQL Editor:
+Run in Supabase SQL Editor (order matters):
 
-`supabase/migrations/001_news_articles.sql`
+1. `supabase/migrations/001_news_articles.sql`
+2. `supabase/migrations/002_ingestion_pipeline.sql`
 
 ### Environment variables (Vercel)
 
@@ -71,42 +72,39 @@ Run once in Supabase SQL Editor:
 |----------|----------|-------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Public anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only; ingestion upserts |
-| `NEWS_API_KEY` | Yes | NewsAPI.org key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only upserts |
+| `GNEWS_API_KEY` | Recommended | [gnews.io](https://gnews.io) — India headlines |
+| `NEWSDATA_API_KEY` | Recommended | [newsdata.io](https://newsdata.io) — global + Hindi |
 | `CRON_SECRET` | Yes | Bearer token for `/api/fetch-news` |
+| `ADMIN_SECRET` | Optional | Admin dashboard `?key=` |
+| `OPENAI_API_KEY` | Optional | AI summaries / headlines |
+
+**Remove:** `NEWS_API_KEY`, `ALLOW_DEV_FETCH`
 
 ### GitHub repository secrets
 
-| Secret | Required | Notes |
-|--------|----------|-------|
-| `CRON_SECRET` | Yes | **Must match** the value in Vercel |
-
-Add under: **Repository → Settings → Secrets and variables → Actions → New repository secret**
+| Secret | Required |
+|--------|----------|
+| `CRON_SECRET` | Yes — must match Vercel |
 
 ### Workflow testing
 
-**Manual run (recommended after setup):**
-
 1. Add `CRON_SECRET` to GitHub Actions secrets.
-2. Go to **Actions → News ingestion cron → Run workflow**.
-3. Check the job log for `HTTP status: 200` and `"ok": true`.
-
-**Verify API directly:**
+2. **Actions → News ingestion cron → Run workflow**
+3. Check logs for category stats and `"ok": true`.
 
 ```bash
 curl -sS -H "Authorization: Bearer YOUR_CRON_SECRET" \
   "https://newspaper-motion.vercel.app/api/fetch-news"
 ```
 
-Expected:
-
-```json
-{ "ok": true, "inserted": 0, "totalFetched": 42, ... }
+```bash
+curl -sS "https://newspaper-motion.vercel.app/api/health"
 ```
 
-**Schedule:** every 30 minutes (`*/30 * * * *` UTC).
+### Admin dashboard
 
-> Remove `ALLOW_DEV_FETCH` from Vercel if previously set — ingestion now uses Bearer auth only.
+`/admin/ingestion?key=YOUR_ADMIN_SECRET` (or `CRON_SECRET` if `ADMIN_SECRET` unset)
 
 ## Deploy (Vercel)
 
@@ -116,30 +114,24 @@ npm run build
 
 Deploy this directory as the project root.
 
-**Note:** Use only `src/app/` for routes. Do not add a root-level `app/` folder — an empty root `app/` will shadow `src/app/` and break the build.
+**Note:** Use only `src/app/` for routes. Do not add a root-level `app/` folder.
 
-Recommended Vercel settings:
-
-- Framework Preset: Next.js
-- Root Directory: `.` (empty)
-- Build Command: `npm run build`
-
-Cron is **not** configured on Vercel; use GitHub Actions instead.
+- Framework: Next.js
+- Root Directory: `.`
+- Cron: **not** on Vercel — use GitHub Actions
 
 ## Structure
 
 ```
-.github/workflows/   # news-cron.yml — scheduled ingestion
-src/
-  app/api/fetch-news/  # Ingestion API
-  app/article/[id]/    # Live article reader
-  lib/                 # supabase, fetchNews, news-db
-  sections/live/       # Live wire homepage sections
-supabase/migrations/   # news_articles schema
+.github/workflows/     news-cron.yml
+docs/                  INGESTION.md
+src/app/api/           fetch-news, health
+src/app/admin/         ingestion dashboard
+src/lib/news/          providers, pipeline, AI
+supabase/migrations/
 ```
 
 ## Concept notes
 
-- Sample headlines and Hindi/English editorial copy are **reimagined placeholders**
-- Images via Unsplash + NewsAPI publisher URLs
-- `robots: noindex` on concept build — remove in production pitch fork if indexing is desired
+- Sample editorial copy remains reimagined placeholders
+- `robots: noindex` on concept build

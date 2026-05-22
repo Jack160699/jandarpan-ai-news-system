@@ -1,16 +1,35 @@
 /**
- * Supabase clients — Phase 1 news ingestion
- *
- * Architecture:
- * - `createBrowserClient()` — anon key, safe for client components (read-only via RLS)
- * - `createAdminClient()` — service role, server-only (API routes, cron upserts)
- * - `createServerAnonClient()` — anon key on server for RSC data fetching
+ * Supabase clients — hybrid news ingestion
  */
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { NewsArticleRow } from "@/lib/types/news-article";
+import type { NewsArticleRow, NewsArticleInsert } from "@/lib/types/news-article";
 
-import type { NewsArticleInsert } from "@/lib/types/news-article";
+export type IngestionLogRow = {
+  id: string;
+  status: string;
+  total_fetched: number;
+  total_valid: number;
+  inserted: number;
+  skipped_duplicates: number;
+  failed_validation: number;
+  category_stats: Record<string, number> | null;
+  provider_stats: Record<string, number> | null;
+  provider_errors: string[] | null;
+  duration_ms: number | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type IngestionFailureRow = {
+  id: string;
+  title: string | null;
+  article_url: string | null;
+  provider: string | null;
+  reason: string;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+};
 
 export type Database = {
   public: {
@@ -19,6 +38,18 @@ export type Database = {
         Row: NewsArticleRow;
         Insert: NewsArticleInsert;
         Update: Partial<NewsArticleInsert>;
+        Relationships: [];
+      };
+      ingestion_logs: {
+        Row: IngestionLogRow;
+        Insert: Partial<IngestionLogRow>;
+        Update: Partial<IngestionLogRow>;
+        Relationships: [];
+      };
+      ingestion_failures: {
+        Row: IngestionFailureRow;
+        Insert: Partial<IngestionFailureRow>;
+        Update: Partial<IngestionFailureRow>;
         Relationships: [];
       };
     };
@@ -52,21 +83,18 @@ function getServiceRoleKey(): string {
   return key;
 }
 
-/** Browser / public read client */
 export function createBrowserClient(): SupabaseClient<Database> {
   return createClient<Database>(getSupabaseUrl(), getAnonKey(), {
     auth: { persistSession: false },
   });
 }
 
-/** Server Components — read published articles */
 export function createServerAnonClient(): SupabaseClient<Database> {
   return createClient<Database>(getSupabaseUrl(), getAnonKey(), {
     auth: { persistSession: false },
   });
 }
 
-/** API routes & cron — bypass RLS for inserts */
 export function createAdminClient(): SupabaseClient<Database> {
   return createClient<Database>(getSupabaseUrl(), getServiceRoleKey(), {
     auth: { persistSession: false, autoRefreshToken: false },

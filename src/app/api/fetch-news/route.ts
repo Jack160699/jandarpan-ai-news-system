@@ -1,21 +1,23 @@
 /**
  * App Router API: GET/POST /api/fetch-news
- * Path: src/app/api/fetch-news/route.ts
  *
- * GitHub Actions driven ingestion — scheduled via .github/workflows/news-cron.yml
+ * GitHub Actions driven ingestion — .github/workflows/news-cron.yml
  *
- * Pipeline:
- * 1. NewsAPI → headlines per category
- * 2. Normalize & validate
- * 3. Upsert into Supabase `news_articles` (dedupe on article_url)
+ * Hybrid pipeline:
+ * 1. GNews (India categories) + NewsData.io (India/global) + RSS (CG local)
+ * 2. Normalize, validate, dedupe
+ * 3. Batch upsert → Supabase news_articles
+ * 4. Optional AI enrichment (OPENAI_API_KEY)
  */
 
 import { NextResponse } from "next/server";
-import { fetchAllCategoryHeadlines } from "@/lib/fetchNews";
-import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase";
+import { processRecentArticlesWithAi } from "@/lib/news/ai/process";
+import { fetchAllNewsProviders } from "@/lib/news/providers";
+import { runIngestionPipeline } from "@/lib/news/pipeline/ingest";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 function isAuthorized(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;
@@ -25,7 +27,6 @@ function isAuthorized(request: Request): boolean {
     if (auth === `Bearer ${cronSecret}`) return true;
   }
 
-  // Local development only — optional ?dev=1 when CRON_SECRET is unset
   if (process.env.NODE_ENV === "development") {
     const url = new URL(request.url);
     if (url.searchParams.get("dev") === "1") return true;
@@ -33,6 +34,14 @@ function isAuthorized(request: Request): boolean {
   }
 
   return false;
+}
+
+function hasAnyProviderConfigured(): boolean {
+  return Boolean(
+    process.env.GNEWS_API_KEY?.trim() ||
+      process.env.NEWSDATA_API_KEY?.trim() ||
+      true
+  );
 }
 
 export async function GET(request: Request) {
@@ -57,23 +66,27 @@ async function handleFetchNews(request: Request) {
     );
   }
 
-  if (!process.env.NEWS_API_KEY) {
+  if (!hasAnyProviderConfigured()) {
     return NextResponse.json(
-      { ok: false, error: "NEWS_API_KEY is not configured" },
+      {
+        ok: false,
+        error: "No news providers configured (GNEWS_API_KEY or NEWSDATA_API_KEY)",
+      },
       { status: 500 }
     );
   }
 
   try {
-    console.log("[fetch-news] Starting ingestion…");
-    const fetchResult = await fetchAllCategoryHeadlines();
+    console.log("[fetch-news] Starting hybrid ingestion…");
+
+    const fetchResult = await fetchAllNewsProviders();
 
     if (!fetchResult.articles.length) {
       return NextResponse.json(
         {
           ok: false,
-          error: "No articles fetched from NewsAPI",
-          categories: fetchResult.categories,
+          error: "No articles fetched from any provider",
+          providers: fetchResult.providers,
           errors: fetchResult.errors,
           durationMs: Date.now() - startedAt,
         },
@@ -81,45 +94,44 @@ async function handleFetchNews(request: Request) {
       );
     }
 
-    const supabase = createAdminClient();
-    const rows = fetchResult.articles;
+    const pipeline = await runIngestionPipeline(fetchResult.articles, {
+      providers: fetchResult.providers.map((p) => ({
+        provider: p.provider,
+        fetched: p.fetched,
+        valid: p.valid,
+        errors: p.errors,
+      })),
+      fetchDurationMs: fetchResult.durationMs,
+      errors: fetchResult.errors,
+    });
 
-    const { data, error } = await supabase
-      .from("news_articles")
-      .upsert(rows, {
-        onConflict: "article_url",
-        ignoreDuplicates: true,
-      })
-      .select("id");
-
-    if (error) {
-      console.error("[fetch-news] Supabase upsert error:", error.message);
-      return NextResponse.json(
-        {
-          ok: false,
-          error: error.message,
-          fetched: fetchResult.articles.length,
-          durationMs: Date.now() - startedAt,
-        },
-        { status: 500 }
-      );
-    }
-
-    const insertedCount = data?.length ?? 0;
-    const skipped = fetchResult.articles.length - insertedCount;
+    const ai = await processRecentArticlesWithAi();
+    pipeline.aiProcessed = ai.processed;
 
     console.log(
-      `[fetch-news] Done: ${insertedCount} new, ${skipped} duplicates skipped, ${fetchResult.errors.length} category errors`
+      `[fetch-news] Done: inserted=${pipeline.inserted}, ai=${ai.processed}, duration=${pipeline.durationMs}ms`
     );
 
     return NextResponse.json({
       ok: true,
-      inserted: insertedCount,
-      skippedDuplicates: skipped,
-      totalFetched: fetchResult.articles.length,
-      categories: fetchResult.categories,
-      errors: fetchResult.errors,
+      inserted: pipeline.inserted,
+      skippedDuplicates: pipeline.skippedDuplicates,
+      failedValidation: pipeline.failedValidation,
+      totalFetched: pipeline.totalFetched,
+      aiProcessed: pipeline.aiProcessed,
+      categoryStats: pipeline.categoryStats,
+      providerStats: pipeline.providerStats,
+      providers: fetchResult.providers,
+      errors: [...fetchResult.errors, ...ai.errors],
+      failures: pipeline.failures,
+      logId: pipeline.logId,
       durationMs: Date.now() - startedAt,
+      preview: fetchResult.articles.slice(0, 3).map((a) => ({
+        title: a.title,
+        category: a.category,
+        provider: a.provider,
+        region: a.region,
+      })),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

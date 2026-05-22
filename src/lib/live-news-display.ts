@@ -31,11 +31,14 @@ export function liveArticleToCard(article: NewsArticleRow): LiveCardModel {
 
 export function categoryLabel(category: NewsCategory): string {
   const labels: Record<NewsCategory, string> = {
+    local: "Chhattisgarh",
+    politics: "Politics",
     business: "Business",
     technology: "Technology",
     sports: "Sports",
     entertainment: "Entertainment",
     health: "Health",
+    world: "World",
   };
   return labels[category] ?? category;
 }

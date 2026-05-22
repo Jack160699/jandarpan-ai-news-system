@@ -12,6 +12,14 @@ export type NewsArticleRow = {
   published_at: string | null;
   created_at: string;
   updated_at: string;
+  provider: string | null;
+  language: string | null;
+  region: string | null;
+  title_hash: string | null;
+  url_hash: string | null;
+  ai_summary: string | null;
+  ai_headline: string | null;
+  ai_processed_at: string | null;
 };
 
 export type NewsCategory =
@@ -19,14 +27,21 @@ export type NewsCategory =
   | "technology"
   | "sports"
   | "entertainment"
-  | "health";
+  | "health"
+  | "politics"
+  | "world"
+  | "local";
 
+/** Categories shown on homepage live wire */
 export const NEWS_INGEST_CATEGORIES: NewsCategory[] = [
+  "local",
+  "politics",
   "business",
   "technology",
   "sports",
   "entertainment",
   "health",
+  "world",
 ];
 
 export type NewsArticleInsert = {
@@ -36,9 +51,17 @@ export type NewsArticleInsert = {
   image_url: string | null;
   source: string | null;
   author: string | null;
-  category: NewsCategory;
+  category: string;
   article_url: string;
   published_at: string | null;
+  provider?: string | null;
+  language?: string | null;
+  region?: string | null;
+  title_hash?: string | null;
+  url_hash?: string | null;
+  ai_summary?: string | null;
+  ai_headline?: string | null;
+  ai_processed_at?: string | null;
 };
 
 /** Homepage feed bundle from Supabase */
