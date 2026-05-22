@@ -4,10 +4,15 @@
  */
 
 import { createAdminClient } from "@/lib/supabase";
+import {
+  claimAiQueueBatch,
+  markAiQueueCompleted,
+} from "@/lib/news/ai/queue";
 import type { NewsArticleRow } from "@/lib/types/news-article";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const BATCH_LIMIT = 8;
+const AI_FETCH_TIMEOUT_MS = 8_000;
 
 export type AiProcessResult = {
   processed: number;
@@ -52,7 +57,7 @@ Return JSON only: {"summary":"2-3 sentence summary","headline":"max 12 words","c
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(25_000),
+    signal: AbortSignal.timeout(AI_FETCH_TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -131,6 +136,77 @@ export async function processRecentArticlesWithAi(
       console.error("[ai]", msg);
     }
   }
+
+  return {
+    processed,
+    skipped: rows.length - processed,
+    errors,
+  };
+}
+
+/** Process articles from news_ai_queue (used by /api/process-ai) */
+export async function processAiQueueBatch(
+  limit = 10
+): Promise<AiProcessResult> {
+  if (!isAiEnabled()) {
+    return { processed: 0, skipped: 0, errors: [] };
+  }
+
+  const articleIds = await claimAiQueueBatch(limit);
+  if (!articleIds.length) {
+    return { processed: 0, skipped: 0, errors: [] };
+  }
+
+  const supabase = createAdminClient();
+  const { data: rows, error } = await supabase
+    .from("news_articles")
+    .select("*")
+    .in("id", articleIds);
+
+  if (error || !rows?.length) {
+    return {
+      processed: 0,
+      skipped: 0,
+      errors: error ? [error.message] : [],
+    };
+  }
+
+  let processed = 0;
+  const errors: string[] = [];
+
+  await Promise.allSettled(
+    rows.map(async (article) => {
+      try {
+        const enriched = await enrichArticle(article);
+        if (!enriched) {
+          await markAiQueueCompleted(article.id, false, "no_enrichment");
+          return;
+        }
+
+        const { error: updateError } = await supabase
+          .from("news_articles")
+          .update({
+            ai_summary: enriched.ai_summary,
+            ai_headline: enriched.ai_headline,
+            category: enriched.category,
+            ai_processed_at: new Date().toISOString(),
+          })
+          .eq("id", article.id);
+
+        if (updateError) {
+          errors.push(updateError.message);
+          await markAiQueueCompleted(article.id, false, updateError.message);
+        } else {
+          processed++;
+          await markAiQueueCompleted(article.id, true);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "AI enrich failed";
+        errors.push(`${article.id}: ${msg}`);
+        await markAiQueueCompleted(article.id, false, msg);
+      }
+    })
+  );
 
   return {
     processed,

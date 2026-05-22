@@ -2,12 +2,9 @@
  * Supabase read layer — ranked live homepage feed
  */
 
-import { unstable_cache } from "next/cache";
 import { createServerAnonClient, isSupabaseConfigured } from "@/lib/supabase";
-import {
-  buildHomepageFeed,
-  LIVE_NEWS_CACHE_TAG,
-} from "@/lib/news/home-ranking";
+import { buildHomepageFeed } from "@/lib/news/home-ranking";
+import { normalizeArticlePool } from "@/lib/news/normalize-pool";
 import { pickRelatedStories, resolveStorySlug } from "@/lib/news/related-stories";
 import { buildArticleSlug } from "@/lib/news/slug";
 import type {
@@ -19,46 +16,95 @@ import type {
 const POOL_LIMIT = 280;
 const PER_CATEGORY = 4;
 
+/** Columns required for homepage — avoids select(*) schema drift */
+const POOL_SELECT =
+  "id,title,description,content,image_url,source,author,category,article_url,slug,published_at,created_at,updated_at,provider,language,region,title_hash,url_hash,ai_summary,ai_headline,ai_processed_at";
+
 export async function fetchArticlePool(): Promise<NewsArticleRow[]> {
-  if (!isSupabaseConfigured()) return [];
-
-  const supabase = createServerAnonClient();
-  const { data, error } = await supabase
-    .from("news_articles")
-    .select("*")
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(POOL_LIMIT);
-
-  if (error) {
-    console.error("[news-db] fetchArticlePool:", error.message);
+  if (!isSupabaseConfigured()) {
+    console.warn(
+      "[news-db] fetchArticlePool skipped — missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
     return [];
   }
 
-  return data ?? [];
-}
+  const supabase = createServerAnonClient();
 
-async function buildLiveNewsFeed(): Promise<LiveNewsFeed | null> {
-  const pool = await fetchArticlePool();
-  return buildHomepageFeed(pool);
-}
+  let data: NewsArticleRow[] | null = null;
+  let error: { message: string; code?: string; details?: string; hint?: string } | null =
+    null;
+  let count: number | null = null;
 
-/** Cached feed — tag `live-news` for ingestion revalidation */
-export async function getLiveNewsFeed(): Promise<LiveNewsFeed | null> {
-  if (!isSupabaseConfigured()) return null;
+  const primary = await supabase
+    .from("news_articles")
+    .select(POOL_SELECT, { count: "exact" })
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(POOL_LIMIT);
 
-  try {
-    return await unstable_cache(
-      buildLiveNewsFeed,
-      ["live-news-feed-v2"],
-      {
-        tags: [LIVE_NEWS_CACHE_TAG],
-        revalidate: 60,
-      }
-    )();
-  } catch (err) {
-    console.error("[news-db] getLiveNewsFeed:", err);
-    return buildLiveNewsFeed();
+  data = (primary.data ?? []) as unknown as NewsArticleRow[];
+  error = primary.error;
+  count = primary.count;
+
+  if (error?.message?.includes("slug")) {
+    const fallbackSelect = POOL_SELECT.replace(",slug", "");
+    const retry = await supabase
+      .from("news_articles")
+      .select(fallbackSelect, { count: "exact" })
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .limit(POOL_LIMIT);
+    data = (retry.data ?? []) as unknown as NewsArticleRow[];
+    error = retry.error;
+    count = retry.count;
   }
+
+  const articles = normalizeArticlePool(data ?? []);
+  console.log("LIVE QUERY RESULT", articles.length, {
+    rawRows: data?.length ?? 0,
+    tableCount: count ?? null,
+    error: error?.message ?? null,
+    code: error?.code ?? null,
+  });
+
+  if (error) {
+    console.error("[news-db] fetchArticlePool:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+    return [];
+  }
+
+  return articles;
+}
+
+/** Homepage feed — uses page ISR (revalidate=60); not unstable_cache to avoid stale empty cache */
+export async function getLiveNewsFeed(): Promise<LiveNewsFeed | null> {
+  if (!isSupabaseConfigured()) {
+    console.warn(
+      "[news-db] getLiveNewsFeed — Supabase env not configured on this deployment"
+    );
+    return null;
+  }
+
+  const pool = await fetchArticlePool();
+  console.log("LIVE QUERY RESULT", pool.length);
+
+  if (!pool.length) {
+    console.warn(
+      "[news-db] Empty pool after query — verify RLS policy 'Public read news articles' on news_articles (migration 001 or 005)"
+    );
+    return null;
+  }
+
+  const feed = buildHomepageFeed(pool);
+  if (!feed?.hero) {
+    console.warn("[news-db] buildHomepageFeed produced no hero", {
+      poolSize: pool.length,
+    });
+  }
+
+  return feed;
 }
 
 export async function getArticleBySlug(

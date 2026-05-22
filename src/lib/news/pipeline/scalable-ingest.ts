@@ -1,0 +1,223 @@
+/**
+ * Scalable ingestion orchestrator — parallel providers, incremental upserts, async AI
+ */
+
+import { createAdminClient } from "@/lib/supabase";
+import { countPendingAiQueue } from "@/lib/news/ai/queue";
+import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
+import { ingestProviderArticles } from "@/lib/news/pipeline/ingest-provider-batch";
+import { runParallelApiProviders } from "@/lib/news/providers/run-provider";
+import { runRssBatched } from "@/lib/news/providers/rss-batch";
+import type { ExecutionDeadline } from "@/lib/serverless/deadline";
+
+export type ScalableIngestResult = {
+  ok: boolean;
+  inserted: number;
+  skippedDuplicates: number;
+  failedValidation: number;
+  totalFetched: number;
+  queuedForAI: number;
+  durationMs: number;
+  timedOutSafely: boolean;
+  completedProviders: string[];
+  skippedProviders: string[];
+  categoryStats: Record<string, number>;
+  providerStats: Record<string, number>;
+  errors: string[];
+  failures: Array<{ title: string; reason: string; provider: string }>;
+  logId: string | null;
+  rssSourceAnalytics: Array<{
+    source: string;
+    fetched: number;
+    valid: number;
+    rejected: number;
+    duplicates: number;
+    skipped?: boolean;
+    error?: string;
+  }>;
+  healthySources: string[];
+  failedSources: string[];
+  articlesRecoveredByFallback: number;
+  imageAnalytics: ImageEnrichmentAnalytics | null;
+};
+
+export async function runScalableIngestion(
+  deadline: ExecutionDeadline
+): Promise<ScalableIngestResult> {
+  const startedAt = Date.now();
+  const completedProviders: string[] = [];
+  const skippedProviders: string[] = [];
+  const errors: string[] = [];
+  const failures: ScalableIngestResult["failures"] = [];
+  const categoryStats: Record<string, number> = {};
+  const providerStats: Record<string, number> = {};
+  let inserted = 0;
+  let skippedDuplicates = 0;
+  let failedValidation = 0;
+  let totalFetched = 0;
+  let queuedForAI = 0;
+  let imageAnalytics: ImageEnrichmentAnalytics | null = null;
+
+  const apiResults = await runParallelApiProviders();
+
+  for (const run of apiResults) {
+    if (deadline.shouldStop()) {
+      skippedProviders.push(run.provider);
+      continue;
+    }
+
+    totalFetched += run.articles.length;
+    if (run.errors.length) errors.push(...run.errors.map((e) => `${run.provider}: ${e}`));
+
+    if (!run.articles.length) {
+      if (run.errors.length) skippedProviders.push(run.provider);
+      continue;
+    }
+
+    const ingested = await ingestProviderArticles(run.articles, run.provider, {
+      maxImagePageFetches: run.provider === "gnews" ? 10 : 8,
+    });
+
+    inserted += ingested.inserted;
+    skippedDuplicates += ingested.skippedDuplicates;
+    failedValidation += ingested.failedValidation;
+    queuedForAI += ingested.queuedForAI;
+    failures.push(...ingested.failures);
+    imageAnalytics = ingested.imageAnalytics ?? imageAnalytics;
+    Object.assign(categoryStats, ingested.categoryStats);
+    providerStats[run.provider] =
+      (providerStats[run.provider] ?? 0) + ingested.inserted;
+    completedProviders.push(run.provider);
+  }
+
+  let rssSummary: Awaited<ReturnType<typeof runRssBatched>> = {
+    totalArticles: 0,
+    batchesRun: 0,
+    batchesSkipped: 0,
+    sourceAnalytics: [],
+    healthySources: [],
+    failedSources: [],
+    articlesRecoveredByFallback: 0,
+    errors: [],
+    durationMs: 0,
+  };
+
+  if (!deadline.shouldStop()) {
+    rssSummary = await runRssBatched({
+      shouldStop: () => deadline.shouldStop(),
+      onBatchComplete: async (batch) => {
+        if (!batch.articles.length) return;
+
+        totalFetched += batch.articles.length;
+        const ingested = await ingestProviderArticles(batch.articles, "rss", {
+          maxImagePageFetches: 6,
+        });
+
+        inserted += ingested.inserted;
+        skippedDuplicates += ingested.skippedDuplicates;
+        failedValidation += ingested.failedValidation;
+        queuedForAI += ingested.queuedForAI;
+        failures.push(...ingested.failures);
+        imageAnalytics = ingested.imageAnalytics ?? imageAnalytics;
+        Object.assign(categoryStats, ingested.categoryStats);
+        providerStats.rss = (providerStats.rss ?? 0) + ingested.inserted;
+      },
+    });
+
+    if (rssSummary.batchesRun > 0) {
+      completedProviders.push("rss");
+    } else {
+      skippedProviders.push("rss");
+    }
+
+    if (rssSummary.batchesSkipped > 0) {
+      deadline.markTimedOut();
+    }
+
+    errors.push(...rssSummary.errors.map((e) => `rss: ${e}`));
+  } else {
+    skippedProviders.push("rss");
+    deadline.markTimedOut();
+  }
+
+  const durationMs = Date.now() - startedAt;
+  const pendingAi = await countPendingAiQueue().catch(() => queuedForAI);
+
+  const supabase = createAdminClient();
+  const status =
+    inserted > 0
+      ? deadline.timedOutSafely
+        ? "partial_timeout"
+        : "success"
+      : totalFetched > 0
+        ? "partial"
+        : "empty";
+
+  const { data: logRow } = await supabase
+    .from("ingestion_logs")
+    .insert({
+      status,
+      total_fetched: totalFetched,
+      total_valid: totalFetched - failedValidation,
+      inserted,
+      skipped_duplicates: skippedDuplicates,
+      failed_validation: failedValidation,
+      category_stats: categoryStats,
+      provider_stats: providerStats,
+      provider_errors: errors.slice(0, 100),
+      duration_ms: durationMs,
+      metadata: {
+        completed_providers: completedProviders,
+        skipped_providers: skippedProviders,
+        timed_out_safely: deadline.timedOutSafely,
+        queued_for_ai: pendingAi,
+        rss_source_analytics: rssSummary.sourceAnalytics,
+        rss_healthy_sources: rssSummary.healthySources,
+        rss_failed_sources: rssSummary.failedSources,
+        articles_recovered_by_fallback: rssSummary.articlesRecoveredByFallback,
+        image_analytics: imageAnalytics,
+        scalable: true,
+      },
+    })
+    .select("id")
+    .single();
+
+  return {
+    ok: inserted > 0 || totalFetched > 0,
+    inserted,
+    skippedDuplicates,
+    failedValidation,
+    totalFetched,
+    queuedForAI: pendingAi,
+    durationMs,
+    timedOutSafely: deadline.timedOutSafely,
+    completedProviders,
+    skippedProviders,
+    categoryStats,
+    providerStats,
+    errors,
+    failures: failures.slice(0, 50),
+    logId: logRow?.id ?? null,
+    rssSourceAnalytics: rssSummary.sourceAnalytics,
+    healthySources: rssSummary.healthySources,
+    failedSources: rssSummary.failedSources,
+    articlesRecoveredByFallback: rssSummary.articlesRecoveredByFallback,
+    imageAnalytics,
+  };
+}
+
+export function triggerAiProcessing(requestUrl: string): void {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret || !process.env.OPENAI_API_KEY?.trim()) return;
+
+  const origin = new URL(requestUrl).origin;
+  const url = `${origin}/api/process-ai`;
+
+  fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      "Content-Type": "application/json",
+    },
+  }).catch(() => null);
+}

@@ -31,11 +31,13 @@ export type ImageEnrichmentAnalytics = {
 };
 
 export async function enrichArticleImages(
-  articles: NormalizedArticle[]
+  articles: NormalizedArticle[],
+  options?: { maxPageFetches?: number }
 ): Promise<{
   articles: NormalizedArticle[];
   analytics: ImageEnrichmentAnalytics;
 }> {
+  const pageFetchLimit = options?.maxPageFetches ?? MAX_PAGE_FETCHES;
   const usedUrls = new Set<string>();
   let pageFetches = 0;
   let scoreSum = 0;
@@ -80,7 +82,7 @@ export async function enrichArticleImages(
           }
         }
 
-        if (!providerOk && pageFetches < MAX_PAGE_FETCHES) {
+        if (!providerOk && pageFetches < pageFetchLimit) {
           pageFetches++;
           const extracted = await extractArticleImage({
             articleUrl: article.article_url,

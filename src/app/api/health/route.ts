@@ -3,9 +3,10 @@
  */
 
 import { NextResponse } from "next/server";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { fetchArticlePool } from "@/lib/news-db";
+import { createServerAnonClient, isSupabaseConfigured } from "@/lib/supabase";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function GET() {
   const providers = {
@@ -17,8 +18,40 @@ export async function GET() {
     cronSecret: Boolean(process.env.CRON_SECRET?.trim()),
   };
 
+  let homepageReadable = false;
+  let articlePoolSize = 0;
+  let anonReadError: string | null = null;
+
+  if (providers.supabase) {
+    try {
+      const pool = await fetchArticlePool();
+      articlePoolSize = pool.length;
+      homepageReadable = pool.length > 0;
+    } catch (err) {
+      anonReadError = err instanceof Error ? err.message : "fetch_failed";
+    }
+
+    if (!homepageReadable && !anonReadError) {
+      try {
+        const supabase = createServerAnonClient();
+        const { count, error } = await supabase
+          .from("news_articles")
+          .select("id", { count: "exact", head: true });
+        if (error) anonReadError = error.message;
+        else if ((count ?? 0) > 0) {
+          anonReadError =
+            "rows_exist_but_pool_empty — check RLS SELECT policy for anon on news_articles";
+        }
+      } catch (err) {
+        anonReadError =
+          err instanceof Error ? err.message : "anon_count_failed";
+      }
+    }
+  }
+
   const healthy =
     providers.supabase &&
+    homepageReadable &&
     (providers.gnews || providers.newsdata || providers.rss);
 
   return NextResponse.json(
@@ -27,6 +60,12 @@ export async function GET() {
       service: "newspaper-motion",
       timestamp: new Date().toISOString(),
       providers,
+      news_articles: {
+        homepage_pool_size: articlePoolSize,
+        homepage_readable: homepageReadable,
+        anon_read_error: anonReadError,
+        table: "news_articles",
+      },
     },
     { status: healthy ? 200 : 503 }
   );

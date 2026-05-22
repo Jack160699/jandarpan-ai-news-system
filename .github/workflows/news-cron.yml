@@ -77,3 +77,23 @@ jobs:
           fi
 
           echo "Ingestion completed successfully."
+
+      - name: Drain AI enrichment queue
+        continue-on-error: true
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          AI_URL: https://newspaper-motion.vercel.app/api/process-ai
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET}" ]; then
+            exit 0
+          fi
+          echo "Calling ${AI_URL} ..."
+          http_code=$(curl -sS -o /tmp/ai.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            --max-time 60 \
+            -X POST \
+            "${AI_URL}")
+          echo "AI queue HTTP: ${http_code}"
+          cat /tmp/ai.json || true

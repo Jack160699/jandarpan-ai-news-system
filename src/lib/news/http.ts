@@ -9,7 +9,7 @@ export type FetchJsonOptions = {
   headers?: Record<string, string>;
 };
 
-const DEFAULT_TIMEOUT = 15_000;
+const DEFAULT_TIMEOUT = 8_000;
 const DEFAULT_RETRIES = 2;
 const DEFAULT_RETRY_DELAY = 800;
 

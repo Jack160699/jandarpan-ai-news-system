@@ -1,25 +1,19 @@
 /**
  * App Router API: GET/POST /api/fetch-news
  *
- * GitHub Actions driven ingestion — .github/workflows/news-cron.yml
- *
- * Hybrid pipeline:
- * 1. GNews (India categories) + NewsData.io (India/global) + RSS (CG local)
- * 2. Normalize, validate, dedupe
- * 3. Batch upsert → Supabase news_articles
- * 4. Optional AI enrichment (OPENAI_API_KEY)
+ * Scalable ingestion — parallel providers, incremental upserts, async AI queue
  */
 
 import { NextResponse } from "next/server";
-import { processRecentArticlesWithAi } from "@/lib/news/ai/process";
-import { enrichArticleImages } from "@/lib/news/images/enrich";
-import { fetchAllNewsProviders } from "@/lib/news/providers";
-import { runIngestionPipeline } from "@/lib/news/pipeline/ingest";
-import { revalidateLiveHomepage } from "@/lib/news/revalidate-home";
+import {
+  runScalableIngestion,
+  triggerAiProcessing,
+} from "@/lib/news/pipeline/scalable-ingest";
+import { createExecutionDeadline } from "@/lib/serverless/deadline";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 function parseBearerToken(authorization: string | null): string | null {
   if (!authorization) return null;
@@ -73,6 +67,7 @@ export async function POST(request: Request) {
 
 async function handleFetchNews(request: Request) {
   const startedAt = Date.now();
+  const deadline = createExecutionDeadline();
 
   const auth = checkCronAuth(request);
   if (!auth.authorized) {
@@ -106,89 +101,73 @@ async function handleFetchNews(request: Request) {
   }
 
   try {
-    console.log("[fetch-news] Starting hybrid ingestion…");
+    console.log("[fetch-news] Scalable ingestion start…");
 
-    const fetchResult = await fetchAllNewsProviders();
+    const result = await runScalableIngestion(deadline);
 
-    if (!fetchResult.articles.length) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "No articles fetched from any provider",
-          providers: fetchResult.providers,
-          errors: fetchResult.errors,
-          durationMs: Date.now() - startedAt,
-        },
-        { status: 502 }
-      );
-    }
-
-    const { articles: enrichedArticles, analytics: imageAnalytics } =
-      await enrichArticleImages(fetchResult.articles);
-
-    const pipeline = await runIngestionPipeline(enrichedArticles, {
-      providers: fetchResult.providers.map((p) => ({
-        provider: p.provider,
-        fetched: p.fetched,
-        valid: p.valid,
-        errors: p.errors,
-      })),
-      fetchDurationMs: fetchResult.durationMs,
-      errors: fetchResult.errors,
-      rssAnalytics: fetchResult.rssAnalytics,
-      healthySources: fetchResult.healthySources,
-      failedSources: fetchResult.failedSources,
-      articlesRecoveredByFallback: fetchResult.articlesRecoveredByFallback,
-      imageAnalytics,
-    });
-
-    const ai = await processRecentArticlesWithAi();
-    pipeline.aiProcessed = ai.processed;
-
-    revalidateLiveHomepage();
-
-    console.log(
-      `[fetch-news] Done: inserted=${pipeline.inserted}, ai=${ai.processed}, duration=${pipeline.durationMs}ms — cache revalidated`
-    );
+    triggerAiProcessing(request.url);
 
     const homepageFeed = await import("@/lib/news-db").then((m) =>
       m.getLiveNewsFeed()
     );
 
+    const durationMs = Date.now() - startedAt;
+
+    console.log(
+      `[fetch-news] Done: inserted=${result.inserted} queuedAI=${result.queuedForAI} timedOut=${result.timedOutSafely} duration=${durationMs}ms`
+    );
+
+    if (!result.ok && result.inserted === 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "No articles ingested",
+          completedProviders: result.completedProviders,
+          skippedProviders: result.skippedProviders,
+          errors: result.errors,
+          durationMs,
+          timedOutSafely: result.timedOutSafely,
+        },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({
       ok: true,
-      inserted: pipeline.inserted,
-      skippedDuplicates: pipeline.skippedDuplicates,
-      failedValidation: pipeline.failedValidation,
-      totalFetched: pipeline.totalFetched,
-      aiProcessed: pipeline.aiProcessed,
-      categoryStats: pipeline.categoryStats,
-      providerStats: pipeline.providerStats,
-      providers: fetchResult.providers,
-      rssSourceAnalytics: fetchResult.rssAnalytics,
-      healthySources: fetchResult.healthySources,
-      failedSources: fetchResult.failedSources,
-      articlesRecoveredByFallback: fetchResult.articlesRecoveredByFallback,
-      imageAnalytics,
-      errors: [...fetchResult.errors, ...ai.errors],
-      failures: pipeline.failures,
-      logId: pipeline.logId,
-      durationMs: Date.now() - startedAt,
-      preview: fetchResult.articles.slice(0, 3).map((a) => ({
-        title: a.title,
-        category: a.category,
-        provider: a.provider,
-        region: a.region,
-      })),
+      inserted: result.inserted,
+      skippedDuplicates: result.skippedDuplicates,
+      failedValidation: result.failedValidation,
+      totalFetched: result.totalFetched,
+      queuedForAI: result.queuedForAI,
+      completedProviders: result.completedProviders,
+      skippedProviders: result.skippedProviders,
+      timedOutSafely: result.timedOutSafely,
+      categoryStats: result.categoryStats,
+      providerStats: result.providerStats,
+      errors: result.errors,
+      failures: result.failures,
+      logId: result.logId,
+      durationMs,
+      rssSourceAnalytics: result.rssSourceAnalytics,
+      healthySources: result.healthySources,
+      failedSources: result.failedSources,
+      articlesRecoveredByFallback: result.articlesRecoveredByFallback,
+      imageAnalytics: result.imageAnalytics,
       homepageAnalytics: homepageFeed?.analytics ?? null,
       homepageHero: homepageFeed?.hero?.title ?? null,
       cacheRevalidated: true,
+      scalable: true,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[fetch-news] Fatal:", message);
     return NextResponse.json(
-      { ok: false, error: message, durationMs: Date.now() - startedAt },
+      {
+        ok: false,
+        error: message,
+        durationMs: Date.now() - startedAt,
+        timedOutSafely: deadline.timedOutSafely,
+      },
       { status: 500 }
     );
   }

@@ -5,6 +5,7 @@ import { BreakingNews } from "@/sections/BreakingNews";
 import { Footer } from "@/sections/Footer";
 import { LiveNewsHome } from "@/sections/live/LiveNewsHome";
 import { getLiveNewsFeed } from "@/lib/news-db";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/brand";
 import { PRODUCTION_ROBOTS, REGIONAL_KEYWORDS, SITE_URL } from "@/lib/seo";
@@ -37,13 +38,22 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 async function LiveNewsSection() {
+  const configured = isSupabaseConfigured();
   const feed = await getLiveNewsFeed();
 
   if (!feed?.hero) {
+    const hint = !configured
+      ? "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on this deployment (Vercel → Environment Variables)."
+      : "Ingestion wrote rows with the service role, but the homepage reads with the anon key. Run migration 005_news_articles_public_read.sql in Supabase, then re-run /api/fetch-news.";
+
     return (
-      <section className="feed-section py-16 text-center">
+      <section className="feed-section py-16 text-center px-4">
         <p className="text-[var(--ink-muted)]">
-          Live wire loading — run ingestion or check Supabase connection.
+          Live wire unavailable — no articles returned from{" "}
+          <code className="text-xs">news_articles</code>.
+        </p>
+        <p className="mt-3 text-sm text-[var(--ink-muted)] max-w-md mx-auto">
+          {hint}
         </p>
       </section>
     );

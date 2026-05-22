@@ -42,6 +42,15 @@ export type RssSourceHealthRow = {
   updated_at: string;
 };
 
+export type NewsAiQueueRow = {
+  id: string;
+  article_id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  created_at: string;
+  processed_at: string | null;
+  error: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -67,6 +76,12 @@ export type Database = {
         Row: RssSourceHealthRow;
         Insert: Partial<RssSourceHealthRow>;
         Update: Partial<RssSourceHealthRow>;
+        Relationships: [];
+      };
+      news_ai_queue: {
+        Row: NewsAiQueueRow;
+        Insert: Partial<NewsAiQueueRow>;
+        Update: Partial<NewsAiQueueRow>;
         Relationships: [];
       };
     };

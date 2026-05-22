@@ -128,12 +128,20 @@ export async function fetchGNewsAll(): Promise<ProviderFetchResult> {
     };
   }
 
-  const results = await Promise.all(
+  const settled = await Promise.allSettled(
     GNEWS_CATEGORIES.map(async (category) => {
       const result = await fetchGNewsCategory(category);
       return { category, ...result };
     })
   );
+
+  const results = settled.map((entry, i) => {
+    const category = GNEWS_CATEGORIES[i];
+    if (entry.status === "fulfilled") return entry.value;
+    const msg =
+      entry.reason instanceof Error ? entry.reason.message : "category failed";
+    return { category, articles: [] as NormalizedArticle[], error: msg };
+  });
 
   const articles: NormalizedArticle[] = [];
   const errors: string[] = [];

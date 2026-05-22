@@ -244,12 +244,13 @@ function pickUnique(
 }
 
 export function buildHomepageFeed(articles: NewsArticleRow[]): LiveNewsFeed | null {
-  if (!articles.length) return null;
+  const pool = articles.filter((a) => a.title?.trim());
+  if (!pool.length) return null;
 
-  const ranked = rankArticles(articles);
+  const ranked = rankArticles(pool);
   const used = new Set<string>();
 
-  const hero = pickUnique(ranked, 1, used)[0] ?? null;
+  const hero = pickUnique(ranked, 1, used)[0] ?? ranked[0] ?? null;
 
   const justIn = pickUnique(
     ranked.filter(
@@ -262,7 +263,7 @@ export function buildHomepageFeed(articles: NewsArticleRow[]): LiveNewsFeed | nu
     used
   );
 
-  const topicTrends = extractTopicTrends(articles);
+  const topicTrends = extractTopicTrends(pool);
   const trendingFromTopics = topicTrends
     .map((t) => ranked.find((a) => a.id === t.articleId))
     .filter((a): a is RankedArticle => Boolean(a))
@@ -289,17 +290,17 @@ export function buildHomepageFeed(articles: NewsArticleRow[]): LiveNewsFeed | nu
 
   const latest = pickUnique(ranked, 12, used);
 
-  const regionalCount = articles.filter(
+  const regionalCount = pool.filter(
     (a) => a.region === "chhattisgarh" || regionalBoostScore(a) >= 35
   ).length;
 
   const sourceMix: Record<string, number> = {};
-  for (const a of articles) {
+  for (const a of pool) {
     const key = a.provider ?? "unknown";
     sourceMix[key] = (sourceMix[key] ?? 0) + 1;
   }
 
-  const liveCount = articles.filter((a) => isArticleLive(a.published_at)).length;
+  const liveCount = pool.filter((a) => isArticleLive(a.published_at)).length;
 
   return {
     hero,
@@ -311,7 +312,7 @@ export function buildHomepageFeed(articles: NewsArticleRow[]): LiveNewsFeed | nu
     fetchedAt: new Date().toISOString(),
     analytics: {
       homepage_source_mix: sourceMix,
-      regional_percentage: Math.round((regionalCount / articles.length) * 100),
+      regional_percentage: Math.round((regionalCount / pool.length) * 100),
       live_articles_count: liveCount,
     },
   };

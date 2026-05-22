@@ -131,7 +131,7 @@ function validateRssArticle(
   return check;
 }
 
-async function fetchOneSource(
+export async function fetchRssSourceBatch(
   source: RSSSource,
   health: Awaited<ReturnType<typeof loadSourceHealth>>
 ): Promise<
@@ -220,27 +220,6 @@ async function fetchOneSource(
   }
 }
 
-async function runBatch(
-  sources: RSSSource[],
-  health: Awaited<ReturnType<typeof loadSourceHealth>>
-): Promise<
-  Array<RssSourceAnalytics & { articles: NormalizedArticle[]; recovered: number }>
-> {
-  const results: Array<
-    RssSourceAnalytics & { articles: NormalizedArticle[]; recovered: number }
-  > = [];
-
-  for (let i = 0; i < sources.length; i += RSS_PARALLEL_BATCH) {
-    const batch = sources.slice(i, i + RSS_PARALLEL_BATCH);
-    const batchResults = await Promise.all(
-      batch.map((source) => fetchOneSource(source, health))
-    );
-    results.push(...batchResults);
-  }
-
-  return results;
-}
-
 export async function fetchRssAll(): Promise<RssFetchResult> {
   const startedAt = Date.now();
 
@@ -251,7 +230,38 @@ export async function fetchRssAll(): Promise<RssFetchResult> {
       .filter((s) => !isSourceSkipped(s, health))
       .sort((a, b) => sourceEffectivePriority(b) - sourceEffectivePriority(a));
 
-    const results = await runBatch(activeSources, health);
+    const results: Array<
+      RssSourceAnalytics & { articles: NormalizedArticle[]; recovered: number }
+    > = [];
+
+    for (let i = 0; i < activeSources.length; i += RSS_PARALLEL_BATCH) {
+      const batch = activeSources.slice(i, i + RSS_PARALLEL_BATCH);
+      const batchResults = await Promise.allSettled(
+        batch.map((source) => fetchRssSourceBatch(source, health))
+      );
+      for (let j = 0; j < batchResults.length; j++) {
+        const entry = batchResults[j];
+        if (entry.status === "fulfilled") {
+          results.push(entry.value);
+        } else {
+          const source = batch[j];
+          const msg =
+            entry.reason instanceof Error
+              ? entry.reason.message
+              : "source failed";
+          results.push({
+            source: source.id,
+            fetched: 0,
+            valid: 0,
+            rejected: 0,
+            duplicates: 0,
+            articles: [],
+            recovered: 0,
+            error: msg,
+          });
+        }
+      }
+    }
 
     const sourceAnalytics: RssSourceAnalytics[] = results.map(
       ({ source, fetched, valid, rejected, duplicates, skipped, error }) => ({
