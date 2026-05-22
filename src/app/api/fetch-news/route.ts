@@ -15,6 +15,7 @@ import { processRecentArticlesWithAi } from "@/lib/news/ai/process";
 import { enrichArticleImages } from "@/lib/news/images/enrich";
 import { fetchAllNewsProviders } from "@/lib/news/providers";
 import { runIngestionPipeline } from "@/lib/news/pipeline/ingest";
+import { revalidateLiveHomepage } from "@/lib/news/revalidate-home";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -144,8 +145,14 @@ async function handleFetchNews(request: Request) {
     const ai = await processRecentArticlesWithAi();
     pipeline.aiProcessed = ai.processed;
 
+    revalidateLiveHomepage();
+
     console.log(
-      `[fetch-news] Done: inserted=${pipeline.inserted}, ai=${ai.processed}, duration=${pipeline.durationMs}ms`
+      `[fetch-news] Done: inserted=${pipeline.inserted}, ai=${ai.processed}, duration=${pipeline.durationMs}ms — cache revalidated`
+    );
+
+    const homepageFeed = await import("@/lib/news-db").then((m) =>
+      m.getLiveNewsFeed()
     );
 
     return NextResponse.json({
@@ -173,6 +180,9 @@ async function handleFetchNews(request: Request) {
         provider: a.provider,
         region: a.region,
       })),
+      homepageAnalytics: homepageFeed?.analytics ?? null,
+      homepageHero: homepageFeed?.hero?.title ?? null,
+      cacheRevalidated: true,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

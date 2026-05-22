@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { NewsImage } from "@/components/live/NewsImage";
 import type { LiveCardModel } from "@/lib/live-news-display";
+import { categoryLabel } from "@/lib/live-news-display";
+import type { NewsCategory } from "@/lib/types/news-article";
 import { useLanguage } from "@/providers/LanguageProvider";
 
 type LiveNewsCardProps = {
@@ -12,13 +14,33 @@ type LiveNewsCardProps = {
   showExcerpt?: boolean;
 };
 
+function MetaBadges({ article }: { article: LiveCardModel }) {
+  const { t } = useLanguage();
+
+  return (
+    <>
+      {article.isLive ? (
+        <span className="feed-badge feed-badge--live">
+          <span className="feed-badge__dot" aria-hidden />
+          LIVE
+        </span>
+      ) : null}
+      {article.isBreaking ? (
+        <span className="feed-badge feed-badge--breaking">
+          {t.common.breakingLabel}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 export function LiveNewsCard({
   article,
   variant = "horizontal",
   priority = false,
   showExcerpt = false,
 }: LiveNewsCardProps) {
-  const { t } = useLanguage();
+  const catLabel = categoryLabel(article.category as NewsCategory);
 
   if (variant === "featured") {
     return (
@@ -37,12 +59,8 @@ export function LiveNewsCard({
           </div>
           <div className="feed-card__body">
             <div className="feed-card__meta-row">
-              <span className="feed-card__category capitalize">
-                {article.category}
-              </span>
-              <span className="feed-badge feed-badge--breaking">
-                {t.common.breakingLabel}
-              </span>
+              <span className="feed-card__category">{catLabel}</span>
+              <MetaBadges article={article} />
             </div>
             <h2 className="feed-card__title feed-card__title--featured">
               {article.title}
@@ -71,9 +89,7 @@ export function LiveNewsCard({
             <NewsImage src={article.imageUrl} alt="" sizes="72px" />
           </div>
           <div className="feed-card__body min-w-0 flex-1 py-0.5">
-            <span className="feed-card__category capitalize">
-              {article.category}
-            </span>
+            <span className="feed-card__category">{catLabel}</span>
             <h3 className="feed-card__title feed-card__title--compact line-clamp-2">
               {article.title}
             </h3>
@@ -100,9 +116,8 @@ export function LiveNewsCard({
         </div>
         <div className="feed-card__body min-w-0 flex-1">
           <div className="feed-card__meta-row">
-            <span className="feed-card__category capitalize">
-              {article.category}
-            </span>
+            <span className="feed-card__category">{catLabel}</span>
+            <MetaBadges article={article} />
           </div>
           <h3 className="feed-card__title line-clamp-2">{article.title}</h3>
           {showExcerpt && article.excerpt ? (

@@ -1,24 +1,31 @@
+import { isArticleLive } from "@/lib/news/home-ranking";
 import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
 import { formatPublishedAt } from "@/lib/news-db";
 import { resolveCardImage } from "@/lib/news/images/display";
 
-/** Display props shared by live news cards (maps DB → UI) */
+/** Display props shared by live news cards */
 export type LiveCardModel = {
   id: string;
   title: string;
   excerpt: string;
-  /** Always a valid, display-ready image URL */
   imageUrl: string;
   category: string;
   source: string | null;
   filedAt: string;
   href: string;
+  isLive: boolean;
+  isBreaking: boolean;
 };
+
+const BREAKING_RE =
+  /\bbreaking\b|\blive\b|\burgent\b|बड़ी खबर|ब्रेकिंग|लाइव/i;
 
 export function liveArticleToCard(article: NewsArticleRow): LiveCardModel {
   const category = article.category;
   const width =
     category === "local" || category === "politics" ? 720 : 640;
+
+  const text = `${article.title} ${article.description ?? ""}`;
 
   return {
     id: article.id,
@@ -40,6 +47,8 @@ export function liveArticleToCard(article: NewsArticleRow): LiveCardModel {
     source: article.source,
     filedAt: formatPublishedAt(article.published_at),
     href: `/article/${article.id}`,
+    isLive: isArticleLive(article.published_at),
+    isBreaking: BREAKING_RE.test(text),
   };
 }
 

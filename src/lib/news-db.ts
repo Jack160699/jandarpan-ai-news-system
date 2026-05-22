@@ -1,59 +1,62 @@
 /**
- * Supabase read layer for live news (Server Components)
+ * Supabase read layer — ranked live homepage feed
  */
 
+import { unstable_cache } from "next/cache";
 import { createServerAnonClient, isSupabaseConfigured } from "@/lib/supabase";
+import {
+  buildHomepageFeed,
+  LIVE_NEWS_CACHE_TAG,
+} from "@/lib/news/home-ranking";
 import type {
   LiveNewsFeed,
   NewsArticleRow,
   NewsCategory,
 } from "@/lib/types/news-article";
-import { NEWS_INGEST_CATEGORIES } from "@/lib/types/news-article";
 
+const POOL_LIMIT = 280;
 const PER_CATEGORY = 4;
-const TRENDING_COUNT = 6;
-const LATEST_COUNT = 12;
 
-export async function getArticlesByCategory(
-  category: NewsCategory,
-  limit = PER_CATEGORY
-): Promise<NewsArticleRow[]> {
+async function fetchArticlePool(): Promise<NewsArticleRow[]> {
   if (!isSupabaseConfigured()) return [];
 
   const supabase = createServerAnonClient();
   const { data, error } = await supabase
     .from("news_articles")
     .select("*")
-    .eq("category", category)
     .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(limit);
+    .limit(POOL_LIMIT);
 
   if (error) {
-    console.error(`[news-db] getArticlesByCategory(${category}):`, error.message);
+    console.error("[news-db] fetchArticlePool:", error.message);
     return [];
   }
 
   return data ?? [];
 }
 
-export async function getLatestArticles(
-  limit = LATEST_COUNT
-): Promise<NewsArticleRow[]> {
-  if (!isSupabaseConfigured()) return [];
+async function buildLiveNewsFeed(): Promise<LiveNewsFeed | null> {
+  const pool = await fetchArticlePool();
+  return buildHomepageFeed(pool);
+}
 
-  const supabase = createServerAnonClient();
-  const { data, error } = await supabase
-    .from("news_articles")
-    .select("*")
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(limit);
+/** Cached feed — tag `live-news` for ingestion revalidation */
+export async function getLiveNewsFeed(): Promise<LiveNewsFeed | null> {
+  if (!isSupabaseConfigured()) return null;
 
-  if (error) {
-    console.error("[news-db] getLatestArticles:", error.message);
-    return [];
+  try {
+    return await unstable_cache(
+      buildLiveNewsFeed,
+      ["live-news-feed-v2"],
+      {
+        tags: [LIVE_NEWS_CACHE_TAG],
+        revalidate: 60,
+      }
+    )();
+  } catch (err) {
+    console.error("[news-db] getLiveNewsFeed:", err);
+    return buildLiveNewsFeed();
   }
-
-  return data ?? [];
 }
 
 export async function getArticleById(
@@ -76,54 +79,24 @@ export async function getArticleById(
   return data;
 }
 
-/**
- * Build homepage feed: hero, trending, per-category grids, latest strip.
- */
-export async function getLiveNewsFeed(): Promise<LiveNewsFeed | null> {
-  if (!isSupabaseConfigured()) return null;
-
-  try {
-    const [latest, ...categoryLists] = await Promise.all([
-      getLatestArticles(LATEST_COUNT + 1),
-      ...NEWS_INGEST_CATEGORIES.map((c) => getArticlesByCategory(c, PER_CATEGORY)),
-    ]);
-
-    if (!latest.length) {
-      return null;
-    }
-
-    const hero = latest[0] ?? null;
-    const trending = latest.slice(1, TRENDING_COUNT + 1);
-
-    const byCategory = NEWS_INGEST_CATEGORIES.reduce(
-      (acc, cat, i) => {
-        acc[cat] = categoryLists[i] ?? [];
-        return acc;
-      },
-      {} as Record<NewsCategory, NewsArticleRow[]>
-    );
-
-    return {
-      hero,
-      trending,
-      byCategory,
-      latest,
-      fetchedAt: new Date().toISOString(),
-    };
-  } catch (err) {
-    console.error("[news-db] getLiveNewsFeed:", err);
-    return null;
-  }
-}
-
 export function formatPublishedAt(iso: string | null): string {
-  if (!iso) return "Recently";
+  if (!iso) return "Just now";
   const date = new Date(iso);
   const diffMs = Date.now() - date.getTime();
   const mins = Math.floor(diffMs / 60_000);
-  if (mins < 60) return `${Math.max(1, mins)} min ago`;
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins} min ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs} hr ago`;
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
+}
+
+/** @deprecated Use getLiveNewsFeed ranked pool */
+export async function getArticlesByCategory(
+  category: NewsCategory,
+  limit = PER_CATEGORY
+): Promise<NewsArticleRow[]> {
+  const feed = await getLiveNewsFeed();
+  return feed?.byCategory[category]?.slice(0, limit) ?? [];
 }

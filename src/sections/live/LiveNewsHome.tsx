@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HomeLiveRefresh } from "@/components/live/HomeLiveRefresh";
 import { LiveNewsCard } from "@/components/live/LiveNewsCard";
 import { FeedSectionHeader } from "@/components/news/FeedSectionHeader";
 import {
@@ -12,24 +13,28 @@ type LiveNewsHomeProps = {
   feed: LiveNewsFeed;
 };
 
-/**
- * Server-rendered live wire from Supabase.
- * Mirrors existing feed-section rhythm (hero → trending → categories → grid).
- */
 export function LiveNewsHome({ feed }: LiveNewsHomeProps) {
   const hero = feed.hero ? liveArticleToCard(feed.hero) : null;
+  const justIn = feed.justIn.map(liveArticleToCard);
   const trending = feed.trending.map(liveArticleToCard);
   const latest = feed.latest.map(liveArticleToCard);
+  const topicTrends = feed.topicTrends;
 
   return (
     <>
+      <HomeLiveRefresh />
+
       {hero ? (
         <section
           id="top-news"
           className="news-scroll-target feed-section feed-section--flush"
         >
           <div className="feed-section__inner">
-            <FeedSectionHeader title="Live wire" href="#live-latest" />
+            <FeedSectionHeader
+              title="Live wire"
+              href="#just-in"
+              meta={`${feed.analytics.live_articles_count} live · ${feed.analytics.regional_percentage}% regional`}
+            />
             <div className="home-hero">
               <div className="home-hero__main px-0">
                 <LiveNewsCard
@@ -41,7 +46,11 @@ export function LiveNewsHome({ feed }: LiveNewsHomeProps) {
               </div>
               <div className="home-hero__side">
                 {trending.slice(0, 3).map((item) => (
-                  <LiveNewsCard key={item.id} article={item} variant="horizontal" />
+                  <LiveNewsCard
+                    key={item.id}
+                    article={item}
+                    variant="horizontal"
+                  />
                 ))}
               </div>
             </div>
@@ -49,19 +58,43 @@ export function LiveNewsHome({ feed }: LiveNewsHomeProps) {
         </section>
       ) : null}
 
-      {trending.length > 0 ? (
-        <section className="feed-section bg-[var(--paper)]" aria-label="Trending live">
+      {justIn.length > 0 ? (
+        <section
+          id="just-in"
+          className="news-scroll-target feed-section bg-[var(--paper)]"
+          aria-label="Just in"
+        >
           <div className="feed-section__inner">
-            <FeedSectionHeader title="Trending now" />
-            <div className="trending-strip">
-              {trending.map((item, i) => (
-                <Link
+            <FeedSectionHeader title="Just in — Chhattisgarh" href="#top-news" />
+            <div className="feed-grid feed-grid--2">
+              {justIn.map((item, i) => (
+                <LiveNewsCard
                   key={item.id}
-                  href={item.href}
+                  article={item}
+                  variant={i < 2 ? "horizontal" : "compact"}
+                  priority={i < 2}
+                  showExcerpt={i === 0}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {topicTrends.length > 0 ? (
+        <section className="feed-section bg-[var(--paper-elevated)]" aria-label="Trending topics">
+          <div className="feed-section__inner">
+            <FeedSectionHeader title="Trending topics (3h)" />
+            <div className="trending-strip">
+              {topicTrends.map((t, i) => (
+                <Link
+                  key={`${t.topic}-${t.articleId}`}
+                  href={`/article/${t.articleId}`}
                   className="trending-chip story-link tap-target"
                 >
                   <span className="trending-chip__rank">{i + 1}</span>
-                  <span className="truncate">{item.title}</span>
+                  <span className="truncate capitalize">{t.topic}</span>
+                  <span className="text-[10px] opacity-70">({t.count})</span>
                 </Link>
               ))}
             </div>
@@ -82,7 +115,7 @@ export function LiveNewsHome({ feed }: LiveNewsHomeProps) {
         className="news-scroll-target feed-section bg-[var(--paper-elevated)]"
       >
         <div className="feed-section__inner">
-          <FeedSectionHeader title="Latest headlines" href="#editorial" />
+          <FeedSectionHeader title="Latest headlines" href="#top-news" />
           <div className="feed-grid feed-grid--2 feed-grid--4">
             {latest.map((item, i) => (
               <LiveNewsCard
@@ -118,7 +151,10 @@ function LiveCategorySection({
       data-category={category}
     >
       <div className="feed-section__inner">
-        <FeedSectionHeader title={categoryLabel(category)} href="#live-latest" />
+        <FeedSectionHeader
+          title={categoryLabel(category)}
+          href="#live-latest"
+        />
         <div
           className={`category-feed-grid ${
             cards.length > 1 ? "category-feed-grid--2" : ""

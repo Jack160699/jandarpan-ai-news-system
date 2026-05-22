@@ -1,22 +1,20 @@
 "use client";
 
 import { SectionLabel } from "@/components/ui/SectionLabel";
-import { useEditorialIntelligenceOptional } from "@/providers/EditorialIntelligenceProvider";
 import { useLanguage } from "@/providers/LanguageProvider";
 
-const TICKER_MORNING =
-  "नया रायपुर: फाइल गायब · Raipur civic update at 10 AM · Durg school inspection postponed · Bastar health camp route extended · Assembly item nine deferred ·";
+type BreakingNewsProps = {
+  /** Live headlines from ingestion (no static demo ticker) */
+  headlines?: string[];
+};
 
-const TICKER_EVENING =
-  "Evening filing: Naya Raipur register restored online · Bhilai night shift notice · Youth league final replay at 8 · Water ward charts updated ·";
-
-export function BreakingNews() {
+export function BreakingNews({ headlines = [] }: BreakingNewsProps) {
   const { t } = useLanguage();
-  const ctx = useEditorialIntelligenceOptional();
+
   const ticker =
-    ctx?.live.phase === "evening" || ctx?.live.phase === "night"
-      ? TICKER_EVENING
-      : TICKER_MORNING;
+    headlines.length > 0
+      ? headlines.join(" · ") + " · "
+      : `${t.common.breakingLabel} — Chhattisgarh live wire updating… · `;
 
   return (
     <section
@@ -29,7 +27,7 @@ export function BreakingNews() {
           variant="breaking"
           className="shrink-0 self-center !text-white"
         >
-          {t.common.breaking} · {t.common.breakingLabel}
+          {t.common.breaking} · LIVE
         </SectionLabel>
         <div className="breaking-ticker relative flex-1 overflow-hidden">
           <div className="breaking-ticker__track flex w-max gap-10 whitespace-nowrap md:gap-14">

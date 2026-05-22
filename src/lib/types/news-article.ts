@@ -64,11 +64,27 @@ export type NewsArticleInsert = {
   ai_processed_at?: string | null;
 };
 
-/** Homepage feed bundle from Supabase */
+export type HomepageAnalytics = {
+  homepage_source_mix: Record<string, number>;
+  regional_percentage: number;
+  live_articles_count: number;
+};
+
+export type TopicTrend = {
+  topic: string;
+  count: number;
+  articleId: string;
+  title: string;
+};
+
+/** Homepage feed bundle — ranked for live regional priority */
 export type LiveNewsFeed = {
   hero: NewsArticleRow | null;
   trending: NewsArticleRow[];
+  justIn: NewsArticleRow[];
+  topicTrends: TopicTrend[];
   byCategory: Record<NewsCategory, NewsArticleRow[]>;
   latest: NewsArticleRow[];
   fetchedAt: string;
+  analytics: HomepageAnalytics;
 };
