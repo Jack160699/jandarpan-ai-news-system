@@ -103,6 +103,7 @@ async function handleFetchNews(request: Request) {
       })),
       fetchDurationMs: fetchResult.durationMs,
       errors: fetchResult.errors,
+      rssAnalytics: fetchResult.rssAnalytics,
     });
 
     const ai = await processRecentArticlesWithAi();
@@ -122,6 +123,7 @@ async function handleFetchNews(request: Request) {
       categoryStats: pipeline.categoryStats,
       providerStats: pipeline.providerStats,
       providers: fetchResult.providers,
+      rssSourceAnalytics: fetchResult.rssAnalytics,
       errors: [...fetchResult.errors, ...ai.errors],
       failures: pipeline.failures,
       logId: pipeline.logId,

@@ -21,10 +21,14 @@ src/lib/news/
   normalize.ts               # validation, dedupe, hashes
   admin-stats.ts             # Dashboard queries
   providers/
+    rss-sources.ts           # CG/MPCG feed catalog + priority
     gnews.ts                 # India categories (GNews)
     newsdata.ts              # India + global (NewsData.io)
-    rss.ts                   # CG Hindi RSS feeds
+    rss.ts                   # Regional RSS orchestrator
     index.ts                 # Parallel orchestrator
+  rss-health.ts              # Feed health / auto-disable dead feeds
+  rss-fetch.ts               # Timeout + UTF-8 + malformed XML recovery
+  language.ts                # Hindi / English detection
   pipeline/
     ingest.ts                # Batch upsert, logs, failures
   ai/
@@ -68,6 +72,7 @@ Run in Supabase SQL Editor (in order):
 
 1. `supabase/migrations/001_news_articles.sql`
 2. `supabase/migrations/002_ingestion_pipeline.sql`
+3. `supabase/migrations/003_rss_source_health.sql`
 
 ## Ingestion flow
 

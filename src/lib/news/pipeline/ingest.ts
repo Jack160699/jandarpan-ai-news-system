@@ -42,6 +42,13 @@ export async function runIngestionPipeline(
     providers: Array<{ provider: string; fetched: number; valid: number; errors: string[] }>;
     fetchDurationMs: number;
     errors: string[];
+    rssAnalytics?: Array<{
+      source: string;
+      fetched: number;
+      valid: number;
+      rejected: number;
+      duplicates: number;
+    }>;
   }
 ): Promise<PipelineResult> {
   const startedAt = Date.now();
@@ -117,7 +124,10 @@ export async function runIngestionPipeline(
       provider_stats: providerStats,
       provider_errors: meta.errors,
       duration_ms: meta.fetchDurationMs + durationMs,
-      metadata: { providers: meta.providers },
+      metadata: {
+        providers: meta.providers,
+        rss_source_analytics: meta.rssAnalytics ?? [],
+      },
     })
     .select("id")
     .single();

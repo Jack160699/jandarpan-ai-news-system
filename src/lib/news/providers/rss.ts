@@ -1,89 +1,70 @@
 /**
- * RSS provider — Chhattisgarh & Hindi local news
+ * RSS provider — Chhattisgarh regional newsroom ingestion
+ * Sources: rss-sources.ts · Health: rss-health.ts · Parse: rss-fetch.ts
  */
 
-import Parser from "rss-parser";
-import { isValidHttpUrl, parsePublishedAt } from "@/lib/news/normalize";
-import type { NormalizedArticle, ProviderFetchResult } from "@/lib/news/types";
+import type Parser from "rss-parser";
+import { detectLanguage } from "@/lib/news/language";
+import {
+  canonicalArticleUrl,
+  dedupeArticles,
+  isPlaceholderImage,
+  isValidHttpUrl,
+  parsePublishedAt,
+  validateArticle,
+} from "@/lib/news/normalize";
+import {
+  isSourceSkipped,
+  loadSourceHealth,
+  recordSourceFailure,
+  recordSourceSuccess,
+} from "@/lib/news/rss-health";
+import { parseFeedResilient } from "@/lib/news/rss-fetch";
+import {
+  regionToDbRegion,
+  RSS_PARALLEL_BATCH,
+  RSS_SOURCES,
+  type RSSSource,
+} from "@/lib/news/providers/rss-sources";
+import type {
+  NormalizedArticle,
+  ProviderFetchResult,
+  RssSourceAnalytics,
+} from "@/lib/news/types";
 
-export type RssFeedConfig = {
-  id: string;
-  name: string;
-  url: string;
-  language: "hi" | "en";
-  region: "chhattisgarh";
+export type RssFetchResult = ProviderFetchResult & {
+  sourceAnalytics: RssSourceAnalytics[];
 };
-
-/** Chhattisgarh / Hindi regional feeds (update URLs if a source changes endpoints) */
-export const CG_RSS_FEEDS: RssFeedConfig[] = [
-  {
-    id: "bhaskar-raipur",
-    name: "Dainik Bhaskar — Raipur",
-    url: "https://www.bhaskar.com/rss/raipur",
-    language: "hi",
-    region: "chhattisgarh",
-  },
-  {
-    id: "patrika-cg",
-    name: "Patrika — Chhattisgarh",
-    url: "https://www.patrika.com/rss/chhattisgarh-news.xml",
-    language: "hi",
-    region: "chhattisgarh",
-  },
-  {
-    id: "haribhoomi",
-    name: "Haribhoomi",
-    url: "https://www.haribhoomi.com/feed/",
-    language: "hi",
-    region: "chhattisgarh",
-  },
-  {
-    id: "naidunia-cg",
-    name: "NaiDunia — Chhattisgarh",
-    url: "https://www.naidunia.com/rss/chhattisgarh",
-    language: "hi",
-    region: "chhattisgarh",
-  },
-  {
-    id: "prabhat-khabar-cg",
-    name: "Prabhat Khabar — CG",
-    url: "https://www.prabhatkhabar.com/state/chhattisgarh/feed",
-    language: "hi",
-    region: "chhattisgarh",
-  },
-];
-
-const parser = new Parser({
-  timeout: 15_000,
-  headers: {
-    "User-Agent": "CG-Bhaskar-Ingest/1.0 (+https://newspaper-motion.vercel.app)",
-    Accept: "application/rss+xml, application/xml, text/xml",
-  },
-  customFields: {
-    item: [
-      ["media:content", "mediaContent", { keepArray: false }],
-      ["media:thumbnail", "mediaThumbnail", { keepArray: false }],
-    ],
-  },
-});
 
 function extractImage(item: Parser.Item & Record<string, unknown>): string | null {
   const enclosure = item.enclosure?.url;
-  if (enclosure && isValidHttpUrl(enclosure)) return enclosure;
+  if (enclosure && isValidHttpUrl(enclosure) && !isPlaceholderImage(enclosure)) {
+    return enclosure;
+  }
 
   const mediaContent = item.mediaContent as { $?: { url?: string } } | undefined;
-  if (mediaContent?.$?.url && isValidHttpUrl(mediaContent.$.url)) {
+  if (
+    mediaContent?.$?.url &&
+    isValidHttpUrl(mediaContent.$.url) &&
+    !isPlaceholderImage(mediaContent.$.url)
+  ) {
     return mediaContent.$.url;
   }
 
   const mediaThumbnail = item.mediaThumbnail as { $?: { url?: string } } | undefined;
-  if (mediaThumbnail?.$?.url && isValidHttpUrl(mediaThumbnail.$.url)) {
+  if (
+    mediaThumbnail?.$?.url &&
+    isValidHttpUrl(mediaThumbnail.$.url) &&
+    !isPlaceholderImage(mediaThumbnail.$.url)
+  ) {
     return mediaThumbnail.$.url;
   }
 
-  const content = item.content ?? item["content:encoded"] ?? "";
-  const imgMatch = String(content).match(/<img[^>]+src=["']([^"']+)["']/i);
-  if (imgMatch?.[1] && isValidHttpUrl(imgMatch[1])) return imgMatch[1];
+  const encoded = item.contentEncoded ?? item.content ?? item["content:encoded"] ?? "";
+  const imgMatch = String(encoded).match(/<img[^>]+src=["']([^"']+)["']/i);
+  if (imgMatch?.[1] && isValidHttpUrl(imgMatch[1]) && !isPlaceholderImage(imgMatch[1])) {
+    return imgMatch[1];
+  }
 
   return null;
 }
@@ -99,22 +80,27 @@ function stripHtml(html: string): string {
 
 function mapRssItem(
   item: Parser.Item,
-  feed: RssFeedConfig
+  source: RSSSource
 ): NormalizedArticle | null {
   const title = item.title?.trim();
-  const articleUrl = item.link?.trim() || item.guid?.trim();
+  const rawLink = item.link?.trim() || item.guid?.trim();
+  if (!title || !rawLink) return null;
 
-  if (!title || !articleUrl || !isValidHttpUrl(articleUrl)) return null;
+  const articleUrl = canonicalArticleUrl(rawLink);
+  if (!isValidHttpUrl(articleUrl)) return null;
 
   const rawContent =
     item.contentSnippet ??
     (item.content ? stripHtml(String(item.content)) : null) ??
-    item.summary ??
-    null;
+    (item.summary ? stripHtml(String(item.summary)) : null);
 
   const description =
     item.contentSnippet?.trim() ??
-    (item.summary ? stripHtml(String(item.summary)).slice(0, 500) : null);
+    (item.summary ? stripHtml(String(item.summary)).slice(0, 600) : null) ??
+    (rawContent ? String(rawContent).slice(0, 600) : null);
+
+  const textForLang = `${title} ${description ?? ""}`;
+  const language = detectLanguage(textForLang, source.language);
 
   const imageUrl = extractImage(item as Parser.Item & Record<string, unknown>);
 
@@ -123,63 +109,158 @@ function mapRssItem(
     description,
     content: rawContent ? String(rawContent).slice(0, 8000) : null,
     image_url: imageUrl,
-    source: feed.name,
+    source: source.name,
     author: item.creator?.trim() ?? null,
-    category: "local",
+    category: source.category,
     published_at: parsePublishedAt(item.isoDate ?? item.pubDate ?? null),
     article_url: articleUrl,
     provider: "rss",
-    language: feed.language,
-    region: "chhattisgarh",
+    language,
+    region: regionToDbRegion(source.region),
   };
 }
 
-export async function fetchRssFeed(
-  feed: RssFeedConfig
-): Promise<{ articles: NormalizedArticle[]; error?: string }> {
-  try {
-    const parsed = await parser.parseURL(feed.url);
-    const articles =
-      parsed.items
-        ?.map((item) => mapRssItem(item, feed))
-        .filter((a): a is NormalizedArticle => a !== null) ?? [];
-
-    console.log(`[rss] ${feed.id}: ${articles.length} articles`);
-    return { articles };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "RSS parse failed";
-    console.error(`[rss] ${feed.id}:`, message);
-    return { articles: [], error: message };
+async function fetchOneSource(
+  source: RSSSource,
+  health: Awaited<ReturnType<typeof loadSourceHealth>>
+): Promise<RssSourceAnalytics & { articles: NormalizedArticle[] }> {
+  if (isSourceSkipped(source, health)) {
+    return {
+      source: source.id,
+      fetched: 0,
+      valid: 0,
+      rejected: 0,
+      duplicates: 0,
+      skipped: true,
+      articles: [],
+    };
   }
+
+  const { feed, error } = await parseFeedResilient(source);
+
+  if (error || !feed.items?.length) {
+    await recordSourceFailure(source, health, error ?? "empty feed");
+    return {
+      source: source.id,
+      fetched: 0,
+      valid: 0,
+      rejected: 0,
+      duplicates: 0,
+      error: error ?? "empty feed",
+      articles: [],
+    };
+  }
+
+  const rawItems = feed.items;
+  let rejected = 0;
+  const mapped: (NormalizedArticle & { _priority: number })[] = [];
+
+  for (const item of rawItems) {
+    const article = mapRssItem(item, source);
+    if (!article) {
+      rejected++;
+      continue;
+    }
+
+    const check = validateArticle(article, { strictRss: true });
+    if (!check.valid) {
+      rejected++;
+      continue;
+    }
+
+    mapped.push({ ...article, _priority: source.priority });
+  }
+
+  const { unique, skipped } = dedupeArticles(mapped, { fuzzy: true });
+
+  await recordSourceSuccess(source, health);
+
+  console.log(
+    `[rss] ${source.id}: fetched=${rawItems.length} valid=${unique.length} rejected=${rejected} dup=${skipped}`
+  );
+
+  return {
+    source: source.id,
+    fetched: rawItems.length,
+    valid: unique.length,
+    rejected,
+    duplicates: skipped,
+    articles: unique,
+  };
 }
 
-export async function fetchRssAll(): Promise<ProviderFetchResult> {
-  const startedAt = Date.now();
+async function runBatch(
+  sources: RSSSource[],
+  health: Awaited<ReturnType<typeof loadSourceHealth>>
+): Promise<Array<RssSourceAnalytics & { articles: NormalizedArticle[] }>> {
+  const results: Array<RssSourceAnalytics & { articles: NormalizedArticle[] }> = [];
 
-  const results = await Promise.all(
-    CG_RSS_FEEDS.map(async (feed) => {
-      const result = await fetchRssFeed(feed);
-      return { feed, ...result };
+  for (let i = 0; i < sources.length; i += RSS_PARALLEL_BATCH) {
+    const batch = sources.slice(i, i + RSS_PARALLEL_BATCH);
+    const batchResults = await Promise.all(
+      batch.map((source) => fetchOneSource(source, health))
+    );
+    results.push(...batchResults);
+  }
+
+  return results;
+}
+
+export async function fetchRssAll(): Promise<RssFetchResult> {
+  const startedAt = Date.now();
+  const health = await loadSourceHealth();
+
+  const activeSources = [...RSS_SOURCES]
+    .filter((s) => !isSourceSkipped(s, health))
+    .sort((a, b) => b.priority - a.priority);
+
+  const results = await runBatch(activeSources, health);
+
+  const sourceAnalytics: RssSourceAnalytics[] = results.map(
+    ({ source, fetched, valid, rejected, duplicates, skipped, error }) => ({
+      source,
+      fetched,
+      valid,
+      rejected,
+      duplicates,
+      skipped,
+      error,
     })
   );
 
-  const articles: NormalizedArticle[] = [];
-  const errors: string[] = [];
-  let fetched = 0;
+  const merged = results.flatMap((r) => {
+    const src = RSS_SOURCES.find((s) => s.id === r.source);
+    const priority = src?.priority ?? 0;
+    return r.articles.map((a) => ({ ...a, _priority: priority }));
+  });
 
-  for (const r of results) {
-    fetched += r.articles.length;
-    if (r.error) errors.push(`${r.feed.id}: ${r.error}`);
-    articles.push(...r.articles);
-  }
+  const { unique, skipped, fuzzySkipped } = dedupeArticles(
+    merged as (NormalizedArticle & { _priority?: number })[],
+    { fuzzy: true }
+  );
+
+  const errors = results
+    .filter((r) => r.error)
+    .map((r) => `${r.source}: ${r.error}`);
+
+  const totalFetched = sourceAnalytics.reduce((n, s) => n + s.fetched, 0);
+  const totalRejected = sourceAnalytics.reduce((n, s) => n + s.rejected, 0);
+
+  console.log(
+    `[rss] Total: ${unique.length} articles, ${totalRejected} rejected, ${skipped} cross-feed dupes (${fuzzySkipped} fuzzy)`
+  );
 
   return {
     provider: "rss",
-    label: "RSS (Chhattisgarh)",
-    articles,
-    fetched,
-    valid: articles.length,
+    label: "RSS (Chhattisgarh regional)",
+    articles: unique,
+    fetched: totalFetched,
+    valid: unique.length,
     errors,
     durationMs: Date.now() - startedAt,
+    sourceAnalytics,
   };
 }
+
+export { RSS_SOURCES } from "@/lib/news/providers/rss-sources";
+export type { RSSSource } from "@/lib/news/providers/rss-sources";

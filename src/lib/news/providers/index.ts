@@ -38,12 +38,15 @@ export async function fetchAllNewsProviders(): Promise<HybridFetchResult> {
     `[ingest] Fetched ${merged.length}, deduped ${unique.length} (skipped ${skipped}), providers ok: ${hasAnyProvider}`
   );
 
+  const rssAnalytics = rss.sourceAnalytics;
+
   return {
     ok: hasAnyProvider || configuredCount === 0,
     providers,
     articles: unique,
     errors,
     durationMs: Date.now() - startedAt,
+    rssAnalytics,
   };
 }
 

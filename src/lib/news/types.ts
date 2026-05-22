@@ -22,6 +22,16 @@ export type NormalizedArticle = {
   region: NewsRegion;
 };
 
+export type RssSourceAnalytics = {
+  source: string;
+  fetched: number;
+  valid: number;
+  rejected: number;
+  duplicates: number;
+  skipped?: boolean;
+  error?: string;
+};
+
 export type ProviderFetchResult = {
   provider: NewsProviderId;
   label: string;
@@ -30,6 +40,7 @@ export type ProviderFetchResult = {
   valid: number;
   errors: string[];
   durationMs: number;
+  sourceAnalytics?: RssSourceAnalytics[];
 };
 
 export type HybridFetchResult = {
@@ -38,6 +49,7 @@ export type HybridFetchResult = {
   articles: NormalizedArticle[];
   errors: string[];
   durationMs: number;
+  rssAnalytics?: RssSourceAnalytics[];
 };
 
 export type IngestionStats = {

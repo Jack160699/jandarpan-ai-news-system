@@ -31,6 +31,17 @@ export type IngestionFailureRow = {
   created_at: string;
 };
 
+export type RssSourceHealthRow = {
+  source_id: string;
+  name: string;
+  last_success: string | null;
+  last_failure: string | null;
+  failure_count: number;
+  consecutive_failures: number;
+  disabled_until: string | null;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -50,6 +61,12 @@ export type Database = {
         Row: IngestionFailureRow;
         Insert: Partial<IngestionFailureRow>;
         Update: Partial<IngestionFailureRow>;
+        Relationships: [];
+      };
+      rss_source_health: {
+        Row: RssSourceHealthRow;
+        Insert: Partial<RssSourceHealthRow>;
+        Update: Partial<RssSourceHealthRow>;
         Relationships: [];
       };
     };

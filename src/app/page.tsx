@@ -27,12 +27,7 @@ async function LiveNewsSection() {
     return <EditorialHomeSections />;
   }
 
-  return (
-    <>
-      <LiveNewsHome feed={feed} />
-      <EditorialHomeSections />
-    </>
-  );
+  return <LiveNewsHome feed={feed} />;
 }
 
 export default function Home() {
