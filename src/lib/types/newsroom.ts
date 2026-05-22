@@ -70,6 +70,17 @@ export type EditorialImageMeta = {
 
 export type EditorialMetadata = {
   ai_confidence?: number;
+  quality_breakdown?: {
+    structure: number;
+    originality: number;
+    readability: number;
+    local_relevance: number;
+    seo_quality: number;
+  };
+  rejection_reasons?: string[];
+  repaired?: boolean;
+  used_fallback?: boolean;
+  batch_rescue?: boolean;
   image?: EditorialImageMeta;
   source_attribution?: Array<{
     signal_id: string;

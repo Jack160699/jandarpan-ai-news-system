@@ -54,8 +54,10 @@ Produces **original** copy from `news_events` + linked `news_signals`:
 
 - Headline, summary, 5-section body, SEO fields, tags, reading time
 - Hindi or English (`NEWSROOM_EDITORIAL_LANGUAGE` or auto)
-- Quality gates (`editorial-guards.ts`): n-gram duplicate phrasing, source overlap, clickbait/unverified language, numeric fact alignment
-- Only **passed** articles are inserted into `generated_articles` with `editorial_metadata` (confidence, attribution, checks)
+- Quality gates (`editorial-guards.ts`): production-tolerant scoring; hard reject only for empty/unsafe/duplicate/malformed/severe hallucination
+- Borderline drafts auto-repair (`editorial-repair.ts`); batch rescues top 1–2 if all would fail
+- Env: `AI_EDITORIAL_MIN_CONFIDENCE` (default 0.48), `AI_EDITORIAL_STRICT_MODE` (legacy strict 0.62)
+- Logs `[EDITORIAL_DECISION]` with confidence, accepted, rejectionReasons, storyId, title
 
 Enable: `NEWSROOM_GENERATE_ARTICLES=true` + `OPENAI_API_KEY`
 

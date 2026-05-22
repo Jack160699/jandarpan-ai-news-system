@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
+import { getEditorialThresholds } from "@/lib/news/ai/editorial-guards";
 import { processEditorialImageQueue } from "@/lib/news/ai/generate-editorial-image";
 
 export const runtime = "nodejs";
@@ -14,7 +15,6 @@ function isAuthorized(request: NextRequest): boolean {
 
 /**
  * POST /api/generate-articles — batch editorial generation from news_events
- * Requires CRON_SECRET + OPENAI_API_KEY. Does not enable homepage cutover.
  */
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
@@ -38,18 +38,27 @@ export async function POST(request: NextRequest) {
     /* default limit */
   }
 
+  const thresholds = getEditorialThresholds();
   const result = await generateEditorialsFromEvents({ limit });
 
   const imageQueue =
-    result.generated > 0
-      ? await processEditorialImageQueue(Math.min(result.generated, 5))
+    result.published > 0
+      ? await processEditorialImageQueue(Math.min(result.published, 5))
       : null;
 
   return NextResponse.json({
     ok: true,
     generated: result.generated,
     rejected: result.rejected,
+    published: result.published,
+    repaired: result.repaired,
     skipped: result.skipped,
+    avgConfidence: result.avgConfidence,
+    topStory: result.topStory,
+    thresholds: {
+      minConfidence: thresholds.minConfidence,
+      strictMode: thresholds.strictMode,
+    },
     errors: result.errors.slice(0, 20),
     results: result.results,
     editorial_images: imageQueue,

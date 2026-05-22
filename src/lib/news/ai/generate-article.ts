@@ -1,6 +1,5 @@
 /**
- * AI editorial generation — original articles from clustered news_events
- * Stores only quality-passed rows in generated_articles
+ * AI editorial generation — production-tolerant publishing from news_events
  */
 
 import { createAdminServerClient } from "@/lib/supabase";
@@ -11,10 +10,21 @@ import {
   queueEditorialImageForArticle,
 } from "@/lib/news/ai/generate-editorial-image";
 import {
+  logEditorialDecision,
   runEditorialQualityChecks,
   type EditorialQualityReport,
   type SourceAttribution,
 } from "@/lib/news/ai/editorial-guards";
+import {
+  buildFallbackDraftFromFactPack,
+  repairBorderlineDraft,
+} from "@/lib/news/ai/editorial-repair";
+import type {
+  BatchEditorialResult,
+  EditorialDraft,
+  EditorialGenerationResult,
+  SupportedEditorialLanguage,
+} from "@/lib/news/ai/editorial-types";
 import { logNewsroom } from "@/lib/newsroom/logger";
 import type {
   GeneratedArticleInsert,
@@ -23,44 +33,17 @@ import type {
   NewsSignalRow,
 } from "@/lib/types/newsroom";
 
+export type {
+  BatchEditorialResult,
+  EditorialDraft,
+  EditorialGenerationResult,
+  SupportedEditorialLanguage,
+} from "@/lib/news/ai/editorial-types";
+
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const EDITORIAL_TIMEOUT_MS = 28_000;
 const EXCERPT_MAX = 420;
-
-export type SupportedEditorialLanguage = "hi" | "en";
-
-export type EditorialDraft = {
-  headline: string;
-  summary: string;
-  article_body: string;
-  seo_title: string;
-  seo_description: string;
-  tags: string[];
-  reading_time: string;
-  language: SupportedEditorialLanguage;
-};
-
-export type EditorialGenerationResult = {
-  ok: boolean;
-  article: GeneratedArticleRow | null;
-  draft: EditorialDraft | null;
-  quality: EditorialQualityReport | null;
-  skipped: boolean;
-  reason?: string;
-};
-
-export type BatchEditorialResult = {
-  generated: number;
-  rejected: number;
-  skipped: number;
-  errors: string[];
-  results: Array<{
-    eventId: string;
-    ok: boolean;
-    reason?: string;
-    confidence?: number;
-  }>;
-};
+const BATCH_RESCUE_COUNT = 2;
 
 type LlmEditorialResponse = {
   headline?: string;
@@ -95,6 +78,16 @@ const SECTION_LABELS: Record<
     background: "Background",
     conclusion: "Conclusion",
   },
+};
+
+type PendingCandidate = {
+  event: NewsEventRow;
+  draft: EditorialDraft;
+  quality: EditorialQualityReport;
+  signals: NewsSignalRow[];
+  attributions: SourceAttribution[];
+  repaired: boolean;
+  usedFallback: boolean;
 };
 
 function logEditorial(message: string, context?: Record<string, unknown>): void {
@@ -196,7 +189,12 @@ function parseLlmDraft(
   const headline = raw.headline?.trim();
   const summary = raw.summary?.trim();
 
-  if (!headline || !summary || !article_body) return null;
+  if (!headline || !summary) return null;
+  if (!article_body && summary.length < 20) return null;
+
+  const body =
+    article_body ||
+    `## ${SECTION_LABELS[language].intro}\n\n${summary}`;
 
   const seo_title = (raw.seo_title?.trim() || headline).slice(0, 70);
   const seo_description = (raw.seo_description?.trim() || summary).slice(0, 160);
@@ -208,11 +206,11 @@ function parseLlmDraft(
   return {
     headline,
     summary,
-    article_body,
+    article_body: body,
     seo_title,
     seo_description,
     tags,
-    reading_time: computeReadingTime(article_body, language),
+    reading_time: computeReadingTime(body, language),
     language,
   };
 }
@@ -226,8 +224,8 @@ async function callEditorialLlm(
 
   const langInstruction =
     language === "hi"
-      ? "Write in clear, simple Hindi (Devanagari). Use short sentences. Regional Chhattisgarh context when relevant."
-      : "Write in clear, simple English. Regional Chhattisgarh/India context when relevant.";
+      ? "Write in clear, simple Hindi (Devanagari). Short sentences OK for breaking wire."
+      : "Write in clear, simple English. Short wire-style OK for breaking news.";
 
   const body = {
     model:
@@ -242,33 +240,29 @@ async function callEditorialLlm(
         content: `You are a senior editor for a trustworthy regional digital newspaper (Chhattisgarh-first).
 ${langInstruction}
 
-Rules (strict):
+Rules:
 - Synthesize ONLY facts present in the user fact pack. Do NOT invent names, numbers, quotes, or outcomes.
-- Do NOT copy phrasing from sources — write original editorial prose.
-- Professional, concise, trustworthy tone. No sensationalism or clickbait.
-- If a detail is missing, omit it rather than guessing.
-- bilingual-ready: keep proper nouns accurate.
+- Prefer original phrasing; light paraphrase of wire copy is acceptable for regional/breaking items.
+- Professional, concise tone. Avoid sensationalism.
+- Short regional or breaking stories are valid — partial sections are OK if facts are thin.
 
 Return JSON only:
 {
-  "headline": "original headline, max 14 words",
-  "summary": "2-3 sentence editorial summary",
+  "headline": "original headline",
+  "summary": "1-3 sentence summary",
   "sections": {
-    "intro": "summary intro paragraph",
-    "key_developments": "bullet-friendly facts as prose",
-    "regional_implications": "why this matters locally",
-    "background": "brief context",
-    "conclusion": "measured closing"
+    "intro": "paragraph",
+    "key_developments": "prose or bullets as prose",
+    "regional_implications": "local angle (optional if thin)",
+    "background": "brief context (optional)",
+    "conclusion": "closing (optional)"
   },
   "seo_title": "max 60 chars",
   "seo_description": "max 155 chars",
   "tags": ["tag1","tag2"]
 }`,
       },
-      {
-        role: "user",
-        content: factPackText,
-      },
+      { role: "user", content: factPackText },
     ],
     response_format: { type: "json_object" as const },
   };
@@ -296,9 +290,7 @@ Return JSON only:
   return JSON.parse(content) as LlmEditorialResponse;
 }
 
-async function loadSignalsForEvent(
-  event: NewsEventRow
-): Promise<NewsSignalRow[]> {
+async function loadSignalsForEvent(event: NewsEventRow): Promise<NewsSignalRow[]> {
   if (!event.signal_ids?.length) return [];
 
   const supabase = createAdminServerClient();
@@ -315,6 +307,16 @@ async function loadSignalsForEvent(
   return data ?? [];
 }
 
+async function loadExistingHeadlines(): Promise<string[]> {
+  const supabase = createAdminServerClient();
+  const { data } = await supabase
+    .from("generated_articles")
+    .select("headline")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  return (data ?? []).map((r) => r.headline);
+}
+
 function pickSourceHeroImage(signals: NewsSignalRow[]): string | null {
   const ranked = [...signals].sort(
     (a, b) => scoreSourceConfidence(b) - scoreSourceConfidence(a)
@@ -322,141 +324,85 @@ function pickSourceHeroImage(signals: NewsSignalRow[]): string | null {
   return ranked.find((s) => s.image_url)?.image_url ?? null;
 }
 
-/**
- * Generate one original editorial from a news_event + its signals.
- * Persists to generated_articles only when quality checks pass.
- */
-export async function generateEditorialFromEvent(
-  event: NewsEventRow
-): Promise<EditorialGenerationResult> {
-  if (!isEditorialEnabled()) {
-    return {
-      ok: false,
-      article: null,
-      draft: null,
-      quality: null,
-      skipped: true,
-      reason: "OPENAI_API_KEY not set",
-    };
-  }
-
-  const signals = await loadSignalsForEvent(event);
-  if (!signals.length) {
-    return {
-      ok: false,
-      article: null,
-      draft: null,
-      quality: null,
-      skipped: true,
-      reason: "no_signals_for_event",
-    };
-  }
-
-  const language = resolveLanguage(event, signals);
-  const { factPackText, sourceTexts, attributions } = buildFactPack(
-    event,
-    signals
-  );
-
-  logEditorial("generation_start", {
-    eventId: event.id,
-    signalCount: signals.length,
-    language,
+function evaluateDraft(input: {
+  draft: EditorialDraft;
+  event: NewsEventRow;
+  signals: NewsSignalRow[];
+  factPackText: string;
+  sourceTexts: string[];
+  existingHeadlines: string[];
+  forcePublish?: boolean;
+}): EditorialQualityReport {
+  return runEditorialQualityChecks({
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    articleBody: input.draft.article_body,
+    seoTitle: input.draft.seo_title,
+    seoDescription: input.draft.seo_description,
+    sourceTexts: input.sourceTexts,
+    factPackText: input.factPackText,
+    sourceCount: input.signals.length,
+    region: input.event.region,
+    category: input.event.category,
+    language: input.draft.language,
+    existingHeadlines: input.existingHeadlines,
+    forcePublish: input.forcePublish,
   });
+}
 
-  let llmRaw: LlmEditorialResponse | null;
-  try {
-    llmRaw = await callEditorialLlm(factPackText, language);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "LLM failed";
-    logEditorial("llm_error", { eventId: event.id, message: msg });
-    return {
-      ok: false,
-      article: null,
-      draft: null,
-      quality: null,
-      skipped: false,
-      reason: msg,
-    };
-  }
-
-  const draft = llmRaw ? parseLlmDraft(llmRaw, language) : null;
-  if (!draft) {
-    return {
-      ok: false,
-      article: null,
-      draft: null,
-      quality: null,
-      skipped: false,
-      reason: "invalid_llm_response",
-    };
-  }
-
-  const quality = runEditorialQualityChecks({
-    headline: draft.headline,
-    summary: draft.summary,
-    articleBody: draft.article_body,
-    seoTitle: draft.seo_title,
-    seoDescription: draft.seo_description,
-    sourceTexts,
-    factPackText,
-    sourceCount: signals.length,
-  });
-
-  logEditorial("quality_report", {
-    eventId: event.id,
-    passed: quality.passed,
-    confidence: quality.ai_confidence,
-    overlap: quality.source_overlap_score,
-    duplicateCount: quality.duplicate_phrasing.length,
-    flags: quality.hallucination_flags,
-  });
-
-  if (!quality.passed) {
-    return {
-      ok: false,
-      article: null,
-      draft,
-      quality,
-      skipped: false,
-      reason: "quality_checks_failed",
-    };
-  }
-
+async function persistGeneratedArticle(input: {
+  event: NewsEventRow;
+  draft: EditorialDraft;
+  quality: EditorialQualityReport;
+  signals: NewsSignalRow[];
+  attributions: SourceAttribution[];
+  repaired: boolean;
+  usedFallback: boolean;
+  batchRescue?: boolean;
+}): Promise<EditorialGenerationResult> {
   const supabase = createAdminServerClient();
-  const slug = buildArticleSlug(draft.headline, event.id);
+  const slug = buildArticleSlug(input.draft.headline, input.event.id);
   const category =
-    event.category ??
-    signals.find((s) => s.category)?.category ??
+    input.event.category ??
+    input.signals.find((s) => s.category)?.category ??
     "world";
   const hero_image_url =
-    pickSourceHeroImage(signals) ?? initialHeroPlaceholder(category);
+    pickSourceHeroImage(input.signals) ?? initialHeroPlaceholder(category);
 
   const row: GeneratedArticleInsert = {
-    event_id: event.id,
+    event_id: input.event.id,
     slug,
-    headline: draft.headline,
-    summary: draft.summary,
-    article_body: draft.article_body,
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    article_body: input.draft.article_body,
     hero_image_url,
-    seo_title: draft.seo_title,
-    seo_description: draft.seo_description,
-    reading_time: draft.reading_time,
-    language: draft.language,
-    tags: draft.tags.length ? draft.tags : event.category ? [event.category] : [],
+    seo_title: input.draft.seo_title,
+    seo_description: input.draft.seo_description,
+    reading_time: input.draft.reading_time,
+    language: input.draft.language,
+    tags: input.draft.tags.length
+      ? input.draft.tags
+      : input.event.category
+        ? [input.event.category]
+        : [],
     editorial_status: "pending",
     published_at: null,
     editorial_metadata: {
-      ai_confidence: quality.ai_confidence,
-      source_attribution: attributions,
-      quality_report: quality,
+      ai_confidence: input.quality.ai_confidence,
+      source_attribution: input.attributions,
+      quality_report: input.quality,
+      quality_breakdown: input.quality.quality_breakdown,
+      rejection_reasons: input.quality.rejectionReasons,
+      repaired: input.repaired,
+      used_fallback: input.usedFallback,
+      batch_rescue: input.batchRescue ?? false,
       generated_at: new Date().toISOString(),
       model:
         process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
         process.env.OPENAI_MODEL?.trim() ||
         "gpt-4o-mini",
-      event_id: event.id,
-      source_count: signals.length,
+      event_id: input.event.id,
+      source_count: input.signals.length,
       structure: [
         "intro",
         "key_developments",
@@ -467,7 +413,9 @@ export async function generateEditorialFromEvent(
       image: {
         status: "queued",
         hero_url: hero_image_url,
-        source: pickSourceHeroImage(signals) ? "source_extracted" : "category_fallback",
+        source: pickSourceHeroImage(input.signals)
+          ? "source_extracted"
+          : "category_fallback",
       },
     },
   };
@@ -483,28 +431,32 @@ export async function generateEditorialFromEvent(
       return {
         ok: false,
         article: null,
-        draft,
-        quality,
+        draft: input.draft,
+        quality: input.quality,
         skipped: true,
         reason: "slug_already_exists",
       };
     }
-    logEditorial("insert_failed", { message: error.message });
     return {
       ok: false,
       article: null,
-      draft,
-      quality,
+      draft: input.draft,
+      quality: input.quality,
       skipped: false,
       reason: error.message,
     };
   }
 
-  logEditorial("generation_complete", {
-    eventId: event.id,
-    articleId: inserted.id,
-    slug: inserted.slug,
-    confidence: quality.ai_confidence,
+  logEditorialDecision({
+    confidence: input.quality.ai_confidence,
+    accepted: true,
+    rejectionReasons: input.quality.rejectionReasons,
+    storyId: inserted.id,
+    title: input.draft.headline,
+    eventId: input.event.id,
+    repaired: input.repaired,
+    batchRescue: input.batchRescue,
+    quality_breakdown: input.quality.quality_breakdown,
   });
 
   await queueEditorialImageForArticle(inserted.id);
@@ -512,14 +464,198 @@ export async function generateEditorialFromEvent(
   return {
     ok: true,
     article: inserted,
+    draft: input.draft,
+    quality: input.quality,
+    skipped: false,
+    repaired: input.repaired,
+    usedFallback: input.usedFallback,
+  };
+}
+
+async function prepareCandidate(
+  event: NewsEventRow,
+  existingHeadlines: string[]
+): Promise<{
+  candidate: PendingCandidate | null;
+  skipped: boolean;
+  reason?: string;
+}> {
+  const signals = await loadSignalsForEvent(event);
+  if (!signals.length) {
+    return { candidate: null, skipped: true, reason: "no_signals_for_event" };
+  }
+
+  const language = resolveLanguage(event, signals);
+  const { factPackText, sourceTexts, attributions } = buildFactPack(
+    event,
+    signals
+  );
+
+  let draft: EditorialDraft | null = null;
+  let usedFallback = false;
+
+  try {
+    const llmRaw = await callEditorialLlm(factPackText, language);
+    draft = llmRaw ? parseLlmDraft(llmRaw, language) : null;
+  } catch (err) {
+    logEditorial("llm_error", {
+      eventId: event.id,
+      message: err instanceof Error ? err.message : "LLM failed",
+    });
+  }
+
+  if (!draft) {
+    draft = buildFallbackDraftFromFactPack({ event, signals, language });
+    usedFallback = true;
+    logEditorial("fallback_draft_used", { eventId: event.id });
+  }
+
+  let repaired = false;
+  let quality = evaluateDraft({
     draft,
-    quality,
+    event,
+    signals,
+    factPackText,
+    sourceTexts,
+    existingHeadlines,
+  });
+
+  if (quality.should_repair && !quality.hard_reject) {
+    draft = await repairBorderlineDraft({
+      draft,
+      event,
+      factPackText,
+      language,
+    });
+    repaired = true;
+    quality = evaluateDraft({
+      draft,
+      event,
+      signals,
+      factPackText,
+      sourceTexts,
+      existingHeadlines,
+    });
+    logEditorial("borderline_repaired", {
+      eventId: event.id,
+      confidence: quality.ai_confidence,
+      passed: quality.publish_allowed,
+    });
+  }
+
+  return {
+    candidate: {
+      event,
+      draft,
+      quality,
+      signals,
+      attributions,
+      repaired,
+      usedFallback,
+    },
     skipped: false,
   };
 }
 
 /**
- * Batch-generate editorials for events not yet in generated_articles.
+ * Generate one original editorial from a news_event + its signals.
+ */
+export async function generateEditorialFromEvent(
+  event: NewsEventRow,
+  options?: { existingHeadlines?: string[]; forcePublish?: boolean }
+): Promise<EditorialGenerationResult> {
+  if (!isEditorialEnabled()) {
+    return {
+      ok: false,
+      article: null,
+      draft: null,
+      quality: null,
+      skipped: true,
+      reason: "OPENAI_API_KEY not set",
+    };
+  }
+
+  const existingHeadlines =
+    options?.existingHeadlines ?? (await loadExistingHeadlines());
+
+  const prepared = await prepareCandidate(event, existingHeadlines);
+  if (!prepared.candidate) {
+    return {
+      ok: false,
+      article: null,
+      draft: null,
+      quality: null,
+      skipped: prepared.skipped,
+      reason: prepared.reason,
+    };
+  }
+
+  const { candidate } = prepared;
+  let quality = candidate.quality;
+
+  if (options?.forcePublish && !quality.hard_reject) {
+    quality = evaluateDraft({
+      draft: candidate.draft,
+      event: candidate.event,
+      signals: candidate.signals,
+      factPackText: buildFactPack(candidate.event, candidate.signals).factPackText,
+      sourceTexts: buildFactPack(candidate.event, candidate.signals).sourceTexts,
+      existingHeadlines,
+      forcePublish: true,
+    });
+  }
+
+  logEditorial("quality_report", {
+    eventId: event.id,
+    passed: quality.publish_allowed,
+    confidence: quality.ai_confidence,
+    overlap: quality.source_overlap_score,
+    hardReject: quality.hard_reject,
+    rejectionReasons: quality.rejectionReasons,
+    breakdown: quality.quality_breakdown,
+    minConfidence: quality.min_confidence_used,
+    strictMode: quality.strict_mode,
+  });
+
+  if (!quality.publish_allowed) {
+    logEditorialDecision({
+      confidence: quality.ai_confidence,
+      accepted: false,
+      rejectionReasons: quality.rejectionReasons,
+      storyId: null,
+      title: candidate.draft.headline,
+      eventId: event.id,
+      repaired: candidate.repaired,
+      quality_breakdown: quality.quality_breakdown,
+    });
+
+    return {
+      ok: false,
+      article: null,
+      draft: candidate.draft,
+      quality,
+      skipped: false,
+      repaired: candidate.repaired,
+      usedFallback: candidate.usedFallback,
+      reason: quality.hard_reject
+        ? quality.hard_reject_reasons.join(",")
+        : "quality_checks_failed",
+    };
+  }
+
+  return persistGeneratedArticle({
+    event: candidate.event,
+    draft: candidate.draft,
+    quality,
+    signals: candidate.signals,
+    attributions: candidate.attributions,
+    repaired: candidate.repaired,
+    usedFallback: candidate.usedFallback,
+  });
+}
+
+/**
+ * Batch-generate editorials; rescues top scorers if entire batch would fail.
  */
 export async function generateEditorialsFromEvents(options?: {
   limit?: number;
@@ -530,13 +666,18 @@ export async function generateEditorialsFromEvents(options?: {
     return {
       generated: 0,
       rejected: 0,
+      published: 0,
+      repaired: 0,
       skipped: 1,
+      avgConfidence: 0,
+      topStory: null,
       errors: ["OPENAI_API_KEY not set"],
       results: [],
     };
   }
 
   const supabase = createAdminServerClient();
+  const existingHeadlines = await loadExistingHeadlines();
 
   const { data: existing } = await supabase
     .from("generated_articles")
@@ -556,7 +697,11 @@ export async function generateEditorialsFromEvents(options?: {
     return {
       generated: 0,
       rejected: 0,
+      published: 0,
+      repaired: 0,
       skipped: 1,
+      avgConfidence: 0,
+      topStory: null,
       errors: error ? [error.message] : [],
       results: [],
     };
@@ -564,30 +709,217 @@ export async function generateEditorialsFromEvents(options?: {
 
   const pending = events.filter((e) => !usedEventIds.has(e.id)).slice(0, limit);
 
-  let generated = 0;
+  let published = 0;
   let rejected = 0;
+  let repaired = 0;
   let skipped = 0;
   const errors: string[] = [];
   const results: BatchEditorialResult["results"] = [];
+  const failedCandidates: PendingCandidate[] = [];
+  const confidenceScores: number[] = [];
+  let lastPublishedStory: { id: string; title: string; confidence: number } | null =
+    null;
 
   for (const event of pending) {
-    const result = await generateEditorialFromEvent(event);
-    results.push({
-      eventId: event.id,
-      ok: result.ok,
-      reason: result.reason,
-      confidence: result.quality?.ai_confidence,
-    });
+    const prepared = await prepareCandidate(event, [
+      ...existingHeadlines,
+      ...failedCandidates.map((c) => c.draft.headline),
+    ]);
 
-    if (result.ok) generated++;
-    else if (result.skipped) skipped++;
-    else {
+    if (!prepared.candidate) {
+      skipped++;
+      results.push({
+        eventId: event.id,
+        ok: false,
+        reason: prepared.reason,
+      });
+      continue;
+    }
+
+    const { candidate } = prepared;
+    confidenceScores.push(candidate.quality.ai_confidence);
+
+    if (candidate.repaired) repaired++;
+
+    if (candidate.quality.publish_allowed) {
+      const saved = await persistGeneratedArticle({
+        event: candidate.event,
+        draft: candidate.draft,
+        quality: candidate.quality,
+        signals: candidate.signals,
+        attributions: candidate.attributions,
+        repaired: candidate.repaired,
+        usedFallback: candidate.usedFallback,
+      });
+
+      results.push({
+        eventId: event.id,
+        ok: saved.ok,
+        published: saved.ok,
+        repaired: candidate.repaired,
+        reason: saved.reason,
+        confidence: candidate.quality.ai_confidence,
+        rejectionReasons: candidate.quality.rejectionReasons,
+      });
+
+      if (saved.ok && saved.article) {
+        published++;
+        existingHeadlines.push(candidate.draft.headline);
+        if (
+          !lastPublishedStory ||
+          candidate.quality.ai_confidence > lastPublishedStory.confidence
+        ) {
+          lastPublishedStory = {
+            id: saved.article.id,
+            title: saved.article.headline,
+            confidence: candidate.quality.ai_confidence,
+          };
+        }
+      } else if (saved.skipped) skipped++;
+      else {
+        rejected++;
+        if (saved.reason) errors.push(`${event.id}: ${saved.reason}`);
+      }
+    } else {
+      failedCandidates.push(candidate);
       rejected++;
-      if (result.reason) errors.push(`${event.id}: ${result.reason}`);
+      results.push({
+        eventId: event.id,
+        ok: false,
+        published: false,
+        repaired: candidate.repaired,
+        reason: candidate.quality.hard_reject
+          ? candidate.quality.hard_reject_reasons.join(",")
+          : "quality_checks_failed",
+        confidence: candidate.quality.ai_confidence,
+        rejectionReasons: candidate.quality.rejectionReasons,
+      });
+
+      logEditorialDecision({
+        confidence: candidate.quality.ai_confidence,
+        accepted: false,
+        rejectionReasons: candidate.quality.rejectionReasons,
+        storyId: null,
+        title: candidate.draft.headline,
+        eventId: event.id,
+        repaired: candidate.repaired,
+        quality_breakdown: candidate.quality.quality_breakdown,
+      });
     }
   }
 
-  logEditorial("batch_complete", { generated, rejected, skipped });
+  if (published === 0 && failedCandidates.length > 0) {
+    const rescuable = failedCandidates
+      .filter((c) => !c.quality.hard_reject)
+      .sort((a, b) => b.quality.ai_confidence - a.quality.ai_confidence)
+      .slice(0, BATCH_RESCUE_COUNT);
 
-  return { generated, rejected, skipped, errors, results };
+    for (const candidate of rescuable) {
+      const { factPackText, sourceTexts } = buildFactPack(
+        candidate.event,
+        candidate.signals
+      );
+      const quality = evaluateDraft({
+        draft: candidate.draft,
+        event: candidate.event,
+        signals: candidate.signals,
+        factPackText,
+        sourceTexts,
+        existingHeadlines,
+        forcePublish: true,
+      });
+
+      const saved = await persistGeneratedArticle({
+        event: candidate.event,
+        draft: candidate.draft,
+        quality,
+        signals: candidate.signals,
+        attributions: candidate.attributions,
+        repaired: candidate.repaired,
+        usedFallback: candidate.usedFallback,
+        batchRescue: true,
+      });
+
+      if (saved.ok && saved.article) {
+        published++;
+        rejected = Math.max(0, rejected - 1);
+        const idx = results.findIndex((r) => r.eventId === candidate.event.id);
+        const entry = {
+          eventId: candidate.event.id,
+          ok: true,
+          published: true,
+          repaired: candidate.repaired,
+          reason: "batch_rescue_top_scorer",
+          confidence: quality.ai_confidence,
+          rejectionReasons: [] as string[],
+        };
+        if (idx >= 0) results[idx] = entry;
+        else results.push(entry);
+        existingHeadlines.push(candidate.draft.headline);
+        if (
+          !lastPublishedStory ||
+          quality.ai_confidence > lastPublishedStory.confidence
+        ) {
+          lastPublishedStory = {
+            id: saved.article.id,
+            title: saved.article.headline,
+            confidence: quality.ai_confidence,
+          };
+        }
+      }
+    }
+
+    logEditorial("batch_rescue", {
+      rescued: published,
+      candidates: rescuable.length,
+    });
+  }
+
+  const avgConfidence =
+    confidenceScores.length > 0
+      ? Math.round(
+          (confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length) *
+            1000
+        ) / 1000
+      : 0;
+
+  let topStory: BatchEditorialResult["topStory"] = null;
+  const bestFailed = [...failedCandidates].sort(
+    (a, b) => b.quality.ai_confidence - a.quality.ai_confidence
+  )[0];
+
+  if (lastPublishedStory) {
+    topStory = {
+      storyId: lastPublishedStory.id,
+      title: lastPublishedStory.title,
+      confidence: lastPublishedStory.confidence,
+    };
+  } else if (bestFailed) {
+    topStory = {
+      storyId: null,
+      title: bestFailed.draft.headline,
+      confidence: bestFailed.quality.ai_confidence,
+    };
+  }
+
+  logEditorial("batch_complete", {
+    published,
+    rejected,
+    repaired,
+    skipped,
+    avgConfidence,
+    topStory,
+  });
+
+  return {
+    generated: published,
+    rejected,
+    published,
+    repaired,
+    skipped,
+    avgConfidence,
+    topStory,
+    errors,
+    results,
+  };
 }
