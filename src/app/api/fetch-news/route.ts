@@ -20,21 +20,38 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-function isAuthorized(request: Request): boolean {
-  const cronSecret = process.env.CRON_SECRET;
+function parseBearerToken(authorization: string | null): string | null {
+  if (!authorization) return null;
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : null;
+}
+
+function checkCronAuth(request: Request): {
+  authorized: boolean;
+  bearerToken: string | null;
+  cronHeader: string | null;
+} {
+  const cronSecret = process.env.CRON_SECRET?.trim() || null;
+  const bearerToken = parseBearerToken(request.headers.get("authorization"));
+  const cronHeader = request.headers.get("x-cron-secret")?.trim() ?? null;
 
   if (cronSecret) {
-    const auth = request.headers.get("authorization");
-    if (auth === `Bearer ${cronSecret}`) return true;
+    if (bearerToken === cronSecret || cronHeader === cronSecret) {
+      return { authorized: true, bearerToken, cronHeader };
+    }
   }
 
   if (process.env.NODE_ENV === "development") {
     const url = new URL(request.url);
-    if (url.searchParams.get("dev") === "1") return true;
-    if (!cronSecret) return true;
+    if (url.searchParams.get("dev") === "1") {
+      return { authorized: true, bearerToken, cronHeader };
+    }
+    if (!cronSecret) {
+      return { authorized: true, bearerToken, cronHeader };
+    }
   }
 
-  return false;
+  return { authorized: false, bearerToken, cronHeader };
 }
 
 function hasAnyProviderConfigured(): boolean {
@@ -56,8 +73,18 @@ export async function POST(request: Request) {
 async function handleFetchNews(request: Request) {
   const startedAt = Date.now();
 
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  const auth = checkCronAuth(request);
+  if (!auth.authorized) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unauthorized",
+        expectedExists: !!process.env.CRON_SECRET?.trim(),
+        bearerReceived: !!auth.bearerToken,
+        xCronReceived: !!auth.cronHeader,
+      },
+      { status: 401 }
+    );
   }
 
   if (!isSupabaseConfigured()) {
@@ -108,6 +135,9 @@ async function handleFetchNews(request: Request) {
       fetchDurationMs: fetchResult.durationMs,
       errors: fetchResult.errors,
       rssAnalytics: fetchResult.rssAnalytics,
+      healthySources: fetchResult.healthySources,
+      failedSources: fetchResult.failedSources,
+      articlesRecoveredByFallback: fetchResult.articlesRecoveredByFallback,
       imageAnalytics,
     });
 
@@ -129,6 +159,9 @@ async function handleFetchNews(request: Request) {
       providerStats: pipeline.providerStats,
       providers: fetchResult.providers,
       rssSourceAnalytics: fetchResult.rssAnalytics,
+      healthySources: fetchResult.healthySources,
+      failedSources: fetchResult.failedSources,
+      articlesRecoveredByFallback: fetchResult.articlesRecoveredByFallback,
       imageAnalytics,
       errors: [...fetchResult.errors, ...ai.errors],
       failures: pipeline.failures,

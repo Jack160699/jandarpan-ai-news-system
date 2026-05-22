@@ -13,11 +13,13 @@ export async function fetchAllNewsProviders(): Promise<HybridFetchResult> {
 
   console.log("[ingest] Starting parallel provider fetch…");
 
-  const [gnews, newsdata, rss] = await Promise.all([
-    fetchGNewsAll(),
-    fetchNewsDataAll(),
-    fetchRssAll(),
+  const [gnews, newsdata, rssResult] = await Promise.all([
+    fetchGNewsAll().catch((e) => emptyProvider("gnews", "GNews", e)),
+    fetchNewsDataAll().catch((e) => emptyProvider("newsdata", "NewsData.io", e)),
+    fetchRssAll().catch((e) => emptyRss(e)),
   ]);
+
+  const rss = rssResult;
 
   const providers = [gnews, newsdata, rss];
   const merged = [...gnews.articles, ...newsdata.articles, ...rss.articles];
@@ -38,15 +40,50 @@ export async function fetchAllNewsProviders(): Promise<HybridFetchResult> {
     `[ingest] Fetched ${merged.length}, deduped ${unique.length} (skipped ${skipped}), providers ok: ${hasAnyProvider}`
   );
 
-  const rssAnalytics = rss.sourceAnalytics;
-
   return {
     ok: hasAnyProvider || configuredCount === 0,
     providers,
     articles: unique,
     errors,
     durationMs: Date.now() - startedAt,
-    rssAnalytics,
+    rssAnalytics: rss.sourceAnalytics,
+    healthySources: rss.healthySources,
+    failedSources: rss.failedSources,
+    articlesRecoveredByFallback: rss.articlesRecoveredByFallback,
+  };
+}
+
+function emptyProvider(
+  provider: "gnews" | "newsdata",
+  label: string,
+  err: unknown
+): import("@/lib/news/types").ProviderFetchResult {
+  const msg = err instanceof Error ? err.message : "provider failed";
+  return {
+    provider,
+    label,
+    articles: [],
+    fetched: 0,
+    valid: 0,
+    errors: [msg],
+    durationMs: 0,
+  };
+}
+
+function emptyRss(err: unknown): import("@/lib/news/providers/rss").RssFetchResult {
+  const msg = err instanceof Error ? err.message : "RSS failed";
+  return {
+    provider: "rss",
+    label: "RSS",
+    articles: [],
+    fetched: 0,
+    valid: 0,
+    errors: [msg],
+    durationMs: 0,
+    sourceAnalytics: [],
+    healthySources: [],
+    failedSources: [],
+    articlesRecoveredByFallback: 0,
   };
 }
 

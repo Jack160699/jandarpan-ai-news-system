@@ -43,6 +43,13 @@ export type ProviderFetchResult = {
   sourceAnalytics?: RssSourceAnalytics[];
 };
 
+export type RssIngestionSummary = {
+  rssSourceAnalytics: RssSourceAnalytics[];
+  healthySources: string[];
+  failedSources: string[];
+  articlesRecoveredByFallback: number;
+};
+
 export type HybridFetchResult = {
   ok: boolean;
   providers: ProviderFetchResult[];
@@ -50,6 +57,9 @@ export type HybridFetchResult = {
   errors: string[];
   durationMs: number;
   rssAnalytics?: RssSourceAnalytics[];
+  healthySources?: string[];
+  failedSources?: string[];
+  articlesRecoveredByFallback?: number;
 };
 
 export type IngestionStats = {

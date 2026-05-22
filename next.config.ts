@@ -20,6 +20,12 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.ndtv.com", pathname: "/**" },
       { protocol: "https", hostname: "**.ndtvimg.com", pathname: "/**" },
       { protocol: "https", hostname: "**.pib.gov.in", pathname: "/**" },
+      { protocol: "https", hostname: "news.google.com", pathname: "/**" },
+      { protocol: "https", hostname: "**.googleusercontent.com", pathname: "/**" },
+      { protocol: "https", hostname: "**.amarujala.com", pathname: "/**" },
+      { protocol: "https", hostname: "**.livehindustan.com", pathname: "/**" },
+      { protocol: "https", hostname: "**.webdunia.com", pathname: "/**" },
+      { protocol: "https", hostname: "**.ddnews.gov.in", pathname: "/**" },
     ],
   },
 };

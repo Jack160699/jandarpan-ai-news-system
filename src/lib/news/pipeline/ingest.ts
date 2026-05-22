@@ -51,6 +51,9 @@ export async function runIngestionPipeline(
       duplicates: number;
     }>;
     imageAnalytics?: ImageEnrichmentAnalytics;
+    healthySources?: string[];
+    failedSources?: string[];
+    articlesRecoveredByFallback?: number;
   }
 ): Promise<PipelineResult> {
   const startedAt = Date.now();
@@ -129,6 +132,9 @@ export async function runIngestionPipeline(
       metadata: {
         providers: meta.providers,
         rss_source_analytics: meta.rssAnalytics ?? [],
+        rss_healthy_sources: meta.healthySources ?? [],
+        rss_failed_sources: meta.failedSources ?? [],
+        articles_recovered_by_fallback: meta.articlesRecoveredByFallback ?? 0,
         image_analytics: meta.imageAnalytics ?? null,
       },
     })

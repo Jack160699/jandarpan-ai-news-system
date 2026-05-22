@@ -1,11 +1,12 @@
 /**
- * RSS source health — skip dead feeds, track success/failure in Supabase
+ * RSS source health — skip dead feeds, dashboard API data
  */
 
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase";
 import {
   RSS_DISABLE_HOURS,
   RSS_MAX_CONSECUTIVE_FAILURES,
+  RSS_SOURCES,
   type RSSSource,
 } from "@/lib/news/providers/rss-sources";
 
@@ -17,6 +18,20 @@ export type SourceHealthRecord = {
   failure_count: number;
   consecutive_failures: number;
   disabled_until: string | null;
+  last_article_count?: number;
+  avg_articles?: number;
+};
+
+export type RssHealthDashboardEntry = {
+  source: string;
+  name: string;
+  healthy: boolean;
+  failures: number;
+  lastSuccess: string | null;
+  avgArticles: number;
+  disabledUntil: string | null;
+  tier: string;
+  url: string;
 };
 
 const memoryHealth = new Map<string, SourceHealthRecord>();
@@ -34,7 +49,15 @@ export async function loadSourceHealth(): Promise<Map<string, SourceHealthRecord
     const { data } = await supabase.from("rss_source_health").select("*");
 
     for (const row of data ?? []) {
-      map.set(row.source_id, row as SourceHealthRecord);
+      const r = row as SourceHealthRecord & {
+        last_article_count?: number;
+        avg_articles?: number;
+      };
+      map.set(r.source_id, {
+        ...r,
+        last_article_count: r.last_article_count ?? 0,
+        avg_articles: r.avg_articles ?? 0,
+      });
     }
   } catch {
     for (const [k, v] of memoryHealth) map.set(k, v);
@@ -52,9 +75,6 @@ export function isSourceSkipped(
 
   const until = new Date(record.disabled_until).getTime();
   if (Date.now() < until) {
-    console.log(
-      `[rss-health] Skipping ${source.id} (disabled until ${record.disabled_until})`
-    );
     return true;
   }
   return false;
@@ -62,17 +82,27 @@ export function isSourceSkipped(
 
 export async function recordSourceSuccess(
   source: RSSSource,
-  health: Map<string, SourceHealthRecord>
+  health: Map<string, SourceHealthRecord>,
+  articleCount: number
 ): Promise<void> {
   const now = new Date().toISOString();
+  const prev = health.get(source.id);
+  const prevAvg = prev?.avg_articles ?? 0;
+  const avg_articles =
+    articleCount > 0
+      ? Math.round(prevAvg * 0.6 + articleCount * 0.4)
+      : prevAvg;
+
   const record: SourceHealthRecord = {
     source_id: source.id,
     name: source.name,
     last_success: now,
-    last_failure: health.get(source.id)?.last_failure ?? null,
-    failure_count: health.get(source.id)?.failure_count ?? 0,
+    last_failure: prev?.last_failure ?? null,
+    failure_count: prev?.failure_count ?? 0,
     consecutive_failures: 0,
     disabled_until: null,
+    last_article_count: articleCount,
+    avg_articles,
   };
 
   health.set(source.id, record);
@@ -94,7 +124,7 @@ export async function recordSourceFailure(
     until.setHours(until.getHours() + RSS_DISABLE_HOURS);
     disabled_until = until.toISOString();
     console.warn(
-      `[rss-health] Disabling ${source.id} for ${RSS_DISABLE_HOURS}h after ${consecutive} failures: ${errorMessage}`
+      `[rss-health] Disabled ${source.id} (${RSS_DISABLE_HOURS}h): ${errorMessage}`
     );
   }
 
@@ -106,25 +136,12 @@ export async function recordSourceFailure(
     failure_count: (prev?.failure_count ?? 0) + 1,
     consecutive_failures: consecutive,
     disabled_until,
+    last_article_count: 0,
+    avg_articles: prev?.avg_articles ?? 0,
   };
 
   health.set(source.id, record);
   await persistHealth(record);
-
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = createAdminClient();
-      await supabase.from("ingestion_failures").insert({
-        title: source.name,
-        article_url: source.url,
-        provider: "rss",
-        reason: `feed_failure: ${errorMessage.slice(0, 200)}`,
-        payload: { source_id: source.id, consecutive },
-      });
-    } catch {
-      /* non-fatal */
-    }
-  }
 }
 
 async function persistHealth(record: SourceHealthRecord): Promise<void> {
@@ -136,7 +153,13 @@ async function persistHealth(record: SourceHealthRecord): Promise<void> {
     const supabase = createAdminClient();
     await supabase.from("rss_source_health").upsert(
       {
-        ...record,
+        source_id: record.source_id,
+        name: record.name,
+        last_success: record.last_success,
+        last_failure: record.last_failure,
+        failure_count: record.failure_count,
+        consecutive_failures: record.consecutive_failures,
+        disabled_until: record.disabled_until,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "source_id" }
@@ -144,4 +167,27 @@ async function persistHealth(record: SourceHealthRecord): Promise<void> {
   } catch (err) {
     console.warn("[rss-health] persist failed:", err);
   }
+}
+
+export async function getRssHealthDashboard(): Promise<RssHealthDashboardEntry[]> {
+  const health = await loadSourceHealth();
+
+  return RSS_SOURCES.map((source) => {
+    const record = health.get(source.id);
+    const disabled =
+      record?.disabled_until &&
+      new Date(record.disabled_until).getTime() > Date.now();
+
+    return {
+      source: source.id,
+      name: source.name,
+      healthy: Boolean(record?.last_success) && !disabled,
+      failures: record?.failure_count ?? 0,
+      lastSuccess: record?.last_success ?? null,
+      avgArticles: record?.avg_articles ?? record?.last_article_count ?? 0,
+      disabledUntil: record?.disabled_until ?? null,
+      tier: source.tier,
+      url: source.url,
+    };
+  });
 }
