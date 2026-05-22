@@ -58,6 +58,21 @@ export type NewsAiQueueRow = {
   error: string | null;
 };
 
+export type EditorialImageQueueRow = {
+  id: string;
+  generated_article_id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  attempts: number;
+  max_attempts: number;
+  prompt_hash: string | null;
+  hero_image_url: string | null;
+  og_image_url: string | null;
+  image_source: string | null;
+  error: string | null;
+  created_at: string;
+  processed_at: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -107,6 +122,12 @@ export type Database = {
         Row: GeneratedArticleRow;
         Insert: GeneratedArticleInsert;
         Update: Partial<GeneratedArticleInsert>;
+        Relationships: [];
+      };
+      editorial_image_queue: {
+        Row: EditorialImageQueueRow;
+        Insert: Partial<EditorialImageQueueRow>;
+        Update: Partial<EditorialImageQueueRow>;
         Relationships: [];
       };
     };

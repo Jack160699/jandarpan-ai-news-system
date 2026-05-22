@@ -9,6 +9,12 @@ Run in order in the SQL editor (or `supabase db push`):
 5. `005_news_articles_public_read.sql` — **required** if homepage is empty but ingestion succeeds (anon RLS read)
 6. `006_news_ai_queue.sql` — async AI enrichment queue for `/api/process-ai`
 7. `007_ai_newsroom_layers.sql` — `news_signals`, `news_events`, `generated_articles`
+8. `008_event_clustering_metadata.sql` — `clustering_metadata` on `news_events`
+9. `009_generated_article_editorial_metadata.sql` — `editorial_metadata` on `generated_articles`
+10. `010_editorial_image_queue.sql` — async hero image generation queue
+11. `011_editorial_control.sql` — approve/reject, homepage pins on generated_articles
+
+After migration 010, create a **public** Storage bucket `editorial-images` in Supabase Dashboard.
 
 After `004`, re-run ingestion so existing rows receive `slug` values.
 

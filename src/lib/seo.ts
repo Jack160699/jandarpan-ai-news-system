@@ -86,6 +86,31 @@ export function articleJsonLd(article: Article) {
   };
 }
 
+export function websiteJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: BRAND.nameEn,
+    alternateName: BRAND.nameHi,
+    url: SITE_URL,
+    description: BRAND.taglineEn,
+    inLanguage: ["hi-IN", "en-IN"],
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+    publisher: {
+      "@type": "NewsMediaOrganization",
+      name: BRAND.nameEn,
+      url: SITE_URL,
+    },
+  };
+}
+
 export function webPageJsonLd(title: string, description: string, path: string) {
   return {
     "@context": "https://schema.org",

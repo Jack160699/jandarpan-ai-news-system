@@ -80,8 +80,8 @@ export const en: Dictionary = {
   },
   search: {
     title: "Search edition",
-    placeholder: "Search headlines, topics, cities…",
-    hint: "Concept demo — search is illustrative only.",
+    placeholder: "Raipur crime today, CG politics, farmer news…",
+    hint: "Hindi + English · districts · categories · typo tolerant",
   },
   archive: {
     backToEdition: "← Today's edition",

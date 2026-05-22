@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 
 type ReadingProgressProps = {
   target?: string;
+  className?: string;
 };
 
-export function ReadingProgress({ target = "article" }: ReadingProgressProps) {
+export function ReadingProgress({
+  target = "article",
+  className = "",
+}: ReadingProgressProps) {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -36,7 +40,7 @@ export function ReadingProgress({ target = "article" }: ReadingProgressProps) {
 
   return (
     <div
-      className="reading-progress fixed left-0 right-0 top-0 z-[60] h-[2px] bg-[var(--rule)]"
+      className={`reading-progress fixed left-0 right-0 top-0 z-[60] h-[2px] bg-[var(--rule)] ${className}`.trim()}
       role="progressbar"
       aria-valuenow={Math.round(progress * 100)}
       aria-valuemin={0}

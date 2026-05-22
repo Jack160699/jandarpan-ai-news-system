@@ -44,6 +44,25 @@ html[data-reading-mode="comfort"] .deck {
   font-size: 1.0625rem;
 }
 
+html[data-reading-mode="comfort"] .immersive-story {
+  --read-leading: 1.92;
+}
+
+html[data-font-scale="sm"] .immersive-story__paragraph,
+html[data-font-scale="sm"] .immersive-summary__text {
+  font-size: 1rem;
+}
+
+html[data-font-scale="lg"] .immersive-story__paragraph,
+html[data-font-scale="lg"] .immersive-summary__text {
+  font-size: 1.25rem;
+}
+
+html[data-font-scale="xl"] .immersive-story__paragraph,
+html[data-font-scale="xl"] .immersive-summary__text {
+  font-size: 1.375rem;
+}
+
 /* Language gate */
 .language-gate {
   position: fixed;

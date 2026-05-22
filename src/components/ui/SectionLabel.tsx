@@ -15,7 +15,7 @@ export function SectionLabel({
     <span
       className={cn(
         "meta-label inline-block",
-        variant === "breaking" && "!text-[var(--accent-orange)]",
+        variant === "breaking" && "!text-[var(--ds-live)]",
         variant === "muted" && "meta-label--muted",
         className
       )}

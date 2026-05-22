@@ -41,6 +41,7 @@ export type NewsEventRow = {
   urgency_score: number;
   source_count: number;
   signal_ids: string[];
+  clustering_metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
@@ -53,7 +54,40 @@ export type NewsEventInsert = {
   urgency_score?: number;
   source_count?: number;
   signal_ids?: string[];
+  clustering_metadata?: Record<string, unknown>;
 };
+
+export type EditorialImageMeta = {
+  source?: string;
+  hero_url?: string;
+  og_url?: string;
+  prompt_hash?: string | null;
+  status?: "queued" | "completed" | "failed";
+  compressed?: boolean;
+  moderation_flags?: string[];
+  processed_at?: string;
+};
+
+export type EditorialMetadata = {
+  ai_confidence?: number;
+  image?: EditorialImageMeta;
+  source_attribution?: Array<{
+    signal_id: string;
+    source: string | null;
+    provider: string;
+    article_url: string;
+    published_at: string | null;
+    confidence: number;
+  }>;
+  quality_report?: Record<string, unknown>;
+  generated_at?: string;
+  model?: string;
+  event_id?: string;
+  source_count?: number;
+  structure?: string[];
+};
+
+export type EditorialArticleStatus = "pending" | "approved" | "rejected";
 
 export type GeneratedArticleRow = {
   id: string;
@@ -69,6 +103,10 @@ export type GeneratedArticleRow = {
   language: string | null;
   tags: string[];
   published_at: string | null;
+  editorial_status?: EditorialArticleStatus;
+  homepage_pin?: boolean;
+  pinned_at?: string | null;
+  editorial_metadata: EditorialMetadata;
   created_at: string;
 };
 
@@ -85,4 +123,9 @@ export type GeneratedArticleInsert = {
   language?: string | null;
   tags?: string[];
   published_at?: string | null;
+  editorial_status?: EditorialArticleStatus;
+  homepage_pin?: boolean;
+  pinned_at?: string | null;
+  reviewed_at?: string | null;
+  editorial_metadata?: EditorialMetadata;
 };

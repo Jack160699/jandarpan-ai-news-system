@@ -4,11 +4,7 @@
 
 import { createAdminServerClient } from "@/lib/supabase";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
-import {
-  clusterRecentSignals,
-  logNewsroom,
-  publishGeneratedFromEvents,
-} from "@/lib/newsroom";
+import { clusterRecentSignals, logNewsroom } from "@/lib/newsroom";
 import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
 import {
   ingestProviderArticles,
@@ -170,13 +166,24 @@ export async function runScalableIngestion(
 
   const clusterResult = await clusterRecentSignals(30).catch(() => ({
     eventsCreated: 0,
+    eventsUpdated: 0,
     signalsProcessed: 0,
+    signalsClustered: 0,
+    duplicatesMerged: 0,
     skipped: true,
-  }));
-
-  const generateResult = await publishGeneratedFromEvents(10).catch(() => ({
-    published: 0,
-    skipped: true,
+    analytics: {
+      signalsFetched: 0,
+      unprocessedCount: 0,
+      pairsCompared: 0,
+      duplicatePairs: 0,
+      clustersFormed: 0,
+      singletonClusters: 0,
+      multiSourceClusters: 0,
+      avgClusterSize: 0,
+      avgSimilarity: 0,
+      method: "keyword_tfidf" as const,
+      sourceConfidenceAvg: 0,
+    },
   }));
 
   const supabase = createAdminServerClient();
@@ -215,8 +222,9 @@ export async function runScalableIngestion(
         validation_stats: validationStats,
         signals_inserted: signalsInserted,
         events_clustered: clusterResult.eventsCreated,
-        generated_published: generateResult.published,
-        newsroom_layers: ["news_signals", "news_events", "generated_articles"],
+        duplicates_merged: clusterResult.duplicatesMerged,
+        clustering_analytics: clusterResult.analytics,
+        newsroom_layers: ["news_signals", "news_events"],
         scalable: true,
       },
     })
@@ -236,7 +244,8 @@ export async function runScalableIngestion(
     failedValidation,
     queuedForAI: pendingAi,
     eventsClustered: clusterResult.eventsCreated,
-    generatedPublished: generateResult.published,
+    duplicatesMerged: clusterResult.duplicatesMerged,
+    clusteringAnalytics: clusterResult.analytics,
     durationMs,
     completedProviders,
     skippedProviders,

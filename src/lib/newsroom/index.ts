@@ -21,6 +21,53 @@ export {
 } from "@/lib/newsroom/bridge/legacy-publish";
 export { clusterRecentSignals } from "@/lib/newsroom/events/cluster";
 export {
+  clusterSignalsIntoEvents,
+  fetchUnprocessedSignals,
+  scoreSourceConfidence,
+} from "@/lib/news/ai/event-clustering";
+export type {
+  ClusterSignalsResult,
+  DuplicateDetectionAnalytics,
+} from "@/lib/news/ai/event-clustering";
+export {
   publishGeneratedFromEvents,
   isGeneratedArticlesHomepageEnabled,
 } from "@/lib/newsroom/generated/publish";
+export {
+  generateEditorialFromEvent,
+  generateEditorialsFromEvents,
+} from "@/lib/news/ai/generate-article";
+export type {
+  EditorialDraft,
+  EditorialGenerationResult,
+  BatchEditorialResult,
+  SupportedEditorialLanguage,
+} from "@/lib/news/ai/generate-article";
+export {
+  runEditorialQualityChecks,
+  type EditorialQualityReport,
+  type SourceAttribution,
+} from "@/lib/news/ai/editorial-guards";
+export {
+  rankArticlesForHomepage,
+  computeHomepagePriorityScore,
+  detectTrendingArticleIds,
+  logHomepageRankingAnalytics,
+} from "@/lib/news/ai/ranking";
+export type {
+  RankingMetadata,
+  RankingFactorBreakdown,
+  RankingPersonalization,
+  HomepageRankingAnalytics,
+} from "@/lib/news/ai/ranking";
+export {
+  resolveEditorialHeroImage,
+  processEditorialImageQueue,
+  queueEditorialImageForArticle,
+  isEditorialImageGenerationEnabled,
+} from "@/lib/news/ai/generate-editorial-image";
+export type {
+  EditorialImageMetadata,
+  ResolveEditorialImageResult,
+  ProcessEditorialImageQueueResult,
+} from "@/lib/news/ai/generate-editorial-image";

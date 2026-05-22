@@ -1,14 +1,15 @@
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ArticleView } from "@/sections/ArticleView";
-import { LiveStoryPage } from "@/sections/story/LiveStoryPage";
+import { ImmersiveStoryPage } from "@/sections/story/ImmersiveStoryPage";
 import { getAllArticleSlugs, getArticle } from "@/lib/articles";
+import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
+import { pickRelatedStories } from "@/lib/news/related-stories";
 import {
-  getArticleBySlug,
-  getLiveStorySlugs,
-  getRelatedStoriesForArticle,
-  fetchArticlePool,
-} from "@/lib/news-db";
+  fetchGeneratedArticlePool,
+  getGeneratedArticleBySlug,
+  getGeneratedArticleSlugs,
+} from "@/lib/newsroom/generated/read";
 import { liveStoryMetadata } from "@/lib/news/story-seo";
 import { NOINDEX_ROBOTS, SITE_URL, articleJsonLd } from "@/lib/seo";
 
@@ -19,20 +20,23 @@ type PageProps = {
 };
 
 export async function generateStaticParams() {
-  const editorial = getAllArticleSlugs().map((slug) => ({ slug }));
   try {
-    const live = await getLiveStorySlugs(200);
-    const liveParams = live.map((slug) => ({ slug }));
-    return [...editorial, ...liveParams];
+    const generated = await getGeneratedArticleSlugs(200);
+    if (generated.length) {
+      return generated.map((slug) => ({ slug }));
+    }
   } catch {
-    return editorial;
+    /* fallback */
   }
+  return getAllArticleSlugs().map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: PageProps) {
   const { slug } = await params;
-  const live = await getArticleBySlug(slug);
-  if (live) return liveStoryMetadata(live);
+  const generated = await getGeneratedArticleBySlug(slug);
+  if (generated) {
+    return liveStoryMetadata(generatedToNewsArticle(generated));
+  }
 
   const editorial = getArticle(slug);
   if (!editorial) return { title: "Story not found" };
@@ -62,25 +66,18 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function StoryPage({ params }: PageProps) {
   const { slug } = await params;
 
-  const liveArticle = await getArticleBySlug(slug);
+  const generatedRow = await getGeneratedArticleBySlug(slug);
 
-  if (liveArticle) {
-    const [related, topicPool] = await Promise.all([
-      getRelatedStoriesForArticle(liveArticle, 6),
-      fetchArticlePool(),
-    ]);
+  if (generatedRow) {
+    const liveArticle = generatedToNewsArticle(generatedRow);
+    const poolRows = await fetchGeneratedArticlePool(80);
+    const topicPool = poolRows.map(generatedToNewsArticle);
+    const related = pickRelatedStories(liveArticle, topicPool, 4);
 
     return (
       <PageShell variant="news">
-        <main
-          data-narrative-root
-          className="home-news-flow mobile-comfort thumb-zone relative z-[2]"
-        >
-          <LiveStoryPage
-            article={liveArticle}
-            related={related}
-            topicPool={topicPool}
-          />
+        <main id="main-content" className="relative z-[2]" role="main">
+          <ImmersiveStoryPage article={liveArticle} related={related} />
         </main>
       </PageShell>
     );

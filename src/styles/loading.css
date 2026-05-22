@@ -13,9 +13,9 @@
 .loading-screen__brand {
   font-family: var(--font-display), Georgia, serif;
   font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--accent-red-deep);
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: var(--ink-headline);
+  letter-spacing: -0.03em;
 }
 
 .loading-screen__label {
@@ -42,8 +42,8 @@
   display: block;
   width: 40%;
   height: 100%;
-  background: var(--accent-orange);
-  animation: loading-shimmer 1.2s ease-in-out infinite;
+  background: var(--ds-accent);
+  animation: loading-shimmer 1.4s var(--ds-ease) infinite;
 }
 
 @keyframes loading-shimmer {
@@ -88,16 +88,17 @@
 }
 
 /* Feed skeletons */
-.skeleton {
+.skeleton,
+.ds-skeleton {
   background: linear-gradient(
     90deg,
     var(--paper-muted) 0%,
-    var(--paper-shadow) 45%,
-    var(--paper-muted) 90%
+    color-mix(in srgb, var(--paper-muted) 65%, var(--paper-elevated)) 50%,
+    var(--paper-muted) 100%
   );
   background-size: 200% 100%;
-  animation: skeleton-wave 1.4s ease-in-out infinite;
-  border-radius: 2px;
+  animation: skeleton-wave 1.6s var(--ds-ease) infinite;
+  border-radius: var(--ds-radius-sm);
 }
 
 @keyframes skeleton-wave {

@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "**.livehindustan.com", pathname: "/**" },
       { protocol: "https", hostname: "**.webdunia.com", pathname: "/**" },
       { protocol: "https", hostname: "**.ddnews.gov.in", pathname: "/**" },
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
     ],
   },
 };

@@ -2,18 +2,18 @@
 
 import { useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { SearchPanel } from "@/components/search/SearchPanel";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 
 export function SearchOverlay() {
   const { searchOpen, setSearchOpen } = useReaderPreferences();
   const { t } = useLanguage();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!searchOpen) return;
-    inputRef.current?.focus();
     const prev = isMobile ? document.body.style.overflow : "";
     if (isMobile) document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
@@ -37,21 +37,13 @@ export function SearchOverlay() {
       onClick={() => setSearchOpen(false)}
     >
       <div
+        ref={inputRef}
         className="search-overlay__panel"
         onClick={(e) => e.stopPropagation()}
       >
         {isMobile ? <div className="mobile-sheet__handle mb-3" aria-hidden /> : null}
         <p className="meta-label text-[var(--ink-faint)]">{t.search.title}</p>
-        <input
-          ref={inputRef}
-          type="search"
-          placeholder={t.search.placeholder}
-          aria-label={t.search.title}
-          className="mt-2"
-        />
-        <p className="editorial-body mt-3 text-sm text-[var(--ink-muted)]">
-          {t.search.hint}
-        </p>
+        <SearchPanel compact onNavigate={() => setSearchOpen(false)} />
         <button
           type="button"
           className="meta-label mt-5 min-h-[44px] text-[var(--ink-faint)] tap-target"

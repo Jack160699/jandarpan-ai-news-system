@@ -16,6 +16,7 @@ import {
   REGIONAL_KEYWORDS,
   SITE_URL,
   organizationJsonLd,
+  websiteJsonLd,
 } from "@/lib/seo";
 import { getThemeColor } from "@/lib/reader-preferences";
 import "@/styles/globals.css";
@@ -53,7 +54,10 @@ export const metadata: Metadata = {
     template: `%s · ${BRAND.nameEn}`,
   },
   description:
-    "Live Chhattisgarh regional newsroom — ranked headlines from Raipur, Bastar, Bilaspur, and statewide sources. Politics, sports, business, and breaking wire.",
+    "Premium regional news from Chhattisgarh — calm, fast, and trustworthy. AI-edited stories from Raipur, Bastar, Bilaspur, and across the state.",
+  applicationName: BRAND.nameEn,
+  category: "news",
+  formatDetection: { telephone: false },
   keywords: REGIONAL_KEYWORDS,
   openGraph: {
     title: `${BRAND.nameEn} — Chhattisgarh News`,
@@ -91,11 +95,17 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${dmMono.variable} native-scroll h-full`}
     >
-      <body className="min-h-full antialiased">
+      <body className="min-h-full antialiased text-[var(--ink-primary)]">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(organizationJsonLd()),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(websiteJsonLd()),
           }}
         />
         <ThemeScript />

@@ -1,16 +1,16 @@
 /**
- * AI-generated editorial articles → generated_articles (public layer)
- * Stub: full generation pipeline to be implemented
+ * Publish AI editorials from news_events → generated_articles
+ * Only finalized articles (quality-passed) are stored
  */
 
-import { createAdminServerClient } from "@/lib/supabase";
-import { buildArticleSlug } from "@/lib/news/slug";
+import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
 import { logNewsroom } from "@/lib/newsroom/logger";
-import type { GeneratedArticleInsert } from "@/lib/types/newsroom";
 
 export type GenerateArticlesResult = {
   published: number;
+  rejected: number;
   skipped: boolean;
+  errors: string[];
 };
 
 export function isGeneratedArticlesHomepageEnabled(): boolean {
@@ -18,57 +18,31 @@ export function isGeneratedArticlesHomepageEnabled(): boolean {
 }
 
 /**
- * Placeholder: publish minimal generated articles from events without full LLM body.
- * Replace with OpenAI editorial generation for production.
+ * Generate original editorials for clustered events (requires OPENAI_API_KEY).
+ * Gated by NEWSROOM_GENERATE_ARTICLES=true — does not auto-enable homepage cutover.
  */
 export async function publishGeneratedFromEvents(
-  limit = 20
+  limit = 8
 ): Promise<GenerateArticlesResult> {
   if (process.env.NEWSROOM_GENERATE_ARTICLES !== "true") {
     logNewsroom("generated", "generation_disabled", {
       hint: "Set NEWSROOM_GENERATE_ARTICLES=true to enable",
     });
-    return { published: 0, skipped: true };
+    return { published: 0, rejected: 0, skipped: true, errors: [] };
   }
 
-  const supabase = createAdminServerClient();
-  const { data: events, error } = await supabase
-    .from("news_events")
-    .select("id, canonical_title, event_summary, category, region, signal_ids")
-    .order("urgency_score", { ascending: false })
-    .limit(limit);
+  const batch = await generateEditorialsFromEvents({ limit });
 
-  if (error || !events?.length) {
-    return { published: 0, skipped: true };
-  }
+  logNewsroom("generated", "publish_batch_complete", {
+    published: batch.generated,
+    rejected: batch.rejected,
+    skipped: batch.skipped,
+  });
 
-  let published = 0;
-
-  for (const event of events) {
-    const slug = buildArticleSlug(event.canonical_title, event.id);
-    const row: GeneratedArticleInsert = {
-      event_id: event.id,
-      slug,
-      headline: event.canonical_title,
-      summary: event.event_summary,
-      article_body: event.event_summary,
-      hero_image_url: null,
-      seo_title: event.canonical_title,
-      seo_description: event.event_summary?.slice(0, 160) ?? null,
-      reading_time: "3 min",
-      language: "hi",
-      tags: event.category ? [event.category] : [],
-      published_at: new Date().toISOString(),
-    };
-
-    const { error: upsertError } = await supabase
-      .from("generated_articles")
-      .upsert(row, { onConflict: "slug", ignoreDuplicates: true });
-
-    if (!upsertError) published++;
-  }
-
-  logNewsroom("generated", "publish_batch_complete", { published });
-
-  return { published, skipped: false };
+  return {
+    published: batch.generated,
+    rejected: batch.rejected,
+    skipped: batch.skipped > 0 && batch.generated === 0,
+    errors: batch.errors,
+  };
 }

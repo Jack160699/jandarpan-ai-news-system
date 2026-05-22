@@ -14,14 +14,15 @@ export function Footer() {
     <footer
       id="footer"
       data-section="footer"
-      className="news-scroll-target relative z-10 border-t border-[var(--rule-strong)] bg-[var(--paper-elevated)] pb-10 pt-8"
+      className="news-scroll-target relative z-10 border-t border-[var(--rule)] bg-[var(--paper)] pb-12 pt-10"
     >
       <div className="editorial-container">
-        <p className="masthead-title-en pointer-events-none !text-[clamp(2rem,8vw,4rem)] opacity-[0.07]">
-          {BRAND.nameEn}
+        <p className="ds-kicker">{BRAND.nameEn}</p>
+        <p className="mt-2 font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--ink-headline)]">
+          {BRAND.taglineEn}
         </p>
 
-        <Rule className="my-10" />
+        <Rule className="my-8" />
 
         <div className="grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-5">

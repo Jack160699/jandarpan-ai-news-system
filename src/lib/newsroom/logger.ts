@@ -5,7 +5,15 @@
 export type NewsroomLogContext = Record<string, unknown>;
 
 export function logNewsroom(
-  stage: "signals" | "events" | "generated" | "bridge" | "pipeline",
+  stage:
+    | "signals"
+    | "events"
+    | "generated"
+    | "editorial-image"
+    | "ranking"
+    | "search"
+    | "bridge"
+    | "pipeline",
   message: string,
   context?: NewsroomLogContext
 ): void {
@@ -19,7 +27,15 @@ export function logNewsroom(
 }
 
 export function logNewsroomError(
-  stage: "signals" | "events" | "generated" | "bridge" | "pipeline",
+  stage:
+    | "signals"
+    | "events"
+    | "generated"
+    | "editorial-image"
+    | "ranking"
+    | "search"
+    | "bridge"
+    | "pipeline",
   message: string,
   error: unknown,
   context?: NewsroomLogContext

@@ -17,8 +17,18 @@ html.native-scroll {
 
 /* Image load — subtle fade */
 .feed-card__media img,
-.article-figure__media img {
-  transition: opacity 0.2s ease;
+.article-figure__media img,
+.hp-hero__visual img,
+.hp-regional__thumb img,
+.hp-shorts__visual img {
+  transition: opacity var(--ds-duration-normal) var(--ds-ease);
+}
+
+/* GPU-friendly list rendering on long pages */
+.hp__section,
+.search-result,
+.immersive-story__body p {
+  -webkit-font-smoothing: antialiased;
 }
 
 .feed-card__media img[data-loaded="false"] {

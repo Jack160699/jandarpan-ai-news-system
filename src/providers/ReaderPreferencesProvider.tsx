@@ -15,6 +15,7 @@ import {
   savePreferences,
   type EditionChoice,
   type ReaderPreferences,
+  type FontScale,
   type ReaderTheme,
   type ReadingMode,
 } from "@/lib/reader-preferences";
@@ -31,6 +32,8 @@ type ReaderPreferencesContextValue = {
   setReadingMode: (mode: ReadingMode) => void;
   toggleReadingMode: () => void;
   setEdition: (edition: EditionChoice) => void;
+  setFontScale: (scale: FontScale) => void;
+  cycleFontScale: () => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
 };
@@ -121,6 +124,18 @@ export function ReaderPreferencesProvider({
     [update]
   );
 
+  const setFontScale = useCallback(
+    (fontScale: FontScale) => update({ fontScale }),
+    [update]
+  );
+
+  const cycleFontScale = useCallback(() => {
+    const order: FontScale[] = ["sm", "base", "lg", "xl"];
+    const idx = order.indexOf(prefs.fontScale ?? "base");
+    const next = order[(idx + 1) % order.length];
+    update({ fontScale: next });
+  }, [update, prefs.fontScale]);
+
   const value = useMemo(
     () => ({
       prefs,
@@ -129,6 +144,8 @@ export function ReaderPreferencesProvider({
       setReadingMode,
       toggleReadingMode,
       setEdition,
+      setFontScale,
+      cycleFontScale,
       searchOpen,
       setSearchOpen,
     }),
@@ -139,6 +156,8 @@ export function ReaderPreferencesProvider({
       setReadingMode,
       toggleReadingMode,
       setEdition,
+      setFontScale,
+      cycleFontScale,
       searchOpen,
     ]
   );

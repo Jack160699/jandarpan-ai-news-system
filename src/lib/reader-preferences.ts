@@ -1,12 +1,14 @@
 export type ReaderLanguage = "en" | "hi" | "cg";
 export type ReaderTheme = "light" | "dark";
 export type ReadingMode = "standard" | "comfort";
+export type FontScale = "sm" | "base" | "lg" | "xl";
 export type EditionChoice = "morning" | "afternoon" | "evening" | "late";
 
 export type ReaderPreferences = {
   language: ReaderLanguage;
   theme: ReaderTheme;
   readingMode: ReadingMode;
+  fontScale: FontScale;
   edition: EditionChoice;
   languageChosen: boolean;
 };
@@ -17,6 +19,7 @@ export const DEFAULT_PREFERENCES: ReaderPreferences = {
   language: "hi",
   theme: "light",
   readingMode: "standard",
+  fontScale: "base",
   edition: "morning",
   languageChosen: false,
 };
@@ -61,6 +64,7 @@ export function applyPreferencesToDocument(prefs: ReaderPreferences) {
   const root = document.documentElement;
   root.setAttribute("data-theme", prefs.theme);
   root.setAttribute("data-reading-mode", prefs.readingMode);
+  root.setAttribute("data-font-scale", prefs.fontScale ?? "base");
   root.setAttribute("data-language", prefs.language);
   root.lang = prefs.language === "en" ? "en" : "hi";
 }

@@ -1,0 +1,404 @@
+/* Immersive article reading — calm, premium, mobile-first */
+
+.immersive-story {
+  --read-max: 40rem;
+  --read-pad: clamp(1.25rem, 4vw, 2rem);
+  --read-prose: 1.125rem;
+  --read-leading: 1.8;
+  padding-bottom: clamp(3rem, 10vw, 5rem);
+  background: var(--paper);
+}
+
+html[data-font-scale="sm"] .immersive-story {
+  --read-prose: 1rem;
+  --read-leading: 1.72;
+}
+
+html[data-font-scale="lg"] .immersive-story {
+  --read-prose: 1.25rem;
+  --read-leading: 1.85;
+}
+
+html[data-font-scale="xl"] .immersive-story {
+  --read-prose: 1.375rem;
+  --read-leading: 1.9;
+}
+
+.immersive-story__shell {
+  max-width: 48rem;
+  margin-inline: auto;
+  padding-inline: var(--read-pad);
+}
+
+/* Sticky reader chrome */
+.immersive-chrome {
+  position: sticky;
+  top: 2px;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem var(--read-pad);
+  margin-inline: calc(-1 * var(--read-pad));
+  background: var(--ds-surface-overlay);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  border-bottom: 1px solid var(--rule);
+}
+
+.immersive-chrome__back {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.immersive-chrome__back:hover {
+  color: var(--ink-headline);
+}
+
+.immersive-chrome__tools {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.immersive-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  padding: 0 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--ds-radius-full);
+  background: var(--paper-elevated);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--ink-body);
+  cursor: pointer;
+  transition:
+    border-color var(--ds-duration-fast) var(--ds-ease),
+    color var(--ds-duration-fast) var(--ds-ease),
+    background var(--ds-duration-fast) var(--ds-ease);
+}
+
+.immersive-tool:hover {
+  border-color: var(--rule-strong);
+  color: var(--ink-headline);
+}
+
+.immersive-tool--active {
+  border-color: var(--ds-accent);
+  color: var(--ds-accent);
+  background: var(--ds-accent-soft);
+}
+
+.immersive-tool__toast {
+  position: fixed;
+  bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  background: var(--ink-headline);
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.immersive-tool__toast--show {
+  opacity: 1;
+}
+
+/* Header */
+.immersive-story__header {
+  padding-top: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.immersive-story__kicker {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-category);
+}
+
+.immersive-story__headline {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--ink-headline);
+  margin: 0.75rem 0 0;
+}
+
+.immersive-story__subtitle {
+  font-family: var(--font-body), Georgia, serif;
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+  line-height: 1.55;
+  color: var(--ink-muted);
+  margin: 1rem 0 0;
+  max-width: var(--read-max);
+}
+
+.immersive-story__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 1.25rem;
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.immersive-story__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent-red-deep);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+}
+
+.immersive-story__live-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: immersive-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes immersive-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Hero */
+.immersive-story__hero {
+  position: relative;
+  margin-top: 2rem;
+  aspect-ratio: 16 / 10;
+  max-height: min(52vh, 480px);
+  overflow: hidden;
+  background: var(--paper-muted);
+}
+
+@media (min-width: 768px) {
+  .immersive-story__hero {
+    aspect-ratio: 2 / 1;
+    border-radius: 2px;
+  }
+}
+
+/* AI summary */
+.immersive-summary {
+  margin-top: 2.5rem;
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--rule);
+  background: var(--paper-elevated);
+  max-width: var(--read-max);
+}
+
+.immersive-summary__label {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-category);
+  margin-bottom: 0.625rem;
+}
+
+.immersive-summary__text {
+  font-family: var(--font-body), Georgia, serif;
+  font-size: calc(var(--read-prose) * 0.95);
+  line-height: var(--read-leading);
+  color: var(--ink-body);
+  margin: 0;
+}
+
+/* Prose */
+.immersive-story__prose {
+  margin-top: 2.5rem;
+  max-width: var(--read-max);
+}
+
+.immersive-story__section {
+  margin-bottom: 2.25rem;
+}
+
+.immersive-story__section-title {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--ink-headline);
+  margin: 0 0 1rem;
+  padding-top: 0.5rem;
+}
+
+.immersive-story__paragraph {
+  font-family: var(--font-body), Georgia, serif;
+  font-size: var(--read-prose);
+  line-height: var(--read-leading);
+  color: var(--ink-body);
+  margin: 0 0 1.35rem;
+}
+
+/* Timeline */
+.immersive-timeline {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--rule);
+  max-width: var(--read-max);
+}
+
+.immersive-timeline__title {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem;
+  color: var(--ink-headline);
+}
+
+.immersive-timeline__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.immersive-timeline__item {
+  display: grid;
+  grid-template-columns: 1rem 1fr;
+  gap: 0 1.25rem;
+  padding-bottom: 1.5rem;
+  position: relative;
+}
+
+.immersive-timeline__item::before {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  top: 1.25rem;
+  bottom: 0;
+  width: 1px;
+  background: var(--rule);
+}
+
+.immersive-timeline__item:last-child::before {
+  display: none;
+}
+
+.immersive-timeline__marker {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--accent-red-deep);
+  margin-top: 0.35rem;
+  z-index: 1;
+}
+
+.immersive-timeline__label {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.immersive-timeline__detail {
+  font-family: var(--font-body), Georgia, serif;
+  font-size: calc(var(--read-prose) * 0.94);
+  line-height: 1.6;
+  color: var(--ink-body);
+  margin-top: 0.35rem;
+}
+
+/* Related */
+.immersive-related {
+  margin-top: 3.5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--rule);
+}
+
+.immersive-related__title {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem;
+}
+
+.immersive-related__grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .immersive-related__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.immersive-related__card {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 1rem;
+  text-decoration: none;
+  color: inherit;
+  align-items: start;
+}
+
+.immersive-related__thumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--paper-muted);
+  overflow: hidden;
+}
+
+.immersive-related__headline {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink-headline);
+}
+
+.immersive-related__meta {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  margin-top: 0.35rem;
+}
+
+/* Progress bar enhancement */
+.reading-progress--immersive {
+  height: 3px;
+  z-index: 60;
+}
+
+.reading-progress--immersive .reading-progress__bar {
+  background: var(--accent-red-deep);
+}

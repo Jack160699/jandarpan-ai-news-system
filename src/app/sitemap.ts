@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getLiveStorySlugs } from "@/lib/news-db";
+import { getGeneratedArticleSlugs } from "@/lib/newsroom/generated/read";
 import { SITE_URL } from "@/lib/seo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -18,11 +18,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.5,
     },
+    {
+      url: `${SITE_URL}/search`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.7,
+    },
   ];
 
   let live: MetadataRoute.Sitemap = [];
   try {
-    const slugs = await getLiveStorySlugs(800);
+    const slugs = await getGeneratedArticleSlugs(800);
     live = slugs.map((slug) => ({
       url: `${SITE_URL}/story/${slug}`,
       lastModified: now,
