@@ -8,6 +8,7 @@ Run in order in the SQL editor (or `supabase db push`):
 4. `004_article_slug.sql` — SEO slugs for `/story/[slug]` (required before production indexing)
 5. `005_news_articles_public_read.sql` — **required** if homepage is empty but ingestion succeeds (anon RLS read)
 6. `006_news_ai_queue.sql` — async AI enrichment queue for `/api/process-ai`
+7. `007_ai_newsroom_layers.sql` — `news_signals`, `news_events`, `generated_articles`
 
 After `004`, re-run ingestion so existing rows receive `slug` values.
 

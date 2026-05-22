@@ -136,6 +136,7 @@ async function handleFetchNews(request: Request) {
     return NextResponse.json({
       ok: true,
       inserted: result.inserted,
+      signalsInserted: result.signalsInserted,
       skippedDuplicates: result.skippedDuplicates,
       failedValidation: result.failedValidation,
       validationStats: result.validationStats,

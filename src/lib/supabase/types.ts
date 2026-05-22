@@ -3,6 +3,14 @@
  */
 
 import type { NewsArticleRow, NewsArticleInsert } from "@/lib/types/news-article";
+import type {
+  GeneratedArticleRow,
+  GeneratedArticleInsert,
+  NewsEventRow,
+  NewsEventInsert,
+  NewsSignalRow,
+  NewsSignalInsert,
+} from "@/lib/types/newsroom";
 
 export type IngestionLogRow = {
   id: string;
@@ -81,6 +89,24 @@ export type Database = {
         Row: NewsAiQueueRow;
         Insert: Partial<NewsAiQueueRow>;
         Update: Partial<NewsAiQueueRow>;
+        Relationships: [];
+      };
+      news_signals: {
+        Row: NewsSignalRow;
+        Insert: NewsSignalInsert;
+        Update: Partial<NewsSignalInsert>;
+        Relationships: [];
+      };
+      news_events: {
+        Row: NewsEventRow;
+        Insert: NewsEventInsert;
+        Update: Partial<NewsEventInsert>;
+        Relationships: [];
+      };
+      generated_articles: {
+        Row: GeneratedArticleRow;
+        Insert: GeneratedArticleInsert;
+        Update: Partial<GeneratedArticleInsert>;
         Relationships: [];
       };
     };

@@ -2,8 +2,13 @@
  * Scalable ingestion orchestrator — parallel providers, incremental upserts, async AI
  */
 
-import { createAdminClient } from "@/lib/supabase";
+import { createAdminServerClient } from "@/lib/supabase";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
+import {
+  clusterRecentSignals,
+  logNewsroom,
+  publishGeneratedFromEvents,
+} from "@/lib/newsroom";
 import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
 import {
   ingestProviderArticles,
@@ -17,6 +22,7 @@ import type { ExecutionDeadline } from "@/lib/serverless/deadline";
 export type ScalableIngestResult = {
   ok: boolean;
   inserted: number;
+  signalsInserted: number;
   skippedDuplicates: number;
   failedValidation: number;
   totalFetched: number;
@@ -58,6 +64,7 @@ export async function runScalableIngestion(
   const categoryStats: Record<string, number> = {};
   const providerStats: Record<string, number> = {};
   let inserted = 0;
+  let signalsInserted = 0;
   let skippedDuplicates = 0;
   let failedValidation = 0;
   let totalFetched = 0;
@@ -92,6 +99,7 @@ export async function runScalableIngestion(
     });
 
     inserted += ingested.inserted;
+    signalsInserted += ingested.signalsInserted;
     skippedDuplicates += ingested.skippedDuplicates;
     failedValidation += ingested.failedValidation;
     queuedForAI += ingested.queuedForAI;
@@ -160,7 +168,18 @@ export async function runScalableIngestion(
   const durationMs = Date.now() - startedAt;
   const pendingAi = await countPendingAiQueue().catch(() => queuedForAI);
 
-  const supabase = createAdminClient();
+  const clusterResult = await clusterRecentSignals(30).catch(() => ({
+    eventsCreated: 0,
+    signalsProcessed: 0,
+    skipped: true,
+  }));
+
+  const generateResult = await publishGeneratedFromEvents(10).catch(() => ({
+    published: 0,
+    skipped: true,
+  }));
+
+  const supabase = createAdminServerClient();
   const status =
     inserted > 0
       ? deadline.timedOutSafely
@@ -194,6 +213,10 @@ export async function runScalableIngestion(
         articles_recovered_by_fallback: rssSummary.articlesRecoveredByFallback,
         image_analytics: imageAnalytics,
         validation_stats: validationStats,
+        signals_inserted: signalsInserted,
+        events_clustered: clusterResult.eventsCreated,
+        generated_published: generateResult.published,
+        newsroom_layers: ["news_signals", "news_events", "generated_articles"],
         scalable: true,
       },
     })
@@ -202,15 +225,18 @@ export async function runScalableIngestion(
 
   const normalized = validationStats.sanitized;
 
-  console.log("INGESTION_FINAL_REPORT", {
+  logNewsroom("pipeline", "INGESTION_FINAL_REPORT", {
     fetched: totalFetched,
     normalized,
     sanitized: validationStats.sanitized,
     softFixed: validationStats.softFixed,
-    inserted,
+    signalsInserted,
+    legacyInserted: inserted,
     rejected: validationStats.rejected,
     failedValidation,
     queuedForAI: pendingAi,
+    eventsClustered: clusterResult.eventsCreated,
+    generatedPublished: generateResult.published,
     durationMs,
     completedProviders,
     skippedProviders,
@@ -221,6 +247,7 @@ export async function runScalableIngestion(
   return {
     ok: inserted > 0 || totalFetched > 0,
     inserted,
+    signalsInserted,
     skippedDuplicates,
     failedValidation,
     totalFetched,
