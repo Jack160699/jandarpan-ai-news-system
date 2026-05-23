@@ -1,38 +1,30 @@
 @import "tailwindcss";
 @import "./design-system.css";
+@import "./theme-system.css";
+@import "./typography-system.css";
 @import "./responsive-system.css";
-@import "./shell-layout.css";
 @import "./layout-system.css";
+@import "./navigation-system.css";
+@import "./editorial-system.css";
 @import "./typography.css";
 @import "./motion.css";
-@import "./motion-premium.css";
-@import "./motion-cinematic.css";
 @import "./cards-premium.css";
 @import "./media-system.css";
-@import "./intelligence.css";
-@import "./institution.css";
 @import "./brand-jan-darpan.css";
 @import "./editorial-layout.css";
 @import "./reader.css";
 @import "./news-density.css";
 @import "./news-feed.css";
 @import "./navigation.css";
-@import "./navigation-mobile.css";
 @import "./navigation-routes.css";
 @import "./footer-premium.css";
 @import "./readability.css";
 @import "./article-reading.css";
 @import "./loading.css";
 @import "./premium-loading.css";
-@import "./app-shell-transitions.css";
-@import "./mobile-ux.css";
-@import "./mobile-newsroom.css";
-@import "./mobile-native.css";
 @import "./production.css";
 @import "./story-page.css";
 @import "./homepage.css";
-@import "./newspaper-premium.css";
-@import "./homepage-premium.css";
 @import "./homepage-daily.css";
 @import "./homepage-desktop.css";
 @import "./homepage-perf.css";
@@ -42,54 +34,17 @@
 @import "./seo.css";
 @import "./evolving-coverage.css";
 @import "./multilingual.css";
-
-/* Language switcher polish */
-.lang-switch--grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-}
-
-.lang-switch__chip {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.15rem;
-  padding: 0.75rem 0.875rem;
-  border: 1px solid var(--rule);
-  border-radius: var(--ds-radius-md);
-  background: var(--paper-elevated);
-  text-align: left;
-}
-
-.lang-switch__chip.is-active {
-  border-color: var(--ds-accent);
-  background: color-mix(in srgb, var(--ds-accent) 10%, var(--paper));
-}
-
-.lang-switch__native {
-  font-size: 1.0625rem;
-  font-weight: 700;
-  color: var(--ink-headline);
-}
-
-.lang-switch__label {
-  font-size: 0.6875rem;
-  color: var(--ink-muted);
-}
-
 @import "./news-shorts.css";
 @import "./reels.css";
-@import "./reels-premium.css";
 @import "./breaking-live.css";
 @import "./live-newsroom.css";
 @import "./live-desk.css";
 @import "./listen-headlines.css";
+@import "./mobile-native.css";
 
 :root {
-  --space-section-tight: clamp(1.25rem, 2.5vh, 2rem);
+  --space-section-tight: clamp(1rem, 2vh, 1.5rem);
   --space-column: clamp(1rem, 3vw, 1.5rem);
-  --accent-investigation: #2c3e50;
 }
 
 @theme inline {
@@ -116,8 +71,6 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink-primary);
-  font-family: var(--font-body), Georgia, "Times New Roman", serif;
-  line-height: 1.5;
 }
 
 ::selection {
@@ -144,10 +97,7 @@ body {
 }
 
 .paper-grain,
-.paper-fiber {
-  display: none;
-}
-
+.paper-fiber,
 .ink-vignette {
   display: none;
 }
@@ -172,16 +122,6 @@ body {
   text-underline-offset: 0.15em;
 }
 
-/* .editorial-container → responsive-system.css */
-
-.section-pad {
-  padding-block: var(--space-section);
-}
-
-.section-pad-tight {
-  padding-block: var(--space-section-tight);
-}
-
 img {
   max-width: 100%;
   height: auto;
@@ -191,7 +131,7 @@ a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--ds-accent);
+  outline: 2px solid var(--th-primary);
   outline-offset: 2px;
 }
 
@@ -201,11 +141,11 @@ select:focus-visible {
   top: 0;
   z-index: var(--rs-z-skip);
   padding: 0.75rem 1rem;
-  font-family: var(--font-ui);
-  font-size: var(--ds-text-ui);
+  font-family: var(--ty-font-ui);
+  font-size: var(--ty-sm);
   font-weight: 600;
-  background: var(--ds-ink);
-  color: var(--ds-surface-raised);
+  background: var(--th-ink);
+  color: #fff;
   border-radius: var(--ds-radius-sm);
   text-decoration: none;
 }
@@ -215,10 +155,36 @@ select:focus-visible {
   top: 0.75rem;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  @media (hover: hover) {
-    a:not(.skip-link):hover {
-      transition: opacity var(--ds-duration-fast) var(--ds-ease);
-    }
-  }
+.lang-switch--grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.lang-switch__chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--ds-radius-md);
+  background: var(--paper-elevated);
+  text-align: left;
+}
+
+.lang-switch__chip.is-active {
+  border-color: var(--th-primary);
+  background: color-mix(in srgb, var(--th-primary) 8%, var(--paper));
+}
+
+.lang-switch__native {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--ink-headline);
+}
+
+.lang-switch__label {
+  font-size: var(--ty-xs);
+  color: var(--ink-muted);
 }

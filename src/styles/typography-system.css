@@ -1,0 +1,96 @@
+/**
+ * Typography System — editorial Hindi + modern English UI
+ */
+
+:root {
+  --ty-font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --ty-font-body: var(--font-body), Georgia, serif;
+  --ty-font-hindi: var(--font-hindi), "Noto Serif Devanagari", var(--ty-font-display);
+  --ty-font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ty-font-meta: var(--font-meta), ui-monospace, monospace;
+
+  --ty-2xs: 0.625rem;
+  --ty-xs: 0.6875rem;
+  --ty-sm: 0.75rem;
+  --ty-base: 0.875rem;
+  --ty-md: 1rem;
+  --ty-lg: 1.125rem;
+  --ty-xl: 1.25rem;
+  --ty-2xl: clamp(1.125rem, 2vw + 0.5rem, 1.5rem);
+  --ty-hero: clamp(1.25rem, 2.5vw + 0.5rem, 1.75rem);
+
+  --ty-leading-tight: 1.2;
+  --ty-leading-snug: 1.35;
+  --ty-leading-normal: 1.5;
+
+  /* Sync responsive-system */
+  --rs-text-2xs: var(--ty-2xs);
+  --rs-text-xs: var(--ty-xs);
+  --rs-text-sm: var(--ty-sm);
+  --rs-text-base: var(--ty-base);
+  --rs-text-md: var(--ty-md);
+  --rs-text-lg: var(--ty-lg);
+  --rs-text-xl: var(--ty-xl);
+  --rs-text-headline-sm: var(--ty-lg);
+  --rs-text-headline-md: var(--ty-xl);
+  --rs-text-headline-lg: var(--ty-2xl);
+  --rs-hero-headline: var(--ty-hero);
+
+  --ds-font-display: var(--ty-font-display);
+  --ds-font-body: var(--ty-font-body);
+  --ds-font-ui: var(--ty-font-ui);
+  --ds-font-meta: var(--ty-font-meta);
+
+  --ds-text-2xs: var(--ty-2xs);
+  --ds-text-xs: var(--ty-xs);
+  --ds-text-sm: var(--ty-sm);
+  --ds-text-base: var(--ty-base);
+  --ds-text-md: var(--ty-md);
+  --ds-text-lg: var(--ty-lg);
+  --ds-text-xl: var(--ty-xl);
+  --ds-text-2xl: var(--ty-2xl);
+  --ds-text-hero: var(--ty-hero);
+  --ds-leading-tight: var(--ty-leading-tight);
+  --ds-leading-snug: var(--ty-leading-snug);
+  --ds-leading-normal: var(--ty-leading-normal);
+}
+
+body {
+  font-family: var(--ty-font-body);
+  font-size: var(--ty-base);
+  line-height: var(--ty-leading-normal);
+  color: var(--ink-primary);
+}
+
+[lang="hi"],
+.hi-text,
+.nr-breaking-hero__headline,
+.nr-card__headline,
+.bh-hero__headline,
+.bh-card__headline {
+  font-family: var(--ty-font-hindi);
+}
+
+.ty-kicker {
+  font-family: var(--ty-font-ui);
+  font-size: var(--ty-2xs);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--th-primary);
+}
+
+.ty-section-title {
+  font-family: var(--ty-font-hindi);
+  font-size: var(--ty-lg);
+  font-weight: 700;
+  line-height: var(--ty-leading-tight);
+  color: var(--ink-headline);
+  margin: 0;
+}
+
+.ty-meta {
+  font-family: var(--ty-font-ui);
+  font-size: var(--ty-xs);
+  color: var(--ink-muted);
+}

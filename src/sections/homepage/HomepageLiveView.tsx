@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import { AdSlot } from "@/components/monetization/AdSlot";
-import { HomepageMasthead } from "@/components/homepage/HomepageMasthead";
 import { LazyHomeSection } from "@/components/homepage/LazyHomeSection";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
 import { LiveNewsroomStatus } from "@/components/live-newsroom/LiveNewsroomStatus";
@@ -75,9 +74,7 @@ function HomepageLiveContent({ brandName }: { brandName?: string }) {
 
       <NewUpdatesBanner />
 
-      <div className="hp-editorial pl-stagger-item">
-        <HomepageMasthead brandName={brandName} />
-
+      <div className="hp-editorial main-content pl-stagger-item">
         <BreakingHero
           lead={heroLead}
           topStories={topStories}

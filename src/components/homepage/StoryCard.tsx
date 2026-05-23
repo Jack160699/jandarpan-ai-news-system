@@ -46,7 +46,7 @@ export function StoryCard({
 
   return (
     <article
-      className={`nr-card nr-card--daily nr-card--${variant} motion-card`}
+      className={`bh-card nr-card nr-card--daily nr-card--${variant}`}
     >
       <TrackedStoryLink
         href={`/story/${article.slug}`}

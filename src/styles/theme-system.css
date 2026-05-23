@@ -1,0 +1,137 @@
+/**
+ * Theme System — Modern Bhaskar-inspired palette (2026)
+ * Single source for color tokens · Jan Darpan Chhattisgarh
+ */
+
+:root {
+  --th-paper: #f7f7f7;
+  --th-paper-raised: #ffffff;
+  --th-paper-muted: #efefef;
+  --th-paper-inset: #e8e8e8;
+
+  --th-ink: #111111;
+  --th-ink-secondary: #333333;
+  --th-ink-muted: #666666;
+  --th-ink-faint: #999999;
+
+  --th-primary: #c62828;
+  --th-primary-dark: #8e0000;
+  --th-primary-soft: #ffebee;
+
+  --th-accent: #e8952d;
+  --th-accent-soft: #fff3e0;
+
+  --th-rule: rgb(17 17 17 / 0.1);
+  --th-rule-strong: rgb(17 17 17 / 0.18);
+
+  --th-ticker-bg: #0a0a0a;
+  --th-ticker-ink: #f5f5f5;
+  --th-ticker-accent: #c62828;
+
+  --th-selection-bg: var(--th-primary-soft);
+  --th-selection-fg: var(--th-ink);
+
+  /* Map → design-system aliases */
+  --ds-surface: var(--th-paper);
+  --ds-surface-raised: var(--th-paper-raised);
+  --ds-surface-sunken: var(--th-paper-muted);
+  --ds-surface-inset: var(--th-paper-inset);
+  --ds-surface-elevated: var(--th-paper-raised);
+  --ds-surface-overlay: rgb(255 255 255 / 0.96);
+
+  --ds-ink: var(--th-ink);
+  --ds-ink-secondary: var(--th-ink-secondary);
+  --ds-ink-tertiary: var(--th-ink-muted);
+  --ds-ink-quaternary: var(--th-ink-faint);
+  --ds-ink-inverse: #ffffff;
+
+  --ds-separator: var(--th-rule);
+  --ds-separator-strong: var(--th-rule-strong);
+
+  --ds-accent: var(--th-primary);
+  --ds-accent-hover: var(--th-primary-dark);
+  --ds-accent-soft: var(--th-primary-soft);
+  --ds-accent-glow: rgb(198 40 40 / 0.15);
+  --ds-masthead-rule: var(--th-primary);
+
+  --ds-live: var(--th-primary);
+  --ds-live-hover: var(--th-primary-dark);
+  --ds-live-soft: var(--th-primary-soft);
+  --ds-live-glow: rgb(198 40 40 / 0.2);
+
+  --ds-breaking: var(--th-accent);
+  --ds-breaking-soft: var(--th-accent-soft);
+
+  --tenant-primary: var(--th-primary);
+  --tenant-primary-dark: var(--th-primary-dark);
+  --tenant-accent: var(--th-accent);
+  --tenant-accent-soft: var(--th-accent-soft);
+
+  --paper: var(--th-paper);
+  --paper-elevated: var(--th-paper-raised);
+  --paper-muted: var(--th-paper-muted);
+  --paper-warm: var(--th-paper-muted);
+  --paper-shadow: var(--th-paper-inset);
+
+  --ink-headline: var(--th-ink);
+  --ink-primary: var(--th-ink);
+  --ink-body: var(--th-ink-secondary);
+  --ink-secondary: var(--th-ink-secondary);
+  --ink-muted: var(--th-ink-muted);
+  --ink-faint: var(--th-ink-faint);
+  --ink-tertiary: var(--th-ink-muted);
+
+  --rule: var(--th-rule);
+  --rule-strong: var(--th-rule-strong);
+
+  --selection-bg: var(--th-selection-bg);
+  --selection-fg: var(--th-ink);
+  --background: var(--paper);
+  --foreground: var(--ink-primary);
+
+  --ds-card-bg: var(--th-paper-raised);
+  --ds-card-border: var(--th-rule);
+  --ds-card-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  --ds-card-shadow-hover: 0 2px 8px rgb(0 0 0 / 0.08);
+  --ds-card-radius: 6px;
+
+  --ds-radius-xs: 2px;
+  --ds-radius-sm: 4px;
+  --ds-radius-md: 6px;
+  --ds-radius-lg: 8px;
+  --ds-radius-xl: 10px;
+  --ds-radius-full: 999px;
+
+  --ds-elevation-1: 0 1px 2px rgb(0 0 0 / 0.05);
+  --ds-elevation-2: 0 2px 8px rgb(0 0 0 / 0.07);
+  --ds-shadow-sm: var(--ds-elevation-1);
+  --ds-shadow-md: var(--ds-elevation-2);
+}
+
+html[data-theme="dark"] {
+  --th-paper: #121212;
+  --th-paper-raised: #1c1c1c;
+  --th-paper-muted: #252525;
+  --th-paper-inset: #0d0d0d;
+
+  --th-ink: #f2f2f2;
+  --th-ink-secondary: #d4d4d4;
+  --th-ink-muted: #a3a3a3;
+  --th-ink-faint: #737373;
+
+  --th-primary: #ef5350;
+  --th-primary-dark: #ff8a80;
+  --th-primary-soft: rgb(239 83 80 / 0.12);
+
+  --th-accent: #ffb74d;
+  --th-accent-soft: rgb(255 183 77 / 0.12);
+
+  --th-rule: rgb(255 255 255 / 0.08);
+  --th-rule-strong: rgb(255 255 255 / 0.14);
+
+  --th-ticker-bg: #000000;
+  --th-ticker-ink: #f5f5f5;
+
+  --ds-card-shadow: 0 1px 0 rgb(255 255 255 / 0.04);
+  --ds-card-shadow-hover: 0 4px 16px rgb(0 0 0 / 0.35);
+}

@@ -24,11 +24,11 @@
 }
 
 .masthead-title-hi {
-  font-family: var(--font-hindi), var(--font-display), serif;
-  font-size: clamp(1.35rem, 5.5vw, 2.35rem);
+  font-family: var(--ty-font-hindi);
+  font-size: var(--ty-xl);
   font-weight: 700;
   line-height: 1.12;
-  color: var(--tenant-primary, #802020);
+  color: var(--th-primary);
 }
 
 .tenant-logo__text {

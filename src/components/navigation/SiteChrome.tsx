@@ -2,15 +2,17 @@
 
 import { CategoryNav } from "./CategoryNav";
 import { TopHeader } from "./TopHeader";
+import { TopUtilityBar } from "./TopUtilityBar";
 
 /**
- * App shell top chrome — TopHeader + CategoryNav with unified sticky stack.
+ * Global site chrome — utility bar + header + category nav (Bhaskar 2026 structure)
  */
 export function SiteChrome() {
   return (
-    <div className="site-chrome newsroom-chrome" data-site-chrome>
+    <header className="site-chrome newsroom-chrome" data-site-chrome>
+      <TopUtilityBar />
       <TopHeader />
       <CategoryNav />
-    </div>
+    </header>
   );
 }

@@ -25,20 +25,20 @@ export function BreakingHero({
 
   return (
     <section
-      className="nr-hero-zone nr-hero-zone--daily hp-lead-zone motion-hero"
+      className="bh-hero-zone nr-hero-zone nr-hero-zone--daily hp-lead-zone"
       aria-labelledby="nr-breaking-hero-title"
     >
-      <div className="nr-wrap nr-hero-zone__inner hp-lead-zone__grid">
-        <article className="nr-breaking-hero nr-breaking-hero--daily">
+      <div className="hp-lead-zone__grid">
+        <article className="bh-hero nr-breaking-hero nr-breaking-hero--daily">
           <TrackedStoryLink
             href={`/story/${lead.slug}`}
             slug={lead.slug}
             category={lead.section}
             region={lead.section}
             surface="breaking"
-            className="nr-breaking-hero__link"
+            className="bh-hero__link nr-breaking-hero__link"
           >
-            <div className="nr-breaking-hero__copy">
+            <div className="bh-hero__copy nr-breaking-hero__copy">
               {showLive ? (
                 <span className="nr-live-badge nr-live-badge--compact motion-hero__flag">
                   <span className="nr-live-badge__dot" aria-hidden />
@@ -52,14 +52,14 @@ export function BreakingHero({
 
               <h2
                 id="nr-breaking-hero-title"
-                className="nr-breaking-hero__headline motion-hero__headline"
+                className="bh-hero__headline nr-breaking-hero__headline"
                 lang={lead.language === "hi" ? "hi" : undefined}
               >
                 {lead.headline}
               </h2>
 
-              <div className="nr-breaking-hero__meta motion-hero__meta">
-                <span>{lead.categoryLabel}</span>
+              <div className="bh-hero__meta nr-breaking-hero__meta">
+                <span className="bh-hero__meta-category">{lead.categoryLabel}</span>
                 <span aria-hidden> · </span>
                 <time dateTime={lead.publishedAt}>
                   {formatHomeTime(lead.publishedAt)}
@@ -67,7 +67,7 @@ export function BreakingHero({
               </div>
             </div>
 
-            <div className="nr-breaking-hero__visual motion-hero__visual">
+            <div className="bh-hero__visual nr-breaking-hero__visual">
               <HomeArticleImage
                 src={lead.imageUrl}
                 alt=""

@@ -37,13 +37,13 @@ export const JAN_DARPAN_CHHATTISGARH_TENANT: TenantConfig = {
     fontRegional: "Noto Serif Devanagari",
   },
   theme: {
-    primary: "#802020",
+    primary: "#c62828",
     primaryDark: "#5c1616",
     accent: "#c5a07d",
     accentSoft: "#f3ebe0",
     live: "#dc2626",
     liveSoft: "#fdecec",
-    surface: "#faf8f6",
+    surface: "#f7f7f7",
     ink: "#1a1a1a",
   },
   categories: [

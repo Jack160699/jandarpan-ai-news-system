@@ -1,7 +1,6 @@
 import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import { AdSlot } from "@/components/monetization/AdSlot";
-import { HomepageMasthead } from "@/components/homepage/HomepageMasthead";
 import { LazyHomeSection } from "@/components/homepage/LazyHomeSection";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
@@ -60,9 +59,7 @@ export function HomepageView({ feed, brandName }: HomepageViewProps) {
         </PageStickyBand>
       ) : null}
 
-      <div className="hp-editorial pl-stagger-item">
-        <HomepageMasthead brandName={brandName} />
-
+      <div className="hp-editorial main-content pl-stagger-item">
         <BreakingHero
           lead={heroLead}
           topStories={topStories}
