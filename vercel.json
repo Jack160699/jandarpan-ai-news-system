@@ -2,20 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "path": "/api/cron/worker/ingest",
-      "schedule": "*/30 * * * *"
-    },
-    {
-      "path": "/api/cron/cluster",
-      "schedule": "0 * * * *"
-    },
-    {
       "path": "/api/cron/orchestrate",
-      "schedule": "0 */2 * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/cron/revalidate",
-      "schedule": "*/20 * * * *"
+      "schedule": "0 18 * * *"
     }
   ]
 }
