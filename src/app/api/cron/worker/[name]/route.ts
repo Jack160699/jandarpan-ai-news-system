@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import { runQueueWorker } from "@/lib/infrastructure/workers/registry";
 import type { WorkerId } from "@/lib/infrastructure/workers/types";
@@ -27,7 +28,7 @@ type RouteParams = { params: Promise<{ name: string }> };
 export async function POST(request: Request, { params }: RouteParams) {
   const auth = verifyCronRequest(request);
   if (!auth.authorized) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    return cronAuthFailureResponse(auth);
   }
 
   if (!isSupabaseConfigured()) {

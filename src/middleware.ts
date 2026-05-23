@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import {
   isDebugPath,
   isProductionDeployment,
+  isProductionExemptPath,
   isSensitiveDevApiPath,
 } from "@/lib/infrastructure/production";
 import {
@@ -63,7 +64,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  if (isProductionDeployment()) {
+  if (isProductionDeployment() && !isProductionExemptPath(pathname)) {
     if (isDebugPath(pathname) || isSensitiveDevApiPath(pathname)) {
       return new NextResponse(null, { status: 404 });
     }

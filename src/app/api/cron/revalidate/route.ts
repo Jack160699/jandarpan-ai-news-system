@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 
@@ -21,10 +22,7 @@ export async function POST(request: Request) {
 async function handleRevalidate(request: Request) {
   const auth = verifyCronRequest(request);
   if (!auth.authorized) {
-    return NextResponse.json(
-      { ok: false, error: "Unauthorized" },
-      { status: 401, headers: noStoreHeaders() }
-    );
+    return cronAuthFailureResponse(auth);
   }
 
   await revalidateNewsroomCaches();

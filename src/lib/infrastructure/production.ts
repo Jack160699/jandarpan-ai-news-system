@@ -9,14 +9,31 @@ export function isProductionDeployment(): boolean {
   );
 }
 
+/** Vercel cron + public ops endpoints — never middleware-404 in production */
+export function isCronPath(pathname: string): boolean {
+  return pathname === "/api/cron" || pathname.startsWith("/api/cron/");
+}
+
+export function isProductionExemptPath(pathname: string): boolean {
+  if (isCronPath(pathname)) return true;
+  if (pathname === "/api/health") return true;
+  if (pathname === "/robots.txt") return true;
+  if (pathname === "/sitemap.xml" || pathname === "/news-sitemap.xml") return true;
+  return false;
+}
+
 export function isDebugPath(pathname: string): boolean {
+  if (isProductionExemptPath(pathname)) return false;
   return (
-    pathname.startsWith("/debug") ||
-    pathname.startsWith("/api/debug")
+    pathname === "/debug" ||
+    pathname.startsWith("/debug/") ||
+    pathname === "/api/debug" ||
+    pathname.startsWith("/api/debug/")
   );
 }
 
 export function isSensitiveDevApiPath(pathname: string): boolean {
+  if (isProductionExemptPath(pathname)) return false;
   if (!pathname.startsWith("/api/")) return false;
   const blocked = [
     "/api/debug",
