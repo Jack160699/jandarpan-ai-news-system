@@ -1,8 +1,10 @@
 import { BRAND } from "@/lib/brand";
 
-/** Production deploy — override via NEXT_PUBLIC_SITE_URL */
+/** Production deploy — override via NEXT_PUBLIC_SITE_URL or NEXT_PUBLIC_APP_URL */
 export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://newspaper-motion.vercel.app";
+  process.env.NEXT_PUBLIC_SITE_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  "https://newspaper-motion.vercel.app";
 
 export const SITE_NAME = BRAND.nameEn;
 export const SITE_NAME_HI = BRAND.nameHi;

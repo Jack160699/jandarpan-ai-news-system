@@ -11,7 +11,8 @@ export function TrendingStories({ articles }: TrendingStoriesProps) {
 
   return (
     <section
-      className="nr-section"
+      id="trending"
+      className="nr-section scroll-mt-24"
       aria-labelledby="nr-trending-title"
     >
       <div className="nr-wrap">

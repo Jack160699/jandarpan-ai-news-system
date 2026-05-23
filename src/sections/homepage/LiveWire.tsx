@@ -11,7 +11,8 @@ export function LiveWire({ items }: LiveWireProps) {
 
   return (
     <section
-      className="nr-section nr-section--wire"
+      id="wire"
+      className="nr-section nr-section--wire scroll-mt-24"
       aria-labelledby="nr-wire-title"
     >
       <div className="nr-wrap">

@@ -2,6 +2,7 @@
  * Homepage ranking — freshness, regional boost, source priority, breaking
  */
 
+import { resolveArticleProvider } from "@/lib/news/article-provider";
 import { isDisplayableImage } from "@/lib/news/images/validate";
 import type {
   LiveNewsFeed,
@@ -122,10 +123,11 @@ export function breakingBoostScore(article: NewsArticleRow): number {
 }
 
 export function sourcePriorityScore(article: NewsArticleRow): number {
-  if (article.provider === "rss" && article.region === "chhattisgarh") return 50;
-  if (article.provider === "rss") return 42;
-  if (article.provider === "gnews" && article.region === "india") return 28;
-  if (article.provider === "newsdata" && article.region === "india") return 24;
+  const provider = resolveArticleProvider(article);
+  if (provider === "rss" && article.region === "chhattisgarh") return 50;
+  if (provider === "rss") return 42;
+  if (provider === "gnews" && article.region === "india") return 28;
+  if (provider === "newsdata" && article.region === "india") return 24;
   if (article.category === "local") return 20;
   if (article.region === "global" || article.category === "world") return 8;
   return 15;
@@ -141,7 +143,7 @@ export function homepageImageScore(article: NewsArticleRow): number {
 /** Display tier: CG RSS → Raipur → India breaking → national → global */
 export function displayTier(article: NewsArticleRow): number {
   const text = `${article.title} ${article.description ?? ""}`;
-  if (article.provider === "rss" && article.region === "chhattisgarh") return 5;
+  if (resolveArticleProvider(article) === "rss" && article.region === "chhattisgarh") return 5;
   if (/raipur|रायपुर/i.test(text)) return 4;
   if (breakingBoostScore(article) > 0 && article.region === "india") return 3;
   if (article.region === "india" || article.category === "politics") return 2;
@@ -296,7 +298,7 @@ export function buildHomepageFeed(articles: NewsArticleRow[]): LiveNewsFeed | nu
 
   const sourceMix: Record<string, number> = {};
   for (const a of pool) {
-    const key = a.provider ?? "unknown";
+    const key = resolveArticleProvider(a) ?? "unknown";
     sourceMix[key] = (sourceMix[key] ?? 0) + 1;
   }
 

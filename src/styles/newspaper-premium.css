@@ -1,0 +1,272 @@
+/**
+ * Premium regional newspaper — editorial density, Mint / Indian Express influence
+ */
+
+/* ── Masthead ── */
+.nr-masthead {
+  border-bottom: 3px double var(--rule-strong);
+  padding-block: 1.25rem 1rem;
+  margin-bottom: 0;
+}
+
+.nr-masthead__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+.nr-masthead__brand {
+  font-family: var(--font-display), Georgia, "Noto Serif Devanagari", serif;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--ink-headline);
+  margin: 0;
+}
+
+.nr-masthead__tagline {
+  font-family: var(--font-ui);
+  font-size: var(--ds-text-caption);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ds-accent);
+  margin-top: 0.35rem;
+}
+
+.nr-masthead__edition {
+  text-align: right;
+  font-family: var(--font-meta), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+
+.nr-masthead__edition strong {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Trust strip ── */
+.nr-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.nr-trust__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.nr-trust__item::before {
+  content: "";
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: var(--ds-accent);
+}
+
+/* ── Local breaking alerts ── */
+.nr-alerts {
+  padding-block: 0.75rem;
+  background: var(--ds-live-soft);
+  border-block: 1px solid color-mix(in srgb, var(--ds-live) 20%, transparent);
+}
+
+.nr-alerts__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.nr-alerts__link {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  text-decoration: none;
+  color: var(--ink-headline);
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  transition: color var(--ds-duration-fast) var(--ds-ease);
+}
+
+.nr-alerts__link:hover {
+  color: var(--ds-live);
+}
+
+.nr-alerts__district {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-live);
+}
+
+/* ── Hero premium (editorial lead) ── */
+.nr-hero-premium {
+  position: relative;
+}
+
+.nr-hero-premium::before {
+  content: "";
+  position: absolute;
+  inset: -1rem -1rem auto;
+  height: 60%;
+  background: radial-gradient(
+    ellipse 80% 50% at 20% 0%,
+    color-mix(in srgb, var(--ds-accent) 6%, transparent),
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.nr-hero-premium .nr-card--editorial-lead {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--rule);
+  border-radius: var(--ds-radius-md);
+  overflow: hidden;
+  background: var(--paper-elevated);
+  box-shadow: var(--ds-shadow-md);
+  transition:
+    box-shadow var(--ds-duration-normal) var(--ds-ease),
+    transform var(--ds-duration-normal) var(--ds-ease);
+}
+
+.nr-hero-premium .nr-card--editorial-lead:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.08);
+}
+
+.nr-hero-premium .nr-card--editorial-lead .nr-card__headline {
+  font-size: clamp(1.85rem, 5vw, 3.125rem);
+  line-height: 1.06;
+}
+
+/* ── Story: AI transparency ── */
+.story-ai-note {
+  margin: 1.5rem 0;
+  padding: 1rem 1.15rem;
+  border-inline-start: 3px solid var(--ds-accent);
+  background: color-mix(in srgb, var(--ds-accent-soft) 60%, var(--paper));
+  border-radius: 0 var(--ds-radius-sm) var(--ds-radius-sm) 0;
+}
+
+.story-ai-note__title {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ds-accent);
+  margin: 0 0 0.4rem;
+}
+
+.story-ai-note__text {
+  font-family: var(--font-ui);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.story-topic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.story-topic-chips__chip {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--ds-radius-full);
+  background: var(--paper-muted);
+  color: var(--ink-secondary);
+  border: 1px solid var(--rule);
+}
+
+.story-topic-chips__chip--region {
+  background: var(--ds-accent-soft);
+  color: var(--ds-accent);
+  border-color: color-mix(in srgb, var(--ds-accent) 25%, transparent);
+}
+
+/* ── Enhanced disclaimer ── */
+.story-disclaimer--premium {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+}
+
+.story-disclaimer--premium .story-disclaimer__standards {
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0 0 0.5rem;
+}
+
+.story-disclaimer--premium .story-disclaimer__text {
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  max-width: 42rem;
+}
+
+/* ── Immersive reading polish ── */
+.immersive-story--premium .immersive-story__headline {
+  font-size: clamp(1.75rem, 5.5vw, 2.875rem);
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.immersive-story--premium .immersive-story__content {
+  max-width: var(--read-max);
+}
+
+.immersive-story--premium .immersive-story__aside {
+  position: sticky;
+  top: 5.5rem;
+  align-self: start;
+}
+
+@media (max-width: 1023px) {
+  .immersive-story--premium .immersive-story__aside {
+    display: none;
+  }
+}
+
+html[data-theme="dark"] .nr-hero-premium .nr-card--editorial-lead {
+  box-shadow: 0 8px 32px rgb(0 0 0 / 0.35);
+}

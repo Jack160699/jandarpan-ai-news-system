@@ -25,12 +25,11 @@ function toInsertRow(article: NormalizedArticle & { slug?: string }): NewsArticl
     description: article.description,
     content: article.content,
     image_url: article.image_url,
-    source: article.source,
+    source: article.source ?? article.provider ?? null,
     author: article.author,
     category: article.category,
     article_url: article.article_url,
     published_at: article.published_at,
-    provider: article.provider,
     language: article.language,
     region: article.region,
     title_hash: titleHash(article.title),
@@ -109,7 +108,7 @@ export async function runIngestionPipeline(
         await supabase.from("ingestion_failures").insert({
           title: row.title,
           article_url: row.article_url,
-          provider: row.provider ?? "unknown",
+          provider: row.source ?? "unknown",
           reason: error.message,
           payload: row,
         });

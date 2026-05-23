@@ -17,7 +17,9 @@ import { StoryRelatedGrid } from "@/components/story/StoryRelatedGrid";
 import { StoryShareRail } from "@/components/story/StoryShareRail";
 import { StorySummaryBox } from "@/components/story/StorySummaryBox";
 import { StoryLiveCoverageBanner } from "@/components/story/StoryLiveCoverageBanner";
+import { StoryAiTransparency } from "@/components/story/StoryAiTransparency";
 import { StoryTimeline } from "@/components/story/StoryTimeline";
+import { StoryTopicChips } from "@/components/story/StoryTopicChips";
 import { isArticleLive } from "@/lib/news/home-ranking";
 import { buildEditorialHeroDisplay } from "@/lib/news/images/editorial-hero-display";
 import { resolveStorySlug } from "@/lib/news/related-stories";
@@ -51,6 +53,7 @@ type ImmersiveStoryPageProps = {
   displayLanguage?: NewsroomLanguage;
   translationActive?: boolean;
   sponsoredStory?: SponsoredStoryMeta | null;
+  tags?: string[];
 };
 
 export function ImmersiveStoryPage({
@@ -62,6 +65,7 @@ export function ImmersiveStoryPage({
   displayLanguage = "hi",
   translationActive = false,
   sponsoredStory = null,
+  tags = [],
 }: ImmersiveStoryPageProps) {
   const slug = resolveStorySlug(article);
   const canonicalUrl = `${SITE_URL}/story/${slug}`;
@@ -129,7 +133,7 @@ export function ImmersiveStoryPage({
       />
 
       <article
-        className="immersive-story immersive-story--premium multilingual-article"
+        className="immersive-story immersive-story--premium immersive-story--editorial multilingual-article"
         data-reading="article"
         data-translation={translationActive ? "1" : "0"}
         lang={displayLanguage}
@@ -186,12 +190,23 @@ export function ImmersiveStoryPage({
             ) : null}
 
             <div className="immersive-story__shell immersive-story__content">
+              <StoryTopicChips
+                tags={tags}
+                region={article.region}
+                category={attribution.categoryLabel}
+              />
+
               {aiSummary ? (
                 <StorySummaryBox
                   summary={aiSummary}
                   confidence={aiConfidence}
                 />
               ) : null}
+
+              <StoryAiTransparency
+                sourceCount={attribution.sourceCount}
+                confidence={aiConfidence}
+              />
 
               <StoryHighlights items={highlights} />
 

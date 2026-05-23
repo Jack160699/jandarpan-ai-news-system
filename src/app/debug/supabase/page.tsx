@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+import { isDevNewsroomDebugAllowed } from "@/lib/newsroom/debug/guard";
 import {
   fetchLatestNews,
   getSupabaseEnvDiagnostics,
@@ -10,6 +12,9 @@ import { getServerEnvSummary, validateEnvNaming } from "@/utils/env";
 export const dynamic = "force-dynamic";
 
 export default async function SupabaseDebugPage() {
+  if (!isDevNewsroomDebugAllowed()) {
+    notFound();
+  }
   const envDiag = getSupabaseEnvDiagnostics();
   const envSummary = getServerEnvSummary();
   const envWarnings = validateEnvNaming();

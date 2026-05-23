@@ -2,6 +2,8 @@
  * Cron / worker route authentication
  */
 
+import { isProductionDeployment } from "@/lib/infrastructure/production";
+
 export function parseBearerToken(authorization: string | null): string | null {
   if (!authorization) return null;
   const match = authorization.match(/^Bearer\s+(.+)$/i);
@@ -21,14 +23,16 @@ export function verifyCronRequest(request: Request): {
     return { authorized: true, bearerToken, cronHeader };
   }
 
-  if (process.env.NODE_ENV === "development") {
-    const url = new URL(request.url);
-    if (url.searchParams.get("dev") === "1") {
-      return { authorized: true, bearerToken, cronHeader };
-    }
-    if (!cronSecret) {
-      return { authorized: true, bearerToken, cronHeader };
-    }
+  if (isProductionDeployment()) {
+    return { authorized: false, bearerToken, cronHeader };
+  }
+
+  const url = new URL(request.url);
+  if (url.searchParams.get("dev") === "1") {
+    return { authorized: true, bearerToken, cronHeader };
+  }
+  if (!cronSecret) {
+    return { authorized: true, bearerToken, cronHeader };
   }
 
   return { authorized: false, bearerToken, cronHeader };

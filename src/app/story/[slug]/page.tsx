@@ -11,6 +11,7 @@ import {
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { buildLocalizedStoryMetadata } from "@/lib/i18n/multilingual/seo";
 import { isNewsroomLanguage } from "@/lib/i18n/languages";
+import { pickRelatedStories } from "@/lib/news/related-stories";
 import {
   fetchGeneratedArticlePool,
   getGeneratedArticleBySlug,
@@ -93,6 +94,14 @@ export default async function StoryPage({ params }: PageProps) {
       generatedToNewsArticle(generatedRow),
       localized
     );
+    const poolArticles = poolRows.map((r) => {
+      const fields = resolveLocalizedFields(r, readerLang);
+      return applyLocalizedFieldsToNewsArticle(
+        generatedToNewsArticle(r),
+        fields
+      );
+    });
+    const related = pickRelatedStories(liveArticle, poolArticles, 8);
 
     let liveCoverage: {
       slug: string;
@@ -130,21 +139,13 @@ export default async function StoryPage({ params }: PageProps) {
           <ImmersiveStoryPage
             article={liveArticle}
             sponsoredStory={sponsoredStory}
-            related={poolRows
-              .filter((r) => r.id !== generatedRow.id)
-              .slice(0, 8)
-              .map((r) => {
-                const fields = resolveLocalizedFields(r, readerLang);
-                return applyLocalizedFieldsToNewsArticle(
-                  generatedToNewsArticle(r),
-                  fields
-                );
-              })}
+            related={related}
             editorialMeta={generatedRow.editorial_metadata}
             readingTime={localized.readingTime}
             liveCoverage={liveCoverage}
             displayLanguage={readerLang}
             translationActive={localized.usedTranslation}
+            tags={generatedRow.tags ?? []}
           />
         </main>
       </PageShell>

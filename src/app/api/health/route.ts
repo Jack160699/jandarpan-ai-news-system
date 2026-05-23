@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { edgeCacheHeaders } from "@/lib/infrastructure/cache/edge";
 import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { getProductionEnvChecks } from "@/lib/infrastructure/production";
 import { getApiProviderHealthDashboard } from "@/lib/infrastructure/providers/api-health";
 import { getRssHealthDashboard } from "@/lib/news/rss-health";
 import {
@@ -31,6 +32,8 @@ export async function GET() {
 
   let homepageReadable = false;
   let articlePoolSize = 0;
+  let generatedPoolSize = 0;
+  let generatedRowCount: number | null = null;
   let anonReadError: string | null = null;
   let anonReadDetails: Record<string, unknown> | null = null;
   let tableRowCount: number | null = null;
@@ -39,19 +42,47 @@ export async function GET() {
     try {
       const supabase = createAnonServerClient();
 
-      const { count, error: countError } = await supabase
-        .from("news_articles")
-        .select("id", { count: "exact", head: true });
+      const [legacyCount, generatedCount] = await Promise.all([
+        supabase.from("news_articles").select("id", { count: "exact", head: true }),
+        supabase
+          .from("generated_articles")
+          .select("id", { count: "exact", head: true })
+          .neq("editorial_status", "rejected")
+          .neq("editorial_status", "pending"),
+      ]);
 
-      tableRowCount = count ?? null;
+      tableRowCount = legacyCount.count ?? null;
+      generatedRowCount = generatedCount.count ?? null;
 
-      if (countError) {
-        anonReadError = countError.message;
+      if (legacyCount.error) {
+        anonReadError = legacyCount.error.message;
         anonReadDetails = {
-          code: countError.code,
-          details: countError.details,
-          hint: countError.hint,
+          code: legacyCount.error.code,
+          details: legacyCount.error.details,
+          hint: legacyCount.error.hint,
         };
+      }
+
+      const { data: generatedSample, error: generatedSelectError } = await supabase
+        .from("generated_articles")
+        .select("id,slug,headline,published_at,editorial_status")
+        .neq("editorial_status", "rejected")
+        .neq("editorial_status", "pending")
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .limit(5);
+
+      if (generatedSelectError) {
+        anonReadError = generatedSelectError.message;
+        anonReadDetails = {
+          code: generatedSelectError.code,
+          stage: "generated_articles_select",
+        };
+      } else {
+        generatedPoolSize = generatedSample?.length ?? 0;
+        homepageReadable =
+          generatedPoolSize > 0 ||
+          (generatedRowCount ?? 0) > 0 ||
+          (tableRowCount ?? 0) > 0;
       }
 
       const { data, error: selectError } = await supabase
@@ -60,22 +91,16 @@ export async function GET() {
         .order("published_at", { ascending: false, nullsFirst: false })
         .limit(5);
 
-      if (selectError) {
+      if (selectError && !anonReadError) {
         anonReadError = selectError.message;
         anonReadDetails = {
           code: selectError.code,
           details: selectError.details,
           hint: selectError.hint,
-          stage: "select",
+          stage: "news_articles_select",
         };
       } else {
         articlePoolSize = data?.length ?? 0;
-        homepageReadable = articlePoolSize > 0 || (tableRowCount ?? 0) > 0;
-
-        if ((tableRowCount ?? 0) > 0 && articlePoolSize === 0) {
-          anonReadError =
-            "rows_exist_but_select_empty — check RLS SELECT on news_articles for anon";
-        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "fetch_failed";
@@ -105,17 +130,26 @@ export async function GET() {
     getRssHealthDashboard().catch(() => []),
   ]);
 
+  const productionEnv = getProductionEnvChecks();
+
   const healthy =
     providers.supabase &&
     homepageReadable &&
     !anonReadError &&
-    (providers.gnews || providers.newsdata || providers.rss);
+    (providers.gnews || providers.newsdata || providers.rss) &&
+    (generatedRowCount ?? 0) > 0;
 
   return NextResponse.json(
     {
       ok: healthy,
       service: "newspaper-motion",
       timestamp: new Date().toISOString(),
+      deployment: {
+        nodeEnv: process.env.NODE_ENV,
+        vercelEnv: process.env.VERCEL_ENV ?? null,
+        productionEnvReady: productionEnv.ready,
+        productionWarnings: productionEnv.warnings,
+      },
       infrastructure: {
         redis: isRedisConfigured(),
         homepageCacheSeconds: INFRA_CONFIG.homepageCacheSeconds,
@@ -127,19 +161,18 @@ export async function GET() {
       },
       providers,
       supabase_env: supabaseEnv,
+      generated_articles: {
+        homepage_pool_size: generatedPoolSize,
+        table_row_count: generatedRowCount,
+        homepage_primary: true,
+      },
       news_articles: {
-        homepage_pool_size: articlePoolSize,
-        homepage_readable: homepageReadable,
+        legacy_pool_size: articlePoolSize,
         table_row_count: tableRowCount,
         anon_read_error: anonReadError,
         anon_read_details: anonReadDetails,
-        table: "news_articles",
-        client: "createAnonServerClient",
-        env_keys: {
-          url: "NEXT_PUBLIC_SUPABASE_URL",
-          anon: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-        },
       },
+      homepage_readable: homepageReadable,
     },
     {
       status: healthy ? 200 : 503,

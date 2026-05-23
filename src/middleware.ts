@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
+  isDebugPath,
+  isProductionDeployment,
+  isSensitiveDevApiPath,
+} from "@/lib/infrastructure/production";
+import {
   getTenantByDomain,
   getDefaultTenantSlug,
   getTenantBySlug,
@@ -57,6 +62,12 @@ export async function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+
+  if (isProductionDeployment()) {
+    if (isDebugPath(pathname) || isSensitiveDevApiPath(pathname)) {
+      return new NextResponse(null, { status: 404 });
+    }
+  }
 
   if (isDashboardProtected(pathname) && !hasDashboardSession(request)) {
     const login = new URL("/dashboard/login", request.url);

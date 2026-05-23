@@ -1,8 +1,9 @@
 import { Suspense } from "react";
 import { PageShell } from "@/components/layout/PageShell";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
-import { getGeneratedHomepageFeed } from "@/lib/homepage/get-feed";
+import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
+import { getTenantConfig } from "@/lib/tenant/resolve";
 import { Footer } from "@/sections/Footer";
 import {
   HomepageEmpty,
@@ -17,17 +18,25 @@ export const metadata = buildHomeMetadata();
 export const revalidate = 60;
 
 async function HomepageContent() {
-  const feed = await getGeneratedHomepageFeed();
+  const [feed, tenant] = await Promise.all([
+    getCachedGeneratedHomepageFeed(),
+    getTenantConfig(),
+  ]);
 
   if (!feed) {
     return <HomepageEmpty />;
   }
 
-  return <HomepageView feed={feed} />;
+  return (
+    <HomepageView
+      feed={feed}
+      brandName={tenant.branding.nameEn}
+    />
+  );
 }
 
 export default async function Home() {
-  const feed = await getGeneratedHomepageFeed();
+  const feed = await getCachedGeneratedHomepageFeed();
   const trending = buildTrendingKeywords({ limit: 12 });
   const storyCount = feed
     ? feed.trending.length + feed.liveWire.length + 1

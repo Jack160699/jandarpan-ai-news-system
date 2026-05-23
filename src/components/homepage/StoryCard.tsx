@@ -76,7 +76,7 @@ export function StoryCard({
           <div className="nr-card__media">
             <HomeArticleImage
               src={article.imageUrl}
-              alt=""
+              alt={article.headline.slice(0, 120)}
               priority={priority}
               sizes={
                 variant === "editorial-lead"

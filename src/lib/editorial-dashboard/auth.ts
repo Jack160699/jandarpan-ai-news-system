@@ -2,6 +2,8 @@
  * Editorial dashboard authentication
  */
 
+import { isProductionDeployment } from "@/lib/infrastructure/production";
+
 export function getExpectedAdminSecret(): string | null {
   return (
     process.env.ADMIN_SECRET?.trim() ||
@@ -12,13 +14,13 @@ export function getExpectedAdminSecret(): string | null {
 
 export function isAdminAuthorized(key: string | undefined | null): boolean {
   const expected = getExpectedAdminSecret();
-  if (!expected) return process.env.NODE_ENV === "development";
+  if (!expected) return !isProductionDeployment();
   return key === expected;
 }
 
 export function verifyAdminRequest(request: Request): boolean {
   const expected = getExpectedAdminSecret();
-  if (!expected) return process.env.NODE_ENV === "development";
+  if (!expected) return !isProductionDeployment();
 
   const url = new URL(request.url);
   const queryKey = url.searchParams.get("key");

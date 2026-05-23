@@ -50,7 +50,7 @@ export async function getAdminIngestionStats(): Promise<AdminIngestionDashboard 
     supabase.from("news_articles").select("id", { count: "exact", head: true }),
     supabase
       .from("news_articles")
-      .select("id, title, category, provider, created_at")
+      .select("id, title, category, source, created_at")
       .order("created_at", { ascending: false })
       .limit(12),
     supabase
@@ -77,17 +77,23 @@ export async function getAdminIngestionStats(): Promise<AdminIngestionDashboard 
   const providerCounts: Record<string, number> = {};
   const { data: providerRows } = await supabase
     .from("news_articles")
-    .select("provider")
-    .not("provider", "is", null);
+    .select("source")
+    .not("source", "is", null);
 
   for (const row of providerRows ?? []) {
-    const p = row.provider as string;
+    const p = row.source as string;
     providerCounts[p] = (providerCounts[p] ?? 0) + 1;
   }
 
   return {
     articleCount: countRes.count ?? 0,
-    latestArticles: latestRes.data ?? [],
+    latestArticles: (latestRes.data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      category: row.category,
+      provider: row.source,
+      created_at: row.created_at,
+    })),
     categoryCounts,
     providerCounts,
     recentLogs: (logsRes.data ?? []).map((l) => ({

@@ -1,21 +1,20 @@
 import { NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { isProductionDeployment } from "@/lib/infrastructure/production";
 import { createAdminServerClient } from "@/lib/supabase";
 import { getDefaultTenant } from "@/lib/tenant/registry";
-
-function authorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return process.env.NODE_ENV === "development";
-  const header = request.headers.get("authorization");
-  if (header === `Bearer ${secret}`) return true;
-  return request.headers.get("x-cron-secret") === secret;
-}
 
 /**
  * Bootstrap owner membership for a Supabase Auth user on the default tenant.
  * POST { userId, email, tenantSlug?, role? }
  */
 export async function POST(request: Request) {
-  if (!authorized(request)) {
+  if (isProductionDeployment()) {
+    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
+
+  const auth = verifyCronRequest(request);
+  if (!auth.authorized) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 

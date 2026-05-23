@@ -2,6 +2,7 @@
  * Safe row mapping for homepage pool — tolerate partial ingestion rows
  */
 
+import { resolveArticleProvider } from "@/lib/news/article-provider";
 import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
 import { NEWS_INGEST_CATEGORIES } from "@/lib/types/news-article";
 
@@ -34,7 +35,7 @@ export function normalizePoolArticle(row: NewsArticleRow): NewsArticleRow | null
     slug: row.slug ?? null,
     published_at: row.published_at ?? row.created_at ?? null,
     region: row.region ?? null,
-    provider: row.provider ?? null,
+    provider: resolveArticleProvider(row),
     language: row.language ?? null,
   };
 }

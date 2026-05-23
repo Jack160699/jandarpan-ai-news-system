@@ -13,7 +13,8 @@ export function RegionalHighlights({ articles }: RegionalHighlightsProps) {
 
   return (
     <section
-      className="nr-section"
+      id="regional"
+      className="nr-section scroll-mt-24"
       aria-labelledby="nr-regional-title"
     >
       <div className="nr-wrap">

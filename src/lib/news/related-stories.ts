@@ -2,6 +2,7 @@
  * Related stories — category, region, keywords, trending overlap
  */
 
+import { resolveArticleProvider } from "@/lib/news/article-provider";
 import { regionalBoostScore } from "@/lib/news/home-ranking";
 import { titleHash } from "@/lib/news/normalize";
 import { buildArticleSlug } from "@/lib/news/slug";
@@ -34,7 +35,7 @@ export function scoreRelatedness(
 
   if (source.category === candidate.category) score += 40;
   if (source.region === candidate.region) score += 30;
-  if (source.provider === candidate.provider) score += 10;
+  if (resolveArticleProvider(source) === resolveArticleProvider(candidate)) score += 10;
 
   const regional = regionalBoostScore(candidate);
   if (regional >= 35) score += 20;

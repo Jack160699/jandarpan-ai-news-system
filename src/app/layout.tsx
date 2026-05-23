@@ -17,7 +17,7 @@ import {
   buildTenantSiteMetadata,
   buildTenantViewport,
 } from "@/lib/tenant/metadata";
-import { getTenantConfig } from "@/lib/tenant/resolve";
+import { getTenantConfig, stripTenantForClient } from "@/lib/tenant/resolve";
 import "@/styles/globals.css";
 import "@/styles/monetization.css";
 
@@ -96,7 +96,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full antialiased text-[var(--ink-primary)]">
         <ThemeScript />
-        <TenantRoot tenant={tenant}>
+        <TenantRoot tenant={stripTenantForClient(tenant)}>
           <ReaderPreferencesProvider>
             <LanguageProvider
               defaultLanguage={tenant.newsroom.defaultLanguage}

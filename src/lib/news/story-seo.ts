@@ -3,6 +3,7 @@
  */
 
 import type { Metadata } from "next";
+import { resolveArticleProvider } from "@/lib/news/article-provider";
 import { isArticleLive } from "@/lib/news/home-ranking";
 import { buildEditorialHeroDisplay } from "@/lib/news/images/editorial-hero-display";
 import { resolveStorySlug } from "@/lib/news/related-stories";
@@ -53,7 +54,7 @@ export function liveStoryMetadata(
     `${title} — ${BRAND.nameEn} live regional desk.`;
 
   const ogImage = resolveStoryOgImage(article, options?.imageMeta);
-  const desk = mapProviderToDesk(article.provider);
+  const desk = mapProviderToDesk(resolveArticleProvider(article));
   const trending = buildTrendingKeywords({ limit: 6 });
   const newsKeywords = newsKeywordsForArticle({
     headline: title,

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
 import { categoryLabel } from "@/lib/live-news-display";
 import { resolveCardImage } from "@/lib/news/images/display";
+import { resolveArticleProvider } from "@/lib/news/article-provider";
 import { resolveStorySlug } from "@/lib/news/related-stories";
 import { estimateReadTime } from "@/lib/news/story-utils";
 import { mapProviderToDesk } from "@/lib/newsroom/desk-branding";
@@ -54,7 +55,7 @@ export function StoryRelatedGrid({ articles }: StoryRelatedGridProps) {
                 </p>
                 <p className="immersive-related__meta">
                   {categoryLabel(article.category as NewsCategory)} ·{" "}
-                  {mapProviderToDesk(article.provider).name} · {readTime}
+                  {mapProviderToDesk(resolveArticleProvider(article)).name} · {readTime}
                 </p>
               </div>
             </Link>

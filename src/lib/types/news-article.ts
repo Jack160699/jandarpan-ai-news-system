@@ -13,7 +13,8 @@ export type NewsArticleRow = {
   published_at: string | null;
   created_at: string;
   updated_at: string;
-  provider: string | null;
+  /** Derived after read — not a `news_articles` column; use resolveArticleProvider(). */
+  provider?: string | null;
   language: string | null;
   region: string | null;
   title_hash: string | null;
@@ -56,7 +57,6 @@ export type NewsArticleInsert = {
   article_url: string;
   slug?: string | null;
   published_at: string | null;
-  provider?: string | null;
   language?: string | null;
   region?: string | null;
   title_hash?: string | null;

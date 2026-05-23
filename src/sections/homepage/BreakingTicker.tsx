@@ -28,6 +28,8 @@ export function BreakingTicker({ items }: BreakingTickerProps) {
             <TrackedStoryLink
               key={`${item.id}-${i}`}
               href={`/story/${item.slug}`}
+              aria-hidden={i >= items.length ? true : undefined}
+              tabIndex={i >= items.length ? -1 : undefined}
               slug={item.slug}
               category={item.section}
               region={item.section}

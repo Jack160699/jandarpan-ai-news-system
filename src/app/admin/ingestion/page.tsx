@@ -3,6 +3,7 @@
  * Access: /admin/ingestion?key=YOUR_ADMIN_SECRET
  */
 
+import { isAdminAuthorized } from "@/lib/editorial-dashboard/auth";
 import { getAdminIngestionStats } from "@/lib/news/admin-stats";
 
 export const dynamic = "force-dynamic";
@@ -10,14 +11,6 @@ export const dynamic = "force-dynamic";
 type PageProps = {
   searchParams: Promise<{ key?: string }>;
 };
-
-function isAdminAuthorized(key: string | undefined): boolean {
-  const adminSecret = process.env.ADMIN_SECRET?.trim();
-  const cronSecret = process.env.CRON_SECRET?.trim();
-  const expected = adminSecret || cronSecret;
-  if (!expected) return process.env.NODE_ENV === "development";
-  return key === expected;
-}
 
 export default async function AdminIngestionPage({ searchParams }: PageProps) {
   const { key } = await searchParams;

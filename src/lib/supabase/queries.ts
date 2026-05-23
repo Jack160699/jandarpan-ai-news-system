@@ -46,8 +46,9 @@ type ArticleQueryResult = {
 };
 
 async function runArticleQuery(
-  apply: (
-    client: ReturnType<typeof createAnonServerClient>
+  build: (
+    client: ReturnType<typeof createAnonServerClient>,
+    select: string
   ) => PromiseLike<{
     data: unknown;
     error: { message: string } | null;
@@ -59,12 +60,21 @@ async function runArticleQuery(
   }
 
   const supabase = createAnonServerClient();
-  const primary = await apply(supabase);
+  const primary = await build(supabase, EXTENDED_ARTICLE_SELECT);
 
   if (!primary.error) {
     return {
       rows: (primary.data ?? []) as NewsArticleRow[],
       count: primary.count,
+      error: null,
+    };
+  }
+
+  const retry = await build(supabase, CORE_ARTICLE_SELECT);
+  if (!retry.error) {
+    return {
+      rows: (retry.data ?? []) as NewsArticleRow[],
+      count: retry.count,
       error: null,
     };
   }
@@ -78,10 +88,10 @@ export async function fetchLatestNews(
 ): Promise<PaginatedResult<NewsArticleRow>> {
   const { from, to, safePage, safeSize } = paginate(params.page, params.pageSize);
 
-  const { rows, count, error } = await runArticleQuery((client) =>
+  const { rows, count, error } = await runArticleQuery((client, select) =>
     client
       .from("news_articles")
-      .select(EXTENDED_ARTICLE_SELECT, { count: "exact" })
+      .select(select, { count: "exact" })
       .order("published_at", { ascending: false, nullsFirst: false })
       .range(from, to)
   );
@@ -127,10 +137,10 @@ export async function fetchTrendingNews(
   const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
   const { from, to, safePage, safeSize } = paginate(params.page, params.pageSize);
 
-  const { rows, count, error } = await runArticleQuery((client) =>
+  const { rows, count, error } = await runArticleQuery((client, select) =>
     client
       .from("news_articles")
-      .select(EXTENDED_ARTICLE_SELECT, { count: "exact" })
+      .select(select, { count: "exact" })
       .gte("published_at", since)
       .not("image_url", "is", null)
       .order("published_at", { ascending: false, nullsFirst: false })
@@ -154,10 +164,10 @@ export async function fetchRegionalNews(
 ): Promise<PaginatedResult<NewsArticleRow>> {
   const { from, to, safePage, safeSize } = paginate(params.page, params.pageSize);
 
-  const { rows, count, error } = await runArticleQuery((client) =>
+  const { rows, count, error } = await runArticleQuery((client, select) =>
     client
       .from("news_articles")
-      .select(EXTENDED_ARTICLE_SELECT, { count: "exact" })
+      .select(select, { count: "exact" })
       .eq("region", region)
       .order("published_at", { ascending: false, nullsFirst: false })
       .range(from, to)
@@ -180,10 +190,10 @@ export async function fetchNewsByCategory(
 ): Promise<PaginatedResult<NewsArticleRow>> {
   const { from, to, safePage, safeSize } = paginate(params.page, params.pageSize);
 
-  const { rows, count, error } = await runArticleQuery((client) =>
+  const { rows, count, error } = await runArticleQuery((client, select) =>
     client
       .from("news_articles")
-      .select(EXTENDED_ARTICLE_SELECT, { count: "exact" })
+      .select(select, { count: "exact" })
       .eq("category", category)
       .order("published_at", { ascending: false, nullsFirst: false })
       .range(from, to)

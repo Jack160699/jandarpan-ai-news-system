@@ -615,4 +615,4 @@ export const CORE_ARTICLE_SELECT =
   "id,title,description,content,image_url,source,author,category,article_url,slug,published_at,created_at";
 
 export const EXTENDED_ARTICLE_SELECT =
-  `${CORE_ARTICLE_SELECT},updated_at,provider,language,region,title_hash,url_hash,ai_summary,ai_headline,ai_processed_at`;
+  `${CORE_ARTICLE_SELECT},updated_at,language,region,title_hash,url_hash,ai_summary,ai_headline,ai_processed_at`;

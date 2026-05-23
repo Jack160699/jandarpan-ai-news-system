@@ -35,6 +35,8 @@ export function BottomNav() {
   const isActive = (tab: (typeof BOTTOM_NAV_TABS)[number]) => {
     if (tab.id === "home") return pathname === "/";
     if (tab.id === "saved") return pathname.startsWith("/archive");
+    if (tab.id === "video") return pathname.startsWith("/shorts");
+    if (tab.id === "profile") return pathname.startsWith("/search");
     return false;
   };
 

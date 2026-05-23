@@ -13,7 +13,8 @@ export function CategoryStreams({ streams }: CategoryStreamsProps) {
 
   return (
     <section
-      className="nr-section nr-section--categories"
+      id="categories"
+      className="nr-section nr-section--categories scroll-mt-24"
       aria-labelledby="nr-categories-title"
     >
       <div className="nr-wrap">

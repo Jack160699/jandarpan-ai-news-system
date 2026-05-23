@@ -12,7 +12,8 @@ import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+/** Vercel Pro: raise to 300 if ingest routinely approaches 60s */
+export const maxDuration = 120;
 
 const VALID: WorkerId[] = [
   "ingest",

@@ -2,6 +2,7 @@
  * Story page view model — desk branding, nav, attribution
  */
 
+import { resolveArticleProvider } from "@/lib/news/article-provider";
 import { categoryLabel } from "@/lib/live-news-display";
 import { REGIONAL_SECTIONS } from "@/lib/homepage/infer-section";
 import type { HomeSectionId } from "@/lib/homepage/types";
@@ -74,7 +75,7 @@ export function buildStoryAttribution(
   article: NewsArticleRow,
   meta?: EditorialMetadata | null
 ): StoryAttribution {
-  const desk = mapProviderToDesk(article.provider);
+  const desk = mapProviderToDesk(resolveArticleProvider(article));
   const category = article.category as NewsCategory;
   const attributionCount = Array.isArray(meta?.source_attribution)
     ? meta.source_attribution.length

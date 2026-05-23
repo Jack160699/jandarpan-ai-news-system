@@ -20,9 +20,10 @@
   --ds-separator: rgb(0 0 0 / 0.08);
   --ds-separator-strong: rgb(0 0 0 / 0.12);
 
-  /* Regional warmth — used sparingly */
-  --ds-accent: #b45309;
-  --ds-accent-soft: #fef3e8;
+  /* Regional warmth — Indian newspaper masthead accent */
+  --ds-accent: #9a3412;
+  --ds-accent-soft: #fff7ed;
+  --ds-masthead-rule: #1c1917;
   --ds-live: #dc2626;
   --ds-live-soft: #fef2f2;
 

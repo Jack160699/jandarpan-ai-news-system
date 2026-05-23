@@ -11,19 +11,22 @@ export function EditorsPicks({ picks }: EditorsPicksProps) {
 
   return (
     <section
-      className="nr-section nr-section--editorial"
+      id="editorial"
+      className="nr-section nr-section--editorial scroll-mt-24"
       aria-labelledby="nr-editors-title"
     >
       <div className="nr-wrap">
         <SectionHeader
           id="nr-editors-title"
-          kicker="AI newsroom"
+          kicker="Lead story"
           title="Editor’s picks"
           titleHi="संपादक की पसंद"
-          description="Original stories written and verified by our AI editorial desk — not raw wire copy."
+          description="Original AI-edited coverage — synthesized from verified regional and national sources."
         />
 
-        <StoryCard article={lead} variant="editorial-lead" priority />
+        <div className="nr-hero-premium">
+          <StoryCard article={lead} variant="editorial-lead" priority />
+        </div>
 
         {supporting.length > 0 ? (
           <ul className="nr-editors__grid" role="list">

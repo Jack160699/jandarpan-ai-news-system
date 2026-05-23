@@ -1,3 +1,4 @@
+import { resolveArticleProvider } from "@/lib/news/article-provider";
 import { isArticleLive } from "@/lib/news/home-ranking";
 import {
   displaySourceLine,
@@ -32,7 +33,7 @@ export function liveArticleToCard(article: NewsArticleRow): LiveCardModel {
     category === "local" || category === "politics" ? 720 : 640;
 
   const text = `${article.title} ${article.description ?? ""}`;
-  const desk = mapProviderToDesk(article.provider);
+  const desk = mapProviderToDesk(resolveArticleProvider(article));
 
   return {
     id: article.id,

@@ -3,34 +3,14 @@
  */
 
 import { NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { getRssHealthDashboard } from "@/lib/news/rss-health";
 
 export const runtime = "nodejs";
 
-function parseBearerToken(authorization: string | null): string | null {
-  if (!authorization) return null;
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
-  return match ? match[1].trim() : null;
-}
-
-function isAuthorized(request: Request): boolean {
-  const cronSecret = process.env.CRON_SECRET?.trim() || null;
-  const bearer = parseBearerToken(request.headers.get("authorization"));
-  const header = request.headers.get("x-cron-secret")?.trim() ?? null;
-
-  if (cronSecret && (bearer === cronSecret || header === cronSecret)) {
-    return true;
-  }
-
-  if (process.env.NODE_ENV === "development") {
-    return true;
-  }
-
-  return false;
-}
-
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  const auth = verifyCronRequest(request);
+  if (!auth.authorized) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 

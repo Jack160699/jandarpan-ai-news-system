@@ -64,6 +64,20 @@ export const getTenantConfig = cache(async (): Promise<TenantConfig> => {
   return getDefaultTenant();
 });
 
+/**
+ * Strip RegExp matchers before passing tenant into Client Components.
+ * Matchers are server-only (ranking / section inference); nav uses slug/href only.
+ */
+export function stripTenantForClient(tenant: TenantConfig): TenantConfig {
+  return {
+    ...tenant,
+    categories: tenant.categories.map((category) => ({
+      ...category,
+      matchers: [],
+    })),
+  };
+}
+
 export function toPublicTenantConfig(tenant: TenantConfig): TenantPublicConfig {
   return {
     slug: tenant.slug,
