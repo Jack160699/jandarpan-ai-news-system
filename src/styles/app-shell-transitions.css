@@ -38,21 +38,7 @@
   position: relative;
 }
 
-@media (max-width: 767px) {
-  .app-shell {
-    min-height: 100dvh;
-    height: auto;
-    overflow: visible;
-  }
-
-  .app-shell__main,
-  .route-transition-host,
-  .route-transition__viewport {
-    flex: 0 0 auto;
-    min-height: auto;
-    overflow: visible;
-  }
-}
+/* Mobile scroll shell — see layout-system.css */
 
 /* Chrome stays painted during route change */
 .app-shell .app-header,
@@ -225,7 +211,7 @@
 .app-shell__main .feed-section,
 .app-shell__main .nr-section,
 .app-shell__main .hp-lazy-section {
-  scroll-margin-top: calc(var(--app-header-total, 88px) + 0.5rem);
+  scroll-margin-top: calc(var(--ls-header-total, var(--app-header-total, 88px)) + 0.25rem);
 }
 
 .app-shell__main .motion-feed {

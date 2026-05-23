@@ -1,165 +1,62 @@
-/* Mobile UX — production Indian news app polish */
+/**
+ * Mobile feed & article polish — chrome/spacing tokens: layout-system.css
+ */
 
-:root {
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-right: env(safe-area-inset-right, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --safe-left: env(safe-area-inset-left, 0px);
-  --bottom-nav-total: calc(var(--bottom-nav-height) + var(--safe-bottom));
-  --touch-min: 44px;
-}
-
-/* Native scroll on phone — faster, familiar (Lenis disabled via JS) */
 html.native-scroll {
   scroll-behavior: auto;
 }
 
-html.native-scroll body {
-  overscroll-behavior-y: auto;
-}
-
 @media (max-width: 767px) {
-  :root {
-    --space-gutter: max(1rem, min(4.5vw, 1.25rem));
-    --app-header-row: 40px;
-    --app-tabs-height: 36px;
-    --app-header-total: calc(var(--app-header-row) + var(--app-tabs-height));
-    --bottom-nav-height: 48px;
-    --bottom-nav-total: calc(var(--bottom-nav-height) + var(--safe-bottom));
-  }
-
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
 
   body {
-    padding-left: var(--safe-left);
-    padding-right: var(--safe-right);
-    overflow-x: hidden;
-  }
-
-  /* Sticky chrome — stable, no jump */
-  .app-header {
-    top: var(--safe-top);
-    padding-top: 0;
-    contain: layout style;
-    will-change: transform;
-  }
-
-  .category-tabs {
-    top: calc(var(--app-header-row) + var(--safe-top));
-    contain: layout style;
-    scroll-padding-inline: var(--space-gutter);
+    padding-left: var(--ls-safe-left);
+    padding-right: var(--ls-safe-right);
   }
 
   .category-tabs__scroll {
-    gap: 0;
-    padding-inline: calc(var(--space-gutter) - 0.375rem) var(--space-gutter) 0.25rem;
-    scroll-padding-inline: var(--space-gutter);
-  }
-
-  .category-tab {
-    min-height: var(--touch-min);
-    padding: 0 0.875rem;
-    font-size: 0.8125rem;
-    -webkit-tap-highlight-color: transparent;
+    scroll-padding-inline: var(--ls-gutter);
   }
 
   .category-tab:active {
     background: var(--paper-muted);
   }
 
-  /* Thumb zone — main content (clear fixed bottom nav + safe area) */
-  .has-bottom-nav main,
-  .has-bottom-nav .page-shell {
-    padding-bottom: calc(var(--bottom-nav-total) + 0.625rem);
-  }
-
   .home-news-flow,
   .mobile-comfort {
-    padding-inline: var(--space-gutter);
-    scroll-padding-top: calc(var(--app-header-total) + var(--safe-top) + 0.5rem);
+    scroll-padding-top: calc(var(--ls-header-total) + var(--ls-safe-top) + 0.375rem);
   }
 
-  .news-scroll-target {
-    scroll-margin-top: calc(var(--app-header-total) + var(--safe-top) + 0.25rem);
-  }
-
-  /* Touch targets */
-  .header-icon-btn {
-    width: var(--touch-min);
-    height: var(--touch-min);
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .header-icon-btn:active {
-    background: var(--paper-muted);
-    transform: scale(0.96);
-  }
-
-  .bottom-nav {
-    padding-bottom: var(--safe-bottom);
-    min-height: var(--bottom-nav-total);
-    contain: layout style;
-    box-shadow: 0 -1px 0 var(--rule);
-  }
-
-  .bottom-nav__item {
-    min-height: var(--touch-min);
-    padding: 0.5rem 0.25rem;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .bottom-nav__item:active {
-    background: var(--paper-muted);
-  }
-
-  .bottom-nav__label-hi {
-    display: none;
-  }
-
-  .app-header__logo {
-    font-size: 1.0625rem;
-    max-width: 42vw;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  /* Feed rhythm — aligned gutters */
+  /* Feed rhythm */
   .feed-section__inner {
     padding-inline: 0;
   }
 
   .feed-section {
-    padding-block: 0.5rem;
     content-visibility: auto;
-    contain-intrinsic-size: auto 320px;
-  }
-
-  .feed-section-header {
-    padding-block: 0.625rem 0.5rem;
-    margin-bottom: 0.375rem;
+    contain-intrinsic-size: auto 280px;
   }
 
   .feed-section-header__more {
-    min-height: var(--touch-min);
-    min-width: var(--touch-min);
+    min-height: var(--ls-touch-target);
+    min-width: var(--ls-touch-target);
     padding-inline: 0.5rem;
   }
 
-  /* Horizontal cards — consistent alignment */
   .feed-card--horizontal .feed-card__link {
     display: flex;
     align-items: flex-start;
-    gap: 0.75rem;
-    min-height: 5.25rem;
-    padding: 0.75rem 0;
+    gap: 0.625rem;
+    min-height: 4.75rem;
+    padding: 0.625rem 0;
   }
 
   .feed-card__media--horizontal {
-    width: 5.75rem;
-    height: 4.25rem;
+    width: 5.25rem;
+    height: 3.875rem;
     flex-shrink: 0;
     border-radius: 2px;
   }
@@ -171,194 +68,134 @@ html.native-scroll body {
   }
 
   .feed-card__title {
-    font-size: 1rem;
-    line-height: 1.35;
+    font-size: var(--ls-text-md);
+    line-height: 1.32;
   }
 
   .feed-card__title--featured {
-    font-size: 1.25rem;
+    font-size: var(--ls-text-lg);
   }
 
   .feed-card--featured .feed-card__link {
-    padding: 0.75rem 0;
+    padding: 0.625rem 0;
   }
 
   .feed-card__media--featured {
-    max-height: min(56vw, 220px);
+    max-height: min(52vw, 200px);
     border-radius: 2px;
   }
 
   .feed-card--compact .feed-card__link {
-    min-height: var(--touch-min);
-    padding: 0.625rem 0;
+    min-height: var(--ls-touch-target);
+    padding: 0.5rem 0;
   }
 
   .feed-card__media--compact {
-    width: 4.5rem;
-    height: 4.5rem;
+    width: 4.25rem;
+    height: 4.25rem;
   }
 
   .feed-card__link:active {
     background: var(--paper-muted);
   }
 
-  /* Hero stack */
   .home-hero__main,
   .home-hero__side {
     padding-inline: 0;
   }
 
-  .home-hero__side .feed-card:last-child {
-    border-bottom: none;
-  }
-
-  /* Trending — thumb scroll */
   .trending-strip {
-    padding: 0.5rem 0 0.625rem;
-    gap: 0.5rem;
-    scroll-padding-inline: 0;
+    padding: 0.375rem 0 0.5rem;
+    gap: 0.375rem;
   }
 
   .trending-chip {
-    min-height: var(--touch-min);
-    padding: 0.5rem 0.875rem;
+    min-height: var(--ls-touch-target);
+    padding: 0.4375rem 0.75rem;
     max-width: 85vw;
-    font-size: 0.875rem;
+    font-size: var(--ls-text-base);
     -webkit-tap-highlight-color: transparent;
   }
 
-  .trending-chip:active {
-    background: var(--paper-muted);
-  }
-
-  /* Quick read */
   .quick-read-link {
-    min-height: var(--touch-min);
-    padding: 0.625rem 0;
-    align-items: center;
-    gap: 0.625rem;
-  }
-
-  .quick-read-title {
-    font-size: 0.9375rem;
-    line-height: 1.35;
-  }
-
-  /* Breaking bar */
-  #breaking .editorial-container {
-    padding-block: 0.5rem;
+    min-height: var(--ls-touch-target);
+    padding: 0.5rem 0;
     gap: 0.5rem;
   }
 
-  /* Continue ribbon above nav */
+  .quick-read-title {
+    font-size: var(--ls-text-base);
+    line-height: 1.32;
+  }
+
+  #breaking .editorial-container {
+    padding-block: 0.375rem;
+    gap: 0.375rem;
+  }
+
   .continue-ribbon {
-    bottom: var(--bottom-nav-total);
-    padding-bottom: 0;
+    bottom: var(--ls-bottom-nav-total);
   }
 
   .continue-ribbon__inner {
-    margin-inline: var(--space-gutter);
+    margin-inline: var(--ls-gutter);
     border-radius: 8px 8px 0 0;
   }
 
-  /* Article mobile */
   .article-page {
-    padding-block: 0.5rem 1.5rem;
-  }
-
-  .article-page__toolbar {
-    margin-inline: 0;
+    padding-block: 0.375rem 1.25rem;
   }
 
   .article-header__title {
-    font-size: 1.375rem;
+    font-size: var(--ls-text-headline-sm);
     line-height: 1.25;
   }
 
   .article-header__deck {
-    font-size: 1.0625rem;
+    font-size: var(--ls-text-md);
   }
 
   .article-meta-bar {
-    gap: 0.375rem 0.75rem;
-    font-size: 0.8125rem;
+    gap: 0.25rem 0.625rem;
+    font-size: var(--ls-text-base);
   }
 
   .article-figure__media {
-    max-height: 50vw;
+    max-height: 48vw;
     border-radius: 2px;
   }
 
   .article-prose p {
-    font-size: 1.0625rem;
-    line-height: 1.7;
+    font-size: var(--ls-text-md);
+    line-height: 1.65;
   }
 
-  .article-prose p + p {
-    margin-top: 0.875rem;
+  .concept-banner__text {
+    padding: 0.3rem var(--ls-gutter);
+    font-size: var(--ls-text-2xs);
   }
 
-  .article-pullquote {
-    margin: 1rem 0;
-    padding: 0.75rem 0 0.75rem 0.875rem;
-  }
-
-  .article-pullquote__text {
-    font-size: 1.0625rem;
-  }
-
-  /* Lighter motion */
   .feed-badge__dot {
     animation-duration: 2s;
   }
-
-  .mobile-sheet,
-  .mobile-sheet-backdrop {
-    animation-duration: 0.2s;
-  }
-
-  .article-unfold {
-    transition: opacity 0.2s ease;
-  }
-
-  /* Concept banner compact */
-  .concept-banner__text {
-    padding: 0.375rem var(--space-gutter);
-    font-size: 0.625rem;
-  }
 }
 
-/* Narrow Android (~320–360px) */
 @media (max-width: 380px) {
-  :root {
-    --space-gutter: 0.875rem;
-  }
-
   .feed-card__media--horizontal {
-    width: 5.25rem;
-    height: 3.875rem;
+    width: 4.75rem;
+    height: 3.5rem;
   }
 
   .feed-card__title {
-    font-size: 0.9375rem;
-  }
-
-  .app-header__locale {
-    display: none;
-  }
-
-  .header-icon-btn {
-    width: 40px;
-    height: 40px;
+    font-size: var(--ls-text-base);
   }
 }
 
-/* Tap feedback utility */
 .tap-target {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
 .tap-target:active {
-  opacity: 0.85;
+  opacity: 0.88;
 }

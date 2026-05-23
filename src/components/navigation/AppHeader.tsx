@@ -32,7 +32,7 @@ export function AppHeader() {
   return (
     <>
       <header className="app-header" data-section="masthead">
-        <div className="app-header__row">
+        <div className="app-header__shell">
           <Link
             href="/"
             className="app-header__brand tap-target"
@@ -62,6 +62,10 @@ export function AppHeader() {
               </div>
             ) : null}
           </Link>
+
+          <div className="app-header__center">
+            <CategoryTabs />
+          </div>
 
           <div className="app-header__actions">
             {isMobile ? (
@@ -153,8 +157,6 @@ export function AppHeader() {
             )}
           </div>
         </div>
-
-        <CategoryTabs />
       </header>
 
       <MobileNavDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />

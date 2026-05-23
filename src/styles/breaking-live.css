@@ -8,7 +8,7 @@
   position: relative;
   display: flex;
   align-items: stretch;
-  min-height: 2.625rem;
+  min-height: 2rem;
   background: linear-gradient(
     90deg,
     #1a0505 0%,
@@ -21,15 +21,9 @@
 
 .nr-ticker--sticky {
   position: sticky;
-  top: var(--app-header-total, 88px);
+  top: var(--ls-header-total, var(--app-header-total, 88px));
   z-index: calc(var(--ds-z-chrome) - 2);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
-}
-
-@media (max-width: 767px) {
-  .nr-ticker--sticky {
-    top: var(--app-header-row, 48px);
-  }
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
 }
 
 .nr-ticker__brand {

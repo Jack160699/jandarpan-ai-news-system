@@ -73,7 +73,7 @@
 .ptr-indicator {
   position: fixed;
   left: 50%;
-  top: calc(var(--app-header-row, 52px) + var(--safe-top, 0px) + 4px);
+  top: calc(var(--ls-header-row, var(--app-header-row, 52px)) + var(--ls-safe-top, 0px) + 4px);
   z-index: calc(var(--ds-z-chrome) + 1);
   display: flex;
   align-items: center;
@@ -146,7 +146,7 @@ html[data-ptr-refresh="1"] main {
 .app-fab-stack {
   position: fixed;
   right: max(1rem, var(--safe-right, 0px));
-  bottom: calc(var(--bottom-nav-total, 4.5rem) + 0.75rem);
+  bottom: calc(var(--ls-bottom-nav-total, var(--bottom-nav-total, 4.5rem)) + 0.375rem);
   z-index: calc(var(--ds-z-chrome) - 2);
   display: flex;
   flex-direction: column;

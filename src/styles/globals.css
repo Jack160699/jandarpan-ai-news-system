@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./design-system.css";
+@import "./layout-system.css";
 @import "./typography.css";
 @import "./motion.css";
 @import "./motion-premium.css";
@@ -9,7 +10,6 @@
 @import "./intelligence.css";
 @import "./institution.css";
 @import "./brand-jan-darpan.css";
-@import "./mobile-premium-refine.css";
 @import "./editorial-layout.css";
 @import "./reader.css";
 @import "./news-density.css";
