@@ -1,12 +1,9 @@
 export { AppChrome } from "./AppChrome";
+export { CategoryTabs } from "./CategoryTabs";
+export { NavProgress } from "./NavProgress";
+export { RouteTransition } from "./RouteTransition";
+
+/* @deprecated — use @/components/layout */
 export { AppHeader } from "./AppHeader";
 export { BottomNav } from "./BottomNav";
-export { CategoryNav } from "./CategoryNav";
-export { CategoryNavigation } from "./CategoryNavigation";
-export { CategoryTabs } from "./CategoryTabs";
-export { MainHeader } from "./MainHeader";
-export { PageShell } from "./PageShell";
-export { PageStickyBand } from "./PageStickyBand";
 export { SiteChrome } from "./SiteChrome";
-export { TopHeader } from "./TopHeader";
-export { TopUtilityBar } from "./TopUtilityBar";

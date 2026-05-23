@@ -63,8 +63,8 @@ export const BOTTOM_NAV_TABS: BottomNavTab[] = [
   { id: "home", label: "Home", labelHi: "होम", href: "/", icon: "home" },
   {
     id: "videos",
-    label: "Videos",
-    labelHi: "वीडियो",
+    label: "Shorts",
+    labelHi: "शॉर्ट्स",
     href: "/shorts",
     icon: "video",
   },

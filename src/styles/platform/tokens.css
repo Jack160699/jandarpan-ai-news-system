@@ -1,0 +1,141 @@
+/**
+ * Platform tokens — single source of truth
+ * Breakpoints: mobile <768 · tablet 768–1023 · desktop ≥1024
+ */
+
+:root {
+  --bp-mobile-max: 767px;
+  --bp-tablet-min: 768px;
+  --bp-desktop-min: 1024px;
+
+  /* Colors */
+  --color-paper: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-muted: #ececec;
+  --color-ink: #0d0d0d;
+  --color-ink-secondary: #2e2e2e;
+  --color-ink-muted: #5c5c5c;
+  --color-ink-faint: #8a8a8a;
+  --color-primary: #c62828;
+  --color-primary-dark: #9b1c1c;
+  --color-primary-soft: rgb(198 40 40 / 0.08);
+  --color-accent: #e8952d;
+  --color-rule: rgb(13 13 13 / 0.08);
+  --color-rule-strong: rgb(13 13 13 / 0.14);
+  --color-ticker-bg: #141414;
+  --color-ticker-text: #ececec;
+  --color-ticker-muted: #b0b0b0;
+
+  --paper: var(--color-paper);
+  --paper-elevated: var(--color-surface);
+  --paper-muted: var(--color-surface-muted);
+  --ink-headline: var(--color-ink);
+  --ink-primary: var(--color-ink);
+  --ink-body: var(--color-ink-secondary);
+  --ink-muted: var(--color-ink-muted);
+  --ink-faint: var(--color-ink-faint);
+  --rule: var(--color-rule);
+  --rule-strong: var(--color-rule-strong);
+  --th-primary: var(--color-primary);
+  --ds-accent: var(--color-primary);
+  --ds-live: var(--color-primary);
+
+  --container-max: 80rem;
+  --gutter-mobile: 1rem;
+  --gutter-tablet: 1.25rem;
+  --gutter-desktop: 1.375rem;
+  --gutter: var(--gutter-mobile);
+  --section-gap: 0.625rem;
+  --section-gap-md: 0.875rem;
+  --section-gap-lg: 1.125rem;
+
+  --header-height: 3.5rem;
+  --nav-height: 3rem;
+  --ticker-height: 2.5rem;
+  --bottom-nav-height: 3.75rem;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --sticky-header: var(--safe-top);
+  --sticky-nav: calc(var(--safe-top) + var(--header-height));
+  --sticky-ticker: calc(var(--sticky-nav) + var(--nav-height));
+  --scroll-margin: calc(var(--sticky-ticker) + 0.25rem);
+
+  --z-header: 100;
+  --z-nav: 90;
+  --z-ticker: 80;
+  --z-bottom-nav: 70;
+  --z-fab: 60;
+  --z-overlay: 200;
+  --z-skip: 300;
+
+  --main-pad-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 0.625rem);
+
+  /* Typography */
+  --text-2xs: 0.625rem;
+  --text-xs: 0.6875rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.1875rem;
+  --text-xl: 1.375rem;
+  --text-hero-mobile: clamp(1.1875rem, 4.2vw, 1.375rem);
+  --text-hero-desktop: clamp(1.375rem, 1.6vw, 1.75rem);
+  --text-hero: var(--text-hero-mobile);
+  --leading-tight: 1.22;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.03);
+  --shadow-card-hover: 0 4px 16px rgb(0 0 0 / 0.08), 0 1px 3px rgb(0 0 0 / 0.04);
+  --shadow-hero: 0 2px 8px rgb(0 0 0 / 0.06), 0 12px 32px rgb(0 0 0 / 0.06);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snappy: cubic-bezier(0.33, 1, 0.68, 1);
+  --duration-fast: 0.16s;
+  --duration-normal: 0.24s;
+  --ticker-duration: 52s;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --gutter: var(--gutter-tablet);
+    --section-gap: 0.75rem;
+    --section-gap-md: 1rem;
+    --section-gap-lg: 1.375rem;
+    --main-pad-bottom: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --gutter: var(--gutter-desktop);
+    --header-height: 4.5rem;
+    --sticky-nav: calc(var(--safe-top) + var(--header-height));
+    --sticky-ticker: calc(var(--sticky-nav) + var(--nav-height));
+    --section-gap-lg: 1.5rem;
+    --text-hero: var(--text-hero-desktop);
+  }
+}
+
+html[data-theme="dark"] {
+  --color-paper: #121212;
+  --color-surface: #1a1a1a;
+  --color-surface-muted: #242424;
+  --color-ink: #f2f2f2;
+  --color-ink-secondary: #d4d4d4;
+  --color-ink-muted: #a3a3a3;
+  --color-ink-faint: #737373;
+  --color-primary: #ef5350;
+  --color-primary-soft: rgb(239 83 80 / 0.12);
+  --color-ticker-bg: #0a0a0a;
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04);
+  --shadow-card-hover: 0 8px 24px rgb(0 0 0 / 0.35);
+  --shadow-hero: 0 8px 28px rgb(0 0 0 / 0.4);
+}

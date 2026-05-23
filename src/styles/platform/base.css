@@ -1,0 +1,139 @@
+/**
+ * Platform base — document, shell, utilities
+ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: auto;
+}
+
+html,
+body {
+  margin: 0;
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-shell {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  background: var(--color-paper);
+}
+
+.app-shell__main {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.has-bottom-nav .app-shell__main {
+  padding-bottom: var(--main-pad-bottom);
+}
+
+@media (min-width: 768px) {
+  .has-bottom-nav .app-shell__main {
+    padding-bottom: 0;
+  }
+}
+
+.pl-container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  box-sizing: border-box;
+}
+
+.pl-hide-mobile {
+  display: none !important;
+}
+
+.pl-hide-desktop {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .pl-hide-mobile {
+    display: block !important;
+  }
+
+  .pl-hide-desktop {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .pl-hide-tablet-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .pl-desktop-only {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .pl-mobile-only {
+    display: none !important;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+[lang="hi"],
+.hi {
+  font-family: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
+}
+
+.pl-scroll-target {
+  scroll-margin-top: var(--scroll-margin);
+}
+
+.route-transition__viewport {
+  flex: 1;
+  width: 100%;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.route-transition-host--out .route-transition__viewport {
+  opacity: 0.96;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-transition-host--out .route-transition__viewport {
+    opacity: 1;
+    transition: none;
+  }
+}
+
+/* Momentum scrolling on iOS */
+.home-page,
+.category-navbar__scroll,
+.hero-news-card__mobile-rail,
+.shorts-section__rail {
+  -webkit-overflow-scrolling: touch;
+}

@@ -1,19 +1,23 @@
+"use client";
+
 import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import { AdSlot } from "@/components/monetization/AdSlot";
+import {
+  BreakingTicker,
+  HeroNewsCard,
+  NewsGrid,
+  ShortsSection,
+} from "@/components/layout";
 import { LazyHomeSection } from "@/components/homepage/LazyHomeSection";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
-import { PageStickyBand } from "@/components/navigation/PageStickyBand";
-import { BreakingHero } from "@/sections/homepage/BreakingHero";
-import { BreakingTicker } from "@/sections/homepage/BreakingTicker";
 import {
   HyperlocalSkeleton,
   LiveWireSkeleton,
-  TrendingShortsSkeleton,
 } from "@/sections/homepage/HomepageSectionSkeletons";
 import { LiveWire } from "@/sections/homepage/LiveWire";
-import { TrendingStories } from "@/sections/homepage/TrendingStories";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 const HyperlocalFeeds = dynamic(
   () =>
@@ -23,23 +27,12 @@ const HyperlocalFeeds = dynamic(
   { loading: () => <HyperlocalSkeleton /> }
 );
 
-const TrendingShortsRail = dynamic(
-  () =>
-    import("@/components/shorts/TrendingShortsRail").then((m) => ({
-      default: m.TrendingShortsRail,
-    })),
-  { loading: () => <TrendingShortsSkeleton /> }
-);
-
 type HomepageViewProps = {
   feed: GeneratedHomepageFeed;
-  brandName?: string;
 };
 
-/**
- * Daily-use homepage — breaking, local, trending, reels only.
- */
-export function HomepageView({ feed, brandName }: HomepageViewProps) {
+export function HomepageView({ feed }: HomepageViewProps) {
+  const { t } = useLanguage();
   const { lead, supporting } = feed.editorsPicks;
   const topStories = [
     ...feed.breakingTicker.slice(0, 3),
@@ -50,51 +43,36 @@ export function HomepageView({ feed, brandName }: HomepageViewProps) {
   const hasTicker = feed.breakingTicker.length > 0;
 
   return (
-    <div
-      className={`nr nr--daily${hasTicker ? " nr--has-ticker" : ""} pl-stagger motion-page`}
-    >
-      {hasTicker ? (
-        <PageStickyBand className="pl-stagger-item">
-          <BreakingTicker items={feed.breakingTicker} />
-        </PageStickyBand>
-      ) : null}
+    <div className="home-page">
+      {hasTicker ? <BreakingTicker items={feed.breakingTicker} /> : null}
 
-      <div className="hp-editorial main-content pl-stagger-item">
-        <BreakingHero
+      <div className="home-page__content pl-container">
+        <HeroNewsCard
           lead={heroLead}
           topStories={topStories}
           featuredShort={feed.newsShorts[0]}
         />
 
-        <div className="hp-body-layout">
-          <div className="hp-body-layout__main">
+        <div className="home-body">
+          <div className="home-body__main">
             <LazyHomeSection
               id="wire"
               minHeight="200px"
               fallback={<LiveWireSkeleton />}
-              className="nr-live-wire"
               style={{ "--stagger": 2 } as CSSProperties}
             >
               <LiveWire items={feed.liveWire} />
             </LazyHomeSection>
 
             {feed.newsShorts.length > 0 ? (
-              <LazyHomeSection
-                minHeight="280px"
-                fallback={<TrendingShortsSkeleton />}
-                className="hp-rail"
-                style={{ "--stagger": 3 } as CSSProperties}
-              >
-                <TrendingShortsRail shorts={feed.newsShorts} />
-              </LazyHomeSection>
+              <ShortsSection shorts={feed.newsShorts} />
             ) : null}
 
-            <div
-              className="feed-section"
-              style={{ "--stagger": 4 } as CSSProperties}
-            >
-              <TrendingStories articles={feed.trending.slice(0, 8)} />
-            </div>
+            <NewsGrid
+              id="trending"
+              title={t.home.trending}
+              articles={feed.trending.slice(0, 8)}
+            />
 
             <LazyHomeSection
               minHeight="200px"
@@ -109,7 +87,7 @@ export function HomepageView({ feed, brandName }: HomepageViewProps) {
             </div>
           </div>
 
-          <aside className="hp-body-layout__aside" aria-label="Local desk">
+          <aside className="home-body__aside" aria-label="Local desk">
             <LocalBreakingAlerts alerts={feed.localBreakingAlerts} />
           </aside>
         </div>

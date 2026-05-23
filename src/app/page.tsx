@@ -34,7 +34,7 @@ async function HomeFeed() {
         })}
       />
       {feed ? (
-        <HomepageLiveView feed={feed} brandName={tenant.branding.nameHi} />
+        <HomepageLiveView feed={feed} />
       ) : (
         <HomepageEmpty />
       )}
