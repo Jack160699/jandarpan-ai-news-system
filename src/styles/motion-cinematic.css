@@ -162,11 +162,11 @@
 }
 
 .category-tab.motion-tab:active {
-  transform: scale(0.96);
+  background: color-mix(in srgb, var(--ds-accent) 10%, transparent);
 }
 
 .category-tab.motion-tab.is-active {
-  transform: scale(1);
+  color: var(--ink-headline);
 }
 
 .category-tabs__indicator {

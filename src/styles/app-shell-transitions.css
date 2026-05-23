@@ -49,39 +49,30 @@
 
 /* Subtle dim on main while navigating */
 .route-transition-host--out .route-transition__viewport {
-  opacity: 0.72;
-  transform: translateY(4px) scale(0.998);
+  opacity: 0.88;
 }
 
 .route-transition-host--in .route-transition__viewport--in {
   opacity: 1;
-  transform: translateY(0) scale(1);
 }
 
 .route-transition__viewport {
   flex: 1;
   width: 100%;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  transition:
-    opacity var(--route-exit-ms, 160ms) var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
-    transform var(--route-enter-ms, 280ms) var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+  transition: opacity var(--route-exit-ms, 160ms) var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 .route-transition__viewport--idle {
   opacity: 1;
-  transform: translateY(0);
 }
 
 .route-transition__viewport--out {
   opacity: 0;
-  transform: translateY(6px);
   pointer-events: none;
 }
 
 .route-transition__viewport--in {
   opacity: 1;
-  transform: translateY(0);
 }
 
 /* Story routes — slightly slower, cinematic */

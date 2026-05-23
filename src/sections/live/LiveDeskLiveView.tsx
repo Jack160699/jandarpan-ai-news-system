@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { PageStickyBand } from "@/components/navigation/PageStickyBand";
 import { LiveNewsroomStatus } from "@/components/live-newsroom/LiveNewsroomStatus";
 import { LiveDeskHeader } from "@/components/live-desk/LiveDeskHeader";
 import { LiveWireFeed } from "@/components/live-desk/LiveWireFeed";
@@ -51,9 +52,9 @@ function LiveDeskLiveContent() {
     <div className="live-desk nr--has-page-stickies nr--has-live-strip">
       <div className="nr-wrap live-desk__top">
         <LiveDeskHeader updateCount={wire.length} />
-        <div className="newsroom-page-stickies">
+        <PageStickyBand>
           <LiveNewsroomStatus />
-        </div>
+        </PageStickyBand>
         <p className="live-desk__hint">
           Auto-updates every 1–2 min · scroll to browse
         </p>

@@ -2,14 +2,14 @@
  * Premium regional newspaper — editorial density, Mint / Indian Express influence
  */
 
-/* ── Masthead ── */
-.nr-masthead {
+/* ── Masthead (legacy premium pages — not daily homepage chrome) ── */
+.nr-masthead:not(.nr-masthead--daily) {
   border-bottom: 3px double var(--rule-strong);
   padding-block: 1.25rem 1rem;
   margin-bottom: 0;
 }
 
-.nr-masthead__row {
+.nr-masthead:not(.nr-masthead--daily) .nr-masthead__row {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -17,7 +17,7 @@
   gap: 0.75rem 1.5rem;
 }
 
-.nr-masthead__brand {
+.nr-masthead:not(.nr-masthead--daily) .nr-masthead__brand {
   font-family: var(--font-display), Georgia, "Noto Serif Devanagari", serif;
   font-size: clamp(1.75rem, 5vw, 2.5rem);
   font-weight: 700;
@@ -27,7 +27,7 @@
   margin: 0;
 }
 
-.nr-masthead__tagline {
+.nr-masthead:not(.nr-masthead--daily) .nr-masthead__tagline {
   font-family: var(--font-ui);
   font-size: var(--ds-text-caption);
   font-weight: 600;
@@ -37,7 +37,7 @@
   margin-top: 0.35rem;
 }
 
-.nr-masthead__edition {
+.nr-masthead:not(.nr-masthead--daily) .nr-masthead__edition {
   text-align: right;
   font-family: var(--font-meta), ui-monospace, monospace;
   font-size: 0.6875rem;
@@ -45,7 +45,7 @@
   line-height: 1.5;
 }
 
-.nr-masthead__edition strong {
+.nr-masthead:not(.nr-masthead--daily) .nr-masthead__edition strong {
   display: block;
   font-family: var(--font-ui);
   font-size: 0.75rem;

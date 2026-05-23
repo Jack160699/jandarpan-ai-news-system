@@ -1,9 +1,9 @@
 /**
  * Layout System — bottom nav, route chrome
- * Tokens: responsive-system.css · Sticky/header: newsroom-sticky.css
+ * Tokens: responsive-system.css · Top chrome: shell-layout.css
  */
 
-/* Header, categories, sticky stack → newsroom-sticky.css */
+/* Header, categories, sticky stack → shell-layout.css */
 
 /* ══════════════════════════════════════════════════════════════
    BOTTOM NAVIGATION (mobile only)

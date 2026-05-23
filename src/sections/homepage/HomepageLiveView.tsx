@@ -10,6 +10,7 @@ import { LiveNewsroomStatus } from "@/components/live-newsroom/LiveNewsroomStatu
 import { NewUpdatesBanner } from "@/components/live-newsroom/NewUpdatesBanner";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { LiveNewsroomProvider, useLiveNewsroom } from "@/providers/LiveNewsroomProvider";
+import { PageStickyBand } from "@/components/navigation/PageStickyBand";
 import { BreakingHero } from "@/sections/homepage/BreakingHero";
 import { BreakingTicker } from "@/sections/homepage/BreakingTicker";
 import {
@@ -65,12 +66,12 @@ function HomepageLiveContent({ brandName }: { brandName?: string }) {
     <div
       className={`nr nr--daily nr--has-page-stickies nr--has-live-strip${hasTicker ? " nr--has-ticker" : ""} pl-stagger motion-page`}
     >
-      <div className="newsroom-page-stickies pl-stagger-item">
+      <PageStickyBand className="pl-stagger-item">
         <LiveNewsroomStatus />
         {hasTicker ? (
           <BreakingTicker items={feed.breakingTicker} freshIds={freshIds} />
         ) : null}
-      </div>
+      </PageStickyBand>
 
       <NewUpdatesBanner />
 

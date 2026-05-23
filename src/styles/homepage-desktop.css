@@ -53,48 +53,6 @@
     --nr-gap: var(--hp-gap);
   }
 
-  .nr--daily .nr-masthead--daily {
-    display: grid;
-  }
-
-  /* Masthead — horizontal editorial dateline */
-  .hp-editorial .nr-masthead--daily {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: end;
-    gap: 0.5rem 2rem;
-    padding: 0.75rem 0 0.625rem;
-    border-bottom: 2px solid var(--ink-headline);
-    margin-bottom: var(--hp-gap);
-  }
-
-  .hp-editorial .nr-masthead--daily .masthead-jd__rule-brand {
-    grid-column: 1 / -1;
-    margin-bottom: 0.375rem !important;
-  }
-
-  .hp-editorial .nr-masthead__brand {
-    font-size: clamp(1.5rem, 2vw, 2rem);
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1.05;
-  }
-
-  .hp-editorial .nr-masthead__tagline {
-    font-size: var(--hp-body);
-    margin-top: 0.25rem;
-    max-width: 36rem;
-  }
-
-  .hp-editorial .nr-masthead__date {
-    grid-column: 2;
-    grid-row: 2 / 4;
-    align-self: end;
-    text-align: right;
-    font-size: var(--hp-meta);
-    white-space: nowrap;
-  }
-
   /* ── Lead band: hero + sidebar top stories ── */
   .hp-lead-zone__grid {
     display: grid;

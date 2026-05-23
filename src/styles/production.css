@@ -36,6 +36,7 @@ html.native-scroll {
 }
 
 /* Icon alignment in header */
+.site-header__actions,
 .newsroom-header__actions {
   align-items: center;
 }

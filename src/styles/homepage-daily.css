@@ -66,12 +66,15 @@
   }
 }
 
-@media (max-width: 767px) {
-  .nr--daily .nr-masthead--daily {
-    display: none;
-  }
+/* Page masthead hidden — brand lives in SiteChrome TopHeader */
+.hp-editorial .nr-masthead--daily,
+.nr--daily .nr-masthead--daily {
+  display: none;
+}
 
-  .nr--daily .newsroom-page-stickies {
+@media (max-width: 767px) {
+  .nr--daily .newsroom-page-stickies,
+  .nr--daily .site-page-stickies {
     max-width: none;
     padding-inline: 0;
   }
