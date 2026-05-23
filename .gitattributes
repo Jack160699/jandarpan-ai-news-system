@@ -1,0 +1,2 @@
+# Normalize API route sources for consistent Vercel/Linux deploys (Windows dev)
+src/app/api/** text eol=lf
