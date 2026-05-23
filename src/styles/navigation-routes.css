@@ -181,12 +181,8 @@
   z-index: calc(var(--ds-z-overlay) + 2);
 }
 
-.app-header {
-  z-index: var(--ds-z-chrome);
-}
-
 .bottom-nav--premium {
-  z-index: calc(var(--ds-z-chrome) - 1);
+  z-index: var(--nr-z-bottom-nav);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,24 +3,19 @@
  */
 
 .nr {
-  --nr-max: var(--rf-container-max, var(--ds-content-max));
-  --nr-pad: var(--rf-gutter, var(--ds-gutter));
-  --nr-gap: var(--rf-section-gap-lg, 1.25rem);
+  --nr-max: var(--rf-container-max);
+  --nr-pad: var(--rf-gutter);
+  --nr-gap: var(--rf-section-gap-lg);
   background: var(--paper);
   width: 100%;
-  max-width: 100vw;
+  max-width: 100%;
   overflow-x: clip;
-}
-
-.nr-root {
-  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .nr-wrap {
   width: 100%;
   max-width: var(--nr-max);
   margin-inline: auto;
-  /* horizontal padding: responsive-foundation.css (.app-container / .nr-wrap) */
 }
 
 .nr-section {

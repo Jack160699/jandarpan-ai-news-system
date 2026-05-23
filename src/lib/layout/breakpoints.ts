@@ -1,4 +1,4 @@
-/** Canonical breakpoints — must match responsive-foundation.css */
+/** Canonical breakpoints — must match responsive-system.css */
 export const RF_BREAKPOINTS = {
   mobileMax: 767,
   tablet: 768,
@@ -8,6 +8,7 @@ export const RF_BREAKPOINTS = {
 
 export type RfBreakpoint = keyof typeof RF_BREAKPOINTS;
 
+/** Media query strings aligned to CSS */
 export const RF_MEDIA = {
   mobile: `(max-width: ${RF_BREAKPOINTS.mobileMax}px)`,
   tablet: `(min-width: ${RF_BREAKPOINTS.tablet}px)`,
@@ -16,3 +17,7 @@ export const RF_MEDIA = {
   laptopOnly: `(min-width: ${RF_BREAKPOINTS.laptop}px) and (max-width: ${RF_BREAKPOINTS.desktop - 1}px)`,
   desktop: `(min-width: ${RF_BREAKPOINTS.desktop}px)`,
 } as const;
+
+/** Preferred canonical names (mirror --rs-bp-* in CSS) */
+export const RS_BREAKPOINTS = RF_BREAKPOINTS;
+export const RS_MEDIA = RF_MEDIA;

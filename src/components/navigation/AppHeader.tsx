@@ -10,7 +10,6 @@ import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { SearchOverlay } from "@/components/reader/SearchOverlay";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
-import { CategoryTabs } from "./CategoryTabs";
 import { MobileNavDrawer } from "./MobileNavDrawer";
 import { IconMenu, IconMoon, IconSearch, IconSun } from "./NavIcons";
 
@@ -31,28 +30,31 @@ export function AppHeader() {
 
   return (
     <>
-      <header className="app-header" data-section="masthead">
-        <div className="app-header__shell">
+      <header
+        className="newsroom-header app-header newsroom-sticky newsroom-sticky--header"
+        data-section="masthead"
+      >
+        <div className="newsroom-header__row">
           <Link
             href="/"
-            className="app-header__brand tap-target"
+            className="newsroom-header__brand tap-target"
             aria-label={brandName}
             onClick={() => startNavigation("/")}
           >
             <TenantLogo
-              className="app-header__logo shrink-0"
+              className="newsroom-header__logo shrink-0"
               variant={isMobile ? "banner" : "mark"}
               showText={!isMobile}
             />
             {!isMobile ? (
-              <div className="app-header__locale">
-                <span className="app-header__city">
+              <div className="newsroom-header__locale">
+                <span className="newsroom-header__city">
                   {showLocalizedBrand
                     ? headerLocation.cityHi
                     : headerLocation.city}
                 </span>
                 {headerLocation.condition ? (
-                  <span className="app-header__weather">
+                  <span className="newsroom-header__weather">
                     {headerLocation.temp
                       ? `${headerLocation.temp} · `
                       : ""}
@@ -63,11 +65,7 @@ export function AppHeader() {
             ) : null}
           </Link>
 
-          <div className="app-header__center">
-            <CategoryTabs />
-          </div>
-
-          <div className="app-header__actions">
+          <div className="newsroom-header__actions">
             {isMobile ? (
               <>
                 <Link
@@ -82,7 +80,7 @@ export function AppHeader() {
 
                 <Link
                   href="/search"
-                  className="header-icon-btn header-icon-btn--lg tap-target"
+                  className="header-icon-btn tap-target"
                   aria-label={t.header.search}
                   onClick={() => startNavigation("/search")}
                 >
@@ -91,7 +89,7 @@ export function AppHeader() {
 
                 <button
                   type="button"
-                  className="header-icon-btn header-icon-btn--lg tap-target"
+                  className="header-icon-btn tap-target"
                   aria-label={t.nav.menu}
                   aria-expanded={menuOpen}
                   onClick={openMenu}

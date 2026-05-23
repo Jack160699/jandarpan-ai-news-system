@@ -19,7 +19,11 @@ export function LiveNewsroomStatus() {
   const relative = formatRelativeTime(lastSyncedAt, language);
 
   return (
-    <div className="live-newsroom-status nr-wrap" role="status" aria-live="polite">
+    <div
+      className="live-newsroom-status newsroom-sticky newsroom-sticky--live"
+      role="status"
+      aria-live="polite"
+    >
       <span className="live-newsroom-status__pulse" aria-hidden>
         <span className="live-newsroom-status__dot" />
       </span>

@@ -1,0 +1,545 @@
+/**
+ * Responsive System — single source of truth
+ * Breakpoints: mobile ≤767 · tablet ≥768 · laptop ≥1024 · desktop ≥1440
+ * Canonical tokens: --rs-*  ·  Legacy aliases: --rf-* / --ls-* / --nr-* (layout)
+ */
+
+/* ══════════════════════════════════════════════════════════════
+   1. BREAKPOINTS (reference only — use in @media)
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --rs-bp-mobile-max: 767px;
+  --rs-bp-tablet: 768px;
+  --rs-bp-laptop: 1024px;
+  --rs-bp-desktop: 1440px;
+
+  /* Aliases for JS (breakpoints.ts) and legacy CSS */
+  --rf-bp-mobile-max: 767px;
+  --rf-bp-tablet: 768px;
+  --rf-bp-laptop: 1024px;
+  --rf-bp-desktop: 1440px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   2. Z-INDEX
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --rs-z-base: 0;
+  --rs-z-raised: 10;
+  --rs-z-sticky: 40;
+  --rs-z-chrome: 60;
+  --rs-z-overlay: 100;
+  --rs-z-modal: 120;
+  --rs-z-skip: 200;
+
+  --ds-z-base: var(--rs-z-base);
+  --ds-z-raised: var(--rs-z-raised);
+  --ds-z-sticky: var(--rs-z-sticky);
+  --ds-z-chrome: var(--rs-z-chrome);
+  --ds-z-overlay: var(--rs-z-overlay);
+  --ds-z-modal: var(--rs-z-modal);
+
+  --nr-z-header: var(--rs-z-chrome);
+  --nr-z-categories: calc(var(--rs-z-chrome) - 1);
+  --nr-z-live-strip: calc(var(--rs-z-chrome) - 2);
+  --nr-z-ticker: calc(var(--rs-z-chrome) - 3);
+  --nr-z-chrome-menu: calc(var(--rs-z-chrome) + 4);
+  --nr-z-chrome-ptr: calc(var(--rs-z-chrome) + 2);
+  --nr-z-bottom-nav: calc(var(--rs-z-chrome) - 4);
+  --nr-z-fab: calc(var(--rs-z-chrome) - 3);
+
+  --rf-z-chrome: var(--nr-z-header);
+  --rf-z-sticky-sub: var(--nr-z-live-strip);
+  --rf-z-sticky-ticker: var(--nr-z-ticker);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   3. SAFE AREA & SPACING
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --rs-safe-top: env(safe-area-inset-top, 0px);
+  --rs-safe-right: env(safe-area-inset-right, 0px);
+  --rs-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --rs-safe-left: env(safe-area-inset-left, 0px);
+
+  --rs-gutter: 1rem;
+  --rs-gutter-min: 0.875rem;
+  --rs-space-section: 0.625rem;
+  --rs-space-section-md: 0.875rem;
+  --rs-space-section-lg: 1.25rem;
+  --rs-space-card: 0.5rem;
+  --rs-space-card-pad: 0.75rem;
+  --rs-space-stack: 0.375rem;
+
+  --rs-touch-min: 2.75rem;
+  --rs-bottom-nav: 3rem;
+
+  --rf-safe-top: var(--rs-safe-top);
+  --rf-safe-right: var(--rs-safe-right);
+  --rf-safe-bottom: var(--rs-safe-bottom);
+  --rf-safe-left: var(--rs-safe-left);
+  --rf-gutter: var(--rs-gutter);
+  --rf-gutter-min: var(--rs-gutter-min);
+  --rf-section-gap: var(--rs-space-section);
+  --rf-section-gap-md: var(--rs-space-section-md);
+  --rf-section-gap-lg: var(--rs-space-section-lg);
+  --rf-card-gap: var(--rs-space-card);
+  --rf-card-pad: var(--rs-space-card-pad);
+  --rf-stack-gap: var(--rs-space-stack);
+  --rf-touch-target: var(--rs-touch-min);
+  --rf-bottom-nav: var(--rs-bottom-nav);
+  --rf-bottom-nav-total: calc(var(--rf-bottom-nav) + var(--rf-safe-bottom));
+  --rf-content-pad-bottom: calc(var(--rf-bottom-nav-total) + 0.5rem);
+
+  --ds-gutter: var(--rs-gutter);
+  --ds-section-gap: var(--rs-space-section-lg);
+  --space-gutter: var(--rs-gutter);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   4. CONTAINERS & TYPOGRAPHY SCALE
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --rs-container-max: 100%;
+  --rs-container-editorial: 68rem;
+  --rs-container-reading: 40rem;
+  --rs-container-home: var(--rs-container-max);
+
+  --rs-text-2xs: 0.5625rem;
+  --rs-text-xs: 0.625rem;
+  --rs-text-sm: 0.75rem;
+  --rs-text-base: 0.8125rem;
+  --rs-text-md: 0.9375rem;
+  --rs-text-lg: 1.0625rem;
+  --rs-text-xl: 1.25rem;
+  --rs-text-section: clamp(0.9375rem, 1vw + 0.75rem, 1.125rem);
+  --rs-text-headline-sm: clamp(1rem, 2.2vw + 0.4rem, 1.25rem);
+  --rs-text-headline-md: clamp(1.125rem, 1.2vw + 0.85rem, 1.4375rem);
+  --rs-text-headline-lg: clamp(1.25rem, 1.5vw + 0.65rem, 1.625rem);
+
+  --rs-hero-ratio: 16 / 9;
+  --rs-hero-max-h: clamp(9rem, 42vw, 11rem);
+  --rs-hero-headline: clamp(1rem, 2.5vw + 0.5rem, 1.25rem);
+  --rs-hero-max-h-desktop: clamp(11rem, 22vw, 13.5rem);
+
+  --rf-container-max: var(--rs-container-max);
+  --rf-container-editorial: var(--rs-container-editorial);
+  --rf-container-reading: var(--rs-container-reading);
+  --rf-text-2xs: var(--rs-text-2xs);
+  --rf-text-xs: var(--rs-text-xs);
+  --rf-text-sm: var(--rs-text-sm);
+  --rf-text-base: var(--rs-text-base);
+  --rf-text-md: var(--rs-text-md);
+  --rf-text-lg: var(--rs-text-lg);
+  --rf-text-xl: var(--rs-text-xl);
+  --rf-text-section: var(--rs-text-section);
+  --rf-text-headline-sm: var(--rs-text-headline-sm);
+  --rf-text-headline-md: var(--rs-text-headline-md);
+  --rf-text-headline-lg: var(--rs-text-headline-lg);
+  --rf-hero-ratio: var(--rs-hero-ratio);
+  --rf-hero-max-h: var(--rs-hero-max-h);
+  --rf-hero-headline: var(--rs-hero-headline);
+
+  --ds-content-max: var(--rs-container-max);
+  --max-editorial: var(--rs-container-editorial);
+
+  --ls-text-2xs: var(--rs-text-2xs);
+  --ls-text-xs: var(--rs-text-xs);
+  --ls-text-sm: var(--rs-text-sm);
+  --ls-text-base: var(--rs-text-base);
+  --ls-text-md: var(--rs-text-md);
+  --ls-text-lg: var(--rs-text-lg);
+  --ls-text-xl: var(--rs-text-xl);
+  --ls-text-headline-sm: var(--rs-text-headline-sm);
+  --ls-text-headline-md: var(--rs-text-headline-md);
+  --ls-text-headline-lg: var(--rs-text-headline-lg);
+  --ls-text-nav: var(--rs-text-sm);
+  --ls-text-tab: var(--rs-text-sm);
+  --ls-text-bottom-nav: var(--rs-text-2xs);
+  --ls-icon-sm: 1.125rem;
+  --ls-icon-md: 1.25rem;
+  --ls-gutter-max: 1.25rem;
+  --ls-gutter: var(--rs-gutter);
+  --ls-container-max: var(--rs-container-max);
+  --ls-container-editorial: var(--rs-container-editorial);
+  --ls-touch-target: var(--rs-touch-min);
+  --ls-hero-ratio: var(--rs-hero-ratio);
+  --ls-hero-max-h-mobile: var(--rs-hero-max-h);
+  --ls-hero-max-h-desktop: var(--rs-hero-max-h-desktop);
+  --touch-min: var(--rs-touch-min);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   5. STICKY CHROME HEIGHTS & SCROLL OFFSETS
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --nr-h-header: 3rem;
+  --nr-h-categories: 1.75rem;
+  --nr-h-live-strip: 1.375rem;
+  --nr-h-ticker: 1.75rem;
+
+  --nr-top-header: var(--rs-safe-top);
+  --nr-top-categories: calc(var(--nr-top-header) + var(--nr-h-header));
+  --nr-top-live: calc(var(--nr-top-categories) + var(--nr-h-categories));
+  --nr-top-ticker: calc(var(--nr-top-live) + var(--nr-h-live-strip));
+  --nr-scroll-margin: calc(var(--nr-top-categories) + var(--nr-h-categories));
+
+  --rf-header-row: var(--nr-h-header);
+  --rf-tabs-height: var(--nr-h-categories);
+  --rf-header-chrome: calc(var(--nr-h-header) + var(--nr-h-categories));
+  --rf-ticker-height: var(--nr-h-ticker);
+  --rf-sticky-chrome: var(--nr-top-categories);
+  --rf-sticky-ticker: var(--nr-top-ticker);
+  --rf-sticky-scroll-margin: var(--nr-scroll-margin);
+  --ls-header-row: var(--nr-h-header);
+  --ls-tabs-height: var(--nr-h-categories);
+  --ls-header-total: var(--rf-header-chrome);
+  --ls-bottom-nav-bar: var(--rf-bottom-nav);
+  --ls-bottom-nav-total: var(--rf-bottom-nav-total);
+  --ls-section-gap: var(--rf-section-gap);
+  --ls-section-gap-lg: var(--rf-section-gap-lg);
+  --ls-content-pad-bottom: var(--rf-content-pad-bottom);
+  --ls-safe-top: var(--rs-safe-top);
+  --ls-safe-right: var(--rs-safe-right);
+  --ls-safe-bottom: var(--rs-safe-bottom);
+  --ls-safe-left: var(--rs-safe-left);
+  --app-header-row: var(--nr-h-header);
+  --app-tabs-height: var(--nr-h-categories);
+  --app-header-total: var(--rf-header-chrome);
+  --bottom-nav-height: var(--rf-bottom-nav);
+  --bottom-nav-total: var(--rf-bottom-nav-total);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   6. BREAKPOINT TOKEN STEPS
+   ══════════════════════════════════════════════════════════════ */
+
+@media (min-width: 768px) {
+  :root {
+    --rs-gutter: clamp(1rem, 2.5vw, 1.5rem);
+    --rs-container-max: min(100vw, 80rem);
+    --rs-space-section: 0.75rem;
+    --rs-space-section-md: 1rem;
+    --rs-space-section-lg: 1.5rem;
+    --rs-space-card: 0.625rem;
+    --rs-space-card-pad: 1rem;
+    --rs-hero-max-h: clamp(11rem, 28vw, 13.5rem);
+    --rs-hero-headline: clamp(1.125rem, 1vw + 0.85rem, 1.4375rem);
+    --rf-content-pad-bottom: 0;
+
+    --nr-h-header: 3.5rem;
+    --nr-h-categories: 0px;
+    --nr-top-categories: var(--nr-top-header);
+    --nr-top-live: calc(var(--nr-top-header) + var(--nr-h-header));
+    --nr-top-ticker: calc(var(--nr-top-live) + var(--nr-h-live-strip));
+    --nr-scroll-margin: calc(var(--nr-top-header) + var(--nr-h-header));
+    --rf-header-chrome: var(--nr-h-header);
+    --rf-tabs-height: 0px;
+
+    --ls-text-tab: var(--rs-text-base);
+    --ls-text-nav: var(--rs-text-base);
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --rs-gutter: 1.5rem;
+    --rs-container-max: min(100vw, 80rem);
+    --rs-container-home: min(100%, 75rem);
+    --rs-space-section: 0.875rem;
+    --rs-space-section-lg: 1.5rem;
+    --rs-space-card: 0.75rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --rs-container-home: min(100%, 80rem);
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --rs-gutter: 1.75rem;
+    --rs-container-max: min(100vw, 90rem);
+  }
+}
+
+@media (max-width: 359px) {
+  :root {
+    --rs-gutter: var(--rs-gutter-min);
+  }
+}
+
+/* Mobile chrome + page stickies scroll depth */
+@media (max-width: 767px) {
+  :root {
+    --nr-h-header: 3rem;
+    --nr-h-categories: 1.75rem;
+    --nr-h-live-strip: 1.375rem;
+    --nr-h-ticker: 1.75rem;
+    --rs-gutter: 0.875rem;
+    --rs-space-section: 0.5rem;
+    --rs-space-section-md: 0.625rem;
+    --rs-space-section-lg: 0.75rem;
+    --rs-space-card: 0.375rem;
+    --rs-space-card-pad: 0.625rem;
+    --rs-space-stack: 0.25rem;
+    --rs-bottom-nav: 2.75rem;
+    --rs-hero-max-h: min(36vw, 9rem);
+    --rs-hero-headline: clamp(1.0625rem, 4.1vw, 1.1875rem);
+    --rs-text-section: 0.9375rem;
+    --ls-text-tab: 0.6875rem;
+    --rf-content-pad-bottom: calc(var(--rf-bottom-nav-total) + 0.375rem);
+  }
+
+  .nr--has-page-stickies.nr--has-live-strip {
+    --nr-scroll-margin: calc(var(--nr-top-live) + var(--nr-h-live-strip));
+  }
+
+  .nr--has-page-stickies.nr--has-ticker:not(.nr--has-live-strip) {
+    --nr-scroll-margin: calc(var(--nr-top-live) + var(--nr-h-ticker));
+  }
+
+  .nr--has-page-stickies.nr--has-live-strip.nr--has-ticker {
+    --nr-scroll-margin: calc(var(--nr-top-ticker) + var(--nr-h-ticker));
+  }
+
+  html {
+    scroll-behavior: auto;
+    overflow-anchor: auto;
+  }
+
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  .app-shell {
+    min-height: 100dvh;
+    min-height: 100svh;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   7. DOCUMENT & VIEWPORT
+   ══════════════════════════════════════════════════════════════ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+html.native-scroll,
+html.native-app {
+  height: auto;
+  min-height: 100%;
+  overflow-y: visible;
+}
+
+html.native-scroll body,
+html.native-app body {
+  height: auto;
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+@media (max-width: 767px) {
+  body {
+    padding-left: var(--rs-safe-left);
+    padding-right: var(--rs-safe-right);
+  }
+
+  .has-bottom-nav main,
+  .has-bottom-nav .page-shell,
+  .has-bottom-nav .nr-root {
+    padding-bottom: var(--rf-content-pad-bottom);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   8. LAYOUT CONTAINERS
+   ══════════════════════════════════════════════════════════════ */
+
+.app-container,
+.nr-wrap,
+.home-news-flow,
+.mobile-comfort,
+.editorial-container,
+.hp-editorial {
+  width: 100%;
+  max-width: var(--rs-container-max);
+  margin-inline: auto;
+  padding-inline: var(--rs-gutter);
+  box-sizing: border-box;
+}
+
+.editorial-container {
+  width: min(100% - var(--rs-gutter) * 2, var(--rs-container-editorial));
+}
+
+.app-container--editorial {
+  max-width: var(--rs-container-editorial);
+}
+
+.app-container--reading {
+  max-width: var(--rs-container-reading);
+}
+
+.app-container--flush,
+.app-container--bleed {
+  padding-inline: 0;
+}
+
+.app-container--bleed {
+  max-width: none;
+}
+
+.hp-editorial {
+  max-width: var(--rs-container-home);
+}
+
+.hp-editorial > .nr-wrap,
+.hp-editorial .nr-wrap {
+  max-width: none;
+  padding-inline: 0;
+}
+
+.app-bleed-band {
+  width: 100%;
+  max-width: 100%;
+  margin-inline: 0;
+  padding-inline: var(--rs-gutter);
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .app-bleed-band {
+    max-width: var(--rs-container-max);
+    margin-inline: auto;
+    padding-inline: 0;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   9. SCROLL TARGETS (single list)
+   ══════════════════════════════════════════════════════════════ */
+
+.news-scroll-target,
+.app-shell__main .feed-section,
+.app-shell__main .nr-section,
+.app-shell__main .hp-lazy-section,
+.home-news-flow,
+.mobile-comfort,
+.nr-root,
+.nr--daily .nr-hero-zone--daily {
+  scroll-margin-top: var(--nr-scroll-margin);
+}
+
+@media (max-width: 767px) {
+  .home-news-flow,
+  .mobile-comfort {
+    scroll-padding-top: var(--nr-scroll-margin);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   10. VISIBILITY & LAYOUT UTILITIES
+   ══════════════════════════════════════════════════════════════ */
+
+.rf-mobile-only {
+  display: block;
+}
+
+.rf-tablet-up {
+  display: none;
+}
+
+.rf-desktop-only {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .rf-mobile-only {
+    display: none !important;
+  }
+
+  .rf-tablet-up {
+    display: block;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rf-desktop-only {
+    display: block;
+  }
+}
+
+.rf-layout-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rs-space-stack);
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .rf-layout-stack--tablet-row {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--rs-space-card);
+  }
+
+  .rf-layout-stack--tablet-row > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rf-layout-grid-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+    gap: var(--rs-space-section-lg);
+    align-items: start;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   11. IN-FLOW COMPONENTS (non-sticky)
+   ══════════════════════════════════════════════════════════════ */
+
+.live-updates-banner {
+  position: relative;
+  top: auto;
+  z-index: var(--nr-z-live-strip);
+  margin: 0 auto var(--rs-space-section);
+  max-width: min(100% - var(--rs-gutter) * 2, 28rem);
+  padding-inline: var(--rs-gutter);
+}
+
+/* Legacy feed grid: collapse awkward tablet-narrow two-col */
+@media (min-width: 640px) and (max-width: 767px) {
+  .feed-grid--2 {
+    grid-template-columns: 1fr;
+  }
+
+  .feed-grid--2 .feed-card:nth-child(odd) {
+    border-right: none;
+    padding-right: 0;
+  }
+
+  .feed-grid--2 .feed-card:nth-child(even) {
+    padding-left: 0;
+  }
+
+  .home-hero {
+    grid-template-columns: 1fr;
+  }
+}

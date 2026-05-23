@@ -2,13 +2,14 @@
  * Breaking & live news — sticky ticker, swipe feeds, pulse UX
  */
 
-/* ── Sticky breaking ticker ── */
+/* Breaking ticker visuals — sticky stack: newsroom-sticky.css */
 .nr-ticker--live {
   --ticker-speed: 38s;
   position: relative;
   display: flex;
   align-items: stretch;
-  min-height: 2rem;
+  min-height: var(--nr-h-ticker, 2rem);
+  max-height: var(--nr-h-ticker, 2rem);
   background: linear-gradient(
     90deg,
     #1a0505 0%,
@@ -17,13 +18,6 @@
   );
   border-block: 1px solid color-mix(in srgb, var(--ds-live) 45%, transparent);
   overflow: hidden;
-}
-
-.nr-ticker--sticky {
-  position: sticky;
-  top: var(--rf-sticky-ticker, var(--ls-header-total));
-  z-index: var(--rf-z-sticky-ticker, calc(var(--ds-z-chrome) - 6));
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
 }
 
 .nr-ticker__brand {

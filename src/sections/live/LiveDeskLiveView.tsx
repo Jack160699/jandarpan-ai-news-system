@@ -48,10 +48,12 @@ function LiveDeskLiveContent() {
   const liveCount = wire.filter((i) => i.isLive || i.ranking.isBreaking).length;
 
   return (
-    <div className="live-desk">
+    <div className="live-desk nr--has-page-stickies nr--has-live-strip">
       <div className="nr-wrap live-desk__top">
         <LiveDeskHeader updateCount={wire.length} />
-        <LiveNewsroomStatus />
+        <div className="newsroom-page-stickies">
+          <LiveNewsroomStatus />
+        </div>
         <p className="live-desk__hint">
           Auto-updates every 1–2 min · scroll to browse
         </p>

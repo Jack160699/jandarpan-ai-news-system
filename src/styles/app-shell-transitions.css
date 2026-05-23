@@ -207,12 +207,7 @@
   view-transition-name: bottom-nav;
 }
 
-/* Section scroll continuity + feed transitions */
-.app-shell__main .feed-section,
-.app-shell__main .nr-section,
-.app-shell__main .hp-lazy-section {
-  scroll-margin-top: var(--rf-sticky-scroll-margin);
-}
+/* scroll-margin → responsive-system.css */
 
 .app-shell__main .motion-feed {
   transition: opacity 0.2s var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1));

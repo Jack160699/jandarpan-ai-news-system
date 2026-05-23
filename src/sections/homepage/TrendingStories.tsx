@@ -25,29 +25,31 @@ export function TrendingStories({ articles, freshIds }: TrendingStoriesProps) {
           title={t.home.trending}
         />
 
-        <div className="nr-trending-featured">
-          <StoryCard
-            article={top}
-            variant="editorial"
-            priority
-            rank={1}
-            showFreshBadge={freshIds?.has(top.id)}
-          />
-        </div>
+        <div className="hp-trending-layout">
+          <div className="hp-trending-layout__lead nr-trending-featured">
+            <StoryCard
+              article={top}
+              variant="editorial"
+              priority
+              rank={1}
+              showFreshBadge={freshIds?.has(top.id)}
+            />
+          </div>
 
-        {rest.length > 0 ? (
-          <MotionFeed as="ul" className="nr-trending-list" role="list">
-            {rest.map((article, index) => (
-              <li key={article.id}>
-                <StoryCard
-                  article={article}
-                  variant="trending"
-                  rank={index + 2}
-                />
-              </li>
-            ))}
-          </MotionFeed>
-        ) : null}
+          {rest.length > 0 ? (
+            <MotionFeed as="ul" className="nr-trending-list" role="list">
+              {rest.map((article, index) => (
+                <li key={article.id}>
+                  <StoryCard
+                    article={article}
+                    variant="trending"
+                    rank={index + 2}
+                  />
+                </li>
+              ))}
+            </MotionFeed>
+          ) : null}
+        </div>
       </div>
     </Reveal>
   );

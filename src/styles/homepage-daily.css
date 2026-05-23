@@ -1,16 +1,95 @@
 /**
  * Daily-use homepage — dense, low decoration
+ * Layout tokens: responsive-system.css
  */
 
 .nr--daily {
-  --nr-section-pad: var(--ls-section-gap, 0.625rem);
+  --nr-max: var(--rf-container-max);
+  --nr-pad: var(--rf-gutter);
+  --nr-gap: var(--rf-section-gap);
+  --nr-section-pad: var(--rf-section-gap);
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .nr--daily .nr-section {
   padding-block: var(--nr-section-pad);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
+.nr--daily .nr-section + .nr-section {
+  border-top: 1px solid var(--rule);
+}
+
+.nr--daily .nr-section__header {
+  margin-bottom: var(--rf-card-gap);
+}
+
+.nr--daily .nr-section__title {
+  font-size: var(--rf-text-section);
+  margin: 0.2rem 0 0;
+}
+
+.nr-root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.feed-section {
+  padding-block: var(--rf-section-gap);
+}
+
+.feed-section-header {
+  padding-block: var(--rf-stack-gap);
+  margin-bottom: var(--rf-stack-gap);
+}
+
+.feed-section-header__title {
+  font-size: var(--rf-text-md);
+}
+
+@media (min-width: 768px) {
+  .nr-hero-zone--daily {
+    padding-block: var(--rf-section-gap-md) var(--rf-section-gap);
+  }
+
+  .nr-breaking-hero--daily .nr-breaking-hero__headline {
+    font-size: var(--rf-hero-headline);
+  }
+
+  .nr-breaking-hero--daily .nr-breaking-hero__visual {
+    aspect-ratio: var(--rf-hero-ratio);
+    max-height: var(--rs-hero-max-h-desktop);
+  }
+}
+
+@media (max-width: 767px) {
+  .nr--daily .nr-masthead--daily {
+    display: none;
+  }
+
+  .nr--daily .newsroom-page-stickies {
+    max-width: none;
+    padding-inline: 0;
+  }
+
+  .nr--daily .live-newsroom-status {
+    padding-inline: var(--rf-gutter);
+  }
 }
 
 /* Masthead + hero — layout-system.css owns responsive sizing */
+
+/* Mobile: stacked lead (copy above image) */
+@media (max-width: 1023px) {
+  .nr-breaking-hero--daily .nr-breaking-hero__link {
+    display: flex;
+    flex-direction: column;
+  }
+}
 
 .nr-breaking-hero__flag {
   display: inline-block;

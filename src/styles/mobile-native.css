@@ -73,8 +73,8 @@
 .ptr-indicator {
   position: fixed;
   left: 50%;
-  top: calc(var(--ls-header-row, var(--app-header-row, 52px)) + var(--ls-safe-top, 0px) + 4px);
-  z-index: calc(var(--ds-z-chrome) + 1);
+  top: calc(var(--nr-top-categories, var(--nr-top-header)) + 4px);
+  z-index: var(--nr-z-chrome-ptr);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -147,7 +147,7 @@ html[data-ptr-refresh="1"] main {
   position: fixed;
   right: max(1rem, var(--safe-right, 0px));
   bottom: calc(var(--ls-bottom-nav-total, var(--bottom-nav-total, 4.5rem)) + 0.375rem);
-  z-index: calc(var(--ds-z-chrome) - 2);
+  z-index: var(--nr-z-fab);
   display: flex;
   flex-direction: column;
   align-items: flex-end;

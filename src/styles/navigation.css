@@ -30,7 +30,7 @@
 .mobile-sheet-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 190;
+  z-index: calc(var(--rs-z-overlay) - 1);
   background: color-mix(in srgb, var(--ink-headline) 40%, transparent);
 }
 
@@ -39,7 +39,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 200;
+  z-index: var(--rs-z-skip);
   max-height: min(70vh, 420px);
   background: var(--paper-elevated);
   border: 1px solid var(--rule);

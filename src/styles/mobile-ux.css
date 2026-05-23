@@ -1,5 +1,5 @@
 /**
- * Mobile feed & article polish — chrome/spacing tokens: layout-system.css
+ * Mobile feed & article polish — tokens: responsive-system.css
  */
 
 html.native-scroll {
@@ -12,18 +12,7 @@ html.native-scroll {
     text-size-adjust: 100%;
   }
 
-  .category-tabs__scroll {
-    scroll-padding-inline: var(--ls-gutter);
-  }
-
-  .category-tab:active {
-    background: var(--paper-muted);
-  }
-
-  .home-news-flow,
-  .mobile-comfort {
-    scroll-padding-top: var(--rf-sticky-scroll-margin);
-  }
+  /* Category chrome → mobile-newsroom.css */
 
   /* Feed rhythm */
   .feed-section__inner {

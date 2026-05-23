@@ -160,13 +160,7 @@
   --ds-content-max: 100%;
   --ds-read-max: 40rem;
 
-  /* ── Z-index ── */
-  --ds-z-base: 0;
-  --ds-z-raised: 10;
-  --ds-z-sticky: 40;
-  --ds-z-chrome: 60;
-  --ds-z-overlay: 100;
-  --ds-z-modal: 120;
+  /* Layout/z-index: responsive-system.css */
 }
 
 /* Map legacy tokens → design system */

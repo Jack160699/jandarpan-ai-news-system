@@ -7,7 +7,7 @@ import { LanguageGate } from "@/components/reader/LanguageGate";
 import { HeadlinesMiniPlayer } from "@/components/listen/HeadlinesMiniPlayer";
 import { HeadlinesListenProvider } from "@/providers/HeadlinesListenProvider";
 import { NavigationProvider } from "@/providers/NavigationProvider";
-import { AppHeader } from "./AppHeader";
+import { NewsroomChrome } from "./NewsroomChrome";
 import { BottomNav } from "./BottomNav";
 import { NavProgress } from "./NavProgress";
 import { AppFab } from "@/components/mobile/AppFab";
@@ -55,7 +55,7 @@ export function AppChrome({ children }: AppChromeProps) {
             <div className="app-container rf-tablet-up">
               <AdSlot slotId="global_header" />
             </div>
-            <AppHeader />
+            <NewsroomChrome />
             <PullToRefresh>
               <ScrollRetention>
                 <RouteTransition>{children}</RouteTransition>

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./design-system.css";
-@import "./responsive-foundation.css";
+@import "./responsive-system.css";
+@import "./newsroom-sticky.css";
 @import "./layout-system.css";
 @import "./typography.css";
 @import "./motion.css";
@@ -25,6 +26,7 @@
 @import "./premium-loading.css";
 @import "./app-shell-transitions.css";
 @import "./mobile-ux.css";
+@import "./mobile-newsroom.css";
 @import "./mobile-native.css";
 @import "./production.css";
 @import "./story-page.css";
@@ -32,6 +34,7 @@
 @import "./newspaper-premium.css";
 @import "./homepage-premium.css";
 @import "./homepage-daily.css";
+@import "./homepage-desktop.css";
 @import "./homepage-perf.css";
 @import "./story-immersive.css";
 @import "./story-editorial-premium.css";
@@ -114,7 +117,6 @@ body {
   background: var(--paper);
   color: var(--ink-primary);
   font-family: var(--font-body), Georgia, "Times New Roman", serif;
-  overflow-x: hidden;
   line-height: 1.5;
 }
 
@@ -170,10 +172,7 @@ body {
   text-underline-offset: 0.15em;
 }
 
-.editorial-container {
-  width: min(100% - var(--space-gutter) * 2, var(--max-editorial));
-  margin-inline: auto;
-}
+/* .editorial-container → responsive-system.css */
 
 .section-pad {
   padding-block: var(--space-section);
@@ -200,7 +199,7 @@ select:focus-visible {
   position: absolute;
   left: -9999px;
   top: 0;
-  z-index: 200;
+  z-index: var(--rs-z-skip);
   padding: 0.75rem 1rem;
   font-family: var(--font-ui);
   font-size: var(--ds-text-ui);

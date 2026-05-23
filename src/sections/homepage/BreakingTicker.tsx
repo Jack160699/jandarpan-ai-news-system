@@ -26,7 +26,7 @@ export function BreakingTicker({
 
   return (
     <section
-      className={`nr-ticker nr-ticker--live${sticky ? " nr-ticker--sticky" : ""}${paused ? " nr-ticker--paused" : ""}`}
+      className={`nr-ticker nr-ticker--live${sticky ? " newsroom-sticky newsroom-sticky--ticker" : ""}${paused ? " nr-ticker--paused" : ""}`}
       aria-label={t.home.tickerAria}
       role="region"
       onPointerDown={() => setPaused(true)}
