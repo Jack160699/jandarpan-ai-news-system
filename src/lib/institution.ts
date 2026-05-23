@@ -45,7 +45,7 @@ export const RITUAL_COPY: Record<
   late: {
     greeting: "Late desk · Final corrections",
     subline: "Holding for dawn · Bastar & Raipur wires",
-    closure: "The newsroom grows quiet. CG Bhaskar endures in the record.",
+    closure: "The newsroom grows quiet. Hamar Chhattisgarh endures in the record.",
   },
 };
 

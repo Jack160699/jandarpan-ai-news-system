@@ -14,7 +14,7 @@ export function RegionalHighlights({ articles }: RegionalHighlightsProps) {
   return (
     <section
       id="regional"
-      className="nr-section scroll-mt-24"
+      className="nr-section nr-section--regional scroll-mt-24"
       aria-labelledby="nr-regional-title"
     >
       <div className="nr-wrap">
@@ -26,17 +26,21 @@ export function RegionalHighlights({ articles }: RegionalHighlightsProps) {
           description="Stories that matter closest to home — Raipur, Bastar, and across the state."
         />
 
-        <StoryCard article={lead} variant="editorial-lead" />
+        <div className="nr-regional-mosaic">
+          <div className="nr-regional-mosaic__lead">
+            <StoryCard article={lead} variant="editorial-lead" priority />
+          </div>
 
-        {rest.length > 0 ? (
-          <ul className="nr-regional__list" role="list">
-            {rest.map((article) => (
-              <li key={article.id}>
-                <StoryCard article={article} variant="compact" />
-              </li>
-            ))}
-          </ul>
-        ) : null}
+          {rest.length > 0 ? (
+            <ul className="nr-regional-mosaic__stack" role="list">
+              {rest.map((article) => (
+                <li key={article.id}>
+                  <StoryCard article={article} variant="compact" />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       </div>
     </section>
   );

@@ -8,3 +8,4 @@ export * from "./analytics";
 export * from "./personalization";
 export * from "./pipeline";
 export { CG_BHASKAR_TENANT } from "./presets/cg-bhaskar";
+export { HAMAR_CHHATTISGARH_TENANT } from "./presets/hamar-chhattisgarh";

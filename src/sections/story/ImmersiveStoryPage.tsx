@@ -1,12 +1,14 @@
-import { InternalSeoLinks } from "@/components/seo/InternalSeoLinks";
 import { LiveStoryJsonLd } from "@/components/seo/LiveStoryJsonLd";
 import { StoryBreadcrumbs } from "@/components/seo/StoryBreadcrumbs";
-import { StoryAttribution } from "@/components/story/StoryAttribution";
 import { StoryBody } from "@/components/story/StoryBody";
 import { StoryCategoryNav } from "@/components/story/StoryCategoryNav";
+import { StoryCinematicHero } from "@/components/story/StoryCinematicHero";
+import { StoryContinueReading } from "@/components/story/StoryContinueReading";
+import { StoryFloatingCTA } from "@/components/story/StoryFloatingCTA";
 import { StoryFooterDisclaimer } from "@/components/story/StoryFooterDisclaimer";
-import { StoryHeroImage } from "@/components/story/StoryHeroImage";
 import { StoryHighlights } from "@/components/story/StoryHighlights";
+import { StoryInlineBreaking } from "@/components/story/StoryInlineBreaking";
+import { StoryInlineRelated } from "@/components/story/StoryInlineRelated";
 import { StoryMobileShareBar } from "@/components/story/StoryMobileShareBar";
 import { StoryReaderShell } from "@/components/story/StoryReaderShell";
 import { AdSlot } from "@/components/monetization/AdSlot";
@@ -106,7 +108,6 @@ export function ImmersiveStoryPage({
 
   const attribution = buildStoryAttribution(article, editorialMeta);
   const categoryNav = buildStoryCategoryNav(category, article.region);
-  const aiConfidence = editorialMeta?.ai_confidence ?? null;
   const breadcrumbs = buildStoryBreadcrumbs({
     category,
     headline,
@@ -118,6 +119,30 @@ export function ImmersiveStoryPage({
   const publishedAtLabel = article.published_at
     ? formatRelativeTime(article.published_at, displayLanguage)
     : null;
+
+  const inlineRelated = related.slice(0, 3);
+  const gridRelated = related.slice(0, 8);
+  const continueRelated = related.slice(0, 6);
+
+  const liveHref = liveCoverage
+    ? `/live/${liveCoverage.slug}`
+    : "/#breaking";
+
+  const inlineSlot = (
+    <>
+      {liveCoverage ? (
+        <StoryInlineBreaking
+          headline={
+            liveCoverage.headline ??
+            "Live coverage is updating for this story."
+          }
+          href={liveHref}
+          sourceCount={liveCoverage.sourceCount}
+        />
+      ) : null}
+      <StoryInlineRelated articles={inlineRelated} />
+    </>
+  );
 
   return (
     <>
@@ -133,50 +158,40 @@ export function ImmersiveStoryPage({
       />
 
       <article
-        className="immersive-story immersive-story--premium immersive-story--editorial multilingual-article"
+        className="immersive-story immersive-story--premium immersive-story--editorial immersive-story--cinematic multilingual-article"
         data-reading="article"
         data-translation={translationActive ? "1" : "0"}
         lang={displayLanguage}
       >
         <div className="immersive-story__layout">
           <div className="immersive-story__main">
-            <div className="immersive-story__shell">
+            <div className="immersive-story__shell immersive-story__shell--chrome">
               <StoryReaderShell
                 slug={slug}
                 title={headline}
                 url={canonicalUrl}
                 readTime={readTime}
               />
-
               <StoryCategoryNav links={categoryNav} />
               <StoryBreadcrumbs items={breadcrumbs} />
-
               {sponsoredStory ? (
                 <SponsoredStoryBanner meta={sponsoredStory} />
               ) : null}
-
-              <header className="immersive-story__header">
-                <p className="immersive-story__kicker story-kicker">
-                  {attribution.categoryLabel} · {attribution.regionLabel}
-                </p>
-                <h1 className="immersive-story__headline story-headline">
-                  {headline}
-                </h1>
-                <StoryAttribution
-                  attribution={attribution}
-                  readTime={readTime}
-                  publishedAtIso={article.published_at}
-                  publishedAtLabel={publishedAtLabel}
-                  isLive={isLive}
-                />
-              </header>
             </div>
 
-            <StoryHeroImage
+            <StoryCinematicHero
               src={heroDisplay.src}
               fallbackSrc={heroDisplay.fallbackSrc}
               sizes={heroDisplay.sizes}
-              alt={headline}
+              headline={headline}
+              categoryLabel={attribution.categoryLabel}
+              regionLabel={attribution.regionLabel}
+              attribution={attribution}
+              readTime={readTime}
+              publishedAtIso={article.published_at}
+              publishedAtLabel={publishedAtLabel}
+              isLive={isLive}
+              desk={attribution.desk}
             />
 
             {liveCoverage ? (
@@ -197,16 +212,10 @@ export function ImmersiveStoryPage({
               />
 
               {aiSummary ? (
-                <StorySummaryBox
-                  summary={aiSummary}
-                  confidence={aiConfidence}
-                />
+                <StorySummaryBox summary={aiSummary} />
               ) : null}
 
-              <StoryAiTransparency
-                sourceCount={attribution.sourceCount}
-                confidence={aiConfidence}
-              />
+              <StoryAiTransparency sourceCount={attribution.sourceCount} />
 
               <StoryHighlights items={highlights} />
 
@@ -214,27 +223,26 @@ export function ImmersiveStoryPage({
                 sections={contentSections}
                 plainParagraphs={plainParagraphs}
                 plainBlocks={parsed.plainBlocks}
+                inlineSlot={inlineSlot}
+                inlineAfterParagraph={3}
               />
 
               <AdSlot
                 slotId="story_in_article"
                 articleSlug={slug}
-                className="immersive-story__shell"
+                className="immersive-story__ad"
               />
 
               <StoryTimeline events={timeline} />
 
-              <StoryRelatedGrid articles={related} />
+              <StoryRelatedGrid articles={gridRelated} />
 
-              <InternalSeoLinks
-                title="Continue reading"
-                links={internalLinks}
+              <StoryContinueReading
+                related={continueRelated}
+                hubLinks={internalLinks}
               />
 
-              <AdSlot
-                slotId="story_footer"
-                articleSlug={slug}
-              />
+              <AdSlot slotId="story_footer" articleSlug={slug} />
 
               <StoryFooterDisclaimer />
             </div>
@@ -250,6 +258,12 @@ export function ImmersiveStoryPage({
           </aside>
         </div>
 
+        <StoryFloatingCTA
+          shareUrl={canonicalUrl}
+          shareTitle={headline}
+          liveHref={liveHref}
+          shortsHref="/shorts"
+        />
         <StoryMobileShareBar url={canonicalUrl} title={headline} />
       </article>
     </>

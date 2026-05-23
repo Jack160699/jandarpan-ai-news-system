@@ -14,7 +14,7 @@ import {
 } from "@/lib/news/rss-feed-cache";
 
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; CG-Bhaskar-RSS/2.1; +https://newspaper-motion.vercel.app)";
+  "Mozilla/5.0 (compatible; Hamar-Chhattisgarh-RSS/2.1; +https://newspaper-motion.vercel.app)";
 
 const parser = new Parser({
   timeout: RSS_FEED_TIMEOUT_MS,

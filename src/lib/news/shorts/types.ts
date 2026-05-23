@@ -64,6 +64,8 @@ export type NewsShortCard = {
   summary60s: string;
   anchorLine: string;
   imageUrl: string;
+  /** Optional MP4/HLS — falls back to image reel when absent */
+  videoUrl?: string | null;
   section: HomeSectionId;
   styleId: string;
   durationSec: number;
@@ -74,4 +76,10 @@ export type NewsShortCard = {
   language: NewsroomLanguage;
   subtitles: SubtitleCue[];
   reelSlides: ReelSlide[];
+  /** Hindi category label for overlay */
+  categoryLabel: string;
+  /** Reporter or wire source */
+  sourceLabel: string;
+  sourceCount: number;
+  isLive: boolean;
 };

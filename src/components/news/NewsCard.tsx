@@ -1,9 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { MediaImage } from "@/components/media/MediaImage";
+import {
+  IMG_CARD_COMPACT,
+  IMG_CARD_FEATURED,
+  IMG_CARD_FEED,
+} from "@/lib/images/homepage-sizes";
 import { localizeFeedStory } from "@/lib/i18n/localize-content";
-import { IMAGE_BLUR } from "@/lib/image-placeholder";
 import type { FeedStory } from "@/lib/home-feed";
 import { useLanguage } from "@/providers/LanguageProvider";
 
@@ -13,6 +17,10 @@ type NewsCardProps = {
   priority?: boolean;
   showExcerpt?: boolean;
 };
+
+function storyCategory(story: FeedStory): string {
+  return story.kicker.toLowerCase().replace(/\s+/g, "-") || "world";
+}
 
 function Badges({ story }: { story: FeedStory }) {
   const { t } = useLanguage();
@@ -42,24 +50,27 @@ export function NewsCard({
   const { language } = useLanguage();
   const localized = localizeFeedStory(story, language);
   const href = `/story/${story.slug}`;
+  const category = storyCategory(story);
 
   if (variant === "featured") {
     return (
-      <article className="feed-card feed-card--featured">
+      <article className="feed-card pcard pcard--news pcard--news-featured feed-card--featured">
         <Link
           href={href}
+          prefetch={false}
           className="story-link feed-card__link feed-card__link--featured tap-target group"
         >
           <div className="feed-card__media feed-card__media--featured">
-            <Image
+            <MediaImage
               src={story.image}
               alt=""
-              fill
+              sizes={IMG_CARD_FEATURED}
+              category={category}
+              aspect="16:9"
               priority={priority}
-              placeholder="blur"
-              blurDataURL={IMAGE_BLUR}
-              sizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, 60vw"
-              className="image-ink object-cover"
+              fillParent
+              cinematic={false}
+              imageClassName="image-ink"
             />
           </div>
           <div className="feed-card__body">
@@ -90,21 +101,22 @@ export function NewsCard({
 
   if (variant === "compact") {
     return (
-      <article className="feed-card feed-card--compact">
+      <article className="feed-card pcard pcard--news pcard--news-compact feed-card--compact">
         <Link
           href={href}
+          prefetch={false}
           className="story-link feed-card__link feed-card__link--compact tap-target group"
         >
           <div className="feed-card__media feed-card__media--compact shrink-0">
-            <Image
+            <MediaImage
               src={story.image}
               alt=""
-              fill
-              loading="lazy"
-              placeholder="blur"
-              blurDataURL={IMAGE_BLUR}
-              sizes="72px"
-              className="image-ink object-cover"
+              sizes={IMG_CARD_COMPACT}
+              category={category}
+              aspect="4:5"
+              fillParent
+              cinematic={false}
+              imageClassName="image-ink"
             />
           </div>
           <div className="feed-card__body min-w-0 flex-1 py-0.5">
@@ -120,22 +132,23 @@ export function NewsCard({
   }
 
   return (
-    <article className="feed-card feed-card--horizontal">
+    <article className="feed-card pcard pcard--news pcard--news-horizontal feed-card--horizontal">
       <Link
         href={href}
+        prefetch={false}
         className="story-link feed-card__link feed-card__link--horizontal tap-target group"
       >
         <div className="feed-card__media feed-card__media--horizontal shrink-0">
-          <Image
+          <MediaImage
             src={story.image}
             alt=""
-            fill
-            sizes="(max-width: 480px) 92px, 112px"
+            sizes={IMG_CARD_FEED}
+            category={category}
+            aspect="4:5"
             priority={priority}
-            loading={priority ? undefined : "lazy"}
-            placeholder="blur"
-            blurDataURL={IMAGE_BLUR}
-            className="image-ink object-cover"
+            fillParent
+            cinematic={false}
+            imageClassName="image-ink"
           />
         </div>
         <div className="feed-card__body min-w-0 flex-1">
@@ -144,12 +157,9 @@ export function NewsCard({
             <Badges story={story} />
           </div>
           <h3 className="feed-card__title line-clamp-2">{localized.title}</h3>
-          {showExcerpt ? (
-            <p className="feed-card__excerpt line-clamp-1">{localized.excerpt}</p>
-          ) : null}
           <p className="feed-card__time">
             {story.filedAt}
-            {story.city ? ` · ${story.city}` : ""} · {story.readTime}
+            {story.city ? ` · ${story.city}` : ""}
           </p>
         </div>
       </Link>

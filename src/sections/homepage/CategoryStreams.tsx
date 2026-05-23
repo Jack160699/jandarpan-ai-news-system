@@ -8,6 +8,15 @@ type CategoryStreamsProps = {
   streams: RegionalSectionBlock[];
 };
 
+const SECTION_ACCENTS = [
+  "nr-categories__block--cg",
+  "nr-categories__block--india",
+  "nr-categories__block--world",
+  "nr-categories__block--biz",
+  "nr-categories__block--sports",
+  "nr-categories__block--edu",
+] as const;
+
 export function CategoryStreams({ streams }: CategoryStreamsProps) {
   if (!streams.length) return null;
 
@@ -26,26 +35,51 @@ export function CategoryStreams({ streams }: CategoryStreamsProps) {
         />
       </div>
 
-      <div className="nr-categories">
-        {streams.map((stream) => (
-          <div key={stream.id} className="nr-categories__block">
-            <div className="nr-categories__head">
-              <h3 className="nr-categories__label">
-                <Link href={categoryPath(stream.id)} className="nr-categories__hub-link">
-                  {stream.label}
-                </Link>
-              </h3>
-              <span className="nr-categories__label-hi">{stream.labelHi}</span>
+      <div className="nr-categories nr-categories--staggered">
+        {streams.map((stream, index) => {
+          const accent =
+            SECTION_ACCENTS[index % SECTION_ACCENTS.length] ??
+            "nr-categories__block--cg";
+          const layoutEven = index % 2 === 0;
+
+          return (
+            <div
+              key={stream.id}
+              className={`nr-categories__block ${accent}${layoutEven ? "" : " nr-categories__block--alt"}`}
+            >
+              <div className="nr-categories__head">
+                <h3 className="nr-categories__label">
+                  <Link
+                    href={categoryPath(stream.id)}
+                    className="nr-categories__hub-link"
+                  >
+                    {stream.label}
+                  </Link>
+                </h3>
+                <span className="nr-categories__label-hi">
+                  {stream.labelHi}
+                </span>
+              </div>
+              <ul
+                className={
+                  layoutEven
+                    ? "nr-categories__cards nr-categories__cards--stack"
+                    : "nr-categories__cards nr-categories__cards--rail"
+                }
+                role="list"
+              >
+                {stream.articles.map((article) => (
+                  <li key={article.id}>
+                    <StoryCard
+                      article={article}
+                      variant={layoutEven ? "editorial" : "compact"}
+                    />
+                  </li>
+                ))}
+              </ul>
             </div>
-            <ul className="nr-categories__cards" role="list">
-              {stream.articles.map((article) => (
-                <li key={article.id}>
-                  <StoryCard article={article} variant="editorial" />
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

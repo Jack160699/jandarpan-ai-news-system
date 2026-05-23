@@ -1,9 +1,9 @@
-export default function Loading() {
+import { HomepageSkeleton } from "@/sections/homepage";
+
+export default function RootLoading() {
   return (
-    <div className="loading-screen" aria-live="polite" aria-busy="true">
-      <p className="loading-screen__brand">CG Bhaskar</p>
-      <p className="loading-screen__label">Edition loading</p>
-      <div className="loading-screen__bar" role="presentation" />
+    <div className="route-loading" aria-busy="true" aria-label="Loading">
+      <HomepageSkeleton />
     </div>
   );
 }

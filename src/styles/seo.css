@@ -96,15 +96,21 @@
 
 .trending-keywords__chip {
   font-size: 0.8125rem;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  background: var(--surface-muted, #f4f0e8);
-  color: var(--ink-primary, #1a1510);
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--ds-radius-full, 999px);
+  background: var(--paper-muted);
+  color: var(--ink-body);
+  border: 1px solid var(--rule);
   text-decoration: none;
+  transition:
+    background var(--ds-duration-fast) var(--ds-ease),
+    border-color var(--ds-duration-fast) var(--ds-ease);
 }
 
 .trending-keywords__chip:hover {
-  background: var(--surface-elevated, #ebe4d6);
+  background: var(--ds-accent-soft);
+  border-color: color-mix(in srgb, var(--ds-accent) 30%, var(--rule));
+  color: var(--ink-headline);
 }
 
 .category-hub {

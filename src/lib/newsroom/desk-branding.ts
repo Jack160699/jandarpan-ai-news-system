@@ -13,8 +13,8 @@ export type NewsDeskLabel = {
 export const NEWS_DESKS: Record<NewsDeskId, NewsDeskLabel> = {
   "cg-ai-desk": {
     id: "cg-ai-desk",
-    name: "CG Bhaskar AI Desk",
-    nameHi: "सीजी भास्कर AI डेस्क",
+    name: "State Desk",
+    nameHi: "राज्य डेस्क",
   },
   "regional-bureau": {
     id: "regional-bureau",

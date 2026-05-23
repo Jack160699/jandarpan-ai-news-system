@@ -25,7 +25,20 @@ export {
 export {
   resolveCardImage,
   resolveDisplayImage,
+  resolveMedia,
   optimizeImageUrlForNext,
+  optimizeCdnUrl,
+  optimizeCdnImageUrl,
+  type ResolvedMedia,
+  type ResolveMediaInput,
+  type DisplayImageInput,
 } from "@/lib/news/images/display";
+
+export {
+  normalizeMediaAspect,
+  aspectClassName,
+  type MediaAspect,
+  type ThumbAspect,
+} from "@/lib/news/images/aspects";
 
 export { enrichArticleImages, type ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";

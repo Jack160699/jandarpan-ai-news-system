@@ -21,7 +21,8 @@ export type CategorySeoConfig = {
 
 const BASE_KEYWORDS = [
   "Chhattisgarh news",
-  "CG Bhaskar",
+  "Hamar Chhattisgarh",
+  "हमार छत्तीसगढ़",
   "छत्तीसगढ़ समाचार",
 ];
 
@@ -102,6 +103,17 @@ export const CATEGORY_SEO: CategorySeoConfig[] = [
     descriptionEn: "Public health, schools, exams, and education policy in Chhattisgarh.",
     descriptionHi: "स्वास्थ्य सेवा, स्कूल, परीक्षा और शिक्षा नीति — छत्तीसगढ़।",
     keywords: [...BASE_KEYWORDS, "health news CG", "education CG"],
+    newsCategory: "health",
+    sectionId: "education",
+  },
+  {
+    slug: "education",
+    path: "/category/education",
+    titleEn: "Education News",
+    titleHi: "शिक्षा समाचार",
+    descriptionEn: "Schools, exams, scholarships, and education policy in Chhattisgarh.",
+    descriptionHi: "स्कूल, परीक्षा, छात्रवृत्ति और शिक्षा नीति — छत्तीसगढ़।",
+    keywords: [...BASE_KEYWORDS, "education CG", "school news"],
     newsCategory: "health",
     sectionId: "education",
   },

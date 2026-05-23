@@ -108,12 +108,14 @@
 
 .feed-card__media--horizontal {
   width: 6.5rem;
-  height: 4.5rem;
+  aspect-ratio: 4 / 5;
+  height: auto;
 }
 
 .feed-card__media--compact {
   width: 4rem;
-  height: 4rem;
+  aspect-ratio: 4 / 5;
+  height: auto;
 }
 
 .feed-card__body {

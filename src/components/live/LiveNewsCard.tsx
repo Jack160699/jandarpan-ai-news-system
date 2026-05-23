@@ -44,7 +44,7 @@ export function LiveNewsCard({
 
   if (variant === "featured") {
     return (
-      <article className="feed-card feed-card--featured">
+      <article className="feed-card pcard pcard--news pcard--news-featured feed-card--featured">
         <Link
           href={article.href}
           className="story-link feed-card__link feed-card__link--featured tap-target group"
@@ -53,6 +53,8 @@ export function LiveNewsCard({
             <NewsImage
               src={article.imageUrl}
               alt=""
+              category={article.category}
+              source={article.source}
               priority={priority}
               sizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, 60vw"
             />
@@ -80,13 +82,19 @@ export function LiveNewsCard({
 
   if (variant === "compact") {
     return (
-      <article className="feed-card feed-card--compact">
+      <article className="feed-card pcard pcard--news pcard--news-compact feed-card--compact">
         <Link
           href={article.href}
           className="story-link feed-card__link feed-card__link--compact tap-target group"
         >
           <div className="feed-card__media feed-card__media--compact shrink-0">
-            <NewsImage src={article.imageUrl} alt="" sizes="72px" />
+            <NewsImage
+              src={article.imageUrl}
+              alt=""
+              category={article.category}
+              source={article.source}
+              sizes="72px"
+            />
           </div>
           <div className="feed-card__body min-w-0 flex-1 py-0.5">
             <span className="feed-card__category">{catLabel}</span>
@@ -101,7 +109,7 @@ export function LiveNewsCard({
   }
 
   return (
-    <article className="feed-card feed-card--horizontal">
+    <article className="feed-card pcard pcard--news pcard--news-horizontal feed-card--horizontal">
       <Link
         href={article.href}
         className="story-link feed-card__link feed-card__link--horizontal tap-target group"
@@ -110,6 +118,8 @@ export function LiveNewsCard({
           <NewsImage
             src={article.imageUrl}
             alt=""
+            category={article.category}
+            source={article.source}
             priority={priority}
             sizes="(max-width: 480px) 92px, 112px"
           />

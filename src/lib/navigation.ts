@@ -5,32 +5,95 @@ export type NavCategory = {
   href: string;
 };
 
-/** Sticky category tabs — regional news app pattern */
+/** Fallback when tenant categories unavailable — real routes only */
 export const NAV_CATEGORIES: NavCategory[] = [
-  { id: "top-news", label: "Top News", labelHi: "टॉप", href: "#top-news" },
-  { id: "chhattisgarh", label: "Chhattisgarh", labelHi: "छत्तीसगढ़", href: "#regional" },
-  { id: "raipur", label: "Raipur", labelHi: "रायपुर", href: "#regional" },
-  { id: "politics", label: "Politics", labelHi: "राजनीति", href: "#editorial" },
-  { id: "crime", label: "Crime", labelHi: "अपराध", href: "#wire" },
-  { id: "sports", label: "Sports", labelHi: "खेल", href: "#categories" },
-  { id: "business", label: "Business", labelHi: "व्यापार", href: "#trending" },
-  { id: "education", label: "Education", labelHi: "शिक्षा", href: "#categories" },
+  { id: "top-news", label: "Top News", labelHi: "टॉप", href: "/" },
+  {
+    id: "chhattisgarh",
+    label: "Chhattisgarh",
+    labelHi: "छत्तीसगढ़",
+    href: "/category/chhattisgarh",
+  },
+  {
+    id: "raipur",
+    label: "Raipur",
+    labelHi: "रायपुर",
+    href: "/category/raipur",
+  },
+  {
+    id: "politics",
+    label: "Politics",
+    labelHi: "राजनीति",
+    href: "/category/politics",
+  },
+  {
+    id: "business",
+    label: "Business",
+    labelHi: "व्यापार",
+    href: "/category/business",
+  },
+  {
+    id: "sports",
+    label: "Sports",
+    labelHi: "खेल",
+    href: "/category/sports",
+  },
+  {
+    id: "education",
+    label: "Education",
+    labelHi: "शिक्षा",
+    href: "/category/education",
+  },
 ];
+
+export type BottomNavIcon =
+  | "home"
+  | "shorts"
+  | "live"
+  | "saved"
+  | "search";
 
 export type BottomNavTab = {
   id: string;
   label: string;
   labelHi: string;
   href: string;
-  icon: "home" | "video" | "live" | "saved" | "profile";
+  icon: BottomNavIcon;
+  /** Non-route actions — must be wired in BottomNav */
+  action?: "menu";
 };
 
+/** Production bottom nav — every item is a real route or menu */
 export const BOTTOM_NAV_TABS: BottomNavTab[] = [
   { id: "home", label: "Home", labelHi: "होम", href: "/", icon: "home" },
-  { id: "video", label: "Video", labelHi: "वीडियो", href: "/shorts", icon: "video" },
-  { id: "live", label: "Live", labelHi: "लाइव", href: "/#breaking", icon: "live" },
-  { id: "saved", label: "Saved", labelHi: "सेव", href: "/archive", icon: "saved" },
-  { id: "profile", label: "Profile", labelHi: "प्रोफाइल", href: "/search", icon: "profile" },
+  {
+    id: "shorts",
+    label: "Shorts",
+    labelHi: "रील्स",
+    href: "/shorts",
+    icon: "shorts",
+  },
+  {
+    id: "live",
+    label: "Live",
+    labelHi: "लाइव",
+    href: "/live",
+    icon: "live",
+  },
+  {
+    id: "saved",
+    label: "Saved",
+    labelHi: "सेव्ड",
+    href: "/archive",
+    icon: "saved",
+  },
+  {
+    id: "search",
+    label: "Search",
+    labelHi: "खोज",
+    href: "/search",
+    icon: "search",
+  },
 ];
 
 export const HEADER_LOCATION = {

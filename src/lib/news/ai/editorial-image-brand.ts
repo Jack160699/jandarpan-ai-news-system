@@ -1,9 +1,9 @@
 /**
- * CG Bhaskar branded editorial visual system — category + region templates
+ * Hamar Chhattisgarh editorial visual system — category + region templates
  */
 
 export const BRAND_VISUAL = {
-  name: "CG Bhaskar AI Desk",
+  name: "Hamar Chhattisgarh Desk",
   palette:
     "warm saffron accents (#E8952D), deep forest green (#1B5E4B), paper beige background, muted trustworthy blues — never neon",
   typographySpace:

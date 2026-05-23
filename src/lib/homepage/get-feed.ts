@@ -11,35 +11,47 @@ import {
 } from "@/lib/infrastructure/cache";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import { buildGeneratedHomepageFeed } from "@/lib/homepage/generated-feed";
-import { buildNewsShortsFromPool } from "@/lib/homepage/shorts-feed";
+import { buildTrendingShortsFromPool } from "@/lib/homepage/shorts-feed";
 import { ISR_TAGS } from "@/lib/infrastructure/cache/isr";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { getTenantConfig } from "@/lib/tenant/resolve";
 import { buildTenantRegionalPersonalization } from "@/lib/tenant/personalization";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 
-async function buildFeedForTenant(): Promise<GeneratedHomepageFeed | null> {
+async function buildFeedForTenant(
+  displayLanguage: Awaited<ReturnType<typeof getServerReaderLanguage>>
+): Promise<GeneratedHomepageFeed | null> {
   const tenant = await getTenantConfig();
   const pool = await fetchGeneratedArticlePool(120);
   const personalization = buildTenantRegionalPersonalization(tenant);
-  const feed = buildGeneratedHomepageFeed(pool, { personalization });
+  const feed = buildGeneratedHomepageFeed(pool, {
+    personalization,
+    displayLanguage,
+  });
   if (!feed) return null;
-  const newsShorts = buildNewsShortsFromPool(pool, 6);
+  const newsShorts = buildTrendingShortsFromPool(pool, 10);
   return { ...feed, newsShorts };
 }
 
 export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed | null> {
   const tenant = await getTenantConfig();
-  const cacheKey = `${CACHE_KEYS.homepageFeed}:${tenant.slug}`;
+  const displayLanguage = await getServerReaderLanguage();
+  const cacheKey = `${CACHE_KEYS.homepageFeed}:${tenant.slug}:${displayLanguage}`;
 
   const cached = await cacheGetJson<GeneratedHomepageFeed>(cacheKey);
   if (cached) return cached;
 
   const getCachedFeedInternal = unstable_cache(
-    buildFeedForTenant,
-    ["homepage-generated-feed-v3", tenant.slug],
+    () => buildFeedForTenant(displayLanguage),
+    ["homepage-generated-feed-v4", tenant.slug, displayLanguage],
     {
       revalidate: INFRA_CONFIG.homepageCacheSeconds,
-      tags: [ISR_TAGS.homepage, ISR_TAGS.homepageFeed, `tenant:${tenant.slug}`],
+      tags: [
+        ISR_TAGS.homepage,
+        ISR_TAGS.homepageFeed,
+        `tenant:${tenant.slug}`,
+        `lang:${displayLanguage}`,
+      ],
     }
   );
 

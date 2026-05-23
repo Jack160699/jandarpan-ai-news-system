@@ -80,10 +80,10 @@ export function buildEditorialImagePrompt(input: {
 
   const style =
     urgency >= 75
-      ? "dynamic CG Bhaskar editorial illustration — credible breaking energy, not sensational"
+      ? "dynamic Hamar Chhattisgarh editorial illustration — credible breaking energy, not sensational"
       : urgency >= 45
         ? "modern Indian newsroom editorial illustration — confident trustworthy composition"
-        : "calm symbolic CG Bhaskar artwork — clear visual storytelling";
+        : "calm symbolic Hamar Chhattisgarh artwork — clear visual storytelling";
 
   const summarySlice = (input.eventSummary ?? "").slice(0, 220);
 

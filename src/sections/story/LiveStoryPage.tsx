@@ -152,7 +152,7 @@ export function LiveStoryPage({
           <div className="story-layout">
             <div className="story-layout__main">
               <div className="story-ai-block">
-                <p className="story-ai-block__label">AI summary</p>
+                <p className="story-ai-block__label">Summary</p>
                 <p>{article.ai_summary ?? article.description ?? why}</p>
               </div>
 

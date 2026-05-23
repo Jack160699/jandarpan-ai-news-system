@@ -113,7 +113,7 @@ export default async function CategoryPage({ params }: PageProps) {
         <section className="category-hub__grid" aria-label="Latest stories">
           {homeArticles.length === 0 ? (
             <p className="category-hub__empty">
-              Stories in this section will appear as the AI newsroom publishes.
+              Stories in this section will appear as our desk files fresh coverage.
             </p>
           ) : (
             <ul className="category-hub__list">

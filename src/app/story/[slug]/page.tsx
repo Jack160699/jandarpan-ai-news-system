@@ -74,8 +74,12 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
   });
 }
 
-export default async function StoryPage({ params }: PageProps) {
+export default async function StoryPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { lang: langParam } = await searchParams;
+  const readerLang = isNewsroomLanguage(langParam)
+    ? langParam
+    : await getServerReaderLanguage();
 
   const generatedRow = await getGeneratedArticleBySlug(slug);
 
@@ -88,7 +92,6 @@ export default async function StoryPage({ params }: PageProps) {
     }
 
     const poolRows = await fetchGeneratedArticlePool(80);
-    const readerLang = await getServerReaderLanguage();
     const localized = resolveLocalizedFields(generatedRow, readerLang);
     const liveArticle = applyLocalizedFieldsToNewsArticle(
       generatedToNewsArticle(generatedRow),

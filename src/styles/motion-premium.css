@@ -1,0 +1,159 @@
+/**
+ * Premium motion — subtle animations platform-wide
+ */
+
+/* Card lift on hover */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ds-hover-lift {
+    transition:
+      transform var(--ds-duration-fast) var(--ds-ease-out),
+      box-shadow var(--ds-duration-normal) var(--ds-ease);
+  }
+
+  .ds-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ds-card-shadow-hover);
+  }
+
+  .nr-card.ds-hover-lift:hover,
+  .pcard.ds-hover-lift:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* Press feedback */
+.ds-press:active {
+  transform: scale(0.985);
+  transition: transform var(--ds-duration-instant) var(--ds-ease);
+}
+
+/* Stagger children */
+.ds-stagger > * {
+  animation: ds-stagger-in var(--ds-duration-slow) var(--ds-ease-out) both;
+}
+
+.ds-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.ds-stagger > *:nth-child(2) { animation-delay: 50ms; }
+.ds-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.ds-stagger > *:nth-child(4) { animation-delay: 150ms; }
+.ds-stagger > *:nth-child(5) { animation-delay: 200ms; }
+.ds-stagger > *:nth-child(6) { animation-delay: 250ms; }
+.ds-stagger > *:nth-child(7) { animation-delay: 300ms; }
+.ds-stagger > *:nth-child(8) { animation-delay: 350ms; }
+
+@keyframes ds-stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Shimmer accent line */
+.ds-accent-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.ds-accent-line::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--ds-accent) 30%,
+    var(--ds-live) 70%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: ds-accent-sweep 4s var(--ds-ease) infinite;
+}
+
+@keyframes ds-accent-sweep {
+  0%, 100% { transform: translateX(-100%); opacity: 0.4; }
+  50% { transform: translateX(100%); opacity: 1; }
+}
+
+/* Pulse dot (live indicators) */
+.ds-pulse-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: ds-pulse-dot 1.4s ease-in-out infinite;
+}
+
+@keyframes ds-pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* Link underline grow */
+.ds-link-grow {
+  position: relative;
+  text-decoration: none;
+}
+
+.ds-link-grow::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 0;
+  height: 1px;
+  background: var(--ds-accent);
+  transition: width var(--ds-duration-normal) var(--ds-ease-out);
+}
+
+@media (hover: hover) {
+  .ds-link-grow:hover::after {
+    width: 100%;
+  }
+}
+
+/* Section reveal */
+.ds-reveal {
+  animation: ds-reveal var(--ds-duration-slow) var(--ds-ease-out) both;
+}
+
+@keyframes ds-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Image Ken Burns (reel fallback) */
+.ds-ken-burns {
+  animation: ds-ken-burns 18s var(--ds-ease) infinite alternate;
+}
+
+@keyframes ds-ken-burns {
+  from { transform: scale(1) translate(0, 0); }
+  to { transform: scale(1.12) translate(-2%, -1%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-stagger > *,
+  .ds-accent-line::after,
+  .ds-pulse-dot,
+  .ds-reveal,
+  .ds-ken-burns {
+    animation: none !important;
+  }
+
+  .ds-hover-lift:hover {
+    transform: none;
+  }
+}

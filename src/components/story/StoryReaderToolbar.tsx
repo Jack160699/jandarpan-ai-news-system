@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { BookmarkButton } from "@/components/mobile/BookmarkButton";
 import { StoryReadingProgress } from "@/components/story/StoryReadingProgress";
+import { triggerHaptic } from "@/lib/mobile/haptics";
 import {
   loadReadingMemory,
   toggleBookmark,
 } from "@/lib/reading-memory";
+import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 
 type StoryReaderToolbarProps = {
@@ -22,6 +25,7 @@ export function StoryReaderToolbar({
   url,
   readTime,
 }: StoryReaderToolbarProps) {
+  const { t } = useLanguage();
   const { prefs, toggleTheme, cycleFontScale, toggleReadingMode } =
     useReaderPreferences();
   const [saved, setSaved] = useState(false);
@@ -41,14 +45,16 @@ export function StoryReaderToolbar({
   const onSave = () => {
     const memory = loadReadingMemory();
     const next = toggleBookmark(memory, slug);
-    setSaved(next.bookmarks.includes(slug));
-    showToast(next.bookmarks.includes(slug) ? "Saved to reading list" : "Removed from saved");
+    const isSaved = next.bookmarks.includes(slug);
+    setSaved(isSaved);
+    showToast(isSaved ? t.article.savedToast : t.article.removedToast);
   };
 
   const onCopy = async () => {
+    triggerHaptic("light");
     try {
       await navigator.clipboard.writeText(url);
-      showToast("Link copied");
+      showToast(t.common.linkCopied);
     } catch {
       showToast("Could not copy link");
     }
@@ -83,15 +89,14 @@ export function StoryReaderToolbar({
             {readTime}
           </span>
 
-          <button
-            type="button"
-            className={`immersive-tool tap-target ${saved ? "immersive-tool--active" : ""}`}
-            onClick={onSave}
-            aria-pressed={saved}
-            aria-label={saved ? "Remove from saved" : "Save article"}
-          >
-            {saved ? "★" : "☆"}
-          </button>
+          <BookmarkButton
+            saved={saved}
+            onToggle={onSave}
+            size="sm"
+            label=""
+            labelSaved=""
+            className="immersive-tool"
+          />
 
           <button
             type="button"

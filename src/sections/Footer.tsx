@@ -1,83 +1,141 @@
 "use client";
 
 import Link from "next/link";
-import { EditionLineage } from "@/components/institution";
+import { TenantLogo } from "@/components/tenant/TenantLogo";
 import { BRAND } from "@/lib/brand";
-import { INSTITUTION, NEWSROOM_DESKS, getPublishingLineage } from "@/lib/institution";
-import { Rule } from "@/components/ui/Rule";
+import { getPrioritizedDistricts } from "@/lib/regional/districts";
 import { useLanguage } from "@/providers/LanguageProvider";
+import { useTenant } from "@/providers/TenantProvider";
+
+const FOOTER_LINK_KEYS = [
+  { href: "/", key: "home" as const },
+  { href: "/live", key: "live" as const },
+  { href: "/shorts", key: "shorts" as const },
+  { href: "/listen", key: "listen" as const },
+  { href: "/category/chhattisgarh", key: "chhattisgarh" as const },
+  { href: "/category/politics", key: "politics" as const },
+  { href: "/category/sports", key: "sports" as const },
+  { href: "/search", key: "search" as const },
+  { href: "/archive", key: "archive" as const },
+];
+
+const SOCIAL = [
+  { href: "https://www.facebook.com", label: "Facebook" },
+  { href: "https://www.youtube.com", label: "YouTube" },
+  { href: "https://twitter.com", label: "X" },
+  { href: "https://wa.me", label: "WhatsApp" },
+] as const;
 
 export function Footer() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { tenant } = useTenant();
+  const districts = getPrioritizedDistricts().slice(0, 10);
+  const brandName = language === "en" ? tenant.branding.nameEn : tenant.branding.nameHi;
 
   return (
-    <footer
-      id="footer"
-      data-section="footer"
-      className="news-scroll-target relative z-10 border-t border-[var(--rule)] bg-[var(--paper)] pb-12 pt-10"
-    >
-      <div className="editorial-container">
-        <p className="ds-kicker">{BRAND.nameEn}</p>
-        <p className="mt-2 font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--ink-headline)]">
-          {BRAND.taglineEn}
-        </p>
-
-        <Rule className="my-8" />
-
-        <div className="grid gap-12 lg:grid-cols-12">
-          <div className="lg:col-span-5">
-            <p className="archive-marker">{t.footer.institution}</p>
-            <EditionLineage className="mt-4" />
-            <p className="editorial-body mt-6 max-w-sm text-sm text-[var(--ink-muted)]">
-              {getPublishingLineage()}
-            </p>
-            <p className="meta-label mt-6 text-[var(--ink-faint)]">
-              {t.brand.conceptNote}
-            </p>
-          </div>
-
-          <div className="lg:col-span-4">
-            <p className="archive-marker">{t.footer.newsroom}</p>
-            <ul className="mt-4 space-y-2">
-              {NEWSROOM_DESKS.map((d) => (
-                <li key={d.id} className="meta-label text-[var(--ink-muted)]">
-                  {d.name} — {d.editor}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="lg:col-span-3">
-            <p className="archive-marker">{t.footer.record}</p>
-            <ul className="mt-4 space-y-3">
-              <li>
-                <Link
-                  href="/archive"
-                  className="editorial-body text-sm transition-opacity hover:opacity-60"
-                >
-                  {t.footer.livingArchive}
-                </Link>
-              </li>
-              <li>
-                <span className="editorial-body text-sm text-[var(--ink-muted)]">
-                  {t.footer.ethics}
-                </span>
-              </li>
-              <li>
-                <span className="editorial-body text-sm text-[var(--ink-muted)]">
-                  {t.footer.contact}
-                </span>
-              </li>
-            </ul>
+    <footer id="footer" className="site-footer" role="contentinfo">
+      <div className="site-footer__brand-band">
+        <div className="nr-wrap site-footer__brand-inner">
+          <TenantLogo className="site-footer__logo" />
+          <div>
+            <p className="site-footer__network">{t.footer.networkName}</p>
+            <h2 className="site-footer__name">{brandName}</h2>
+            <p className="site-footer__tagline">{t.brand.tagline}</p>
           </div>
         </div>
+      </div>
 
-        <Rule className="my-12" />
+      <div className="nr-wrap site-footer__grid site-footer__grid--daily">
+        <section aria-labelledby="footer-sections">
+          <h3 id="footer-sections" className="site-footer__heading">
+            {t.footer.sectionsTitle}
+          </h3>
+          <ul className="site-footer__links">
+            {FOOTER_LINK_KEYS.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="site-footer__link tap-target">
+                  {t.footer.links[item.key]}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-        <div className="flex flex-col gap-3 text-[var(--ink-faint)] sm:flex-row sm:justify-between">
-          <p className="meta-label">
-            © {new Date().getFullYear()} {INSTITUTION.name} · {t.footer.copyright}
+        <section aria-labelledby="footer-districts">
+          <h3 id="footer-districts" className="site-footer__heading">
+            {t.footer.districtsTitle}
+          </h3>
+          <ul className="site-footer__districts">
+            {districts.map((d) => (
+              <li key={d.slug}>
+                <Link
+                  href={`/district/${d.slug}`}
+                  className="site-footer__district tap-target"
+                >
+                  <span className="site-footer__district-hi">{d.nameHi}</span>
+                  <span className="site-footer__district-en">{d.name}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="footer-contact">
+          <h3 id="footer-contact" className="site-footer__heading">
+            {t.footer.contactTitle}
+          </h3>
+          <ul className="site-footer__contact">
+            <li>
+              <span className="site-footer__contact-label">
+                {t.footer.corrections}
+              </span>
+              <a
+                href={`mailto:${t.footer.editorialEmail}`}
+                className="site-footer__email"
+              >
+                {t.footer.editorialEmail}
+              </a>
+            </li>
+            <li>
+              <span className="site-footer__contact-label">News tips</span>
+              <a
+                href={`mailto:${t.footer.tipsEmail}`}
+                className="site-footer__email"
+              >
+                {t.footer.tipsEmail}
+              </a>
+            </li>
+            <li>
+              <span className="site-footer__contact-label">
+                {BRAND.press}
+              </span>
+            </li>
+          </ul>
+
+          <h4 className="site-footer__subheading">{t.footer.followTitle}</h4>
+          <ul className="site-footer__social">
+            {SOCIAL.map((s) => (
+              <li key={s.label}>
+                <a
+                  href={s.href}
+                  className="site-footer__social-link tap-target"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {s.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+
+      <div className="site-footer__legal">
+        <div className="nr-wrap site-footer__legal-inner">
+          <p>
+            © {new Date().getFullYear()} {BRAND.nameEn}. {t.footer.copyright}.
           </p>
+          <p className="site-footer__registry">{BRAND.registry}</p>
         </div>
       </div>
     </footer>

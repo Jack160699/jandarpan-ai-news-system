@@ -1,4 +1,4 @@
-/* Typography scale — readability-first */
+/* Typography scale — maps to design-system tokens */
 
 .display-xl {
   font-family: var(--font-display), Georgia, serif;
@@ -70,13 +70,21 @@
 
 .meta-label {
   font-family: var(--font-ui);
-  font-size: 0.75rem;
+  font-size: var(--ds-text-xs);
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--ds-tracking-wide);
   text-transform: uppercase;
   line-height: 1.35;
   color: var(--accent-category);
 }
+
+/* Premium scale aliases */
+.type-hero { font-size: var(--ds-text-hero); }
+.type-display { font-size: var(--ds-text-3xl); }
+.type-headline { font-size: var(--ds-text-xl); }
+.type-title { font-size: var(--ds-text-lg); }
+.type-body { font-size: var(--ds-text-md); }
+.type-caption { font-size: var(--ds-text-xs); }
 
 .pull-quote {
   font-family: var(--font-display), Georgia, serif;

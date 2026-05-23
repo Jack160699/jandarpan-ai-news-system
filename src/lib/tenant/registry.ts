@@ -4,11 +4,13 @@
 
 import { createAdminServerClient } from "@/lib/supabase";
 import { CG_BHASKAR_TENANT } from "@/lib/tenant/presets/cg-bhaskar";
+import { HAMAR_CHHATTISGARH_TENANT } from "@/lib/tenant/presets/hamar-chhattisgarh";
 import { PIONEER_POST_TENANT } from "@/lib/tenant/presets/pioneer-post";
 import type { TenantConfig } from "@/lib/tenant/types";
 import { normalizeTenantConfig } from "@/lib/tenant/validate";
 
 const STATIC_TENANTS: TenantConfig[] = [
+  HAMAR_CHHATTISGARH_TENANT,
   CG_BHASKAR_TENANT,
   PIONEER_POST_TENANT,
 ];
@@ -43,12 +45,12 @@ export function getDefaultTenantSlug(): string {
   return (
     process.env.NEWSROOM_DEFAULT_TENANT?.trim() ||
     process.env.DEFAULT_TENANT_SLUG?.trim() ||
-    "cg-bhaskar"
+    "hamar-chhattisgarh"
   );
 }
 
 export function getDefaultTenant(): TenantConfig {
-  return getTenantBySlug(getDefaultTenantSlug()) ?? CG_BHASKAR_TENANT;
+  return getTenantBySlug(getDefaultTenantSlug()) ?? HAMAR_CHHATTISGARH_TENANT;
 }
 
 export async function loadTenantFromDatabase(

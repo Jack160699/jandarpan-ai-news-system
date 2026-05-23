@@ -1,65 +1,171 @@
 /**
- * CG Bhaskar design system — calm, premium, regionally warm
- * Apple-like clarity: generous space, restrained color, precise motion
+ * Hamar Chhattisgarh — Premium visual design system
+ * Typography · spacing · elevation · cards · motion
  */
 
 :root {
-  /* Surfaces */
-  --ds-surface: #fafafa;
+  /* ── Surfaces (light) ── */
+  --ds-surface: #f8f7f5;
   --ds-surface-raised: #ffffff;
-  --ds-surface-sunken: #f4f4f5;
-  --ds-surface-overlay: rgb(255 255 255 / 0.82);
+  --ds-surface-sunken: #f0eeeb;
+  --ds-surface-overlay: rgb(255 255 255 / 0.88);
+  --ds-surface-elevated: #ffffff;
+  --ds-surface-inset: #ebe8e4;
 
-  /* Ink */
-  --ds-ink: #1c1c1e;
-  --ds-ink-secondary: #3a3a3c;
-  --ds-ink-tertiary: #636366;
-  --ds-ink-quaternary: #8e8e93;
+  /* ── Ink (light) ── */
+  --ds-ink: #1a1816;
+  --ds-ink-secondary: #3d3834;
+  --ds-ink-tertiary: #6b6560;
+  --ds-ink-quaternary: #9a948c;
+  --ds-ink-inverse: #faf8f6;
 
-  /* Rules */
-  --ds-separator: rgb(0 0 0 / 0.08);
-  --ds-separator-strong: rgb(0 0 0 / 0.12);
+  /* ── Rules ── */
+  --ds-separator: rgb(26 24 22 / 0.08);
+  --ds-separator-strong: rgb(26 24 22 / 0.14);
 
-  /* Regional warmth — Indian newspaper masthead accent */
-  --ds-accent: #9a3412;
-  --ds-accent-soft: #fff7ed;
-  --ds-masthead-rule: #1c1917;
+  /* ── Brand accents — forest green + terracotta (tenant overrides via CSS vars) ── */
+  --ds-accent: #1a4d3e;
+  --ds-accent-hover: #0f2e26;
+  --ds-accent-soft: #f5ebe0;
+  --ds-accent-glow: rgb(26 77 62 / 0.18);
+  --ds-masthead-rule: #1a4d3e;
   --ds-live: #dc2626;
+  --ds-live-hover: #b91c1c;
   --ds-live-soft: #fef2f2;
+  --ds-live-glow: rgb(220 38 38 / 0.2);
+  --ds-breaking: #ea580c;
+  --ds-breaking-soft: #fff7ed;
 
-  /* Radius */
+  /* ── Spacing scale (4px base) ── */
+  --ds-space-0: 0;
+  --ds-space-1: 0.25rem;
+  --ds-space-2: 0.5rem;
+  --ds-space-3: 0.75rem;
+  --ds-space-4: 1rem;
+  --ds-space-5: 1.25rem;
+  --ds-space-6: 1.5rem;
+  --ds-space-8: 2rem;
+  --ds-space-10: 2.5rem;
+  --ds-space-12: 3rem;
+  --ds-space-16: 4rem;
+  --ds-space-20: 5rem;
+  --ds-gutter: clamp(1rem, 4vw, 1.75rem);
+  --ds-section-gap: clamp(2.75rem, 6vw, 4.5rem);
+  --ds-card-pad: var(--ds-space-4);
+  --ds-card-gap: var(--ds-space-3);
+
+  /* ── Typography scale ── */
+  --ds-font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --ds-font-body: var(--font-body), Georgia, serif;
+  --ds-font-ui: var(--font-ui), system-ui, sans-serif;
+  --ds-font-meta: var(--font-meta), ui-monospace, monospace;
+
+  --ds-text-2xs: 0.625rem;
+  --ds-text-xs: 0.6875rem;
+  --ds-text-sm: 0.8125rem;
+  --ds-text-base: 0.9375rem;
+  --ds-text-md: 1.0625rem;
+  --ds-text-lg: 1.25rem;
+  --ds-text-xl: 1.5rem;
+  --ds-text-2xl: clamp(1.625rem, 3.5vw, 2rem);
+  --ds-text-3xl: clamp(2rem, 5vw, 2.75rem);
+  --ds-text-4xl: clamp(2.25rem, 6vw, 3.5rem);
+  --ds-text-hero: clamp(2.5rem, 7vw, 4rem);
+
+  --ds-leading-tight: 1.15;
+  --ds-leading-snug: 1.3;
+  --ds-leading-normal: 1.5;
+  --ds-leading-relaxed: 1.65;
+
+  --ds-tracking-tight: -0.025em;
+  --ds-tracking-normal: 0;
+  --ds-tracking-wide: 0.06em;
+  --ds-tracking-wider: 0.1em;
+
+  /* Legacy aliases */
+  --ds-text-caption: var(--ds-text-xs);
+  --ds-text-ui: var(--ds-text-sm);
+  --ds-text-body: var(--ds-text-md);
+  --ds-text-title: var(--ds-text-2xl);
+
+  /* ── Border radius ── */
+  --ds-radius-xs: 4px;
   --ds-radius-sm: 8px;
   --ds-radius-md: 12px;
   --ds-radius-lg: 16px;
+  --ds-radius-xl: 20px;
+  --ds-radius-2xl: 24px;
   --ds-radius-full: 999px;
 
-  /* Elevation */
-  --ds-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.04);
-  --ds-shadow-md: 0 4px 24px rgb(0 0 0 / 0.06);
+  /* ── Elevation (layered depth) ── */
+  --ds-elevation-0: none;
+  --ds-elevation-1: 0 1px 2px rgb(26 24 22 / 0.04), 0 1px 3px rgb(26 24 22 / 0.06);
+  --ds-elevation-2: 0 4px 12px rgb(26 24 22 / 0.06), 0 2px 4px rgb(26 24 22 / 0.04);
+  --ds-elevation-3: 0 8px 24px rgb(26 24 22 / 0.08), 0 4px 8px rgb(26 24 22 / 0.04);
+  --ds-elevation-4: 0 16px 48px rgb(26 24 22 / 0.1), 0 8px 16px rgb(26 24 22 / 0.06);
+  --ds-elevation-accent: 0 8px 28px var(--ds-accent-glow);
+  --ds-elevation-live: 0 8px 28px var(--ds-live-glow);
 
-  /* Motion */
+  /* ── Shadows (semantic) ── */
+  --ds-shadow-sm: var(--ds-elevation-1);
+  --ds-shadow-md: var(--ds-elevation-2);
+  --ds-shadow-lg: var(--ds-elevation-3);
+  --ds-shadow-xl: var(--ds-elevation-4);
+
+  /* ── Card system tokens ── */
+  --ds-card-bg: var(--ds-surface-raised);
+  --ds-card-border: var(--ds-separator);
+  --ds-card-radius: var(--ds-radius-lg);
+  --ds-card-shadow: var(--ds-shadow-sm);
+  --ds-card-shadow-hover: var(--ds-shadow-md);
+  --ds-thumb-radius: var(--ds-radius-md);
+  --ds-thumb-aspect-16-9: 16 / 9;
+  --ds-thumb-aspect-4-5: 4 / 5;
+  /* Legacy aliases */
+  --ds-thumb-aspect-wide: 16 / 9;
+  --ds-thumb-aspect-cinematic: 16 / 9;
+  --ds-thumb-aspect-standard: 16 / 9;
+  --ds-thumb-aspect-portrait: 4 / 5;
+  --ds-thumb-aspect-reel: 4 / 5;
+  --ds-gradient-thumb: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(0 0 0 / 0.15) 40%,
+    rgb(0 0 0 / 0.72) 100%
+  );
+  --ds-gradient-thumb-subtle: linear-gradient(
+    180deg,
+    transparent 55%,
+    rgb(0 0 0 / 0.45) 100%
+  );
+  --ds-gradient-breaking: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ds-live) 12%, transparent) 0%,
+    transparent 55%
+  );
+
+  /* ── Motion ── */
+  --ds-duration-instant: 100ms;
   --ds-duration-fast: 180ms;
   --ds-duration-normal: 280ms;
   --ds-duration-slow: 420ms;
+  --ds-duration-slower: 600ms;
   --ds-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
   --ds-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ds-ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --ds-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Layout */
+  /* ── Layout ── */
   --ds-content-max: 72rem;
   --ds-read-max: 40rem;
-  --ds-gutter: clamp(1rem, 4vw, 1.75rem);
-  --ds-section-gap: clamp(2.75rem, 6vw, 4.5rem);
 
-  /* Typography scale */
-  --ds-text-caption: 0.6875rem;
-  --ds-text-ui: 0.8125rem;
-  --ds-text-body: 1.0625rem;
-  --ds-text-title: clamp(1.5rem, 3vw, 2rem);
-  --ds-text-hero: clamp(2rem, 5.5vw, 3.25rem);
-
-  /* Z */
+  /* ── Z-index ── */
+  --ds-z-base: 0;
+  --ds-z-raised: 10;
+  --ds-z-sticky: 40;
   --ds-z-chrome: 60;
   --ds-z-overlay: 100;
+  --ds-z-modal: 120;
 }
 
 /* Map legacy tokens → design system */
@@ -68,7 +174,7 @@
   --paper-elevated: var(--ds-surface-raised);
   --paper-warm: var(--ds-surface-sunken);
   --paper-muted: var(--ds-surface-sunken);
-  --paper-shadow: #e4e4e7;
+  --paper-shadow: var(--ds-surface-inset);
 
   --ink-headline: var(--ds-ink);
   --ink-primary: var(--ds-ink);
@@ -81,13 +187,13 @@
   --rule-strong: var(--ds-separator-strong);
 
   --accent-orange: var(--ds-accent);
-  --accent-orange-deep: #92400e;
+  --accent-orange-deep: var(--ds-accent-hover);
   --accent-red: var(--ds-live);
-  --accent-red-deep: #b91c1c;
+  --accent-red-deep: var(--ds-live-hover);
   --brand-maroon: var(--ds-ink);
   --brand-maroon-deep: var(--ds-ink);
   --brand-orange: var(--ds-accent);
-  --accent-breaking: var(--ds-accent);
+  --accent-breaking: var(--ds-breaking);
   --accent-category: var(--ds-ink-tertiary);
   --accent-live: var(--ds-live);
 
@@ -106,25 +212,120 @@
   --ease-breath: var(--ds-ease);
 }
 
+/* ── Dark theme — premium charcoal, warm accents ── */
 html[data-theme="dark"] {
-  --ds-surface: #000000;
-  --ds-surface-raised: #1c1c1e;
-  --ds-surface-sunken: #2c2c2e;
-  --ds-surface-overlay: rgb(28 28 30 / 0.88);
+  --ds-surface: #141312;
+  --ds-surface-raised: #1f1d1b;
+  --ds-surface-sunken: #2a2724;
+  --ds-surface-overlay: rgb(31 29 27 / 0.94);
+  --ds-surface-elevated: #262422;
+  --ds-surface-inset: #0f0e0d;
 
-  --ds-ink: #f5f5f7;
-  --ds-ink-secondary: #d1d1d6;
-  --ds-ink-tertiary: #98989d;
-  --ds-ink-quaternary: #636366;
+  --ds-ink: #f5f2ef;
+  --ds-ink-secondary: #d4cfc8;
+  --ds-ink-tertiary: #a39e96;
+  --ds-ink-quaternary: #736d66;
+  --ds-ink-inverse: #141312;
 
-  --ds-separator: rgb(255 255 255 / 0.1);
-  --ds-separator-strong: rgb(255 255 255 / 0.16);
+  --ds-separator: rgb(255 255 255 / 0.08);
+  --ds-separator-strong: rgb(255 255 255 / 0.14);
 
-  --ds-accent-soft: rgb(180 83 9 / 0.15);
-  --ds-live-soft: rgb(220 38 38 / 0.12);
+  --ds-accent: #fb923c;
+  --ds-accent-hover: #fdba74;
+  --ds-accent-soft: rgb(251 146 60 / 0.14);
+  --ds-accent-glow: rgb(251 146 60 / 0.28);
+  --ds-live: #f87171;
+  --ds-live-hover: #fca5a5;
+  --ds-live-soft: rgb(248 113 113 / 0.14);
+  --ds-live-glow: rgb(248 113 113 / 0.25);
+  --ds-breaking: #fb923c;
+  --ds-breaking-soft: rgb(251 146 60 / 0.12);
+
+  --ds-card-bg: var(--ds-surface-raised);
+  --ds-card-border: var(--ds-separator);
+  --ds-card-shadow: 0 1px 0 rgb(255 255 255 / 0.04), 0 4px 16px rgb(0 0 0 / 0.35);
+  --ds-card-shadow-hover: 0 1px 0 rgb(255 255 255 / 0.06), 0 8px 28px rgb(0 0 0 / 0.45);
+
+  --ds-gradient-thumb: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgb(0 0 0 / 0.25) 35%,
+    rgb(0 0 0 / 0.85) 100%
+  );
+  --ds-gradient-breaking: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ds-live) 18%, transparent) 0%,
+    transparent 60%
+  );
+
+  --paper-shadow: #2a2724;
 }
 
-/* Primitives */
+/* ── Typography utilities ── */
+.ds-type-hero {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-hero);
+  font-weight: 600;
+  line-height: var(--ds-leading-tight);
+  letter-spacing: var(--ds-tracking-tight);
+  color: var(--ds-ink);
+}
+
+.ds-type-display {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-3xl);
+  font-weight: 600;
+  line-height: var(--ds-leading-tight);
+  letter-spacing: var(--ds-tracking-tight);
+  color: var(--ds-ink);
+}
+
+.ds-type-headline {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-xl);
+  font-weight: 600;
+  line-height: var(--ds-leading-snug);
+  letter-spacing: var(--ds-tracking-tight);
+  color: var(--ds-ink);
+}
+
+.ds-type-title {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-lg);
+  font-weight: 600;
+  line-height: var(--ds-leading-snug);
+  color: var(--ds-ink);
+}
+
+.ds-type-body {
+  font-family: var(--ds-font-body);
+  font-size: var(--ds-text-md);
+  line-height: var(--ds-leading-relaxed);
+  color: var(--ds-ink-secondary);
+}
+
+.ds-type-caption {
+  font-family: var(--ds-font-ui);
+  font-size: var(--ds-text-xs);
+  font-weight: 600;
+  letter-spacing: var(--ds-tracking-wide);
+  text-transform: uppercase;
+  color: var(--ds-ink-tertiary);
+}
+
+.ds-type-meta {
+  font-family: var(--ds-font-ui);
+  font-size: var(--ds-text-sm);
+  color: var(--ds-ink-tertiary);
+}
+
+/* ── Spacing utilities ── */
+.ds-stack-2 > * + * { margin-top: var(--ds-space-2); }
+.ds-stack-3 > * + * { margin-top: var(--ds-space-3); }
+.ds-stack-4 > * + * { margin-top: var(--ds-space-4); }
+.ds-stack-6 > * + * { margin-top: var(--ds-space-6); }
+
+/* ── Primitives ── */
 .ds-skeleton {
   background: linear-gradient(
     90deg,
@@ -138,12 +339,8 @@ html[data-theme="dark"] {
 }
 
 @keyframes ds-skeleton-wave {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
 .ds-empty {
@@ -170,19 +367,19 @@ html[data-theme="dark"] {
 }
 
 .ds-empty__title {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 1.5rem;
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-xl);
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--ds-tracking-tight);
   color: var(--ink-headline);
-  line-height: 1.2;
+  line-height: var(--ds-leading-tight);
 }
 
 .ds-empty__text {
-  margin-top: 0.75rem;
-  font-family: var(--font-ui);
-  font-size: var(--ds-text-ui);
-  line-height: 1.55;
+  margin-top: var(--ds-space-3);
+  font-family: var(--ds-font-ui);
+  font-size: var(--ds-text-sm);
+  line-height: var(--ds-leading-normal);
   color: var(--ink-muted);
 }
 
@@ -190,15 +387,15 @@ html[data-theme="dark"] {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: var(--ds-space-4);
+  margin-bottom: var(--ds-space-6);
 }
 
 .ds-kicker {
-  font-family: var(--font-ui);
-  font-size: var(--ds-text-caption);
+  font-family: var(--ds-font-ui);
+  font-size: var(--ds-text-xs);
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--ds-tracking-wide);
   text-transform: uppercase;
   color: var(--ink-muted);
 }
@@ -210,7 +407,7 @@ html[data-theme="dark"] {
 @keyframes ds-fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -224,6 +421,7 @@ html[data-theme="dark"] {
     border-color var(--ds-duration-fast) var(--ds-ease),
     opacity var(--ds-duration-fast) var(--ds-ease),
     transform var(--ds-duration-fast) var(--ds-ease),
+    box-shadow var(--ds-duration-fast) var(--ds-ease),
     background-color var(--ds-duration-fast) var(--ds-ease);
 }
 

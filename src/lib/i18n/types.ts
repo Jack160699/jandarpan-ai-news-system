@@ -26,6 +26,7 @@ export type Dictionary = {
     darkMode: string;
     lightMode: string;
     languageSheetTitle: string;
+    live: string;
   };
   nav: {
     topNews: string;
@@ -38,9 +39,18 @@ export type Dictionary = {
     education: string;
     home: string;
     video: string;
+    shorts: string;
     live: string;
     saved: string;
     profile: string;
+    districts: string;
+    search: string;
+    menu: string;
+    categoriesTitle: string;
+    districtsTitle: string;
+    savedStories: string;
+    theme: string;
+    listen: string;
   };
   common: {
     all: string;
@@ -48,6 +58,18 @@ export type Dictionary = {
     live: string;
     breakingLabel: string;
     minRead: string;
+    loading: string;
+    error: string;
+    retry: string;
+    more: string;
+    seeAll: string;
+    developing: string;
+    justNow: string;
+    today: string;
+    share: string;
+    copyLink: string;
+    linkCopied: string;
+    shareFailed: string;
   };
   home: {
     topHeadlines: string;
@@ -59,17 +81,50 @@ export type Dictionary = {
     quickRead: string;
     investigations: string;
     opinion: string;
+    mastheadTagline: string;
+    cgUpdates: string;
+    moreToday: string;
+    hyperlocal: string;
+    reels: string;
+    emptyTitle: string;
+    emptyBody: string;
+    loadingEdition: string;
+    tickerAria: string;
+    fresh: string;
     categories: {
       politics: string;
       chhattisgarh: string;
       sports: string;
       business: string;
+      india: string;
+      world: string;
+      education: string;
+      raipur: string;
     };
     cities: {
       raipur: string;
       bastar: string;
       bhilai: string;
     };
+  };
+  live: {
+    title: string;
+    subtitle: string;
+    wire: string;
+    latest: string;
+    updating: string;
+    viewAll: string;
+  };
+  listen: {
+    title: string;
+    subtitle: string;
+    play: string;
+    pause: string;
+  };
+  shorts: {
+    title: string;
+    trending: string;
+    watch: string;
   };
   article: {
     back: string;
@@ -78,6 +133,12 @@ export type Dictionary = {
     related: string;
     bookmark: string;
     bookmarked: string;
+    edition: string;
+    savedToast: string;
+    removedToast: string;
+    keyPoints: string;
+    transparencyTitle: string;
+    transparencyBody: string;
   };
   ribbon: {
     continue: string;
@@ -88,6 +149,8 @@ export type Dictionary = {
     title: string;
     placeholder: string;
     hint: string;
+    noResults: string;
+    searching: string;
   };
   archive: {
     backToEdition: string;
@@ -95,14 +158,64 @@ export type Dictionary = {
     title: string;
     description: string;
     livingArchive: string;
+    empty: string;
+  };
+  trust: {
+    verified: string;
+    reviewed: string;
+    regionalNetwork: string;
+    fastUpdates: string;
+    multiSource: string;
+  };
+  story: {
+    keyPoints: string;
+    deskNoteKicker: string;
+    deskNoteBody: string;
+    deskNoteFine: string;
+    disclaimerTitle: string;
+    disclaimerBody: string;
+    relatedStories: string;
+    trendingNow: string;
+    liveUpdating: string;
   };
   footer: {
-    institution: string;
-    newsroom: string;
-    record: string;
+    networkName: string;
+    mission: string;
+    sectionsTitle: string;
+    newsroomTitle: string;
+    districtsTitle: string;
+    standardsTitle: string;
+    contactTitle: string;
+    followTitle: string;
+    corrections: string;
+    editorialEmail: string;
+    tipsEmail: string;
+    ethicsLink: string;
+    standardsLink: string;
     livingArchive: string;
-    ethics: string;
-    contact: string;
+    trendingTitle: string;
     copyright: string;
+    newsTips: string;
+    links: {
+      home: string;
+      live: string;
+      shorts: string;
+      listen: string;
+      chhattisgarh: string;
+      politics: string;
+      sports: string;
+      search: string;
+      archive: string;
+    };
+  };
+  ptr: {
+    pull: string;
+    release: string;
+    refreshing: string;
+  };
+  fab: {
+    scrollTop: string;
+    listen: string;
+    live: string;
   };
 };

@@ -26,7 +26,7 @@ export function buildLiveCoverageMetadata(
     `${bundle.event.canonical_title} Live Updates`;
   const description =
     bundle.event.event_summary ??
-    `Ongoing coverage from ${bundle.event.source_count} sources — CG Bhaskar live desk.`;
+    `Ongoing coverage from ${bundle.event.source_count} sources — Hamar Chhattisgarh live desk.`;
 
   return buildPageMetadata({
     title,
@@ -77,7 +77,7 @@ export function EvolvingStoryPage({ bundle }: EvolvingStoryPageProps) {
     coverageStartTime: event.created_at,
     publisher: {
       "@type": "NewsMediaOrganization",
-      name: "CG Bhaskar",
+      name: "Hamar Chhattisgarh",
     },
   };
 
@@ -108,10 +108,7 @@ export function EvolvingStoryPage({ bundle }: EvolvingStoryPageProps) {
           ) : null}
 
           {event.event_summary ? (
-            <StorySummaryBox
-              summary={event.event_summary}
-              confidence={Number(event.cluster_confidence)}
-            />
+            <StorySummaryBox summary={event.event_summary} />
           ) : null}
 
           <LiveUpdateFeed blocks={liveBlocks} />

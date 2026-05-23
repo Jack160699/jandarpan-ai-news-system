@@ -22,7 +22,7 @@ import {
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_RETRIES = 2;
 const USER_AGENT =
-  "CG-Bhaskar-ImageBot/1.0 (+https://newspaper-motion.vercel.app; image extraction)";
+  "Hamar-Chhattisgarh-ImageBot/1.0 (+https://newspaper-motion.vercel.app; image extraction)";
 
 /** Normalize URL for storage & Next/Image */
 export function normalizeImageUrl(raw: string, articleUrl?: string): string {

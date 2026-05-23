@@ -1,27 +1,32 @@
+"use client";
+
+import { useLanguage } from "@/providers/LanguageProvider";
+
 type StoryAiTransparencyProps = {
   sourceCount?: number;
-  confidence?: number | null;
 };
 
+/** Editorial trust note — no internal scores or AI branding */
 export function StoryAiTransparency({
   sourceCount = 1,
-  confidence,
 }: StoryAiTransparencyProps) {
-  const confidenceLabel =
-    typeof confidence === "number"
-      ? `${Math.round(confidence * 100)}% desk confidence`
-      : null;
+  const { t } = useLanguage();
 
   return (
-    <aside className="story-ai-note" aria-label="How this story was produced">
-      <p className="story-ai-note__title">AI newsroom transparency</p>
-      <p className="story-ai-note__text">
-        This article was written by our editorial AI desk using {sourceCount}{" "}
-        {sourceCount === 1 ? "verified public source" : "verified public sources"}.
-        Facts are drawn from wire and regional signals; the desk synthesizes and
-        fact-checks before publish. {confidenceLabel ? `${confidenceLabel}.` : ""}
-        Corrections: editorial@regionaldesk.local
+    <aside className="story-desk-note" aria-label="Editorial standards">
+      <div className="story-desk-note__mast">
+        <span className="story-desk-note__mark" aria-hidden>
+          ✓
+        </span>
+        <p className="story-desk-note__kicker">{t.story.deskNoteKicker}</p>
+      </div>
+      <p className="story-desk-note__text">
+        {t.story.deskNoteBody}
+        {sourceCount > 1
+          ? ` ${sourceCount} verified sources informed this report.`
+          : null}
       </p>
+      <p className="story-desk-note__fine">{t.story.deskNoteFine}</p>
     </aside>
   );
 }

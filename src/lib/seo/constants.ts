@@ -12,6 +12,9 @@ export const SITE_NAME_HI = BRAND.nameHi;
 /** Regional + brand keywords for layout defaults */
 export const REGIONAL_KEYWORDS = [
   BRAND.nameEn,
+  BRAND.nameHi,
+  "Hamar Chhattisgarh",
+  "हमार छत्तीसगढ़",
   "Chhattisgarh news",
   "Raipur news",
   "Bastar news",
@@ -43,4 +46,4 @@ export const NOINDEX_ROBOTS = {
   googleBot: { index: false, follow: false },
 } as const;
 
-export const PUBLISHER_LOGO_URL = `${SITE_URL}/brand/cg-bhaskar-mark.svg`;
+export const PUBLISHER_LOGO_URL = `${SITE_URL}/brand/hamar-chhattisgarh-mark.svg`;

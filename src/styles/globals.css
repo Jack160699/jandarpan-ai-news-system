@@ -2,28 +2,79 @@
 @import "./design-system.css";
 @import "./typography.css";
 @import "./motion.css";
+@import "./motion-premium.css";
+@import "./cards-premium.css";
+@import "./media-system.css";
 @import "./intelligence.css";
 @import "./institution.css";
-@import "./brand-cgb.css";
+@import "./brand-hamar.css";
 @import "./editorial-layout.css";
 @import "./reader.css";
 @import "./news-density.css";
 @import "./news-feed.css";
 @import "./navigation.css";
+@import "./navigation-mobile.css";
+@import "./navigation-routes.css";
+@import "./footer-premium.css";
 @import "./readability.css";
 @import "./article-reading.css";
 @import "./loading.css";
 @import "./mobile-ux.css";
+@import "./mobile-native.css";
 @import "./production.css";
 @import "./story-page.css";
 @import "./homepage.css";
 @import "./newspaper-premium.css";
+@import "./homepage-premium.css";
+@import "./homepage-daily.css";
+@import "./homepage-perf.css";
 @import "./story-immersive.css";
+@import "./story-editorial-premium.css";
 @import "./search.css";
 @import "./seo.css";
 @import "./evolving-coverage.css";
 @import "./multilingual.css";
+
+/* Language switcher polish */
+.lang-switch--grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.lang-switch__chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--ds-radius-md);
+  background: var(--paper-elevated);
+  text-align: left;
+}
+
+.lang-switch__chip.is-active {
+  border-color: var(--ds-accent);
+  background: color-mix(in srgb, var(--ds-accent) 10%, var(--paper));
+}
+
+.lang-switch__native {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--ink-headline);
+}
+
+.lang-switch__label {
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+}
+
 @import "./news-shorts.css";
+@import "./reels.css";
+@import "./breaking-live.css";
+@import "./live-desk.css";
+@import "./listen-headlines.css";
 
 :root {
   --space-section-tight: clamp(1.25rem, 2.5vh, 2rem);

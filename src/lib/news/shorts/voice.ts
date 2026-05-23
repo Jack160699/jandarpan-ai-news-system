@@ -11,7 +11,7 @@ import type { ShortVoiceMeta } from "@/lib/news/shorts/types";
 
 const OPENAI_SPEECH_URL = "https://api.openai.com/v1/audio/speech";
 
-/** OpenAI voices — mapped per language family */
+/** OpenAI voices — Hindi/CG use warm narrator; regional newsroom feel */
 const VOICE_BY_LANG: Record<NewsroomLanguage, string> = {
   en: "alloy",
   hi: "nova",

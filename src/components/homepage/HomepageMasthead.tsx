@@ -1,36 +1,35 @@
+"use client";
+
+import { formatNewsDate } from "@/lib/i18n/format";
+import { useLanguage } from "@/providers/LanguageProvider";
+import { useTenant } from "@/providers/TenantProvider";
+
 type HomepageMastheadProps = {
-  fetchedAt?: string;
   brandName?: string;
 };
 
-function formatEditionDate(iso?: string): string {
-  const d = iso ? new Date(iso) : new Date();
-  return d.toLocaleDateString("en-IN", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
+export function HomepageMasthead({ brandName }: HomepageMastheadProps) {
+  const { t, language } = useLanguage();
+  const { tenant } = useTenant();
+  const name =
+    brandName ??
+    (language === "en"
+      ? tenant?.branding.nameEn
+      : tenant?.branding.nameHi) ??
+    "हमार छत्तीसगढ़";
 
-export function HomepageMasthead({
-  fetchedAt,
-  brandName = "CG Bhaskar",
-}: HomepageMastheadProps) {
+  const today = formatNewsDate(new Date().toISOString(), language, "short");
+
   return (
-    <header id="top-news" className="nr-masthead nr-wrap scroll-mt-24">
-      <div className="nr-masthead__row">
-        <div>
-          <p className="nr-masthead__tagline">Chhattisgarh · India · World</p>
-          <h1 className="nr-masthead__brand">{brandName}</h1>
-        </div>
-        <div className="nr-masthead__edition">
-          <strong>Digital edition</strong>
-          <time dateTime={fetchedAt ?? new Date().toISOString()}>
-            {formatEditionDate(fetchedAt)}
-          </time>
-        </div>
-      </div>
+    <header id="top-news" className="nr-masthead nr-masthead--daily nr-wrap scroll-mt-24">
+      <div className="masthead-hc__rule-brand mb-2" aria-hidden />
+      <h1 className="nr-masthead__brand masthead-title-hi">{name}</h1>
+      <p className="nr-masthead__tagline text-sm text-[var(--ink-tertiary)]">
+        {t.home.mastheadTagline}
+      </p>
+      <p className="nr-masthead__date">
+        {today} · {t.nav.chhattisgarh}
+      </p>
     </header>
   );
 }

@@ -2,15 +2,8 @@
  * Homepage news shorts rail — build from article pool
  */
 
-import { normalizeArticleLanguage } from "@/lib/i18n/languages";
-import { inferSection } from "@/lib/homepage/infer-section";
-import { buildAnchorLine } from "@/lib/news/shorts/anchor";
-import { shortCardFromRow } from "@/lib/news/shorts/build-short";
-import { buildReelSlides } from "@/lib/news/shorts/reels";
-import { getShortStyle } from "@/lib/news/shorts/styles";
-import { generateSubtitlesFromScript } from "@/lib/news/shorts/subtitles";
+import { ensureShortCard } from "@/lib/news/shorts/ensure-card";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
-import { buildVoiceStreamPath } from "@/lib/news/shorts/voice";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 export function buildNewsShortsFromPool(
@@ -29,8 +22,7 @@ export function buildNewsShortsFromPool(
   const cards: NewsShortCard[] = [];
 
   for (const row of candidates) {
-    let card = shortCardFromRow(row);
-    if (!card) card = buildMinimalShortCard(row);
+    const card = ensureShortCard(row);
     if (card) cards.push(card);
     if (cards.length >= limit) break;
   }
@@ -38,43 +30,19 @@ export function buildNewsShortsFromPool(
   return cards;
 }
 
-function buildMinimalShortCard(row: GeneratedArticleRow): NewsShortCard | null {
-  const summary = row.summary?.trim();
-  if (!summary) return null;
-
-  const section = inferSection(row);
-  const language = normalizeArticleLanguage(row.language);
-  const script = `${row.headline}. ${summary}`.slice(0, 600);
-  const subtitles = generateSubtitlesFromScript(script, 58);
-  const imageUrl = row.hero_image_url ?? "";
-  const highlights = script
-    .split(/(?<=[.!?।])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 8)
-    .slice(0, 3);
-
-  return {
-    articleId: row.id,
-    slug: row.slug,
-    headline: row.headline,
-    summary60s: summary.slice(0, 280),
-    anchorLine: buildAnchorLine(section, language, row.headline),
-    imageUrl,
-    section,
-    styleId: getShortStyle(section).id,
-    durationSec: 58,
-    highlights,
-    hasVoice: false,
-    voiceStreamPath: buildVoiceStreamPath(row.slug),
-    publishedAt: row.published_at ?? row.created_at,
-    language,
-    subtitles,
-    reelSlides: buildReelSlides({
-      headline: row.headline,
-      highlights: highlights.length ? highlights : [summary.slice(0, 80)],
-      imageUrl,
-      subtitles,
-      durationSec: 58,
-    }),
-  };
+/** Trending shorts — prefer live + recent for homepage hero rail */
+export function buildTrendingShortsFromPool(
+  rows: GeneratedArticleRow[],
+  limit = 8
+): NewsShortCard[] {
+  const cards = buildNewsShortsFromPool(rows, limit * 2);
+  return [...cards]
+    .sort((a, b) => {
+      const live = (b.isLive ? 2 : 0) - (a.isLive ? 2 : 0);
+      if (live !== 0) return live;
+      return (
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+      );
+    })
+    .slice(0, limit);
 }

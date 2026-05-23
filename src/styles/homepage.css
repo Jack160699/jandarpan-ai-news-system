@@ -5,7 +5,7 @@
 .nr {
   --nr-max: var(--ds-content-max);
   --nr-pad: var(--ds-gutter);
-  --nr-gap: clamp(2.5rem, 5vw, 4rem);
+  --nr-gap: clamp(1.5rem, 4vw, 2.75rem);
   background: var(--paper);
 }
 
@@ -996,7 +996,7 @@
 }
 
 .nr-card--editorial-lead .nr-card__media {
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
   box-shadow: var(--ds-shadow-md);
 }
 
@@ -1016,7 +1016,7 @@
 
 /* Editorial grid card */
 .nr-card--editorial .nr-card__media {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 16 / 9;
 }
 
 .nr-card--editorial .nr-card__headline {
@@ -1095,7 +1095,7 @@
 }
 
 .nr-card--compact .nr-card__media {
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 5;
 }
 
 .nr-card--compact .nr-card__headline {

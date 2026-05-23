@@ -1,9 +1,14 @@
+"use client";
+
+import { useLanguage } from "@/providers/LanguageProvider";
+
 type StorySummaryBoxProps = {
   summary: string;
-  confidence?: number | null;
 };
 
-export function StorySummaryBox({ summary, confidence }: StorySummaryBoxProps) {
+export function StorySummaryBox({ summary }: StorySummaryBoxProps) {
+  const { t } = useLanguage();
+
   return (
     <aside
       className="immersive-summary story-summary-box"
@@ -11,13 +16,8 @@ export function StorySummaryBox({ summary, confidence }: StorySummaryBoxProps) {
     >
       <div className="story-summary-box__head">
         <p id="story-summary-title" className="immersive-summary__label">
-          AI editorial summary
+          {t.story.keyPoints}
         </p>
-        {typeof confidence === "number" ? (
-          <span className="story-summary-box__confidence" title="Desk confidence">
-            {Math.round(confidence * 100)}% verified
-          </span>
-        ) : null}
       </div>
       <p className="immersive-summary__text story-deck">{summary}</p>
     </aside>

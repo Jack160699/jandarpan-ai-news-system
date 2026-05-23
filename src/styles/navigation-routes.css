@@ -1,0 +1,206 @@
+/**
+ * Route transitions, nav progress, live hub, loading shells
+ */
+
+/* Top progress during navigation */
+.nav-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: calc(var(--ds-z-modal) + 2);
+  pointer-events: none;
+  background: transparent;
+  overflow: hidden;
+}
+
+.nav-progress::after {
+  content: "";
+  display: block;
+  height: 100%;
+  width: 35%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--ds-accent),
+    var(--ds-live)
+  );
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.nav-progress--active::after {
+  opacity: 1;
+  animation: nav-progress-slide 0.85s var(--ds-ease) infinite;
+}
+
+@keyframes nav-progress-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+/* Main content fade while navigating */
+.route-transition {
+  flex: 1;
+  transition: opacity var(--ds-duration-fast) var(--ds-ease);
+}
+
+.route-transition--loading {
+  opacity: 0.92;
+}
+
+.route-loading {
+  min-height: 50vh;
+  animation: ds-fade-in var(--ds-duration-normal) var(--ds-ease-out) both;
+}
+
+/* Category tab sliding indicator */
+.category-tabs {
+  position: relative;
+}
+
+.category-tabs__indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: var(--ds-radius-full);
+  background: linear-gradient(90deg, var(--ds-accent), var(--ds-live));
+  transition:
+    transform var(--ds-duration-normal) var(--ds-ease-out),
+    width var(--ds-duration-normal) var(--ds-ease-out);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.category-tabs__scroll {
+  position: relative;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 0.75rem;
+  gap: 0.125rem;
+}
+
+.category-tab {
+  scroll-snap-align: center;
+  position: relative;
+  z-index: 2;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border-radius: var(--ds-radius-full);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--ds-duration-fast) var(--ds-ease),
+    background var(--ds-duration-fast) var(--ds-ease),
+    transform var(--ds-duration-instant) var(--ds-ease);
+}
+
+.category-tab:active {
+  transform: scale(0.96);
+  background: color-mix(in srgb, var(--ds-accent) 10%, transparent);
+}
+
+.category-tab.is-active {
+  color: var(--ds-accent);
+  border-bottom-color: transparent;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .category-tab {
+    min-height: 2.875rem;
+    padding: 0 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Bottom nav pending optimistic state */
+.bottom-nav__item.is-pending {
+  opacity: 0.75;
+}
+
+.bottom-nav__item.is-pending .bottom-nav__icon-wrap {
+  animation: nav-pending-pulse 0.6s ease-in-out infinite;
+}
+
+@keyframes nav-pending-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.94);
+  }
+}
+
+/* Live hub page */
+.live-page__header {
+  padding-block: 1rem 0.5rem;
+}
+
+.live-page__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--ds-live);
+}
+
+.live-page__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--ds-live);
+  animation: nav-live-pulse 1.2s ease-in-out infinite;
+}
+
+.live-page__title {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 700;
+  margin: 0.35rem 0 0;
+  color: var(--ink-headline);
+}
+
+.live-page__sub {
+  font-family: var(--font-hindi), var(--font-ui), sans-serif;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  margin: 0.25rem 0 0;
+}
+
+/* Z-index stack: progress > drawer > header > bottom nav */
+.nav-drawer__backdrop {
+  z-index: calc(var(--ds-z-overlay) + 1);
+}
+
+.nav-drawer {
+  z-index: calc(var(--ds-z-overlay) + 2);
+}
+
+.app-header {
+  z-index: var(--ds-z-chrome);
+}
+
+.bottom-nav--premium {
+  z-index: calc(var(--ds-z-chrome) - 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-progress--active::after,
+  .bottom-nav__item.is-pending .bottom-nav__icon-wrap {
+    animation: none;
+  }
+
+  .route-transition--loading {
+    opacity: 1;
+  }
+}

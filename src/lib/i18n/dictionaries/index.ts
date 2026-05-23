@@ -1,23 +1,23 @@
 import type { AppLanguage, Dictionary } from "../types";
+import { getLanguageConfig } from "@/lib/i18n/languages";
+import { bn } from "./bn";
 import { cg } from "./cg";
 import { en } from "./en";
 import { hi } from "./hi";
+import { mr } from "./mr";
+import { ta } from "./ta";
 
-export const dictionaries: Partial<Record<AppLanguage, Dictionary>> & {
-  en: Dictionary;
-  hi: Dictionary;
-  cg: Dictionary;
-} = {
+export const dictionaries: Record<AppLanguage, Dictionary> = {
   en,
   hi,
   cg,
+  mr,
+  bn,
+  ta,
 };
 
-import { getLanguageConfig } from "@/lib/i18n/languages";
-
 export function getDictionary(language: AppLanguage): Dictionary {
-  const direct = dictionaries[language as keyof typeof dictionaries];
-  if (direct) return direct;
-  const fallback = getLanguageConfig(language).dictionaryFallback;
-  return dictionaries[fallback] ?? dictionaries.hi;
+  return dictionaries[language] ?? dictionaries[getLanguageConfig(language).dictionaryFallback];
 }
+
+export { en, hi, cg, mr, bn, ta };

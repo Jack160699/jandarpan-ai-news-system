@@ -17,6 +17,8 @@ import {
   buildTenantSiteMetadata,
   buildTenantViewport,
 } from "@/lib/tenant/metadata";
+import { getLanguageConfig } from "@/lib/i18n/languages";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { getTenantConfig, stripTenantForClient } from "@/lib/tenant/resolve";
 import "@/styles/globals.css";
 import "@/styles/monetization.css";
@@ -84,13 +86,16 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const tenant = await getTenantConfig();
-  const htmlLang = tenant.newsroom.defaultLanguage === "en" ? "en" : "hi";
+  const readerLang = await getServerReaderLanguage();
+  const langCfg = getLanguageConfig(readerLang);
 
   return (
     <html
-      lang={htmlLang}
+      lang={langCfg.hreflang}
       dir="ltr"
       data-tenant={tenant.slug}
+      data-language={readerLang}
+      data-script={langCfg.scriptAttr}
       suppressHydrationWarning
       className={fontClassName}
     >

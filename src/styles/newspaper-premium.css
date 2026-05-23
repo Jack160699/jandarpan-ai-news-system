@@ -59,8 +59,10 @@
 .nr-trust {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-  padding: 0.65rem 0;
+  gap: 0.35rem 1rem;
+  padding: 0.45rem var(--nr-pad, 1rem);
+  max-width: var(--nr-max, 72rem);
+  margin-inline: auto;
   border-bottom: 1px solid var(--rule);
   font-family: var(--font-ui);
   font-size: 0.6875rem;

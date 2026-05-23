@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BRAND } from "@/lib/brand";
+import { LanguageSwitcher } from "@/components/reader/LanguageSwitcher";
+import { useTenant } from "@/providers/TenantProvider";
 import type { AppLanguage } from "@/lib/i18n/types";
 import { useLanguage } from "@/providers/LanguageProvider";
 
 export function LanguageGate() {
-  const { showLanguageGate, language, confirmLanguage, t, ready } = useLanguage();
+  const { tenant } = useTenant();
+  const { showLanguageGate, language, confirmLanguage, setLanguage, t, ready } =
+    useLanguage();
   const [selected, setSelected] = useState<AppLanguage>(language);
   const [visible, setVisible] = useState(false);
 
@@ -26,6 +29,9 @@ export function LanguageGate() {
 
   if (!ready || !showLanguageGate) return null;
 
+  const brandName =
+    language === "en" ? tenant.branding.nameEn : tenant.branding.nameHi;
+
   return (
     <div
       className={`language-gate ${visible ? "language-gate--visible" : ""}`}
@@ -35,7 +41,7 @@ export function LanguageGate() {
     >
       <div className="language-gate__panel">
         <p className="meta-label text-[var(--ink-faint)]">
-          {BRAND.nameEn} · {t.gate.editionLabel}
+          {brandName} · {t.gate.editionLabel}
         </p>
         <h2
           id="language-gate-title"
@@ -43,49 +49,25 @@ export function LanguageGate() {
         >
           {t.gate.title}
         </h2>
-        <p
-          className="mt-2 text-sm text-[var(--ink-muted)]"
-          style={{ fontFamily: "var(--font-hindi)" }}
-        >
-          {t.gate.subtitle}
-        </p>
+        <p className="mt-2 text-sm text-[var(--ink-muted)]">{t.gate.subtitle}</p>
         <p className="editorial-body mt-3 text-[15px] text-[var(--ink-muted)]">
           {t.gate.description}
         </p>
 
-        <div className="language-gate__options" role="listbox">
-          {(["en", "hi", "cg"] as const).map((id) => {
-            const opt = { en: "English", hi: "हिन्दी", cg: "छत्तीसगढ़ी" }[id];
-            const label = { en: "English", hi: "Hindi", cg: "Chhattisgarhi" }[id];
-            return (
-              <button
-                key={id}
-                type="button"
-                role="option"
-                aria-selected={selected === id}
-                className="language-gate__option tap-target"
-                onClick={() => setSelected(id)}
-              >
-                <span>
-                  <span className="block text-base font-medium text-[var(--ink-primary)]">
-                    {opt}
-                  </span>
-                  <span className="meta-label mt-1 text-[var(--ink-faint)]">
-                    {label}
-                  </span>
-                </span>
-                {selected === id ? (
-                  <span className="meta-label text-[var(--accent-category)]">✓</span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
+        <LanguageSwitcher
+          variant="grid"
+          className="language-gate__options mt-4"
+          value={selected}
+          onSelect={setSelected}
+        />
 
         <button
           type="button"
-          className="language-gate__confirm tap-target"
-          onClick={() => confirmLanguage(selected)}
+          className="language-gate__confirm tap-press mt-4"
+          onClick={() => {
+            confirmLanguage(selected);
+            setLanguage(selected);
+          }}
         >
           {t.gate.confirm}
         </button>

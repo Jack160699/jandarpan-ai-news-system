@@ -1,0 +1,132 @@
+/**
+ * Production media frames — fixed aspect, skeleton, cinematic scrims
+ */
+
+.media-frame {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  background: var(--paper-muted);
+  isolation: isolate;
+}
+
+.media-frame--16-9 {
+  aspect-ratio: 16 / 9;
+}
+
+.media-frame--4-5 {
+  aspect-ratio: 4 / 5;
+}
+
+.media-frame--fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: unset;
+}
+
+.media-frame__inner {
+  position: absolute;
+  inset: 0;
+}
+
+.media-frame__img {
+  object-fit: cover;
+  transition: opacity var(--ds-duration-normal) var(--ds-ease-out),
+    transform var(--ds-duration-slow) var(--ds-ease-out);
+}
+
+.media-frame__img--16-9 {
+  object-position: center 38%;
+}
+
+.media-frame__img--4-5 {
+  object-position: center 32%;
+}
+
+.media-frame__img--loading {
+  opacity: 0;
+}
+
+.media-frame__img--loaded {
+  opacity: 1;
+}
+
+.media-frame__skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(
+    110deg,
+    var(--paper-muted) 8%,
+    color-mix(in srgb, var(--ink-faint) 6%, var(--paper-muted)) 18%,
+    var(--paper-muted) 33%
+  );
+  background-size: 200% 100%;
+  animation: media-shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes media-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.media-frame__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.media-frame__scrim--cinematic {
+  background: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 0.08) 0%,
+    transparent 35%,
+    transparent 55%,
+    rgb(0 0 0 / 0.72) 100%
+  );
+}
+
+.media-frame__scrim--contrast {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  background: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 0.12) 0%,
+    transparent 40%,
+    rgb(0 0 0 / 0.45) 100%
+  );
+}
+
+.media-frame__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    145deg,
+    var(--paper-muted) 0%,
+    color-mix(in srgb, var(--ds-accent-soft) 35%, var(--paper-muted)) 100%
+  );
+}
+
+.media-frame__fallback-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--ds-radius-sm);
+  border: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--ink-faint) 8%, transparent);
+  opacity: 0.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-frame__skeleton {
+    animation: none;
+  }
+}

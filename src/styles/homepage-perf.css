@@ -1,0 +1,99 @@
+/**
+ * Homepage performance — CLS, scroll, content-visibility
+ */
+
+/* Smooth scrolling without blocking paint */
+.nr-root {
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nr-root {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Lazy section placeholders */
+.hp-lazy-section[data-loaded="false"] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
+}
+
+/* Below-fold sections skip layout/paint until near viewport */
+.hp-defer-paint {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+
+.nr-section.hp-defer-paint,
+.live-wire.hp-defer-paint,
+.trending-shorts.hp-defer-paint,
+.nr-section--categories.hp-defer-paint {
+  contain-intrinsic-size: auto 360px;
+}
+
+/* Skeleton rails match real rail slots */
+.hp-skeleton-block {
+  padding-block: 0.75rem;
+}
+
+.hp-skeleton-rail {
+  display: flex;
+  gap: 0.65rem;
+  overflow: hidden;
+  padding-inline: max(1rem, var(--space-gutter));
+}
+
+.hp-skeleton-rail__slot {
+  flex: 0 0 min(72vw, 260px);
+  flex-shrink: 0;
+}
+
+.hp-skeleton-rail__slot--reel {
+  flex: 0 0 min(42vw, 11rem);
+}
+
+.hp-rail-sentinel {
+  flex: 0 0 1px;
+  width: 1px;
+  height: 1px;
+  scroll-snap-align: end;
+  pointer-events: none;
+}
+
+/* Fixed hero visual height — prevents CLS */
+.nr-breaking-hero__visual {
+  min-height: 180px;
+}
+
+.nr-hero-reel__placeholder {
+  min-height: 200px;
+  max-height: 280px;
+}
+
+.nr-hero-story-card__thumb {
+  width: 4.5rem;
+  height: 4.5rem;
+  flex-shrink: 0;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--ds-radius-sm);
+  background: var(--paper-muted);
+}
+
+/* Horizontal rails: GPU-friendly scroll */
+.breaking-rail__scroll,
+.live-wire__scroll,
+.trending-shorts__scroll,
+.nr-hero-stories__scroll {
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Reduce paint during fast vertical scroll */
+@media (max-width: 767px) {
+  .hp-defer-paint {
+    content-visibility: auto;
+  }
+}

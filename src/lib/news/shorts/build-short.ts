@@ -12,6 +12,8 @@ import { generate60SecondSummary } from "@/lib/news/shorts/summarize";
 import { getShortStyle } from "@/lib/news/shorts/styles";
 import { generateSubtitlesFromScript } from "@/lib/news/shorts/subtitles";
 import type { NewsShortBundle, NewsShortCard } from "@/lib/news/shorts/types";
+import { enrichShortCard } from "@/lib/news/shorts/enrich";
+import { ensureShortCard } from "@/lib/news/shorts/ensure-card";
 import { buildVoiceMeta } from "@/lib/news/shorts/voice";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
@@ -27,13 +29,15 @@ export function shortCardFromRow(row: GeneratedArticleRow): NewsShortCard | null
   const bundle = bundleFromRow(row);
   if (!bundle) return null;
 
-  return {
+  const style = getShortStyle(bundle.section);
+  const base: NewsShortCard = {
     articleId: row.id,
     slug: row.slug,
     headline: row.headline,
     summary60s: bundle.summary60s,
     anchorLine: bundle.anchorLine,
     imageUrl: row.hero_image_url ?? "",
+    videoUrl: null,
     section: bundle.section,
     styleId: bundle.styleId,
     durationSec: bundle.durationSec,
@@ -44,7 +48,13 @@ export function shortCardFromRow(row: GeneratedArticleRow): NewsShortCard | null
     language: bundle.language,
     subtitles: bundle.subtitles,
     reelSlides: bundle.reel.slides,
+    categoryLabel: style.badgeHi,
+    sourceLabel: "हमार छत्तीसगढ़ डेस्क",
+    sourceCount: 1,
+    isLive: false,
   };
+
+  return enrichShortCard(base, row);
 }
 
 export async function buildNewsShortForArticle(
@@ -161,14 +171,7 @@ export async function fetchShortsPool(limit = 40): Promise<NewsShortCard[]> {
     if (!row.published_at && !row.summary) continue;
 
     const full = row as GeneratedArticleRow;
-    let card = shortCardFromRow(full);
-    if (!card && full.summary) {
-      const bundle = await buildNewsShortForArticle(full, {
-        skipLlm: !process.env.OPENAI_API_KEY?.trim(),
-      });
-      full.shorts_metadata = bundle;
-      card = shortCardFromRow(full);
-    }
+    const card = ensureShortCard(full);
     if (card) cards.push(card);
     if (cards.length >= limit) break;
   }

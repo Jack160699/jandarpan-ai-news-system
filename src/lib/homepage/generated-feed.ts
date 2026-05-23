@@ -16,6 +16,14 @@ import { buildOpenGraphImageUrl, optimizeCdnImageUrl } from "@/lib/news/ai/edito
 import { resolveFallbackImage } from "@/lib/news/images/fallbacks";
 import { isDisplayableImage } from "@/lib/news/images/validate";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+import { resolveLocalizedFields } from "@/lib/i18n/resolve-article";
+import {
+  normalizeArticleLanguage,
+  readingTimeLabel,
+  type NewsroomLanguage,
+} from "@/lib/i18n/languages";
+import { getSectionLabel } from "@/lib/i18n/section-labels";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 import { resolveEditorialDesk } from "@/lib/newsroom/desk-branding";
 import type {
   EditorsPicksBlock,
@@ -76,7 +84,8 @@ export function toHomeArticle(
     isBreaking: boolean;
     duplicateClusterId: string | null;
     section?: HomeSectionId;
-  }
+  },
+  displayLanguage: NewsroomLanguage = "hi"
 ): HomeArticle {
   const { hero, og } = resolveImageUrls(row);
   const hours = hoursSince(row.published_at);
@@ -85,7 +94,9 @@ export function toHomeArticle(
   const publishedAt = row.published_at ?? row.created_at;
   const section = ranked?.section ?? inferSection(row);
   const priorityScore = ranked?.priorityScore ?? 0;
-  const sectionDef = REGIONAL_SECTIONS.find((s) => s.id === section);
+  const localized = resolveLocalizedFields(row, displayLanguage);
+  const dict = getDictionary(displayLanguage);
+  const readMins = parseInt(localized.readingTime ?? row.reading_time ?? "3", 10) || 3;
   const attributionCount = Array.isArray(meta.source_attribution)
     ? meta.source_attribution.length
     : 0;
@@ -94,12 +105,12 @@ export function toHomeArticle(
   return {
     id: row.id,
     slug: row.slug,
-    headline: row.headline,
-    summary: row.summary?.trim() || row.seo_description?.trim() || "",
+    headline: localized.headline,
+    summary: localized.summary?.trim() || localized.seoDescription?.trim() || "",
     imageUrl: hero,
     ogImageUrl: og,
     section,
-    readingTime: row.reading_time ?? "3 min",
+    readingTime: readingTimeLabel(readMins, displayLanguage),
     publishedAt,
     isLive: hours <= LIVE_WINDOW_HOURS,
     urgency: computeUrgency(hours, confidence),
@@ -112,11 +123,11 @@ export function toHomeArticle(
       isBreaking: ranked?.isBreaking ?? false,
       duplicateClusterId: ranked?.duplicateClusterId ?? null,
     },
-    language: row.language ?? "hi",
+    language: normalizeArticleLanguage(row.language),
     tags: row.tags ?? [],
     aiConfidence: confidence,
     sourceCount: Math.max(1, sourceCount),
-    categoryLabel: sectionDef?.label ?? section,
+    categoryLabel: getSectionLabel(section, dict, displayLanguage),
     desk: resolveEditorialDesk(
       section,
       section === "chhattisgarh" || section === "raipur"
@@ -145,8 +156,12 @@ function pickCategoryStreams(
 
 export function buildGeneratedHomepageFeed(
   rows: GeneratedArticleRow[],
-  options?: { personalization?: RankingPersonalization }
+  options?: {
+    personalization?: RankingPersonalization;
+    displayLanguage?: NewsroomLanguage;
+  }
 ): GeneratedHomepageFeed | null {
+  const displayLanguage = options?.displayLanguage ?? "hi";
   if (!rows.length) return null;
 
   const rankedOutputs = rankArticlesForHomepage(rows, {
@@ -155,14 +170,18 @@ export function buildGeneratedHomepageFeed(
   const hyperlocalBundle = buildHyperlocalFeedBundle(rows, { maxDistricts: 6 });
   const localAlerts = buildLocalBreakingAlerts(rows, { cgOnly: true, limit: 8 });
   const ranked = rankedOutputs.map((r) =>
-    toHomeArticle(r.row, {
-      priorityScore: r.ranking.priorityScore,
-      reasons: r.ranking.reasons,
-      isTrending: r.ranking.isTrending,
-      isBreaking: r.ranking.isBreaking,
-      duplicateClusterId: r.ranking.duplicateClusterId,
-      section: r.section,
-    })
+    toHomeArticle(
+      r.row,
+      {
+        priorityScore: r.ranking.priorityScore,
+        reasons: r.ranking.reasons,
+        isTrending: r.ranking.isTrending,
+        isBreaking: r.ranking.isBreaking,
+        duplicateClusterId: r.ranking.duplicateClusterId,
+        section: r.section,
+      },
+      displayLanguage
+    )
   );
 
   const usedIds = new Set<string>();

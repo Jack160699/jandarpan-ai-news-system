@@ -1,0 +1,65 @@
+/* Hamar Chhattisgarh — forest + terracotta regional identity */
+
+.masthead-hc {
+  background: var(--paper-elevated);
+}
+
+.masthead-hc__rule-brand {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--tenant-primary-dark, #0f2e26),
+    var(--tenant-accent, #c45c2a) 45%,
+    var(--tenant-primary, #1a4d3e) 100%
+  );
+}
+
+.masthead-title-en {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.75rem, 7vw, 3.25rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--tenant-primary, #1a4d3e);
+}
+
+.masthead-title-hi {
+  font-family: var(--font-hindi), var(--font-display), serif;
+  font-size: clamp(1.75rem, 8vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink-body);
+}
+
+.tenant-logo__text {
+  font-family: var(--font-hindi), var(--font-body), serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--tenant-primary, #1a4d3e);
+}
+
+.regional-badge {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--tenant-primary, #1a4d3e);
+  border: 1px solid color-mix(in srgb, var(--tenant-primary) 35%, transparent);
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+}
+
+.district-chip {
+  font-family: var(--font-hindi), var(--font-ui), sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tenant-primary);
+  background: var(--tenant-accent-soft, #f5ebe0);
+  padding: 0.2rem 0.5rem;
+  border-radius: 2px;
+}
+
+.category-nav a.is-active,
+.category-nav a:hover {
+  color: var(--tenant-primary, #1a4d3e);
+}

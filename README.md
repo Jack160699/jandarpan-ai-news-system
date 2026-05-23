@@ -1,7 +1,7 @@
-# CG Bhaskar — Concept Redesign
+# Hamar Chhattisgarh
 
-**Speculative premium redesign** for presentation and pitching purposes only.  
-Not affiliated with CG Bhaskar. Not an official product.
+**हमार छत्तीसगढ़** — premium regional digital news for Chhattisgarh.  
+Independent identity; not affiliated with any national daily publisher.
 
 ## Experience
 

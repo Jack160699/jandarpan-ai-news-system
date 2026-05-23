@@ -1,0 +1,27 @@
+{
+  "name": "हमार छत्तीसगढ़",
+  "short_name": "हमार CG",
+  "description": "छत्तीसगढ़ की ताज़ा खबरें — जिला, राज्य और देश, एक जगह।",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#1a4d3e",
+  "lang": "hi-IN",
+  "dir": "ltr",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/brand/hamar-chhattisgarh-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/hamar-chhattisgarh-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["news", "magazines"]
+}

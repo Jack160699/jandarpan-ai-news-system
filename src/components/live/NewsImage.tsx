@@ -1,54 +1,43 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
-import { IMAGE_BLUR } from "@/lib/image-placeholder";
-import { NEWSROOM_PLACEHOLDER } from "@/lib/news/images/fallbacks";
-import { optimizeImageUrlForNext } from "@/lib/news/images/display";
+import { MediaImage } from "@/components/media/MediaImage";
 
 type NewsImageProps = {
-  /** Pre-resolved URL from liveArticleToCard, or raw URL with fallbacks */
   src: string | null | undefined;
   alt: string;
-  fill?: boolean;
+  category?: string;
+  source?: string | null;
   priority?: boolean;
   sizes?: string;
   className?: string;
-  /** Card width hint for Unsplash/CDN optimization */
   width?: number;
 };
 
 /**
- * Live news images — always renders a valid editorial visual.
- * Uses unoptimized remote URLs + tiered fallback on load error.
+ * Live news images — tiered fallback, skeleton, fixed crop
  */
 export function NewsImage({
   src,
   alt,
-  fill = true,
+  category = "world",
+  source,
   priority = false,
   sizes = "100vw",
-  className = "image-ink object-cover",
-  width = 640,
+  className = "image-ink",
 }: NewsImageProps) {
-  const [failed, setFailed] = useState(false);
-  const primary = src
-    ? optimizeImageUrlForNext(src, width)
-    : NEWSROOM_PLACEHOLDER;
-  const resolved = failed ? NEWSROOM_PLACEHOLDER : primary;
-
   return (
-    <Image
-      src={resolved}
+    <MediaImage
+      src={src}
       alt={alt}
-      fill={fill}
-      priority={priority}
       sizes={sizes}
-      unoptimized
-      placeholder="blur"
-      blurDataURL={IMAGE_BLUR}
-      className={className}
-      onError={() => setFailed(true)}
+      category={category}
+      source={source}
+      aspect="16:9"
+      priority={priority}
+      fillParent
+      cinematic
+      imageClassName={className}
+      className="h-full w-full"
     />
   );
 }

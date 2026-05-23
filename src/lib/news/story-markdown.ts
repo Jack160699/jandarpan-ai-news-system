@@ -5,7 +5,9 @@
 export type StoryBlock =
   | { type: "paragraph"; text: string }
   | { type: "image"; src: string; alt: string }
-  | { type: "list"; items: string[] };
+  | { type: "list"; items: string[] }
+  | { type: "quote"; text: string; attribution?: string }
+  | { type: "stat"; value: string; label: string };
 
 export type StorySection = {
   id: string;
@@ -74,6 +76,51 @@ function parseBlocks(text: string): StoryBlock[] {
     if (!row) {
       flushList();
       flushPara();
+      continue;
+    }
+
+    if (row.startsWith(">")) {
+      flushList();
+      flushPara();
+      const quoteText = row.replace(/^>\s*/, "").trim();
+      const attrMatch = quoteText.match(/^(.+?)\s*[—–-]\s*(.+)$/);
+      if (attrMatch && attrMatch[1].length > 12) {
+        blocks.push({
+          type: "quote",
+          text: attrMatch[1].replace(/^["']|["']$/g, "").trim(),
+          attribution: attrMatch[2].trim(),
+        });
+      } else {
+        blocks.push({
+          type: "quote",
+          text: quoteText.replace(/^["']|["']$/g, "").trim(),
+        });
+      }
+      continue;
+    }
+
+    const statDirective = row.match(/^::stat\s+(.+)$/i);
+    if (statDirective) {
+      flushList();
+      flushPara();
+      const parts = statDirective[1].split("|").map((p) => p.trim());
+      blocks.push({
+        type: "stat",
+        value: parts[0] ?? statDirective[1],
+        label: parts[1] ?? "Key figure",
+      });
+      continue;
+    }
+
+    const statInline = row.match(/^(\d[\d,.]*%?)\s*[|·–-]\s*(.+)$/);
+    if (statInline && row.length < 100) {
+      flushList();
+      flushPara();
+      blocks.push({
+        type: "stat",
+        value: statInline[1].trim(),
+        label: statInline[2].trim(),
+      });
       continue;
     }
 

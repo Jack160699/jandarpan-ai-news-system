@@ -1,8 +1,8 @@
 {
-  "name": "cg-bhaskar-concept",
+  "name": "hamar-chhattisgarh",
   "version": "1.0.0",
   "private": true,
-  "description": "CG Bhaskar speculative premium redesign concept — presentation only",
+  "description": "Hamar Chhattisgarh — premium regional digital news for Chhattisgarh",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

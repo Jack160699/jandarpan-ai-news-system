@@ -1,9 +1,14 @@
+"use client";
+
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
-import { ConfidenceIndicator } from "@/components/homepage/ConfidenceIndicator";
-import { DeskBadge } from "@/components/homepage/DeskBadge";
-import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
-import { formatHomeTime } from "@/lib/homepage/format";
-import { resolveDeskForCardVariant } from "@/lib/newsroom/desk-branding";
+import { CardThumbnail } from "@/components/cards/CardThumbnail";
+import {
+  IMG_CARD_COMPACT,
+  IMG_CARD_EDITORIAL,
+  IMG_CARD_LEAD,
+} from "@/lib/images/homepage-sizes";
+import { useLocaleFormat } from "@/lib/i18n/hooks";
+import { useLanguage } from "@/providers/LanguageProvider";
 import type { HomeArticle } from "@/lib/homepage/types";
 
 export type StoryCardVariant =
@@ -21,23 +26,8 @@ type StoryCardProps = {
   rank?: number;
 };
 
-function variantDesk(article: HomeArticle, variant: StoryCardVariant) {
-  if (variant === "wire" || variant === "breaking") {
-    return resolveDeskForCardVariant(variant === "breaking" ? "breaking" : "wire");
-  }
-  return article.desk;
-}
-
 function showImage(variant: StoryCardVariant): boolean {
   return variant !== "wire";
-}
-
-function deskVariant(
-  variant: StoryCardVariant
-): "editorial" | "wire" | "breaking" {
-  if (variant === "wire") return "wire";
-  if (variant === "breaking") return "breaking";
-  return "editorial";
 }
 
 export function StoryCard({
@@ -46,125 +36,73 @@ export function StoryCard({
   priority = false,
   rank,
 }: StoryCardProps) {
-  const desk = variantDesk(article, variant);
-  const deskV = deskVariant(variant);
+  const { t } = useLanguage();
+  const { time } = useLocaleFormat();
   const hasImage = showImage(variant);
-  const summary =
-    article.summary.trim() ||
-    "Brief update from the newsroom desk — open for full coverage.";
-
-  const tags = article.tags.slice(0, 3);
-  const clickSurface =
-    variant === "breaking" ? "breaking" : ("homepage" as const);
+  const showSummary =
+    variant === "editorial-lead" || variant === "editorial";
 
   return (
-    <article
-      className={`nr-card nr-card--${variant}`}
-      data-variant={variant}
-    >
+    <article className={`nr-card nr-card--daily nr-card--${variant}`}>
       <TrackedStoryLink
         href={`/story/${article.slug}`}
         slug={article.slug}
         category={article.section}
         region={article.section}
-        surface={clickSurface}
+        surface={variant === "breaking" ? "breaking" : "homepage"}
         listPosition={rank}
-        className="nr-card__link"
-        aria-label={`${article.headline}, ${article.categoryLabel}`}
+        className="nr-card__link tap-target"
+        prefetch={priority ? undefined : false}
       >
         {hasImage ? (
           <div className="nr-card__media">
-            <HomeArticleImage
+            <CardThumbnail
               src={article.imageUrl}
-              alt={article.headline.slice(0, 120)}
+              alt=""
+              aspect="fill"
+              category={article.tags[0] ?? article.section}
+              overlay="none"
               priority={priority}
               sizes={
                 variant === "editorial-lead"
-                  ? "(max-width: 768px) 100vw, 65vw"
+                  ? IMG_CARD_LEAD
                   : variant === "compact"
-                    ? "11rem"
-                    : variant === "editorial"
-                      ? "(max-width: 640px) 100vw, 33vw"
-                      : "(max-width: 768px) 100vw, 40vw"
+                    ? IMG_CARD_COMPACT
+                    : IMG_CARD_EDITORIAL
+              }
+              badges={
+                article.ranking.isBreaking || variant === "breaking" ? (
+                  <span className="pcard__flag pcard__flag--breaking">
+                    {t.common.breakingLabel}
+                  </span>
+                ) : article.isLive ? (
+                  <span className="pcard__flag pcard__flag--live">
+                    {t.common.live}
+                  </span>
+                ) : null
               }
             />
-            {variant === "breaking" || article.ranking.isBreaking ? (
-              <span className="nr-card__flag nr-card__flag--breaking">Breaking</span>
-            ) : null}
-            {variant === "editorial" || variant === "editorial-lead" ? (
-              <span className="nr-card__flag nr-card__flag--ai">AI Editorial</span>
-            ) : null}
-            {variant === "wire" && article.isLive ? (
-              <span className="nr-card__flag nr-card__flag--live">Live</span>
-            ) : null}
           </div>
         ) : null}
 
         <div className="nr-card__body">
-          <div className="nr-card__top">
-            {typeof rank === "number" ? (
-              <span className="nr-card__rank" aria-hidden>
-                {String(rank).padStart(2, "0")}
-              </span>
-            ) : null}
-            <div className="nr-card__badges">
-              <DeskBadge desk={desk} variant={deskV} />
-              {variant === "wire" && article.isLive ? (
-                <span className="nr-card__live-pill">Live</span>
-              ) : null}
-            </div>
-          </div>
+          {typeof rank === "number" && variant === "trending" ? (
+            <span className="nr-card__rank">{rank}</span>
+          ) : null}
 
           <h3 className="nr-card__headline">{article.headline}</h3>
 
-          {variant !== "wire" && variant !== "compact" ? (
-            <p className="nr-card__summary">{summary}</p>
-          ) : variant === "compact" ? (
-            <p className="nr-card__summary nr-card__summary--short">{summary}</p>
+          {showSummary && article.summary ? (
+            <p className="nr-card__summary">{article.summary}</p>
           ) : null}
 
-          <div className="nr-card__meta">
-            <span className="nr-card__meta-item">{article.categoryLabel}</span>
-            <span className="nr-card__meta-dot" aria-hidden>
-              ·
-            </span>
-            <span className="nr-card__meta-item">{article.readingTime}</span>
-            <span className="nr-card__meta-dot" aria-hidden>
-              ·
-            </span>
-            <time className="nr-card__meta-item" dateTime={article.publishedAt}>
-              {formatHomeTime(article.publishedAt)}
+          <p className="nr-card__meta">
+            <span>{article.categoryLabel}</span>
+            <span aria-hidden> · </span>
+            <time dateTime={article.publishedAt}>
+              {time(article.publishedAt)}
             </time>
-            {article.sourceCount > 0 && variant !== "wire" ? (
-              <>
-                <span className="nr-card__meta-dot" aria-hidden>
-                  ·
-                </span>
-                <span className="nr-card__meta-item">
-                  {article.sourceCount}{" "}
-                  {article.sourceCount === 1 ? "source" : "sources"}
-                </span>
-              </>
-            ) : null}
-          </div>
-
-          {variant !== "wire" ? (
-            <div className="nr-card__footer">
-              {tags.length > 0 ? (
-                <ul className="nr-card__tags" aria-label="Tags">
-                  {tags.map((tag) => (
-                    <li key={tag}>{tag}</li>
-                  ))}
-                </ul>
-              ) : null}
-              <ConfidenceIndicator score={article.aiConfidence} />
-            </div>
-          ) : (
-            <ConfidenceIndicator
-              score={article.aiConfidence}
-              showLabel={false}
-            />
-          )}
+          </p>
         </div>
       </TrackedStoryLink>
     </article>

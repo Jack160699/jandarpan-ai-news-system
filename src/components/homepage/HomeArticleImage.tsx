@@ -1,17 +1,18 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
-import { IMAGE_BLUR } from "@/lib/image-placeholder";
+import { MediaImage } from "@/components/media/MediaImage";
 
 type HomeArticleImageProps = {
   src: string;
   alt: string;
   priority?: boolean;
   sizes: string;
+  category?: string;
+  source?: string | null;
   fallbackSrc?: string;
   className?: string;
   aspectClassName?: string;
+  aspect?: "16:9" | "4:5" | "fill";
 };
 
 export function HomeArticleImage({
@@ -19,41 +20,32 @@ export function HomeArticleImage({
   alt,
   priority = false,
   sizes,
-  fallbackSrc,
-  className = "object-cover",
+  category,
+  source,
+  className = "pcard-thumb__img",
   aspectClassName,
+  aspect = "fill",
 }: HomeArticleImageProps) {
-  const [failed, setFailed] = useState(false);
-  const displaySrc =
-    failed && fallbackSrc?.trim() ? fallbackSrc : src?.trim() ?? "";
-  const hasSrc = Boolean(displaySrc) && !(failed && !fallbackSrc?.trim());
-
   return (
     <div
       className={
         aspectClassName ??
         "relative h-full w-full nr-card__image-wrap"
       }
-      data-image-state={hasSrc ? (failed ? "fallback" : "loaded") : "empty"}
     >
-      {hasSrc ? (
-        <Image
-          src={displaySrc}
-          alt={alt}
-          fill
-          priority={priority}
-          loading={priority ? undefined : "lazy"}
-          placeholder="blur"
-          blurDataURL={IMAGE_BLUR}
-          sizes={sizes}
-          className={className}
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <div className="nr-card__image-fallback" aria-hidden>
-          <span className="nr-card__image-fallback-mark" />
-        </div>
-      )}
+      <MediaImage
+        src={src || undefined}
+        alt={alt}
+        sizes={sizes}
+        priority={priority}
+        category={category}
+        source={source}
+        aspect={aspect}
+        fillParent
+        cinematic={false}
+        imageClassName={className}
+        className="h-full w-full"
+      />
     </div>
   );
 }

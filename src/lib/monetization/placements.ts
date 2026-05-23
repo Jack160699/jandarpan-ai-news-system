@@ -46,7 +46,7 @@ export const PLACEMENT_SLOT_META: Record<
   },
 };
 
-/** Default house ads for CG Bhaskar — lightweight promos */
+/** Default house ads for Hamar Chhattisgarh — lightweight promos */
 export function defaultMonetizationSettings(): TenantMonetizationSettings {
   const house = (slotId: PlacementSlotId, label: string): PlacementUnit => ({
     slotId,

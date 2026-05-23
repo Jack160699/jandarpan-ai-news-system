@@ -1,5 +1,3 @@
-import { ConceptBanner } from "@/components/institution/ConceptBanner";
-import { EditionLineage } from "@/components/institution";
 import { PageShell } from "@/components/layout/PageShell";
 import { ArchivePageContent } from "@/sections/ArchivePageContent";
 import type { Metadata } from "next";
@@ -7,15 +5,15 @@ import { BRAND } from "@/lib/brand";
 import { PRODUCTION_ROBOTS, SITE_URL, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Living Archive",
+  title: "Saved stories",
   description:
-    "Editorial chronology and ongoing investigations — CG Bhaskar archive for Chhattisgarh.",
+    "Your saved stories from Hamar Chhattisgarh — read again anytime.",
   alternates: { canonical: "/archive" },
   robots: PRODUCTION_ROBOTS,
   openGraph: {
-    title: `Living Archive · ${BRAND.nameEn}`,
+    title: `Saved stories · ${BRAND.nameEn}`,
     description:
-      "Editorial chronology and ongoing investigations — Chhattisgarh regional archive.",
+      "Bookmarked Chhattisgarh news stories — read again anytime.",
     type: "website",
     url: `${SITE_URL}/archive`,
     locale: "hi_IN",
@@ -23,16 +21,16 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: `Living Archive · ${BRAND.nameEn}`,
+    title: `Saved stories · ${BRAND.nameEn}`,
     description:
-      "Editorial chronology and ongoing investigations — Chhattisgarh regional archive.",
+      "Bookmarked Chhattisgarh news stories — read again anytime.",
   },
 };
 
 export default function ArchivePage() {
   const jsonLd = webPageJsonLd(
-    "Living Archive",
-    "Chronology of CG Bhaskar filings and investigations.",
+    "Saved stories",
+    "Stories you saved from Hamar Chhattisgarh regional coverage.",
     "/archive"
   );
 
@@ -42,7 +40,6 @@ export default function ArchivePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ConceptBanner />
       <ArchivePageContent />
     </PageShell>
   );

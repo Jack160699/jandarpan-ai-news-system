@@ -1,84 +1,78 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { BOTTOM_NAV_TABS } from "@/lib/navigation";
+import {
+  isBottomNavActive,
+  isBottomNavPending,
+  resolveNavHref,
+} from "@/lib/navigation/active";
+import { triggerHaptic } from "@/lib/mobile/haptics";
 import { useLanguage } from "@/providers/LanguageProvider";
+import { useNavigation } from "@/providers/NavigationProvider";
 import {
   IconHome,
   IconLive,
-  IconProfile,
   IconSaved,
-  IconVideo,
+  IconSearch,
+  IconShorts,
 } from "./NavIcons";
 
 const ICONS = {
   home: IconHome,
-  video: IconVideo,
+  shorts: IconShorts,
   live: IconLive,
   saved: IconSaved,
-  profile: IconProfile,
+  search: IconSearch,
 } as const;
 
 const TAB_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]> = {
   home: "home",
-  video: "video",
+  shorts: "shorts",
   live: "live",
   saved: "saved",
-  profile: "profile",
+  search: "search",
 };
 
 export function BottomNav() {
-  const pathname = usePathname();
+  const { pathname, hash, pendingPath, startNavigation } = useNavigation();
   const { t } = useLanguage();
 
-  const isActive = (tab: (typeof BOTTOM_NAV_TABS)[number]) => {
-    if (tab.id === "home") return pathname === "/";
-    if (tab.id === "saved") return pathname.startsWith("/archive");
-    if (tab.id === "video") return pathname.startsWith("/shorts");
-    if (tab.id === "profile") return pathname.startsWith("/search");
-    return false;
-  };
-
   return (
-    <nav className="bottom-nav md:hidden" aria-label="Main navigation">
-      {BOTTOM_NAV_TABS.map((tab) => {
-        const Icon = ICONS[tab.icon];
-        const active = isActive(tab);
-        const label = t.nav[TAB_KEYS[tab.id] ?? "home"];
-        const isHome = tab.id === "home";
-        const isArchive = tab.id === "saved";
+    <nav className="bottom-nav bottom-nav--premium md:hidden" aria-label="Main">
+      <div className="bottom-nav__inner">
+        {BOTTOM_NAV_TABS.map((tab) => {
+          const Icon = ICONS[tab.icon];
+          const active =
+            isBottomNavActive(tab, pathname, hash) ||
+            isBottomNavPending(tab, pendingPath);
+          const label = t.nav[TAB_KEYS[tab.id] ?? "home"];
+          const isLive = tab.id === "live";
+          const href = resolveNavHref(tab.href, pathname);
 
-        if (isHome || isArchive) {
           return (
             <Link
               key={tab.id}
-              href={tab.href}
-              className={`bottom-nav__item tap-target ${active ? "is-active" : ""}`}
+              href={href}
+              prefetch={tab.id === "home"}
+              className={`bottom-nav__item tap-press${active ? " is-active" : ""}${isLive ? " bottom-nav__item--live" : ""}${pendingPath === tab.href ? " is-pending" : ""}`}
               aria-current={active ? "page" : undefined}
+              onClick={() => {
+                triggerHaptic(isLive ? "medium" : "selection");
+                startNavigation(href);
+              }}
             >
-              <Icon className="bottom-nav__icon" />
+              <span className="bottom-nav__icon-wrap">
+                {isLive ? (
+                  <span className="bottom-nav__live-ring" aria-hidden />
+                ) : null}
+                <Icon className="bottom-nav__icon" />
+              </span>
               <span className="bottom-nav__label">{label}</span>
             </Link>
           );
-        }
-
-        const href =
-          tab.href.startsWith("/#") && pathname !== "/"
-            ? `/${tab.href}`
-            : tab.href;
-
-        return (
-          <Link
-            key={tab.id}
-            href={href}
-            className={`bottom-nav__item tap-target ${active ? "is-active" : ""}`}
-          >
-            <Icon className="bottom-nav__icon" />
-            <span className="bottom-nav__label">{label}</span>
-          </Link>
-        );
-      })}
+        })}
+      </div>
     </nav>
   );
 }

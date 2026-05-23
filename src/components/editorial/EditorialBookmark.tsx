@@ -1,5 +1,6 @@
 "use client";
 
+import { BookmarkButton } from "@/components/mobile/BookmarkButton";
 import { useEditorialIntelligenceOptional } from "@/providers/EditorialIntelligenceProvider";
 import { useLanguage } from "@/providers/LanguageProvider";
 
@@ -15,13 +16,12 @@ export function EditorialBookmark({ slug }: EditorialBookmarkProps) {
   const saved = ctx.isBookmarked(slug);
 
   return (
-    <button
-      type="button"
-      onClick={() => ctx.toggleArticleBookmark(slug)}
-      className={`bookmark-control meta-label border border-[var(--rule)] px-3 py-1.5 transition-colors hover:border-[var(--rule-strong)] tap-target ${saved ? "is-saved" : ""}`}
-      aria-pressed={saved}
-    >
-      {saved ? t.article.bookmarked : t.article.bookmark}
-    </button>
+    <BookmarkButton
+      saved={saved}
+      onToggle={() => ctx.toggleArticleBookmark(slug)}
+      label={t.article.bookmark}
+      labelSaved={t.article.bookmarked}
+      className="bookmark-control meta-label"
+    />
   );
 }
