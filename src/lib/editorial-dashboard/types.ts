@@ -47,6 +47,15 @@ export type DashboardEventCluster = {
   created_at: string;
 };
 
+export type DashboardSourceAttribution = {
+  signal_id: string;
+  source: string | null;
+  provider: string;
+  article_url: string;
+  published_at: string | null;
+  confidence: number;
+};
+
 export type DashboardGeneratedArticle = {
   id: string;
   slug: string;
@@ -54,11 +63,20 @@ export type DashboardGeneratedArticle = {
   summary: string | null;
   editorial_status: EditorialArticleStatus;
   homepage_pin: boolean;
+  is_breaking: boolean;
+  is_featured: boolean;
   published_at: string | null;
   ai_confidence: number | null;
+  readability: number | null;
+  seo_quality: number | null;
+  local_relevance: number | null;
+  originality: number | null;
   source_count: number | null;
+  event_id: string | null;
   language: string | null;
   created_at: string;
+  source_attribution: DashboardSourceAttribution[];
+  hero_image_url: string | null;
 };
 
 export type DashboardImageQueueItem = {

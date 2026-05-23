@@ -62,5 +62,13 @@ export async function POST(request: NextRequest) {
     errors: result.errors.slice(0, 20),
     results: result.results,
     editorial_images: imageQueue,
+    intelligenceFields: [
+      "confidence",
+      "readability",
+      "seoQuality",
+      "localRelevance",
+      "originality",
+      "publishDecision",
+    ],
   });
 }

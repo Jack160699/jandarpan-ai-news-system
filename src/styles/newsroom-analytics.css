@@ -1,0 +1,134 @@
+/* Newsroom analytics dashboards — CSS-only visualizations */
+
+.nra-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.75rem;
+}
+
+.nra-kpi {
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--anr-border);
+  background: var(--anr-surface);
+}
+
+.nra-kpi__value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.nra-kpi__label {
+  font-size: 0.68rem;
+  color: var(--anr-muted);
+  margin-top: 0.2rem;
+}
+
+.nra-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.35rem;
+  height: 120px;
+  padding: 0.75rem 0 0;
+}
+
+.nra-chart__bar-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.nra-chart__bar {
+  width: 100%;
+  max-width: 36px;
+  border-radius: 4px 4px 0 0;
+  background: var(--anr-accent);
+  min-height: 4px;
+  transition: height 0.3s ease;
+}
+
+.nra-chart__bar--clicks {
+  background: #3b82f6;
+  margin-top: 2px;
+}
+
+.nra-chart__label {
+  font-size: 0.6rem;
+  color: var(--anr-muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.nra-heatmap {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.5rem;
+}
+
+.nra-heatmap__cell {
+  padding: 0.65rem;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.75rem;
+  border: 1px solid var(--anr-border);
+}
+
+.nra-heatmap__cell strong {
+  display: block;
+  font-size: 0.8125rem;
+}
+
+.nra-topic-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.nra-topic-pill {
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  border: 1px solid var(--anr-border);
+}
+
+.nra-velocity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nra-velocity-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--anr-border);
+  font-size: 0.8125rem;
+}
+
+.nra-privacy {
+  font-size: 0.7rem;
+  color: var(--anr-muted);
+  padding: 0.5rem 0;
+}
+
+.nra-live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--anr-live);
+}
+
+@media (max-width: 640px) {
+  .nra-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

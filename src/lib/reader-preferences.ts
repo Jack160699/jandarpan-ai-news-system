@@ -1,4 +1,6 @@
-export type ReaderLanguage = "en" | "hi" | "cg";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+
+export type ReaderLanguage = NewsroomLanguage;
 export type ReaderTheme = "light" | "dark";
 export type ReadingMode = "standard" | "comfort";
 export type FontScale = "sm" | "base" | "lg" | "xl";
@@ -11,6 +13,8 @@ export type ReaderPreferences = {
   fontScale: FontScale;
   edition: EditionChoice;
   languageChosen: boolean;
+  /** Hyperlocal district slug (Chhattisgarh) for regional personalization */
+  homeDistrict?: string | null;
 };
 
 export const PREFS_STORAGE_KEY = "cgb-reader-prefs";
@@ -22,17 +26,10 @@ export const DEFAULT_PREFERENCES: ReaderPreferences = {
   fontScale: "base",
   edition: "morning",
   languageChosen: false,
+  homeDistrict: "raipur",
 };
 
-export const LANGUAGE_OPTIONS: {
-  id: ReaderLanguage;
-  label: string;
-  native: string;
-}[] = [
-  { id: "en", label: "English", native: "English" },
-  { id: "hi", label: "Hindi", native: "हिन्दी" },
-  { id: "cg", label: "Chhattisgarhi", native: "छत्तीसगढ़ी" },
-];
+export { LANGUAGE_OPTIONS } from "@/lib/i18n/languages";
 
 export const EDITION_OPTIONS: { id: EditionChoice; label: string; hi: string }[] =
   [
@@ -66,7 +63,28 @@ export function applyPreferencesToDocument(prefs: ReaderPreferences) {
   root.setAttribute("data-reading-mode", prefs.readingMode);
   root.setAttribute("data-font-scale", prefs.fontScale ?? "base");
   root.setAttribute("data-language", prefs.language);
-  root.lang = prefs.language === "en" ? "en" : "hi";
+  const lang =
+    prefs.language === "en"
+      ? "en"
+      : prefs.language === "bn"
+        ? "bn"
+        : prefs.language === "ta"
+          ? "ta"
+          : prefs.language === "mr"
+            ? "mr"
+            : "hi";
+  root.lang = lang;
+  root.setAttribute("data-language", prefs.language);
+  root.setAttribute(
+    "data-script",
+    prefs.language === "bn"
+      ? "bengali"
+      : prefs.language === "ta"
+        ? "tamil"
+        : prefs.language === "en"
+          ? "latin"
+          : "devanagari"
+  );
 }
 
 export function getThemeColor(theme: ReaderTheme): string {

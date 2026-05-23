@@ -3,26 +3,30 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useIsMobile } from "@/hooks/useMediaQuery";
-import { BRAND } from "@/lib/brand";
-import { HEADER_LOCATION } from "@/lib/navigation";
 import type { AppLanguage } from "@/lib/i18n/types";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
+import { useTenant } from "@/providers/TenantProvider";
 import { SearchOverlay } from "@/components/reader/SearchOverlay";
+import { TenantLogo } from "@/components/tenant/TenantLogo";
 import { CategoryTabs } from "./CategoryTabs";
 import { MobileSheet } from "./MobileSheet";
 import { IconMoon, IconSearch, IconSun } from "./NavIcons";
 
 export function AppHeader() {
+  const { tenant, headerLocation } = useTenant();
   const { language, setLanguage, t, languageOptions } = useLanguage();
   const { prefs, toggleTheme, setSearchOpen } = useReaderPreferences();
   const [langOpen, setLangOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const showLocalizedBrand = language !== "en";
+  const brandName = showLocalizedBrand
+    ? tenant.branding.nameHi
+    : tenant.branding.nameEn;
 
   const langShort =
-    languageOptions.find((l) => l.id === language)?.native.slice(0, 2) ?? "हि";
+    languageOptions.find((l) => l.id === language)?.shortCode ?? "हि";
 
   useEffect(() => {
     if (!langOpen || isMobile) return;
@@ -40,18 +44,21 @@ export function AppHeader() {
       <header className="app-header" data-section="masthead">
         <div className="app-header__row">
           <div className="app-header__brand">
-            <Link href="/" className="app-header__logo shrink-0">
-              {showLocalizedBrand ? BRAND.nameHi : BRAND.nameEn}
-            </Link>
+            <TenantLogo className="app-header__logo shrink-0" />
             <div className="app-header__locale hidden min-[380px]:flex">
               <span className="app-header__city">
                 {showLocalizedBrand
-                  ? HEADER_LOCATION.cityHi
-                  : HEADER_LOCATION.city}
+                  ? headerLocation.cityHi
+                  : headerLocation.city}
               </span>
-              <span className="app-header__weather">
-                {HEADER_LOCATION.temp} · {HEADER_LOCATION.condition}
-              </span>
+              {headerLocation.condition ? (
+                <span className="app-header__weather">
+                  {headerLocation.temp
+                    ? `${headerLocation.temp} · `
+                    : ""}
+                  {headerLocation.condition}
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -59,11 +66,11 @@ export function AppHeader() {
             <button
               type="button"
               className="header-icon-btn tap-target min-[380px]:hidden"
-              aria-label={`${HEADER_LOCATION.city}, ${HEADER_LOCATION.temp}`}
-              title={`${HEADER_LOCATION.city} · ${HEADER_LOCATION.temp}`}
+              aria-label={brandName}
+              title={brandName}
             >
               <span className="text-[10px] font-medium leading-none">
-                {HEADER_LOCATION.temp}
+                {headerLocation.temp || "°"}
               </span>
             </button>
 

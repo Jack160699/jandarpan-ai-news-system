@@ -1,0 +1,238 @@
+/* Evolving live coverage pages */
+
+.evolving-story {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1.5rem clamp(1rem, 3vw, 2rem) 3rem;
+}
+
+.evolving-story__kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--ink-muted, #5c5348);
+  margin: 0 0 0.5rem;
+}
+
+.evolving-story__live-pill {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: #c41e1e;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+.evolving-story__headline {
+  font-family: var(--font-display), serif;
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  line-height: 1.15;
+  margin: 0 0 1rem;
+}
+
+.cluster-confidence {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  background: var(--surface-muted, #f4f0e8);
+  font-size: 0.8125rem;
+  margin-bottom: 1.25rem;
+}
+
+.cluster-confidence--high {
+  border-left: 3px solid #2d6a4f;
+}
+
+.cluster-confidence--medium {
+  border-left: 3px solid #bc6c25;
+}
+
+.cluster-confidence--low {
+  border-left: 3px solid #9e9e9e;
+}
+
+.cluster-confidence__value {
+  font-size: 1.125rem;
+}
+
+.live-updates {
+  margin: 2rem 0;
+}
+
+.live-updates__title {
+  font-size: 1.125rem;
+  margin: 0 0 1rem;
+}
+
+.live-updates__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.live-updates__item {
+  padding: 1rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  background: var(--surface-elevated, #fff);
+}
+
+.live-updates__item--breaking {
+  border-color: rgba(196, 30, 30, 0.35);
+  background: rgba(196, 30, 30, 0.04);
+}
+
+.live-updates__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--ink-muted, #5c5348);
+  margin-bottom: 0.5rem;
+}
+
+.live-updates__badge {
+  font-weight: 700;
+  color: #c41e1e;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.live-updates__headline {
+  font-size: 1.0625rem;
+  margin: 0 0 0.35rem;
+  line-height: 1.35;
+}
+
+.live-updates__summary {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-secondary, #3d3830);
+  margin: 0;
+}
+
+.live-updates__sources {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  font-size: 0.8125rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+}
+
+.live-updates__src-conf {
+  opacity: 0.7;
+  margin-left: 0.25rem;
+}
+
+.coverage-timeline {
+  margin: 2.5rem 0;
+}
+
+.coverage-timeline__title {
+  font-size: 1.125rem;
+  margin: 0 0 1rem;
+}
+
+.coverage-timeline__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 1rem;
+  border-left: 2px solid var(--border-subtle, rgba(0, 0, 0, 0.1));
+}
+
+.coverage-timeline__item {
+  position: relative;
+  padding: 0 0 1.25rem 1.25rem;
+}
+
+.coverage-timeline__marker {
+  position: absolute;
+  left: -1.4rem;
+  top: 0.35rem;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-primary, #1a1510);
+}
+
+.coverage-timeline__item--update .coverage-timeline__marker {
+  background: #c41e1e;
+}
+
+.coverage-timeline__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted, #5c5348);
+  margin: 0 0 0.25rem;
+}
+
+.coverage-timeline__detail {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.coverage-timeline__source {
+  font-size: 0.8125rem;
+  color: var(--ink-muted, #5c5348);
+  margin: 0.25rem 0 0;
+}
+
+.evolving-story__synthesis {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+}
+
+.evolving-story__story-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-link, #8b4513);
+}
+
+.story-live-banner {
+  margin: 1rem 0 1.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(196, 30, 30, 0.08),
+    rgba(196, 30, 30, 0.02)
+  );
+  border: 1px solid rgba(196, 30, 30, 0.2);
+}
+
+.story-live-banner__link {
+  font-weight: 600;
+  color: #8b2e2e;
+  text-decoration: none;
+}
+
+.story-live-banner__link:hover {
+  text-decoration: underline;
+}

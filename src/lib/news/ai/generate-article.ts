@@ -3,7 +3,14 @@
  */
 
 import { createAdminServerClient } from "@/lib/supabase";
-import { buildArticleSlug } from "@/lib/news/slug";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
+import { buildNewsShortForArticle } from "@/lib/news/shorts/build-short";
+import { translateGeneratedArticle } from "@/lib/i18n/multilingual/translate";
+import { mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
+import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
+import { optimizeSeoSlug } from "@/lib/seo/slug-optimize";
+import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
 import {
   initialHeroPlaceholder,
@@ -16,6 +23,7 @@ import {
   type SourceAttribution,
 } from "@/lib/news/ai/editorial-guards";
 import {
+  applyEditorialEnhancements,
   buildFallbackDraftFromFactPack,
   repairBorderlineDraft,
 } from "@/lib/news/ai/editorial-repair";
@@ -93,6 +101,18 @@ type PendingCandidate = {
 function logEditorial(message: string, context?: Record<string, unknown>): void {
   console.log(`[generate-article] ${message}`, context ? JSON.stringify(context) : "");
   logNewsroom("generated", message, context);
+}
+
+function qualityResultFields(quality: EditorialQualityReport) {
+  return {
+    confidence: quality.ai_confidence,
+    readability: quality.quality_breakdown.readability,
+    seoQuality: quality.quality_breakdown.seo_quality,
+    localRelevance: quality.quality_breakdown.local_relevance,
+    originality: quality.quality_breakdown.originality,
+    publishDecision: quality.publishDecision,
+    rejectionReasons: quality.rejectionReasons,
+  };
 }
 
 function isEditorialEnabled(): boolean {
@@ -347,6 +367,7 @@ function evaluateDraft(input: {
     language: input.draft.language,
     existingHeadlines: input.existingHeadlines,
     forcePublish: input.forcePublish,
+    event: input.event,
   });
 }
 
@@ -361,7 +382,7 @@ async function persistGeneratedArticle(input: {
   batchRescue?: boolean;
 }): Promise<EditorialGenerationResult> {
   const supabase = createAdminServerClient();
-  const slug = buildArticleSlug(input.draft.headline, input.event.id);
+  const slug = optimizeSeoSlug(input.draft.headline, input.event.id);
   const category =
     input.event.category ??
     input.signals.find((s) => s.category)?.category ??
@@ -369,7 +390,36 @@ async function persistGeneratedArticle(input: {
   const hero_image_url =
     pickSourceHeroImage(input.signals) ?? initialHeroPlaceholder(category);
 
+  const signalGeos = input.signals.map((s) =>
+    tagGeoFromContent({
+      title: s.title,
+      body: s.raw_content,
+      region: s.region,
+      category: s.category,
+    })
+  );
+  const draftGeo = tagGeoFromContent({
+    title: input.draft.headline,
+    body: [input.draft.summary, input.draft.article_body].join("\n"),
+    region: input.event.region,
+    category,
+  });
+  const geo = mergeGeoMetadata(
+    ...(input.event.geo_metadata ? [input.event.geo_metadata] : []),
+    ...signalGeos,
+    draftGeo
+  );
+  const regionalTopic = scoreRegionalTopic({
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    articleBody: input.draft.article_body,
+    region: input.event.region,
+    category,
+    geo,
+  });
+
   const row: GeneratedArticleInsert = {
+    tenant_id: getPipelineTenantId(),
     event_id: input.event.id,
     slug,
     headline: input.draft.headline,
@@ -387,6 +437,7 @@ async function persistGeneratedArticle(input: {
         : [],
     editorial_status: "pending",
     published_at: null,
+    geo_metadata: geo,
     editorial_metadata: {
       ai_confidence: input.quality.ai_confidence,
       source_attribution: input.attributions,
@@ -403,6 +454,14 @@ async function persistGeneratedArticle(input: {
         "gpt-4o-mini",
       event_id: input.event.id,
       source_count: input.signals.length,
+      duplicate_cluster_id: input.quality.duplicate_cluster_id,
+      breaking_score: input.quality.quality_breakdown.breaking_score,
+      trend_score: input.quality.quality_breakdown.trend_score,
+      headline_quality: input.quality.quality_breakdown.headline_quality,
+      spam_score: input.quality.quality_breakdown.spam_score,
+      publish_decision: input.quality.publishDecision,
+      regional: geo,
+      regional_topic_score: regionalTopic.score,
       structure: [
         "intro",
         "key_developments",
@@ -449,6 +508,11 @@ async function persistGeneratedArticle(input: {
 
   logEditorialDecision({
     confidence: input.quality.ai_confidence,
+    readability: input.quality.quality_breakdown.readability,
+    seoQuality: input.quality.quality_breakdown.seo_quality,
+    localRelevance: input.quality.quality_breakdown.local_relevance,
+    originality: input.quality.quality_breakdown.originality,
+    publishDecision: input.quality.publishDecision,
     accepted: true,
     rejectionReasons: input.quality.rejectionReasons,
     storyId: inserted.id,
@@ -456,10 +520,31 @@ async function persistGeneratedArticle(input: {
     eventId: input.event.id,
     repaired: input.repaired,
     batchRescue: input.batchRescue,
+    breakingScore: input.quality.quality_breakdown.breaking_score,
+    trendScore: input.quality.quality_breakdown.trend_score,
+    duplicateClusterId: input.quality.duplicate_cluster_id,
     quality_breakdown: input.quality.quality_breakdown,
   });
 
   await queueEditorialImageForArticle(inserted.id);
+
+  if (
+    process.env.NEWSROOM_AUTO_TRANSLATE === "true" &&
+    process.env.OPENAI_API_KEY?.trim()
+  ) {
+    void translateGeneratedArticle(inserted as GeneratedArticleRow).catch(
+      () => undefined
+    );
+  }
+
+  if (
+    process.env.NEWSROOM_AUTO_SHORTS === "true" &&
+    process.env.OPENAI_API_KEY?.trim()
+  ) {
+    void buildNewsShortForArticle(inserted as GeneratedArticleRow).catch(
+      () => undefined
+    );
+  }
 
   return {
     ok: true,
@@ -508,6 +593,8 @@ async function prepareCandidate(
     draft = buildFallbackDraftFromFactPack({ event, signals, language });
     usedFallback = true;
     logEditorial("fallback_draft_used", { eventId: event.id });
+  } else {
+    draft = applyEditorialEnhancements(draft, event);
   }
 
   let repaired = false;
@@ -620,12 +707,20 @@ export async function generateEditorialFromEvent(
   if (!quality.publish_allowed) {
     logEditorialDecision({
       confidence: quality.ai_confidence,
+      readability: quality.quality_breakdown.readability,
+      seoQuality: quality.quality_breakdown.seo_quality,
+      localRelevance: quality.quality_breakdown.local_relevance,
+      originality: quality.quality_breakdown.originality,
+      publishDecision: quality.publishDecision,
       accepted: false,
       rejectionReasons: quality.rejectionReasons,
       storyId: null,
       title: candidate.draft.headline,
       eventId: event.id,
       repaired: candidate.repaired,
+      breakingScore: quality.quality_breakdown.breaking_score,
+      trendScore: quality.quality_breakdown.trend_score,
+      duplicateClusterId: quality.duplicate_cluster_id,
       quality_breakdown: quality.quality_breakdown,
     });
 
@@ -660,7 +755,7 @@ export async function generateEditorialFromEvent(
 export async function generateEditorialsFromEvents(options?: {
   limit?: number;
 }): Promise<BatchEditorialResult> {
-  const limit = options?.limit ?? 8;
+  const limit = options?.limit ?? INFRA_CONFIG.editorialBatchLimit;
 
   if (!isEditorialEnabled()) {
     return {
@@ -720,11 +815,19 @@ export async function generateEditorialsFromEvents(options?: {
   let lastPublishedStory: { id: string; title: string; confidence: number } | null =
     null;
 
-  for (const event of pending) {
-    const prepared = await prepareCandidate(event, [
-      ...existingHeadlines,
-      ...failedCandidates.map((c) => c.draft.headline),
-    ]);
+  const preparedList = await runWithConcurrency(
+    pending,
+    INFRA_CONFIG.editorialConcurrency,
+    (event) =>
+      prepareCandidate(event, [
+        ...existingHeadlines,
+        ...failedCandidates.map((c) => c.draft.headline),
+      ])
+  );
+
+  for (let i = 0; i < pending.length; i++) {
+    const event = pending[i];
+    const prepared = preparedList[i];
 
     if (!prepared.candidate) {
       skipped++;
@@ -758,8 +861,7 @@ export async function generateEditorialsFromEvents(options?: {
         published: saved.ok,
         repaired: candidate.repaired,
         reason: saved.reason,
-        confidence: candidate.quality.ai_confidence,
-        rejectionReasons: candidate.quality.rejectionReasons,
+        ...qualityResultFields(candidate.quality),
       });
 
       if (saved.ok && saved.article) {
@@ -791,18 +893,19 @@ export async function generateEditorialsFromEvents(options?: {
         reason: candidate.quality.hard_reject
           ? candidate.quality.hard_reject_reasons.join(",")
           : "quality_checks_failed",
-        confidence: candidate.quality.ai_confidence,
-        rejectionReasons: candidate.quality.rejectionReasons,
+        ...qualityResultFields(candidate.quality),
       });
 
       logEditorialDecision({
-        confidence: candidate.quality.ai_confidence,
+        ...qualityResultFields(candidate.quality),
         accepted: false,
-        rejectionReasons: candidate.quality.rejectionReasons,
         storyId: null,
         title: candidate.draft.headline,
         eventId: event.id,
         repaired: candidate.repaired,
+        breakingScore: candidate.quality.quality_breakdown.breaking_score,
+        trendScore: candidate.quality.quality_breakdown.trend_score,
+        duplicateClusterId: candidate.quality.duplicate_cluster_id,
         quality_breakdown: candidate.quality.quality_breakdown,
       });
     }
@@ -850,7 +953,7 @@ export async function generateEditorialsFromEvents(options?: {
           published: true,
           repaired: candidate.repaired,
           reason: "batch_rescue_top_scorer",
-          confidence: quality.ai_confidence,
+          ...qualityResultFields(quality),
           rejectionReasons: [] as string[],
         };
         if (idx >= 0) results[idx] = entry;

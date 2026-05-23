@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import {
   applyLanguageToDocument,
@@ -16,6 +17,7 @@ import {
   saveStoredLanguage,
 } from "@/lib/i18n/storage";
 import type { AppLanguage, Dictionary, LanguageOption } from "@/lib/i18n/types";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { LANGUAGE_OPTIONS } from "@/lib/i18n/types";
 import { PREFS_STORAGE_KEY } from "@/lib/reader-preferences";
 
@@ -49,8 +51,25 @@ function syncReaderPrefsLanguage(language: AppLanguage, chosen: boolean) {
   }
 }
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<AppLanguage>("hi");
+type LanguageProviderProps = {
+  children: ReactNode;
+  defaultLanguage?: NewsroomLanguage;
+  enabledLanguages?: NewsroomLanguage[];
+};
+
+export function LanguageProvider({
+  children,
+  defaultLanguage = "hi",
+  enabledLanguages,
+}: LanguageProviderProps) {
+  const router = useRouter();
+  const languageOptions = useMemo(() => {
+    if (!enabledLanguages?.length) return LANGUAGE_OPTIONS;
+    const allowed = new Set(enabledLanguages);
+    return LANGUAGE_OPTIONS.filter((o) => allowed.has(o.id as NewsroomLanguage));
+  }, [enabledLanguages]);
+
+  const [language, setLanguageState] = useState<AppLanguage>(defaultLanguage);
   const [chosen, setChosen] = useState(false);
   const [ready, setReady] = useState(false);
 
@@ -74,8 +93,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLanguage = useCallback(
     (lang: AppLanguage) => {
       persist(lang, true);
+      router.refresh();
     },
-    [persist]
+    [persist, router]
   );
 
   const confirmLanguage = useCallback(
@@ -93,11 +113,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       t,
       ready,
       showLanguageGate: ready && !chosen,
-      languageOptions: LANGUAGE_OPTIONS,
+      languageOptions,
       setLanguage,
       confirmLanguage,
     }),
-    [language, t, ready, chosen, setLanguage, confirmLanguage]
+    [language, t, ready, chosen, languageOptions, setLanguage, confirmLanguage]
   );
 
   return (

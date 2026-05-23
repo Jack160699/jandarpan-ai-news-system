@@ -78,6 +78,24 @@ Run in Supabase SQL Editor (order matters):
 | `CRON_SECRET` | Yes | Bearer token for `/api/fetch-news` |
 | `ADMIN_SECRET` | Optional | Admin dashboard `?key=` |
 | `OPENAI_API_KEY` | Optional | AI summaries / headlines |
+| `UPSTASH_REDIS_REST_URL` | Optional | Redis cache (homepage feed) |
+| `UPSTASH_REDIS_REST_TOKEN` | Optional | Upstash REST token |
+| `INGEST_BUDGET_MS` | Optional | Serverless soft stop (default 52000) |
+| `EDITORIAL_CONCURRENCY` | Optional | Parallel LLM prepares (default 2) |
+| `HOMEPAGE_CACHE_SECONDS` | Optional | ISR + Redis TTL (default 60) |
+
+### Production cron (Vercel)
+
+`vercel.json` schedules the full pipeline:
+
+- `POST /api/cron/orchestrate` — ingest → AI → editorial → images
+- `POST /api/cron/worker/:name` — single worker (staggered)
+
+Set `CRON_SECRET` in Vercel; Vercel Cron sends `Authorization: Bearer CRON_SECRET`.
+
+Apply migration `012_api_provider_health.sql` for GNews/NewsData health scoring.
+
+Logs: `[INGESTION_ANALYTICS]` JSON in function logs.
 
 **Remove:** `NEWS_API_KEY`, `ALLOW_DEV_FETCH`
 
@@ -118,7 +136,7 @@ Deploy this directory as the project root.
 
 - Framework: Next.js
 - Root Directory: `.`
-- Cron: **not** on Vercel — use GitHub Actions
+- Cron: Vercel (`vercel.json`) and/or GitHub Actions → `/api/cron/orchestrate`
 
 ## Structure
 

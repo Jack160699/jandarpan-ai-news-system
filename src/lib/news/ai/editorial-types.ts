@@ -49,6 +49,11 @@ export type BatchEditorialResult = {
     repaired?: boolean;
     reason?: string;
     confidence?: number;
+    readability?: number;
+    seoQuality?: number;
+    localRelevance?: number;
+    originality?: number;
+    publishDecision?: string;
     rejectionReasons?: string[];
   }>;
 };

@@ -1,0 +1,90 @@
+/**
+ * Multilingual typography — Unicode scripts, mobile readability
+ */
+
+[data-script="devanagari"] .immersive-story__title,
+[data-script="devanagari"] .headline-lg,
+[data-script="devanagari"] .headline-md,
+[data-script="devanagari"] .headline-sm,
+[data-script="devanagari"] .editorial-body,
+[data-script="devanagari"] .deck,
+[data-language="hi"] .immersive-story__title,
+[data-language="cg"] .immersive-story__title,
+[data-language="mr"] .immersive-story__title {
+  font-family: var(--font-hindi), var(--font-body), serif;
+  line-height: 1.72;
+  letter-spacing: 0.01em;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+[data-script="bengali"] .immersive-story__title,
+[data-script="bengali"] .editorial-body,
+[data-script="bengali"] .deck,
+[data-language="bn"] .immersive-story__title {
+  font-family: var(--font-bengali), var(--font-body), serif;
+  line-height: 1.78;
+  letter-spacing: 0.005em;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+[data-script="tamil"] .immersive-story__title,
+[data-script="tamil"] .editorial-body,
+[data-script="tamil"] .deck,
+[data-language="ta"] .immersive-story__title {
+  font-family: var(--font-tamil), var(--font-body), serif;
+  line-height: 1.8;
+  letter-spacing: 0.01em;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+[data-script="latin"] .immersive-story__title,
+[data-language="en"] .immersive-story__title {
+  font-family: var(--font-body), Georgia, serif;
+  line-height: 1.65;
+}
+
+.multilingual-article {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern" 1;
+}
+
+@media (max-width: 640px) {
+  [data-script="devanagari"] .immersive-story__title,
+  [data-script="bengali"] .immersive-story__title,
+  [data-script="tamil"] .immersive-story__title {
+    font-size: clamp(1.25rem, 5.5vw, 1.65rem);
+    line-height: 1.65;
+  }
+
+  [data-script="devanagari"] .editorial-body,
+  [data-script="bengali"] .editorial-body,
+  [data-script="tamil"] .editorial-body {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+}
+
+[data-translation="1"]::before {
+  content: "";
+  display: block;
+  height: 0;
+}
+
+.immersive-story[data-translation="1"] .immersive-story__meta::after {
+  content: "Translated edition";
+  display: inline-block;
+  margin-inline-start: 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted, #666);
+}
+
+[data-language="hi"] .immersive-story[data-translation="1"] .immersive-story__meta::after {
+  content: "अनुवादित संस्करण";
+}

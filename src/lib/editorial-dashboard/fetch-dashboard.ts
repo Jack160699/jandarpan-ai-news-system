@@ -5,7 +5,10 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { getTrendingSearches } from "@/lib/search/trending-queries";
 import { RSS_SOURCES } from "@/lib/news/providers/rss-sources";
-import type { EditorialDashboardSnapshot } from "@/lib/editorial-dashboard/types";
+import type {
+  DashboardGeneratedArticle,
+  EditorialDashboardSnapshot,
+} from "@/lib/editorial-dashboard/types";
 
 export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnapshot | null> {
   if (!isSupabaseConfigured()) return null;
@@ -48,10 +51,10 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
     supabase
       .from("generated_articles")
       .select(
-        "id, slug, headline, summary, editorial_status, homepage_pin, published_at, editorial_metadata, language, created_at"
+        "id, slug, headline, summary, editorial_status, homepage_pin, published_at, editorial_metadata, language, created_at, hero_image_url, event_id"
       )
       .order("created_at", { ascending: false })
-      .limit(40),
+      .limit(80),
     supabase
       .from("editorial_image_queue")
       .select(
@@ -89,6 +92,10 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
 
   const generatedArticles = (articlesRes.data ?? []).map((row) => {
     const meta = (row.editorial_metadata ?? {}) as Record<string, unknown>;
+    const breakdown = (meta.quality_breakdown ?? {}) as Record<string, number>;
+    const attribution =
+      (meta.source_attribution as DashboardGeneratedArticle["source_attribution"]) ??
+      [];
     return {
       id: row.id,
       slug: row.slug,
@@ -99,11 +106,20 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
         | "approved"
         | "rejected",
       homepage_pin: row.homepage_pin ?? false,
+      is_breaking: Boolean(meta.is_breaking),
+      is_featured: Boolean(meta.is_featured) || Boolean(row.homepage_pin),
       published_at: row.published_at,
       ai_confidence: (meta.ai_confidence as number) ?? null,
-      source_count: (meta.source_count as number) ?? null,
+      readability: breakdown.readability ?? null,
+      seo_quality: breakdown.seo_quality ?? null,
+      local_relevance: breakdown.local_relevance ?? null,
+      originality: breakdown.originality ?? null,
+      source_count: (meta.source_count as number) ?? attribution.length ?? null,
+      event_id: row.event_id ?? (meta.event_id as string) ?? null,
       language: row.language,
       created_at: row.created_at,
+      source_attribution: attribution,
+      hero_image_url: (row as { hero_image_url?: string }).hero_image_url ?? null,
     };
   });
 
@@ -246,7 +262,7 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
           ? topRanked.reduce((s, a) => s + (a.ai_confidence ?? 0), 0) /
             topRanked.length
           : 0,
-      breakingCount: 0,
+      breakingCount: generatedArticles.filter((a) => a.is_breaking).length,
     },
     sourceReliability,
   };

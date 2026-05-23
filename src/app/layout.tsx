@@ -1,25 +1,25 @@
 import type { Metadata, Viewport } from "next";
 import {
   DM_Mono,
+  Noto_Serif_Bengali,
   Noto_Serif_Devanagari,
+  Noto_Serif_Tamil,
   Playfair_Display,
   Source_Serif_4,
 } from "next/font/google";
 import { AppChrome } from "@/components/navigation/AppChrome";
 import { ThemeScript } from "@/components/reader/ThemeScript";
+import { TenantRoot } from "@/components/tenant/TenantRoot";
 import { EditorialIntelligenceProvider } from "@/providers/EditorialIntelligenceProvider";
 import { LanguageProvider } from "@/providers/LanguageProvider";
 import { ReaderPreferencesProvider } from "@/providers/ReaderPreferencesProvider";
-import { BRAND } from "@/lib/brand";
 import {
-  PRODUCTION_ROBOTS,
-  REGIONAL_KEYWORDS,
-  SITE_URL,
-  organizationJsonLd,
-  websiteJsonLd,
-} from "@/lib/seo";
-import { getThemeColor } from "@/lib/reader-preferences";
+  buildTenantSiteMetadata,
+  buildTenantViewport,
+} from "@/lib/tenant/metadata";
+import { getTenantConfig } from "@/lib/tenant/resolve";
 import "@/styles/globals.css";
+import "@/styles/monetization.css";
 
 const playfair = Playfair_Display({
   variable: "--font-display",
@@ -40,6 +40,20 @@ const notoDevanagari = Noto_Serif_Devanagari({
   display: "swap",
 });
 
+const notoBengali = Noto_Serif_Bengali({
+  variable: "--font-bengali",
+  subsets: ["bengali", "latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
+
+const notoTamil = Noto_Serif_Tamil({
+  variable: "--font-tamil",
+  subsets: ["tamil", "latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
+
 const dmMono = DM_Mono({
   variable: "--font-meta",
   subsets: ["latin"],
@@ -47,75 +61,53 @@ const dmMono = DM_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: `${BRAND.nameEn} — Chhattisgarh News`,
-    template: `%s · ${BRAND.nameEn}`,
-  },
-  description:
-    "Premium regional news from Chhattisgarh — calm, fast, and trustworthy. AI-edited stories from Raipur, Bastar, Bilaspur, and across the state.",
-  applicationName: BRAND.nameEn,
-  category: "news",
-  formatDetection: { telephone: false },
-  keywords: REGIONAL_KEYWORDS,
-  openGraph: {
-    title: `${BRAND.nameEn} — Chhattisgarh News`,
-    description: BRAND.taglineEn,
-    type: "website",
-    url: SITE_URL,
-    locale: "hi_IN",
-    siteName: BRAND.nameEn,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: BRAND.nameEn,
-    description: BRAND.taglineEn,
-  },
-  robots: PRODUCTION_ROBOTS,
-  alternates: { canonical: "/" },
-};
+const fontClassName = `${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${notoBengali.variable} ${notoTamil.variable} ${dmMono.variable} native-scroll h-full`;
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: getThemeColor("light"),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getTenantConfig();
+  return buildTenantSiteMetadata(tenant);
+}
 
-export default function RootLayout({
+export async function generateViewport(): Promise<Viewport> {
+  const tenant = await getTenantConfig();
+  return {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+    themeColor: buildTenantViewport(tenant).themeColor,
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const tenant = await getTenantConfig();
+  const htmlLang = tenant.newsroom.defaultLanguage === "en" ? "en" : "hi";
+
   return (
     <html
-      lang="hi"
+      lang={htmlLang}
       dir="ltr"
+      data-tenant={tenant.slug}
       suppressHydrationWarning
-      className={`${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${dmMono.variable} native-scroll h-full`}
+      className={fontClassName}
     >
       <body className="min-h-full antialiased text-[var(--ink-primary)]">
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(organizationJsonLd()),
-          }}
-        />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(websiteJsonLd()),
-          }}
-        />
         <ThemeScript />
-        <ReaderPreferencesProvider>
-          <LanguageProvider>
-            <EditorialIntelligenceProvider>
-              <AppChrome>{children}</AppChrome>
-            </EditorialIntelligenceProvider>
-          </LanguageProvider>
-        </ReaderPreferencesProvider>
+        <TenantRoot tenant={tenant}>
+          <ReaderPreferencesProvider>
+            <LanguageProvider
+              defaultLanguage={tenant.newsroom.defaultLanguage}
+              enabledLanguages={tenant.newsroom.enabledLanguages}
+            >
+              <EditorialIntelligenceProvider>
+                <AppChrome>{children}</AppChrome>
+              </EditorialIntelligenceProvider>
+            </LanguageProvider>
+          </ReaderPreferencesProvider>
+        </TenantRoot>
       </body>
     </html>
   );

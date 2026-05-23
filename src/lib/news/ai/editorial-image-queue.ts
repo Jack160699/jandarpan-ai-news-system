@@ -58,6 +58,38 @@ export async function countPendingEditorialImages(): Promise<number> {
   return count ?? 0;
 }
 
+export async function findDuplicateImageByVisualHash(
+  visualHash: string,
+  isNearDuplicate: (a: string, b: string) => boolean
+): Promise<{
+  hero_image_url: string;
+  og_image_url: string | null;
+  matchedHash: string;
+} | null> {
+  const supabase = createAdminServerClient();
+  const { data: articles } = await supabase
+    .from("generated_articles")
+    .select("hero_image_url, editorial_metadata")
+    .not("hero_image_url", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  for (const art of articles ?? []) {
+    const img = (art.editorial_metadata as { image?: { visual_hash?: string; og_url?: string } })
+      ?.image;
+    const existing = img?.visual_hash;
+    if (existing && isNearDuplicate(visualHash, existing) && art.hero_image_url) {
+      return {
+        hero_image_url: art.hero_image_url,
+        og_image_url: img?.og_url ?? null,
+        matchedHash: existing,
+      };
+    }
+  }
+
+  return null;
+}
+
 export async function findDuplicateImageByPromptHash(
   promptHash: string
 ): Promise<{ hero_image_url: string; og_image_url: string | null } | null> {
@@ -143,6 +175,59 @@ export async function markEditorialImageCompleted(input: {
         ...meta,
         image: {
           ...imageMeta,
+          hero_url: input.heroImageUrl,
+          og_url: input.ogImageUrl ?? input.heroImageUrl,
+          source: input.imageSource,
+          prompt_hash: input.promptHash,
+          processed_at: now,
+          status: "completed",
+        },
+      },
+    })
+    .eq("id", input.generatedArticleId);
+}
+
+export async function markEditorialImageCompletedWithMeta(input: {
+  queueId: string;
+  generatedArticleId: string;
+  heroImageUrl: string;
+  ogImageUrl: string | null;
+  imageSource: string;
+  promptHash: string | null;
+  imageMeta: Record<string, unknown>;
+}): Promise<void> {
+  const supabase = createAdminServerClient();
+  const now = new Date().toISOString();
+
+  await supabase
+    .from("editorial_image_queue")
+    .update({
+      status: "completed",
+      hero_image_url: input.heroImageUrl,
+      og_image_url: input.ogImageUrl,
+      image_source: input.imageSource,
+      prompt_hash: input.promptHash,
+      processed_at: now,
+      error: null,
+    })
+    .eq("id", input.queueId);
+
+  const { data: article } = await supabase
+    .from("generated_articles")
+    .select("editorial_metadata")
+    .eq("id", input.generatedArticleId)
+    .single();
+
+  const meta = (article?.editorial_metadata ?? {}) as Record<string, unknown>;
+
+  await supabase
+    .from("generated_articles")
+    .update({
+      hero_image_url: input.heroImageUrl,
+      editorial_metadata: {
+        ...meta,
+        image: {
+          ...input.imageMeta,
           hero_url: input.heroImageUrl,
           og_url: input.ogImageUrl ?? input.heroImageUrl,
           source: input.imageSource,

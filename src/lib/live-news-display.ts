@@ -1,4 +1,8 @@
 import { isArticleLive } from "@/lib/news/home-ranking";
+import {
+  displaySourceLine,
+  mapProviderToDesk,
+} from "@/lib/newsroom/desk-branding";
 import { resolveStorySlug } from "@/lib/news/related-stories";
 import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
 import { formatPublishedAt } from "@/lib/news-db";
@@ -28,6 +32,7 @@ export function liveArticleToCard(article: NewsArticleRow): LiveCardModel {
     category === "local" || category === "politics" ? 720 : 640;
 
   const text = `${article.title} ${article.description ?? ""}`;
+  const desk = mapProviderToDesk(article.provider);
 
   return {
     id: article.id,
@@ -46,7 +51,7 @@ export function liveArticleToCard(article: NewsArticleRow): LiveCardModel {
       width
     ),
     category: article.category,
-    source: article.source,
+    source: displaySourceLine(desk, article.source),
     filedAt: formatPublishedAt(article.published_at),
     href: storyPath(resolveStorySlug(article)),
     isLive: isArticleLive(article.published_at),

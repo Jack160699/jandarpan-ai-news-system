@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { NAV_CATEGORIES } from "@/lib/navigation";
 import { useLanguage } from "@/providers/LanguageProvider";
+import { useTenant } from "@/providers/TenantProvider";
 
 const NAV_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]> = {
   "top-news": "topNews",
@@ -18,7 +18,8 @@ const NAV_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]>
 
 export function CategoryTabs() {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { navCategories } = useTenant();
   const [active, setActive] = useState("top-news");
 
   const scrollTo = useCallback(
@@ -42,14 +43,16 @@ export function CategoryTabs() {
   useEffect(() => {
     if (pathname !== "/") return;
 
-    const ids = NAV_CATEGORIES.map((c) => c.href.replace("#", "")).filter(Boolean);
+    const ids = navCategories
+      .map((c) => c.href.replace("#", ""))
+      .filter(Boolean);
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
         if (visible?.target.id) {
-          const match = NAV_CATEGORIES.find(
+          const match = navCategories.find(
             (c) => c.href === `#${visible.target.id}`
           );
           if (match) setActive(match.id);
@@ -64,14 +67,19 @@ export function CategoryTabs() {
     });
 
     return () => observer.disconnect();
-  }, [pathname]);
+  }, [pathname, navCategories]);
 
   return (
     <nav className="category-tabs" aria-label="News categories">
       <div className="category-tabs__scroll">
-        {NAV_CATEGORIES.map((cat) => {
+        {navCategories.map((cat) => {
           const key = NAV_KEYS[cat.id];
-          const label = key ? t.nav[key] : cat.label;
+          const label =
+            key
+              ? t.nav[key]
+              : language === "en"
+                ? cat.label
+                : cat.labelHi ?? cat.label;
           return (
             <button
               key={cat.id}

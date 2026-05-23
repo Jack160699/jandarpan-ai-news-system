@@ -1,15 +1,9 @@
 /**
- * Invalidate homepage cache after ingestion
+ * Invalidate homepage cache after ingestion — ISR + Redis
  */
 
-import { revalidatePath, revalidateTag } from "next/cache";
-import { LIVE_NEWS_CACHE_TAG } from "@/lib/news/home-ranking";
+import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 
 export function revalidateLiveHomepage(): void {
-  try {
-    revalidateTag(LIVE_NEWS_CACHE_TAG, "default");
-    revalidatePath("/");
-  } catch (err) {
-    console.warn("[revalidate] live homepage:", err);
-  }
+  void revalidateNewsroomCaches();
 }

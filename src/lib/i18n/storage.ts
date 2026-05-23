@@ -1,13 +1,12 @@
+import { isNewsroomLanguage, getLanguageConfig } from "@/lib/i18n/languages";
 import type { AppLanguage } from "./types";
 import { PREFS_STORAGE_KEY } from "@/lib/reader-preferences";
 
 export const LANGUAGE_STORAGE_KEY = "cgb-language";
 export const LANGUAGE_CHOSEN_KEY = "cgb-language-chosen";
 
-const VALID: AppLanguage[] = ["en", "hi", "cg"];
-
 export function isAppLanguage(value: string | null | undefined): value is AppLanguage {
-  return VALID.includes(value as AppLanguage);
+  return isNewsroomLanguage(value);
 }
 
 export type StoredLanguageState = {
@@ -64,10 +63,13 @@ export function saveStoredLanguage(language: AppLanguage, chosen: boolean) {
   if (typeof window === "undefined") return;
   localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   localStorage.setItem(LANGUAGE_CHOSEN_KEY, chosen ? "1" : "0");
+  document.cookie = `${LANGUAGE_STORAGE_KEY}=${language}; path=/; max-age=31536000; SameSite=Lax`;
 }
 
 export function applyLanguageToDocument(language: AppLanguage) {
   const root = document.documentElement;
+  const config = getLanguageConfig(language);
   root.setAttribute("data-language", language);
-  root.lang = language === "en" ? "en" : "hi";
+  root.setAttribute("data-script", config.scriptAttr);
+  root.lang = config.bcp47.split("-")[0];
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LiveNewsCard } from "@/components/live/LiveNewsCard";
 import { NewsImage } from "@/components/live/NewsImage";
 import { LiveStoryJsonLd } from "@/components/seo/LiveStoryJsonLd";
-import { StoryAnalyticsTracker } from "@/components/story/StoryAnalyticsTracker";
+import { ReaderAnalyticsTracker } from "@/components/analytics/ReaderAnalyticsTracker";
 import { StoryReadingProgress } from "@/components/story/StoryReadingProgress";
 import { StoryShareRail } from "@/components/story/StoryShareRail";
 import { FeedSectionHeader } from "@/components/news/FeedSectionHeader";
@@ -72,11 +72,11 @@ export function LiveStoryPage({
   return (
     <>
       <LiveStoryJsonLd article={article} />
-      <StoryAnalyticsTracker
+      <ReaderAnalyticsTracker
         slug={slug}
-        source={article.source}
         category={article.category}
-        provider={article.provider}
+        region={article.region}
+        surface="story"
       />
       <StoryReadingProgress />
 

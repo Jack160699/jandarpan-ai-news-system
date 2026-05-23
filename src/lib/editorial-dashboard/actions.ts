@@ -103,6 +103,90 @@ export async function disableRssSource(
   return { ok: true, message: `Disabled ${hours}h` };
 }
 
+export async function updateArticleHeadline(
+  articleId: string,
+  headline: string
+): Promise<EditorialActionResult> {
+  if (!isSupabaseConfigured()) return { ok: false, message: "No database" };
+  const trimmed = headline.trim();
+  if (trimmed.length < 4) return { ok: false, message: "Headline too short" };
+
+  const supabase = createAdminServerClient();
+  const { error } = await supabase
+    .from("generated_articles")
+    .update({
+      headline: trimmed,
+      seo_title: trimmed.slice(0, 70),
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", articleId);
+
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
+export async function setArticleBreaking(
+  articleId: string,
+  isBreaking: boolean
+): Promise<EditorialActionResult> {
+  if (!isSupabaseConfigured()) return { ok: false, message: "No database" };
+
+  const supabase = createAdminServerClient();
+  const { data: row } = await supabase
+    .from("generated_articles")
+    .select("editorial_metadata")
+    .eq("id", articleId)
+    .maybeSingle();
+
+  const meta = (row?.editorial_metadata ?? {}) as Record<string, unknown>;
+  const { error } = await supabase
+    .from("generated_articles")
+    .update({
+      editorial_metadata: {
+        ...meta,
+        is_breaking: isBreaking,
+        breaking_marked_at: isBreaking ? new Date().toISOString() : null,
+      },
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq("id", articleId);
+
+  if (error) return { ok: false, message: error.message };
+  return { ok: true };
+}
+
+export async function setArticleFeatured(
+  articleId: string,
+  featured: boolean
+): Promise<EditorialActionResult> {
+  if (!isSupabaseConfigured()) return { ok: false, message: "No database" };
+
+  const supabase = createAdminServerClient();
+  const { data: row } = await supabase
+    .from("generated_articles")
+    .select("editorial_metadata")
+    .eq("id", articleId)
+    .maybeSingle();
+
+  const meta = (row?.editorial_metadata ?? {}) as Record<string, unknown>;
+  const pinResult = await setHomepagePin(articleId, featured);
+
+  await supabase
+    .from("generated_articles")
+    .update({
+      editorial_metadata: { ...meta, is_featured: featured },
+    })
+    .eq("id", articleId);
+
+  return pinResult;
+}
+
+export async function manualPublishArticle(
+  articleId: string
+): Promise<EditorialActionResult> {
+  return setArticleEditorialStatus(articleId, "approved");
+}
+
 export async function enableRssSource(
   sourceId: string
 ): Promise<EditorialActionResult> {

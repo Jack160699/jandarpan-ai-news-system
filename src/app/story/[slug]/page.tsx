@@ -1,22 +1,35 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ArticleView } from "@/sections/ArticleView";
 import { ImmersiveStoryPage } from "@/sections/story/ImmersiveStoryPage";
 import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
-import { pickRelatedStories } from "@/lib/news/related-stories";
+import {
+  applyLocalizedFieldsToNewsArticle,
+  resolveLocalizedFields,
+} from "@/lib/i18n/resolve-article";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
+import { buildLocalizedStoryMetadata } from "@/lib/i18n/multilingual/seo";
+import { isNewsroomLanguage } from "@/lib/i18n/languages";
 import {
   fetchGeneratedArticlePool,
   getGeneratedArticleBySlug,
   getGeneratedArticleSlugs,
 } from "@/lib/newsroom/generated/read";
-import { liveStoryMetadata } from "@/lib/news/story-seo";
-import { NOINDEX_ROBOTS, SITE_URL, articleJsonLd } from "@/lib/seo";
+import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { fetchSponsoredStory } from "@/lib/monetization/fetch-payload";
+import {
+  articleJsonLd,
+  buildPageMetadata,
+  shouldRedirectToCanonicalSlug,
+} from "@/lib/seo";
+import { getTenantConfig } from "@/lib/tenant/resolve";
 
 export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ lang?: string }>;
 };
 
 export async function generateStaticParams() {
@@ -31,36 +44,33 @@ export async function generateStaticParams() {
   return getAllArticleSlugs().map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({ params }: PageProps) {
+export async function generateMetadata({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { lang: langParam } = await searchParams;
+  const displayLang = isNewsroomLanguage(langParam) ? langParam : undefined;
+
   const generated = await getGeneratedArticleBySlug(slug);
   if (generated) {
-    return liveStoryMetadata(generatedToNewsArticle(generated));
+    const article = generatedToNewsArticle(generated);
+    const ogImage =
+      generated.editorial_metadata?.image?.og_url ?? article.image_url;
+    return buildLocalizedStoryMetadata(generated, {
+      displayLanguage: displayLang,
+      ogImage: ogImage ?? undefined,
+    });
   }
 
   const editorial = getArticle(slug);
   if (!editorial) return { title: "Story not found" };
 
-  const url = `${SITE_URL}/story/${slug}`;
-  return {
+  return buildPageMetadata({
     title: editorial.title,
     description: editorial.deck,
-    alternates: { canonical: `/story/${slug}` },
-    robots: NOINDEX_ROBOTS,
-    openGraph: {
-      title: editorial.title,
-      description: editorial.deck,
-      type: "article",
-      url,
-      images: [{ url: editorial.image }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: editorial.title,
-      description: editorial.deck,
-      images: [editorial.image],
-    },
-  };
+    path: `/story/${slug}`,
+    ogImage: editorial.image,
+    ogType: "article",
+    noindex: true,
+  });
 }
 
 export default async function StoryPage({ params }: PageProps) {
@@ -69,15 +79,73 @@ export default async function StoryPage({ params }: PageProps) {
   const generatedRow = await getGeneratedArticleBySlug(slug);
 
   if (generatedRow) {
-    const liveArticle = generatedToNewsArticle(generatedRow);
+    if (
+      generatedRow.slug &&
+      shouldRedirectToCanonicalSlug(slug, generatedRow.slug)
+    ) {
+      permanentRedirect(`/story/${generatedRow.slug}`);
+    }
+
     const poolRows = await fetchGeneratedArticlePool(80);
-    const topicPool = poolRows.map(generatedToNewsArticle);
-    const related = pickRelatedStories(liveArticle, topicPool, 4);
+    const readerLang = await getServerReaderLanguage();
+    const localized = resolveLocalizedFields(generatedRow, readerLang);
+    const liveArticle = applyLocalizedFieldsToNewsArticle(
+      generatedToNewsArticle(generatedRow),
+      localized
+    );
+
+    let liveCoverage: {
+      slug: string;
+      headline?: string | null;
+      sourceCount?: number;
+    } | null = null;
+
+    if (generatedRow.event_id && isSupabaseConfigured()) {
+      const supabase = createAdminServerClient();
+      const { data: ev } = await supabase
+        .from("news_events")
+        .select(
+          "coverage_slug,coverage_headline,is_live,source_count"
+        )
+        .eq("id", generatedRow.event_id)
+        .maybeSingle();
+      if (ev?.is_live && ev.coverage_slug) {
+        liveCoverage = {
+          slug: ev.coverage_slug,
+          headline: ev.coverage_headline,
+          sourceCount: ev.source_count ?? undefined,
+        };
+      }
+    }
+
+    const tenant = await getTenantConfig();
+    const sponsoredStory =
+      tenant.monetization?.sponsoredStoriesEnabled !== false
+        ? await fetchSponsoredStory(tenant.id, generatedRow.slug)
+        : null;
 
     return (
       <PageShell variant="news">
         <main id="main-content" className="relative z-[2]" role="main">
-          <ImmersiveStoryPage article={liveArticle} related={related} />
+          <ImmersiveStoryPage
+            article={liveArticle}
+            sponsoredStory={sponsoredStory}
+            related={poolRows
+              .filter((r) => r.id !== generatedRow.id)
+              .slice(0, 8)
+              .map((r) => {
+                const fields = resolveLocalizedFields(r, readerLang);
+                return applyLocalizedFieldsToNewsArticle(
+                  generatedToNewsArticle(r),
+                  fields
+                );
+              })}
+            editorialMeta={generatedRow.editorial_metadata}
+            readingTime={localized.readingTime}
+            liveCoverage={liveCoverage}
+            displayLanguage={readerLang}
+            translationActive={localized.usedTranslation}
+          />
         </main>
       </PageShell>
     );

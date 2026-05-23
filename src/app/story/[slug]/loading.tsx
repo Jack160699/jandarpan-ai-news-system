@@ -15,8 +15,14 @@ export default function StoryLoading() {
           <Skeleton className="mt-4 h-10 max-w-xl w-full" />
           <Skeleton className="mt-3 h-5 max-w-md w-[70%]" />
         </div>
-        <Skeleton className="immersive-story__hero mt-8 aspect-[16/10] w-full" />
+        <div className="story-cat-nav mt-4 flex gap-2 overflow-hidden">
+          <Skeleton className="h-8 w-20 rounded-full" />
+          <Skeleton className="h-8 w-24 rounded-full" />
+          <Skeleton className="h-8 w-16 rounded-full" />
+        </div>
+        <Skeleton className="immersive-story__hero mt-6 aspect-[16/9] w-full max-w-none" />
         <Skeleton className="immersive-summary mt-10 h-28 w-full" />
+        <Skeleton className="story-highlights mt-8 h-24 w-full" />
         <div className="mt-10">
           <SkeletonText lines={4} />
         </div>

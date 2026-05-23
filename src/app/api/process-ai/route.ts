@@ -3,39 +3,23 @@
  */
 
 import { NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 import { processAiQueueBatch } from "@/lib/news/ai/process";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
-import { revalidateLiveHomepage } from "@/lib/news/revalidate-home";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-function parseBearerToken(authorization: string | null): string | null {
-  if (!authorization) return null;
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
-  return match ? match[1].trim() : null;
-}
-
-function checkCronAuth(request: Request): boolean {
-  const cronSecret = process.env.CRON_SECRET?.trim() || null;
-  const bearer = parseBearerToken(request.headers.get("authorization"));
-  const header = request.headers.get("x-cron-secret")?.trim() ?? null;
-
-  if (cronSecret && (bearer === cronSecret || header === cronSecret)) {
-    return true;
-  }
-
-  if (process.env.NODE_ENV === "development" && !cronSecret) {
-    return true;
-  }
-
-  return false;
-}
-
 export async function POST(request: Request) {
-  if (!checkCronAuth(request)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  if (!verifyCronRequest(request).authorized) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401, headers: noStoreHeaders() }
+    );
   }
 
   if (!isSupabaseConfigured()) {
@@ -56,11 +40,11 @@ export async function POST(request: Request) {
   }
 
   const startedAt = Date.now();
-  const result = await processAiQueueBatch(10);
+  const result = await processAiQueueBatch(INFRA_CONFIG.aiQueueBatch);
   const pending = await countPendingAiQueue();
 
   if (result.processed > 0) {
-    revalidateLiveHomepage();
+    await revalidateNewsroomCaches();
   }
 
   return NextResponse.json({
@@ -70,7 +54,7 @@ export async function POST(request: Request) {
     errors: result.errors,
     pending,
     durationMs: Date.now() - startedAt,
-  });
+  }, { headers: noStoreHeaders() });
 }
 
 export async function GET(request: Request) {

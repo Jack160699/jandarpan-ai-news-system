@@ -1,20 +1,23 @@
 /**
- * Server Supabase clients — Node.js / serverless (never import in client components)
+ * Server Supabase clients — App Router, Route Handlers, Server Actions.
+ * Never import in Client Components.
  */
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import type { Database } from "@/lib/supabase/types";
-import {
-  getPublicSupabaseEnv,
-  getServiceRoleEnv,
-} from "@/lib/supabase/env";
+import { getPublicSupabaseEnv } from "@/lib/supabase/env";
+import { assertServerOnly } from "@/utils/env";
+
+export { createAdminServerClient, createAdminClient } from "@/lib/supabase/admin";
 
 const serverFetch =
   typeof globalThis.fetch === "function"
     ? globalThis.fetch.bind(globalThis)
     : undefined;
 
-function clientOptions() {
+function anonOptions() {
   return {
     auth: {
       persistSession: false as const,
@@ -25,23 +28,42 @@ function clientOptions() {
 }
 
 /**
- * Server anon read client — same key as browser (RLS applies)
+ * Stateless anon server client — public reads under RLS (no user session).
  */
 export function createAnonServerClient(): SupabaseClient<Database> {
+  assertServerOnly("createAnonServerClient");
   const { url, anonKey } = getPublicSupabaseEnv();
-  return createClient<Database>(url, anonKey, clientOptions());
+  return createClient<Database>(url, anonKey, anonOptions());
 }
 
 /** @deprecated Use createAnonServerClient */
 export const createServerAnonClient = createAnonServerClient;
 
 /**
- * Server admin client — SUPABASE_SERVICE_ROLE_KEY only (bypasses RLS)
+ * Cookie-aware server client — respects logged-in user JWT from Supabase Auth cookies.
+ * Use in Server Components, Server Actions, and Route Handlers that need the user session.
  */
-export function createAdminServerClient(): SupabaseClient<Database> {
-  const { url, serviceRoleKey } = getServiceRoleEnv();
-  return createClient<Database>(url, serviceRoleKey, clientOptions());
-}
+export async function createCookieServerClient(): Promise<
+  SupabaseClient<Database>
+> {
+  assertServerOnly("createCookieServerClient");
+  const cookieStore = await cookies();
+  const { url, anonKey } = getPublicSupabaseEnv();
 
-/** @deprecated Use createAdminServerClient */
-export const createAdminClient = createAdminServerClient;
+  return createServerClient<Database>(url, anonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        } catch {
+          // setAll from Server Component without mutable cookies — middleware handles refresh
+        }
+      },
+    },
+  });
+}

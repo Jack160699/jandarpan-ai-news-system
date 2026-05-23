@@ -21,6 +21,11 @@ export {
 } from "@/lib/newsroom/bridge/legacy-publish";
 export { clusterRecentSignals } from "@/lib/newsroom/events/cluster";
 export {
+  getEvolvingCoverageBySlug,
+  getLiveCoverageSlugs,
+} from "@/lib/news/coverage/read";
+export { computeClusterConfidence } from "@/lib/news/coverage/confidence";
+export {
   clusterSignalsIntoEvents,
   fetchUnprocessedSignals,
   scoreSourceConfidence,
@@ -45,9 +50,16 @@ export type {
 } from "@/lib/news/ai/generate-article";
 export {
   runEditorialQualityChecks,
+  logEditorialDecision,
   type EditorialQualityReport,
   type SourceAttribution,
 } from "@/lib/news/ai/editorial-guards";
+export {
+  analyzeEditorialIntelligence,
+  logQualityBreakdown,
+  type EditorialIntelligenceResult,
+  type PublishDecision,
+} from "@/lib/news/ai/editorial-intelligence";
 export {
   rankArticlesForHomepage,
   computeHomepagePriorityScore,

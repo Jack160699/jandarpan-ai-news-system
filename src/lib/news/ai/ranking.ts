@@ -3,6 +3,11 @@
  */
 
 import { titleSimilarity } from "@/lib/news/normalize";
+import {
+  buildRegionalRankingSnapshot,
+  geoFromRecord,
+  scoreRegionalTopicFromArticle,
+} from "@/lib/regional";
 import { logNewsroom } from "@/lib/newsroom/logger";
 import type { HomeSectionId } from "@/lib/homepage/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
@@ -26,6 +31,7 @@ export type RankingFactorBreakdown = {
   freshness: number;
   urgency: number;
   regional: number;
+  districtBoost: number;
   sourceTrust: number;
   engagement: number;
   category: number;
@@ -53,11 +59,12 @@ export type RankedArticleOutput = RankedArticleInput & {
   ranking: RankingMetadata;
 };
 
-/** Personalization hooks (future: user prefs, geo, reading history) */
+/** Personalization — district routing, CG-first policy */
 export type RankingPersonalization = {
   preferredSections?: HomeSectionId[];
   regionBoostMultiplier?: number;
   boostSlugs?: string[];
+  homeDistrict?: string | null;
 };
 
 export type HomepageRankingAnalytics = {
@@ -156,6 +163,14 @@ function scoreRegional(
   return base * mult;
 }
 
+function scoreDistrictBoost(
+  row: GeneratedArticleRow,
+  personalization?: RankingPersonalization
+): number {
+  const topic = scoreRegionalTopicFromArticle(row, personalization?.homeDistrict);
+  return Math.min(16, topic.districtBoost + topic.cgStateBoost * 0.35);
+}
+
 function scoreSourceTrust(row: GeneratedArticleRow): number {
   const meta = row.editorial_metadata ?? {};
   const confidence = meta.ai_confidence ?? 0.5;
@@ -204,6 +219,10 @@ function scoreCategory(section: HomeSectionId): number {
 }
 
 function scoreBreakingBoost(row: GeneratedArticleRow, hours: number): number {
+  const meta = row.editorial_metadata ?? {};
+  if (meta.is_breaking) {
+    return hours > LIVE_WINDOW_HOURS ? 6 : 16;
+  }
   if (!BREAKING_RE.test(`${row.headline} ${row.summary ?? ""}`)) return 0;
   if (hours > LIVE_WINDOW_HOURS) return 4;
   return 14;
@@ -275,6 +294,7 @@ function buildReasons(factors: RankingFactorBreakdown, flags: {
   if (flags.isBreaking) reasons.push("breaking_news_boost");
   if (factors.freshness >= 20) reasons.push("high_freshness");
   if (factors.regional >= 18) reasons.push("regional_priority");
+  if (factors.districtBoost >= 10) reasons.push("district_hyperlocal_boost");
   if (factors.sourceTrust >= 12) reasons.push("trusted_multi_source");
   if (factors.engagement >= 10) reasons.push("strong_engagement_signals");
   if (flags.isTrending) reasons.push("trending_velocity");
@@ -304,6 +324,7 @@ export function computeHomepagePriorityScore(
   const freshness = scoreFreshness(hours);
   const staleDecay = scoreStaleDecay(hours);
   const regional = scoreRegional(section, personalization);
+  const districtBoost = scoreDistrictBoost(row, personalization);
   const sourceTrust = scoreSourceTrust(row);
   const engagement = scoreEngagement(row);
   const urgency = scoreUrgency(row, hours);
@@ -318,6 +339,7 @@ export function computeHomepagePriorityScore(
     freshness +
     urgency +
     regional +
+    districtBoost +
     sourceTrust +
     engagement +
     category +
@@ -334,6 +356,7 @@ export function computeHomepagePriorityScore(
       freshness,
       urgency,
       regional,
+      districtBoost,
       sourceTrust,
       engagement,
       category,
@@ -417,6 +440,26 @@ export function rankArticlesForHomepage(
   });
 
   logHomepageRankingAnalytics(ranked);
+
+  const cgCount = rows.filter((r) => geoFromRecord(r).is_chhattisgarh).length;
+  const districtTagged = rows.filter(
+    (r) => (geoFromRecord(r).districts?.length ?? 0) > 0
+  ).length;
+  const scores = rows.map((r) =>
+    scoreRegionalTopicFromArticle(r, options?.personalization?.homeDistrict).score
+  );
+  const avgRegionalScore =
+    scores.length > 0
+      ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10
+      : 0;
+
+  buildRegionalRankingSnapshot({
+    poolSize: rows.length,
+    cgCount,
+    districtTagged,
+    topDistrict: ranked[0] ? geoFromRecord(ranked[0].row).primary_district : null,
+    avgRegionalScore,
+  });
 
   return ranked;
 }

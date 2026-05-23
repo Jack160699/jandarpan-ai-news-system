@@ -3,8 +3,10 @@
  */
 
 import { createAdminServerClient } from "@/lib/supabase";
+import { tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { logNewsroom, logNewsroomError } from "@/lib/newsroom/logger";
 import type { NormalizedArticle } from "@/lib/news/types";
+import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import type { NewsSignalInsert } from "@/lib/types/newsroom";
 
 const BATCH_SIZE = 40;
@@ -24,7 +26,15 @@ export function normalizedToSignal(
     .join("\n\n")
     .trim();
 
+  const geo = tagGeoFromContent({
+    title: article.title,
+    body: rawContent,
+    region: article.region,
+    category: article.category,
+  });
+
   return {
+    tenant_id: getPipelineTenantId(),
     source: article.source,
     provider: article.provider,
     title: article.title,
@@ -33,13 +43,15 @@ export function normalizedToSignal(
     image_url: article.image_url,
     published_at: article.published_at,
     category: article.category,
-    region: article.region,
+    region: geo.is_chhattisgarh ? "chhattisgarh" : article.region,
     language: article.language,
+    geo_metadata: geo,
     ingestion_metadata: {
       author: article.author,
       title_hash: meta?.title_hash,
       url_hash: meta?.url_hash,
       slug: meta?.slug,
+      geo,
       ...meta,
     },
   };

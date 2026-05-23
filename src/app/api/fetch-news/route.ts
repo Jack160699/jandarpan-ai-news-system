@@ -5,6 +5,10 @@
  */
 
 import { NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
+import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
+import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
 import {
   runScalableIngestion,
   triggerAiProcessing,
@@ -14,40 +18,6 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-function parseBearerToken(authorization: string | null): string | null {
-  if (!authorization) return null;
-  const match = authorization.match(/^Bearer\s+(.+)$/i);
-  return match ? match[1].trim() : null;
-}
-
-function checkCronAuth(request: Request): {
-  authorized: boolean;
-  bearerToken: string | null;
-  cronHeader: string | null;
-} {
-  const cronSecret = process.env.CRON_SECRET?.trim() || null;
-  const bearerToken = parseBearerToken(request.headers.get("authorization"));
-  const cronHeader = request.headers.get("x-cron-secret")?.trim() ?? null;
-
-  if (cronSecret) {
-    if (bearerToken === cronSecret || cronHeader === cronSecret) {
-      return { authorized: true, bearerToken, cronHeader };
-    }
-  }
-
-  if (process.env.NODE_ENV === "development") {
-    const url = new URL(request.url);
-    if (url.searchParams.get("dev") === "1") {
-      return { authorized: true, bearerToken, cronHeader };
-    }
-    if (!cronSecret) {
-      return { authorized: true, bearerToken, cronHeader };
-    }
-  }
-
-  return { authorized: false, bearerToken, cronHeader };
-}
 
 function hasAnyProviderConfigured(): boolean {
   return Boolean(
@@ -69,7 +39,7 @@ async function handleFetchNews(request: Request) {
   const startedAt = Date.now();
   const deadline = createExecutionDeadline();
 
-  const auth = checkCronAuth(request);
+  const auth = verifyCronRequest(request);
   if (!auth.authorized) {
     return NextResponse.json(
       {
@@ -79,7 +49,7 @@ async function handleFetchNews(request: Request) {
         bearerReceived: !!auth.bearerToken,
         xCronReceived: !!auth.cronHeader,
       },
-      { status: 401 }
+      { status: 401, headers: noStoreHeaders() }
     );
   }
 
@@ -101,9 +71,13 @@ async function handleFetchNews(request: Request) {
   }
 
   try {
-    console.log("[fetch-news] Scalable ingestion start…");
+    logIngestionAnalytics({ event: "worker_start", worker: "ingest" });
 
     const result = await runScalableIngestion(deadline);
+
+    if (result.inserted > 0) {
+      await revalidateNewsroomCaches();
+    }
 
     triggerAiProcessing(request.url);
 

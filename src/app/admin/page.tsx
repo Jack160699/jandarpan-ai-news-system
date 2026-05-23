@@ -9,5 +9,5 @@ type PageProps = {
 export default async function AdminIndexPage({ searchParams }: PageProps) {
   const { key } = await searchParams;
   const qs = key ? `?key=${encodeURIComponent(key)}` : "";
-  redirect(`/admin/dashboard${qs}`);
+  redirect(`/admin/editorial${qs}`);
 }

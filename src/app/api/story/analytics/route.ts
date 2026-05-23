@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase";
+import { persistReaderEvents } from "@/lib/analytics/persist";
+import { getTenantConfig } from "@/lib/tenant/resolve";
 
 export const runtime = "nodejs";
 
-type AnalyticsBody = {
+type LegacyBody = {
   event: "view" | "dwell" | "share" | "trending_click";
   slug: string;
   dwellMs?: number;
@@ -12,11 +13,12 @@ type AnalyticsBody = {
   provider?: string | null;
 };
 
+/** Legacy endpoint — forwards to analytics engine */
 export async function POST(request: Request) {
-  let body: AnalyticsBody;
+  let body: LegacyBody;
 
   try {
-    body = (await request.json()) as AnalyticsBody;
+    body = (await request.json()) as LegacyBody;
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
@@ -25,20 +27,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  console.log("[story-analytics]", body);
+  const tenant = await getTenantConfig();
+  const map = {
+    view: "article_view" as const,
+    dwell: "dwell" as const,
+    share: "share" as const,
+    trending_click: "article_click" as const,
+  };
 
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = createAdminClient();
-      await supabase.from("ingestion_logs").insert({
-        status: `story_${body.event}`,
-        total_fetched: 1,
-        metadata: body,
-      });
-    } catch {
-      /* non-blocking */
-    }
-  }
+  await persistReaderEvents(tenant.id, null, [
+    {
+      eventType: map[body.event],
+      articleSlug: body.slug,
+      category: body.category,
+      surface: body.event === "trending_click" ? "homepage" : "story",
+      valueNum: body.dwellMs,
+      metadata: { source: body.source, provider: body.provider },
+    },
+  ]);
 
   return NextResponse.json({ ok: true });
 }

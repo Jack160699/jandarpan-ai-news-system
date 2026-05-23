@@ -1,18 +1,12 @@
-export type AppLanguage = "en" | "hi" | "cg";
+import { NEWSROOM_LANGUAGES, type NewsroomLanguage } from "@/lib/i18n/languages";
 
-export const APP_LANGUAGES: AppLanguage[] = ["en", "hi", "cg"];
+/** App UI + reader language (6 Indian regional languages) */
+export type AppLanguage = NewsroomLanguage;
 
-export type LanguageOption = {
-  id: AppLanguage;
-  label: string;
-  native: string;
-};
+export const APP_LANGUAGES: AppLanguage[] = [...NEWSROOM_LANGUAGES];
 
-export const LANGUAGE_OPTIONS: LanguageOption[] = [
-  { id: "en", label: "English", native: "English" },
-  { id: "hi", label: "Hindi", native: "हिन्दी" },
-  { id: "cg", label: "Chhattisgarhi", native: "छत्तीसगढ़ी" },
-];
+export type { LanguageOption } from "@/lib/i18n/languages";
+export { LANGUAGE_OPTIONS } from "@/lib/i18n/languages";
 
 export type Dictionary = {
   brand: {

@@ -3,12 +3,21 @@ import { cg } from "./cg";
 import { en } from "./en";
 import { hi } from "./hi";
 
-export const dictionaries: Record<AppLanguage, Dictionary> = {
+export const dictionaries: Partial<Record<AppLanguage, Dictionary>> & {
+  en: Dictionary;
+  hi: Dictionary;
+  cg: Dictionary;
+} = {
   en,
   hi,
   cg,
 };
 
+import { getLanguageConfig } from "@/lib/i18n/languages";
+
 export function getDictionary(language: AppLanguage): Dictionary {
-  return dictionaries[language] ?? dictionaries.hi;
+  const direct = dictionaries[language as keyof typeof dictionaries];
+  if (direct) return direct;
+  const fallback = getLanguageConfig(language).dictionaryFallback;
+  return dictionaries[fallback] ?? dictionaries.hi;
 }

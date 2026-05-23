@@ -3,6 +3,11 @@
  */
 
 import { NextResponse } from "next/server";
+import { edgeCacheHeaders } from "@/lib/infrastructure/cache/edge";
+import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { getApiProviderHealthDashboard } from "@/lib/infrastructure/providers/api-health";
+import { getRssHealthDashboard } from "@/lib/news/rss-health";
 import {
   CORE_ARTICLE_SELECT,
   createAnonServerClient,
@@ -95,6 +100,11 @@ export async function GET() {
     anonReadError,
   });
 
+  const [apiHealth, rssHealth] = await Promise.all([
+    getApiProviderHealthDashboard().catch(() => []),
+    getRssHealthDashboard().catch(() => []),
+  ]);
+
   const healthy =
     providers.supabase &&
     homepageReadable &&
@@ -106,6 +116,15 @@ export async function GET() {
       ok: healthy,
       service: "newspaper-motion",
       timestamp: new Date().toISOString(),
+      infrastructure: {
+        redis: isRedisConfigured(),
+        homepageCacheSeconds: INFRA_CONFIG.homepageCacheSeconds,
+        editorialConcurrency: INFRA_CONFIG.editorialConcurrency,
+      },
+      provider_health: {
+        api: apiHealth,
+        rss: rssHealth.slice(0, 12),
+      },
       providers,
       supabase_env: supabaseEnv,
       news_articles: {
@@ -122,6 +141,9 @@ export async function GET() {
         },
       },
     },
-    { status: healthy ? 200 : 503 }
+    {
+      status: healthy ? 200 : 503,
+      headers: edgeCacheHeaders({ sMaxAge: 15, private: true }),
+    }
   );
 }

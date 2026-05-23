@@ -3,9 +3,10 @@
  */
 
 import { buildArticleSlug } from "@/lib/news/slug";
+import { inferSection } from "@/lib/homepage/infer-section";
+import { resolveEditorialDesk } from "@/lib/newsroom/desk-branding";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
-import { inferSection } from "@/lib/homepage/generated-feed";
 
 const SECTION_TO_CATEGORY: Record<string, NewsCategory> = {
   chhattisgarh: "local",
@@ -22,6 +23,10 @@ export function generatedToNewsArticle(
 ): NewsArticleRow {
   const section = inferSection(row);
   const category = (SECTION_TO_CATEGORY[section] ?? "local") as NewsCategory;
+  const desk = resolveEditorialDesk(
+    section,
+    section === "chhattisgarh" || section === "raipur"
+  );
 
   return {
     id: row.id,
@@ -29,7 +34,7 @@ export function generatedToNewsArticle(
     description: row.summary,
     content: row.article_body,
     image_url: row.hero_image_url,
-    source: "CG Bhaskar Editorial",
+    source: desk.name,
     author: "Editorial Desk",
     category,
     article_url: `/story/${row.slug}`,

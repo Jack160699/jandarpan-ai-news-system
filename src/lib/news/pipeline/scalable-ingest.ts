@@ -2,6 +2,7 @@
  * Scalable ingestion orchestrator — parallel providers, incremental upserts, async AI
  */
 
+import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
 import { createAdminServerClient } from "@/lib/supabase";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
 import { clusterRecentSignals, logNewsroom } from "@/lib/newsroom";
@@ -232,6 +233,18 @@ export async function runScalableIngestion(
     .single();
 
   const normalized = validationStats.sanitized;
+
+  logIngestionAnalytics({
+    event: "ingest_batch",
+    durationMs,
+    inserted,
+    fetched: totalFetched,
+    metadata: {
+      completedProviders,
+      skippedProviders,
+      timedOutSafely: deadline.timedOutSafely,
+    },
+  });
 
   logNewsroom("pipeline", "INGESTION_FINAL_REPORT", {
     fetched: totalFetched,

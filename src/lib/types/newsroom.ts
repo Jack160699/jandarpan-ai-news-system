@@ -2,8 +2,11 @@
  * AI-native newsroom layer types
  */
 
+import type { RegionalGeoMetadata } from "@/lib/regional/geo-tagging";
+
 export type NewsSignalRow = {
   id: string;
+  tenant_id?: string | null;
   source: string | null;
   provider: string;
   title: string;
@@ -15,10 +18,12 @@ export type NewsSignalRow = {
   region: string | null;
   language: string | null;
   ingestion_metadata: Record<string, unknown>;
+  geo_metadata?: RegionalGeoMetadata;
   created_at: string;
 };
 
 export type NewsSignalInsert = {
+  tenant_id?: string | null;
   source?: string | null;
   provider: string;
   title: string;
@@ -30,10 +35,12 @@ export type NewsSignalInsert = {
   region?: string | null;
   language?: string | null;
   ingestion_metadata?: Record<string, unknown>;
+  geo_metadata?: RegionalGeoMetadata;
 };
 
 export type NewsEventRow = {
   id: string;
+  tenant_id?: string | null;
   canonical_title: string;
   event_summary: string | null;
   region: string | null;
@@ -42,11 +49,18 @@ export type NewsEventRow = {
   source_count: number;
   signal_ids: string[];
   clustering_metadata: Record<string, unknown>;
+  coverage_slug: string | null;
+  coverage_headline: string | null;
+  cluster_confidence: number | null;
+  is_live: boolean;
+  coverage_status: string;
+  geo_metadata?: RegionalGeoMetadata;
   created_at: string;
   updated_at: string;
 };
 
 export type NewsEventInsert = {
+  tenant_id?: string | null;
   canonical_title: string;
   event_summary?: string | null;
   region?: string | null;
@@ -55,6 +69,39 @@ export type NewsEventInsert = {
   source_count?: number;
   signal_ids?: string[];
   clustering_metadata?: Record<string, unknown>;
+  coverage_slug?: string | null;
+  coverage_headline?: string | null;
+  cluster_confidence?: number | null;
+  is_live?: boolean;
+  coverage_status?: string;
+  geo_metadata?: RegionalGeoMetadata;
+  updated_at?: string;
+};
+
+export type CoverageUpdateRow = {
+  id: string;
+  event_id: string;
+  update_type: string;
+  headline: string;
+  summary: string | null;
+  signal_ids: string[];
+  source_attribution: unknown[];
+  cluster_confidence: number | null;
+  is_breaking: boolean;
+  published_at: string;
+  created_at: string;
+};
+
+export type CoverageUpdateInsert = {
+  event_id: string;
+  update_type?: string;
+  headline: string;
+  summary?: string | null;
+  signal_ids?: string[];
+  source_attribution?: unknown[];
+  cluster_confidence?: number | null;
+  is_breaking?: boolean;
+  published_at?: string;
 };
 
 export type EditorialImageMeta = {
@@ -62,8 +109,19 @@ export type EditorialImageMeta = {
   hero_url?: string;
   og_url?: string;
   prompt_hash?: string | null;
-  status?: "queued" | "completed" | "failed";
+  visual_hash?: string | null;
+  quality_score?: number;
+  quality_flags?: string[];
+  fallback_tier?: string;
+  responsive_sizes?: string;
+  width?: number;
+  height?: number;
+  mobile_width?: number;
+  mobile_height?: number;
+  repair_attempts?: number;
+  status?: "queued" | "completed" | "failed" | "repaired";
   compressed?: boolean;
+  storage_path?: string | null;
   moderation_flags?: string[];
   processed_at?: string;
 };
@@ -76,7 +134,22 @@ export type EditorialMetadata = {
     readability: number;
     local_relevance: number;
     seo_quality: number;
+    breaking_score?: number;
+    trend_score?: number;
+    headline_quality?: number;
+    spam_score?: number;
+    source_overlap?: number;
   };
+  duplicate_cluster_id?: string | null;
+  breaking_score?: number;
+  trend_score?: number;
+  headline_quality?: number;
+  spam_score?: number;
+  publish_decision?: string;
+  is_breaking?: boolean;
+  is_featured?: boolean;
+  breaking_marked_at?: string | null;
+  regenerated_at?: string | null;
   rejection_reasons?: string[];
   repaired?: boolean;
   used_fallback?: boolean;
@@ -96,12 +169,18 @@ export type EditorialMetadata = {
   event_id?: string;
   source_count?: number;
   structure?: string[];
+  regional?: RegionalGeoMetadata;
+  regional_topic_score?: number;
+  translations?: import("@/lib/i18n/multilingual/types").ArticleTranslations;
+  translations_updated_at?: string;
+  shorts?: import("@/lib/news/shorts/types").NewsShortBundle;
 };
 
 export type EditorialArticleStatus = "pending" | "approved" | "rejected";
 
 export type GeneratedArticleRow = {
   id: string;
+  tenant_id?: string | null;
   event_id: string | null;
   slug: string;
   headline: string;
@@ -118,10 +197,13 @@ export type GeneratedArticleRow = {
   homepage_pin?: boolean;
   pinned_at?: string | null;
   editorial_metadata: EditorialMetadata;
+  geo_metadata?: RegionalGeoMetadata;
+  shorts_metadata?: import("@/lib/news/shorts/types").NewsShortBundle;
   created_at: string;
 };
 
 export type GeneratedArticleInsert = {
+  tenant_id?: string | null;
   event_id?: string | null;
   slug: string;
   headline: string;
@@ -139,4 +221,6 @@ export type GeneratedArticleInsert = {
   pinned_at?: string | null;
   reviewed_at?: string | null;
   editorial_metadata?: EditorialMetadata;
+  geo_metadata?: RegionalGeoMetadata;
+  shorts_metadata?: import("@/lib/news/shorts/types").NewsShortBundle;
 };

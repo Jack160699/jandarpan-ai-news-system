@@ -19,6 +19,10 @@
 @import "./homepage.css";
 @import "./story-immersive.css";
 @import "./search.css";
+@import "./seo.css";
+@import "./evolving-coverage.css";
+@import "./multilingual.css";
+@import "./news-shorts.css";
 
 :root {
   --space-section-tight: clamp(1.25rem, 2.5vh, 2rem);

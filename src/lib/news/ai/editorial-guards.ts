@@ -1,14 +1,16 @@
 /**
- * Editorial quality guards — production-tolerant regional newsroom validation
+ * Editorial quality guards — production editorial intelligence + publish gates
  */
 
 import {
-  cosineSimilarity,
-  tokenizeForSimilarity,
-  buildTfIdfVector,
-  computeIdf,
-} from "@/lib/news/ai/similarity";
+  analyzeEditorialIntelligence,
+  computeSourceOverlapScore,
+  logQualityBreakdown,
+  type EditorialIntelligenceResult,
+  type PublishDecision,
+} from "@/lib/news/ai/editorial-intelligence";
 import { normalizeTitle, titleSimilarity } from "@/lib/news/normalize";
+import type { NewsEventRow } from "@/lib/types/newsroom";
 
 const CLICKBAIT_RE =
   /\b(shocking|unbelievable|you won'?t believe|exposed|slams|destroys|बड़ा धमाका|चौंकाने|सनसनी|धमाकेदार)\b/i;
@@ -41,6 +43,11 @@ export type QualityBreakdown = {
   readability: number;
   local_relevance: number;
   seo_quality: number;
+  breaking_score?: number;
+  trend_score?: number;
+  headline_quality?: number;
+  spam_score?: number;
+  source_overlap?: number;
 };
 
 export type EditorialQualityReport = {
@@ -58,12 +65,20 @@ export type EditorialQualityReport = {
   borderline: boolean;
   should_repair: boolean;
   publish_allowed: boolean;
+  publishDecision: PublishDecision;
   min_confidence_used: number;
   strict_mode: boolean;
+  intelligence: EditorialIntelligenceResult;
+  duplicate_cluster_id: string | null;
 };
 
 export type EditorialDecisionLog = {
   confidence: number;
+  readability: number;
+  seoQuality: number;
+  localRelevance: number;
+  originality: number;
+  publishDecision: PublishDecision;
   accepted: boolean;
   rejectionReasons: string[];
   storyId: string | null;
@@ -71,6 +86,9 @@ export type EditorialDecisionLog = {
   eventId?: string;
   repaired?: boolean;
   batchRescue?: boolean;
+  breakingScore?: number;
+  trendScore?: number;
+  duplicateClusterId?: string | null;
   quality_breakdown?: QualityBreakdown;
 };
 
@@ -136,20 +154,7 @@ export function findDuplicatePhrasing(
   return hits;
 }
 
-export function computeSourceOverlapScore(
-  draftText: string,
-  sourceTexts: string[]
-): number {
-  const combined = sourceTexts.join(" ");
-  if (!combined.trim()) return 0;
-
-  const draftTokens = tokenizeForSimilarity(draftText);
-  const sourceTokens = tokenizeForSimilarity(combined);
-  const idf = computeIdf([draftTokens, sourceTokens]);
-  const draftVec = buildTfIdfVector(draftTokens, idf);
-  const sourceVec = buildTfIdfVector(sourceTokens, idf);
-  return cosineSimilarity(draftVec, sourceVec);
-}
+export { computeSourceOverlapScore } from "@/lib/news/ai/editorial-intelligence";
 
 export function detectHallucinationFlags(
   draftText: string,
@@ -181,97 +186,6 @@ export function detectHallucinationFlags(
   return flags;
 }
 
-export function computeAiConfidence(input: {
-  sourceCount: number;
-  overlapScore: number;
-  duplicateCount: number;
-  hallucinationCount: number;
-  clickbaitCount: number;
-  breakdown: QualityBreakdown;
-  thresholds: EditorialThresholds;
-}): number {
-  const avgBreakdown =
-    (input.breakdown.structure +
-      input.breakdown.originality +
-      input.breakdown.readability +
-      input.breakdown.local_relevance +
-      input.breakdown.seo_quality) /
-    5;
-
-  let score = 0.38 + avgBreakdown * 0.35;
-  score += Math.min(0.18, input.sourceCount * 0.06);
-  score += Math.max(0, 0.12 - input.overlapScore * 0.22);
-  score -= input.duplicateCount * (input.thresholds.strictMode ? 0.08 : 0.03);
-  score -= input.hallucinationCount * (input.thresholds.strictMode ? 0.1 : 0.04);
-  score -= input.clickbaitCount * (input.thresholds.strictMode ? 0.12 : 0.05);
-
-  return Math.max(0, Math.min(1, Math.round(score * 1000) / 1000));
-}
-
-export function buildQualityBreakdown(input: {
-  headline: string;
-  summary: string;
-  articleBody: string;
-  seoTitle: string;
-  seoDescription: string;
-  sourceCount: number;
-  overlapScore: number;
-  duplicateCount: number;
-  region?: string | null;
-  category?: string | null;
-  language?: string;
-}): QualityBreakdown {
-  const body = input.articleBody.trim();
-  const sectionCount = (body.match(/^##\s/mg) ?? []).length;
-  const wordCount = body.split(/\s+/).filter(Boolean).length;
-
-  const structure =
-    sectionCount >= 3
-      ? 0.9
-      : sectionCount >= 1
-        ? 0.72
-        : wordCount >= 80
-          ? 0.55
-          : 0.35;
-
-  const originality = Math.max(
-    0.25,
-    Math.min(1, 1 - input.overlapScore * (input.duplicateCount > 2 ? 1.2 : 1))
-  );
-
-  const readability =
-    input.summary.length >= 40 && wordCount >= 60
-      ? 0.85
-      : input.summary.length >= 20
-        ? 0.68
-        : 0.45;
-
-  const regionalText = `${input.headline} ${input.summary} ${body}`.toLowerCase();
-  const localHints =
-    /chhattisgarh|छत्तीसगढ|raipur|रायपुर|bastar|बस्तर|bilaspur|durg|korba|jagdalpur/i;
-  const local_relevance =
-    input.region === "chhattisgarh" || localHints.test(regionalText)
-      ? 0.88
-      : input.category === "local"
-        ? 0.75
-        : 0.55;
-
-  const seo_quality =
-    input.seoTitle.length >= 12 &&
-    input.seoDescription.length >= 40 &&
-    input.headline.length >= 8
-      ? 0.82
-      : 0.5;
-
-  return {
-    structure: Math.round(structure * 1000) / 1000,
-    originality: Math.round(originality * 1000) / 1000,
-    readability: Math.round(readability * 1000) / 1000,
-    local_relevance: Math.round(local_relevance * 1000) / 1000,
-    seo_quality: Math.round(seo_quality * 1000) / 1000,
-  };
-}
-
 export function isDuplicateGeneratedStory(
   headline: string,
   existingHeadlines: string[]
@@ -292,6 +206,7 @@ function detectHardRejects(input: {
   unsafeText: string;
   hallucination_flags: string[];
   duplicateStory: boolean;
+  isSpam: boolean;
   thresholds: EditorialThresholds;
 }): string[] {
   const reasons: string[] = [];
@@ -320,6 +235,10 @@ function detectHardRejects(input: {
     reasons.push("unsafe_content");
   }
 
+  if (input.isSpam) {
+    reasons.push("spam_like_content");
+  }
+
   const numericDrift = input.hallucination_flags.filter((f) =>
     f.startsWith("numeric_claim")
   ).length;
@@ -343,6 +262,23 @@ export function logEditorialDecision(decision: EditorialDecisionLog): void {
   console.log("[EDITORIAL_DECISION]", JSON.stringify(payload));
 }
 
+function intelligenceToQualityBreakdown(
+  intel: EditorialIntelligenceResult
+): QualityBreakdown {
+  return {
+    structure: intel.structure,
+    originality: intel.originality,
+    readability: intel.readability,
+    local_relevance: intel.localRelevance,
+    seo_quality: intel.seoQuality,
+    breaking_score: intel.breakingScore,
+    trend_score: intel.trendScore,
+    headline_quality: intel.headlineQuality,
+    spam_score: intel.spamScore,
+    source_overlap: intel.quality_breakdown.sourceOverlap,
+  };
+}
+
 export function runEditorialQualityChecks(input: {
   headline: string;
   summary: string;
@@ -357,6 +293,7 @@ export function runEditorialQualityChecks(input: {
   language?: string;
   existingHeadlines?: string[];
   forcePublish?: boolean;
+  event?: NewsEventRow | null;
 }): EditorialQualityReport {
   const thresholds = getEditorialThresholds();
   const draftText = [
@@ -380,36 +317,38 @@ export function runEditorialQualityChecks(input: {
     f.includes("clickbait")
   );
 
-  const quality_breakdown = buildQualityBreakdown({
-    headline: input.headline,
-    summary: input.summary,
-    articleBody: input.articleBody,
-    seoTitle: input.seoTitle,
-    seoDescription: input.seoDescription,
-    sourceCount: input.sourceCount,
-    overlapScore: source_overlap_score,
-    duplicateCount: duplicate_phrasing.length,
-    region: input.region,
-    category: input.category,
-    language: input.language,
-  });
-
-  const ai_confidence = computeAiConfidence({
-    sourceCount: input.sourceCount,
-    overlapScore: source_overlap_score,
-    duplicateCount: duplicate_phrasing.length,
-    hallucinationCount: hallucination_flags.filter(
-      (f) => !f.includes("clickbait")
-    ).length,
-    clickbaitCount: clickbait_flags.length,
-    breakdown: quality_breakdown,
-    thresholds,
-  });
-
-  const duplicateStory = isDuplicateGeneratedStory(
-    input.headline,
-    input.existingHeadlines ?? []
+  const intelligence = analyzeEditorialIntelligence(
+    {
+      headline: input.headline,
+      summary: input.summary,
+      articleBody: input.articleBody,
+      seoTitle: input.seoTitle,
+      seoDescription: input.seoDescription,
+      sourceTexts: input.sourceTexts,
+      factPackText: input.factPackText,
+      sourceCount: input.sourceCount,
+      region: input.region,
+      category: input.category,
+      language: input.language,
+      existingHeadlines: input.existingHeadlines,
+      event: input.event,
+    },
+    {
+      sourceOverlap: source_overlap_score,
+      duplicatePhraseCount: duplicate_phrasing.length,
+    }
   );
+
+  let ai_confidence = intelligence.confidence;
+  ai_confidence -= intelligence.spamScore * 0.2;
+  ai_confidence -= duplicate_phrasing.length * (thresholds.strictMode ? 0.06 : 0.025);
+  ai_confidence -= hallucination_flags.filter((f) => !f.includes("clickbait")).length *
+    (thresholds.strictMode ? 0.08 : 0.03);
+  ai_confidence = Math.max(0, Math.min(1, Math.round(ai_confidence * 1000) / 1000));
+
+  const duplicateStory =
+    intelligence.duplicateCluster !== null &&
+    intelligence.duplicateCluster.similarity >= 0.88;
 
   const hard_reject_reasons = detectHardRejects({
     headline: input.headline,
@@ -418,6 +357,7 @@ export function runEditorialQualityChecks(input: {
     unsafeText: draftText,
     hallucination_flags,
     duplicateStory,
+    isSpam: intelligence.isSpam,
     thresholds,
   });
 
@@ -434,11 +374,20 @@ export function runEditorialQualityChecks(input: {
     if (source_overlap_score > thresholds.maxSourceOverlap) {
       rejectionReasons.push("high_source_overlap");
     }
+    if (intelligence.readability < 0.38) {
+      rejectionReasons.push("low_readability");
+    }
+    if (intelligence.seoQuality < 0.35) {
+      rejectionReasons.push("low_seo_quality");
+    }
     if (
       thresholds.strictMode &&
       clickbait_flags.length > 0
     ) {
       rejectionReasons.push("clickbait_tone");
+    }
+    if (intelligence.headlineQuality < 0.32) {
+      rejectionReasons.push("weak_headline");
     }
   }
 
@@ -450,6 +399,9 @@ export function runEditorialQualityChecks(input: {
   const should_repair =
     !hard_reject &&
     (borderline ||
+      rejectionReasons.includes("low_readability") ||
+      rejectionReasons.includes("weak_headline") ||
+      rejectionReasons.includes("low_seo_quality") ||
       (ai_confidence < thresholds.minConfidence &&
         ai_confidence >= thresholds.minConfidence - BORDERLINE_WINDOW));
 
@@ -457,13 +409,15 @@ export function runEditorialQualityChecks(input: {
     !hard_reject &&
     ai_confidence >= thresholds.minConfidence &&
     duplicate_phrasing.length <= thresholds.maxDuplicatePhrases &&
-    source_overlap_score <= thresholds.maxSourceOverlap;
+    source_overlap_score <= thresholds.maxSourceOverlap &&
+    !intelligence.isSpam;
 
   if (thresholds.strictMode) {
     publish_allowed =
       publish_allowed &&
       duplicate_phrasing.length === 0 &&
-      !clickbait_flags.length;
+      clickbait_flags.length === 0 &&
+      intelligence.readability >= 0.45;
   }
 
   if (input.forcePublish && !hard_reject) {
@@ -471,9 +425,14 @@ export function runEditorialQualityChecks(input: {
     rejectionReasons.length = 0;
   }
 
-  const passed = publish_allowed;
+  let publishDecision: PublishDecision = "reject";
+  if (publish_allowed) publishDecision = "publish";
+  else if (should_repair && !hard_reject) publishDecision = "repair";
 
-  return {
+  const passed = publish_allowed;
+  const quality_breakdown = intelligenceToQualityBreakdown(intelligence);
+
+  const report: EditorialQualityReport = {
     passed,
     ai_confidence,
     source_overlap_score: Math.round(source_overlap_score * 1000) / 1000,
@@ -481,13 +440,10 @@ export function runEditorialQualityChecks(input: {
     hallucination_flags,
     clickbait_flags,
     checks_run: [
+      ...intelligence.checks_run,
       "ngram_duplicate_phrasing",
-      "tfidf_source_overlap",
       "unverified_language",
-      "clickbait_tone",
       "numeric_fact_alignment",
-      "confidence_scoring",
-      "quality_breakdown",
       "hard_reject_gate",
       thresholds.strictMode ? "strict_mode" : "production_tolerant",
     ],
@@ -498,9 +454,22 @@ export function runEditorialQualityChecks(input: {
     borderline,
     should_repair,
     publish_allowed,
+    publishDecision,
     min_confidence_used: thresholds.minConfidence,
     strict_mode: thresholds.strictMode,
+    intelligence: { ...intelligence, confidence: ai_confidence },
+    duplicate_cluster_id: intelligence.duplicateCluster?.clusterId ?? null,
   };
+
+  logQualityBreakdown({
+    eventId: input.event?.id,
+    title: input.headline,
+    intelligence: report.intelligence,
+    publishDecision,
+    rejectionReasons,
+  });
+
+  return report;
 }
 
 /** @deprecated use getEditorialThresholds().minConfidence */

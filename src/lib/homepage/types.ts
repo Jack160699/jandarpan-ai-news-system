@@ -1,6 +1,9 @@
 /**
- * Homepage feed types — generated_articles only
+ * Homepage feed types — generated_articles newsroom layout
  */
+
+import type { NewsShortCard } from "@/lib/news/shorts/types";
+import type { NewsDeskLabel } from "@/lib/newsroom/desk-branding";
 
 export type HomeSectionId =
   | "chhattisgarh"
@@ -33,13 +36,16 @@ export type HomeArticle = {
   publishedAt: string;
   isLive: boolean;
   urgency: HomeUrgency;
-  /** @deprecated use priorityScore — kept for UI compatibility */
+  /** @deprecated use priorityScore */
   trendScore: number;
   priorityScore: number;
   ranking: HomeRankingMeta;
   language: string;
   tags: string[];
   aiConfidence: number;
+  sourceCount: number;
+  categoryLabel: string;
+  desk: NewsDeskLabel;
 };
 
 export type RegionalSectionBlock = {
@@ -49,17 +55,45 @@ export type RegionalSectionBlock = {
   articles: HomeArticle[];
 };
 
+export type EditorsPicksBlock = {
+  lead: HomeArticle;
+  supporting: HomeArticle[];
+};
+
+export type FooterIntelligence = {
+  fetchedAt: string;
+  storyCount: number;
+  breakingCount: number;
+  trendingCount: number;
+  avgConfidence: number;
+  trendingSearches: string[];
+};
+
+export type HyperlocalFeedSummary = {
+  districtSlug: string;
+  districtName: string;
+  districtNameHi: string;
+  articleCount: number;
+  topHeadline: string | null;
+};
+
+/** Premium AI newsroom homepage — 8 sections */
 export type GeneratedHomepageFeed = {
-  hero: HomeArticle;
-  liveUpdates: HomeArticle[];
-  regional: RegionalSectionBlock[];
+  breakingTicker: HomeArticle[];
+  editorsPicks: EditorsPicksBlock;
+  liveWire: HomeArticle[];
+  regionalHighlights: HomeArticle[];
   trending: HomeArticle[];
   shorts: HomeArticle[];
+  newsShorts: NewsShortCard[];
+  categoryStreams: RegionalSectionBlock[];
+  footerIntelligence: FooterIntelligence;
+  hyperlocalFeeds: HyperlocalFeedSummary[];
+  localBreakingAlerts: Array<{
+    slug: string;
+    headline: string;
+    district: string | null;
+    urgency: string;
+  }>;
   fetchedAt: string;
-  rankingAnalytics?: {
-    poolSize: number;
-    trendingCount: number;
-    breakingCount: number;
-    avgPriorityScore: number;
-  };
 };

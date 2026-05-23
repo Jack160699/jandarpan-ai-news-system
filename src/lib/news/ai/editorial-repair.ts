@@ -7,10 +7,14 @@ import type {
   EditorialDraft,
   SupportedEditorialLanguage,
 } from "@/lib/news/ai/editorial-types";
+import { scoreHeadlineQuality } from "@/lib/news/ai/editorial-intelligence";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const REPAIR_TIMEOUT_MS = 18_000;
+
+const CLICKBAIT_TRIM_RE =
+  /\b(shocking|unbelievable|you won'?t believe|exposed|slams|destroys|बड़ा धमाका|चौंकाने|सनसनी)\b/gi;
 
 function trimHeadline(text: string, max = 90): string {
   const t = text.replace(/\s+/g, " ").trim();
@@ -18,10 +22,82 @@ function trimHeadline(text: string, max = 90): string {
   return `${t.slice(0, max - 1).trim()}…`;
 }
 
+function stripClickbait(text: string): string {
+  return text.replace(CLICKBAIT_TRIM_RE, "").replace(/\s+/g, " ").trim();
+}
+
+/** Improve weak or sensational headlines using event context */
+export function enhanceHeadlineQuality(
+  draft: EditorialDraft,
+  event: NewsEventRow
+): EditorialDraft {
+  let headline = stripClickbait(draft.headline);
+  const quality = scoreHeadlineQuality(headline);
+
+  if (quality < 0.45 || headline.length < 12) {
+    headline =
+      event.canonical_title?.trim() ||
+      headline ||
+      (draft.language === "hi" ? "क्षेत्रीय अपडेट" : "Regional update");
+  }
+
+  headline = trimHeadline(headline);
+
+  if (headline.length < 10 && event.event_summary) {
+    const bit = event.event_summary.split(/[.!?।]/)[0]?.trim();
+    if (bit && bit.length >= 12) headline = trimHeadline(bit);
+  }
+
+  return {
+    ...draft,
+    headline,
+    seo_title: trimHeadline(draft.seo_title || headline, 70),
+  };
+}
+
+/** Build summary from intro section when LLM summary is thin */
+export function autoGenerateSummary(draft: EditorialDraft): EditorialDraft {
+  let summary = draft.summary.replace(/\s+/g, " ").trim();
+
+  if (summary.length >= 60) {
+    return { ...draft, summary: summary.slice(0, 320) };
+  }
+
+  const introMatch = draft.article_body.match(
+    /^##\s*[^\n]+\n+([\s\S]*?)(?=\n##|$)/m
+  );
+  const introText = introMatch?.[1]?.replace(/^[-*•]\s+/gm, "").trim() ?? "";
+
+  if (introText.length >= 40) {
+    const firstPara = introText.split(/\n{2,}/)[0]?.trim() ?? introText;
+    summary = firstPara.slice(0, 280);
+  } else if (draft.article_body.length >= 80) {
+    summary = draft.article_body
+      .replace(/^##[^\n]*\n+/gm, "")
+      .replace(/\n+/g, " ")
+      .trim()
+      .slice(0, 280);
+  }
+
+  if (summary.length < 40 && draft.headline.length >= 12) {
+    summary =
+      draft.language === "hi"
+        ? `${draft.headline} — संपादकीय डेस्क से संकलित रिपोर्ट।`
+        : `${draft.headline} — editorially compiled report for readers.`;
+  }
+
+  return {
+    ...draft,
+    summary: summary.slice(0, 320),
+    seo_description: (draft.seo_description || summary).slice(0, 160),
+  };
+}
+
 export function normalizeEditorialFormatting(draft: EditorialDraft): EditorialDraft {
   let body = draft.article_body
     .replace(/\r\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+\n/g, "\n")
     .trim();
 
   if (!body.startsWith("##") && body.length > 40) {
@@ -40,7 +116,7 @@ export function normalizeEditorialFormatting(draft: EditorialDraft): EditorialDr
 
   return {
     ...draft,
-    headline: trimHeadline(draft.headline),
+    headline: trimHeadline(stripClickbait(draft.headline)),
     summary: expandedSummary,
     article_body: body,
     seo_title: trimHeadline(draft.seo_title || draft.headline, 70),
@@ -53,13 +129,20 @@ export function improveHeadlineFromEvent(
   draft: EditorialDraft,
   event: NewsEventRow
 ): EditorialDraft {
-  if (draft.headline.length >= 12) return draft;
-  const fallback = event.canonical_title?.trim() || draft.headline;
-  return {
-    ...draft,
-    headline: trimHeadline(fallback),
-    seo_title: trimHeadline(fallback, 70),
-  };
+  return enhanceHeadlineQuality(draft, event);
+}
+
+/**
+ * Full pre-publish enhancement pass — formatting, headline, summary
+ */
+export function applyEditorialEnhancements(
+  draft: EditorialDraft,
+  event: NewsEventRow
+): EditorialDraft {
+  let out = normalizeEditorialFormatting(draft);
+  out = enhanceHeadlineQuality(out, event);
+  out = autoGenerateSummary(out);
+  return normalizeEditorialFormatting(out);
 }
 
 /**
@@ -117,7 +200,7 @@ export function buildFallbackDraftFromFactPack(input: {
       ? `${Math.max(1, Math.round(wordCount / 200))} मिनट`
       : `${Math.max(1, Math.round(wordCount / 200))} min read`;
 
-  return {
+  const draft: EditorialDraft = {
     headline: trimHeadline(headline),
     summary: summary.slice(0, 320),
     article_body,
@@ -127,6 +210,8 @@ export function buildFallbackDraftFromFactPack(input: {
     reading_time,
     language,
   };
+
+  return applyEditorialEnhancements(draft, event);
 }
 
 export async function regenerateIntroSection(input: {
@@ -213,12 +298,11 @@ export async function repairBorderlineDraft(input: {
   factPackText: string;
   language: SupportedEditorialLanguage;
 }): Promise<EditorialDraft> {
-  let draft = improveHeadlineFromEvent(input.draft, input.event);
-  draft = normalizeEditorialFormatting(draft);
+  let draft = applyEditorialEnhancements(input.draft, input.event);
   draft = await regenerateIntroSection({
     draft,
     factPackText: input.factPackText,
     language: input.language,
   });
-  return draft;
+  return applyEditorialEnhancements(draft, input.event);
 }

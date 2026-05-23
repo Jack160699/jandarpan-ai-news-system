@@ -1,11 +1,13 @@
-/** CG Bhaskar — speculative redesign concept (pitch / presentation only) */
+/** Legacy brand constants — default tenant preset (prefer `getTenantConfig()`). */
+
+import { CG_BHASKAR_TENANT } from "@/lib/tenant/presets/cg-bhaskar";
 
 export const BRAND = {
-  nameEn: "CG Bhaskar",
-  nameHi: "सीजी भास्कर",
-  taglineEn: "Chhattisgarh's journal of record",
-  taglineHi: "छत्तीसगढ़ का विश्वसनीय अखबार",
-  conceptLabel: "Concept redesign · Presentation only",
+  nameEn: CG_BHASKAR_TENANT.branding.nameEn,
+  nameHi: CG_BHASKAR_TENANT.branding.nameHi,
+  taglineEn: CG_BHASKAR_TENANT.branding.taglineEn,
+  taglineHi: CG_BHASKAR_TENANT.branding.taglineHi,
+  conceptLabel: CG_BHASKAR_TENANT.branding.conceptLabel ?? "AI Newsroom",
   founded: 1958,
   volume: 68,
   editionNumber: 2847,

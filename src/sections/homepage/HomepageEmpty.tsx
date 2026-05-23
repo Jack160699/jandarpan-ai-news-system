@@ -6,9 +6,10 @@ export function HomepageEmpty() {
 
   return (
     <EmptyState
+      className="nr-empty"
       kicker="Chhattisgarh desk"
       title="Stories are on their way"
-      icon="📰"
+      icon="◌"
       description={
         <>
           <p>

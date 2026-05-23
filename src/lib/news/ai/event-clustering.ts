@@ -12,7 +12,20 @@ import {
   tokenizeForSimilarity,
   type SparseVector,
 } from "@/lib/news/ai/similarity";
+import { computeClusterConfidence } from "@/lib/news/coverage/confidence";
+import {
+  buildCoverageHeadline,
+  buildCoverageSlug,
+  shouldEnableLiveCoverage,
+} from "@/lib/news/coverage/coverage-headline";
+import {
+  fetchActiveEvents,
+  matchSignalsToActiveEvents,
+  mergeSignalsIntoEvent,
+} from "@/lib/news/coverage/merge-into-events";
+import { mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { logNewsroom } from "@/lib/newsroom/logger";
+import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import type { NewsEventInsert } from "@/lib/types/newsroom";
 import type { NewsSignalRow } from "@/lib/types/newsroom";
 
@@ -458,12 +471,72 @@ export async function clusterSignalsIntoEvents(options?: {
 
   logClustering("clustering_start", { count: signals.length });
 
-  const docTokens = signals.map((s) =>
+  const activeEvents = await fetchActiveEvents();
+  const { matches, unmatched } = matchSignalsToActiveEvents(
+    signals,
+    activeEvents
+  );
+
+  let eventsUpdated = 0;
+  const matchedByEvent = new Map<string, NewsSignalRow[]>();
+  for (const m of matches) {
+    const list = matchedByEvent.get(m.event.id) ?? [];
+    list.push(m.signal);
+    matchedByEvent.set(m.event.id, list);
+  }
+
+  for (const [eventId, batch] of matchedByEvent) {
+    const event = activeEvents.find((e) => e.id === eventId);
+    if (!event) continue;
+    const avgSim =
+      matches
+        .filter((x) => x.event.id === eventId)
+        .reduce((s, x) => s + x.similarity, 0) / batch.length;
+    const merged = await mergeSignalsIntoEvent(event, batch, {
+      avgSimilarity: avgSim,
+    });
+    if (merged.updateId) eventsUpdated++;
+  }
+
+  const signalsToCluster = unmatched.length ? unmatched : [];
+
+  if (!signalsToCluster.length && eventsUpdated > 0) {
+    const analytics: DuplicateDetectionAnalytics = {
+      ...emptyAnalytics,
+      signalsFetched: signals.length,
+      unprocessedCount: signals.length,
+      multiSourceClusters: eventsUpdated,
+    };
+    logClustering("merged_into_existing_only", { eventsUpdated });
+    return {
+      eventsCreated: 0,
+      eventsUpdated,
+      signalsProcessed: signals.length,
+      signalsClustered: signals.length,
+      duplicatesMerged: matches.length,
+      skipped: false,
+      analytics,
+    };
+  }
+
+  if (!signalsToCluster.length) {
+    return {
+      eventsCreated: 0,
+      eventsUpdated,
+      signalsProcessed: signals.length,
+      signalsClustered: 0,
+      duplicatesMerged: 0,
+      skipped: true,
+      analytics: emptyAnalytics,
+    };
+  }
+
+  const docTokens = signalsToCluster.map((s) =>
     tokenizeForSimilarity(`${s.title} ${s.raw_content ?? ""}`)
   );
   const idf = computeIdf(docTokens);
 
-  const embeddingTexts = signals.map(
+  const embeddingTexts = signalsToCluster.map(
     (s) => `${s.title}\n${s.raw_content ?? ""}`
   );
   const embeddings = await fetchEmbeddings(embeddingTexts);
@@ -472,9 +545,9 @@ export async function clusterSignalsIntoEvents(options?: {
     ? "embedding_hybrid"
     : "keyword_tfidf";
 
-  const features = buildSignalFeatures(signals, idf, embeddings);
+  const features = buildSignalFeatures(signalsToCluster, idf, embeddings);
   const { clusters, analytics: partial } = clusterSignalsLocally(
-    signals,
+    signalsToCluster,
     features
   );
 
@@ -500,22 +573,104 @@ export async function clusterSignalsIntoEvents(options?: {
       confidenceSum += scoreSourceConfidence(s);
     }
 
+    const confidence = computeClusterConfidence({
+      signals: cluster.signals,
+      avgSimilarity: cluster.avgSimilarity,
+      mergeReasons: cluster.mergeReasons,
+    });
+
+    const urgency = computeUrgencyScore(cluster.signals);
+    const canonicalTitle = pickCanonicalTitle(cluster.signals);
+    const isLive = shouldEnableLiveCoverage({
+      sourceCount: size,
+      urgencyScore: urgency,
+      clusterConfidence: confidence.score,
+      isBreaking: BREAKING_RE.test(
+        cluster.signals.map((s) => s.title).join(" ")
+      ),
+    });
+
+    const eventGeo = mergeGeoMetadata(
+      ...cluster.signals.map((s) =>
+        (s.geo_metadata as ReturnType<typeof tagGeoFromContent> | undefined) ??
+          tagGeoFromContent({
+            title: s.title,
+            body: s.raw_content,
+            region: s.region,
+            category: s.category,
+          })
+      )
+    );
+
     const row: NewsEventInsert = {
-      canonical_title: pickCanonicalTitle(cluster.signals),
+      tenant_id: getPipelineTenantId(),
+      canonical_title: canonicalTitle,
       event_summary: buildEventSummary(cluster.signals),
-      region: inferCanonicalRegion(cluster.signals),
+      region: eventGeo.is_chhattisgarh
+        ? "chhattisgarh"
+        : inferCanonicalRegion(cluster.signals),
       category: inferCanonicalCategory(cluster.signals),
-      urgency_score: computeUrgencyScore(cluster.signals),
+      geo_metadata: eventGeo,
+      urgency_score: urgency,
       source_count: size,
       signal_ids: cluster.signals.map((s) => s.id),
-      clustering_metadata: buildClusteringMetadata(cluster, method),
+      clustering_metadata: {
+        ...buildClusteringMetadata(cluster, method),
+        cluster_confidence_report: confidence,
+      },
+      cluster_confidence: confidence.score,
+      is_live: isLive,
+      coverage_status: "active",
+      coverage_headline: isLive
+        ? buildCoverageHeadline(
+            canonicalTitle,
+            cluster.signals[0]?.language
+          )
+        : null,
+      coverage_slug: null,
     };
 
-    const { error } = await supabase.from("news_events").insert(row);
-    if (!error) eventsCreated++;
+    const { data: inserted, error } = await supabase
+      .from("news_events")
+      .insert(row)
+      .select("id")
+      .single();
+
+    if (!error && inserted && isLive) {
+      const slug = buildCoverageSlug(canonicalTitle, inserted.id);
+      await supabase
+        .from("news_events")
+        .update({ coverage_slug: slug })
+        .eq("id", inserted.id);
+
+      if (size > 0) {
+        await supabase.from("coverage_updates").insert({
+          event_id: inserted.id,
+          update_type: size > 1 ? "development" : "source_wire",
+          headline: cluster.signals[0].title,
+          summary: cluster.signals[0].raw_content?.slice(0, 400),
+          signal_ids: cluster.signals.map((s) => s.id),
+          source_attribution: cluster.signals.map((s) => ({
+            signal_id: s.id,
+            source: s.source,
+            provider: s.provider,
+            article_url: s.article_url,
+            published_at: s.published_at,
+            confidence: scoreSourceConfidence(s),
+          })),
+          cluster_confidence: confidence.score,
+          is_breaking: BREAKING_RE.test(cluster.signals[0].title),
+          published_at:
+            cluster.signals[0].published_at ?? new Date().toISOString(),
+        });
+      }
+    }
+
+    const insertError = error;
+    if (!insertError) eventsCreated++;
     else {
       logClustering("event_insert_failed", {
-        message: error.message,
+        message: insertError.message,
         size,
       });
     }
@@ -523,7 +678,7 @@ export async function clusterSignalsIntoEvents(options?: {
 
   const analytics: DuplicateDetectionAnalytics = {
     signalsFetched: signals.length,
-    unprocessedCount: signals.length,
+    unprocessedCount: signalsToCluster.length,
     pairsCompared: partial.pairsCompared ?? 0,
     duplicatePairs: partial.duplicatePairs ?? 0,
     clustersFormed: clusters.length,
@@ -543,10 +698,10 @@ export async function clusterSignalsIntoEvents(options?: {
 
   return {
     eventsCreated,
-    eventsUpdated: 0,
+    eventsUpdated,
     signalsProcessed: signals.length,
     signalsClustered,
-    duplicatesMerged,
+    duplicatesMerged: duplicatesMerged + matches.length,
     skipped: false,
     analytics,
   };

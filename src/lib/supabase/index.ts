@@ -27,6 +27,29 @@ export { createBrowserClient } from "@/lib/supabase/client";
 export {
   createAnonServerClient,
   createServerAnonClient,
-  createAdminServerClient,
-  createAdminClient,
+  createCookieServerClient,
 } from "@/lib/supabase/server";
+
+export { createAdminServerClient, createAdminClient } from "@/lib/supabase/admin";
+
+export { updateSupabaseSession } from "@/lib/supabase/middleware";
+
+export {
+  signInWithPassword,
+  signInWithGoogle,
+  signInWithOtp,
+  signOut,
+  getServerAuthSession,
+  createUserAuthClient,
+} from "@/lib/supabase/auth";
+
+export {
+  fetchLatestNews,
+  fetchArticleBySlug,
+  fetchTrendingNews,
+  fetchRegionalNews,
+  fetchNewsByCategory,
+  type PaginatedResult,
+  type QueryResult,
+  type PaginationParams,
+} from "@/lib/supabase/queries";

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
+import { categoryLabel } from "@/lib/live-news-display";
 import { resolveCardImage } from "@/lib/news/images/display";
 import { resolveStorySlug } from "@/lib/news/related-stories";
 import { estimateReadTime } from "@/lib/news/story-utils";
-import type { NewsArticleRow } from "@/lib/types/news-article";
+import { mapProviderToDesk } from "@/lib/newsroom/desk-branding";
+import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
 
 type StoryRelatedGridProps = {
   articles: NewsArticleRow[];
@@ -51,7 +53,8 @@ export function StoryRelatedGrid({ articles }: StoryRelatedGridProps) {
                   {article.ai_headline ?? article.title}
                 </p>
                 <p className="immersive-related__meta">
-                  {article.category} · {readTime}
+                  {categoryLabel(article.category as NewsCategory)} ·{" "}
+                  {mapProviderToDesk(article.provider).name} · {readTime}
                 </p>
               </div>
             </Link>

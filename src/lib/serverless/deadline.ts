@@ -2,6 +2,8 @@
  * Serverless execution budget — stop before Vercel hard timeout
  */
 
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+
 const DEFAULT_BUDGET_MS = 55_000;
 const HOBBY_BUDGET_MS = 9_000;
 
@@ -15,14 +17,9 @@ export type ExecutionDeadline = {
 };
 
 function resolveBudgetMs(): number {
-  const explicit = Number(process.env.INGEST_BUDGET_MS);
-  if (explicit > 0) return explicit;
+  if (INFRA_CONFIG.ingestBudgetMs > 0) return INFRA_CONFIG.ingestBudgetMs;
 
   if (process.env.VERCEL === "1") {
-    const plan = process.env.VERCEL_ENV;
-    if (plan && process.env.VERCEL_ACCOUNT_LEVEL === "hobby") {
-      return HOBBY_BUDGET_MS;
-    }
     return HOBBY_BUDGET_MS;
   }
 
@@ -34,7 +31,7 @@ export function createExecutionDeadline(
 ): ExecutionDeadline {
   const startedAt = Date.now();
   const budget = maxDurationMs ?? resolveBudgetMs();
-  const stopAt = Math.floor(budget * 0.8);
+  const stopAt = Math.floor(budget * INFRA_CONFIG.ingestStopRatio);
 
   const state = { timedOutSafely: false };
 

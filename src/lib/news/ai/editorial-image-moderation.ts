@@ -1,8 +1,14 @@
 /**
- * Editorial image prompt moderation — block misleading / photorealistic requests
+ * Editorial image prompt moderation + branded contextual prompts
  */
 
 import { createHash } from "crypto";
+import {
+  BRAND_VISUAL,
+  getCategoryVisualTemplate,
+  getRegionVisualOverlay,
+  hindiFriendlyCompositionNotes,
+} from "@/lib/news/ai/editorial-image-brand";
 
 const PHOTOREAL_BAN_RE =
   /\b(photo(?:graph)?|photorealistic|realistic photo|cctv|dashcam|selfie|portrait of|headshot|paparazzi)\b/i;
@@ -67,39 +73,45 @@ export function buildEditorialImagePrompt(input: {
   urgencyScore: number;
   eventSummary: string | null;
   moderation: ModerationResult;
+  repairAttempt?: number;
 }): string {
+  const template = getCategoryVisualTemplate(input.category);
   const urgency = input.urgencyScore;
+
   const style =
     urgency >= 75
-      ? "dynamic cinematic editorial illustration with subtle motion energy"
+      ? "dynamic CG Bhaskar editorial illustration — credible breaking energy, not sensational"
       : urgency >= 45
-        ? "modern newspaper editorial illustration, confident composition"
-        : "calm symbolic editorial artwork, clean visual storytelling";
+        ? "modern Indian newsroom editorial illustration — confident trustworthy composition"
+        : "calm symbolic CG Bhaskar artwork — clear visual storytelling";
 
-  const regionHint =
-    input.region === "chhattisgarh"
-      ? "Chhattisgarh regional context (Raipur skyline hints, tribal patterns abstract, river motifs — symbolic only)"
-      : input.region === "india"
-        ? "Indian civic and community context, abstract regional cues"
-        : "South Asia editorial context, abstract geography";
-
-  const categoryHint = `News category: ${input.category}.`;
-  const summarySlice = (input.eventSummary ?? "").slice(0, 200);
+  const summarySlice = (input.eventSummary ?? "").slice(0, 220);
 
   const safetyBlock = input.moderation.forceSymbolicOnly
-    ? "Use ONLY abstract symbolic shapes, maps, icons, silhouettes without identifiable faces. No humans resembling real people."
-    : "No identifiable real people, no politician likeness, no photorealism.";
+    ? "ONLY abstract symbolic shapes, maps, icons, silhouettes without identifiable faces. No humans resembling real people."
+    : "No identifiable real people, no politician likeness, no photorealism, no fake disaster photography.";
+
+  const repairNote =
+    input.repairAttempt && input.repairAttempt > 0
+      ? `Repair variant ${input.repairAttempt}: simplify and strengthen symbolism.`
+      : "";
 
   return [
-    `Create a ${style} for a digital newspaper hero image.`,
+    `${BRAND_VISUAL.style}`,
+    `Create a ${style} for ${BRAND_VISUAL.name} hero image.`,
     `Story theme (abstract): ${input.moderation.sanitizedHeadline}.`,
-    categoryHint,
-    regionHint,
-    summarySlice ? `Context cues: ${summarySlice}` : "",
-    "Visual style: editorial illustration, newspaper art direction, muted trustworthy palette, soft gradients, symbolic storytelling.",
-    "Forbidden: photographs, photorealism, fake disaster photos, fake politicians, misleading incident imagery, gore, logos, text overlays, watermarks.",
+    `Category: ${input.category}. ${template.motifs}`,
+    `Mood: ${template.mood}. Composition: ${template.composition}.`,
+    getRegionVisualOverlay(input.region),
+    summarySlice ? `Context: ${summarySlice}` : "",
+    BRAND_VISUAL.palette,
+    BRAND_VISUAL.typographySpace,
+    hindiFriendlyCompositionNotes(),
+    "Visual language: editorial illustration only — soft gradients, symbolic storytelling, premium newspaper art direction.",
+    "Forbidden: photographs, photorealism, misleading incident imagery, gore, logos, watermarks, embedded text.",
     safetyBlock,
-    "Output: single cohesive hero illustration suitable for mobile and OpenGraph crop.",
+    repairNote,
+    "Output: single cohesive 16:9 hero illustration optimized for mobile and OpenGraph crop.",
   ]
     .filter(Boolean)
     .join(" ");

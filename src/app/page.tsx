@@ -1,9 +1,8 @@
 import { Suspense } from "react";
-import type { Metadata } from "next";
 import { PageShell } from "@/components/layout/PageShell";
-import { BRAND } from "@/lib/brand";
+import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { getGeneratedHomepageFeed } from "@/lib/homepage/get-feed";
-import { PRODUCTION_ROBOTS, REGIONAL_KEYWORDS, SITE_URL } from "@/lib/seo";
+import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
 import { Footer } from "@/sections/Footer";
 import {
   HomepageEmpty,
@@ -11,29 +10,10 @@ import {
   HomepageView,
 } from "@/sections/homepage";
 
-export const metadata: Metadata = {
-  title: `${BRAND.nameEn} — Chhattisgarh`,
-  description:
-    "Premium regional news from Chhattisgarh — AI-edited stories from Raipur, Bastar, and across the state.",
-  keywords: REGIONAL_KEYWORDS,
-  alternates: { canonical: "/" },
-  robots: PRODUCTION_ROBOTS,
-  openGraph: {
-    title: `${BRAND.nameEn} — Chhattisgarh`,
-    description: BRAND.taglineEn,
-    type: "website",
-    url: SITE_URL,
-    locale: "hi_IN",
-    siteName: BRAND.nameEn,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: BRAND.nameEn,
-    description: BRAND.taglineEn,
-  },
-};
+export const metadata = buildHomeMetadata();
 
 /** ISR — edge-friendly cache, 60s freshness */
+/** ISR — keep in sync with HOMEPAGE_CACHE_SECONDS (default 60) */
 export const revalidate = 60;
 
 async function HomepageContent() {
@@ -46,12 +26,24 @@ async function HomepageContent() {
   return <HomepageView feed={feed} />;
 }
 
-export default function Home() {
+export default async function Home() {
+  const feed = await getGeneratedHomepageFeed();
+  const trending = buildTrendingKeywords({ limit: 12 });
+  const storyCount = feed
+    ? feed.trending.length + feed.liveWire.length + 1
+    : 0;
+
   return (
     <PageShell variant="news">
+      <JsonLdScript
+        data={homepageJsonLd({
+          storyCount,
+          trendingKeywords: trending,
+        })}
+      />
       <main
         id="main-content"
-        className="hp-root relative z-[2]"
+        className="nr-root relative z-[2]"
         role="main"
       >
         <Suspense fallback={<HomepageSkeleton />}>

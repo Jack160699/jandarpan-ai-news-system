@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { NOINDEX_ROBOTS } from "@/lib/seo";
+import "@/styles/admin-newsroom.css";
 
 export const metadata: Metadata = {
-  title: "Admin",
+  title: "Newsroom Admin",
   robots: NOINDEX_ROBOTS,
 };
 

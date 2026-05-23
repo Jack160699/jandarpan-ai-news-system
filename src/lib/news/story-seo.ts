@@ -1,129 +1,133 @@
 /**
- * Live story SEO — metadata + JSON-LD
+ * Live story SEO — fast metadata + JSON-LD (delegates to lib/seo)
  */
 
 import type { Metadata } from "next";
 import { isArticleLive } from "@/lib/news/home-ranking";
-import { estimateReadTime } from "@/lib/news/story-utils";
+import { buildEditorialHeroDisplay } from "@/lib/news/images/editorial-hero-display";
 import { resolveStorySlug } from "@/lib/news/related-stories";
-import { resolveCardImage } from "@/lib/news/images/display";
+import {
+  buildStoryBreadcrumbs,
+  buildPageMetadata,
+  liveNewsArticleJsonLd,
+  newsKeywordsForArticle,
+} from "@/lib/seo";
+import { buildTrendingKeywords } from "@/lib/seo/trending-keywords";
+import { SITE_URL } from "@/lib/seo/constants";
+import {
+  displaySourceLine,
+  mapProviderToDesk,
+} from "@/lib/newsroom/desk-branding";
 import { BRAND } from "@/lib/brand";
-import { PRODUCTION_ROBOTS, SITE_URL } from "@/lib/seo";
+import type { EditorialImageMeta } from "@/lib/types/newsroom";
 import type { NewsArticleRow } from "@/lib/types/news-article";
 
-const CG_KEYWORDS = [
-  "Chhattisgarh news",
-  "Raipur news",
-  "CG news Hindi",
-  "छत्तीसगढ़ समाचार",
-  "regional news India",
-  "Bastar",
-  "Bilaspur",
-  "Durg",
-];
+export function resolveStoryOgImage(
+  article: NewsArticleRow,
+  imageMeta?: EditorialImageMeta | null
+): string {
+  const display = buildEditorialHeroDisplay({
+    heroUrl: article.image_url,
+    category: article.category,
+    region: article.region,
+    source: article.source,
+    imageMeta: imageMeta ?? undefined,
+  });
+  return imageMeta?.og_url ?? display.src;
+}
 
-export function liveStoryMetadata(article: NewsArticleRow): Metadata {
+export function liveStoryMetadata(
+  article: NewsArticleRow,
+  options?: { imageMeta?: EditorialImageMeta | null; seoTitle?: string | null; seoDescription?: string | null }
+): Metadata {
   const slug = resolveStorySlug(article);
-  const url = `${SITE_URL}/story/${slug}`;
-  const title = article.ai_headline?.trim() || article.title;
+  const title =
+    options?.seoTitle?.trim() ||
+    article.ai_headline?.trim() ||
+    article.title;
   const description =
+    options?.seoDescription?.trim() ||
     article.ai_summary?.trim() ||
     article.description?.trim() ||
     article.content?.slice(0, 160)?.trim() ||
     `${title} — ${BRAND.nameEn} live regional desk.`;
 
-  const image = resolveCardImage(
-    {
-      imageUrl: article.image_url,
-      category: article.category,
-      source: article.source,
-      articleUrl: article.article_url,
-    },
-    1200
-  );
+  const ogImage = resolveStoryOgImage(article, options?.imageMeta);
+  const desk = mapProviderToDesk(article.provider);
+  const trending = buildTrendingKeywords({ limit: 6 });
+  const newsKeywords = newsKeywordsForArticle({
+    headline: title,
+    category: article.category,
+    region: article.region,
+    tags: [article.category, desk.name],
+    trendingPool: trending,
+  });
 
-  const keywords = [
-    article.category,
-    article.region ?? "chhattisgarh",
-    article.source ?? BRAND.nameEn,
-    ...CG_KEYWORDS,
-  ].filter(Boolean);
+  const locale = article.language === "en" ? "en_IN" : "hi_IN";
 
-  return {
+  return buildPageMetadata({
     title,
     description,
-    keywords,
-    alternates: { canonical: `/story/${slug}` },
-    robots: PRODUCTION_ROBOTS,
-    openGraph: {
-      title,
-      description,
-      type: "article",
-      url,
-      locale: article.language === "hi" ? "hi_IN" : "en_IN",
-      siteName: BRAND.nameEn,
-      publishedTime: article.published_at ?? undefined,
-      modifiedTime: article.updated_at,
-      section: article.category,
-      images: [
-        {
-          url: image,
-          width: 1200,
-          height: 630,
-          alt: title,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [image],
-    },
-  };
+    path: `/story/${slug}`,
+    keywords: [
+      article.category,
+      article.region ?? "chhattisgarh",
+      desk.name,
+      BRAND.nameEn,
+      ...trending.slice(0, 4),
+    ],
+    locale,
+    alternateLocales: ["hi_IN", "en_IN"],
+    ogImage,
+    ogType: "article",
+    publishedTime: article.published_at,
+    modifiedTime: article.updated_at,
+    section: article.category,
+    newsKeywords,
+  });
 }
 
-export function liveStoryJsonLd(article: NewsArticleRow) {
+export function liveStoryJsonLd(
+  article: NewsArticleRow,
+  options?: { imageMeta?: EditorialImageMeta | null }
+) {
   const slug = resolveStorySlug(article);
   const url = `${SITE_URL}/story/${slug}`;
-  const image = resolveCardImage(
-    {
-      imageUrl: article.image_url,
-      category: article.category,
-      source: article.source,
-      articleUrl: article.article_url,
-    },
-    1200
-  );
+  const headline = article.ai_headline?.trim() || article.title;
+  const image = resolveStoryOgImage(article, options?.imageMeta);
+  const breadcrumbs = buildStoryBreadcrumbs({
+    category: article.category,
+    headline,
+    slug,
+  });
 
-  return {
-    "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    headline: article.title,
-    alternativeHeadline: article.ai_headline ?? undefined,
-    description: article.description ?? article.ai_summary ?? undefined,
-    image: [image],
-    datePublished: article.published_at ?? article.created_at,
-    dateModified: article.updated_at,
-    author: article.author
-      ? { "@type": "Person", name: article.author }
-      : { "@type": "Organization", name: article.source ?? BRAND.nameEn },
-    publisher: {
-      "@type": "NewsMediaOrganization",
-      name: BRAND.nameEn,
-      url: SITE_URL,
-    },
-    articleSection: article.category,
-    inLanguage: article.language ?? "hi",
-    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+  const wordCount = (article.content ?? article.description ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+
+  const trending = buildTrendingKeywords({ limit: 6 });
+
+  return liveNewsArticleJsonLd({
+    article,
     url,
-    isAccessibleForFree: true,
-    speakable: {
-      "@type": "SpeakableSpecification",
-      cssSelector: [".story-headline", ".story-deck"],
-    },
-    ...(isArticleLive(article.published_at)
-      ? { genre: "LiveBreakingNews" }
-      : {}),
-  };
+    headline,
+    description: article.ai_summary ?? article.description,
+    image,
+    breadcrumbs,
+    keywords: newsKeywordsForArticle({
+      headline,
+      category: article.category,
+      region: article.region,
+      trendingPool: trending,
+    }),
+    isLive: isArticleLive(article.published_at),
+    wordCount,
+  });
+}
+
+/** @deprecated use liveStoryJsonLd — returns first graph only */
+export function liveStoryJsonLdLegacy(article: NewsArticleRow) {
+  const graphs = liveStoryJsonLd(article);
+  return Array.isArray(graphs) ? graphs[0] : graphs;
 }
