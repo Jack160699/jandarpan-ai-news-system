@@ -69,8 +69,13 @@ export function LazyHomeSection({
       className={`hp-lazy-section feed-section ${className}`.trim()}
       style={{ ...style, minHeight: show ? undefined : minHeight }}
       data-loaded={show ? "true" : "false"}
+      aria-busy={show ? undefined : true}
     >
-      {show ? children : fallback}
+      {show ? (
+        <div className="hp-lazy-section__content">{children}</div>
+      ) : (
+        fallback
+      )}
     </div>
   );
 }

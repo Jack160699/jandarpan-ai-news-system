@@ -49,20 +49,28 @@ export function HomepageView({ feed, brandName }: HomepageViewProps) {
   const heroLead = feed.breakingTicker[0] ?? lead;
 
   return (
-    <div className="nr nr--daily">
-      <HomepageMasthead brandName={brandName} />
+    <div className="nr nr--daily pl-stagger motion-page">
+      <div className="pl-stagger-item">
+        <HomepageMasthead brandName={brandName} />
+      </div>
 
       {feed.breakingTicker.length > 0 ? (
-        <BreakingTicker items={feed.breakingTicker} />
+        <div className="pl-stagger-item">
+          <BreakingTicker items={feed.breakingTicker} />
+        </div>
       ) : null}
 
-      <BreakingHero
-        lead={heroLead}
-        topStories={topStories}
-        featuredShort={feed.newsShorts[0]}
-      />
+      <div className="pl-stagger-item">
+        <BreakingHero
+          lead={heroLead}
+          topStories={topStories}
+          featuredShort={feed.newsShorts[0]}
+        />
+      </div>
 
-      <LocalBreakingAlerts alerts={feed.localBreakingAlerts} />
+      <div className="pl-stagger-item">
+        <LocalBreakingAlerts alerts={feed.localBreakingAlerts} />
+      </div>
 
       <LazyHomeSection
         id="wire"
@@ -85,7 +93,10 @@ export function HomepageView({ feed, brandName }: HomepageViewProps) {
         </LazyHomeSection>
       ) : null}
 
-      <div className="feed-section" style={{ "--stagger": 4 } as CSSProperties}>
+      <div
+        className="feed-section pl-stagger-item"
+        style={{ "--stagger": 4 } as CSSProperties}
+      >
         <TrendingStories articles={feed.trending.slice(0, 8)} />
       </div>
 
@@ -97,7 +108,7 @@ export function HomepageView({ feed, brandName }: HomepageViewProps) {
         <HyperlocalFeeds feeds={feed.hyperlocalFeeds.slice(0, 6)} />
       </LazyHomeSection>
 
-      <div className="nr-wrap nr-ad-slot">
+      <div className="nr-wrap nr-ad-slot pl-stagger-item">
         <AdSlot slotId="home_mid_feed" />
       </div>
     </div>

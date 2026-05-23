@@ -24,6 +24,7 @@ type StoryCardProps = {
   variant: StoryCardVariant;
   priority?: boolean;
   rank?: number;
+  showFreshBadge?: boolean;
 };
 
 function showImage(variant: StoryCardVariant): boolean {
@@ -35,6 +36,7 @@ export function StoryCard({
   variant,
   priority = false,
   rank,
+  showFreshBadge = false,
 }: StoryCardProps) {
   const { t } = useLanguage();
   const { time } = useLocaleFormat();
@@ -43,7 +45,9 @@ export function StoryCard({
     variant === "editorial-lead" || variant === "editorial";
 
   return (
-    <article className={`nr-card nr-card--daily nr-card--${variant}`}>
+    <article
+      className={`nr-card nr-card--daily nr-card--${variant} motion-card`}
+    >
       <TrackedStoryLink
         href={`/story/${article.slug}`}
         slug={article.slug}
@@ -51,7 +55,7 @@ export function StoryCard({
         region={article.section}
         surface={variant === "breaking" ? "breaking" : "homepage"}
         listPosition={rank}
-        className="nr-card__link tap-target"
+        className="nr-card__link tap-target motion-press"
         prefetch={priority ? undefined : false}
       >
         {hasImage ? (
@@ -71,7 +75,11 @@ export function StoryCard({
                     : IMG_CARD_EDITORIAL
               }
               badges={
-                article.ranking.isBreaking || variant === "breaking" ? (
+                showFreshBadge ? (
+                  <span className="pcard__flag pcard__flag--fresh">
+                    {t.home.fresh}
+                  </span>
+                ) : article.ranking.isBreaking || variant === "breaking" ? (
                   <span className="pcard__flag pcard__flag--breaking">
                     {t.common.breakingLabel}
                   </span>

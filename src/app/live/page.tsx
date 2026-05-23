@@ -6,7 +6,7 @@ import { BRAND } from "@/lib/brand";
 import { PRODUCTION_ROBOTS, SITE_URL, webPageJsonLd } from "@/lib/seo";
 import { Footer } from "@/sections/Footer";
 import { HomepageEmpty } from "@/sections/homepage";
-import { LiveDeskView } from "@/sections/live/LiveDeskView";
+import { LiveDeskLiveView } from "@/sections/live/LiveDeskLiveView";
 
 export const revalidate = 60;
 
@@ -42,10 +42,7 @@ export default async function LivePage() {
     <PageShell variant="news">
       <JsonLdScript data={jsonLd} />
       <main id="main-content" className="live-page nr-root" role="main">
-        <LiveDeskView
-          items={feed.liveWire}
-          tickerItems={feed.breakingTicker}
-        />
+        <LiveDeskLiveView feed={feed} />
       </main>
       <Footer />
     </PageShell>

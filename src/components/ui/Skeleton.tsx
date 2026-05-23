@@ -9,7 +9,7 @@ type SkeletonProps = {
 export function Skeleton({ className, label = "Loading" }: SkeletonProps) {
   return (
     <span
-      className={cn("ds-skeleton block", className)}
+      className={cn("ds-skeleton pl-shimmer block", className)}
       role="status"
       aria-label={label}
       aria-busy="true"

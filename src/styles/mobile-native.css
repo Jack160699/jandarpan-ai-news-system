@@ -288,22 +288,10 @@ html[data-ptr-refresh="1"] main {
   background: color-mix(in srgb, #f59e0b 12%, transparent);
 }
 
-/* ── Route transition (app-like) ── */
+/* ── Route transition (app-like) — see app-shell-transitions.css ── */
 @media (max-width: 767px) {
-  .route-transition {
-    flex: 1;
-    transition:
-      opacity 0.22s var(--ds-ease),
-      transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .route-transition--enter {
-    animation: route-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
-  }
-
-  .route-transition--loading {
-    opacity: 0.88;
-    transform: translateY(3px) scale(0.998);
+  .route-transition-host--in .route-transition__viewport--in {
+    animation: route-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
 

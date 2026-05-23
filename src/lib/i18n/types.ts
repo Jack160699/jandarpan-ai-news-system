@@ -91,6 +91,11 @@ export type Dictionary = {
     loadingEdition: string;
     tickerAria: string;
     fresh: string;
+    liveNewsroom: string;
+    updatedPrefix: string;
+    newUpdatesAvailable: string;
+    refreshFeed: string;
+    dismissUpdates: string;
     categories: {
       politics: string;
       chhattisgarh: string;
@@ -123,8 +128,25 @@ export type Dictionary = {
   };
   shorts: {
     title: string;
+    subtitle: string;
     trending: string;
     watch: string;
+    backHome: string;
+    readFull: string;
+    mute: string;
+    unmute: string;
+    play: string;
+    pause: string;
+    share: string;
+    bookmark: string;
+    bookmarked: string;
+    empty: string;
+    loading: string;
+    swipeHint: string;
+    narration: string;
+    narrationShort: string;
+    feedAria: string;
+    actionsAria: string;
   };
   article: {
     back: string;

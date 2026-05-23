@@ -7,23 +7,25 @@ type ShortSubtitlesProps = {
   cues: SubtitleCue[];
   progressMs: number;
   className?: string;
+  cinematic?: boolean;
 };
 
 export function ShortSubtitles({
   cues,
   progressMs,
   className = "",
+  cinematic = false,
 }: ShortSubtitlesProps) {
   const active = subtitleAtTime(cues, progressMs);
   if (!active) return null;
 
   return (
-    <p
-      className={`short-subtitles ${className}`.trim()}
+    <div
+      className={`reel-caption${cinematic ? " reel-caption--cinematic" : ""} ${className}`.trim()}
       role="doc-subtitle"
       aria-live="polite"
     >
-      {active.text}
-    </p>
+      <p className="reel-caption__text">{active.text}</p>
+    </div>
   );
 }

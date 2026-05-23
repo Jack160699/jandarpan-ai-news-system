@@ -9,24 +9,24 @@ export function FeedCardSkeleton({
 }: FeedCardSkeletonProps) {
   if (variant === "hero") {
     return (
-      <div className="feed-skeleton-list" aria-hidden>
-        <div className="skeleton skeleton-hero" />
-        <div className="skeleton skeleton-line skeleton-line--short" />
-        <div className="skeleton skeleton-line skeleton-line--title" />
-        <div className="skeleton skeleton-line skeleton-line--title-2" />
+      <div className="feed-skeleton-list pl-stagger" aria-hidden>
+        <div className="pl-shimmer-block skeleton-hero" />
+        <div className="pl-shimmer-block skeleton-line skeleton-line--short" />
+        <div className="pl-shimmer-block skeleton-line skeleton-line--title" />
+        <div className="pl-shimmer-block skeleton-line skeleton-line--title-2" />
       </div>
     );
   }
 
   return (
-    <div className="feed-skeleton-list" aria-hidden>
+    <div className="feed-skeleton-list pl-stagger" aria-hidden>
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="skeleton-card">
-          <div className="skeleton skeleton-card__thumb" />
+        <div key={i} className="skeleton-card pl-stagger-item">
+          <div className="pl-shimmer-block skeleton-card__thumb" />
           <div className="skeleton-card__body">
-            <div className="skeleton skeleton-line skeleton-line--short" />
-            <div className="skeleton skeleton-line skeleton-line--title" />
-            <div className="skeleton skeleton-line skeleton-line--title-2" />
+            <div className="pl-shimmer-block skeleton-line skeleton-line--short" />
+            <div className="pl-shimmer-block skeleton-line skeleton-line--title" />
+            <div className="pl-shimmer-block skeleton-line skeleton-line--title-2" />
           </div>
         </div>
       ))}

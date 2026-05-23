@@ -25,7 +25,7 @@ export function BreakingHero({
 
   return (
     <section
-      className="nr-hero-zone nr-hero-zone--daily"
+      className="nr-hero-zone nr-hero-zone--daily motion-hero"
       aria-labelledby="nr-breaking-hero-title"
     >
       <div className="nr-wrap nr-hero-zone__inner">
@@ -39,23 +39,25 @@ export function BreakingHero({
             className="nr-breaking-hero__link"
           >
             {showLive ? (
-              <span className="nr-live-badge nr-live-badge--compact">
+              <span className="nr-live-badge nr-live-badge--compact motion-hero__flag">
                 <span className="nr-live-badge__dot" aria-hidden />
                 LIVE
               </span>
             ) : (
-              <span className="nr-breaking-hero__flag">Breaking</span>
+              <span className="nr-breaking-hero__flag motion-hero__flag">
+                Breaking
+              </span>
             )}
 
             <h2
               id="nr-breaking-hero-title"
-              className="nr-breaking-hero__headline"
+              className="nr-breaking-hero__headline motion-hero__headline"
               lang={lead.language === "hi" ? "hi" : undefined}
             >
               {lead.headline}
             </h2>
 
-            <div className="nr-breaking-hero__meta">
+            <div className="nr-breaking-hero__meta motion-hero__meta">
               <span>{lead.categoryLabel}</span>
               <span aria-hidden> · </span>
               <time dateTime={lead.publishedAt}>
@@ -63,7 +65,7 @@ export function BreakingHero({
               </time>
             </div>
 
-            <div className="nr-breaking-hero__visual">
+            <div className="nr-breaking-hero__visual motion-hero__visual">
               <HomeArticleImage
                 src={lead.imageUrl}
                 alt=""

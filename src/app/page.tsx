@@ -1,17 +1,20 @@
+import { Suspense } from "react";
 import { PageShell } from "@/components/layout/PageShell";
+import { HomepageLoadingView } from "@/components/loading";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
 import { getTenantConfig } from "@/lib/tenant/resolve";
 import { Footer } from "@/sections/Footer";
-import { HomepageEmpty, HomepageView } from "@/sections/homepage";
+import { HomepageEmpty } from "@/sections/homepage";
+import { HomepageLiveView } from "@/sections/homepage/HomepageLiveView";
 
 export const metadata = buildHomeMetadata();
 
 /** ISR — edge-friendly cache, 60s freshness */
 export const revalidate = 60;
 
-export default async function Home() {
+async function HomeFeed() {
   const [feed, tenant] = await Promise.all([
     getCachedGeneratedHomepageFeed(),
     getTenantConfig(),
@@ -23,26 +26,29 @@ export default async function Home() {
     : 0;
 
   return (
-    <PageShell variant="news">
+    <>
       <JsonLdScript
         data={homepageJsonLd({
           storyCount,
           trendingKeywords: trending,
         })}
       />
-      <main
-        id="main-content"
-        className="nr-root relative z-[2]"
-        role="main"
-      >
-        {feed ? (
-          <HomepageView
-            feed={feed}
-            brandName={tenant.branding.nameHi}
-          />
-        ) : (
-          <HomepageEmpty />
-        )}
+      {feed ? (
+        <HomepageLiveView feed={feed} brandName={tenant.branding.nameHi} />
+      ) : (
+        <HomepageEmpty />
+      )}
+    </>
+  );
+}
+
+export default function Home() {
+  return (
+    <PageShell variant="news">
+      <main id="main-content" className="nr-root relative z-[2]" role="main">
+        <Suspense fallback={<HomepageLoadingView />}>
+          <HomeFeed />
+        </Suspense>
         <Footer />
       </main>
     </PageShell>

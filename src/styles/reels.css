@@ -1,5 +1,5 @@
 /**
- * Vertical news reels — TikTok / Instagram style, mobile-first
+ * Vertical news reels — full-height immersive feed, mobile-first
  */
 
 .reels-page {
@@ -231,7 +231,7 @@
   animation: nr-pulse 1.4s var(--ds-ease) infinite;
 }
 
-/* TikTok-style side rail */
+/* Side action rail */
 .reel-item__side-actions {
   position: absolute;
   right: 0.5rem;
@@ -469,4 +469,23 @@
   .reels-viewport {
     scroll-behavior: auto;
   }
+}
+
+/* Shorts full-page loading */
+.reels-skeleton__media {
+  flex: 1;
+  min-height: 60vh;
+  width: 100%;
+  border-radius: 0;
+}
+
+.reels-skeleton__copy {
+  padding: 1rem 1.25rem 2rem;
+}
+
+.reels-page--loading .reels-page__frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--paper);
 }

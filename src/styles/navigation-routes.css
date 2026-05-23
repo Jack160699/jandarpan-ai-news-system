@@ -44,14 +44,9 @@
   }
 }
 
-/* Main content fade while navigating */
-.route-transition {
-  flex: 1;
-  transition: opacity var(--ds-duration-fast) var(--ds-ease);
-}
-
-.route-transition--loading {
-  opacity: 0.92;
+/* Main content fade while navigating (shell crossfade in app-shell-transitions.css) */
+.route-transition-host--out .route-transition__viewport {
+  opacity: 0.88;
 }
 
 .route-loading {
@@ -200,7 +195,7 @@
     animation: none;
   }
 
-  .route-transition--loading {
+  .route-transition-host--out .route-transition__viewport {
     opacity: 1;
   }
 }

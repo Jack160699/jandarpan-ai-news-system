@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { memo, useState } from "react";
 import { HorizontalLazyRail } from "@/components/homepage/HorizontalLazyRail";
+import { Reveal } from "@/components/motion";
 import { ShortPreviewCard } from "@/components/shorts/ShortPreviewCard";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
 
@@ -31,7 +32,8 @@ export function TrendingShortsRail({ shorts }: TrendingShortsRailProps) {
   const featured = shorts.slice(0, 6);
 
   return (
-    <section
+    <Reveal
+      as="section"
       id="reels"
       className="trending-shorts trending-shorts--daily scroll-mt-24"
       aria-labelledby="trending-shorts-title"
@@ -49,7 +51,7 @@ export function TrendingShortsRail({ shorts }: TrendingShortsRailProps) {
         items={featured}
         getKey={(short) => short.articleId}
         ariaLabel="News reels"
-        className="trending-shorts__scroll"
+        className="trending-shorts__scroll motion-rail"
         slotClassName="trending-shorts__slot"
         initialCount={3}
         batchSize={3}
@@ -61,6 +63,6 @@ export function TrendingShortsRail({ shorts }: TrendingShortsRailProps) {
           />
         )}
       />
-    </section>
+    </Reveal>
   );
 }

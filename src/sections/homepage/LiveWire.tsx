@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { LiveWireFeed } from "@/components/live-desk/LiveWireFeed";
+import { Reveal } from "@/components/motion";
 import { useLanguage } from "@/providers/LanguageProvider";
 import type { HomeArticle } from "@/lib/homepage/types";
 
 type LiveWireProps = {
   items: HomeArticle[];
+  freshIds?: ReadonlySet<string>;
 };
 
-export function LiveWire({ items }: LiveWireProps) {
+export function LiveWire({ items, freshIds }: LiveWireProps) {
   const { t } = useLanguage();
   if (!items.length) return null;
 
   return (
-    <section
+    <Reveal
+      as="section"
       id="wire"
       className="live-wire live-wire--daily scroll-mt-24"
       aria-labelledby="nr-wire-title"
@@ -29,8 +32,12 @@ export function LiveWire({ items }: LiveWireProps) {
       </div>
 
       <div className="nr-wrap">
-        <LiveWireFeed items={items.slice(0, 6)} variant="feed" />
+        <LiveWireFeed
+          items={items.slice(0, 6)}
+          variant="feed"
+          freshIds={freshIds}
+        />
       </div>
-    </section>
+    </Reveal>
   );
 }

@@ -125,7 +125,7 @@ export function CategoryTabs() {
                 key={cat.id}
                 type="button"
                 data-cat-id={cat.id}
-                className={`category-tab tap-press${active ? " is-active" : ""}`}
+                className={`category-tab tap-press motion-tab${active ? " is-active" : ""}`}
                 aria-current={active ? "page" : undefined}
                 onClick={() => onHashSection(href)}
               >
@@ -142,7 +142,7 @@ export function CategoryTabs() {
               href={linkHref}
               data-cat-id={cat.id}
               prefetch={cat.id === "top-news"}
-              className={`category-tab tap-press${active ? " is-active" : ""}`}
+              className={`category-tab tap-press motion-tab${active ? " is-active" : ""}`}
               aria-current={active ? "page" : undefined}
               onClick={() => {
                 triggerHaptic("selection");

@@ -8,9 +8,14 @@ import type { HomeArticle } from "@/lib/homepage/types";
 type BreakingTickerProps = {
   items: HomeArticle[];
   sticky?: boolean;
+  freshIds?: ReadonlySet<string>;
 };
 
-export function BreakingTicker({ items, sticky = true }: BreakingTickerProps) {
+export function BreakingTicker({
+  items,
+  sticky = true,
+  freshIds,
+}: BreakingTickerProps) {
   const [paused, setPaused] = useState(false);
   const { t } = useLanguage();
 
@@ -52,7 +57,7 @@ export function BreakingTicker({ items, sticky = true }: BreakingTickerProps) {
               category={item.section}
               region={item.section}
               surface="breaking"
-              className="nr-ticker__item"
+              className={`nr-ticker__item${freshIds?.has(item.id) ? " nr-ticker__item--fresh" : ""}`}
             >
               {item.ranking.isBreaking ? (
                 <span className="nr-ticker__tag">{t.common.breakingLabel}</span>

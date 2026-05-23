@@ -1,0 +1,239 @@
+/**
+ * App shell + route transitions — persistent chrome, fluid page changes
+ * Properties: opacity, transform only (GPU-friendly)
+ */
+
+/* ── Persistent shell ── */
+.app-shell {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  background: var(--paper);
+  isolation: isolate;
+}
+
+.app-shell[data-hydrated="false"] .route-transition__viewport {
+  opacity: 1;
+}
+
+.app-shell[data-hydrated="true"] .route-transition__viewport--idle {
+  animation: app-hydrate-in 0.22s var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+@keyframes app-hydrate-in {
+  from {
+    opacity: 0.94;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.app-shell__main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+}
+
+/* Chrome stays painted during route change */
+.app-shell .app-header,
+.app-shell .bottom-nav--premium,
+.app-shell .headlines-mini-player {
+  transition: none;
+}
+
+/* Subtle dim on main while navigating */
+.route-transition-host--out .route-transition__viewport {
+  opacity: 0.72;
+  transform: translateY(4px) scale(0.998);
+}
+
+.route-transition-host--in .route-transition__viewport--in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.route-transition__viewport {
+  flex: 1;
+  width: 100%;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition:
+    opacity var(--route-exit-ms, 160ms) var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1)),
+    transform var(--route-enter-ms, 280ms) var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.route-transition__viewport--idle {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.route-transition__viewport--out {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+.route-transition__viewport--in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Story routes — slightly slower, cinematic */
+.route-transition-host--story .route-transition__viewport {
+  transition-duration: 200ms, 320ms;
+}
+
+.route-transition-host--story.route-transition-host--in .route-transition__viewport--in {
+  animation: route-story-enter 0.38s var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1)) both;
+}
+
+@keyframes route-story-enter {
+  from {
+    opacity: 0.85;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* In-page story polish (when already mounted) */
+.immersive-story.route-story-page .immersive-story__shell {
+  animation: route-story-shell-in 0.32s var(--motion-ease-out) both;
+}
+
+@keyframes route-story-shell-in {
+  from {
+    opacity: 0.92;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.immersive-story.route-story-page .immersive-story__hero .story-hero__frame {
+  animation: route-story-hero-in 0.4s var(--motion-ease-out) 0.06s both;
+}
+
+@keyframes route-story-hero-in {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Prevent white flash between routes */
+.route-transition-host {
+  background: var(--paper);
+  contain: layout style;
+}
+
+/* Loading shells inside shell — no double flash */
+.route-transition-host .route-loading {
+  animation: route-loading-in 0.22s var(--motion-ease-out) both;
+}
+
+@keyframes route-loading-in {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── View Transitions API (progressive enhancement) ── */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.28s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  ::view-transition-old(root) {
+    animation-name: vt-fade-out;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: vt-fade-in;
+  }
+
+  /* Keep header/chrome stable */
+  ::view-transition-group(app-header),
+  ::view-transition-group(bottom-nav) {
+    animation: none;
+  }
+}
+
+@keyframes vt-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.92;
+  }
+}
+
+@keyframes vt-fade-in {
+  from {
+    opacity: 0.92;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Assign view-transition-name on chrome (set in components via class) */
+.app-header {
+  view-transition-name: app-header;
+}
+
+.bottom-nav--premium {
+  view-transition-name: bottom-nav;
+}
+
+/* Section scroll continuity + feed transitions */
+.app-shell__main .feed-section,
+.app-shell__main .nr-section,
+.app-shell__main .hp-lazy-section {
+  scroll-margin-top: calc(var(--app-header-total, 88px) + 0.5rem);
+}
+
+.app-shell__main .motion-feed {
+  transition: opacity 0.2s var(--motion-ease-out, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+.app-shell__main .motion-feed__item {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-transition__viewport,
+  .route-transition-host--out .route-transition__viewport,
+  .immersive-story.route-story-page .immersive-story__shell,
+  .immersive-story.route-story-page .immersive-story__hero .story-hero__frame {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}

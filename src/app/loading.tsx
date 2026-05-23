@@ -1,10 +1,14 @@
 import Image from "next/image";
-import { HomepageSkeleton } from "@/sections/homepage";
+import { HomepageLoadingView } from "@/components/loading";
 
 export default function RootLoading() {
   return (
-    <div className="route-loading" aria-busy="true" aria-label="Loading">
-      <div className="route-loading__brand">
+    <div
+      className="route-loading route-loading--premium"
+      aria-busy="true"
+      aria-label="Loading"
+    >
+      <div className="route-loading__brand pl-stagger-item">
         <Image
           src="/brand/jan-darpan-chhattisgarh-logo.png"
           alt="जन दर्पण छत्तीसगढ़"
@@ -14,7 +18,7 @@ export default function RootLoading() {
           className="route-loading__logo"
         />
       </div>
-      <HomepageSkeleton />
+      <HomepageLoadingView />
     </div>
   );
 }

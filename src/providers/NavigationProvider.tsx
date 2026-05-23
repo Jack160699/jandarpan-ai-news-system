@@ -17,6 +17,7 @@ type NavigationContextValue = {
   isNavigating: boolean;
   pendingPath: string | null;
   startNavigation: (href: string) => void;
+  completeNavigation: () => void;
   menuOpen: boolean;
   setMenuOpen: (open: boolean) => void;
   openMenu: () => void;
@@ -39,13 +40,16 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setPendingPath(null);
     setMenuOpen(false);
   }, [pathname, hash]);
 
   const startNavigation = useCallback((href: string) => {
     const path = href.split("#")[0] || "/";
     setPendingPath(path);
+  }, []);
+
+  const completeNavigation = useCallback(() => {
+    setPendingPath(null);
   }, []);
 
   const value = useMemo(
@@ -55,12 +59,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       isNavigating: pendingPath !== null,
       pendingPath,
       startNavigation,
+      completeNavigation,
       menuOpen,
       setMenuOpen,
       openMenu: () => setMenuOpen(true),
       closeMenu: () => setMenuOpen(false),
     }),
-    [pathname, hash, pendingPath, startNavigation, menuOpen]
+    [pathname, hash, pendingPath, startNavigation, completeNavigation, menuOpen]
   );
 
   return (

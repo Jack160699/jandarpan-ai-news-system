@@ -10,6 +10,7 @@ type LiveWireFeedProps = {
   /** Max items in rail mode (homepage) */
   limit?: number;
   className?: string;
+  freshIds?: ReadonlySet<string>;
 };
 
 export const LiveWireFeed = memo(function LiveWireFeed({
@@ -17,6 +18,7 @@ export const LiveWireFeed = memo(function LiveWireFeed({
   variant = "feed",
   limit,
   className = "",
+  freshIds,
 }: LiveWireFeedProps) {
   const slice = limit ? items.slice(0, limit) : items;
 
@@ -36,6 +38,8 @@ export const LiveWireFeed = memo(function LiveWireFeed({
                 article={article}
                 listPosition={index + 1}
                 index={index}
+                isFreshMarker={freshIds?.has(article.id)}
+                isIncoming={freshIds?.has(article.id)}
               />
             </div>
           ))}
@@ -56,6 +60,8 @@ export const LiveWireFeed = memo(function LiveWireFeed({
           article={article}
           listPosition={index + 1}
           index={index}
+          isFreshMarker={freshIds?.has(article.id)}
+          isIncoming={freshIds?.has(article.id)}
         />
       ))}
     </div>

@@ -11,6 +11,8 @@ type BreakingWireItemProps = {
   article: HomeArticle;
   listPosition?: number;
   index?: number;
+  isFreshMarker?: boolean;
+  isIncoming?: boolean;
 };
 
 function isFresh(article: HomeArticle): boolean {
@@ -23,6 +25,8 @@ export const BreakingWireItem = memo(function BreakingWireItem({
   article,
   listPosition,
   index = 0,
+  isFreshMarker = false,
+  isIncoming = false,
 }: BreakingWireItemProps) {
   const { t } = useLanguage();
   const { time } = useLocaleFormat();
@@ -34,7 +38,7 @@ export const BreakingWireItem = memo(function BreakingWireItem({
 
   return (
     <article
-      className={`bwire-item${isLive ? " bwire-item--live" : ""}${isBreaking ? " bwire-item--breaking" : ""}`}
+      className={`bwire-item motion-wire${isLive ? " bwire-item--live" : ""}${isBreaking ? " bwire-item--breaking" : ""}${isFreshMarker ? " bwire-item--fresh" : ""}${isIncoming ? " bwire-item--incoming" : ""}`}
       style={{ "--bwire-i": index } as CSSProperties}
     >
       <TrackedStoryLink
@@ -44,7 +48,7 @@ export const BreakingWireItem = memo(function BreakingWireItem({
         region={article.section}
         surface="homepage"
         listPosition={listPosition}
-        className="bwire-item__link tap-press"
+        className="bwire-item__link tap-press motion-press"
       >
         <span className="bwire-item__rail" aria-hidden>
           <span className="bwire-item__pulse" />

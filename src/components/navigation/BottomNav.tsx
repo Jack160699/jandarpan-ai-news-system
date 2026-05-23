@@ -55,7 +55,7 @@ export function BottomNav() {
               key={tab.id}
               href={href}
               prefetch={tab.id === "home"}
-              className={`bottom-nav__item tap-press${active ? " is-active" : ""}${isLive ? " bottom-nav__item--live" : ""}${pendingPath === tab.href ? " is-pending" : ""}`}
+              className={`bottom-nav__item tap-press motion-nav-tab${active ? " is-active" : ""}${isLive ? " bottom-nav__item--live" : ""}${pendingPath === tab.href ? " is-pending" : ""}`}
               aria-current={active ? "page" : undefined}
               onClick={() => {
                 triggerHaptic(isLive ? "medium" : "selection");

@@ -14,6 +14,7 @@ import { AppFab } from "@/components/mobile/AppFab";
 import { NativeTouchLayer } from "@/components/mobile/NativeTouchLayer";
 import { PullToRefresh } from "@/components/mobile/PullToRefresh";
 import { ScrollRetention } from "@/components/mobile/ScrollRetention";
+import { AppHydration } from "./AppHydration";
 import { RouteTransition } from "./RouteTransition";
 
 type AppChromeProps = {
@@ -43,7 +44,11 @@ export function AppChrome({ children }: AppChromeProps) {
     <HeadlinesListenProvider>
       <NavigationProvider>
         <NativeTouchLayer>
-          <div className="has-bottom-nav has-hl-mini flex min-h-full flex-col">
+          <div
+            className="app-shell has-bottom-nav has-hl-mini flex min-h-full flex-col"
+            data-hydrated="false"
+          >
+            <AppHydration />
             <SkipLink />
             <NavProgress />
             <LanguageGate />

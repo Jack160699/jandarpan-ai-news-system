@@ -9,20 +9,24 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { ReelSegmentProgress } from "@/components/shorts/ReelSegmentProgress";
 import { ShortHighlightStrip } from "@/components/shorts/ShortHighlightStrip";
 import { ShortSubtitles } from "@/components/shorts/ShortSubtitles";
+import { formatRelativeTime } from "@/lib/i18n/format";
 import {
   getBookmarkedSlugs,
   toggleShortBookmark,
 } from "@/lib/news/shorts/bookmarks";
 import { getShortStyle } from "@/lib/news/shorts/styles";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 export type ReelItemVariant = "full" | "preview";
 
 type ReelItemProps = {
   short: NewsShortCard;
   active?: boolean;
+  prewarm?: boolean;
   variant?: ReelItemVariant;
   onActivate?: () => void;
 };
@@ -30,8 +34,8 @@ type ReelItemProps = {
 async function shareShort(short: NewsShortCard): Promise<void> {
   const url =
     typeof window !== "undefined"
-      ? `${window.location.origin}/shorts/${short.slug}`
-      : `/shorts/${short.slug}`;
+      ? `${window.location.origin}/shorts?start=${short.slug}`
+      : `/shorts?start=${short.slug}`;
   const payload = {
     title: short.headline,
     text: short.summary60s.slice(0, 120),
@@ -53,16 +57,20 @@ async function shareShort(short: NewsShortCard): Promise<void> {
 export function ReelItem({
   short,
   active = false,
+  prewarm = false,
   variant = "full",
   onActivate,
 }: ReelItemProps) {
+  const { t, language } = useLanguage();
   const style = getShortStyle(short.section);
   const rootRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [progressMs, setProgressMs] = useState(0);
+  const [videoProgressPct, setVideoProgressPct] = useState(0);
   const [slideIndex, setSlideIndex] = useState(0);
   const [muted, setMuted] = useState(true);
+  const [paused, setPaused] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
   const [shareDone, setShareDone] = useState(false);
 
@@ -83,7 +91,7 @@ export function ReelItem({
         ];
 
   const tick = useCallback(() => {
-    if (hasVideo) return;
+    if (hasVideo || paused) return;
     setProgressMs((prev) => {
       const next = prev + 100;
       if (next >= durationMs) return 0;
@@ -93,47 +101,70 @@ export function ReelItem({
       if (idx >= 0) setSlideIndex(idx);
       return next;
     });
-  }, [durationMs, hasVideo, slides]);
+  }, [durationMs, hasVideo, paused, slides]);
 
   useEffect(() => {
     setBookmarked(getBookmarkedSlugs().includes(short.slug));
   }, [short.slug]);
 
   useEffect(() => {
+    if (!active) {
+      setProgressMs(0);
+      setSlideIndex(0);
+      setPaused(false);
+      setVideoProgressPct(0);
+    }
+  }, [active, short.slug]);
+
+  useEffect(() => {
     const video = videoRef.current;
     if (!hasVideo || !video) return;
 
-    if (active) {
+    if (active && !paused) {
       video.muted = muted;
       video.play().catch(() => undefined);
     } else {
       video.pause();
-      video.currentTime = 0;
+      if (!active) video.currentTime = 0;
     }
-  }, [active, hasVideo, muted]);
+  }, [active, hasVideo, muted, paused]);
 
   useEffect(() => {
-    if (!active || hasVideo) {
-      audioRef.current?.pause();
-      if (!active && !hasVideo) return;
-      if (hasVideo) return;
-    }
-    if (!active) return;
+    const video = videoRef.current;
+    if (!hasVideo || !video || !active) return;
 
+    const onTime = () => {
+      const dur = video.duration || short.durationSec || 1;
+      setVideoProgressPct((video.currentTime / dur) * 100);
+      const ms = video.currentTime * 1000;
+      setProgressMs(ms);
+      const idx = slides.findIndex((s) => ms >= s.startMs && ms < s.endMs);
+      if (idx >= 0) setSlideIndex(idx);
+    };
+
+    video.addEventListener("timeupdate", onTime);
+    return () => video.removeEventListener("timeupdate", onTime);
+  }, [active, hasVideo, short.durationSec, slides]);
+
+  useEffect(() => {
+    if (!active || hasVideo || paused) return;
     const id = window.setInterval(tick, 100);
-    return () => window.clearInterval(id);
-  }, [active, hasVideo, tick]);
+    return () => clearInterval(id);
+  }, [active, hasVideo, paused, tick]);
 
   useEffect(() => {
-    if (!active || muted || !short.hasVoice || hasVideo) return;
+    if (!active || muted || !short.hasVoice || hasVideo) {
+      audioRef.current?.pause();
+      return;
+    }
     const audio = new Audio(short.voiceStreamPath);
     audioRef.current = audio;
-    audio.play().catch(() => undefined);
+    if (!paused) audio.play().catch(() => undefined);
     return () => {
       audio.pause();
       audioRef.current = null;
     };
-  }, [active, muted, short.hasVoice, short.voiceStreamPath, hasVideo]);
+  }, [active, muted, short.hasVoice, short.voiceStreamPath, hasVideo, paused]);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -142,11 +173,11 @@ export function ReelItem({
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
-        if (entry?.isIntersecting && entry.intersectionRatio >= 0.55) {
+        if (entry?.isIntersecting && entry.intersectionRatio >= 0.6) {
           onActivate?.();
         }
       },
-      { threshold: [0.55, 0.75] }
+      { threshold: [0.6, 0.85] }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -159,10 +190,19 @@ export function ReelItem({
 
   const currentSlide = slides[slideIndex] ?? slides[0];
   const progressPct = hasVideo
-    ? videoRef.current
-      ? (videoRef.current.currentTime / (short.durationSec || 1)) * 100
-      : 0
+    ? videoProgressPct
     : Math.min(100, (progressMs / durationMs) * 100);
+
+  const slideProgressInSegment = (() => {
+    const slide = slides[slideIndex];
+    if (!slide) return progressPct;
+    const span = slide.endMs - slide.startMs || 1;
+    const local = progressMs - slide.startMs;
+    return Math.min(100, Math.max(0, (local / span) * 100));
+  })();
+
+  const timeLabel = formatRelativeTime(short.publishedAt, language);
+  const preloadVideo = active || prewarm ? "auto" : "none";
 
   const cssVars = {
     "--short-gradient": style.gradient,
@@ -170,10 +210,26 @@ export function ReelItem({
     "--short-overlay": style.overlay,
   } as CSSProperties;
 
+  const togglePlay = () => {
+    if (hasVideo) {
+      const v = videoRef.current;
+      if (!v) return;
+      if (v.paused) {
+        v.play().catch(() => undefined);
+        setPaused(false);
+      } else {
+        v.pause();
+        setPaused(true);
+      }
+    } else {
+      setPaused((p) => !p);
+    }
+  };
+
   return (
     <article
       ref={rootRef}
-      className={`reel-item reel-item--${variant}`}
+      className={`reel-item reel-item--${variant}${active ? " reel-item--active" : ""}${paused ? " reel-item--paused" : ""}`}
       style={cssVars}
       data-active={active ? "1" : "0"}
       data-section={short.section}
@@ -188,7 +244,7 @@ export function ReelItem({
             muted={muted}
             playsInline
             loop
-            preload={active ? "auto" : "none"}
+            preload={preloadVideo}
             aria-label={short.headline}
           />
         ) : short.imageUrl ? (
@@ -201,47 +257,71 @@ export function ReelItem({
                 ? "100vw"
                 : "(max-width: 640px) 80vw, 320px"
             }
-            className={`reel-item__image${active ? " reel-item__image--playing" : ""}`}
+            className={`reel-item__image${active && !paused ? " reel-item__image--playing" : ""}`}
             priority={active && variant === "full"}
-            loading={active ? "eager" : "lazy"}
+            loading={active || prewarm ? "eager" : "lazy"}
           />
         ) : (
           <div className="reel-item__placeholder" />
         )}
-        <div className="reel-item__overlay" aria-hidden />
-        <div className="reel-item__progress" aria-hidden>
-          <span style={{ width: `${progressPct}%` }} />
+
+        <button
+          type="button"
+          className="reel-item__tap-zone tap-target"
+          onClick={togglePlay}
+          aria-label={paused ? t.shorts.play : t.shorts.pause}
+        />
+
+        <div className="reel-item__overlay reel-item__overlay--cinematic" aria-hidden />
+
+        <div className="reel-item__progress-top">
+          <ReelSegmentProgress
+            total={slides.length}
+            activeIndex={slideIndex}
+            progressPct={slideProgressInSegment}
+          />
         </div>
+
         {short.isLive ? (
           <span className="reel-item__live">
             <span className="reel-item__live-dot" aria-hidden />
-            LIVE
+            {t.common.live}
+          </span>
+        ) : null}
+
+        {paused && active ? (
+          <span className="reel-item__paused-badge" aria-hidden>
+            ❚❚
           </span>
         ) : null}
       </div>
 
-      <div
-        className="reel-item__side-actions"
-        aria-label="Reel actions"
-        onClick={(e) => variant === "preview" && e.stopPropagation()}
-        onKeyDown={(e) => variant === "preview" && e.stopPropagation()}
-      >
+      <div className="reel-item__side-actions" aria-label={t.shorts.actionsAria}>
         <button
           type="button"
           className="reel-item__action tap-target"
           onClick={() => setMuted((m) => !m)}
-          aria-label={muted ? "Unmute" : "Mute"}
+          aria-label={muted ? t.shorts.unmute : t.shorts.mute}
         >
-          <span aria-hidden>{muted ? "🔇" : "🔊"}</span>
+          <span className="reel-item__action-icon" aria-hidden>
+            {muted ? "🔇" : "🔊"}
+          </span>
         </button>
+        {short.hasVoice ? (
+          <span className="reel-item__narration-pill" title={t.shorts.narration}>
+            {t.shorts.narrationShort}
+          </span>
+        ) : null}
         <button
           type="button"
           className={`reel-item__action tap-target${bookmarked ? " reel-item__action--on" : ""}`}
           onClick={() => setBookmarked(toggleShortBookmark(short.slug))}
-          aria-label={bookmarked ? "Remove bookmark" : "Bookmark"}
+          aria-label={bookmarked ? t.shorts.bookmarked : t.shorts.bookmark}
           aria-pressed={bookmarked}
         >
-          <span aria-hidden>{bookmarked ? "★" : "☆"}</span>
+          <span className="reel-item__action-icon" aria-hidden>
+            {bookmarked ? "★" : "☆"}
+          </span>
         </button>
         <button
           type="button"
@@ -252,23 +332,32 @@ export function ReelItem({
               window.setTimeout(() => setShareDone(false), 2000);
             });
           }}
-          aria-label="Share"
+          aria-label={t.shorts.share}
         >
-          <span aria-hidden>↗</span>
+          <span className="reel-item__action-icon" aria-hidden>
+            ↗
+          </span>
         </button>
         {variant === "full" ? (
           <Link
             href={`/story/${short.slug}`}
             className="reel-item__action reel-item__action--story tap-target"
-            aria-label="Read full story"
+            aria-label={t.shorts.readFull}
           >
-            <span aria-hidden>📰</span>
+            <span className="reel-item__action-icon" aria-hidden>
+              📰
+            </span>
           </Link>
         ) : null}
       </div>
 
-      <div className="reel-item__content">
-        <span className="reel-item__category">{short.categoryLabel}</span>
+      <div className="reel-item__content reel-item__content--premium">
+        <div className="reel-item__meta-row">
+          <span className="reel-item__category">{short.categoryLabel}</span>
+          <time className="reel-item__time" dateTime={short.publishedAt}>
+            {timeLabel}
+          </time>
+        </div>
         <p className="reel-item__source">
           {short.sourceLabel}
           {short.sourceCount > 1 ? ` · ${short.sourceCount} sources` : ""}
@@ -279,22 +368,33 @@ export function ReelItem({
         >
           {currentSlide.headline}
         </h2>
+
         {variant === "full" ? (
-          <>
-            <ShortSubtitles cues={short.subtitles} progressMs={progressMs} />
-            <ShortHighlightStrip
-              highlights={short.highlights}
-              activeIndex={slideIndex}
-            />
-          </>
+          <ShortSubtitles
+            cues={short.subtitles}
+            progressMs={progressMs}
+            cinematic
+          />
         ) : null}
+
+        {variant === "full" ? (
+          <ShortHighlightStrip
+            highlights={short.highlights}
+            activeIndex={slideIndex}
+          />
+        ) : null}
+
         <p className="reel-item__deck">{short.summary60s}</p>
+
         {variant === "full" ? (
           <Link
             href={`/story/${short.slug}`}
             className="reel-item__read-cta tap-target"
           >
-            पूरी खबर पढ़ें
+            {t.shorts.readFull}
+            <span className="reel-item__read-cta-arrow" aria-hidden>
+              →
+            </span>
           </Link>
         ) : null}
       </div>

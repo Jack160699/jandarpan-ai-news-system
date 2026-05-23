@@ -158,7 +158,7 @@ export function ImmersiveStoryPage({
       />
 
       <article
-        className="immersive-story immersive-story--premium immersive-story--editorial immersive-story--cinematic multilingual-article"
+        className="immersive-story immersive-story--premium immersive-story--editorial immersive-story--cinematic multilingual-article route-story-page"
         data-reading="article"
         data-translation={translationActive ? "1" : "0"}
         lang={displayLanguage}

@@ -6,12 +6,16 @@ import {
   restoreScrollPosition,
   saveScrollPosition,
 } from "@/lib/mobile/scroll-retention";
+import {
+  ROUTE_TOTAL_MS,
+  prefersReducedMotion,
+} from "@/lib/navigation/transition-config";
 
 type ScrollRetentionProps = {
   children: ReactNode;
 };
 
-/** Restore scroll when returning to a feed route within the same session */
+/** Restore scroll after route transition completes (avoids jump mid-fade) */
 export function ScrollRetention({ children }: ScrollRetentionProps) {
   const pathname = usePathname();
   const prevPath = useRef<string | null>(null);
@@ -21,12 +25,20 @@ export function ScrollRetention({ children }: ScrollRetentionProps) {
     if (prev && prev !== pathname) {
       saveScrollPosition(prev);
     }
-    restoreScrollPosition(pathname);
+
+    const delay = prefersReducedMotion() ? 0 : ROUTE_TOTAL_MS;
+    const timer = window.setTimeout(() => {
+      restoreScrollPosition(pathname);
+    }, delay);
+
     prevPath.current = pathname;
 
     const onPageHide = () => saveScrollPosition(pathname);
     window.addEventListener("pagehide", onPageHide);
-    return () => window.removeEventListener("pagehide", onPageHide);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("pagehide", onPageHide);
+    };
   }, [pathname]);
 
   return <>{children}</>;
