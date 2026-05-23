@@ -9,7 +9,7 @@
   }
 
   html.native-app body {
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto;
   }
 
   /* Momentum horizontal rails */
@@ -62,10 +62,12 @@
 /* ── Pull to refresh ── */
 .ptr-root {
   position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  flex: 0 0 auto;
+  display: block;
+  width: 100%;
   min-height: 0;
+  overflow: visible;
+  touch-action: pan-y;
 }
 
 .ptr-indicator {
@@ -306,14 +308,10 @@ html[data-ptr-refresh="1"] main {
   }
 }
 
-/* Bottom nav — spring active indicator */
+/* Bottom nav — subtle press only (no pulsing active ring) */
 @media (max-width: 767px) {
-  .bottom-nav--premium .bottom-nav__item.is-active .bottom-nav__icon-wrap {
-    animation: nav-tab-pop 0.38s cubic-bezier(0.34, 1.4, 0.64, 1);
-  }
-
   .bottom-nav--premium .bottom-nav__item:active .bottom-nav__icon-wrap {
-    transform: scale(0.88);
+    transform: scale(0.94);
   }
 }
 
@@ -329,12 +327,15 @@ html[data-ptr-refresh="1"] main {
   }
 }
 
-/* Enhanced live pulse */
+/* Live pulse — ticker/badges only (not bottom nav) */
 .live-pulse,
 .nr-ticker__live-dot,
-.live-badge__dot,
-.bottom-nav__live-ring {
+.live-badge__dot {
   animation: live-pulse-native 1.15s ease-in-out infinite;
+}
+
+.bottom-nav__live-ring {
+  display: none;
 }
 
 @keyframes live-pulse-native {

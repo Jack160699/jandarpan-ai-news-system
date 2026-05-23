@@ -21,10 +21,10 @@ html.native-scroll body {
 @media (max-width: 767px) {
   :root {
     --space-gutter: max(1rem, min(4.5vw, 1.25rem));
-    --app-header-row: 44px;
-    --app-tabs-height: 40px;
+    --app-header-row: 40px;
+    --app-tabs-height: 36px;
     --app-header-total: calc(var(--app-header-row) + var(--app-tabs-height));
-    --bottom-nav-height: 56px;
+    --bottom-nav-height: 48px;
     --bottom-nav-total: calc(var(--bottom-nav-height) + var(--safe-bottom));
   }
 
@@ -70,10 +70,10 @@ html.native-scroll body {
     background: var(--paper-muted);
   }
 
-  /* Thumb zone — main content */
+  /* Thumb zone — main content (clear fixed bottom nav + safe area) */
   .has-bottom-nav main,
   .has-bottom-nav .page-shell {
-    padding-bottom: calc(var(--bottom-nav-total) + 0.75rem);
+    padding-bottom: calc(var(--bottom-nav-total) + 0.625rem);
   }
 
   .home-news-flow,

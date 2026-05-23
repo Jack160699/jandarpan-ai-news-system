@@ -14,6 +14,8 @@ import { useLanguage } from "@/providers/LanguageProvider";
 
 const THRESHOLD = 72;
 const MAX_PULL = 110;
+/** Minimum downward pull before capturing gesture (allows normal scroll at top) */
+const PULL_ARM_PX = 16;
 const ENABLED_PREFIXES = ["/", "/live", "/category", "/search", "/archive"];
 
 type PullToRefreshProps = {
@@ -67,17 +69,21 @@ export function PullToRefresh({ children }: PullToRefreshProps) {
     if (!pulling.current || refreshing) return;
     const y = e.touches[0]?.clientY ?? 0;
     const delta = y - startY.current;
-    if (delta <= 0) {
-      setPull(0);
-      return;
-    }
     if (window.scrollY > 4) {
       pulling.current = false;
       setPull(0);
       return;
     }
+    if (delta <= 0) {
+      setPull(0);
+      return;
+    }
+    /* Do not block browser scroll until user clearly pulls down to refresh */
+    if (delta < PULL_ARM_PX) {
+      return;
+    }
     e.preventDefault();
-    const damped = Math.min(MAX_PULL, delta * 0.45);
+    const damped = Math.min(MAX_PULL, (delta - PULL_ARM_PX) * 0.5);
     setPull(damped);
     if (damped > THRESHOLD * 0.85 && hapticReady.current) {
       hapticReady.current = false;

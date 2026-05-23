@@ -46,12 +46,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
   },
 ];
 
-export type BottomNavIcon =
-  | "home"
-  | "shorts"
-  | "live"
-  | "saved"
-  | "search";
+export type BottomNavIcon = "home" | "video" | "live" | "profile";
 
 export type BottomNavTab = {
   id: string;
@@ -63,15 +58,15 @@ export type BottomNavTab = {
   action?: "menu";
 };
 
-/** Production bottom nav — every item is a real route or menu */
+/** Production bottom nav — Home, Videos, Live, Profile */
 export const BOTTOM_NAV_TABS: BottomNavTab[] = [
   { id: "home", label: "Home", labelHi: "होम", href: "/", icon: "home" },
   {
-    id: "shorts",
-    label: "Shorts",
-    labelHi: "रील्स",
+    id: "videos",
+    label: "Videos",
+    labelHi: "वीडियो",
     href: "/shorts",
-    icon: "shorts",
+    icon: "video",
   },
   {
     id: "live",
@@ -81,18 +76,11 @@ export const BOTTOM_NAV_TABS: BottomNavTab[] = [
     icon: "live",
   },
   {
-    id: "saved",
-    label: "Saved",
-    labelHi: "सेव्ड",
+    id: "profile",
+    label: "Profile",
+    labelHi: "प्रोफाइल",
     href: "/archive",
-    icon: "saved",
-  },
-  {
-    id: "search",
-    label: "Search",
-    labelHi: "खोज",
-    href: "/search",
-    icon: "search",
+    icon: "profile",
   },
 ];
 

@@ -4,10 +4,30 @@
 
 @media (max-width: 767px) {
   :root {
-    --app-tabs-height: 2.5rem;
+    --app-header-row: 2.5rem;
+    --app-tabs-height: 2.25rem;
     --app-header-total: calc(var(--app-header-row) + var(--app-tabs-height));
-    --bottom-nav-height: 3.5rem;
-    --bottom-nav-total: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0) + 0.25rem);
+    --bottom-nav-height: 3rem;
+    --bottom-nav-total: calc(
+      var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px)
+    );
+  }
+
+  /* Solid chrome — no transparency bleed */
+  .app-header,
+  .category-tabs {
+    background: var(--paper);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .app-header__row {
+    align-items: center;
+  }
+
+  .app-header__actions {
+    align-items: center;
+    gap: 0.0625rem;
   }
 }
 
@@ -15,9 +35,10 @@
 .header-live-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  min-height: 1.75rem;
-  padding: 0 0.5rem;
+  justify-content: center;
+  gap: 0.25rem;
+  min-height: 1.5rem;
+  padding: 0 0.4375rem;
   border-radius: var(--ds-radius-full);
   background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
   color: #fff;
@@ -37,52 +58,40 @@
 }
 
 .header-live-btn__dot {
-  width: 0.4rem;
-  height: 0.4rem;
+  width: 0.3125rem;
+  height: 0.3125rem;
   border-radius: 50%;
   background: #fff;
-  animation: nav-live-pulse 1.2s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 .header-icon-btn--lg {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 .header-icon-btn--lg svg {
-  width: 1.375rem;
-  height: 1.375rem;
-}
-
-@keyframes nav-live-pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.55;
-    transform: scale(0.85);
-  }
+  width: 1.125rem;
+  height: 1.125rem;
 }
 
 /* ── Premium bottom nav ── */
 .bottom-nav--premium {
   z-index: calc(var(--ds-z-chrome) - 1);
-  padding-bottom: env(safe-area-inset-bottom, 0);
-  background: color-mix(in srgb, var(--ds-surface-overlay) 92%, var(--paper));
+  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  background: var(--paper);
   border-top: 1px solid var(--rule);
-  box-shadow: 0 -8px 32px color-mix(in srgb, var(--ink-headline) 8%, transparent);
+  box-shadow: 0 -1px 0 var(--rule);
 }
 
 .bottom-nav--premium .bottom-nav__inner {
   display: flex;
-  justify-content: space-around;
-  align-items: stretch;
+  justify-content: space-evenly;
+  align-items: center;
   min-height: var(--bottom-nav-height);
-  max-width: 32rem;
+  max-width: 24rem;
   margin-inline: auto;
-  padding: 0.35rem 0.5rem 0.25rem;
+  padding: 0.2rem 0.75rem;
 }
 
 .bottom-nav--premium .bottom-nav__item {
@@ -91,10 +100,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
-  min-width: 3.5rem;
-  min-height: 3.25rem;
-  padding: 0.25rem;
+  gap: 0.125rem;
+  min-width: 0;
+  max-width: 4.5rem;
+  min-height: 2.625rem;
+  padding: 0.125rem 0.25rem;
   border: none;
   background: transparent;
   color: var(--ink-muted);
@@ -114,8 +124,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2rem;
+  height: 2rem;
   border-radius: var(--ds-radius-md);
   transition:
     background var(--ds-duration-fast) var(--ds-ease),
@@ -123,8 +133,8 @@
 }
 
 .bottom-nav--premium .bottom-nav__icon {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   stroke-width: 1.85;
   transition: color var(--ds-duration-fast) var(--ds-ease);
 }
@@ -174,25 +184,7 @@
 }
 
 .bottom-nav__live-ring {
-  position: absolute;
-  inset: -2px;
-  border-radius: inherit;
-  border: 2px solid var(--ds-live);
-  opacity: 0.6;
-  animation: nav-ring-pulse 2s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes nav-ring-pulse {
-  0%,
-  100% {
-    opacity: 0.35;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.05);
-  }
+  display: none;
 }
 
 /* ── Slide-out drawer ── */
@@ -423,8 +415,7 @@
     animation: none;
   }
 
-  .header-live-btn__dot,
-  .bottom-nav__live-ring {
+  .header-live-btn__dot {
     animation: none;
   }
 }

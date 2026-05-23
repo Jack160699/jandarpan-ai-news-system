@@ -38,6 +38,22 @@
   position: relative;
 }
 
+@media (max-width: 767px) {
+  .app-shell {
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .app-shell__main,
+  .route-transition-host,
+  .route-transition__viewport {
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
+  }
+}
+
 /* Chrome stays painted during route change */
 .app-shell .app-header,
 .app-shell .bottom-nav--premium,

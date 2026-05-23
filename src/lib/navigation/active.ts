@@ -16,16 +16,12 @@ export function isBottomNavActive(
   switch (tab.id) {
     case "home":
       return pathname === "/" && !hash;
-    case "shorts":
+    case "videos":
       return pathname === "/shorts" || pathname.startsWith("/shorts/");
     case "live":
       return pathname === "/live" || pathname.startsWith("/live/");
-    case "saved":
-      return pathname === "/archive" || pathname.startsWith("/archive");
-    case "search":
-      return pathname === "/search";
     case "profile":
-      return false;
+      return pathname === "/archive" || pathname.startsWith("/archive");
     default:
       return false;
   }

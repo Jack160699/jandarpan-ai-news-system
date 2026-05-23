@@ -63,7 +63,7 @@ const dmMono = DM_Mono({
   display: "swap",
 });
 
-const fontClassName = `${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${notoBengali.variable} ${notoTamil.variable} ${dmMono.variable} native-scroll h-full`;
+const fontClassName = `${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${notoBengali.variable} ${notoTamil.variable} ${dmMono.variable} native-scroll min-h-full`;
 
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenantConfig();

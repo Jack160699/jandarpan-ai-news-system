@@ -10,28 +10,20 @@ import {
 import { triggerHaptic } from "@/lib/mobile/haptics";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
-import {
-  IconHome,
-  IconLive,
-  IconSaved,
-  IconSearch,
-  IconShorts,
-} from "./NavIcons";
+import { IconHome, IconLive, IconProfile, IconVideo } from "./NavIcons";
 
 const ICONS = {
   home: IconHome,
-  shorts: IconShorts,
+  video: IconVideo,
   live: IconLive,
-  saved: IconSaved,
-  search: IconSearch,
+  profile: IconProfile,
 } as const;
 
 const TAB_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]> = {
   home: "home",
-  shorts: "shorts",
+  videos: "video",
   live: "live",
-  saved: "saved",
-  search: "search",
+  profile: "profile",
 };
 
 export function BottomNav() {
@@ -63,9 +55,6 @@ export function BottomNav() {
               }}
             >
               <span className="bottom-nav__icon-wrap">
-                {isLive ? (
-                  <span className="bottom-nav__live-ring" aria-hidden />
-                ) : null}
                 <Icon className="bottom-nav__icon" />
               </span>
               <span className="bottom-nav__label">{label}</span>

@@ -45,7 +45,7 @@ export function AppChrome({ children }: AppChromeProps) {
       <NavigationProvider>
         <NativeTouchLayer>
           <div
-            className="app-shell has-bottom-nav has-hl-mini flex min-h-full flex-col"
+            className="app-shell has-bottom-nav has-hl-mini flex min-h-dvh flex-col"
             data-hydrated="false"
           >
             <AppHydration />
