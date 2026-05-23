@@ -21,8 +21,8 @@
 
 .nr-ticker--sticky {
   position: sticky;
-  top: var(--ls-header-total, var(--app-header-total, 88px));
-  z-index: calc(var(--ds-z-chrome) - 2);
+  top: var(--rf-sticky-ticker, var(--ls-header-total));
+  z-index: var(--rf-z-sticky-ticker, calc(var(--ds-z-chrome) - 6));
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
 }
 

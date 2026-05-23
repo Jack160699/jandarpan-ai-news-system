@@ -52,7 +52,7 @@ export function AppChrome({ children }: AppChromeProps) {
             <SkipLink />
             <NavProgress />
             <LanguageGate />
-            <div className="nr-wrap hidden md:block">
+            <div className="app-container rf-tablet-up">
               <AdSlot slotId="global_header" />
             </div>
             <AppHeader />

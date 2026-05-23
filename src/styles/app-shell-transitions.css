@@ -211,7 +211,7 @@
 .app-shell__main .feed-section,
 .app-shell__main .nr-section,
 .app-shell__main .hp-lazy-section {
-  scroll-margin-top: calc(var(--ls-header-total, var(--app-header-total, 88px)) + 0.25rem);
+  scroll-margin-top: var(--rf-sticky-scroll-margin);
 }
 
 .app-shell__main .motion-feed {

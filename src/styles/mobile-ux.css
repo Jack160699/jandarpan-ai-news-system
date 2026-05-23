@@ -12,11 +12,6 @@ html.native-scroll {
     text-size-adjust: 100%;
   }
 
-  body {
-    padding-left: var(--ls-safe-left);
-    padding-right: var(--ls-safe-right);
-  }
-
   .category-tabs__scroll {
     scroll-padding-inline: var(--ls-gutter);
   }
@@ -27,7 +22,7 @@ html.native-scroll {
 
   .home-news-flow,
   .mobile-comfort {
-    scroll-padding-top: calc(var(--ls-header-total) + var(--ls-safe-top) + 0.375rem);
+    scroll-padding-top: var(--rf-sticky-scroll-margin);
   }
 
   /* Feed rhythm */

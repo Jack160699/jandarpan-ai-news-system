@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RF_MEDIA } from "@/lib/layout/breakpoints";
 
 export function useMediaQuery(query: string) {
   const [matches, setMatches] = useState(false);
@@ -16,6 +17,22 @@ export function useMediaQuery(query: string) {
   return matches;
 }
 
+/** ≤767px — mobile chrome, bottom nav, stacked layout */
 export function useIsMobile() {
-  return useMediaQuery("(max-width: 767px)");
+  return useMediaQuery(RF_MEDIA.mobile);
+}
+
+/** ≥768px */
+export function useIsTabletUp() {
+  return useMediaQuery(RF_MEDIA.tablet);
+}
+
+/** ≥1024px */
+export function useIsLaptopUp() {
+  return useMediaQuery(RF_MEDIA.laptop);
+}
+
+/** ≥1440px */
+export function useIsDesktop() {
+  return useMediaQuery(RF_MEDIA.desktop);
 }

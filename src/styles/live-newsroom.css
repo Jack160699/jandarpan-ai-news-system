@@ -66,15 +66,9 @@
 
 /* ── New updates banner ── */
 .live-updates-banner {
-  position: sticky;
-  top: calc(var(--ls-header-total, var(--app-header-total, 56px)) + var(--ls-safe-top, 0px) + 0.25rem);
-  z-index: calc(var(--ds-z-chrome) - 2);
   display: flex;
   align-items: stretch;
   gap: 0.25rem;
-  margin: 0 auto 0.75rem;
-  max-width: min(100%, 28rem);
-  padding-inline: var(--nr-gutter, 1rem);
   pointer-events: none;
 }
 

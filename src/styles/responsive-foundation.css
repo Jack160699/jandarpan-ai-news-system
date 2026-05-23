@@ -1,0 +1,500 @@
+/**
+ * Responsive Foundation — single source of truth
+ * Breakpoints: mobile ≤767 · tablet 768–1023 · laptop 1024–1439 · desktop ≥1440
+ * Inspired by Bloomberg / Google News / BBC / NYT / Inshorts density patterns
+ */
+
+/* ══════════════════════════════════════════════════════════════
+   BREAKPOINT REFERENCE (use in @media only)
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --rf-bp-mobile-max: 767px;
+  --rf-bp-tablet: 768px;
+  --rf-bp-laptop: 1024px;
+  --rf-bp-desktop: 1440px;
+
+  /* Safe area */
+  --rf-safe-top: env(safe-area-inset-top, 0px);
+  --rf-safe-right: env(safe-area-inset-right, 0px);
+  --rf-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --rf-safe-left: env(safe-area-inset-left, 0px);
+
+  /* ── Gutters (mobile-first) ── */
+  --rf-gutter: 1rem;
+  --rf-gutter-min: 0.875rem;
+
+  /* ── Container widths ── */
+  --rf-container-max: 100%;
+  --rf-container-editorial: 68rem;
+  --rf-container-reading: 40rem;
+
+  /* ── Section & card rhythm ── */
+  --rf-section-gap: 0.625rem;
+  --rf-section-gap-md: 0.875rem;
+  --rf-section-gap-lg: 1.25rem;
+  --rf-card-gap: 0.5rem;
+  --rf-card-pad: 0.75rem;
+  --rf-stack-gap: 0.375rem;
+
+  /* ── Chrome dimensions (mobile) ── */
+  --rf-header-row: 3.25rem;
+  --rf-tabs-height: 2.25rem;
+  --rf-header-chrome: calc(var(--rf-header-row) + var(--rf-tabs-height));
+  --rf-bottom-nav: 3rem;
+  --rf-bottom-nav-total: calc(var(--rf-bottom-nav) + var(--rf-safe-bottom));
+  --rf-touch-target: 2.75rem;
+  --rf-ticker-height: 2rem;
+  --rf-content-pad-bottom: calc(var(--rf-bottom-nav-total) + 0.5rem);
+
+  /* ── Sticky stack (computed tops) ── */
+  --rf-sticky-chrome: calc(var(--rf-header-chrome) + var(--rf-safe-top));
+  --rf-sticky-ticker: var(--rf-sticky-chrome);
+  --rf-sticky-scroll-margin: calc(var(--rf-sticky-chrome) + 0.25rem);
+
+  /* ── Hero caps ── */
+  --rf-hero-ratio: 16 / 9;
+  --rf-hero-max-h: clamp(9rem, 42vw, 11rem);
+  --rf-hero-headline: clamp(1rem, 2.5vw + 0.5rem, 1.25rem);
+
+  /* ── Typography (density-aware) ── */
+  --rf-text-2xs: 0.5625rem;
+  --rf-text-xs: 0.625rem;
+  --rf-text-sm: 0.75rem;
+  --rf-text-base: 0.8125rem;
+  --rf-text-md: 0.9375rem;
+  --rf-text-lg: 1.0625rem;
+  --rf-text-xl: 1.25rem;
+  --rf-text-section: clamp(0.9375rem, 1vw + 0.75rem, 1.125rem);
+  --rf-text-headline-sm: clamp(1rem, 2.2vw + 0.4rem, 1.25rem);
+  --rf-text-headline-md: clamp(1.125rem, 1.2vw + 0.85rem, 1.4375rem);
+  --rf-text-headline-lg: clamp(1.25rem, 1.5vw + 0.65rem, 1.625rem);
+
+  /* Z-index bands */
+  --rf-z-chrome: var(--ds-z-chrome, 60);
+  --rf-z-sticky-sub: calc(var(--rf-z-chrome) - 4);
+  --rf-z-sticky-ticker: calc(var(--rf-z-chrome) - 6);
+
+  /* Legacy aliases → foundation (one mapping) */
+  --ls-gutter: var(--rf-gutter);
+  --ls-container-max: var(--rf-container-max);
+  --ls-container-editorial: var(--rf-container-editorial);
+  --ls-header-row: var(--rf-header-row);
+  --ls-tabs-height: var(--rf-tabs-height);
+  --ls-header-total: var(--rf-header-chrome);
+  --ls-bottom-nav-bar: var(--rf-bottom-nav);
+  --ls-bottom-nav-total: var(--rf-bottom-nav-total);
+  --ls-section-gap: var(--rf-section-gap);
+  --ls-section-gap-lg: var(--rf-section-gap-lg);
+  --ls-content-pad-bottom: var(--rf-content-pad-bottom);
+  --ls-safe-top: var(--rf-safe-top);
+  --ls-safe-right: var(--rf-safe-right);
+  --ls-safe-bottom: var(--rf-safe-bottom);
+  --ls-safe-left: var(--rf-safe-left);
+  --ls-touch-target: var(--rf-touch-target);
+  --ls-hero-ratio: var(--rf-hero-ratio);
+  --ls-hero-max-h-mobile: var(--rf-hero-max-h);
+  --ls-hero-max-h-desktop: clamp(11rem, 22vw, 13.5rem);
+  --app-header-row: var(--rf-header-row);
+  --app-tabs-height: var(--rf-tabs-height);
+  --app-header-total: var(--rf-header-chrome);
+  --bottom-nav-height: var(--rf-bottom-nav);
+  --bottom-nav-total: var(--rf-bottom-nav-total);
+  --space-gutter: var(--rf-gutter);
+  --ds-gutter: var(--rf-gutter);
+  --ds-content-max: var(--rf-container-max);
+  --ds-section-gap: var(--rf-section-gap-lg);
+  --max-editorial: var(--rf-container-editorial);
+}
+
+/* Tablet */
+@media (min-width: 768px) {
+  :root {
+    --rf-gutter: clamp(1rem, 2.5vw, 1.5rem);
+    --rf-container-max: min(100vw, 80rem);
+    --rf-header-row: 3.75rem;
+    --rf-tabs-height: 0px;
+    --rf-header-chrome: var(--rf-header-row);
+    --rf-content-pad-bottom: 0;
+    --rf-section-gap: 0.75rem;
+    --rf-section-gap-md: 1rem;
+    --rf-section-gap-lg: 1.5rem;
+    --rf-card-gap: 0.625rem;
+    --rf-card-pad: 1rem;
+    --rf-sticky-chrome: calc(var(--rf-header-chrome) + var(--rf-safe-top));
+    --rf-sticky-ticker: var(--rf-sticky-chrome);
+    --rf-sticky-scroll-margin: calc(var(--rf-sticky-chrome) + 0.5rem);
+    --rf-hero-max-h: clamp(11rem, 28vw, 13.5rem);
+    --rf-hero-headline: clamp(1.125rem, 1vw + 0.85rem, 1.4375rem);
+  }
+}
+
+/* Laptop */
+@media (min-width: 1024px) {
+  :root {
+    --rf-gutter: 1.5rem;
+    --rf-container-max: min(100vw, 80rem);
+    --rf-section-gap: 0.875rem;
+    --rf-section-gap-lg: 1.5rem;
+    --rf-card-gap: 0.75rem;
+  }
+}
+
+/* Desktop — cap ultra-wide stretch */
+@media (min-width: 1440px) {
+  :root {
+    --rf-gutter: 1.75rem;
+    --rf-container-max: min(100vw, 90rem);
+  }
+}
+
+/* Ultra-narrow phones */
+@media (max-width: 359px) {
+  :root {
+    --rf-gutter: var(--rf-gutter-min);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DOCUMENT — viewport, overflow, scaling
+   ══════════════════════════════════════════════════════════════ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  overflow-x: clip;
+  max-width: 100vw;
+}
+
+html.native-scroll,
+html.native-app {
+  height: auto;
+  min-height: 100%;
+  overflow-y: visible;
+}
+
+html.native-scroll body,
+html.native-app body {
+  height: auto;
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+@media (max-width: 767px) {
+  body {
+    padding-left: var(--rf-safe-left);
+    padding-right: var(--rf-safe-right);
+  }
+
+  .has-bottom-nav main,
+  .has-bottom-nav .page-shell,
+  .has-bottom-nav .nr-root {
+    padding-bottom: var(--rf-content-pad-bottom);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UNIFIED CONTAINER SYSTEM
+   ══════════════════════════════════════════════════════════════ */
+
+.app-container,
+.nr-wrap,
+.editorial-container {
+  width: 100%;
+  max-width: var(--rf-container-max);
+  margin-inline: auto;
+  padding-inline: var(--rf-gutter);
+  box-sizing: border-box;
+}
+
+.editorial-container {
+  width: min(100% - var(--rf-gutter) * 2, var(--rf-container-editorial));
+}
+
+.app-container--editorial {
+  max-width: var(--rf-container-editorial);
+}
+
+.app-container--reading {
+  max-width: var(--rf-container-reading);
+}
+
+.app-container--flush {
+  padding-inline: 0;
+}
+
+.app-container--bleed {
+  max-width: none;
+  padding-inline: 0;
+}
+
+/* Full-bleed bands inside centered pages */
+.app-bleed-band {
+  width: 100vw;
+  max-width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: var(--rf-gutter);
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .app-bleed-band {
+    width: 100%;
+    max-width: var(--rf-container-max);
+    margin-inline: auto;
+    padding-inline: 0;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LAYOUT MODE UTILITIES — mobile vs desktop logic separation
+   ══════════════════════════════════════════════════════════════ */
+
+.rf-mobile-only {
+  display: block;
+}
+
+.rf-tablet-up {
+  display: none;
+}
+
+.rf-desktop-only {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .rf-mobile-only {
+    display: none !important;
+  }
+
+  .rf-tablet-up {
+    display: block;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rf-desktop-only {
+    display: block;
+  }
+}
+
+/* Grid shells — mobile stack, desktop columns */
+.rf-layout-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rf-stack-gap);
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .rf-layout-stack--tablet-row {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--rf-card-gap);
+  }
+
+  .rf-layout-stack--tablet-row > * {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rf-layout-grid-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+    gap: var(--rf-section-gap-lg);
+    align-items: start;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STICKY STACK — single chrome block, sub-layers use tokens
+   ══════════════════════════════════════════════════════════════ */
+
+.rf-sticky-chrome {
+  position: sticky;
+  top: 0;
+  z-index: var(--rf-z-chrome);
+}
+
+.rf-sticky-below-chrome {
+  position: sticky;
+  top: var(--rf-sticky-chrome);
+  z-index: var(--rf-z-sticky-ticker);
+}
+
+/* Scroll targets account for chrome */
+.news-scroll-target,
+.app-shell__main .feed-section,
+.app-shell__main .nr-section,
+.app-shell__main .hp-lazy-section,
+.home-news-flow,
+.mobile-comfort {
+  scroll-margin-top: var(--rf-sticky-scroll-margin);
+}
+
+@media (max-width: 767px) {
+  .home-news-flow,
+  .mobile-comfort {
+    scroll-padding-top: var(--rf-sticky-scroll-margin);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   HOMEPAGE DAILY DENSITY — overrides legacy premium spacing
+   ══════════════════════════════════════════════════════════════ */
+
+.nr--daily {
+  --nr-max: var(--rf-container-max);
+  --nr-pad: var(--rf-gutter);
+  --nr-gap: var(--rf-section-gap);
+  --nr-section-pad: var(--rf-section-gap);
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
+.nr--daily .nr-section {
+  padding-block: var(--rf-section-gap);
+  content-visibility: auto;
+  contain-intrinsic-size: auto 240px;
+}
+
+.nr--daily .nr-section + .nr-section {
+  border-top: 1px solid var(--rule);
+}
+
+.nr--daily .nr-section__header {
+  margin-bottom: var(--rf-card-gap);
+}
+
+.nr--daily .nr-section__title {
+  font-size: var(--rf-text-section);
+  margin: 0.2rem 0 0;
+}
+
+.nr-root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Prevent legacy homepage from re-padding wraps */
+.nr-wrap,
+.home-news-flow,
+.mobile-comfort {
+  padding-inline: var(--rf-gutter);
+}
+
+@media (min-width: 768px) {
+  .nr--daily .nr-masthead--daily {
+    display: block;
+  }
+}
+
+@media (max-width: 767px) {
+  .nr--daily .nr-masthead--daily {
+    display: none;
+  }
+}
+
+/* Hero zone — compact, no giant blocks */
+.nr-hero-zone--daily {
+  padding-block: var(--rf-section-gap) var(--rf-stack-gap);
+}
+
+.nr-breaking-hero--daily .nr-breaking-hero__headline {
+  font-size: var(--rf-hero-headline);
+}
+
+.nr-breaking-hero--daily .nr-breaking-hero__visual {
+  aspect-ratio: var(--rf-hero-ratio);
+  max-height: var(--rf-hero-max-h);
+}
+
+@media (min-width: 768px) {
+  .nr-hero-zone--daily {
+    padding-block: var(--rf-section-gap-md) var(--rf-section-gap);
+  }
+
+  .nr-breaking-hero--daily .nr-breaking-hero__visual {
+    max-height: var(--ls-hero-max-h-desktop);
+  }
+}
+
+.feed-section {
+  padding-block: var(--rf-section-gap);
+}
+
+.feed-section-header {
+  padding-block: var(--rf-stack-gap) var(--rf-stack-gap);
+  margin-bottom: var(--rf-stack-gap);
+}
+
+.feed-section-header__title {
+  font-size: var(--rf-text-md);
+}
+
+/* Ticker: sticky mobile only, in-flow desktop */
+.nr-ticker--live.nr-ticker--sticky {
+  top: var(--rf-sticky-ticker);
+}
+
+@media (min-width: 768px) {
+  .nr-ticker--live.nr-ticker--sticky {
+    position: relative;
+    top: auto;
+    z-index: auto;
+    box-shadow: none;
+  }
+}
+
+/* Updates banner — in-flow, not competing with ticker stack */
+.live-updates-banner {
+  position: relative;
+  top: auto;
+  z-index: var(--rf-z-sticky-sub);
+  margin: 0 auto var(--rf-section-gap);
+  max-width: min(100% - var(--rf-gutter) * 2, 28rem);
+  padding-inline: var(--rf-gutter);
+}
+
+/* Legacy 640px grids → align to tablet breakpoint for daily home */
+@media (min-width: 768px) {
+  .nr--daily .nr-hero-stories--daily .nr-hero-story-card {
+    flex: 0 0 min(42vw, 220px);
+  }
+}
+
+@media (max-width: 767px) {
+  .nr--daily .nr-hero-stories--daily .nr-hero-story-card {
+    flex: 0 0 min(72vw, 260px);
+  }
+}
+
+/* ── Align legacy 640px grids to tablet breakpoint (768px) ── */
+@media (min-width: 640px) and (max-width: 767px) {
+  .feed-grid--2 {
+    grid-template-columns: 1fr;
+  }
+
+  .feed-grid--2 .feed-card:nth-child(odd) {
+    border-right: none;
+    padding-right: 0;
+  }
+
+  .feed-grid--2 .feed-card:nth-child(even) {
+    padding-left: 0;
+  }
+
+  .home-hero {
+    grid-template-columns: 1fr;
+  }
+}

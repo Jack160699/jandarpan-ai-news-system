@@ -1,161 +1,44 @@
 /**
- * Layout System — single source of truth for responsive chrome, spacing, typography
- * Breakpoints: mobile ≤767 · tablet 768–1023 · laptop 1024–1439 · desktop ≥1440
+ * Layout System — app chrome (header, tabs, bottom nav)
+ * Tokens & containers: responsive-foundation.css
  */
 
-/* ── Breakpoint tokens (reference only) ── */
+/* Typography aliases from foundation */
 :root {
-  --ls-bp-sm: 767px;
-  --ls-bp-md: 1023px;
-  --ls-bp-lg: 1439px;
-
-  /* Safe area */
-  --ls-safe-top: env(safe-area-inset-top, 0px);
-  --ls-safe-right: env(safe-area-inset-right, 0px);
-  --ls-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --ls-safe-left: env(safe-area-inset-left, 0px);
-
-  /* ── Mobile-first chrome (target: header row 56px, tabs 32px, bottom bar ~48px) ── */
-  --ls-header-row: 3.5rem;
-  --ls-tabs-height: 2rem;
-  --ls-header-total: calc(var(--ls-header-row) + var(--ls-tabs-height));
-  --ls-bottom-nav-bar: 2.875rem;
-  --ls-bottom-nav-total: calc(var(--ls-bottom-nav-bar) + var(--ls-safe-bottom));
-  --ls-touch-target: 2.75rem;
+  --ls-text-2xs: var(--rf-text-2xs);
+  --ls-text-xs: var(--rf-text-xs);
+  --ls-text-sm: var(--rf-text-sm);
+  --ls-text-base: var(--rf-text-base);
+  --ls-text-md: var(--rf-text-md);
+  --ls-text-lg: var(--rf-text-lg);
+  --ls-text-xl: var(--rf-text-xl);
+  --ls-text-headline-sm: var(--rf-text-headline-sm);
+  --ls-text-headline-md: var(--rf-text-headline-md);
+  --ls-text-headline-lg: var(--rf-text-headline-lg);
+  --ls-text-nav: var(--rf-text-sm);
+  --ls-text-tab: var(--rf-text-sm);
+  --ls-text-bottom-nav: var(--rf-text-2xs);
   --ls-icon-sm: 1.125rem;
   --ls-icon-md: 1.25rem;
-
-  /* Layout */
-  --ls-gutter: 1rem;
   --ls-gutter-max: 1.25rem;
-  --ls-container-max: 72rem;
-  --ls-container-editorial: var(--max-editorial, 68rem);
-  --ls-section-gap: 0.625rem;
-  --ls-section-gap-lg: 1rem;
-  --ls-content-pad-bottom: calc(var(--ls-bottom-nav-total) + 0.5rem);
-
-  /* Typography scale */
-  --ls-text-2xs: 0.5625rem;
-  --ls-text-xs: 0.625rem;
-  --ls-text-sm: 0.75rem;
-  --ls-text-base: 0.8125rem;
-  --ls-text-md: 0.9375rem;
-  --ls-text-lg: 1.0625rem;
-  --ls-text-xl: 1.25rem;
-  --ls-text-headline-sm: clamp(1rem, 2.8vw + 0.35rem, 1.25rem);
-  --ls-text-headline-md: clamp(1.125rem, 1.5vw + 0.75rem, 1.5rem);
-  --ls-text-headline-lg: clamp(1.25rem, 2vw + 0.5rem, 1.75rem);
-  --ls-text-nav: 0.75rem;
-  --ls-text-tab: 0.75rem;
-  --ls-text-bottom-nav: 0.5625rem;
-
-  /* Hero */
-  --ls-hero-ratio: 16 / 9;
-  --ls-hero-max-h-mobile: 11rem;
-  --ls-hero-max-h-desktop: 13.5rem;
-
-  /* Legacy aliases — one mapping, no conflicting overrides elsewhere */
-  --app-header-row: var(--ls-header-row);
-  --app-tabs-height: var(--ls-tabs-height);
-  --app-header-total: var(--ls-header-total);
-  --bottom-nav-height: var(--ls-bottom-nav-bar);
-  --bottom-nav-total: var(--ls-bottom-nav-total);
-  --space-gutter: var(--ls-gutter);
-  --safe-top: var(--ls-safe-top);
-  --safe-right: var(--ls-safe-right);
-  --safe-bottom: var(--ls-safe-bottom);
-  --safe-left: var(--ls-safe-left);
-  --touch-min: var(--ls-touch-target);
+  --touch-min: var(--rf-touch-target);
 }
 
-/* Tablet */
 @media (min-width: 768px) {
   :root {
-    --ls-header-row: 4rem;
-    --ls-tabs-height: 0px;
-    --ls-header-total: var(--ls-header-row);
-    --ls-gutter: clamp(1rem, 2.5vw, 1.5rem);
-    --ls-section-gap: 0.75rem;
-    --ls-section-gap-lg: 1.25rem;
-    --ls-content-pad-bottom: 0;
-    --ls-text-tab: 0.8125rem;
-    --ls-text-nav: 0.8125rem;
-    --ls-hero-max-h-desktop: 15rem;
-  }
-}
-
-/* Laptop */
-@media (min-width: 1024px) {
-  :root {
-    --ls-gutter: 1.5rem;
-    --ls-section-gap: 0.875rem;
-    --ls-section-gap-lg: 1.5rem;
-  }
-}
-
-/* Desktop */
-@media (min-width: 1440px) {
-  :root {
-    --ls-gutter: 1.75rem;
+    --ls-text-tab: var(--rf-text-base);
+    --ls-text-nav: var(--rf-text-base);
   }
 }
 
 /* ══════════════════════════════════════════════════════════════
-   DOCUMENT / SHELL — natural scroll, no flex traps
-   ══════════════════════════════════════════════════════════════ */
-
-html.native-scroll,
-html.native-app {
-  height: auto;
-  min-height: 100%;
-  overflow-y: visible;
-}
-
-html.native-scroll body,
-html.native-app body {
-  height: auto;
-  min-height: 100dvh;
-  overflow-x: hidden;
-  overflow-y: visible;
-  overscroll-behavior-y: auto;
-}
-
-@media (max-width: 767px) {
-  html,
-  body {
-    overflow-x: hidden;
-    max-width: 100vw;
-  }
-
-  .app-shell {
-    min-height: 100dvh;
-    height: auto;
-    overflow: visible;
-  }
-
-  .ptr-root,
-  .app-shell__main,
-  .route-transition-host,
-  .route-transition__viewport {
-    flex: 0 0 auto;
-    min-height: auto;
-    overflow: visible;
-  }
-
-  .has-bottom-nav main,
-  .has-bottom-nav .page-shell {
-    padding-bottom: var(--ls-content-pad-bottom);
-  }
-}
-
-/* ══════════════════════════════════════════════════════════════
-   APP HEADER
+   APP HEADER — one sticky unit (brand + tabs on mobile)
    ══════════════════════════════════════════════════════════════ */
 
 .app-header {
   position: sticky;
   top: 0;
-  z-index: var(--ds-z-chrome);
+  z-index: var(--rf-z-chrome);
   background: var(--paper);
   border-bottom: 1px solid var(--rule);
   backdrop-filter: none;
@@ -167,11 +50,13 @@ html.native-app body {
   flex-wrap: wrap;
   align-items: center;
   width: 100%;
-  min-height: var(--ls-header-row);
-  padding-inline: max(var(--ls-gutter), var(--ls-safe-left))
-    max(var(--ls-gutter), var(--ls-safe-right));
-  padding-top: var(--ls-safe-top);
+  max-width: 100%;
+  min-height: var(--rf-header-row);
+  padding-inline: max(var(--rf-gutter), var(--rf-safe-left))
+    max(var(--rf-gutter), var(--rf-safe-right));
+  padding-top: var(--rf-safe-top);
   gap: 0;
+  box-sizing: border-box;
 }
 
 .app-header__brand {
@@ -188,6 +73,7 @@ html.native-app body {
   order: 3;
   width: 100%;
   min-width: 0;
+  flex: 0 0 100%;
 }
 
 .app-header__actions {
@@ -228,7 +114,6 @@ html.native-app body {
   color: var(--ink-faint);
 }
 
-/* Mobile logo banner */
 .tenant-logo--banner {
   max-width: min(46vw, 9rem);
 }
@@ -244,13 +129,12 @@ html.native-app body {
   background: color-mix(in srgb, #fff 94%, transparent);
 }
 
-/* Header actions */
 .header-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--ls-touch-target);
-  height: var(--ls-touch-target);
+  width: var(--rf-touch-target);
+  height: var(--rf-touch-target);
   border: none;
   background: transparent;
   color: var(--ink-muted);
@@ -268,11 +152,6 @@ html.native-app body {
 .header-icon-btn--lg {
   width: 2.25rem;
   height: 2.25rem;
-}
-
-.header-icon-btn--lg svg {
-  width: var(--ls-icon-sm);
-  height: var(--ls-icon-sm);
 }
 
 .header-icon-btn--lang {
@@ -322,7 +201,7 @@ html.native-app body {
 .header-menu button {
   display: block;
   width: 100%;
-  min-height: var(--ls-touch-target);
+  min-height: var(--rf-touch-target);
   padding: 0.5rem 1rem;
   text-align: left;
   font-family: var(--font-ui);
@@ -332,21 +211,21 @@ html.native-app body {
   background: transparent;
 }
 
-/* Desktop: logo | categories | actions in one 64px row */
+/* Desktop: logo | categories | actions — single row */
 @media (min-width: 768px) {
+  .app-header {
+    top: var(--rf-safe-top);
+  }
+
   .app-header__shell {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 2.25fr) minmax(0, 1fr);
     align-items: center;
     flex-wrap: nowrap;
-    max-width: var(--ls-container-editorial);
+    max-width: var(--rf-container-editorial);
     margin-inline: auto;
     padding-top: 0;
-    top: var(--ls-safe-top);
-  }
-
-  .app-header {
-    top: var(--ls-safe-top);
+    min-height: var(--rf-header-row);
   }
 
   .app-header__brand {
@@ -360,6 +239,7 @@ html.native-app body {
     order: unset;
     grid-column: 2;
     width: auto;
+    flex: none;
     justify-self: center;
     max-width: 100%;
   }
@@ -390,23 +270,26 @@ html.native-app body {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   CATEGORY TABS
+   CATEGORY TABS — part of header chrome (no separate sticky)
    ══════════════════════════════════════════════════════════════ */
 
 .category-tabs {
   position: relative;
-  z-index: calc(var(--ds-z-chrome) - 1);
+  z-index: 1;
   background: var(--paper);
-  border-bottom: 1px solid var(--rule);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  min-height: var(--ls-tabs-height);
+  border-bottom: none;
+  min-height: var(--rf-tabs-height);
 }
 
 @media (max-width: 767px) {
   .category-tabs {
-    position: sticky;
-    top: calc(var(--ls-header-row) + var(--ls-safe-top));
+    position: static;
+    border-bottom: none;
+    background: transparent;
+  }
+
+  .app-header__center {
+    border-top: 1px solid var(--rule);
   }
 }
 
@@ -416,6 +299,10 @@ html.native-app body {
     border-bottom: none;
     min-height: auto;
     background: transparent;
+  }
+
+  .app-header__center {
+    border-top: none;
   }
 }
 
@@ -428,7 +315,7 @@ html.native-app body {
   padding: 0 0.25rem;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-  min-height: var(--ls-tabs-height);
+  min-height: var(--rf-tabs-height);
 }
 
 @media (min-width: 768px) {
@@ -463,7 +350,7 @@ html.native-app body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--ls-tabs-height);
+  min-height: var(--rf-tabs-height);
   padding: 0 0.625rem;
   font-family: var(--font-ui);
   font-size: var(--ls-text-tab);
@@ -481,7 +368,6 @@ html.native-app body {
   .category-tab {
     min-height: 2.25rem;
     padding: 0 0.75rem;
-    font-size: var(--ls-text-tab);
   }
 
   .category-tab:hover {
@@ -494,14 +380,11 @@ html.native-app body {
 .category-tab.is-active {
   color: var(--ink-headline);
   font-weight: 700;
-}
-
-.category-tab.is-active {
   border-bottom: none;
 }
 
 /* ══════════════════════════════════════════════════════════════
-   BOTTOM NAVIGATION (mobile)
+   BOTTOM NAVIGATION (mobile only)
    ══════════════════════════════════════════════════════════════ */
 
 .bottom-nav {
@@ -509,13 +392,13 @@ html.native-app body {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: calc(var(--ds-z-chrome) - 2);
+  z-index: calc(var(--rf-z-chrome) - 2);
   background: var(--paper);
   border-top: 1px solid var(--rule);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  padding-bottom: var(--ls-safe-bottom);
-  min-height: var(--ls-bottom-nav-total);
+  padding-bottom: var(--rf-safe-bottom);
+  min-height: var(--rf-bottom-nav-total);
   box-shadow: 0 -1px 0 var(--rule);
 }
 
@@ -523,18 +406,13 @@ html.native-app body {
   .bottom-nav {
     display: none;
   }
-
-  .has-bottom-nav main,
-  .has-bottom-nav .page-shell {
-    padding-bottom: 0;
-  }
 }
 
 .bottom-nav--premium .bottom-nav__inner {
   display: flex;
   align-items: center;
   justify-content: space-evenly;
-  min-height: var(--ls-bottom-nav-bar);
+  min-height: var(--rf-bottom-nav);
   max-width: 22rem;
   margin-inline: auto;
   padding: 0.125rem 0.5rem;
@@ -604,7 +482,7 @@ html.native-app body {
 }
 
 .app-fab-stack {
-  bottom: calc(var(--ls-bottom-nav-total) + 0.375rem);
+  bottom: calc(var(--rf-bottom-nav-total) + 0.375rem);
 }
 
 @media (min-width: 768px) {
@@ -614,29 +492,11 @@ html.native-app body {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   HOMEPAGE — masthead, status, ticker, hero (density)
+   HOMEPAGE CHROME — masthead, status, hero, ticker density
    ══════════════════════════════════════════════════════════════ */
 
-.nr--daily {
-  --nr-pad: var(--ls-gutter);
-  --nr-section-pad: var(--ls-section-gap);
-}
-
-.nr-wrap,
-.home-news-flow,
-.mobile-comfort {
-  padding-inline: var(--ls-gutter);
-}
-
-/* Hide redundant in-page masthead on mobile (logo already in app header) */
-@media (max-width: 767px) {
-  .nr-masthead--daily {
-    display: none;
-  }
-}
-
 .nr-masthead--daily {
-  padding: 0.375rem var(--ls-gutter) 0.25rem;
+  padding: 0.375rem var(--rf-gutter) 0.25rem;
   border-bottom: 1px solid var(--rule);
 }
 
@@ -670,7 +530,7 @@ html.native-app body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem 0.375rem;
-  padding: 0.25rem var(--ls-gutter) 0.375rem;
+  padding: 0.25rem var(--rf-gutter) 0.375rem;
   font-family: var(--font-ui);
   font-size: var(--ls-text-xs);
   color: var(--ink-muted);
@@ -681,19 +541,8 @@ html.native-app body {
   color: var(--ink-body);
 }
 
-/* Ticker — compact */
 .nr-ticker--live {
-  min-height: 2rem;
-}
-
-.nr-ticker--sticky {
-  top: var(--ls-header-total);
-}
-
-@media (max-width: 767px) {
-  .nr-ticker--sticky {
-    top: calc(var(--ls-header-total) + var(--ls-safe-top));
-  }
+  min-height: var(--rf-ticker-height);
 }
 
 .nr-ticker__brand {
@@ -702,11 +551,6 @@ html.native-app body {
 
 .nr-ticker__live-pill {
   font-size: var(--ls-text-2xs);
-}
-
-/* Hero — daily stacked layout */
-.nr-hero-zone--daily {
-  padding-block: 0.375rem 0.25rem;
 }
 
 .nr-breaking-hero--daily {
@@ -719,7 +563,7 @@ html.native-app body {
 
 .nr-breaking-hero--daily .nr-breaking-hero__link {
   display: block;
-  padding: 0.625rem 0.75rem 0.75rem;
+  padding: var(--rf-card-pad);
   text-decoration: none;
   color: inherit;
 }
@@ -732,7 +576,6 @@ html.native-app body {
 .nr-breaking-hero--daily .nr-breaking-hero__headline {
   margin: 0;
   font-family: var(--font-hindi), var(--font-display), Georgia, serif;
-  font-size: var(--ls-text-headline-sm);
   font-weight: 700;
   line-height: 1.25;
   color: var(--ink-headline);
@@ -747,54 +590,17 @@ html.native-app body {
 
 .nr-breaking-hero--daily .nr-breaking-hero__visual {
   margin-top: 0.5rem;
-  aspect-ratio: var(--ls-hero-ratio);
-  max-height: var(--ls-hero-max-h-mobile);
   border-radius: var(--ds-radius-sm);
   overflow: hidden;
   position: relative;
   background: var(--paper-muted);
 }
 
-@media (min-width: 768px) {
-  .nr-breaking-hero--daily .nr-breaking-hero__headline {
-    font-size: var(--ls-text-headline-md);
-  }
-
-  .nr-breaking-hero--daily .nr-breaking-hero__visual {
-    max-height: var(--ls-hero-max-h-desktop);
-  }
-
-  .nr-hero-zone--daily {
-    padding-block: 0.5rem 0.375rem;
-  }
-}
-
 .nr-hero-zone__media-row--daily {
-  gap: 0.375rem;
-  margin-top: 0.375rem;
+  gap: var(--rf-card-gap);
+  margin-top: var(--rf-card-gap);
 }
 
-.feed-section {
-  padding-block: var(--ls-section-gap);
-}
-
-.feed-section-header {
-  padding-block: 0.375rem 0.25rem;
-  margin-bottom: 0.25rem;
-}
-
-.feed-section-header__title {
-  font-size: var(--ls-text-md);
-}
-
-.news-scroll-target,
-.app-shell__main .feed-section,
-.app-shell__main .nr-section,
-.app-shell__main .hp-lazy-section {
-  scroll-margin-top: calc(var(--ls-header-total) + var(--ls-safe-top) + 0.25rem);
-}
-
-/* Route loading brand */
 .route-loading__brand {
   display: flex;
   justify-content: center;
@@ -816,12 +622,7 @@ html.native-app body {
   margin-inline: auto;
 }
 
-/* Ultra-narrow */
 @media (max-width: 359px) {
-  :root {
-    --ls-gutter: 0.875rem;
-  }
-
   .tenant-logo--banner {
     max-width: min(44vw, 8.5rem);
   }

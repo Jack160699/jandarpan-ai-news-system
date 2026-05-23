@@ -49,8 +49,9 @@
   --ds-space-12: 3rem;
   --ds-space-16: 4rem;
   --ds-space-20: 5rem;
-  --ds-gutter: clamp(1rem, 4vw, 1.75rem);
-  --ds-section-gap: clamp(2.75rem, 6vw, 4.5rem);
+  /* Gutters & section rhythm — overridden by responsive-foundation.css */
+  --ds-gutter: 1rem;
+  --ds-section-gap: 1.25rem;
   --ds-card-pad: var(--ds-space-4);
   --ds-card-gap: var(--ds-space-3);
 
@@ -156,7 +157,7 @@
   --ds-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* ── Layout ── */
-  --ds-content-max: 72rem;
+  --ds-content-max: 100%;
   --ds-read-max: 40rem;
 
   /* ── Z-index ── */

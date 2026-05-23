@@ -3,10 +3,13 @@
  */
 
 .nr {
-  --nr-max: var(--ds-content-max);
-  --nr-pad: var(--ds-gutter);
-  --nr-gap: clamp(1.5rem, 4vw, 2.75rem);
+  --nr-max: var(--rf-container-max, var(--ds-content-max));
+  --nr-pad: var(--rf-gutter, var(--ds-gutter));
+  --nr-gap: var(--rf-section-gap-lg, 1.25rem);
   background: var(--paper);
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
 }
 
 .nr-root {
@@ -17,7 +20,7 @@
   width: 100%;
   max-width: var(--nr-max);
   margin-inline: auto;
-  padding-inline: var(--nr-pad);
+  /* horizontal padding: responsive-foundation.css (.app-container / .nr-wrap) */
 }
 
 .nr-section {
