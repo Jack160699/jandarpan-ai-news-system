@@ -11,11 +11,15 @@ export type TenantStatus = "active" | "suspended" | "trial";
 export type TenantBranding = {
   nameEn: string;
   nameHi: string;
+  /** PWA / compact chrome label */
+  shortNameEn?: string;
+  shortNameHi?: string;
   taglineEn: string;
   taglineHi: string;
   logoUrl: string;
   logoMarkUrl?: string;
   faviconUrl?: string;
+  ogImageUrl?: string;
   conceptLabel?: string;
 };
 

@@ -39,7 +39,7 @@ function extractSourceLabel(row: GeneratedArticleRow): string {
   if (typeof provider === "string" && provider) {
     return provider.replace(/_/g, " ");
   }
-  return "हमार छत्तीसगढ़ डेस्क";
+  return "जन दर्पण डेस्क";
 }
 
 function detectLive(row: GeneratedArticleRow): boolean {

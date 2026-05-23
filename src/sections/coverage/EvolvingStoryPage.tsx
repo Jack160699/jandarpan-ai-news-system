@@ -26,7 +26,7 @@ export function buildLiveCoverageMetadata(
     `${bundle.event.canonical_title} Live Updates`;
   const description =
     bundle.event.event_summary ??
-    `Ongoing coverage from ${bundle.event.source_count} sources — Hamar Chhattisgarh live desk.`;
+    `Ongoing coverage from ${bundle.event.source_count} sources — Jan Darpan Chhattisgarh live desk.`;
 
   return buildPageMetadata({
     title,
@@ -77,7 +77,7 @@ export function EvolvingStoryPage({ bundle }: EvolvingStoryPageProps) {
     coverageStartTime: event.created_at,
     publisher: {
       "@type": "NewsMediaOrganization",
-      name: "Hamar Chhattisgarh",
+      name: "Jan Darpan Chhattisgarh",
     },
   };
 

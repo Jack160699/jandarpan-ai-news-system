@@ -7,11 +7,10 @@ export function buildTenantSiteMetadata(tenant: TenantConfig): Metadata {
   const { branding, seo, siteUrl } = tenant;
   const titleDefault = `${branding.nameHi} — ${seo.titleSuffix}`;
   const ogImage =
-    tenant.branding.logoUrl?.includes("hamar") ||
-    tenant.slug === "hamar-chhattisgarh" ||
-    tenant.slug === "cg-bhaskar"
-      ? "/brand/hamar-chhattisgarh-og.svg"
-      : tenant.branding.logoMarkUrl ?? tenant.branding.logoUrl ?? "/brand/hamar-chhattisgarh-og.svg";
+    branding.ogImageUrl ??
+    branding.logoUrl ??
+    "/brand/jan-darpan-chhattisgarh-og.png";
+  const appTitle = branding.shortNameHi ?? branding.nameHi;
 
   return {
     metadataBase: new URL(siteUrl),
@@ -20,7 +19,7 @@ export function buildTenantSiteMetadata(tenant: TenantConfig): Metadata {
       template: `%s · ${branding.nameHi}`,
     },
     description: seo.defaultDescription,
-    applicationName: branding.nameHi,
+    applicationName: appTitle,
     category: "news",
     keywords: seo.keywords,
     manifest: "/site.webmanifest",
@@ -32,7 +31,7 @@ export function buildTenantSiteMetadata(tenant: TenantConfig): Metadata {
       : undefined,
     appleWebApp: {
       capable: true,
-      title: branding.nameHi,
+      title: branding.shortNameEn ?? branding.shortNameHi ?? branding.nameHi,
       statusBarStyle: "default",
     },
     openGraph: {

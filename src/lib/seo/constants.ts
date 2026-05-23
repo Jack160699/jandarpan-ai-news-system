@@ -13,8 +13,10 @@ export const SITE_NAME_HI = BRAND.nameHi;
 export const REGIONAL_KEYWORDS = [
   BRAND.nameEn,
   BRAND.nameHi,
-  "Hamar Chhattisgarh",
-  "हमार छत्तीसगढ़",
+  "Jan Darpan Chhattisgarh",
+  "जन दर्पण छत्तीसगढ़",
+  "Jan Darpan",
+  "जन दर्पण",
   "Chhattisgarh news",
   "Raipur news",
   "Bastar news",
@@ -46,4 +48,4 @@ export const NOINDEX_ROBOTS = {
   googleBot: { index: false, follow: false },
 } as const;
 
-export const PUBLISHER_LOGO_URL = `${SITE_URL}/brand/hamar-chhattisgarh-mark.svg`;
+export const PUBLISHER_LOGO_URL = `${SITE_URL}/brand/jan-darpan-mark.png`;

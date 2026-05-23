@@ -4,10 +4,10 @@
 
 @media (max-width: 767px) {
   :root {
-    --app-tabs-height: 2.875rem;
+    --app-tabs-height: 2.5rem;
     --app-header-total: calc(var(--app-header-row) + var(--app-tabs-height));
-    --bottom-nav-height: 4.25rem;
-    --bottom-nav-total: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0) + 0.5rem);
+    --bottom-nav-height: 3.5rem;
+    --bottom-nav-total: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0) + 0.25rem);
   }
 }
 
@@ -15,9 +15,9 @@
 .header-live-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 2.5rem;
-  padding: 0 0.75rem;
+  gap: 0.3rem;
+  min-height: 1.75rem;
+  padding: 0 0.5rem;
   border-radius: var(--ds-radius-full);
   background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
   color: #fff;

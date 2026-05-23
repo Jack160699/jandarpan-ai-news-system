@@ -28,7 +28,7 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
     <div className="anr" data-theme={theme}>
       <div className="anr-shell">
         <aside className="anr-sidebar">
-          <p className="anr-brand">हमार छत्तीसगढ़ · संपादकीय</p>
+          <p className="anr-brand">जन दर्पण छत्तीसगढ़ · संपादकीय</p>
           {NAV.map((item) => {
             const href = `${item.href}${qs}`;
             const active = pathname === item.href;

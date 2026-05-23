@@ -5,7 +5,7 @@ export const cg: Dictionary = {
   brand: {
     tagline: "छत्तीसगढ़ के अपन डिजिटल अखबार — साफ, भरोसेमंद, जमीन के",
     conceptNote:
-      "हमार छत्तीसगढ़ — रायपुर, बिलासपुर, बस्तर अउ सब 36 जिला ल खबर, छापे से पहिले संपादकीय जाँच।",
+      "जन दर्पण छत्तीसगढ़ — रायपुर, बिलासपुर, बस्तर अउ सब 36 जिला ल खबर, छापे से पहिले संपादकीय जाँच।",
   },
   gate: {
     editionLabel: "आज के संस्करण",
@@ -158,16 +158,16 @@ export const cg: Dictionary = {
     deskNoteKicker: "न्यूज़रूम से",
     deskNoteBody:
       "ए रिपोर्ट छत्तीसगढ़ संपादकीय टीम सत्यापित स्रोत मं तैयार करे हे। छापे से पहिले जाँच होथे।",
-    deskNoteFine: "सुधार: sudhar@hamarchhattisgarh.in",
+    deskNoteFine: "सुधार: sudhar@jandarpancg.in",
     disclaimerTitle: "संपादकीय मानक",
     disclaimerBody:
-      "हमार छत्तीसगढ़ स्वतंत्र क्षेत्रीय प्रकाशन हे। हम दावा के जाँच करथन, गलती तुरंत सुधारथन।",
+      "जन दर्पण छत्तीसगढ़ स्वतंत्र क्षेत्रीय प्रकाशन हे। हम दावा के जाँच करथन, गलती तुरंत सुधारथन।",
     relatedStories: "संबंधित खबर",
     trendingNow: "अभी ट्रेंड मं",
     liveUpdating: "लाइव कवरेज अपडेट होथे…",
   },
   footer: {
-    networkName: "हमार छत्तीसगढ़",
+    networkName: "जन दर्पण छत्तीसगढ़",
     mission: "अपन छत्तीसगढ़ — जिला ब्यूरो अउ भरोसेमंद लाइव कवरेज।",
     sectionsTitle: "खंड",
     newsroomTitle: "न्यूज़रूम",
@@ -176,8 +176,8 @@ export const cg: Dictionary = {
     contactTitle: "संपर्क",
     followTitle: "फॉलो करौ",
     corrections: "गलती बताउ अथवा सुधार भेजौ",
-    editorialEmail: "sudhar@hamarchhattisgarh.in",
-    tipsEmail: "khabar@hamarchhattisgarh.in",
+    editorialEmail: "sudhar@jandarpancg.in",
+    tipsEmail: "khabar@jandarpancg.in",
     ethicsLink: "नीति अउ स्वतंत्रता",
     standardsLink: "संपादकीय मानक",
     livingArchive: "सेव खबर",

@@ -16,13 +16,13 @@ export function HomepageMasthead({ brandName }: HomepageMastheadProps) {
     (language === "en"
       ? tenant?.branding.nameEn
       : tenant?.branding.nameHi) ??
-    "हमार छत्तीसगढ़";
+    "जन दर्पण छत्तीसगढ़";
 
   const today = formatNewsDate(new Date().toISOString(), language, "short");
 
   return (
     <header id="top-news" className="nr-masthead nr-masthead--daily nr-wrap scroll-mt-24">
-      <div className="masthead-hc__rule-brand mb-2" aria-hidden />
+      <div className="masthead-jd__rule-brand mb-2" aria-hidden />
       <h1 className="nr-masthead__brand masthead-title-hi">{name}</h1>
       <p className="nr-masthead__tagline text-sm text-[var(--ink-tertiary)]">
         {t.home.mastheadTagline}

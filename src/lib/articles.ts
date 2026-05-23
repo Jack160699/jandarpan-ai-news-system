@@ -31,17 +31,17 @@ export const articles: Record<string, Article> = {
       "A land allotment register vanished from a civic server for eleven days. Farmers, officials, and a quiet clerk describe what happens when paperwork becomes power.",
     author: "Ananya Tiwari",
     role: "Investigations · Raipur",
-    filedFrom: "Filed from Raipur · Hamar Chhattisgarh Investigations",
+    filedFrom: "Filed from Raipur · Jan Darpan Chhattisgarh Investigations",
     readTime: "16 min",
     image: EDITORIAL_IMAGES.civicOffice,
-    imageCredit: "Photograph · Hamar Chhattisgarh Archive",
+    imageCredit: "Photograph · Jan Darpan Chhattisgarh Archive",
     category: "Investigations",
     pullQuote:
       "In Chhattisgarh, a missing file is never only a technical error — it is a story about who gets to wait.",
     paragraphs: [
       "The clerk noticed the gap on a Tuesday, which is when the civic office is loudest and least patient. Row 412 of the Naya Raipur allotment register showed a name, a date, and then — for eleven days — nothing where a scan should have been.",
       "Farmers from two villages had already made the journey twice. They carried folders thick with stamps, photographs of boundary stones, and letters written in block capitals by relatives who could not leave the fields. Each time they were told the system was updating.",
-      "Hamar Chhattisgarh began reviewing the access logs after a tip that did not arrive on letterhead. What emerged was not a hacker drama but something more familiar: a sequence of permissions granted, revoked, and granted again within the same department.",
+      "Jan Darpan Chhattisgarh began reviewing the access logs after a tip that did not arrive on letterhead. What emerged was not a hacker drama but something more familiar: a sequence of permissions granted, revoked, and granted again within the same department.",
       "Deputy Secretary Mehta, speaking on condition that we not quote her directly on internal matters, said the state was committed to transparency. The farmers said transparency is a word that reaches them after the monsoon reaches someone else.",
       "On the fourth night of reporting, a backup drive surfaced in an adjacent office. It contained not only the missing pages but earlier versions — including one dated before a public hearing that officials had said was never scheduled.",
       "Land, in Naya Raipur, is discussed in the language of smart cities and satellite maps. On the ground it is discussed in the language of cousins, canals, and the distance to the bus stand.",
@@ -64,7 +64,7 @@ export const articles: Record<string, Article> = {
     filedFrom: "Filed from Durg · Education desk",
     readTime: "11 min",
     image: EDITORIAL_IMAGES.schoolIndia,
-    imageCredit: "Photograph · Hamar Chhattisgarh",
+    imageCredit: "Photograph · Jan Darpan Chhattisgarh",
     category: "Education",
     pullQuote:
       "हमें इमारत नहीं, समय चाहिए — और समय भी कभी-कभी रुक जाता है।",
@@ -88,7 +88,7 @@ export const articles: Record<string, Article> = {
     filedFrom: "Raipur · Assembly beat",
     readTime: "7 min",
     image: EDITORIAL_IMAGES.assemblyPolitics,
-    imageCredit: "Hamar Chhattisgarh",
+    imageCredit: "Jan Darpan Chhattisgarh",
     category: "Politics",
     pullQuote: "Procedure, in the capital, has its own weather.",
     paragraphs: [
@@ -107,7 +107,7 @@ export const articles: Record<string, Article> = {
     filedFrom: "Filed from Jagdalpur",
     readTime: "5 min",
     image: EDITORIAL_IMAGES.ruralHealth,
-    imageCredit: "Hamar Chhattisgarh",
+    imageCredit: "Jan Darpan Chhattisgarh",
     category: "Chhattisgarh",
     pullQuote: "The queue began before the tent cloth was tied.",
     paragraphs: [
@@ -125,7 +125,7 @@ export const articles: Record<string, Article> = {
     filedFrom: "Filed from Raipur",
     readTime: "6 min",
     image: EDITORIAL_IMAGES.metroStreet,
-    imageCredit: "Hamar Chhattisgarh",
+    imageCredit: "Jan Darpan Chhattisgarh",
     category: "Raipur",
     pullQuote: "Every map is also a market map.",
     paragraphs: [
@@ -143,7 +143,7 @@ export const articles: Record<string, Article> = {
     filedFrom: "Filed from Bhilai",
     readTime: "4 min",
     image: EDITORIAL_IMAGES.steelIndustry,
-    imageCredit: "Hamar Chhattisgarh",
+    imageCredit: "Jan Darpan Chhattisgarh",
     category: "Business",
     pullQuote: "Production speaks first; policy answers later.",
     paragraphs: [
@@ -161,7 +161,7 @@ export const articles: Record<string, Article> = {
     filedFrom: "Filed from Raipur",
     readTime: "4 min",
     image: EDITORIAL_IMAGES.cricketGround,
-    imageCredit: "Hamar Chhattisgarh",
+    imageCredit: "Jan Darpan Chhattisgarh",
     category: "Sports",
     pullQuote: "The scoreboard flickered; nobody left.",
     paragraphs: [
@@ -179,7 +179,7 @@ export const articles: Record<string, Article> = {
     filedFrom: "Filed from Rajnandgaon",
     readTime: "6 min",
     image: EDITORIAL_IMAGES.folkCulture,
-    imageCredit: "Hamar Chhattisgarh",
+    imageCredit: "Jan Darpan Chhattisgarh",
     category: "Culture",
     pullQuote: "Memory, here, is sung before it is written.",
     paragraphs: [
@@ -197,7 +197,7 @@ export const articles: Record<string, Article> = {
     filedFrom: "Filed from Raipur",
     readTime: "3 min",
     image: EDITORIAL_IMAGES.waterCivic,
-    imageCredit: "Hamar Chhattisgarh",
+    imageCredit: "Jan Darpan Chhattisgarh",
     category: "Raipur",
     pullQuote: "A schedule is a promise with a timestamp.",
     paragraphs: [

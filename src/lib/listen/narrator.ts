@@ -11,13 +11,13 @@ const NARRATORS: Record<NewsroomLanguage, NarratorProfile> = {
   hi: {
     name: "Priya Sharma",
     nameHi: "प्रिया शर्मा",
-    desk: "हमार छत्तीसगढ़ डेस्क",
+    desk: "जन दर्पण डेस्क",
     deskHi: "छत्तीसगढ़ ब्यूरो",
   },
   cg: {
     name: "Priya Sharma",
     nameHi: "प्रिया शर्मा",
-    desk: "हमार छत्तीसगढ़ डेस्क",
+    desk: "जन दर्पण डेस्क",
     deskHi: "छत्तीसगढ़ ब्यूरो",
   },
   en: {

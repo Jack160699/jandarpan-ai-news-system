@@ -22,8 +22,8 @@ export async function POST(request: Request) {
     {
       tenant_id: tenant.id,
       slug: "daily-briefing",
-      name_en: "Hamar Chhattisgarh Daily",
-      name_hi: "हमार छत्तीसगढ़ दैनिक",
+      name_en: "Jan Darpan Chhattisgarh Daily",
+      name_hi: "जन दर्पण छत्तीसगढ़ दैनिक",
       frequency: "daily",
       description: "Morning digest of Chhattisgarh headlines",
       active: true,

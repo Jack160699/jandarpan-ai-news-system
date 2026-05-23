@@ -2,9 +2,9 @@ import type { Dictionary } from "../types";
 
 export const en: Dictionary = {
   brand: {
-    tagline: "Chhattisgarh's own digital newspaper — clear, trustworthy, regional",
+    tagline: "Chhattisgarh's premium digital news mirror — clear, trustworthy, regional",
     conceptNote:
-      "Hamar Chhattisgarh covers Raipur, Bilaspur, Bastar, and all 36 districts with editorial review before publish.",
+      "Jan Darpan Chhattisgarh covers Raipur, Bilaspur, Bastar, and all 36 districts with editorial review before publish.",
   },
   gate: {
     editionLabel: "Today's edition",
@@ -169,16 +169,16 @@ export const en: Dictionary = {
     deskNoteBody:
       "This report was prepared by our Chhattisgarh editorial team using verified public sources. Wire reports, district bureaus, and partner outlets are cross-checked and reviewed before publication.",
     deskNoteFine:
-      "Corrections and clarifications: sudhar@hamarchhattisgarh.in",
+      "Corrections and clarifications: sudhar@jandarpancg.in",
     disclaimerTitle: "Editorial standards",
     disclaimerBody:
-      "Hamar Chhattisgarh is an independent regional publisher. We verify claims against multiple sources, attribute reporting clearly, and correct errors promptly. We do not publish unverified rumours as fact.",
+      "Jan Darpan Chhattisgarh is an independent regional publisher. We verify claims against multiple sources, attribute reporting clearly, and correct errors promptly. We do not publish unverified rumours as fact.",
     relatedStories: "Related stories",
     trendingNow: "Trending now",
     liveUpdating: "Live coverage is updating…",
   },
   footer: {
-    networkName: "Hamar Chhattisgarh",
+    networkName: "Jan Darpan Chhattisgarh",
     mission:
       "Your Chhattisgarh — district bureaus, state desk, and live coverage you can trust.",
     sectionsTitle: "Sections",
@@ -188,8 +188,8 @@ export const en: Dictionary = {
     contactTitle: "Contact",
     followTitle: "Follow us",
     corrections: "Report an error or send a correction",
-    editorialEmail: "sudhar@hamarchhattisgarh.in",
-    tipsEmail: "khabar@hamarchhattisgarh.in",
+    editorialEmail: "sudhar@jandarpancg.in",
+    tipsEmail: "khabar@jandarpancg.in",
     ethicsLink: "Ethics & independence",
     standardsLink: "Editorial standards",
     livingArchive: "Saved stories",

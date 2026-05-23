@@ -1,12 +1,14 @@
 /** Legacy brand constants — prefer tenant config + BRAND_VOICE */
 import { BRAND_VOICE } from "@/lib/brand/voice";
-import { HAMAR_CHHATTISGARH_TENANT } from "@/lib/tenant/presets/hamar-chhattisgarh";
+import { JAN_DARPAN_CHHATTISGARH_TENANT } from "@/lib/tenant/presets/jan-darpan-chhattisgarh";
 
-const t = HAMAR_CHHATTISGARH_TENANT;
+const t = JAN_DARPAN_CHHATTISGARH_TENANT;
 
 export const BRAND = {
   nameEn: t.branding.nameEn,
   nameHi: t.branding.nameHi,
+  shortNameEn: t.branding.shortNameEn ?? BRAND_VOICE.shortNameEn,
+  shortNameHi: t.branding.shortNameHi ?? BRAND_VOICE.shortNameHi,
   taglineEn: t.branding.taglineEn,
   taglineHi: t.branding.taglineHi,
   conceptLabel: t.branding.conceptLabel ?? BRAND_VOICE.promiseEn,

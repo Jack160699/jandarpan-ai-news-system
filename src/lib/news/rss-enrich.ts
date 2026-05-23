@@ -15,7 +15,7 @@ import type { NormalizedArticle } from "@/lib/news/types";
 
 const PAGE_TIMEOUT_MS = 8_000;
 const USER_AGENT =
-  "Mozilla/5.0 (compatible; Hamar-Chhattisgarh-RSS/2.1; +https://newspaper-motion.vercel.app)";
+  "Mozilla/5.0 (compatible; Jan-Darpan-Chhattisgarh-RSS/2.1; +https://newspaper-motion.vercel.app)";
 
 export function extractArticleMetadataFromHtml(html: string): {
   title?: string;

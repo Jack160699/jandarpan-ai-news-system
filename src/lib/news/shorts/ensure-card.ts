@@ -67,7 +67,7 @@ export function buildMinimalShortCard(
       durationSec: 58,
     }),
     categoryLabel: style.badgeHi,
-    sourceLabel: "हमार छत्तीसगढ़ डेस्क",
+    sourceLabel: "जन दर्पण डेस्क",
     sourceCount: 1,
     isLive: false,
   };

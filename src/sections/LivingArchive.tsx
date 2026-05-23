@@ -22,7 +22,7 @@ export function LivingArchive({ preview = false }: LivingArchiveProps) {
       <div className="editorial-container">
         <SectionLabel>Living archive</SectionLabel>
         <h2 className="headline-sm mt-2 max-w-[22ch]">
-          हमार छत्तीसगढ़ — आपकी सेव की खबरें
+          जन दर्पण छत्तीसगढ़ — आपकी सेव की खबरें
         </h2>
         <p className="editorial-body mt-3 max-w-xl text-sm text-[var(--ink-secondary)]">
           Investigations persist across editions. Dispatches return when the desk

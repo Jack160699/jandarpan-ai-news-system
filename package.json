@@ -1,8 +1,8 @@
 {
-  "name": "hamar-chhattisgarh",
+  "name": "jan-darpan-chhattisgarh",
   "version": "1.0.0",
   "private": true,
-  "description": "Hamar Chhattisgarh — premium regional digital news for Chhattisgarh",
+  "description": "Jan Darpan Chhattisgarh — premium regional digital news for Chhattisgarh",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

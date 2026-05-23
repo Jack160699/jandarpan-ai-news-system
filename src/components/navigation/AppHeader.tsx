@@ -39,7 +39,11 @@ export function AppHeader() {
             aria-label={brandName}
             onClick={() => startNavigation("/")}
           >
-            <TenantLogo className="app-header__logo shrink-0" />
+            <TenantLogo
+              className="app-header__logo shrink-0"
+              variant={isMobile ? "banner" : "mark"}
+              showText={!isMobile}
+            />
             {!isMobile ? (
               <div className="app-header__locale">
                 <span className="app-header__city">

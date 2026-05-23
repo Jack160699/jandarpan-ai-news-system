@@ -7,5 +7,6 @@ export * from "./metadata";
 export * from "./analytics";
 export * from "./personalization";
 export * from "./pipeline";
+export { JAN_DARPAN_CHHATTISGARH_TENANT } from "./presets/jan-darpan-chhattisgarh";
 export { CG_BHASKAR_TENANT } from "./presets/cg-bhaskar";
 export { HAMAR_CHHATTISGARH_TENANT } from "./presets/hamar-chhattisgarh";

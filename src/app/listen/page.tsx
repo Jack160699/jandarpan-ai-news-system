@@ -12,7 +12,7 @@ export const revalidate = 60;
 export const metadata: Metadata = {
   title: `Listen to Today's Headlines · ${BRAND.nameEn}`,
   description:
-    "Hear today's top headlines in Hindi — audio briefing from Hamar Chhattisgarh.",
+    "Hear today's top headlines in Hindi — audio briefing from Jan Darpan Chhattisgarh.",
   alternates: { canonical: `${SITE_URL}/listen` },
   robots: PRODUCTION_ROBOTS,
 };

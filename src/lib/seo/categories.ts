@@ -21,8 +21,8 @@ export type CategorySeoConfig = {
 
 const BASE_KEYWORDS = [
   "Chhattisgarh news",
-  "Hamar Chhattisgarh",
-  "हमार छत्तीसगढ़",
+  "Jan Darpan Chhattisgarh",
+  "जन दर्पण छत्तीसगढ़",
   "छत्तीसगढ़ समाचार",
 ];
 

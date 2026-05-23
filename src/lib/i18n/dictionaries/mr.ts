@@ -5,7 +5,7 @@ export const mr: Dictionary = {
   brand: {
     tagline: "छत्तीसगढचे स्वतःचे डिजिटल वृत्तपत्र — स्पष्ट, विश्वासार्ह",
     conceptNote:
-      "हमार छत्तीसगढ — रायपूर, बिलासपूर, बस्तर आणि सर्व ३६ जिल्ह्यांच्या बातम्या.",
+      "जन दर्पण छत्तीसगढ — रायपूर, बिलासपूर, बस्तर आणि सर्व ३६ जिल्ह्यांच्या बातम्या.",
   },
   gate: {
     editionLabel: "आजचा अंक",
@@ -158,16 +158,16 @@ export const mr: Dictionary = {
     deskNoteKicker: "न्यूजरूमकडून",
     deskNoteBody:
       "हा अहवाल छत्तीसगढ संपादकीय टीमने सत्यापित स्रोतांवरून तयार केला.",
-    deskNoteFine: "सुधारणा: sudhar@hamarchhattisgarh.in",
+    deskNoteFine: "सुधारणा: sudhar@jandarpancg.in",
     disclaimerTitle: "संपादकीय मानके",
     disclaimerBody:
-      "हमार छत्तीसगढ हे स्वतंत्र प्रादेशिक प्रकाशन आहे. आम्ही दावे तपासतो आणि चुका दुरुस्त करतो.",
+      "जन दर्पण छत्तीसगढ हे स्वतंत्र प्रादेशिक प्रकाशन आहे. आम्ही दावे तपासतो आणि चुका दुरुस्त करतो.",
     relatedStories: "संबंधित बातम्या",
     trendingNow: "आता ट्रेंडमध्ये",
     liveUpdating: "लाइव्ह कव्हरेज अपडेट होत आहे…",
   },
   footer: {
-    networkName: "हमार छत्तीसगढ",
+    networkName: "जन दर्पण छत्तीसगढ",
     mission: "तुमचा छत्तीसगढ — जिल्हा ब्यूरो आणि लाइव्ह कव्हरेज.",
     sectionsTitle: "विभाग",
     newsroomTitle: "न्यूजरूम",
@@ -176,8 +176,8 @@ export const mr: Dictionary = {
     contactTitle: "संपर्क",
     followTitle: "फॉलो करा",
     corrections: "चूक कळवा किंवा सुधारणा पाठवा",
-    editorialEmail: "sudhar@hamarchhattisgarh.in",
-    tipsEmail: "khabar@hamarchhattisgarh.in",
+    editorialEmail: "sudhar@jandarpancg.in",
+    tipsEmail: "khabar@jandarpancg.in",
     ethicsLink: "नीती आणि स्वातंत्र्य",
     standardsLink: "संपादकीय मानके",
     livingArchive: "सेव्ह बातम्या",

@@ -21,10 +21,10 @@ html.native-scroll body {
 @media (max-width: 767px) {
   :root {
     --space-gutter: max(1rem, min(4.5vw, 1.25rem));
-    --app-header-row: 52px;
-    --app-tabs-height: 44px;
+    --app-header-row: 44px;
+    --app-tabs-height: 40px;
     --app-header-total: calc(var(--app-header-row) + var(--app-tabs-height));
-    --bottom-nav-height: 52px;
+    --bottom-nav-height: 56px;
     --bottom-nav-total: calc(var(--bottom-nav-height) + var(--safe-bottom));
   }
 

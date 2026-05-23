@@ -7,7 +7,7 @@ import { PRODUCTION_ROBOTS, SITE_URL, webPageJsonLd } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Saved stories",
   description:
-    "Your saved stories from Hamar Chhattisgarh — read again anytime.",
+    "Your saved stories from Jan Darpan Chhattisgarh — read again anytime.",
   alternates: { canonical: "/archive" },
   robots: PRODUCTION_ROBOTS,
   openGraph: {
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 export default function ArchivePage() {
   const jsonLd = webPageJsonLd(
     "Saved stories",
-    "Stories you saved from Hamar Chhattisgarh regional coverage.",
+    "Stories you saved from Jan Darpan Chhattisgarh regional coverage.",
     "/archive"
   );
 

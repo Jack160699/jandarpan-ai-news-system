@@ -1,0 +1,111 @@
+/* Jan Darpan Chhattisgarh — maroon + gold regional identity */
+
+.masthead-jd {
+  background: var(--paper-elevated);
+}
+
+.masthead-jd__rule-brand {
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--tenant-primary-dark, #5c1616),
+    var(--tenant-accent, #c5a07d) 45%,
+    var(--tenant-primary, #802020) 100%
+  );
+}
+
+.masthead-title-en {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.35rem, 5.5vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--ink-headline);
+}
+
+.masthead-title-hi {
+  font-family: var(--font-hindi), var(--font-display), serif;
+  font-size: clamp(1.35rem, 5.5vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.12;
+  color: var(--tenant-primary, #802020);
+}
+
+.tenant-logo__text {
+  font-family: var(--font-hindi), var(--font-body), serif;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--tenant-primary, #802020);
+}
+
+.regional-badge {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--tenant-primary, #802020);
+  border: 1px solid color-mix(in srgb, var(--tenant-primary) 35%, transparent);
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+}
+
+.district-chip {
+  font-family: var(--font-hindi), var(--font-ui), sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tenant-primary);
+  background: var(--tenant-accent-soft, #f3ebe0);
+  padding: 0.2rem 0.5rem;
+  border-radius: 2px;
+}
+
+.category-nav a.is-active,
+.category-nav a:hover {
+  color: var(--tenant-primary, #802020);
+}
+
+/* Horizontal logo — header */
+.tenant-logo--banner {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  max-width: min(52vw, 11.5rem);
+  text-decoration: none;
+}
+
+.tenant-logo__banner-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 0;
+}
+
+.tenant-logo__img--banner {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: 1.625rem;
+  max-height: 1.625rem;
+  object-fit: contain;
+  object-position: left center;
+}
+
+[data-theme="dark"] .tenant-logo__banner-wrap {
+  padding: 0.125rem 0.375rem;
+  border-radius: var(--ds-radius-sm);
+  background: color-mix(in srgb, #fff 94%, transparent);
+}
+
+@media (min-width: 768px) {
+  .tenant-logo__img--banner {
+    height: 1.875rem;
+    max-height: 1.875rem;
+  }
+
+  .tenant-logo--banner {
+    max-width: 14rem;
+  }
+}

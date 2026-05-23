@@ -161,7 +161,7 @@ export const ta: Dictionary = {
     deskNoteKicker: "நியூஸ்ரூமிலிருந்து",
     deskNoteBody:
       "இந்த அறிக்கை சத்தீஸ்கர் தொகுப்பு குழு சரிபார்க்கப்பட்ட ஆதாரங்களுடன் தயாரித்தது.",
-    deskNoteFine: "திருத்தம்: sudhar@hamarchhattisgarh.in",
+    deskNoteFine: "திருத்தம்: sudhar@jandarpancg.in",
     disclaimerTitle: "தொகுப்பு தரநிலை",
     disclaimerBody:
       "ஹமார் சத்தீஸ்கர் ஒரு சுயாதீன பிராந்திய வெளியீடு. நாங்கள் கூற்றுகளைச் சரிபார்க்கிறோம்.",
@@ -180,8 +180,8 @@ export const ta: Dictionary = {
     contactTitle: "தொடர்பு",
     followTitle: "பின்தொடருங்கள்",
     corrections: "பிழை அறிவிக்கவும் அல்லது திருத்தம் அனுப்பவும்",
-    editorialEmail: "sudhar@hamarchhattisgarh.in",
-    tipsEmail: "khabar@hamarchhattisgarh.in",
+    editorialEmail: "sudhar@jandarpancg.in",
+    tipsEmail: "khabar@jandarpancg.in",
     ethicsLink: "நெறிமுறை & சுதந்திரம்",
     standardsLink: "தொகுப்பு தரநிலை",
     livingArchive: "சேமித்த செய்திகள்",

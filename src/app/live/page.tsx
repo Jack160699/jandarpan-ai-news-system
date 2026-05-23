@@ -34,7 +34,7 @@ export default async function LivePage() {
 
   const jsonLd = webPageJsonLd(
     "Live Desk",
-    "Live breaking wire from Hamar Chhattisgarh.",
+    "Live breaking wire from Jan Darpan Chhattisgarh.",
     "/live"
   );
 

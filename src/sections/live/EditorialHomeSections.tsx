@@ -18,7 +18,7 @@ export function EditorialHomeSections() {
       <div className="feed-section border-t border-[var(--rule)] bg-[var(--paper)]">
         <div className="feed-section__inner py-3">
           <p className="meta-label text-[var(--ink-faint)]">
-            हमार छत्तीसगढ़ · क्षेत्रीय अंक
+            जन दर्पण छत्तीसगढ़ · क्षेत्रीय अंक
           </p>
         </div>
       </div>

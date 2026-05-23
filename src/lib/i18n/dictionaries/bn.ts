@@ -158,7 +158,7 @@ export const bn: Dictionary = {
     deskNoteKicker: "নিউজরুম থেকে",
     deskNoteBody:
       "এই রিপোর্ট ছত্তীসগড় সম্পাদকীয় দল সত্যায়িত সূত্রে প্রস্তুত করেছে।",
-    deskNoteFine: "সংশোধন: sudhar@hamarchhattisgarh.in",
+    deskNoteFine: "সংশোধন: sudhar@jandarpancg.in",
     disclaimerTitle: "সম্পাদকীয় মান",
     disclaimerBody:
       "হামার ছত্তীসগড় একটি স্বাধীন আঞ্চলিক প্রকাশনা। আমরা দাবি যাচাই করি এবং ভুল সংশোধন করি।",
@@ -176,8 +176,8 @@ export const bn: Dictionary = {
     contactTitle: "যোগাযোগ",
     followTitle: "অনুসরণ করুন",
     corrections: "ভুল জানান বা সংশোধন পাঠান",
-    editorialEmail: "sudhar@hamarchhattisgarh.in",
-    tipsEmail: "khabar@hamarchhattisgarh.in",
+    editorialEmail: "sudhar@jandarpancg.in",
+    tipsEmail: "khabar@jandarpancg.in",
     ethicsLink: "নীতি ও স্বাধীনতা",
     standardsLink: "সম্পাদকীয় মান",
     livingArchive: "সেভ করা খবর",

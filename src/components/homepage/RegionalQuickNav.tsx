@@ -47,7 +47,7 @@ export function RegionalQuickNav({
             36
           </span>
           <div>
-            <p className="nr-quicknav__title">हमार छत्तीसगढ़</p>
+            <p className="nr-quicknav__title">जन दर्पण छत्तीसगढ़</p>
             <p className="nr-quicknav__sub">Hamaar Chhattisgarh</p>
           </div>
         </div>

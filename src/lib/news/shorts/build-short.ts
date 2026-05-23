@@ -49,7 +49,7 @@ export function shortCardFromRow(row: GeneratedArticleRow): NewsShortCard | null
     subtitles: bundle.subtitles,
     reelSlides: bundle.reel.slides,
     categoryLabel: style.badgeHi,
-    sourceLabel: "हमार छत्तीसगढ़ डेस्क",
+    sourceLabel: "जन दर्पण डेस्क",
     sourceCount: 1,
     isLive: false,
   };

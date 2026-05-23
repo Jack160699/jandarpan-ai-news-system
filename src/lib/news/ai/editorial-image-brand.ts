@@ -1,9 +1,9 @@
 /**
- * Hamar Chhattisgarh editorial visual system — category + region templates
+ * Jan Darpan Chhattisgarh editorial visual system — category + region templates
  */
 
 export const BRAND_VISUAL = {
-  name: "Hamar Chhattisgarh Desk",
+  name: "Jan Darpan Desk",
   palette:
     "warm saffron accents (#E8952D), deep forest green (#1B5E4B), paper beige background, muted trustworthy blues — never neon",
   typographySpace:
