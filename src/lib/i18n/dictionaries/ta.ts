@@ -84,7 +84,7 @@ export const ta: Dictionary = {
     emptyTitle: "பதிப்பு புதுப்பிக்கப்படுகிறது",
     emptyBody: "விரைவில் புதிய செய்திகள் இங்கே தோன்றும்.",
     loadingEdition: "இன்றைய பதிப்பு ஏற்றுகிறது…",
-    tickerAria: "பிரேக்கிங் டிக்கர்",
+    tickerAria: "நேரடி செய்தி டிக்கர்",
     tickerFallback: "சமீபத்திய தலைப்புகள் புதுப்பிக்கப்படுகின்றன…",
     fresh: "புதிய",
     liveNewsroom: "நேரலை செய்தி அறை",

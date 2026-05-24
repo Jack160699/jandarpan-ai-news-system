@@ -37,9 +37,13 @@
   --color-ink-faint: #888888;
   --color-rule: rgb(13 13 13 / 0.08);
   --color-rule-strong: rgb(13 13 13 / 0.14);
-  --color-ticker-bg: #0a0a0a;
-  --color-ticker-text: #f2f2f2;
-  --color-ticker-muted: #b8b8b8;
+  --color-ticker-bg: #f8f8f8;
+  --color-ticker-border: rgb(13 13 13 / 0.1);
+  --color-ticker-text: var(--color-ink);
+  --color-ticker-muted: var(--color-ink-muted);
+  --color-ticker-live-bg: rgb(255 43 43 / 0.12);
+  --color-ticker-live-text: #b71c1c;
+  --color-ticker-live-dot: var(--color-red);
 
   --paper: var(--color-paper);
   --paper-elevated: var(--color-surface);
@@ -123,7 +127,7 @@
   --ease-snappy: cubic-bezier(0.33, 1, 0.68, 1);
   --duration-fast: 0.16s;
   --duration-normal: 0.24s;
-  --ticker-duration: 52s;
+  --ticker-duration: 72s;
 }
 
 @media (min-width: 768px) {
@@ -163,8 +167,16 @@ html[data-theme="dark"] {
   --color-rule: rgb(255 255 255 / 0.06);
   --color-rule-strong: rgb(255 255 255 / 0.1);
   --color-ticker-bg: #050505;
+  --color-ticker-border: rgb(255 255 255 / 0.08);
   --color-ticker-text: #ffffff;
-  --color-ticker-muted: rgb(255 255 255 / 0.68);
+  --color-ticker-muted: rgb(255 255 255 / 0.62);
+  --color-ticker-live-bg: linear-gradient(
+    135deg,
+    var(--color-red-deep) 0%,
+    var(--color-red) 100%
+  );
+  --color-ticker-live-text: #ffffff;
+  --color-ticker-live-dot: #ffffff;
   --shadow-card: 0 4px 20px rgb(0 0 0 / 0.5);
   --shadow-card-hover: 0 8px 28px rgb(0 0 0 / 0.62);
   --shadow-hero: 0 4px 24px rgb(0 0 0 / 0.55);

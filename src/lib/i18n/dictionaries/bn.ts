@@ -83,7 +83,7 @@ export const bn: Dictionary = {
     emptyTitle: "সংস্করণ আপডেট হচ্ছে",
     emptyBody: "শীঘ্রই তাজা খবর এখানে দেখা যাবে।",
     loadingEdition: "আজকের সংস্করণ লোড হচ্ছে…",
-    tickerAria: "ব্রেকিং টিকার",
+    tickerAria: "লাইভ টিকার",
     tickerFallback: "সর্বশেষ শিরোনাম আপডেট হচ্ছে…",
     fresh: "তাজা",
     liveNewsroom: "লাইভ নিউজরুম",
