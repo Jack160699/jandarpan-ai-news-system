@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArticleCardActions } from "@/components/article/ArticleCardActions";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
 import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
 import { BreakingHeroReel } from "@/sections/homepage/BreakingHeroReel";
@@ -73,6 +74,16 @@ export function HeroNewsCard({
                 </>
               ) : null}
             </div>
+
+            <ArticleCardActions
+              articleId={lead.id}
+              headline={lead.headline}
+              summary={lead.summary}
+              slugOrPath={lead.slug}
+              langHint={lead.language === "hi" ? "hi-IN" : "auto"}
+              className="hero-news-card__actions"
+              enableSpeedCycle
+            />
           </div>
 
           <div className="hero-news-card__visual hero-news-card__visual--premium">

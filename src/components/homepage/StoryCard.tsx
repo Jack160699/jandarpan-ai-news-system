@@ -1,5 +1,6 @@
 "use client";
 
+import { ArticleCardActions } from "@/components/article/ArticleCardActions";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
 import { CardThumbnail } from "@/components/cards/CardThumbnail";
 import {
@@ -109,6 +110,14 @@ export function StoryCard({
           </p>
         </div>
       </TrackedStoryLink>
+      <ArticleCardActions
+        articleId={article.id}
+        headline={article.headline}
+        summary={article.summary}
+        slugOrPath={article.slug}
+        langHint={article.language === "hi" ? "hi-IN" : "auto"}
+        enableSpeedCycle
+      />
     </article>
   );
 }

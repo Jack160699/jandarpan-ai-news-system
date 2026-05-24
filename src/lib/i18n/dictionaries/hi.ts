@@ -47,6 +47,13 @@ export const hi: Dictionary = {
     theme: "थीम",
     listen: "सुनें",
   },
+  cardActions: {
+    groupLabel: "शेयर और सुनें",
+    whatsapp: "WhatsApp",
+    listen: "सुनें",
+    pause: "रोकें",
+    resume: "जारी रखें",
+  },
   common: {
     all: "सभी",
     breaking: "ताज़ा",

@@ -47,6 +47,13 @@ export const cg: Dictionary = {
     theme: "थीम",
     listen: "सुनौ",
   },
+  cardActions: {
+    groupLabel: "शेयर अउ सुनौ",
+    whatsapp: "WhatsApp",
+    listen: "सुनौ",
+    pause: "रोकौ",
+    resume: "फेर सुनौ",
+  },
   common: {
     all: "सब",
     breaking: "ताजा",

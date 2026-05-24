@@ -10,6 +10,7 @@ import { StoryHighlights } from "@/components/story/StoryHighlights";
 import { StoryInlineBreaking } from "@/components/story/StoryInlineBreaking";
 import { StoryInlineRelated } from "@/components/story/StoryInlineRelated";
 import { StoryMobileShareBar } from "@/components/story/StoryMobileShareBar";
+import { ArticleCardActions } from "@/components/article/ArticleCardActions";
 import { StoryReaderShell } from "@/components/story/StoryReaderShell";
 import { AdSlot } from "@/components/monetization/AdSlot";
 import { SponsoredStoryBanner } from "@/components/monetization/SponsoredStoryBanner";
@@ -193,6 +194,20 @@ export function ImmersiveStoryPage({
               isLive={isLive}
               desk={attribution.desk}
             />
+
+            <div className="immersive-story__shell">
+              <ArticleCardActions
+                articleId={slug}
+                headline={headline}
+                summary={
+                  aiSummary ??
+                  plainParagraphs.slice(0, 2).join(" ")
+                }
+                slugOrPath={slug}
+                className="article-page__actions"
+                enableSpeedCycle
+              />
+            </div>
 
             {liveCoverage ? (
               <div className="immersive-story__shell">

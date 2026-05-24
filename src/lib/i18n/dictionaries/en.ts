@@ -47,6 +47,13 @@ export const en: Dictionary = {
     theme: "Theme",
     listen: "Listen",
   },
+  cardActions: {
+    groupLabel: "Share and listen",
+    whatsapp: "WhatsApp",
+    listen: "Listen",
+    pause: "Pause",
+    resume: "Resume",
+  },
   common: {
     all: "All",
     breaking: "Breaking",

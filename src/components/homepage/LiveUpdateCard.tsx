@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { ArticleCardActions } from "@/components/article/ArticleCardActions";
 import { PremiumLiveCard } from "@/components/cards/PremiumLiveCard";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
 import { BreakingBadge } from "@/components/homepage/BreakingBadge";
@@ -96,6 +97,13 @@ export const LiveUpdateCard = memo(function LiveUpdateCard({
           </p>
         </div>
       </TrackedStoryLink>
+      <ArticleCardActions
+        articleId={article.id}
+        headline={article.headline}
+        summary={article.summary}
+        slugOrPath={article.slug}
+        langHint={article.language === "hi" ? "hi-IN" : "auto"}
+      />
     </article>
     </PremiumLiveCard>
   );

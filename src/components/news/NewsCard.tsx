@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArticleCardActions } from "@/components/article/ArticleCardActions";
 import { MediaImage } from "@/components/media/MediaImage";
 import {
   IMG_CARD_COMPACT,
@@ -95,6 +96,12 @@ export function NewsCard({
             </p>
           </div>
         </Link>
+        <ArticleCardActions
+          articleId={story.slug}
+          headline={localized.title}
+          summary={localized.excerpt}
+          slugOrPath={story.slug}
+        />
       </article>
     );
   }
@@ -127,6 +134,12 @@ export function NewsCard({
             <p className="feed-card__time">{story.filedAt}</p>
           </div>
         </Link>
+        <ArticleCardActions
+          articleId={story.slug}
+          headline={localized.title}
+          summary={localized.excerpt}
+          slugOrPath={story.slug}
+        />
       </article>
     );
   }
@@ -163,6 +176,12 @@ export function NewsCard({
           </p>
         </div>
       </Link>
+      <ArticleCardActions
+        articleId={story.slug}
+        headline={localized.title}
+        summary={localized.excerpt}
+        slugOrPath={story.slug}
+      />
     </article>
   );
 }

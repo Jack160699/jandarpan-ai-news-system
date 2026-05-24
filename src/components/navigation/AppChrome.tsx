@@ -6,6 +6,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { SkipLink } from "@/components/ui/SkipLink";
 import { LanguageGate } from "@/components/reader/LanguageGate";
 import { HeadlinesMiniPlayer } from "@/components/listen/HeadlinesMiniPlayer";
+import { ArticleSpeechProvider } from "@/providers/ArticleSpeechProvider";
 import { HeadlinesListenProvider } from "@/providers/HeadlinesListenProvider";
 import { NavigationProvider } from "@/providers/NavigationProvider";
 import { NavProgress } from "./NavProgress";
@@ -35,6 +36,7 @@ export function AppChrome({ children }: AppChromeProps) {
 
   return (
     <HeadlinesListenProvider>
+      <ArticleSpeechProvider>
       <NavigationProvider>
         <NativeTouchLayer>
           <div className="app-shell has-bottom-nav" data-hydrated="false">
@@ -58,6 +60,7 @@ export function AppChrome({ children }: AppChromeProps) {
           </div>
         </NativeTouchLayer>
       </NavigationProvider>
+      </ArticleSpeechProvider>
     </HeadlinesListenProvider>
   );
 }

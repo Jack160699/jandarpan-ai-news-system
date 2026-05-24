@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { Article } from "@/lib/articles";
 import {
+  ArticleCardActions,
   ArticleHeroImage,
   ArticleMetaBar,
   ArticlePullQuote,
@@ -74,6 +75,15 @@ export function ArticleView({ article }: ArticleViewProps) {
             </header>
 
             <ArticleMetaBar article={article} />
+
+            <ArticleCardActions
+              articleId={article.slug}
+              headline={localized.title}
+              summary={[localized.deck, ...article.paragraphs.slice(0, 2)].join(" ")}
+              slugOrPath={article.slug}
+              className="article-page__actions"
+              enableSpeedCycle
+            />
 
             <ArticleHeroImage
               src={article.image}

@@ -53,6 +53,13 @@ export type Dictionary = {
     theme: string;
     listen: string;
   };
+  cardActions: {
+    groupLabel: string;
+    whatsapp: string;
+    listen: string;
+    pause: string;
+    resume: string;
+  };
   common: {
     all: string;
     breaking: string;

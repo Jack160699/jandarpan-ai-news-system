@@ -47,6 +47,13 @@ export const bn: Dictionary = {
     theme: "থিম",
     listen: "শুনুন",
   },
+  cardActions: {
+    groupLabel: "শেয়ার ও শুনুন",
+    whatsapp: "WhatsApp",
+    listen: "শুনুন",
+    pause: "বিরতি",
+    resume: "আবার শুনুন",
+  },
   common: {
     all: "সব",
     breaking: "ব্রেকিং",

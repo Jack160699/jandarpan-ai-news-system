@@ -12,6 +12,10 @@ import {
 } from "react";
 import type { HeadlineTrack, PlaybackSpeed } from "@/lib/listen/types";
 import { PLAYBACK_SPEEDS } from "@/lib/listen/types";
+import {
+  ARTICLE_SPEECH_START_EVENT,
+  articleSpeechController,
+} from "@/lib/speech/article-speech-controller";
 
 type HeadlinesListenContextValue = {
   tracks: HeadlineTrack[];
@@ -73,6 +77,7 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
   const initPlaylist = useCallback(
     (nextTracks: HeadlineTrack[], startIndex = 0) => {
       if (!nextTracks.length) return;
+      articleSpeechController.cancel();
       const i = Math.min(Math.max(0, startIndex), nextTracks.length - 1);
       setTracks(nextTracks);
       setIndex(i);
@@ -147,16 +152,35 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
     }
   }, [playing, loading, speed]);
 
+  useEffect(() => {
+    const onArticleSpeech = () => {
+      const audio = audioRef.current;
+      audio?.pause();
+      setPlaying(false);
+    };
+    window.addEventListener(ARTICLE_SPEECH_START_EVENT, onArticleSpeech);
+    return () =>
+      window.removeEventListener(ARTICLE_SPEECH_START_EVENT, onArticleSpeech);
+  }, []);
+
   const togglePlay = useCallback(() => {
     if (!track) return;
-    setPlaying((p) => !p);
+    setPlaying((p) => {
+      const next = !p;
+      if (next) articleSpeechController.cancel();
+      return next;
+    });
   }, [track]);
 
-  const play = useCallback(() => setPlaying(true), []);
+  const play = useCallback(() => {
+    articleSpeechController.cancel();
+    setPlaying(true);
+  }, []);
   const pause = useCallback(() => setPlaying(false), []);
 
   const next = useCallback(() => {
     if (index < tracks.length - 1) {
+      articleSpeechController.cancel();
       setIndex((i) => i + 1);
       setPlaying(true);
     }
@@ -164,6 +188,7 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
 
   const prev = useCallback(() => {
     if (index > 0) {
+      articleSpeechController.cancel();
       setIndex((i) => i - 1);
       setPlaying(true);
     }

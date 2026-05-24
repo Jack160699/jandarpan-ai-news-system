@@ -48,6 +48,13 @@ export const ta: Dictionary = {
     theme: "தீம்",
     listen: "கேளுங்கள்",
   },
+  cardActions: {
+    groupLabel: "பகிர் மற்றும் கேளுங்கள்",
+    whatsapp: "WhatsApp",
+    listen: "கேளுங்கள்",
+    pause: "இடைநிறுத்து",
+    resume: "தொடர்க",
+  },
   common: {
     all: "அனைத்தும்",
     breaking: "பிரேக்கிங்",

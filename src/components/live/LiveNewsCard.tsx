@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArticleCardActions } from "@/components/article/ArticleCardActions";
 import { NewsImage } from "@/components/live/NewsImage";
 import type { LiveCardModel } from "@/lib/live-news-display";
 import { categoryLabel } from "@/lib/live-news-display";
@@ -76,6 +77,12 @@ export function LiveNewsCard({
             </p>
           </div>
         </Link>
+        <ArticleCardActions
+          articleId={article.id}
+          headline={article.title}
+          summary={article.excerpt}
+          slugOrPath={article.href}
+        />
       </article>
     );
   }
@@ -104,6 +111,12 @@ export function LiveNewsCard({
             <p className="feed-card__time">{article.filedAt}</p>
           </div>
         </Link>
+        <ArticleCardActions
+          articleId={article.id}
+          headline={article.title}
+          summary={article.excerpt}
+          slugOrPath={article.href}
+        />
       </article>
     );
   }
@@ -139,6 +152,12 @@ export function LiveNewsCard({
           </p>
         </div>
       </Link>
+      <ArticleCardActions
+        articleId={article.id}
+        headline={article.title}
+        summary={article.excerpt}
+        slugOrPath={article.href}
+      />
     </article>
   );
 }
