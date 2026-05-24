@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { ShortsReelsShell } from "@/components/shorts/ShortsReelsShell";
+import { ReelsPage } from "@/features/reels/ReelsPage";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { fetchShortsPool } from "@/lib/news/shorts/build-short";
 import { BRAND } from "@/lib/brand";
@@ -50,7 +50,7 @@ export default async function ShortsPage() {
           </div>
         }
       >
-        <ShortsReelsShell shorts={shorts} />
+        <ReelsPage shorts={shorts} />
       </Suspense>
     </>
   );

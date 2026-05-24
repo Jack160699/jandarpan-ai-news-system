@@ -39,6 +39,7 @@ export type Dictionary = {
     education: string;
     home: string;
     video: string;
+    reels: string;
     shorts: string;
     live: string;
     saved: string;

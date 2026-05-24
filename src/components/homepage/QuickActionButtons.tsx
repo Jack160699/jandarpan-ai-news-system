@@ -5,7 +5,7 @@ import {
   IconLive,
   IconNewspaper,
   IconSearch,
-  IconVideo,
+  IconReels,
 } from "@/components/navigation/NavIcons";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
@@ -15,13 +15,13 @@ type ActionItem = {
   href: string;
   labelKey: keyof ReturnType<typeof useLanguage>["t"]["nav"];
   emoji?: string;
-  Icon?: typeof IconVideo;
+  Icon?: typeof IconReels;
   live?: boolean;
 };
 
 const ACTIONS: ActionItem[] = [
   { id: "listen", href: "/listen", labelKey: "listen", emoji: "🎧" },
-  { id: "shorts", href: "/shorts", labelKey: "video", Icon: IconVideo },
+  { id: "shorts", href: "/shorts", labelKey: "shorts", Icon: IconReels },
   { id: "live", href: "/live", labelKey: "live", Icon: IconLive, live: true },
   { id: "epaper", href: "/archive", labelKey: "saved", Icon: IconNewspaper },
   { id: "search", href: "/search", labelKey: "search", Icon: IconSearch },

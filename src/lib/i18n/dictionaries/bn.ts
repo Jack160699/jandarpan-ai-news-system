@@ -33,6 +33,7 @@ export const bn: Dictionary = {
     education: "শিক্ষা",
     home: "হোম",
     video: "ভিডিও",
+    reels: "রিলস",
     shorts: "রিলস",
     live: "লাইভ",
     saved: "সেভ",

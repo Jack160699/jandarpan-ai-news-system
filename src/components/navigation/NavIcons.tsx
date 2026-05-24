@@ -78,6 +78,11 @@ export function IconShorts({ className }: IconProps) {
   );
 }
 
+/** Vertical reels / shorts tab icon */
+export function IconReels({ className }: IconProps) {
+  return <IconShorts className={className} />;
+}
+
 export function IconDistricts({ className }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>

@@ -33,6 +33,7 @@ export const cg: Dictionary = {
     education: "शिक्षा",
     home: "होम",
     video: "वीडियो",
+    reels: "रील्स",
     shorts: "रील्स",
     live: "लाइव",
     saved: "सेव",

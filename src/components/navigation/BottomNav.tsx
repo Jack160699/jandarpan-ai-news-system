@@ -11,14 +11,14 @@ import {
 import { triggerHaptic } from "@/lib/mobile/haptics";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
-import { IconHome, IconLive, IconVideo } from "./NavIcons";
+import { IconHome, IconLive, IconReels } from "./NavIcons";
 
 const ICONS: Record<
   Exclude<import("@/lib/navigation").BottomNavIcon, "menu">,
   typeof IconHome
 > = {
   home: IconHome,
-  video: IconVideo,
+  reels: IconReels,
   live: IconLive,
 };
 
@@ -39,7 +39,7 @@ function BottomNavTabIcon({
 
 const TAB_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]> = {
   home: "home",
-  videos: "video",
+  reels: "shorts",
   live: "live",
   menu: "menu",
 };

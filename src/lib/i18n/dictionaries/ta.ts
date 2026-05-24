@@ -34,6 +34,7 @@ export const ta: Dictionary = {
     education: "கல்வி",
     home: "முகப்பு",
     video: "வீடியோ",
+    reels: "ரீல்ஸ்",
     shorts: "ரீல்ஸ்",
     live: "நேரலை",
     saved: "சேமி",
