@@ -3,6 +3,7 @@
  */
 
 import { normalizeArticleLanguage } from "@/lib/i18n/languages";
+import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { inferSection } from "@/lib/homepage/infer-section";
 import { buildAnchorLine } from "@/lib/news/shorts/anchor";
 import { bundleFromRow, shortCardFromRow } from "@/lib/news/shorts/build-short";
@@ -66,8 +67,12 @@ export function buildMinimalShortCard(
       subtitles,
       durationSec: 58,
     }),
-    categoryLabel: style.badgeHi,
-    sourceLabel: "जन दर्पण डेस्क",
+    categoryLabel: pickBilingualLabel(language, style.badge, style.badgeHi),
+    sourceLabel: pickBilingualLabel(
+      language,
+      "Jan Darpan Desk",
+      "जन दर्पण डेस्क"
+    ),
     sourceCount: 1,
     isLive: false,
   };

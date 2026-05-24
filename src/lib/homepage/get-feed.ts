@@ -34,7 +34,7 @@ async function buildFeedFromPool(
     displayLanguage,
   });
   if (!feed) return null;
-  const newsShorts = buildTrendingShortsFromPool(pool, 10);
+  const newsShorts = buildTrendingShortsFromPool(pool, 10, displayLanguage);
   return { ...feed, newsShorts };
 }
 

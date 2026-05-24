@@ -1,12 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { SectionHeader } from "@/components/homepage/SectionHeader";
 import type { HyperlocalFeedSummary } from "@/lib/homepage/types";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type HyperlocalFeedsProps = {
   feeds: HyperlocalFeedSummary[];
 };
 
 export function HyperlocalFeeds({ feeds }: HyperlocalFeedsProps) {
+  const { t } = useLanguage();
   if (!feeds.length) return null;
 
   return (
@@ -18,8 +22,7 @@ export function HyperlocalFeeds({ feeds }: HyperlocalFeedsProps) {
       <div className="nr-wrap">
         <SectionHeader
           id="hyperlocal-heading"
-          title="Near you"
-          titleHi="आपके जिले"
+          title={t.home.hyperlocal}
         />
 
         <ul className="nr-hyperlocal__grid nr-hyperlocal__grid--daily" role="list">
@@ -30,7 +33,7 @@ export function HyperlocalFeeds({ feeds }: HyperlocalFeedsProps) {
                 className="nr-hyperlocal__card tap-target"
               >
                 <span className="nr-hyperlocal__district-hi">
-                  {f.districtNameHi}
+                  {f.districtName}
                 </span>
                 {f.topHeadline ? (
                   <p className="nr-hyperlocal__headline">{f.topHeadline}</p>

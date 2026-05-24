@@ -15,6 +15,7 @@ import {
   loadReadingMemory,
   toggleBookmark,
 } from "@/lib/reading-memory";
+import { pickDeskLabel } from "@/lib/i18n/pick-label";
 import { useLanguage } from "@/providers/LanguageProvider";
 import type { HomeArticle } from "@/lib/homepage/types";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
@@ -37,8 +38,7 @@ export function HeroNewsCard({
   const isLive = lead.isLive;
   const isBreaking = lead.ranking.isBreaking;
   const showLiveBadge = isLive || isBreaking;
-  const sourceLabel =
-    language === "en" ? lead.desk.name : lead.desk.nameHi;
+  const sourceLabel = pickDeskLabel(language, lead.desk);
 
   useEffect(() => {
     const memory = loadReadingMemory();

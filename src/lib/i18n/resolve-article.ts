@@ -27,10 +27,11 @@ export function getArticleTranslations(
   return (meta?.translations as ArticleTranslations) ?? {};
 }
 
-export function resolveLocalizedFields(
+/** Strict: only source language or stored AI translation — never mixed fallback */
+export function resolveLocalizedFieldsStrict(
   row: GeneratedArticleRow,
   displayLanguage: NewsroomLanguage
-): LocalizedArticleFields {
+): LocalizedArticleFields | null {
   const source = normalizeArticleLanguage(row.language);
   const translations = getArticleTranslations(row.editorial_metadata);
 
@@ -42,13 +43,13 @@ export function resolveLocalizedFields(
       seoTitle: row.seo_title ?? row.headline,
       seoDescription: row.seo_description ?? row.summary ?? "",
       readingTime: row.reading_time,
-      language: source,
+      language: displayLanguage,
       usedTranslation: false,
     };
   }
 
   const bundle = translations[displayLanguage];
-  if (bundle) {
+  if (bundle?.headline?.trim() && bundle.summary?.trim()) {
     return {
       headline: bundle.headline,
       summary: bundle.summary,
@@ -61,16 +62,26 @@ export function resolveLocalizedFields(
     };
   }
 
-  return {
-    headline: row.headline,
-    summary: row.summary ?? "",
-    articleBody: row.article_body ?? "",
-    seoTitle: row.seo_title ?? row.headline,
-    seoDescription: row.seo_description ?? row.summary ?? "",
-    readingTime: row.reading_time,
-    language: source,
-    usedTranslation: false,
-  };
+  return null;
+}
+
+/** @deprecated Use resolveLocalizedFieldsStrict for reader UI */
+export function resolveLocalizedFields(
+  row: GeneratedArticleRow,
+  displayLanguage: NewsroomLanguage
+): LocalizedArticleFields {
+  return (
+    resolveLocalizedFieldsStrict(row, displayLanguage) ?? {
+      headline: row.headline,
+      summary: row.summary ?? "",
+      articleBody: row.article_body ?? "",
+      seoTitle: row.seo_title ?? row.headline,
+      seoDescription: row.seo_description ?? row.summary ?? "",
+      readingTime: row.reading_time,
+      language: normalizeArticleLanguage(row.language),
+      usedTranslation: false,
+    }
+  );
 }
 
 export function applyLocalizedFieldsToNewsArticle(

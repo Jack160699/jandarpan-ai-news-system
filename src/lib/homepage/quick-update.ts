@@ -1,4 +1,6 @@
 import { resolveWireLocation } from "@/lib/homepage/wire-location";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { pickDeskLabel } from "@/lib/i18n/pick-label";
 import type { HomeArticle } from "@/lib/homepage/types";
 
 export type QuickUpdateData = {
@@ -20,7 +22,10 @@ export function isQuickUpdateFresh(article: HomeArticle): boolean {
   return hours < 2;
 }
 
-export function homeArticleToQuickUpdate(article: HomeArticle): QuickUpdateData {
+export function homeArticleToQuickUpdate(
+  article: HomeArticle,
+  language: NewsroomLanguage = "hi"
+): QuickUpdateData {
   const fresh = isQuickUpdateFresh(article);
   const isLive = article.isLive;
   const isBreaking =
@@ -28,7 +33,7 @@ export function homeArticleToQuickUpdate(article: HomeArticle): QuickUpdateData 
 
   const updateLine =
     article.summary?.trim() ||
-    `${article.categoryLabel} · ${article.desk.nameHi || article.desk.name}`;
+    `${article.categoryLabel} · ${pickDeskLabel(language, article.desk)}`;
 
   return {
     id: article.id,
@@ -40,6 +45,6 @@ export function homeArticleToQuickUpdate(article: HomeArticle): QuickUpdateData 
     language: article.language,
     isLive,
     isBreaking: isBreaking && !isLive,
-    location: resolveWireLocation(article),
+    location: resolveWireLocation(article, language),
   };
 }

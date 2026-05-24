@@ -1,5 +1,5 @@
 import type { AppLanguage } from "@/lib/i18n/types";
-import { isNewsroomLanguage } from "@/lib/i18n/languages";
+import { isGateLanguage } from "@/lib/i18n/gate-languages";
 
 /** Map browser BCP-47 tag to newsroom language for gate UI + default highlight */
 export function detectBrowserLanguage(): AppLanguage {
@@ -17,15 +17,18 @@ export function detectBrowserLanguage(): AppLanguage {
     if (base === "bn") return "bn";
     if (base === "mr") return "mr";
     if (base === "ta") return "ta";
-    if (base === "ur") return "ur";
+    if (base === "cg") return "cg";
   }
 
   return "en";
 }
 
+/** Default highlight for onboarding when no saved preference */
 export function resolveGateHighlightLanguage(
   stored: AppLanguage | null | undefined
 ): AppLanguage {
-  if (stored && isNewsroomLanguage(stored)) return stored;
-  return detectBrowserLanguage();
+  if (stored && isGateLanguage(stored)) return stored;
+  const detected = detectBrowserLanguage();
+  if (isGateLanguage(detected)) return detected;
+  return "cg";
 }

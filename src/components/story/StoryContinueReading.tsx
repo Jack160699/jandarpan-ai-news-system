@@ -1,10 +1,14 @@
+"use client";
+
 import Link from "next/link";
 import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
-import { categoryLabel } from "@/lib/live-news-display";
+import { pickBilingualLabel } from "@/lib/i18n/pick-label";
+import { displayCategoryLabel } from "@/lib/news/category-display";
 import { resolveCardImage } from "@/lib/news/images/display";
 import { resolveStorySlug } from "@/lib/news/related-stories";
 import type { InternalLink } from "@/lib/seo/internal-links";
 import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type StoryContinueReadingProps = {
   related: NewsArticleRow[];
@@ -15,6 +19,7 @@ export function StoryContinueReading({
   related,
   hubLinks,
 }: StoryContinueReadingProps) {
+  const { language, t } = useLanguage();
   const cards = related.slice(0, 4);
   const hubs = hubLinks.slice(0, 4);
 
@@ -27,9 +32,8 @@ export function StoryContinueReading({
     >
       <header className="story-continue__head">
         <h2 id="story-continue-title" className="story-continue__title">
-          Continue reading
+          {t.story.relatedStories}
         </h2>
-        <p className="story-continue__sub">आगे पढ़ें · More from the desk</p>
       </header>
 
       {cards.length > 0 ? (
@@ -59,7 +63,10 @@ export function StoryContinueReading({
                 </div>
                 <div className="story-continue__body">
                   <span className="story-continue__cat">
-                    {categoryLabel(article.category as NewsCategory)}
+                    {displayCategoryLabel(
+                      article.category as NewsCategory,
+                      language
+                    )}
                   </span>
                   <h3 className="story-continue__headline">
                     {article.ai_headline ?? article.title}
@@ -76,7 +83,11 @@ export function StoryContinueReading({
           {hubs.map((link) => (
             <li key={link.href}>
               <Link href={link.href} className="story-continue__hub-link">
-                {link.labelHi ?? link.label}
+                {pickBilingualLabel(
+                  language,
+                  link.label,
+                  link.labelHi ?? link.label
+                )}
               </Link>
             </li>
           ))}

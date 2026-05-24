@@ -6,7 +6,7 @@ import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
 import {
   applyLocalizedFieldsToNewsArticle,
-  resolveLocalizedFields,
+  resolveLocalizedFieldsStrict,
 } from "@/lib/i18n/resolve-article";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { buildLocalizedStoryMetadata } from "@/lib/i18n/multilingual/seo";
@@ -92,18 +92,23 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     }
 
     const poolRows = await fetchGeneratedArticlePool(80);
-    const localized = resolveLocalizedFields(generatedRow, readerLang);
+    const localized = resolveLocalizedFieldsStrict(generatedRow, readerLang);
+    if (!localized) notFound();
+
     const liveArticle = applyLocalizedFieldsToNewsArticle(
       generatedToNewsArticle(generatedRow),
       localized
     );
-    const poolArticles = poolRows.map((r) => {
-      const fields = resolveLocalizedFields(r, readerLang);
-      return applyLocalizedFieldsToNewsArticle(
-        generatedToNewsArticle(r),
-        fields
-      );
-    });
+    const poolArticles = poolRows
+      .map((r) => {
+        const fields = resolveLocalizedFieldsStrict(r, readerLang);
+        if (!fields) return null;
+        return applyLocalizedFieldsToNewsArticle(
+          generatedToNewsArticle(r),
+          fields
+        );
+      })
+      .filter((a): a is NonNullable<typeof a> => a !== null);
     const related = pickRelatedStories(liveArticle, poolArticles, 8);
 
     let liveCoverage: {

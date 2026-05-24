@@ -50,6 +50,19 @@ export function getNarrator(language: NewsroomLanguage): NarratorProfile {
   return NARRATORS[language] ?? NARRATORS.hi;
 }
 
+/** Single-language narrator line for listen UI */
+export function getNarratorDisplay(language: NewsroomLanguage): {
+  name: string;
+  desk: string;
+  initial: string;
+} {
+  const n = getNarrator(language);
+  if (language === "en") {
+    return { name: n.name, desk: n.desk, initial: n.name.charAt(0) };
+  }
+  return { name: n.nameHi, desk: n.deskHi, initial: n.nameHi.charAt(0) };
+}
+
 export function formatDuration(sec: number): string {
   const s = Math.max(0, Math.floor(sec));
   const m = Math.floor(s / 60);

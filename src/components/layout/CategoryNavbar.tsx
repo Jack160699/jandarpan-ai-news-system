@@ -9,6 +9,8 @@ import {
   resolveNavHref,
 } from "@/lib/navigation/active";
 import { triggerHaptic } from "@/lib/mobile/haptics";
+import { pickBilingualLabel } from "@/lib/i18n/pick-label";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { NAV_CATEGORIES, type NavCategory } from "@/lib/navigation";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
@@ -28,11 +30,11 @@ const NAV_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]>
 function labelFor(
   cat: NavCategory,
   t: ReturnType<typeof useLanguage>["t"],
-  language: string
+  language: NewsroomLanguage
 ) {
   const key = NAV_KEYS[cat.id];
   if (key) return t.nav[key];
-  return language === "en" ? cat.label : cat.labelHi ?? cat.label;
+  return pickBilingualLabel(language, cat.label, cat.labelHi ?? cat.label);
 }
 
 export function CategoryNavbar() {

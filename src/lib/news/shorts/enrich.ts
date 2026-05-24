@@ -3,6 +3,8 @@
  */
 
 import { inferSection, REGIONAL_SECTIONS } from "@/lib/homepage/infer-section";
+import { normalizeArticleLanguage } from "@/lib/i18n/languages";
+import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { getShortStyle } from "@/lib/news/shorts/styles";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
@@ -60,11 +62,15 @@ export function enrichShortCard(
   const section = card.section ?? inferSection(row);
   const sectionDef = REGIONAL_SECTIONS.find((s) => s.id === section);
   const style = getShortStyle(section);
+  const lang = normalizeArticleLanguage(card.language ?? row.language);
+  const categoryLabel = sectionDef
+    ? pickBilingualLabel(lang, sectionDef.label, sectionDef.labelHi)
+    : pickBilingualLabel(lang, style.badge, style.badgeHi);
 
   return {
     ...card,
     section,
-    categoryLabel: sectionDef?.labelHi ?? style.badgeHi,
+    categoryLabel,
     sourceLabel: extractSourceLabel(row),
     isLive: detectLive(row),
     videoUrl: extractVideoUrl(row),

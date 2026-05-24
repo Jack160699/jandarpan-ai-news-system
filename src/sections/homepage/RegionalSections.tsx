@@ -28,9 +28,6 @@ export function RegionalSections({ sections }: RegionalSectionsProps) {
             <div key={block.id} className="hp-regional__block">
               <h3 className="hp__title" style={{ fontSize: "1.25rem" }}>
                 {block.label}
-                <span className="hp__title-hi ml-2 font-normal">
-                  {block.labelHi}
-                </span>
               </h3>
               <ul className="hp-regional__list">
                 {block.articles.map((article) => (

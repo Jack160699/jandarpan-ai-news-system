@@ -46,6 +46,8 @@ export type HomeArticle = {
   sourceCount: number;
   categoryLabel: string;
   desk: NewsDeskLabel;
+  /** False when article has no translation for active reader language */
+  localeMatch?: boolean;
 };
 
 export type RegionalSectionBlock = {

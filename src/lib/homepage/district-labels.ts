@@ -1,4 +1,6 @@
 import type { HomeArticle } from "@/lib/homepage/types";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 
 export type DistrictLabel = {
   label: string;
@@ -23,30 +25,25 @@ function matchTag(tags: string[], needle: string): boolean {
 }
 
 /** Resolve district badge for slider cards */
+function pickDistrict(
+  language: NewsroomLanguage,
+  d: DistrictLabel
+): string {
+  return pickBilingualLabel(language, d.label, d.labelHi);
+}
+
 export function districtLabelFor(
   article: HomeArticle,
   index: number,
-  language: "en" | "hi" | string
+  language: NewsroomLanguage
 ): string {
-  if (index === 0) {
-    return language === "hi" ? DISTRICTS[0].labelHi : DISTRICTS[0].label;
-  }
-  if (index === 1) {
-    return language === "hi" ? DISTRICTS[1].labelHi : DISTRICTS[1].label;
-  }
+  if (index === 0) return pickDistrict(language, DISTRICTS[0]);
+  if (index === 1) return pickDistrict(language, DISTRICTS[1]);
   const fromSection = SECTION_DISTRICT[article.section];
-  if (fromSection) {
-    return language === "hi" ? fromSection.labelHi : fromSection.label;
-  }
-  if (matchTag(article.tags, "durg")) {
-    return language === "hi" ? DISTRICTS[1].labelHi : DISTRICTS[1].label;
-  }
-  if (matchTag(article.tags, "bilaspur")) {
-    return language === "hi" ? DISTRICTS[2].labelHi : DISTRICTS[2].label;
-  }
-  if (matchTag(article.tags, "bastar")) {
-    return language === "hi" ? DISTRICTS[3].labelHi : DISTRICTS[3].label;
-  }
+  if (fromSection) return pickDistrict(language, fromSection);
+  if (matchTag(article.tags, "durg")) return pickDistrict(language, DISTRICTS[1]);
+  if (matchTag(article.tags, "bilaspur")) return pickDistrict(language, DISTRICTS[2]);
+  if (matchTag(article.tags, "bastar")) return pickDistrict(language, DISTRICTS[3]);
   const fallback = DISTRICTS[index % DISTRICTS.length];
-  return language === "hi" ? fallback.labelHi : fallback.label;
+  return pickDistrict(language, fallback);
 }

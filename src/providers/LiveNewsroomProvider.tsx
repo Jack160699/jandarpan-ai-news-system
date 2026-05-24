@@ -22,6 +22,8 @@ import {
   shouldShowUpdateBanner,
 } from "@/lib/realtime/merge-feed";
 import type { LiveHomepageSnapshot } from "@/lib/realtime/types";
+import { localizeGeneratedFeed } from "@/lib/i18n/strict-locale";
+import { useLanguageOptional } from "@/providers/LanguageProvider";
 
 type LiveNewsroomContextValue = {
   feed: GeneratedHomepageFeed;
@@ -49,7 +51,16 @@ export function LiveNewsroomProvider({
   children,
   enabled = true,
 }: LiveNewsroomProviderProps) {
-  const [feed, setFeed] = useState(initialFeed);
+  const languageCtx = useLanguageOptional();
+  const displayLanguage = languageCtx?.language ?? "hi";
+
+  const [feed, setFeed] = useState(() =>
+    localizeGeneratedFeed(initialFeed, displayLanguage)
+  );
+
+  useEffect(() => {
+    setFeed(localizeGeneratedFeed(initialFeed, displayLanguage));
+  }, [initialFeed, displayLanguage]);
   const [lastSyncedAt, setLastSyncedAt] = useState(initialFeed.fetchedAt);
   const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
   const [pendingSnapshot, setPendingSnapshot] =

@@ -19,7 +19,7 @@ export const NationalHighlightsFeed = memo(function NationalHighlightsFeed({
   items,
   freshIds,
 }: NationalHighlightsFeedProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const reduceMotion = useReducedMotion();
   const slice = items.slice(0, 6);
 
@@ -51,7 +51,7 @@ export const NationalHighlightsFeed = memo(function NationalHighlightsFeed({
             {slice.map((article, index) => (
               <NationalNewsCard
                 key={article.id}
-                {...homeArticleToQuickUpdate(article)}
+                {...homeArticleToQuickUpdate(article, language)}
                 listPosition={index + 1}
                 index={index}
                 isIncoming={freshIds?.has(article.id)}

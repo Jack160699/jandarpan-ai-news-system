@@ -4,6 +4,7 @@ import { memo } from "react";
 import { QuickUpdateCard } from "@/components/quick-update/QuickUpdateCard";
 import { homeArticleToQuickUpdate } from "@/lib/homepage/quick-update";
 import type { HomeArticle } from "@/lib/homepage/types";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type LiveUpdateCardProps = {
   article: HomeArticle;
@@ -18,10 +19,13 @@ export const LiveUpdateCard = memo(function LiveUpdateCard({
   listPosition,
   rank,
 }: LiveUpdateCardProps) {
+  const { language } = useLanguage();
+  const quick = homeArticleToQuickUpdate(article, language);
+
   if (variant === "wire") {
     return (
       <QuickUpdateCard
-        {...homeArticleToQuickUpdate(article)}
+        {...quick}
         listPosition={listPosition ?? rank}
         variant="feed"
       />
@@ -30,7 +34,7 @@ export const LiveUpdateCard = memo(function LiveUpdateCard({
 
   return (
     <QuickUpdateCard
-      {...homeArticleToQuickUpdate(article)}
+      {...quick}
       listPosition={listPosition ?? rank}
       variant="feed"
     />

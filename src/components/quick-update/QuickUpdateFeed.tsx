@@ -4,6 +4,7 @@ import { memo } from "react";
 import { QuickUpdateCard } from "@/components/quick-update/QuickUpdateCard";
 import { homeArticleToQuickUpdate } from "@/lib/homepage/quick-update";
 import type { HomeArticle } from "@/lib/homepage/types";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type QuickUpdateFeedProps = {
   items: HomeArticle[];
@@ -20,6 +21,7 @@ export const QuickUpdateFeed = memo(function QuickUpdateFeed({
   className = "",
   freshIds,
 }: QuickUpdateFeedProps) {
+  const { language } = useLanguage();
   const slice = limit ? items.slice(0, limit) : items;
   if (!slice.length) return null;
 
@@ -38,7 +40,7 @@ export const QuickUpdateFeed = memo(function QuickUpdateFeed({
               role="listitem"
             >
               <QuickUpdateCard
-                {...homeArticleToQuickUpdate(article)}
+                {...homeArticleToQuickUpdate(article, language)}
                 listPosition={index + 1}
                 index={index}
                 variant="rail"
@@ -60,7 +62,7 @@ export const QuickUpdateFeed = memo(function QuickUpdateFeed({
       {slice.map((article, index) => (
         <QuickUpdateCard
           key={article.id}
-          {...homeArticleToQuickUpdate(article)}
+          {...homeArticleToQuickUpdate(article, language)}
           listPosition={index + 1}
           index={index}
           variant="feed"

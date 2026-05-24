@@ -60,16 +60,9 @@ export function liveArticleToCard(article: NewsArticleRow): LiveCardModel {
   };
 }
 
+import { displayCategoryLabel } from "@/lib/news/category-display";
+
+/** @deprecated Prefer displayCategoryLabel(category, language) for localized UI */
 export function categoryLabel(category: NewsCategory): string {
-  const labels: Record<NewsCategory, string> = {
-    local: "Chhattisgarh",
-    politics: "Politics",
-    business: "Business",
-    technology: "Technology",
-    sports: "Sports",
-    entertainment: "Entertainment",
-    health: "Health",
-    world: "World",
-  };
-  return labels[category] ?? category;
+  return displayCategoryLabel(category, "en");
 }

@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { HeadlinesTranscript } from "@/components/listen/HeadlinesTranscript";
 import { HeadlinesWaveform } from "@/components/listen/HeadlinesWaveform";
-import { formatDuration, getNarrator } from "@/lib/listen/narrator";
+import { formatDuration, getNarratorDisplay } from "@/lib/listen/narrator";
 import { useHeadlinesListen } from "@/providers/HeadlinesListenProvider";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 export function HeadlinesListenPlayer() {
+  const { t } = useLanguage();
   const {
     track,
     tracks,
@@ -26,37 +28,39 @@ export function HeadlinesListenPlayer() {
   if (!track) {
     return (
       <div className="hl-player hl-player--empty">
-        <p>No headlines available to play right now.</p>
+        <p>{t.listen.subtitle}</p>
         <Link href="/" className="hl-player__cta tap-target">
-          Back to homepage
+          {t.shorts.backHome}
         </Link>
       </div>
     );
   }
 
-  const narrator = getNarrator(track.language);
+  const narrator = getNarratorDisplay(track.language);
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
   const remaining = Math.max(0, duration - currentTime);
 
   return (
     <div className="hl-player">
       <div className="hl-player__hero">
-        <p className="hl-player__brand">Listen to Today&apos;s Headlines</p>
-        <p className="hl-player__brand-hi">आज की मुख्य खबरें सुनें</p>
+        <p className="hl-player__brand">{t.listen.title}</p>
 
         <div className="hl-player__narrator">
           <span className="hl-player__avatar" aria-hidden>
-            {narrator.nameHi.charAt(0)}
+            {narrator.initial}
           </span>
           <div>
-            <p className="hl-player__narrator-name">{narrator.nameHi}</p>
-            <p className="hl-player__narrator-desk">{narrator.deskHi}</p>
+            <p className="hl-player__narrator-name">{narrator.name}</p>
+            <p className="hl-player__narrator-desk">{narrator.desk}</p>
           </div>
         </div>
 
         <HeadlinesWaveform active={playing && !loading} className="hl-player__wave" />
 
-        <p className="hl-player__headline" lang={track.language === "hi" ? "hi" : undefined}>
+        <p
+          className="hl-player__headline"
+          lang={track.language !== "en" ? track.language : undefined}
+        >
           {track.headline}
         </p>
         <p className="hl-player__meta">
@@ -79,7 +83,7 @@ export function HeadlinesListenPlayer() {
         <div
           className="hl-player__scrub"
           role="slider"
-          aria-label="Playback position"
+          aria-label={t.listen.title}
           aria-valuemin={0}
           aria-valuemax={Math.round(duration)}
           aria-valuenow={Math.round(currentTime)}
@@ -103,7 +107,7 @@ export function HeadlinesListenPlayer() {
             className="hl-player__ctrl hl-player__ctrl--ghost tap-target"
             onClick={prev}
             disabled={index === 0}
-            aria-label="Previous headline"
+            aria-label="Previous"
           >
             ‹
           </button>
@@ -112,14 +116,14 @@ export function HeadlinesListenPlayer() {
             type="button"
             className="hl-player__play tap-target"
             onClick={togglePlay}
-            aria-label={playing ? "Pause" : "Play"}
+            aria-label={playing ? t.listen.pause : t.listen.play}
             disabled={loading}
           >
             <span className="hl-player__play-icon" aria-hidden>
               {loading ? "…" : playing ? "❚❚" : "▶"}
             </span>
             <span className="hl-player__play-label">
-              {loading ? "Loading…" : playing ? "Pause" : "Play"}
+              {loading ? t.common.loading : playing ? t.listen.pause : t.listen.play}
             </span>
           </button>
 
@@ -128,7 +132,7 @@ export function HeadlinesListenPlayer() {
             className="hl-player__ctrl hl-player__ctrl--ghost tap-target"
             onClick={next}
             disabled={index >= tracks.length - 1}
-            aria-label="Next headline"
+            aria-label="Next"
           >
             ›
           </button>
@@ -138,7 +142,7 @@ export function HeadlinesListenPlayer() {
           type="button"
           className="hl-player__speed tap-target"
           onClick={cycleSpeed}
-          aria-label={`Playback speed ${speed}x`}
+          aria-label={`${speed}×`}
         >
           {speed}×
         </button>
@@ -151,7 +155,7 @@ export function HeadlinesListenPlayer() {
       />
 
       <Link href={`/story/${track.slug}`} className="hl-player__read tap-target">
-        पूरी खबर पढ़ें →
+        {t.shorts.readFull} →
       </Link>
     </div>
   );

@@ -4,6 +4,7 @@ import { memo } from "react";
 import { QuickUpdateCard } from "@/components/quick-update/QuickUpdateCard";
 import { homeArticleToQuickUpdate } from "@/lib/homepage/quick-update";
 import type { HomeArticle } from "@/lib/homepage/types";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type BreakingWireItemProps = {
   article: HomeArticle;
@@ -20,9 +21,10 @@ export const BreakingWireItem = memo(function BreakingWireItem({
   index = 0,
   isIncoming = false,
 }: BreakingWireItemProps) {
+  const { language } = useLanguage();
   return (
     <QuickUpdateCard
-      {...homeArticleToQuickUpdate(article)}
+      {...homeArticleToQuickUpdate(article, language)}
       listPosition={listPosition}
       index={index}
       variant="feed"

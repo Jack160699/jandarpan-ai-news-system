@@ -5,6 +5,7 @@
 import { createAdminServerClient } from "@/lib/supabase";
 import { inferSection } from "@/lib/homepage/infer-section";
 import { normalizeArticleLanguage } from "@/lib/i18n/languages";
+import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { buildAnchorLine } from "@/lib/news/shorts/anchor";
 import { logShortsAnalytics } from "@/lib/news/shorts/analytics";
 import { buildReelSlides } from "@/lib/news/shorts/reels";
@@ -30,6 +31,7 @@ export function shortCardFromRow(row: GeneratedArticleRow): NewsShortCard | null
   if (!bundle) return null;
 
   const style = getShortStyle(bundle.section);
+  const lang = normalizeArticleLanguage(bundle.language ?? row.language);
   const base: NewsShortCard = {
     articleId: row.id,
     slug: row.slug,
@@ -48,8 +50,8 @@ export function shortCardFromRow(row: GeneratedArticleRow): NewsShortCard | null
     language: bundle.language,
     subtitles: bundle.subtitles,
     reelSlides: bundle.reel.slides,
-    categoryLabel: style.badgeHi,
-    sourceLabel: "जन दर्पण डेस्क",
+    categoryLabel: pickBilingualLabel(lang, style.badge, style.badgeHi),
+    sourceLabel: pickBilingualLabel(lang, "Jan Darpan Desk", "जन दर्पण डेस्क"),
     sourceCount: 1,
     isLive: false,
   };

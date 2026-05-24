@@ -30,9 +30,7 @@ export function CategoryStreams({ streams }: CategoryStreamsProps) {
       <div className="nr-wrap">
         <SectionHeader
           id="nr-categories-title"
-          kicker="Browse by desk"
           title="Category streams"
-          titleHi="श्रेणी"
         />
       </div>
 
@@ -57,9 +55,6 @@ export function CategoryStreams({ streams }: CategoryStreamsProps) {
                     {stream.label}
                   </Link>
                 </h3>
-                <span className="nr-categories__label-hi">
-                  {stream.labelHi}
-                </span>
               </div>
               <ul
                 className={

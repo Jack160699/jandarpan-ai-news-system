@@ -20,6 +20,7 @@ import {
 import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
 import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
 import { HomepageFooter } from "@/components/footer/HomepageFooter";
+import { useLocalizedFeed } from "@/hooks/useLocalizedFeed";
 
 const HyperlocalFeeds = dynamic(
   () =>
@@ -33,7 +34,10 @@ type HomepageLiveViewProps = {
   feed: GeneratedHomepageFeed;
 };
 
-export function HomepageLiveView({ feed }: HomepageLiveViewProps) {
+export function HomepageLiveView({ feed: serverFeed }: HomepageLiveViewProps) {
+  const feed = useLocalizedFeed(serverFeed) ?? serverFeed;
+  if (!feed) return null;
+
   return (
     <LiveNewsroomProvider initialFeed={feed}>
       <HomepageLiveContent
@@ -48,8 +52,9 @@ type HomepageLiveContentProps = {
 };
 
 function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
-  const { feed, freshIds } = useLiveNewsroom();
-  const { t } = useLanguage();
+  const { feed: liveFeed, freshIds } = useLiveNewsroom();
+  const { language, t } = useLanguage();
+  const feed = useLocalizedFeed(liveFeed) ?? liveFeed;
 
   const { lead, supporting } = feed.editorsPicks;
   const topStories = [

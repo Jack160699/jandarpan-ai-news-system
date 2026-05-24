@@ -11,12 +11,13 @@ import {
   buildLocalBreakingAlerts,
 } from "@/lib/regional";
 import type { RankingPersonalization } from "@/lib/news/ai/ranking";
-import { getTrendingSearches } from "@/lib/search/trending-queries";
 import { buildOpenGraphImageUrl, optimizeCdnImageUrl } from "@/lib/news/ai/editorial-image-compress";
 import { resolveFallbackImage } from "@/lib/news/images/fallbacks";
 import { isDisplayableImage } from "@/lib/news/images/validate";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
-import { resolveLocalizedFields } from "@/lib/i18n/resolve-article";
+import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
+import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
+import { localizeGeneratedFeed } from "@/lib/i18n/strict-locale";
 import {
   normalizeArticleLanguage,
   readingTimeLabel,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/i18n/languages";
 import { getSectionLabel } from "@/lib/i18n/section-labels";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { resolveEditorialDesk } from "@/lib/newsroom/desk-branding";
 import type {
   EditorsPicksBlock,
@@ -86,7 +88,10 @@ export function toHomeArticle(
     section?: HomeSectionId;
   },
   displayLanguage: NewsroomLanguage = "hi"
-): HomeArticle {
+): HomeArticle | null {
+  const localized = resolveLocalizedFieldsStrict(row, displayLanguage);
+  if (!localized) return null;
+
   const { hero, og } = resolveImageUrls(row);
   const hours = hoursSince(row.published_at);
   const meta = row.editorial_metadata ?? {};
@@ -94,7 +99,6 @@ export function toHomeArticle(
   const publishedAt = row.published_at ?? row.created_at;
   const section = ranked?.section ?? inferSection(row);
   const priorityScore = ranked?.priorityScore ?? 0;
-  const localized = resolveLocalizedFields(row, displayLanguage);
   const dict = getDictionary(displayLanguage);
   const readMins = parseInt(localized.readingTime ?? row.reading_time ?? "3", 10) || 3;
   const attributionCount = Array.isArray(meta.source_attribution)
@@ -123,7 +127,7 @@ export function toHomeArticle(
       isBreaking: ranked?.isBreaking ?? false,
       duplicateClusterId: ranked?.duplicateClusterId ?? null,
     },
-    language: normalizeArticleLanguage(row.language),
+    language: localized.language,
     tags: row.tags ?? [],
     aiConfidence: confidence,
     sourceCount: Math.max(1, sourceCount),
@@ -132,23 +136,27 @@ export function toHomeArticle(
       section,
       section === "chhattisgarh" || section === "raipur"
     ),
+    localeMatch: true,
   };
 }
 
 function pickCategoryStreams(
   ranked: HomeArticle[],
   usedIds: Set<string>,
+  displayLanguage: NewsroomLanguage,
   perSection = 4
 ): RegionalSectionBlock[] {
+  const dict = getDictionary(displayLanguage);
   return REGIONAL_SECTIONS.map((def) => {
     const articles = ranked
       .filter((a) => a.section === def.id && !usedIds.has(a.id))
       .sort((a, b) => b.priorityScore - a.priorityScore)
       .slice(0, perSection);
+    const label = getSectionLabel(def.id, dict, displayLanguage);
     return {
       id: def.id,
-      label: def.label,
-      labelHi: def.labelHi,
+      label,
+      labelHi: label,
       articles,
     };
   }).filter((s) => s.articles.length > 0);
@@ -169,20 +177,22 @@ export function buildGeneratedHomepageFeed(
   });
   const hyperlocalBundle = buildHyperlocalFeedBundle(rows, { maxDistricts: 6 });
   const localAlerts = buildLocalBreakingAlerts(rows, { cgOnly: true, limit: 8 });
-  const ranked = rankedOutputs.map((r) =>
-    toHomeArticle(
-      r.row,
-      {
-        priorityScore: r.ranking.priorityScore,
-        reasons: r.ranking.reasons,
-        isTrending: r.ranking.isTrending,
-        isBreaking: r.ranking.isBreaking,
-        duplicateClusterId: r.ranking.duplicateClusterId,
-        section: r.section,
-      },
-      displayLanguage
+  const ranked = rankedOutputs
+    .map((r) =>
+      toHomeArticle(
+        r.row,
+        {
+          priorityScore: r.ranking.priorityScore,
+          reasons: r.ranking.reasons,
+          isTrending: r.ranking.isTrending,
+          isBreaking: r.ranking.isBreaking,
+          duplicateClusterId: r.ranking.duplicateClusterId,
+          section: r.section,
+        },
+        displayLanguage
+      )
     )
-  );
+    .filter((a): a is HomeArticle => a !== null);
 
   const usedIds = new Set<string>();
 
@@ -273,7 +283,7 @@ export function buildGeneratedHomepageFeed(
 
   for (const s of shorts) usedIds.add(s.id);
 
-  const categoryStreams = pickCategoryStreams(ranked, usedIds, 5);
+  const categoryStreams = pickCategoryStreams(ranked, usedIds, displayLanguage, 5);
 
   const avgConfidence =
     ranked.length > 0
@@ -283,7 +293,7 @@ export function buildGeneratedHomepageFeed(
         ) / 100
       : 0;
 
-  return {
+  const feed: GeneratedHomepageFeed = {
     breakingTicker: tickerItems.length ? tickerItems : editorialPool.slice(0, 6),
     editorsPicks,
     liveWire: liveWire.length ? liveWire : editorialPool.slice(0, 10),
@@ -303,21 +313,37 @@ export function buildGeneratedHomepageFeed(
       breakingCount: rankedOutputs.filter((r) => r.ranking.isBreaking).length,
       trendingCount: rankedOutputs.filter((r) => r.ranking.isTrending).length,
       avgConfidence,
-      trendingSearches: getTrendingSearches(6),
+      trendingSearches: getTrendingSearchesForLanguage(displayLanguage, 6),
     },
     hyperlocalFeeds: hyperlocalBundle.feeds.map((f) => ({
       districtSlug: f.districtSlug,
-      districtName: f.districtName,
-      districtNameHi: f.districtNameHi,
+      districtName: pickBilingualLabel(
+        displayLanguage,
+        f.districtName,
+        f.districtNameHi
+      ),
+      districtNameHi: pickBilingualLabel(
+        displayLanguage,
+        f.districtName,
+        f.districtNameHi
+      ),
       articleCount: f.articles.length,
       topHeadline: f.articles[0]?.headline ?? null,
     })),
-    localBreakingAlerts: localAlerts.map((a) => ({
-      slug: a.slug,
-      headline: a.headline,
-      district: a.district,
-      urgency: a.urgency,
-    })),
+    localBreakingAlerts: localAlerts
+      .map((a) => {
+        const match = ranked.find((art) => art.slug === a.slug);
+        if (!match) return null;
+        return {
+          slug: a.slug,
+          headline: match.headline,
+          district: a.district,
+          urgency: a.urgency,
+        };
+      })
+      .filter((a): a is NonNullable<typeof a> => a !== null),
     fetchedAt: new Date().toISOString(),
   };
+
+  return localizeGeneratedFeed(feed, displayLanguage);
 }
