@@ -13,18 +13,10 @@ export function isBottomNavActive(
   pathname: string,
   hash: string
 ): boolean {
-  switch (tab.id) {
-    case "home":
-      return pathname === "/" && !hash;
-    case "videos":
-      return pathname === "/shorts" || pathname.startsWith("/shorts/");
-    case "live":
-      return pathname === "/live" || pathname.startsWith("/live/");
-    case "profile":
-      return pathname === "/archive" || pathname.startsWith("/archive");
-    default:
-      return false;
+  if (tab.href === "/") {
+    return pathname === "/" && !hash;
   }
+  return pathname === tab.href || pathname.startsWith(`${tab.href}/`);
 }
 
 export function isBottomNavPending(
@@ -32,7 +24,9 @@ export function isBottomNavPending(
   pendingPath: string | null
 ): boolean {
   if (!pendingPath) return false;
-  if (tab.action) return false;
+  if (tab.href === "/") {
+    return pendingPath === "/";
+  }
   return pendingPath === tab.href || pendingPath.startsWith(`${tab.href}/`);
 }
 
