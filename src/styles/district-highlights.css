@@ -1,4 +1,4 @@
-/* District + national highlights — premium mobile editorial stack */
+/* District + national highlights — layout shell (segment UI uses Tailwind) */
 
 .home-highlights-desk {
   display: flex;
@@ -12,7 +12,6 @@
   min-width: 0;
 }
 
-/* Remove faux ad band / ruler lines above highlights */
 .home-highlights-desk .live-wire,
 .home-highlights-desk .live-wire--embedded,
 .home-highlights-desk .live-wire--daily {
@@ -46,159 +45,6 @@
   scroll-margin-top: 5rem;
 }
 
-/* ── Slim skeleton (no ad-like section kicker) ── */
-.highlights-desk-skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-  padding-block: 0.15rem;
-}
-
-.highlights-desk-skeleton__title {
-  height: 1.125rem;
-  width: 42%;
-  max-width: 11rem;
-  border-radius: 8px;
-  background: var(--paper-muted, #ece8e1);
-  animation: highlights-skeleton-pulse 1.35s ease-in-out infinite;
-}
-
-.highlights-desk-skeleton__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.625rem;
-}
-
-.highlights-desk-skeleton__card {
-  min-height: 5.25rem;
-  border-radius: 22px;
-  background: var(--paper-muted, #ece8e1);
-  animation: highlights-skeleton-pulse 1.35s ease-in-out infinite;
-  animation-delay: 0.08s;
-}
-
-.highlights-desk-skeleton__feed {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.highlights-desk-skeleton__row {
-  height: 3.25rem;
-  border-radius: 14px;
-  background: var(--paper-muted, #ece8e1);
-  animation: highlights-skeleton-pulse 1.35s ease-in-out infinite;
-}
-
-.highlights-desk-skeleton__row:nth-child(2) {
-  animation-delay: 0.06s;
-}
-
-.highlights-desk-skeleton__row:nth-child(3) {
-  animation-delay: 0.12s;
-}
-
-@keyframes highlights-skeleton-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .highlights-desk-skeleton__title,
-  .highlights-desk-skeleton__card,
-  .highlights-desk-skeleton__row {
-    animation: none;
-    opacity: 0.7;
-  }
-}
-
-/* ── Live blink (active district only) ── */
-.live-blink {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-shrink: 0;
-}
-
-.live-blink__dot {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 999px;
-  background: #dc2626;
-  box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.45);
-  animation: live-blink-pulse 1.35s ease-in-out infinite;
-}
-
-.live-blink--intense .live-blink__dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  animation: live-blink-blink 1.05s ease-in-out infinite;
-}
-
-.live-blink__label {
-  font-size: 0.625rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  line-height: 1;
-  color: #b91c1c;
-}
-
-.district-highlight-card--active .live-blink__label {
-  color: #991b1b;
-}
-
-.district-highlight-card--active .live-blink__dot {
-  background: #dc2626;
-  box-shadow: 0 0 10px rgba(220, 38, 38, 0.55);
-}
-
-@keyframes live-blink-pulse {
-  0%,
-  100% {
-    opacity: 0.5;
-    transform: scale(0.9);
-    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.35);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
-    box-shadow: 0 0 0 5px rgba(220, 38, 38, 0);
-  }
-}
-
-@keyframes live-blink-blink {
-  0%,
-  42%,
-  100% {
-    opacity: 1;
-  }
-  48%,
-  92% {
-    opacity: 0.2;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .live-blink__dot {
-    animation: none;
-    opacity: 1;
-  }
-}
-
-/* ── District section ── */
-.district-highlights {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-.district-highlights__head,
 .live-wire--embedded .live-wire__head {
   display: flex;
   align-items: baseline;
@@ -207,7 +53,6 @@
   margin-bottom: 0.25rem;
 }
 
-.district-highlights__title,
 .live-wire--embedded .live-wire__title {
   margin: 0;
   font-family: var(--font-hindi), var(--font-display), Georgia, serif;
@@ -218,7 +63,6 @@
   color: var(--color-ink, #1c1410);
 }
 
-.district-highlights__cta,
 .live-wire--embedded .live-wire__cta {
   font-size: 0.8125rem;
   font-weight: 700;
@@ -227,200 +71,30 @@
   text-decoration: none;
 }
 
-/* 2-column district grid */
-.district-highlights__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.625rem;
-}
-
-@media (min-width: 768px) {
-  .district-highlights__grid {
-    gap: 0.75rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .district-highlights__grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-/* ── District highlight card ── */
-.district-highlight-card {
-  position: relative;
-  display: flex;
-  min-height: 5.25rem;
-  width: 100%;
-  padding: 0;
+.home-feed-stack .live-wire--daily,
+.home-feed-stack .live-wire,
+.home-feed-stack .live-wire--embedded {
+  padding-block: 0;
+  margin-block: 0;
   border: none;
   background: transparent;
-  cursor: pointer;
-  text-align: left;
-  -webkit-tap-highlight-color: transparent;
-  will-change: transform;
-}
-
-.district-highlight-card__glow {
-  position: absolute;
-  inset: 0;
-  border-radius: 22px;
-  opacity: 0;
-  transition: opacity 0.28s ease;
-  pointer-events: none;
-}
-
-.district-highlight-card__inner {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 0.5rem;
-  width: 100%;
-  min-height: 5.25rem;
-  padding: 0.85rem 0.9rem;
-  border-radius: 22px;
-  border: 1px solid color-mix(in srgb, var(--color-rule, #ddd5c8) 90%, transparent);
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--color-surface, #fff) 88%, transparent) 0%,
-    color-mix(in srgb, var(--color-paper-muted, #f3efe8) 65%, transparent) 100%
-  );
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow:
-    0 1px 2px rgb(28 20 16 / 0.04),
-    0 10px 28px rgb(28 20 16 / 0.06);
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease,
-    background 0.25s ease;
-}
-
-.district-highlight-card:hover:not(.district-highlight-card--active) .district-highlight-card__inner {
-  border-color: color-mix(in srgb, var(--color-primary, #a01830) 22%, var(--color-rule));
-  box-shadow:
-    0 2px 4px rgb(28 20 16 / 0.05),
-    0 14px 32px rgb(28 20 16 / 0.08);
-}
-
-.district-highlight-card--active .district-highlight-card__glow {
-  opacity: 1;
-  background: radial-gradient(
-    120% 90% at 50% 0%,
-    color-mix(in srgb, #dc2626 28%, transparent),
-    transparent 68%
-  );
-  box-shadow: 0 0 28px color-mix(in srgb, #dc2626 22%, transparent);
-}
-
-.district-highlight-card--active .district-highlight-card__inner {
-  border-color: color-mix(in srgb, #dc2626 55%, var(--color-rule));
-  background: linear-gradient(
-    155deg,
-    color-mix(in srgb, #fff 92%, #fecaca 8%) 0%,
-    color-mix(in srgb, var(--color-paper-muted) 70%, #fee2e2 30%) 100%
-  );
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, #dc2626 12%, transparent),
-    0 8px 24px color-mix(in srgb, #dc2626 18%, transparent),
-    0 18px 40px rgb(28 20 16 / 0.1);
-}
-
-.district-highlight-card__row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.4rem;
-  width: 100%;
-}
-
-.district-highlight-card__name {
-  font-family: var(--font-ui), system-ui, sans-serif;
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  color: var(--color-ink, #1c1410);
-}
-
-.district-highlight-card--active .district-highlight-card__name {
-  color: #7f1d1d;
-}
-
-.district-highlight-card__count {
-  align-self: flex-start;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #991b1b;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, #dc2626 12%, #fff);
-  border: 1px solid color-mix(in srgb, #dc2626 18%, transparent);
-}
-
-/* Feed */
-.district-highlights__feed-wrap {
-  scroll-margin-top: 5.5rem;
-  transition: opacity 0.2s ease;
-}
-
-.district-highlights__feed-wrap--loading {
-  opacity: 0.72;
 }
 
 .district-feed {
-  min-height: 4rem;
+  min-height: 3.5rem;
 }
 
 .district-feed__empty {
   font-size: 0.875rem;
   color: var(--color-ink-muted, #6b5f54);
-  padding: 0.75rem 0;
+  padding: 0.5rem 0;
 }
 
-.district-highlights .quick-update-feed,
+#district-highlights .quick-update-feed,
 .home-highlights-desk .live-wire--embedded .quick-update-feed {
   border-radius: 16px;
 }
 
-/* Dark mode */
-html[data-theme="dark"] .district-highlights__title,
 html[data-theme="dark"] .live-wire--embedded .live-wire__title {
   color: var(--color-ink, #f3efe8);
-}
-
-html[data-theme="dark"] .district-highlight-card__inner {
-  border-color: color-mix(in srgb, #475569 65%, transparent);
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--color-surface) 90%, #0f172a) 0%,
-    color-mix(in srgb, #1e293b 80%, transparent) 100%
-  );
-  box-shadow: 0 10px 28px rgb(0 0 0 / 0.35);
-}
-
-html[data-theme="dark"] .district-highlight-card__name {
-  color: var(--color-ink, #f1f5f9);
-}
-
-html[data-theme="dark"] .district-highlight-card--active .district-highlight-card__inner {
-  border-color: color-mix(in srgb, #ef4444 50%, #475569);
-  background: linear-gradient(
-    155deg,
-    color-mix(in srgb, #1e293b 80%, #450a0a 20%) 0%,
-    color-mix(in srgb, #0f172a 70%, #7f1d1d 30%) 100%
-  );
-}
-
-html[data-theme="dark"] .district-highlight-card--active .district-highlight-card__name {
-  color: #fecaca;
-}
-
-html[data-theme="dark"] .highlights-desk-skeleton__title,
-html[data-theme="dark"] .highlights-desk-skeleton__card,
-html[data-theme="dark"] .highlights-desk-skeleton__row {
-  background: color-mix(in srgb, var(--paper-muted) 80%, #334155);
 }

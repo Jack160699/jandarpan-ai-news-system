@@ -111,8 +111,14 @@ export type Dictionary = {
     refreshFeed: string;
     dismissUpdates: string;
     nationalHighlights: string;
+    nationalNewsTab: string;
+    internationalNewsTab: string;
+    nationalSegmentEmpty: string;
+    allUpdates: string;
     districtHighlights: string;
     districtLive: string;
+    districtLivePrefix: string;
+    districtLiveStoriesLabel: string;
     districtEmpty: string;
     districtStories: string;
     featuredDistricts: {

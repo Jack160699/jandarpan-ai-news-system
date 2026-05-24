@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { DistrictHighlights } from "@/components/home/DistrictHighlights";
 import { buildDistrictArticlePool } from "@/lib/homepage/district-filter";
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
-import { LiveWire } from "@/sections/homepage/LiveWire";
+import { NationalHighlights } from "@/components/home/NationalHighlights";
 
 type HomeDeskSplitProps = {
   feed: GeneratedHomepageFeed;
@@ -32,7 +32,12 @@ export function HomeDeskSplit({
       ) : null}
       {wireItems.length > 0 ? (
         <div className="home-highlights-desk__block home-highlights-desk__block--national">
-          <LiveWire items={wireItems} freshIds={freshIds} embedded />
+          <NationalHighlights
+            articles={wireItems}
+            feed={feed}
+            freshIds={freshIds}
+            embedded
+          />
         </div>
       ) : null}
     </div>
