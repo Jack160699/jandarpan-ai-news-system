@@ -27,7 +27,7 @@ async function runGNews(
   health: Awaited<ReturnType<typeof loadApiProviderHealth>>
 ): Promise<ProviderRunResult> {
   const provider: NewsProviderId = "gnews";
-  if (isApiProviderDisabled(provider, health)) {
+  if (await isApiProviderDisabled(provider, health)) {
     logIngestionAnalytics({
       event: "provider_disabled",
       provider,
@@ -80,7 +80,7 @@ async function runNewsData(
   health: Awaited<ReturnType<typeof loadApiProviderHealth>>
 ): Promise<ProviderRunResult> {
   const provider: NewsProviderId = "newsdata";
-  if (isApiProviderDisabled(provider, health)) {
+  if (await isApiProviderDisabled(provider, health)) {
     logIngestionAnalytics({
       event: "provider_disabled",
       provider,

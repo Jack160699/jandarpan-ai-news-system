@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Bookmark } from "lucide-react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
+import { DistrictNewsSlider } from "@/components/homepage/DistrictNewsSlider";
 import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
 import { HeroCardActions } from "@/components/layout/HeroCardActions";
 import { BreakingHeroReel } from "@/sections/homepage/BreakingHeroReel";
@@ -235,33 +236,7 @@ export function HeroNewsCard({
       ) : null}
 
       {topStories.length > 0 ? (
-        <div className="hero-news-card__mobile-rail pl-mobile-only">
-          {topStories.slice(0, 4).map((story, index) => (
-            <article key={story.id} className="hero-news-card__mobile-card">
-              <TrackedStoryLink
-                href={`/story/${story.slug}`}
-                slug={story.slug}
-                category={story.section}
-                region={story.section}
-                surface="homepage"
-                listPosition={index + 1}
-                className="hero-news-card__rail-link"
-              >
-                <div className="hero-news-card__rail-thumb">
-                  <HomeArticleImage
-                    src={story.imageUrl}
-                    alt=""
-                    sizes={IMG_HERO_THUMB}
-                    category={story.tags[0] ?? story.section}
-                  />
-                </div>
-                <h4 className="hero-news-card__rail-title hi">
-                  {story.headline}
-                </h4>
-              </TrackedStoryLink>
-            </article>
-          ))}
-        </div>
+        <DistrictNewsSlider articles={topStories} />
       ) : null}
     </motion.section>
   );

@@ -15,6 +15,9 @@ export async function buildLiveHomepageSnapshot(): Promise<{
     source: string;
     rateLimited: boolean;
     poolSize: number;
+    staleAgeMs: number | null;
+    ingestFirstSkippedWire: boolean;
+    qualityRanked: boolean;
   };
 }> {
   const [tenant, displayLanguage, { rows: pool, diagnostics }] = await Promise.all([
@@ -27,6 +30,8 @@ export async function buildLiveHomepageSnapshot(): Promise<{
     source: diagnostics.source,
     poolSize: pool.length,
     rateLimited: diagnostics.rateLimited,
+    staleAgeMs: diagnostics.staleAgeMs,
+    ingestFirstSkippedWire: diagnostics.ingestFirstSkippedWire,
   });
 
   const personalization = buildTenantRegionalPersonalization(tenant);
@@ -42,6 +47,9 @@ export async function buildLiveHomepageSnapshot(): Promise<{
         source: diagnostics.source,
         rateLimited: diagnostics.rateLimited,
         poolSize: pool.length,
+        staleAgeMs: diagnostics.staleAgeMs,
+        ingestFirstSkippedWire: diagnostics.ingestFirstSkippedWire,
+        qualityRanked: diagnostics.qualityRanked,
       },
     };
   }
@@ -57,6 +65,9 @@ export async function buildLiveHomepageSnapshot(): Promise<{
       source: diagnostics.source,
       rateLimited: diagnostics.rateLimited,
       poolSize: pool.length,
+      staleAgeMs: diagnostics.staleAgeMs,
+      ingestFirstSkippedWire: diagnostics.ingestFirstSkippedWire,
+      qualityRanked: diagnostics.qualityRanked,
     },
   };
 }

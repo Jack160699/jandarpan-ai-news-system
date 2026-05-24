@@ -13,7 +13,10 @@ import { buildGeneratedHomepageFeed } from "@/lib/homepage/generated-feed";
 import { buildTrendingShortsFromPool } from "@/lib/homepage/shorts-feed";
 import { ISR_TAGS } from "@/lib/infrastructure/cache/isr";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
-import { resolveLiveArticlePool } from "@/lib/news/live-feed";
+import {
+  resolveLiveArticlePool,
+  writeFeedSegmentCaches,
+} from "@/lib/news/live-feed";
 import { logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { getTenantConfig } from "@/lib/tenant/resolve";
 import { buildTenantRegionalPersonalization } from "@/lib/tenant/personalization";
@@ -65,6 +68,7 @@ export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed 
         ...feed.footerIntelligence,
         fetchedAt: new Date().toISOString(),
       };
+      await writeFeedSegmentCaches(feed);
     }
     return feed;
   }
@@ -93,6 +97,7 @@ export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed 
 
   if (feed?.trending?.length) {
     await cacheSetJson(cacheKey, feed, INFRA_CONFIG.homepageCacheSeconds);
+    await writeFeedSegmentCaches(feed);
   }
 
   return feed;

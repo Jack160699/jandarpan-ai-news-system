@@ -246,6 +246,15 @@ export async function runScalableIngestion(
     },
   });
 
+  if (inserted > 0 || signalsInserted > 0) {
+    const { refreshSnapshotFromDatabase } = await import(
+      "@/lib/news/live-feed/resolve-pool"
+    );
+    await refreshSnapshotFromDatabase(120).catch((err) => {
+      console.warn("[ingest] snapshot refresh failed:", err);
+    });
+  }
+
   logNewsroom("pipeline", "INGESTION_FINAL_REPORT", {
     fetched: totalFetched,
     normalized,

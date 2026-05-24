@@ -65,3 +65,5 @@ export const CACHE_KEYS = {
   homepageFeed: "nr:homepage:feed:v1",
   providerHealth: "nr:providers:health:v1",
 } as const;
+
+export { NEWS_CACHE_KEYS } from "@/lib/infrastructure/cache/keys";

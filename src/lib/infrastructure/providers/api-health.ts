@@ -2,11 +2,17 @@
  * API provider health (GNews, NewsData) — auto-disable dead sources
  */
 
+import { AGGREGATION_CONFIG } from "@/lib/news/aggregation/config";
+import {
+  isCircuitOpen,
+  recordCircuitFailure,
+  recordCircuitSuccess,
+} from "@/lib/news/providers/circuit-breaker";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { NewsProviderId } from "@/lib/news/types";
 
-const MAX_CONSECUTIVE_FAILURES = 3;
-const DISABLE_HOURS = 6;
+const MAX_CONSECUTIVE_FAILURES = AGGREGATION_CONFIG.circuitFailureThreshold;
+const DISABLE_MS = AGGREGATION_CONFIG.circuitCooldownMs;
 
 export type ApiProviderHealth = {
   provider_id: string;
@@ -60,10 +66,11 @@ export async function loadApiProviderHealth(): Promise<
   return map;
 }
 
-export function isApiProviderDisabled(
+export async function isApiProviderDisabled(
   provider: NewsProviderId,
   health: Map<string, ApiProviderHealth>
-): boolean {
+): Promise<boolean> {
+  if (await isCircuitOpen(provider)) return true;
   const record = health.get(provider);
   if (!record?.disabled_until) return false;
   return new Date(record.disabled_until).getTime() > Date.now();
@@ -93,6 +100,10 @@ export async function recordApiProviderSuccess(
   record.health_score = computeHealthScore(record);
   health.set(provider, record);
   await persistApiHealth(record);
+  await recordCircuitSuccess(provider, {
+    latencyMs: input.latencyMs,
+    articleCount: input.articleCount,
+  });
 }
 
 export async function recordApiProviderFailure(
@@ -105,13 +116,12 @@ export async function recordApiProviderFailure(
   let disabled_until: string | null = null;
 
   if (consecutive >= MAX_CONSECUTIVE_FAILURES) {
-    const until = new Date();
-    until.setHours(until.getHours() + DISABLE_HOURS);
+    const until = new Date(Date.now() + DISABLE_MS);
     disabled_until = until.toISOString();
-    console.warn(
-      `[api-health] Disabled ${provider} for ${DISABLE_HOURS}h: ${errorMessage}`
-    );
   }
+
+  const rateLimited = /rate|quota|429/i.test(errorMessage);
+  await recordCircuitFailure(provider, errorMessage, { rateLimited });
 
   const record: ApiProviderHealth = {
     provider_id: provider,

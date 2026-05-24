@@ -131,11 +131,6 @@ html:not([data-theme="dark"]) .breaking-ticker__pill {
   border-color: var(--color-rule);
 }
 
-html:not([data-theme="dark"]) .quick-actions {
-  background: color-mix(in srgb, var(--color-surface) 96%, var(--paper-texture-tint));
-  border-color: var(--color-rule);
-}
-
 html:not([data-theme="dark"]) .site-footer.jd-footer {
   background: linear-gradient(
     180deg,

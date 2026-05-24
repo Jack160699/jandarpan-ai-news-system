@@ -8,6 +8,8 @@ import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { getProductionEnvChecks } from "@/lib/infrastructure/production";
 import { getApiProviderHealthDashboard } from "@/lib/infrastructure/providers/api-health";
+import { getProviderRegistryDashboard } from "@/lib/news/providers/circuit-breaker";
+import { getAggregationMetrics } from "@/lib/news/live-feed/observability";
 import { getRssHealthDashboard } from "@/lib/news/rss-health";
 import {
   CORE_ARTICLE_SELECT,
@@ -125,10 +127,13 @@ export async function GET() {
     anonReadError,
   });
 
-  const [apiHealth, rssHealth] = await Promise.all([
+  const [apiHealth, rssHealth, circuitRegistry] = await Promise.all([
     getApiProviderHealthDashboard().catch(() => []),
     getRssHealthDashboard().catch(() => []),
+    getProviderRegistryDashboard().catch(() => []),
   ]);
+
+  const liveFeedMetrics = getAggregationMetrics();
 
   const productionEnv = getProductionEnvChecks();
 
@@ -158,7 +163,9 @@ export async function GET() {
       provider_health: {
         api: apiHealth,
         rss: rssHealth.slice(0, 12),
+        circuit_breaker: circuitRegistry,
       },
+      live_feed_metrics: liveFeedMetrics,
       providers,
       supabase_env: supabaseEnv,
       generated_articles: {

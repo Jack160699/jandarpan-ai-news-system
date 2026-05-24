@@ -14,6 +14,9 @@ export type LivePollMeta = {
   source?: string;
   poolSize?: number;
   rateLimited?: boolean;
+  staleAgeMs?: number | null;
+  ingestFirstSkippedWire?: boolean;
+  qualityRanked?: boolean;
 };
 
 export type LivePollResult =

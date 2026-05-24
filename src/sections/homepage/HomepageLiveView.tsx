@@ -9,7 +9,6 @@ import {
 } from "@/components/layout";
 import { HomepageStackBands } from "@/components/layout/HomepageStackBands";
 import { LazyHomeSection } from "@/components/homepage/LazyHomeSection";
-import { QuickActionButtons } from "@/components/homepage/QuickActionButtons";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
 import { NewUpdatesBanner } from "@/components/live-newsroom/NewUpdatesBanner";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
@@ -71,8 +70,6 @@ function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
           topStories={topStories}
           featuredShort={feed.newsShorts[0]}
         />
-
-        <QuickActionButtons />
 
         <div className="home-body">
           <div className="home-body__main home-feed-stack">

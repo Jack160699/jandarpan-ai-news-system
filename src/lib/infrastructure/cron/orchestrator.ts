@@ -80,6 +80,10 @@ export async function runCronOrchestration(
 
     if ((published ?? 0) > 0 || (ingestInserted ?? 0) > 0) {
       await revalidateNewsroomCaches({ publishedStories: published ?? 0 });
+      const { refreshSnapshotFromDatabase } = await import(
+        "@/lib/news/live-feed/resolve-pool"
+      );
+      await refreshSnapshotFromDatabase(120).catch(() => null);
     }
   }
 
