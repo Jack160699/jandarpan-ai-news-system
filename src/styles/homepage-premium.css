@@ -535,7 +535,7 @@
 }
 
 .nr--premium .nr-ticker__label {
-  background: linear-gradient(135deg, var(--ds-live) 0%, #ea580c 100%);
+  background: linear-gradient(135deg, var(--ds-live) 0%, var(--color-red-deep) 100%);
   font-family: var(--font-hindi), var(--font-ui), sans-serif;
   letter-spacing: 0.08em;
 }

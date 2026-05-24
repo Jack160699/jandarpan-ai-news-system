@@ -1,28 +1,28 @@
 /* Reader preferences — comfort mode & clean dark edition */
 
 html[data-theme="dark"] {
-  --paper: #000000;
-  --paper-elevated: #050505;
-  --paper-warm: #000000;
-  --paper-muted: #0a0a0a;
-  --paper-shadow: #0a0a0a;
+  --paper: #050505;
+  --paper-elevated: #0b0b0b;
+  --paper-warm: #050505;
+  --paper-muted: #111111;
+  --paper-shadow: #111111;
   --ink-headline: #ffffff;
   --ink-primary: #ffffff;
-  --ink-body: rgb(255 255 255 / 0.72);
-  --ink-secondary: rgb(255 255 255 / 0.72);
-  --ink-muted: rgb(255 255 255 / 0.72);
-  --ink-faint: rgb(255 255 255 / 0.45);
-  --rule: rgb(255 255 255 / 0.05);
-  --rule-strong: rgb(255 255 255 / 0.08);
-  --accent-orange: #ff8c42;
-  --accent-orange-deep: #e85d04;
-  --accent-red: #ff6b6b;
-  --accent-red-deep: #e85555;
-  --brand-maroon: var(--accent-red);
-  --brand-maroon-deep: var(--accent-red-deep);
-  --accent-breaking: var(--accent-orange);
-  --accent-category: var(--accent-red);
-  --selection-bg: #3d2a1f;
+  --ink-body: rgb(255 255 255 / 0.78);
+  --ink-secondary: rgb(255 255 255 / 0.78);
+  --ink-muted: rgb(255 255 255 / 0.62);
+  --ink-faint: rgb(255 255 255 / 0.42);
+  --rule: rgb(255 255 255 / 0.06);
+  --rule-strong: rgb(255 255 255 / 0.1);
+  --accent-orange: var(--color-primary);
+  --accent-orange-deep: var(--color-primary-dark);
+  --accent-red: var(--color-primary);
+  --accent-red-deep: var(--color-primary-deep);
+  --brand-maroon: var(--color-primary-dark);
+  --brand-maroon-deep: var(--color-primary-darker);
+  --accent-breaking: var(--color-primary);
+  --accent-category: var(--color-primary);
+  --selection-bg: rgb(255 43 43 / 0.18);
   --selection-fg: #fff;
   --background: var(--paper);
   --foreground: var(--ink-primary);

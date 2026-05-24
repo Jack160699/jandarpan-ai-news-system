@@ -12,11 +12,11 @@
   max-height: var(--nr-h-ticker, 2rem);
   background: linear-gradient(
     90deg,
-    #1a0505 0%,
-    #0f0f0f 40%,
-    #0f0f0f 100%
+    #7f1010 0%,
+    #0a0a0a 38%,
+    #0a0a0a 100%
   );
-  border-block: 1px solid color-mix(in srgb, var(--ds-live) 45%, transparent);
+  border-block: 1px solid color-mix(in srgb, var(--ds-live) 50%, transparent);
   overflow: hidden;
 }
 
@@ -28,7 +28,7 @@
   flex-shrink: 0;
   gap: 0.1rem;
   padding: 0 0.65rem;
-  background: linear-gradient(135deg, #dc2626 0%, #ea580c 100%);
+  background: linear-gradient(135deg, #b71c1c 0%, #ff2b2b 100%);
   border-inline-end: 1px solid rgb(255 255 255 / 0.15);
 }
 

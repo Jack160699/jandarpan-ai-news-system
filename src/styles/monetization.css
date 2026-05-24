@@ -82,7 +82,7 @@
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
   border-radius: 8px;
-  border: 1px solid var(--brand-orange, #b45309);
+  border: 1px solid var(--brand-orange, var(--color-primary));
   background: var(--ds-accent-soft, #fef3e8);
   font-size: 0.8125rem;
 }
@@ -92,7 +92,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--brand-orange, #b45309);
+  color: var(--brand-orange, var(--color-primary));
 }
 
 .mnr-affiliate {

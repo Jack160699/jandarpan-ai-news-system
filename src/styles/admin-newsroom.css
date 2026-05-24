@@ -11,7 +11,7 @@
   --anr-accent-soft: rgba(217, 119, 6, 0.15);
   --anr-live: #ef4444;
   --anr-success: #22c55e;
-  --anr-danger: #f87171;
+  --anr-danger: #ff2b2b;
   min-height: 100vh;
   background: var(--anr-bg);
   color: var(--anr-text);

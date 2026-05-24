@@ -20,19 +20,19 @@
   --rule: #e5e5e5;
   --rule-strong: #d0d0d0;
 
-  /* Accent hierarchy — orange breaking, red categories */
-  --accent-orange: #e85d04;
-  --accent-orange-deep: #d35400;
-  --accent-red: #c41e1e;
-  --accent-red-deep: #9b1818;
-  --brand-maroon: var(--accent-red);
-  --brand-maroon-deep: var(--accent-red-deep);
-  --brand-orange: var(--accent-orange);
-  --accent-breaking: var(--accent-orange);
-  --accent-category: var(--accent-red);
-  --accent-live: var(--accent-red);
+  /* Accent — unified News Red */
+  --accent-orange: var(--color-primary);
+  --accent-orange-deep: var(--color-primary-dark);
+  --accent-red: var(--color-primary);
+  --accent-red-deep: var(--color-primary-deep);
+  --brand-maroon: var(--color-primary-dark);
+  --brand-maroon-deep: var(--color-primary-darker);
+  --brand-orange: var(--color-primary);
+  --accent-breaking: var(--color-primary);
+  --accent-category: var(--color-primary);
+  --accent-live: var(--color-primary);
 
-  --selection-bg: #ffe8d6;
+  --selection-bg: rgb(255 43 43 / 0.12);
   --selection-fg: var(--ink-headline);
 
   --background: var(--paper);

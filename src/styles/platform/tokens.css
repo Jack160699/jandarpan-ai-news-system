@@ -8,23 +8,38 @@
   --bp-tablet-min: 768px;
   --bp-desktop-min: 1024px;
 
-  /* Colors */
-  --color-paper: #f5f5f5;
-  --color-surface: #ffffff;
-  --color-surface-muted: #ececec;
+  /* ── News Red accent system ── */
+  --color-red: #ff2b2b;
+  --color-red-light: #ff4d4d;
+  --color-red-deep: #e50914;
+  --color-red-dark: #b71c1c;
+  --color-red-darker: #7f1010;
+  --color-red-glow: rgb(255 43 43 / 0.35);
+  --color-red-soft: rgb(255 43 43 / 0.08);
+  --color-red-soft-hover: rgb(255 43 43 / 0.12);
+
+  --color-primary: var(--color-red);
+  --color-primary-light: var(--color-red-light);
+  --color-primary-dark: var(--color-red-dark);
+  --color-primary-deep: var(--color-red-deep);
+  --color-primary-darker: var(--color-red-darker);
+  --color-primary-soft: var(--color-red-soft);
+  --color-primary-glow: var(--color-red-glow);
+  --color-accent: var(--color-red);
+
+  /* ── Light surfaces — elegant newspaper ── */
+  --color-paper: #f7f6f4;
+  --color-surface: #fdfcfb;
+  --color-surface-muted: #efefed;
   --color-ink: #0d0d0d;
-  --color-ink-secondary: #2e2e2e;
-  --color-ink-muted: #5c5c5c;
-  --color-ink-faint: #8a8a8a;
-  --color-primary: #c62828;
-  --color-primary-dark: #9b1c1c;
-  --color-primary-soft: rgb(198 40 40 / 0.08);
-  --color-accent: #e8952d;
+  --color-ink-secondary: #2a2a2a;
+  --color-ink-muted: #5a5a5a;
+  --color-ink-faint: #888888;
   --color-rule: rgb(13 13 13 / 0.08);
   --color-rule-strong: rgb(13 13 13 / 0.14);
-  --color-ticker-bg: #141414;
-  --color-ticker-text: #ececec;
-  --color-ticker-muted: #b0b0b0;
+  --color-ticker-bg: #0a0a0a;
+  --color-ticker-text: #f2f2f2;
+  --color-ticker-muted: #b8b8b8;
 
   --paper: var(--color-paper);
   --paper-elevated: var(--color-surface);
@@ -37,8 +52,15 @@
   --rule: var(--color-rule);
   --rule-strong: var(--color-rule-strong);
   --th-primary: var(--color-primary);
+  --th-primary-dark: var(--color-primary-dark);
+  --th-primary-soft: var(--color-primary-soft);
   --ds-accent: var(--color-primary);
   --ds-live: var(--color-primary);
+
+  --tenant-primary: var(--color-primary);
+  --tenant-primary-dark: var(--color-primary-dark);
+  --tenant-accent: var(--color-red-light);
+  --tenant-accent-soft: var(--color-primary-soft);
 
   --container-max: 80rem;
   --gutter-mobile: 1rem;
@@ -125,21 +147,25 @@
 }
 
 html[data-theme="dark"] {
-  --color-paper: #000000;
-  --color-surface: #050505;
-  --color-surface-muted: #0a0a0a;
+  /* ── AMOLED cinematic surfaces ── */
+  --color-paper: #050505;
+  --color-surface: #0b0b0b;
+  --color-surface-muted: #111111;
   --color-ink: #ffffff;
-  --color-ink-secondary: rgb(255 255 255 / 0.72);
-  --color-ink-muted: rgb(255 255 255 / 0.72);
-  --color-ink-faint: rgb(255 255 255 / 0.45);
-  --color-primary: #ef5350;
-  --color-primary-soft: rgb(239 83 80 / 0.12);
-  --color-rule: rgb(255 255 255 / 0.05);
-  --color-rule-strong: rgb(255 255 255 / 0.08);
-  --color-ticker-bg: #000000;
+  --color-ink-secondary: rgb(255 255 255 / 0.78);
+  --color-ink-muted: rgb(255 255 255 / 0.62);
+  --color-ink-faint: rgb(255 255 255 / 0.42);
+  --color-primary: var(--color-red);
+  --color-primary-light: var(--color-red-light);
+  --color-primary-dark: var(--color-red-deep);
+  --color-primary-soft: rgb(255 43 43 / 0.14);
+  --color-primary-glow: var(--color-red-glow);
+  --color-rule: rgb(255 255 255 / 0.06);
+  --color-rule-strong: rgb(255 255 255 / 0.1);
+  --color-ticker-bg: #050505;
   --color-ticker-text: #ffffff;
-  --color-ticker-muted: rgb(255 255 255 / 0.72);
-  --shadow-card: 0 4px 20px rgb(0 0 0 / 0.45);
-  --shadow-card-hover: 0 8px 28px rgb(0 0 0 / 0.55);
-  --shadow-hero: 0 4px 20px rgb(0 0 0 / 0.45);
+  --color-ticker-muted: rgb(255 255 255 / 0.68);
+  --shadow-card: 0 4px 20px rgb(0 0 0 / 0.5);
+  --shadow-card-hover: 0 8px 28px rgb(0 0 0 / 0.62);
+  --shadow-hero: 0 4px 24px rgb(0 0 0 / 0.55);
 }

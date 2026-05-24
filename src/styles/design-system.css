@@ -5,9 +5,9 @@
 
 :root {
   /* ── Surfaces (light) ── */
-  --ds-surface: #f8f7f5;
-  --ds-surface-raised: #ffffff;
-  --ds-surface-sunken: #f0eeeb;
+  --ds-surface: #f7f6f4;
+  --ds-surface-raised: #fdfcfb;
+  --ds-surface-sunken: #efefed;
   --ds-surface-overlay: rgb(255 255 255 / 0.88);
   --ds-surface-elevated: #ffffff;
   --ds-surface-inset: #ebe8e4;
@@ -23,18 +23,18 @@
   --ds-separator: rgb(26 24 22 / 0.08);
   --ds-separator-strong: rgb(26 24 22 / 0.14);
 
-  /* ── Brand accents — forest green + terracotta (tenant overrides via CSS vars) ── */
-  --ds-accent: #1a4d3e;
-  --ds-accent-hover: #0f2e26;
-  --ds-accent-soft: #f5ebe0;
-  --ds-accent-glow: rgb(26 77 62 / 0.18);
-  --ds-masthead-rule: #1a4d3e;
-  --ds-live: #dc2626;
-  --ds-live-hover: #b91c1c;
-  --ds-live-soft: #fef2f2;
-  --ds-live-glow: rgb(220 38 38 / 0.2);
-  --ds-breaking: #ea580c;
-  --ds-breaking-soft: #fff7ed;
+  /* ── Brand accents — News Red cinematic system ── */
+  --ds-accent: #ff2b2b;
+  --ds-accent-hover: #e50914;
+  --ds-accent-soft: rgb(255 43 43 / 0.08);
+  --ds-accent-glow: rgb(255 43 43 / 0.35);
+  --ds-masthead-rule: #b71c1c;
+  --ds-live: #ff2b2b;
+  --ds-live-hover: #e50914;
+  --ds-live-soft: rgb(255 43 43 / 0.08);
+  --ds-live-glow: rgb(255 43 43 / 0.35);
+  --ds-breaking: #ff2b2b;
+  --ds-breaking-soft: rgb(255 43 43 / 0.06);
 
   /* ── Spacing scale (4px base) ── */
   --ds-space-0: 0;
@@ -209,12 +209,12 @@
 
 /* ── Dark theme — premium AMOLED black ── */
 html[data-theme="dark"] {
-  --ds-surface: #000000;
-  --ds-surface-raised: #050505;
-  --ds-surface-sunken: #0a0a0a;
-  --ds-surface-overlay: rgb(5 5 5 / 0.94);
-  --ds-surface-elevated: #050505;
-  --ds-surface-inset: #000000;
+  --ds-surface: #050505;
+  --ds-surface-raised: #0b0b0b;
+  --ds-surface-sunken: #111111;
+  --ds-surface-overlay: rgb(11 11 11 / 0.94);
+  --ds-surface-elevated: #111111;
+  --ds-surface-inset: #050505;
 
   --ds-ink: #ffffff;
   --ds-ink-secondary: rgb(255 255 255 / 0.72);
@@ -225,16 +225,16 @@ html[data-theme="dark"] {
   --ds-separator: rgb(255 255 255 / 0.05);
   --ds-separator-strong: rgb(255 255 255 / 0.08);
 
-  --ds-accent: #fb923c;
-  --ds-accent-hover: #fdba74;
-  --ds-accent-soft: rgb(251 146 60 / 0.14);
-  --ds-accent-glow: rgb(251 146 60 / 0.28);
-  --ds-live: #f87171;
-  --ds-live-hover: #fca5a5;
-  --ds-live-soft: rgb(248 113 113 / 0.14);
-  --ds-live-glow: rgb(248 113 113 / 0.25);
-  --ds-breaking: #fb923c;
-  --ds-breaking-soft: rgb(251 146 60 / 0.12);
+  --ds-accent: #ff2b2b;
+  --ds-accent-hover: #ff4d4d;
+  --ds-accent-soft: rgb(255 43 43 / 0.14);
+  --ds-accent-glow: rgb(255 43 43 / 0.35);
+  --ds-live: #ff2b2b;
+  --ds-live-hover: #ff4d4d;
+  --ds-live-soft: rgb(255 43 43 / 0.14);
+  --ds-live-glow: rgb(255 43 43 / 0.35);
+  --ds-breaking: #ff2b2b;
+  --ds-breaking-soft: rgb(255 43 43 / 0.12);
 
   --ds-card-bg: var(--ds-surface-raised);
   --ds-card-border: var(--ds-separator);

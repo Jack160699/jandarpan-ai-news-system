@@ -1,32 +1,32 @@
 /**
- * Theme System — Modern Bhaskar-inspired palette (2026)
+ * Theme System — News Red palette
  * Single source for color tokens · Jan Darpan Chhattisgarh
  */
 
 :root {
-  --th-paper: #f7f7f7;
-  --th-paper-raised: #ffffff;
-  --th-paper-muted: #efefef;
-  --th-paper-inset: #e8e8e8;
+  --th-paper: #f7f6f4;
+  --th-paper-raised: #fdfcfb;
+  --th-paper-muted: #efefed;
+  --th-paper-inset: #e8e8e6;
 
-  --th-ink: #111111;
-  --th-ink-secondary: #333333;
-  --th-ink-muted: #666666;
-  --th-ink-faint: #999999;
+  --th-ink: #0d0d0d;
+  --th-ink-secondary: #2a2a2a;
+  --th-ink-muted: #5a5a5a;
+  --th-ink-faint: #888888;
 
-  --th-primary: #c62828;
-  --th-primary-dark: #8e0000;
-  --th-primary-soft: #ffebee;
+  --th-primary: #ff2b2b;
+  --th-primary-dark: #b71c1c;
+  --th-primary-soft: rgb(255 43 43 / 0.08);
 
-  --th-accent: #e8952d;
-  --th-accent-soft: #fff3e0;
+  --th-accent: #ff2b2b;
+  --th-accent-soft: rgb(255 43 43 / 0.08);
 
-  --th-rule: rgb(17 17 17 / 0.1);
-  --th-rule-strong: rgb(17 17 17 / 0.18);
+  --th-rule: rgb(13 13 13 / 0.08);
+  --th-rule-strong: rgb(13 13 13 / 0.14);
 
   --th-ticker-bg: #0a0a0a;
-  --th-ticker-ink: #f5f5f5;
-  --th-ticker-accent: #c62828;
+  --th-ticker-ink: #f2f2f2;
+  --th-ticker-accent: #ff2b2b;
 
   --th-selection-bg: var(--th-primary-soft);
   --th-selection-fg: var(--th-ink);
@@ -37,7 +37,7 @@
   --ds-surface-sunken: var(--th-paper-muted);
   --ds-surface-inset: var(--th-paper-inset);
   --ds-surface-elevated: var(--th-paper-raised);
-  --ds-surface-overlay: rgb(255 255 255 / 0.96);
+  --ds-surface-overlay: rgb(253 252 251 / 0.96);
 
   --ds-ink: var(--th-ink);
   --ds-ink-secondary: var(--th-ink-secondary);
@@ -49,18 +49,18 @@
   --ds-separator-strong: var(--th-rule-strong);
 
   --ds-accent: var(--th-primary);
-  --ds-accent-hover: var(--th-primary-dark);
+  --ds-accent-hover: #e50914;
   --ds-accent-soft: var(--th-primary-soft);
-  --ds-accent-glow: rgb(198 40 40 / 0.15);
-  --ds-masthead-rule: var(--th-primary);
+  --ds-accent-glow: rgb(255 43 43 / 0.35);
+  --ds-masthead-rule: var(--th-primary-dark);
 
   --ds-live: var(--th-primary);
-  --ds-live-hover: var(--th-primary-dark);
+  --ds-live-hover: #e50914;
   --ds-live-soft: var(--th-primary-soft);
-  --ds-live-glow: rgb(198 40 40 / 0.2);
+  --ds-live-glow: rgb(255 43 43 / 0.35);
 
-  --ds-breaking: var(--th-accent);
-  --ds-breaking-soft: var(--th-accent-soft);
+  --ds-breaking: var(--th-primary);
+  --ds-breaking-soft: rgb(255 43 43 / 0.06);
 
   --tenant-primary: var(--th-primary);
   --tenant-primary-dark: var(--th-primary-dark);
@@ -109,29 +109,29 @@
 }
 
 html[data-theme="dark"] {
-  --th-paper: #121212;
-  --th-paper-raised: #1c1c1c;
-  --th-paper-muted: #252525;
-  --th-paper-inset: #0d0d0d;
+  --th-paper: #050505;
+  --th-paper-raised: #0b0b0b;
+  --th-paper-muted: #111111;
+  --th-paper-inset: #050505;
 
-  --th-ink: #f2f2f2;
-  --th-ink-secondary: #d4d4d4;
-  --th-ink-muted: #a3a3a3;
-  --th-ink-faint: #737373;
+  --th-ink: #ffffff;
+  --th-ink-secondary: rgb(255 255 255 / 0.78);
+  --th-ink-muted: rgb(255 255 255 / 0.62);
+  --th-ink-faint: rgb(255 255 255 / 0.42);
 
-  --th-primary: #ef5350;
-  --th-primary-dark: #ff8a80;
-  --th-primary-soft: rgb(239 83 80 / 0.12);
+  --th-primary: #ff2b2b;
+  --th-primary-dark: #e50914;
+  --th-primary-soft: rgb(255 43 43 / 0.14);
 
-  --th-accent: #ffb74d;
-  --th-accent-soft: rgb(255 183 77 / 0.12);
+  --th-accent: #ff2b2b;
+  --th-accent-soft: rgb(255 43 43 / 0.14);
 
-  --th-rule: rgb(255 255 255 / 0.08);
-  --th-rule-strong: rgb(255 255 255 / 0.14);
+  --th-rule: rgb(255 255 255 / 0.06);
+  --th-rule-strong: rgb(255 255 255 / 0.1);
 
-  --th-ticker-bg: #000000;
-  --th-ticker-ink: #f5f5f5;
+  --th-ticker-bg: #050505;
+  --th-ticker-ink: #ffffff;
 
-  --ds-card-shadow: 0 1px 0 rgb(255 255 255 / 0.04);
-  --ds-card-shadow-hover: 0 4px 16px rgb(0 0 0 / 0.35);
+  --ds-card-shadow: 0 4px 20px rgb(0 0 0 / 0.5);
+  --ds-card-shadow-hover: 0 8px 28px rgb(0 0 0 / 0.62);
 }

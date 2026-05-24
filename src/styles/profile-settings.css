@@ -82,7 +82,7 @@ html[data-theme="dark"] .theme-toggle__glass {
 }
 
 .theme-toggle__icon--moon.is-active {
-  color: color-mix(in srgb, var(--color-primary) 85%, #fff);
+  color: var(--color-red-light);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -117,7 +117,7 @@ html[data-theme="dark"] .theme-toggle__glass {
 }
 
 html[data-theme="dark"] .profile-settings__group {
-  background: #050505;
+  background: #0b0b0b;
   border-color: color-mix(in srgb, #fff 8%, transparent);
 }
 

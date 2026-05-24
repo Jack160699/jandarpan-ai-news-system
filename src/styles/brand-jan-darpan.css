@@ -8,9 +8,9 @@
   height: 3px;
   background: linear-gradient(
     90deg,
-    var(--tenant-primary-dark, #5c1616),
-    var(--tenant-accent, #c5a07d) 45%,
-    var(--tenant-primary, #802020) 100%
+    var(--tenant-primary-dark, #7f1010),
+    var(--tenant-accent, #ff4d4d) 45%,
+    var(--tenant-primary, #ff2b2b) 100%
   );
 }
 
@@ -35,7 +35,7 @@
   font-family: var(--font-hindi), var(--font-body), serif;
   font-size: 0.9375rem;
   font-weight: 700;
-  color: var(--tenant-primary, #802020);
+  color: var(--tenant-primary, #ff2b2b);
 }
 
 .regional-badge {
@@ -43,7 +43,7 @@
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--tenant-primary, #802020);
+  color: var(--tenant-primary, #ff2b2b);
   border: 1px solid color-mix(in srgb, var(--tenant-primary) 35%, transparent);
   padding: 0.25rem 0.5rem;
   border-radius: 2px;
@@ -54,14 +54,14 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--tenant-primary);
-  background: var(--tenant-accent-soft, #f3ebe0);
+  background: var(--tenant-accent-soft, rgb(255 43 43 / 0.08));
   padding: 0.2rem 0.5rem;
   border-radius: 2px;
 }
 
 .category-nav a.is-active,
 .category-nav a:hover {
-  color: var(--tenant-primary, #802020);
+  color: var(--tenant-primary, #ff2b2b);
 }
 
 /* Horizontal logo — header */
