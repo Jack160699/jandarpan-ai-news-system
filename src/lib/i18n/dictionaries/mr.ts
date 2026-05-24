@@ -84,6 +84,7 @@ export const mr: Dictionary = {
     emptyBody: "लवकरच ताज्या बातम्या येथे दिसतील.",
     loadingEdition: "आजचा अंक लोड होत आहे…",
     tickerAria: "ब्रेकिंग टिकर",
+    tickerFallback: "नवीनतम हेडलाइन अपडेट होत आहेत…",
     fresh: "ताजे",
     liveNewsroom: "लाइव्ह न्यूजरूम",
     updatedPrefix: "अपडेट",

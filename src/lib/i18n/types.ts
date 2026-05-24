@@ -90,6 +90,7 @@ export type Dictionary = {
     emptyBody: string;
     loadingEdition: string;
     tickerAria: string;
+    tickerFallback: string;
     fresh: string;
     liveNewsroom: string;
     updatedPrefix: string;

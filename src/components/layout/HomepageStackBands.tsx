@@ -1,9 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
 import { BreakingTicker } from "@/components/layout/BreakingTicker";
 import { TrendingStrip } from "@/components/homepage/TrendingStrip";
-import { LiveNewsroomStatus } from "@/components/live-newsroom/LiveNewsroomStatus";
 import { HomepageStackPortal } from "@/components/layout/HomepageStackPortal";
+import { buildTickerHeadlines } from "@/lib/homepage/ticker-headlines";
 import { useLiveNewsroom } from "@/providers/LiveNewsroomProvider";
 
 type HomepageStackBandsProps = {
@@ -12,22 +13,17 @@ type HomepageStackBandsProps = {
 
 /** Homepage-only layers mounted into the unified sticky stack via portal */
 export function HomepageStackBands({ trendingTopics }: HomepageStackBandsProps) {
-  const { feed } = useLiveNewsroom();
-  const hasTicker = feed.breakingTicker.length > 0;
+  const { feed, freshIds } = useLiveNewsroom();
+  const tickerItems = useMemo(() => buildTickerHeadlines(feed), [feed]);
 
   return (
-    <HomepageStackPortal hasTicker={hasTicker}>
+    <HomepageStackPortal hasTicker>
       <div className="stack-band stack-band--trending">
         <TrendingStrip topics={trendingTopics} />
       </div>
-      <div className="stack-band stack-band--live">
-        <LiveNewsroomStatus />
+      <div className="stack-band stack-band--ticker">
+        <BreakingTicker items={tickerItems} freshIds={freshIds} />
       </div>
-      {hasTicker ? (
-        <div className="stack-band stack-band--ticker">
-          <BreakingTicker items={feed.breakingTicker} />
-        </div>
-      ) : null}
     </HomepageStackPortal>
   );
 }

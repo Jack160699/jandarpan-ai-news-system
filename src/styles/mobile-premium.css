@@ -225,77 +225,6 @@ html[data-theme="dark"] .trending-strip__pill {
   background: #050505;
 }
 
-/* ── Live newsroom premium (inside stack band) ── */
-.live-newsroom-status--premium {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem 0.5rem;
-  width: 100%;
-}
-
-.live-newsroom-status--premium .live-newsroom-status__label {
-  font-size: var(--text-xs);
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-primary);
-}
-
-.live-newsroom-status__live-dot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.live-newsroom-status__wave {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 0.75rem;
-  margin-inline: 0.125rem;
-}
-
-.live-newsroom-status__wave span {
-  display: block;
-  width: 2px;
-  border-radius: 1px;
-  background: var(--color-primary);
-  animation: live-wave 1.2s ease-in-out infinite;
-}
-
-.live-newsroom-status__wave span:nth-child(1) { height: 0.25rem; animation-delay: 0s; }
-.live-newsroom-status__wave span:nth-child(2) { height: 0.5rem; animation-delay: 0.1s; }
-.live-newsroom-status__wave span:nth-child(3) { height: 0.75rem; animation-delay: 0.2s; }
-.live-newsroom-status__wave span:nth-child(4) { height: 0.45rem; animation-delay: 0.3s; }
-.live-newsroom-status__wave span:nth-child(5) { height: 0.625rem; animation-delay: 0.15s; }
-
-@keyframes live-wave {
-  0%, 100% { transform: scaleY(0.45); opacity: 0.55; }
-  50% { transform: scaleY(1); opacity: 1; }
-}
-
-.stack-band--live .live-newsroom-status__meta {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.live-newsroom-status__meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: var(--text-xs);
-  color: var(--color-ink-muted);
-}
-
-.live-newsroom-status__verified {
-  font-weight: 600;
-  color: var(--color-ink-secondary);
-}
-
 /* ── Breaking ticker premium (inside stack band) ── */
 .breaking-ticker--premium .breaking-ticker__label {
   min-width: 3.5rem;
@@ -307,17 +236,21 @@ html[data-theme="dark"] .trending-strip__pill {
   50% { box-shadow: inset 0 0 12px rgb(255 255 255 / 0.12); }
 }
 
-.breaking-ticker__static {
-  display: none;
+.breaking-ticker--rotate {
+  align-items: center;
+}
+
+.breaking-ticker__content {
   flex: 1;
+  min-width: 0;
+  display: flex;
   align-items: center;
   gap: 0.375rem;
-  min-width: 0;
-  padding-inline: 0.5rem;
+  padding-inline: 0.625rem;
   overflow: hidden;
 }
 
-.breaking-ticker__prefix {
+.breaking-ticker--rotate .breaking-ticker__prefix {
   flex-shrink: 0;
   font-size: var(--text-2xs);
   font-weight: 800;
@@ -326,30 +259,45 @@ html[data-theme="dark"] .trending-strip__pill {
   color: var(--color-ticker-muted);
 }
 
-.breaking-ticker__lead {
+.breaking-ticker__headline-slot {
+  flex: 1;
+  min-width: 0;
+  height: 1.3125rem;
+  overflow: hidden;
+}
+
+.breaking-ticker__headline--active {
+  display: block;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
   font-size: var(--text-sm);
   font-weight: 600;
+  line-height: 1.3125rem;
   color: var(--color-ticker-text);
   text-decoration: none;
+  animation: ticker-headline-in 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@media (max-width: 639px) {
-  .breaking-ticker--premium .breaking-ticker__static {
-    display: flex;
-  }
-
-  .breaking-ticker--premium .breaking-ticker__viewport--marquee {
-    display: none;
-  }
+.breaking-ticker__headline--fallback {
+  color: var(--color-ticker-muted);
+  font-weight: 500;
 }
 
-@media (min-width: 640px) {
-  .breaking-ticker--premium .breaking-ticker__static {
-    display: none;
+.breaking-ticker__headline--fresh {
+  color: #fff;
+}
+
+@keyframes ticker-headline-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -551,8 +499,8 @@ html[data-theme="dark"] .quick-actions {
 
 @media (prefers-reduced-motion: reduce) {
   .trending-strip__track,
-  .live-newsroom-status__wave span,
-  .breaking-ticker--premium .breaking-ticker__label {
+  .breaking-ticker--premium .breaking-ticker__label,
+  .breaking-ticker__headline--active {
     animation: none !important;
   }
 }

@@ -84,6 +84,7 @@ export const hi: Dictionary = {
     emptyBody: "छत्तीसगढ़ भर की ताज़ा खबरें जल्द यहाँ दिखेंगी।",
     loadingEdition: "आज का अंक लोड हो रहा है…",
     tickerAria: "ब्रेकिंग न्यूज़ टिकर",
+    tickerFallback: "ताज़ा हेडलाइन अपडेट हो रही हैं…",
     fresh: "ताज़ा",
     liveNewsroom: "लाइव न्यूज़रूम",
     updatedPrefix: "अपडेट",

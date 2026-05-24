@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
+import { useMemo } from "react";
 import { AdSlot } from "@/components/monetization/AdSlot";
 import {
   BreakingTicker,
@@ -12,6 +13,7 @@ import {
 import { LazyHomeSection } from "@/components/homepage/LazyHomeSection";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
+import { buildTickerHeadlines } from "@/lib/homepage/ticker-headlines";
 import {
   HyperlocalSkeleton,
   LiveWireSkeleton,
@@ -40,11 +42,11 @@ export function HomepageView({ feed }: HomepageViewProps) {
   ].filter((a, i, arr) => arr.findIndex((x) => x.id === a.id) === i);
 
   const heroLead = feed.breakingTicker[0] ?? lead;
-  const hasTicker = feed.breakingTicker.length > 0;
+  const tickerItems = useMemo(() => buildTickerHeadlines(feed), [feed]);
 
   return (
     <div className="home-page">
-      {hasTicker ? <BreakingTicker items={feed.breakingTicker} /> : null}
+      <BreakingTicker items={tickerItems} />
 
       <div className="home-page__content pl-container">
         <HeroNewsCard

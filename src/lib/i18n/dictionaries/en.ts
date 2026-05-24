@@ -84,6 +84,7 @@ export const en: Dictionary = {
     emptyBody: "Fresh stories from across Chhattisgarh will appear here shortly.",
     loadingEdition: "Loading today's edition…",
     tickerAria: "Breaking news ticker",
+    tickerFallback: "Latest headlines updating…",
     fresh: "Fresh",
     liveNewsroom: "Live newsroom",
     updatedPrefix: "Updated",

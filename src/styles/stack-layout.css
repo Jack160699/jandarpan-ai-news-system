@@ -13,7 +13,7 @@
 
   --stack-chrome-h: calc(var(--stack-header-h) + var(--stack-category-h));
   --stack-home-extra-h: calc(
-    var(--stack-trending-h) + var(--stack-live-h) + var(--stack-ticker-h)
+    var(--stack-trending-h) + var(--stack-ticker-h)
   );
   --stack-home-h: calc(var(--stack-chrome-h) + var(--stack-home-extra-h));
 
@@ -99,20 +99,6 @@
   max-height: var(--stack-trending-h);
 }
 
-.stack-band--live {
-  height: var(--stack-live-h);
-  min-height: var(--stack-live-h);
-  max-height: var(--stack-live-h);
-  display: flex;
-  align-items: center;
-  padding-inline: var(--gutter);
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--color-primary) 6%, var(--color-paper)) 0%,
-    var(--color-paper) 45%
-  );
-}
-
 .stack-band--ticker {
   height: var(--stack-ticker-h);
   min-height: var(--stack-ticker-h);
@@ -120,7 +106,6 @@
 }
 
 .stack-band--trending .trending-strip,
-.stack-band--live .live-newsroom-status,
 .stack-band--ticker .breaking-ticker {
   position: relative;
   top: auto;

@@ -84,6 +84,7 @@ export const cg: Dictionary = {
     emptyBody: "छत्तीसगढ़ भर के ताजा खबर जल्द इहाँ दिखही।",
     loadingEdition: "आज के संस्करण लोड होथे…",
     tickerAria: "ब्रेकिंग टिकर",
+    tickerFallback: "ताजा हेडलाइन अपडेट होथे…",
     fresh: "ताजा",
     liveNewsroom: "लाइव न्यूजरूम",
     updatedPrefix: "अपडेट",

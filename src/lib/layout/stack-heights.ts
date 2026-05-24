@@ -1,6 +1,6 @@
 /**
  * Mobile chrome stack — centralized layer heights (mirrors CSS tokens)
- * HEADER + CATEGORY + TRENDING + LIVE_BAR + TICKER
+ * HEADER + CATEGORY + TRENDING + TICKER
  */
 export const STACK_HEADER_HEIGHT = "3.25rem";
 export const STACK_CATEGORY_HEIGHT = "2.875rem";
