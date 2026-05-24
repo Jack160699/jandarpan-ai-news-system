@@ -4,9 +4,13 @@ import Image from "next/image";
 import { useTenant } from "@/providers/TenantProvider";
 import { useLanguage } from "@/providers/LanguageProvider";
 
+/** Official banner aspect (~5:1) — width/height for Next.js layout stability */
+const BANNER_WIDTH = 420;
+const BANNER_HEIGHT = 84;
+
 type TenantLogoProps = {
   className?: string;
-  /** Show text wordmark beside mark (desktop drawer, etc.) */
+  /** Show text wordmark beside mark (footer / compact slots) */
   showText?: boolean;
   /** Horizontal banner logo for app header */
   variant?: "mark" | "banner";
@@ -34,11 +38,13 @@ export function TenantLogo({
           <Image
             src={bannerSrc}
             alt={name}
-            width={280}
-            height={56}
+            width={BANNER_WIDTH}
+            height={BANNER_HEIGHT}
             className="tenant-logo__img tenant-logo__img--banner"
             priority
-            sizes="(max-width: 767px) 42vw, 200px"
+            fetchPriority="high"
+            quality={92}
+            sizes="(max-width: 767px) 52vw, 280px"
           />
         </span>
       </span>
@@ -51,10 +57,11 @@ export function TenantLogo({
         <Image
           src={markSrc}
           alt=""
-          width={32}
-          height={32}
-          className="tenant-logo__img h-7 w-7 shrink-0 object-contain"
+          width={48}
+          height={48}
+          className="tenant-logo__img tenant-logo__img--mark"
           priority
+          quality={90}
         />
       ) : null}
       {showText ? (

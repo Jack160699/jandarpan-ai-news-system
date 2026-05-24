@@ -48,17 +48,13 @@ body,
   }
 }
 
-/* ── LIVE ticker badge — cinematic in dark, soft in light ── */
-html[data-theme="dark"] .breaking-ticker--premium .breaking-ticker__label {
+/* ── LIVE badge — subtle glow (scroll row, no marquee) ── */
+html[data-theme="dark"] .breaking-ticker--scroll .breaking-ticker__label {
   animation: accent-live-glow 2.8s ease-in-out infinite;
 }
 
-html:not([data-theme="dark"]) .breaking-ticker--premium .breaking-ticker__label {
+html:not([data-theme="dark"]) .breaking-ticker--scroll .breaking-ticker__label {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
-}
-
-.breaking-ticker__dot {
-  animation: accent-dot-pulse 2.2s ease-in-out infinite;
 }
 
 /* ── Category nav — animated underline + active glow ── */
@@ -191,8 +187,7 @@ html:not([data-theme="dark"]) .breaking-ticker--premium .breaking-ticker__label 
     transition: none;
   }
 
-  .breaking-ticker--premium .breaking-ticker__label,
-  .breaking-ticker__dot,
+  .breaking-ticker--scroll .breaking-ticker__label,
   .main-header__badge {
     animation: none !important;
   }

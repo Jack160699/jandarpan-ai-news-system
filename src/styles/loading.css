@@ -63,7 +63,8 @@
   color: rgb(255 255 255 / 0.95);
 }
 
-.breaking-ticker__track {
+/* Legacy orange crawl only — not the homepage LIVE scroll row */
+.breaking-ticker:not(.breaking-ticker--scroll) .breaking-ticker__track {
   animation: breaking-scroll 32s linear infinite;
 }
 
@@ -77,7 +78,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .breaking-ticker__track {
+  .breaking-ticker:not(.breaking-ticker--scroll) .breaking-ticker__track {
     animation: none;
   }
 

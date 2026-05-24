@@ -12,9 +12,10 @@ export default function RootLoading() {
         <Image
           src="/brand/jan-darpan-chhattisgarh-logo.png"
           alt="जन दर्पण छत्तीसगढ़"
-          width={280}
-          height={56}
+          width={420}
+          height={84}
           priority
+          quality={92}
           className="route-loading__logo"
         />
       </div>

@@ -43,7 +43,7 @@ html[data-theme="dark"] .main-header--mobile-premium.main-header--scrolled {
   .main-header__brand--mobile {
     flex: 1;
     min-width: 0;
-    max-width: min(52vw, 10.5rem);
+    max-width: min(58vw, 12.75rem);
   }
 
   .main-header__actions--mobile {
@@ -225,24 +225,14 @@ html[data-theme="dark"] .trending-strip__pill {
   background: #0b0b0b;
 }
 
-/* ── Live ticker premium (inside stack band) ── */
-.breaking-ticker--premium {
-  align-items: stretch;
+/* ── Live ticker scroll row (inside stack band) ── */
+html[data-theme="dark"] .breaking-ticker__pill {
+  background: #0b0b0b;
 }
 
-.breaking-ticker--premium .breaking-ticker__label {
-  min-width: 4rem;
-  padding-inline: 0.8125rem;
-}
-
-.breaking-ticker--marquee .breaking-ticker__viewport {
-  flex: 1;
-  min-width: 0;
-}
-
-.breaking-ticker--marquee .breaking-ticker__item {
-  font-weight: 500;
-  letter-spacing: 0.012em;
+.breaking-ticker--scroll .breaking-ticker__pill:first-of-type {
+  border-color: color-mix(in srgb, var(--color-primary) 32%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 16%, transparent);
 }
 
 /* ── Hero premium ── */

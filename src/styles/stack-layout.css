@@ -118,7 +118,8 @@
   border-radius: 0;
 }
 
-.stack-band--trending .trending-strip {
+.stack-band--trending .trending-strip,
+.stack-band--ticker .breaking-ticker {
   padding-block: 0;
 }
 

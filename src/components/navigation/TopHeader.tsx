@@ -44,8 +44,8 @@ export function TopHeader() {
           >
             <TenantLogo
               className="site-header__logo newsroom-header__logo shrink-0"
-              variant={isMobile ? "banner" : "mark"}
-              showText={!isMobile}
+              variant="banner"
+              showText={false}
             />
             {!isMobile ? (
               <div className="site-header__locale newsroom-header__locale">
