@@ -253,7 +253,6 @@ export type Dictionary = {
     followTitle: string;
     taglineFooter: string;
     quickLinksTitle: string;
-    editorialContactsTitle: string;
     publisherLine: string;
     corrections: string;
     editorialEmail: string;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
+import { isPlaceholderContent } from "@/lib/homepage/placeholder-content";
 import { useLanguage } from "@/providers/LanguageProvider";
 import type { HomeArticle } from "@/lib/homepage/types";
 
@@ -13,8 +14,9 @@ type BreakingTickerProps = {
 export function BreakingTicker({ items, freshIds }: BreakingTickerProps) {
   const [paused, setPaused] = useState(false);
   const { t } = useLanguage();
-  const hasHeadlines = items.length > 0;
-  const doubled = hasHeadlines ? [...items, ...items] : [];
+  const visible = items.filter((item) => !isPlaceholderContent(item.headline));
+  const hasHeadlines = visible.length > 0;
+  const doubled = hasHeadlines ? [...visible, ...visible] : [];
 
   const pause = () => setPaused(true);
   const resume = () => setPaused(false);
@@ -45,8 +47,8 @@ export function BreakingTicker({ items, freshIds }: BreakingTickerProps) {
                 region={item.section}
                 surface="breaking"
                 role="listitem"
-                aria-hidden={index >= items.length ? true : undefined}
-                tabIndex={index >= items.length ? -1 : undefined}
+                aria-hidden={index >= visible.length ? true : undefined}
+                tabIndex={index >= visible.length ? -1 : undefined}
                 className={`breaking-ticker__pill${freshIds?.has(item.id) ? " breaking-ticker__pill--fresh" : ""}`}
               >
                 {item.headline}

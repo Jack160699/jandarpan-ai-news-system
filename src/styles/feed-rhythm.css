@@ -43,11 +43,15 @@
 }
 
 .home-page__content {
-  padding-block: var(--rhythm-section);
+  padding-block: 0.375rem var(--rhythm-section);
 }
 
 .home-page__content > .hero-news-card--premium {
   margin-bottom: 0;
+}
+
+.home-page__content > .home-body {
+  margin-top: 0;
 }
 
 /* ── Feed sections ── */

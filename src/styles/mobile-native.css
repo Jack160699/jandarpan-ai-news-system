@@ -59,7 +59,7 @@
   }
 }
 
-/* ── Pull to refresh ── */
+/* ── Pull to refresh (silent — no top hint chrome) ── */
 .ptr-root {
   position: relative;
   flex: 0 0 auto;
@@ -70,63 +70,8 @@
   touch-action: pan-y;
 }
 
-.ptr-indicator {
-  position: fixed;
-  left: 50%;
-  top: calc(var(--nr-top-categories, var(--nr-top-header)) + 4px);
-  z-index: var(--nr-z-chrome-ptr);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.85rem;
-  border-radius: var(--ds-radius-full);
-  background: color-mix(in srgb, var(--ds-surface-overlay) 94%, var(--paper));
-  border: 1px solid var(--rule);
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--ink-headline) 12%, transparent);
-  transform: translate(-50%, calc(-100% - 8px + var(--ptr-pull, 0px)));
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.2s ease,
-    transform 0.12s ease-out;
-}
-
-.ptr-indicator--visible {
-  opacity: 1;
-}
-
-.ptr-indicator--refreshing .ptr-indicator__spinner {
-  animation: ptr-spin 0.7s linear infinite;
-}
-
-.ptr-indicator__ring {
-  display: flex;
-  width: 1.25rem;
-  height: 1.25rem;
-  align-items: center;
-  justify-content: center;
-}
-
-.ptr-indicator__spinner {
-  width: 100%;
-  height: 100%;
-  border: 2px solid color-mix(in srgb, var(--ds-accent) 25%, transparent);
-  border-top-color: var(--ds-accent);
-  border-radius: 50%;
-  transform: rotate(calc(var(--ptr-progress, 0) * 280deg));
-}
-
-.ptr-indicator__label {
-  font-family: var(--font-hindi), var(--font-ui), sans-serif;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  color: var(--ink-muted);
-}
-
-@keyframes ptr-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.ptr-root--silent .ptr-indicator {
+  display: none !important;
 }
 
 html[data-ptr-refresh="1"] main {

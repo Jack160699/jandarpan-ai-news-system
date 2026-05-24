@@ -249,7 +249,6 @@ export const ta: Dictionary = {
     followTitle: "பின்தொடருங்கள்",
     taglineFooter: "சத்தீஸ்கரின் பிரீமியம் பிராந்திய டிஜிட்டல் செய்தி அறை",
     quickLinksTitle: "விரைவு இணைப்புகள்",
-    editorialContactsTitle: "ஆசிரியர் தொடர்புகள்",
     publisherLine: "சுயாதீன பிராந்திய வெளியீட்டாளர் • சத்தீஸ்கர்",
     corrections: "பிழை அறிவிக்கவும் அல்லது திருத்தம் அனுப்பவும்",
     editorialEmail: "sudhar@jandarpancg.in",

@@ -245,7 +245,6 @@ export const bn: Dictionary = {
     followTitle: "অনুসরণ করুন",
     taglineFooter: "ছত্তীসগড়ের প্রিমিয়াম আঞ্চলিক ডিজিটাল নিউজরুম",
     quickLinksTitle: "দ্রুত লিংক",
-    editorialContactsTitle: "সম্পাদকীয় যোগাযোগ",
     publisherLine: "স্বাধীন আঞ্চলিক প্রকাশক • ছত্তীসগড়",
     corrections: "ভুল জানান বা সংশোধন পাঠান",
     editorialEmail: "sudhar@jandarpancg.in",

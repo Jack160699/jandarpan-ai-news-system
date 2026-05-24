@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { DistrictSegmentIcon } from "@/components/home/DistrictSegmentIcon";
 import { cn } from "@/lib/cn";
 import {
   FEATURED_DISTRICT_SLUGS,
@@ -10,37 +11,40 @@ import {
 } from "@/lib/homepage/district-filter";
 import { useLanguage } from "@/providers/LanguageProvider";
 
-const DISTRICT_TINT: Record<
-  FeaturedDistrictSlug,
-  { light: string; dark: string; icon: string }
-> = {
-  bilaspur: {
-    light: "bg-amber-100 text-amber-800 ring-amber-200/80",
-    dark: "dark:bg-amber-950/60 dark:text-amber-200 dark:ring-amber-800/50",
-    icon: "B",
-  },
-  raipur: {
-    light: "bg-sky-100 text-sky-800 ring-sky-200/80",
-    dark: "dark:bg-sky-950/60 dark:text-sky-200 dark:ring-sky-800/50",
-    icon: "R",
-  },
-  durg: {
-    light: "bg-emerald-100 text-emerald-800 ring-emerald-200/80",
-    dark: "dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-800/50",
-    icon: "D",
-  },
-  rajnandgaon: {
-    light: "bg-violet-100 text-violet-800 ring-violet-200/80",
-    dark: "dark:bg-violet-950/60 dark:text-violet-200 dark:ring-violet-800/50",
-    icon: "Rg",
-  },
-};
-
 type DistrictSegmentedControlProps = {
   selected: FeaturedDistrictSlug;
   counts: Record<FeaturedDistrictSlug, number>;
   onSelect: (slug: FeaturedDistrictSlug) => void;
 };
+
+/** Compact LIVE chip — dot only visible space, label abbreviated */
+function DistrictLiveChip({
+  label,
+  reduceMotion,
+}: {
+  label: string;
+  reduceMotion: boolean | null;
+}) {
+  return (
+    <motion.span
+      layout="position"
+      initial={reduceMotion ? false : { opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+      className="inline-flex max-w-full shrink-0 items-center gap-0.5 rounded-full bg-white/20 px-1 py-px"
+    >
+      <span className="relative flex h-1.5 w-1.5 shrink-0">
+        {!reduceMotion ? (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/80 opacity-70" />
+        ) : null}
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+      </span>
+      <span className="text-[7px] font-extrabold uppercase leading-none tracking-[0.14em] text-white">
+        {label}
+      </span>
+    </motion.span>
+  );
+}
 
 export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
   selected,
@@ -51,18 +55,21 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
   const reduceMotion = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const scrollActiveIntoView = useCallback((slug: FeaturedDistrictSlug) => {
-    const root = scrollRef.current;
-    if (!root) return;
-    const btn = root.querySelector<HTMLButtonElement>(
-      `[data-district-segment="${slug}"]`
-    );
-    btn?.scrollIntoView({
-      behavior: reduceMotion ? "auto" : "smooth",
-      block: "nearest",
-      inline: "center",
-    });
-  }, [reduceMotion]);
+  const scrollActiveIntoView = useCallback(
+    (slug: FeaturedDistrictSlug) => {
+      const root = scrollRef.current;
+      if (!root) return;
+      const btn = root.querySelector<HTMLButtonElement>(
+        `[data-district-segment="${slug}"]`
+      );
+      btn?.scrollIntoView({
+        behavior: reduceMotion ? "auto" : "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    },
+    [reduceMotion]
+  );
 
   const handleSelect = (slug: FeaturedDistrictSlug) => {
     onSelect(slug);
@@ -81,7 +88,7 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
       <div
         ref={scrollRef}
         className={cn(
-          "w-full min-w-0 overflow-x-auto overscroll-x-contain",
+          "w-full min-w-0 overflow-x-auto overscroll-x-contain snap-x snap-mandatory",
           "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         )}
       >
@@ -102,7 +109,6 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
                 ? district.name
                 : t.home.featuredDistricts[slug] || district.nameHi;
             const isActive = selected === slug;
-            const tint = DISTRICT_TINT[slug];
             const isFirst = index === 0;
             const isLast = index === FEATURED_DISTRICT_SLUGS.length - 1;
 
@@ -113,17 +119,23 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
                 role="tab"
                 data-district-segment={slug}
                 aria-selected={isActive}
+                aria-label={`${label}${isActive ? `, ${t.home.districtLive}` : ""}`}
+                layout={reduceMotion ? false : "position"}
                 onClick={() => handleSelect(slug)}
                 whileHover={
-                  reduceMotion || isActive ? undefined : { y: -1, scale: 1.01 }
+                  reduceMotion || isActive ? undefined : { y: -1 }
                 }
                 whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+                transition={{ type: "spring", stiffness: 480, damping: 32 }}
                 className={cn(
-                  "tap-target relative z-10 flex min-h-[42px] min-w-[5.5rem] flex-1 shrink-0 items-center justify-center gap-1.5",
-                  "px-2.5 py-2 font-medium transition-colors duration-200",
+                  "tap-target relative z-10 flex h-12 shrink-0 snap-center flex-col items-center justify-center",
+                  "gap-0.5 overflow-hidden px-2 transition-[flex-basis,min-width] duration-200",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 focus-visible:ring-offset-1",
                   isFirst && "rounded-l-[14px]",
                   isLast && "rounded-r-[14px]",
+                  isActive
+                    ? "min-w-[6.75rem] flex-[1.35] sm:min-w-[7.25rem]"
+                    : "min-w-[5.25rem] flex-1 sm:min-w-[5.5rem]",
                   !isActive &&
                     "text-stone-700 hover:bg-white/50 dark:text-stone-200 dark:hover:bg-white/5"
                 )}
@@ -151,42 +163,31 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
                   </motion.div>
                 ) : null}
 
-                <span
-                  className={cn(
-                    "relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ring-1",
-                    isActive
-                      ? "bg-white/20 text-white ring-white/30"
-                      : cn(tint.light, tint.dark)
-                  )}
-                  aria-hidden
-                >
-                  {tint.icon}
-                </span>
-
-                <span
-                  className={cn(
-                    "relative z-10 truncate text-[13px] leading-tight tracking-tight",
-                    isActive ? "font-semibold text-white" : "font-medium"
-                  )}
-                >
-                  {label}
-                </span>
-
-                {isActive ? (
-                  <motion.span
-                    initial={reduceMotion ? false : { opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="relative z-10 flex items-center gap-1 rounded-full bg-white/15 px-1.5 py-0.5"
+                {/* Row 1: icon + district name — name always visible */}
+                <span className="relative z-10 flex w-full min-w-0 max-w-full items-center gap-1.5">
+                  <DistrictSegmentIcon slug={slug} isActive={isActive} />
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate text-left text-[12px] leading-tight tracking-tight",
+                      isActive
+                        ? "font-semibold text-white"
+                        : "font-medium text-stone-800 dark:text-stone-100"
+                    )}
+                    title={label}
                   >
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-                    </span>
-                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-white">
-                      {t.home.districtLive}
-                    </span>
-                  </motion.span>
-                ) : null}
+                    {label}
+                  </span>
+                </span>
+
+                {/* Row 2: compact LIVE — only active; reserves space via fixed tab height */}
+                {isActive ? (
+                  <DistrictLiveChip
+                    label={t.home.districtLive}
+                    reduceMotion={reduceMotion}
+                  />
+                ) : (
+                  <span className="h-[11px] shrink-0" aria-hidden />
+                )}
               </motion.button>
             );
           })}

@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Mail, Phone, User } from "lucide-react";
 import { FooterSocialIcon } from "@/components/footer/FooterSocialIcon";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
 import {
-  FOOTER_EDITORIAL_CONTACTS,
   FOOTER_QUICK_LINKS,
   FOOTER_SOCIAL,
   FOOTER_DISTRICT_SLUGS,
@@ -30,7 +28,6 @@ export function Footer() {
   return (
     <footer id="footer" className="jd-footer site-footer" role="contentinfo">
       <div className="jd-footer__inner pl-container">
-        {/* Brand */}
         <div className="jd-footer__brand">
           <TenantLogo variant="banner" showText={false} className="jd-footer__logo" />
           <div className="jd-footer__brand-text">
@@ -39,7 +36,6 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Quick links */}
         <section className="jd-footer__block" aria-labelledby="footer-quick-links">
           <h2 id="footer-quick-links" className="jd-footer__label">
             {t.footer.quickLinksTitle}
@@ -55,7 +51,6 @@ export function Footer() {
           </ul>
         </section>
 
-        {/* Districts */}
         <section className="jd-footer__block" aria-labelledby="footer-districts">
           <h2 id="footer-districts" className="jd-footer__label">
             {t.footer.districtsTitle}
@@ -76,42 +71,10 @@ export function Footer() {
           </ul>
         </section>
 
-        {/* Editorial contacts */}
-        <section className="jd-footer__block" aria-labelledby="footer-contacts">
-          <h2 id="footer-contacts" className="jd-footer__label">
-            {t.footer.editorialContactsTitle}
-          </h2>
-          <ul className="jd-footer__contacts">
-            {FOOTER_EDITORIAL_CONTACTS.map((contact) => (
-              <li key={contact.email}>
-                <article className="jd-footer__contact-card">
-                  <p className="jd-footer__contact-name">
-                    <User className="jd-footer__contact-icon" aria-hidden />
-                    <span>{contact.name}</span>
-                  </p>
-                  <p className="jd-footer__contact-row">
-                    <Phone className="jd-footer__contact-icon" aria-hidden />
-                    <a href={contact.phoneHref} className="jd-footer__contact-link">
-                      {contact.phone}
-                    </a>
-                  </p>
-                  <p className="jd-footer__contact-row">
-                    <Mail className="jd-footer__contact-icon" aria-hidden />
-                    <a
-                      href={`mailto:${contact.email}`}
-                      className="jd-footer__contact-link jd-footer__contact-link--email"
-                    >
-                      {contact.email}
-                    </a>
-                  </p>
-                </article>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Social */}
-        <section className="jd-footer__block jd-footer__block--social" aria-labelledby="footer-social">
+        <section
+          className="jd-footer__block jd-footer__block--social"
+          aria-labelledby="footer-social"
+        >
           <h2 id="footer-social" className="jd-footer__label">
             {t.footer.followTitle}
           </h2>
@@ -132,7 +95,6 @@ export function Footer() {
           </ul>
         </section>
 
-        {/* Copyright */}
         <div className="jd-footer__legal">
           <p className="jd-footer__copy">
             © {year} {brandName}

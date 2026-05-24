@@ -252,7 +252,6 @@ export const hi: Dictionary = {
     followTitle: "हमें फॉलो करें",
     taglineFooter: "छत्तीसगढ़ का प्रीमियम क्षेत्रीय डिजिटल न्यूज़रूम",
     quickLinksTitle: "त्वरित लिंक",
-    editorialContactsTitle: "संपादकीय संपर्क",
     publisherLine: "स्वतंत्र क्षेत्रीय प्रकाशक • छत्तीसगढ़",
     corrections: "त्रुटि की सूचना या सुधार भेजें",
     editorialEmail: "sudhar@jandarpancg.in",

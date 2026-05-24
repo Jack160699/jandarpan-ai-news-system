@@ -5,7 +5,6 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Bookmark } from "lucide-react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
-import { DistrictNewsSlider } from "@/components/home/DistrictNewsSlider";
 import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
 import { HeroCardActions } from "@/components/layout/HeroCardActions";
 import { BreakingHeroReel } from "@/sections/homepage/BreakingHeroReel";
@@ -233,10 +232,6 @@ export function HeroNewsCard({
           ) : null}
           {featuredShort ? <BreakingHeroReel short={featuredShort} /> : null}
         </aside>
-      ) : null}
-
-      {topStories.length > 0 ? (
-        <DistrictNewsSlider articles={topStories} />
       ) : null}
     </motion.section>
   );

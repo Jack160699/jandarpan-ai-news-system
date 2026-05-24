@@ -129,7 +129,7 @@
 }
 
 .home-page__content {
-  padding-top: var(--section-gap-md);
+  padding-top: 0.25rem;
 }
 
 /* Hero isolation — overlays stay inside card, not chrome stack */

@@ -3,14 +3,12 @@
 import { useRouter } from "next/navigation";
 import {
   useCallback,
-  useEffect,
   useRef,
   useState,
   type ReactNode,
   type TouchEvent,
 } from "react";
 import { triggerHaptic } from "@/lib/mobile/haptics";
-import { useLanguage } from "@/providers/LanguageProvider";
 
 const THRESHOLD = 72;
 const MAX_PULL = 110;
@@ -28,19 +26,14 @@ function isEnabledPath(pathname: string): boolean {
   );
 }
 
+/** Silent pull-to-refresh — gesture + haptics only, no top hint UI */
 export function PullToRefresh({ children }: PullToRefreshProps) {
   const router = useRouter();
-  const { t } = useLanguage();
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef(0);
   const pulling = useRef(false);
   const hapticReady = useRef(false);
-  const pathnameRef = useRef("");
-
-  useEffect(() => {
-    pathnameRef.current = window.location.pathname;
-  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -78,7 +71,6 @@ export function PullToRefresh({ children }: PullToRefreshProps) {
       setPull(0);
       return;
     }
-    /* Do not block browser scroll until user clearly pulls down to refresh */
     if (delta < PULL_ARM_PX) {
       return;
     }
@@ -101,38 +93,15 @@ export function PullToRefresh({ children }: PullToRefreshProps) {
     }
   };
 
-  const progress = Math.min(1, pull / THRESHOLD);
-  const show = pull > 8 || refreshing;
-
   return (
     <div
-      className="ptr-root"
+      className="ptr-root ptr-root--silent"
+      data-ptr-active={refreshing ? "true" : undefined}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
       onTouchCancel={onTouchEnd}
     >
-      <div
-        className={`ptr-indicator${show ? " ptr-indicator--visible" : ""}${refreshing ? " ptr-indicator--refreshing" : ""}`}
-        style={
-          {
-            "--ptr-pull": `${pull}px`,
-            "--ptr-progress": progress,
-          } as React.CSSProperties
-        }
-        aria-hidden={!show}
-      >
-        <span className="ptr-indicator__ring">
-          <span className="ptr-indicator__spinner" />
-        </span>
-        <span className="ptr-indicator__label">
-          {refreshing
-            ? t.ptr.refreshing
-            : progress >= 1
-              ? t.ptr.release
-              : t.ptr.pull}
-        </span>
-      </div>
       {children}
     </div>
   );

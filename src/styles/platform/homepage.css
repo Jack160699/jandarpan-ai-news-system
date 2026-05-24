@@ -187,12 +187,12 @@ html[data-theme="dark"] .hero-news-card__rail-thumb {
 }
 
 .home-page__content {
-  padding-block: var(--section-gap-md);
+  padding-block: 0.375rem var(--section-gap-md);
 }
 
 @media (min-width: 1024px) {
   .home-page__content {
-    padding-block: var(--section-gap-lg);
+    padding-block: 0.5rem var(--section-gap-lg);
   }
 }
 

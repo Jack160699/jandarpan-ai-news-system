@@ -253,7 +253,6 @@ export const en: Dictionary = {
     followTitle: "Follow us",
     taglineFooter: "Chhattisgarh's premium regional digital newsroom",
     quickLinksTitle: "Quick links",
-    editorialContactsTitle: "Editorial Contacts",
     publisherLine: "Independent regional publisher • Chhattisgarh",
     corrections: "Report an error or send a correction",
     editorialEmail: "sudhar@jandarpancg.in",

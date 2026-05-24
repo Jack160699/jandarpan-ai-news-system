@@ -20,28 +20,6 @@ export const FOOTER_DISTRICT_SLUGS = [
   "dhamtari",
 ] as const;
 
-export type FooterContact = {
-  name: string;
-  phone: string;
-  phoneHref: string;
-  email: string;
-};
-
-export const FOOTER_EDITORIAL_CONTACTS: FooterContact[] = [
-  {
-    name: "Shubham Giri",
-    phone: "8770044298",
-    phoneHref: "tel:+918770044298",
-    email: "borntoprotecths@gmail.com",
-  },
-  {
-    name: "Shriyansh Chandrakar",
-    phone: "7777812777",
-    phoneHref: "tel:+917777812777",
-    email: "shriyanshchandrakar@gmail.com",
-  },
-];
-
 export type FooterSocialId =
   | "facebook"
   | "youtube"

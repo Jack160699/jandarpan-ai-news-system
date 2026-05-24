@@ -142,7 +142,6 @@ html:not([data-theme="dark"]) .site-footer.jd-footer {
 
 html:not([data-theme="dark"]) .jd-footer__chip,
 html:not([data-theme="dark"]) .jd-footer__district,
-html:not([data-theme="dark"]) .jd-footer__contact-card,
 html:not([data-theme="dark"]) .jd-footer__social-btn {
   background: var(--color-surface);
   border-color: var(--color-rule);

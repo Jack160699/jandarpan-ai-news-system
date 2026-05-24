@@ -245,7 +245,6 @@ export const mr: Dictionary = {
     followTitle: "फॉलो करा",
     taglineFooter: "छत्तीसगढचे प्रीमियम प्रादेशिक डिजिटल न्यूजरूम",
     quickLinksTitle: "द्रुत दुवे",
-    editorialContactsTitle: "संपादकीय संपर्क",
     publisherLine: "स्वतंत्र प्रादेशिक प्रकाशक • छत्तीसगढ",
     corrections: "चूक कळवा किंवा सुधारणा पाठवा",
     editorialEmail: "sudhar@jandarpancg.in",

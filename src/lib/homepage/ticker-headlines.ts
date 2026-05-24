@@ -1,3 +1,4 @@
+import { isPlaceholderContent } from "@/lib/homepage/placeholder-content";
 import type { GeneratedHomepageFeed, HomeArticle } from "./types";
 
 const TICKER_HEADLINE_LIMIT = 12;
@@ -17,6 +18,7 @@ export function buildTickerHeadlines(feed: GeneratedHomepageFeed): HomeArticle[]
 
   for (const article of pool) {
     if (!article?.id || seen.has(article.id)) continue;
+    if (isPlaceholderContent(article.headline)) continue;
     seen.add(article.id);
     unique.push(article);
   }

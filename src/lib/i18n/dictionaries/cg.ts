@@ -245,7 +245,6 @@ export const cg: Dictionary = {
     followTitle: "फॉलो करौ",
     taglineFooter: "छत्तीसगढ़ के प्रीमियम क्षेत्रीय डिजिटल न्यूज़रूम",
     quickLinksTitle: "जल्दी लिंक",
-    editorialContactsTitle: "संपादकीय संपर्क",
     publisherLine: "स्वतंत्र क्षेत्रीय प्रकाशक • छत्तीसगढ़",
     corrections: "गलती बताउ अथवा सुधार भेजौ",
     editorialEmail: "sudhar@jandarpancg.in",

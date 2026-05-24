@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { filterPlaceholderStrings } from "@/lib/homepage/placeholder-content";
 import { DEFAULT_TRENDING_TOPICS } from "@/lib/navigation";
 import { useLanguage } from "@/providers/LanguageProvider";
 
@@ -11,7 +12,8 @@ type TrendingStripProps = {
 export function TrendingStrip({ topics }: TrendingStripProps) {
   const { t } = useLanguage();
   const [paused, setPaused] = useState(false);
-  const items = topics?.length ? topics : [...DEFAULT_TRENDING_TOPICS];
+  const fromApi = topics?.length ? filterPlaceholderStrings(topics) : [];
+  const items = fromApi.length ? fromApi : [...DEFAULT_TRENDING_TOPICS];
   const doubled = [...items, ...items];
 
   return (
