@@ -4,24 +4,24 @@
  */
 
 :root {
-  /* ── Surfaces (light) ── */
-  --ds-surface: #f7f6f4;
-  --ds-surface-raised: #fdfcfb;
-  --ds-surface-sunken: #efefed;
-  --ds-surface-overlay: rgb(255 255 255 / 0.88);
-  --ds-surface-elevated: #ffffff;
-  --ds-surface-inset: #ebe8e4;
+  /* ── Surfaces (light) — newspaper paper ── */
+  --ds-surface: #f6f1e8;
+  --ds-surface-raised: #fffdf8;
+  --ds-surface-sunken: #efe7da;
+  --ds-surface-overlay: rgb(255 253 248 / 0.92);
+  --ds-surface-elevated: #fffdf8;
+  --ds-surface-inset: #efe7da;
 
   /* ── Ink (light) ── */
-  --ds-ink: #1a1816;
-  --ds-ink-secondary: #3d3834;
-  --ds-ink-tertiary: #6b6560;
-  --ds-ink-quaternary: #9a948c;
-  --ds-ink-inverse: #faf8f6;
+  --ds-ink: #1a1a1a;
+  --ds-ink-secondary: #3a3834;
+  --ds-ink-tertiary: #5e5a55;
+  --ds-ink-quaternary: #7a756e;
+  --ds-ink-inverse: #fffdf8;
 
   /* ── Rules ── */
-  --ds-separator: rgb(26 24 22 / 0.08);
-  --ds-separator-strong: rgb(26 24 22 / 0.14);
+  --ds-separator: #d8ccb8;
+  --ds-separator-strong: #c9bba3;
 
   /* ── Brand accents — News Red cinematic system ── */
   --ds-accent: #ff2b2b;

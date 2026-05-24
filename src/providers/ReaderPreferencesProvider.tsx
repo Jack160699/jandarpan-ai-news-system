@@ -70,7 +70,7 @@ export function ReaderPreferencesProvider({
     if (meta) {
       meta.setAttribute(
         "content",
-        prefs.theme === "dark" ? "#050505" : "#f8f8f8"
+        prefs.theme === "dark" ? "#050505" : "#f6f1e8"
       );
     }
   }, [prefs.theme, hydrated]);

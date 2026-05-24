@@ -3,7 +3,7 @@
  */
 export const TICKER_MARQUEE = {
   TRENDING_DURATION: "38s",
-  LIVE_DURATION: "38s",
+  LIVE_DURATION: "60s",
   EASING: "linear",
 } as const;
 

@@ -306,8 +306,12 @@ html[data-theme="dark"] .hero-news-card__rail-thumb {
   font-size: var(--text-hero);
   font-weight: 700;
   line-height: var(--leading-tight);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   color: var(--color-ink);
+}
+
+html:not([data-theme="dark"]) .hero-news-card__headline {
+  letter-spacing: -0.025em;
 }
 
 .hero-news-card__meta {

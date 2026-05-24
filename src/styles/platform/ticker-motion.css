@@ -24,7 +24,7 @@
 }
 
 .breaking-ticker--live .breaking-ticker__track {
-  animation-duration: var(--live-marquee-duration, var(--trending-marquee-duration, 38s));
+  animation-duration: var(--live-marquee-duration, 60s);
 }
 
 .trending-strip--paused .trending-strip__track,

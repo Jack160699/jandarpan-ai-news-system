@@ -36,7 +36,8 @@ html[data-theme="dark"] .main-header--mobile-premium.main-header--scrolled {
   }
 
   .main-header--mobile-premium .main-header__brand {
-    max-width: min(46vw, 9.25rem);
+    max-width: min(62vw, 13.5rem);
+    align-self: center;
   }
 
   .main-header--mobile-premium .main-header__btn {

@@ -4,15 +4,15 @@
  */
 
 :root {
-  --th-paper: #f7f6f4;
-  --th-paper-raised: #fdfcfb;
-  --th-paper-muted: #efefed;
-  --th-paper-inset: #e8e8e6;
+  --th-paper: #f6f1e8;
+  --th-paper-raised: #fffdf8;
+  --th-paper-muted: #efe7da;
+  --th-paper-inset: #efe7da;
 
-  --th-ink: #0d0d0d;
-  --th-ink-secondary: #2a2a2a;
-  --th-ink-muted: #5a5a5a;
-  --th-ink-faint: #888888;
+  --th-ink: #1a1a1a;
+  --th-ink-secondary: #3a3834;
+  --th-ink-muted: #5e5a55;
+  --th-ink-faint: #7a756e;
 
   --th-primary: #ff2b2b;
   --th-primary-dark: #b71c1c;
@@ -21,11 +21,11 @@
   --th-accent: #ff2b2b;
   --th-accent-soft: rgb(255 43 43 / 0.08);
 
-  --th-rule: rgb(13 13 13 / 0.08);
-  --th-rule-strong: rgb(13 13 13 / 0.14);
+  --th-rule: #d8ccb8;
+  --th-rule-strong: #c9bba3;
 
-  --th-ticker-bg: #f8f8f8;
-  --th-ticker-ink: #111111;
+  --th-ticker-bg: #f0e9dc;
+  --th-ticker-ink: #1a1a1a;
   --th-ticker-accent: #ff2b2b;
 
   --th-selection-bg: var(--th-primary-soft);

@@ -47,7 +47,7 @@ export function TenantLogo({
             priority
             fetchPriority="high"
             quality={92}
-            sizes="(max-width: 767px) 36vw, 168px"
+            sizes="(max-width: 767px) 52vw, 220px"
             style={{ objectFit: "contain" }}
           />
         </span>

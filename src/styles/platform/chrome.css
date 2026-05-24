@@ -30,9 +30,11 @@
   min-width: 0;
   flex: 0 1 auto;
   align-items: center;
+  align-self: stretch;
   gap: 0.5rem;
-  max-width: min(52%, calc(100% - 8.75rem));
+  max-width: min(58%, calc(100% - 9.5rem));
   padding: 0;
+  margin-inline-end: 0.25rem;
   text-decoration: none;
   color: inherit;
 }

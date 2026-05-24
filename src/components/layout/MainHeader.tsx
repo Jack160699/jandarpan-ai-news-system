@@ -35,7 +35,11 @@ export function MainHeader() {
             aria-label={brandName}
             onClick={() => startNavigation("/")}
           >
-            <TenantLogo variant="banner" showText={false} />
+            <TenantLogo
+              variant="banner"
+              showText={false}
+              className="main-header__logo"
+            />
             {!isMobile ? (
               <div className="main-header__locale">
                 <span className="main-header__city">
