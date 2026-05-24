@@ -48,13 +48,13 @@ body,
   }
 }
 
-/* ── LIVE badge — subtle glow (scroll row, no marquee) ── */
-html[data-theme="dark"] .breaking-ticker--scroll .breaking-ticker__label {
-  animation: accent-live-glow 2.8s ease-in-out infinite;
+/* ── LIVE badge — subtle glow ── */
+html[data-theme="dark"] .breaking-ticker--live .breaking-ticker__label {
+  animation: accent-live-glow 3.2s ease-in-out infinite;
 }
 
-html:not([data-theme="dark"]) .breaking-ticker--scroll .breaking-ticker__label {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
+html:not([data-theme="dark"]) .breaking-ticker--live .breaking-ticker__label {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
 /* ── Category nav — animated underline + active glow ── */
@@ -70,7 +70,6 @@ html:not([data-theme="dark"]) .breaking-ticker--scroll .breaking-ticker__label {
 
 .category-navbar__tab.is-active {
   color: var(--color-primary);
-  text-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .category-navbar--premium .category-navbar__tab--live.is-active {
@@ -187,7 +186,7 @@ html:not([data-theme="dark"]) .breaking-ticker--scroll .breaking-ticker__label {
     transition: none;
   }
 
-  .breaking-ticker--scroll .breaking-ticker__label,
+  .breaking-ticker--live .breaking-ticker__label,
   .main-header__badge {
     animation: none !important;
   }

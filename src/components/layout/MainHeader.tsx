@@ -31,7 +31,7 @@ export function MainHeader() {
         <div className="main-header__inner">
           <Link
             href="/"
-            className={`main-header__brand${isMobile ? " main-header__brand--mobile" : ""}`}
+            className="main-header__brand"
             aria-label={brandName}
             onClick={() => startNavigation("/")}
           >
@@ -53,9 +53,7 @@ export function MainHeader() {
             ) : null}
           </Link>
 
-          <div
-            className={`main-header__actions${isMobile ? " main-header__actions--mobile" : ""}`}
-          >
+          <div className="main-header__actions">
             <ThemeToggleButton compact />
             <Link
               href="/live"

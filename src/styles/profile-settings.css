@@ -47,7 +47,7 @@
 }
 
 html[data-theme="dark"] .theme-toggle__glass {
-  background: color-mix(in srgb, #0a0a0a 72%, transparent);
+  background: color-mix(in srgb, var(--color-paper) 72%, transparent);
   border-color: color-mix(in srgb, #fff 8%, transparent);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.06),
@@ -117,8 +117,8 @@ html[data-theme="dark"] .theme-toggle__glass {
 }
 
 html[data-theme="dark"] .profile-settings__group {
-  background: #0b0b0b;
-  border-color: color-mix(in srgb, #fff 8%, transparent);
+  background: var(--color-surface);
+  border-color: var(--color-rule);
 }
 
 .profile-settings__group-title {

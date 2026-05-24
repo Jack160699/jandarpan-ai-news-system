@@ -24,8 +24,8 @@
   --th-rule: rgb(13 13 13 / 0.08);
   --th-rule-strong: rgb(13 13 13 / 0.14);
 
-  --th-ticker-bg: #0a0a0a;
-  --th-ticker-ink: #f2f2f2;
+  --th-ticker-bg: #f8f8f8;
+  --th-ticker-ink: #111111;
   --th-ticker-accent: #ff2b2b;
 
   --th-selection-bg: var(--th-primary-soft);

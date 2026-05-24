@@ -27,18 +27,18 @@
   --color-primary-glow: var(--color-red-glow);
   --color-accent: var(--color-red);
 
-  /* ── Light surfaces — elegant newspaper ── */
-  --color-paper: #f7f6f4;
-  --color-surface: #fdfcfb;
-  --color-surface-muted: #efefed;
-  --color-ink: #0d0d0d;
-  --color-ink-secondary: #2a2a2a;
-  --color-ink-muted: #5a5a5a;
+  /* ── Light surfaces — premium news app ── */
+  --color-paper: #f8f8f8;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3f3f3;
+  --color-ink: #111111;
+  --color-ink-secondary: #444444;
+  --color-ink-muted: #666666;
   --color-ink-faint: #888888;
-  --color-rule: rgb(13 13 13 / 0.08);
-  --color-rule-strong: rgb(13 13 13 / 0.14);
+  --color-rule: #eaeaea;
+  --color-rule-strong: #dddddd;
   --color-ticker-bg: #f8f8f8;
-  --color-ticker-border: rgb(13 13 13 / 0.1);
+  --color-ticker-border: #eaeaea;
   --color-ticker-text: var(--color-ink);
   --color-ticker-muted: var(--color-ink-muted);
   --color-ticker-live-bg: rgb(255 43 43 / 0.12);
@@ -128,6 +128,8 @@
   --duration-fast: 0.16s;
   --duration-normal: 0.24s;
   --ticker-duration: 120s;
+  --live-marquee-duration: 22s;
+  --trending-marquee-duration: 38s;
 }
 
 @media (min-width: 768px) {

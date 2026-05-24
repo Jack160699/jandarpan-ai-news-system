@@ -44,7 +44,7 @@ export function TenantLogo({
             priority
             fetchPriority="high"
             quality={92}
-            sizes="(max-width: 767px) 52vw, 280px"
+            sizes="(max-width: 767px) 42vw, 200px"
           />
         </span>
       </span>
