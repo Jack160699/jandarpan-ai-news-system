@@ -23,7 +23,7 @@ export function NewsGrid({ id, title, articles, freshIds }: NewsGridProps) {
   return (
     <section
       id={id}
-      className="news-grid feed-section pl-scroll-target"
+      className="news-grid news-grid--trending feed-section pl-scroll-target"
       aria-labelledby={id ? `${id}-title` : undefined}
     >
       <header className="news-grid__header">

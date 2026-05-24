@@ -1,0 +1,111 @@
+/**
+ * Mobile feed sections — aligned cards, rhythm, trending grid
+ */
+
+/* ── Trending / second feed section ── */
+.home-feed-stack .news-grid.feed-section {
+  padding-block: 0;
+  border-top: none;
+}
+
+.news-grid__layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.news-grid__lead {
+  margin-bottom: 0;
+}
+
+.news-grid__list.feed-rhythm-list {
+  gap: 1.25rem;
+}
+
+.news-grid__list > li,
+.news-grid__list > .native-ad-feed-item {
+  margin: 0;
+  min-width: 0;
+}
+
+/* Uniform feed cards in trending list */
+.home-feed-stack .news-grid .feed-news-card {
+  margin-bottom: 0;
+}
+
+.home-feed-stack .news-grid .feed-news-card__main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.home-feed-stack .news-grid .feed-news-card:not(.feed-news-card--lead) .feed-news-card__link {
+  align-items: flex-start;
+  min-height: 6.5rem;
+}
+
+.home-feed-stack .news-grid .feed-news-card__media {
+  width: 6.75rem;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  flex-shrink: 0;
+}
+
+.home-feed-stack .news-grid .feed-news-card--compact .feed-news-card__media {
+  width: 5.5rem;
+}
+
+.home-feed-stack .news-grid .feed-news-card--emphasis .feed-news-card__media {
+  width: 6.75rem;
+}
+
+.home-feed-stack .news-grid .feed-news-card__content {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+  padding-top: 0.0625rem;
+}
+
+.home-feed-stack .news-grid .feed-news-card__headline {
+  font-size: 1.0625rem;
+  line-height: 1.36;
+  -webkit-line-clamp: 3;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.home-feed-stack .news-grid .feed-news-card__summary {
+  -webkit-line-clamp: 2;
+  line-height: 1.48;
+}
+
+.home-feed-stack .news-grid .feed-news-card__meta {
+  margin-top: auto;
+  padding-top: 0.375rem;
+}
+
+.home-feed-stack .news-grid .feed-news-card .hero-card-actions {
+  flex-shrink: 0;
+}
+
+/* Lead card in grid */
+.home-feed-stack .news-grid .feed-news-card--lead .feed-news-card__link {
+  min-height: auto;
+}
+
+@media (max-width: 767px) {
+  .news-grid__layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .news-grid__list {
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-feed-stack .news-grid__layout {
+    gap: 1.5rem;
+  }
+}

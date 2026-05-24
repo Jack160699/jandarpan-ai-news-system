@@ -157,11 +157,7 @@
   padding-top: 0.125rem;
 }
 
-/* Emphasis beat — larger thumb, always show deck */
-.feed-news-card--emphasis .feed-news-card__media {
-  width: 7.25rem;
-}
-
+/* Emphasis beat — typography only (thumb size stays uniform) */
 .feed-news-card--emphasis .feed-news-card__headline {
   font-size: var(--rhythm-headline-lg);
 }
@@ -281,8 +277,3 @@ html:not([data-theme="dark"]) .home-feed-stack .feed-news-card__main {
   min-height: var(--rhythm-touch);
 }
 
-@media (min-width: 768px) {
-  .feed-news-card--emphasis .feed-news-card__media {
-    width: 8rem;
-  }
-}

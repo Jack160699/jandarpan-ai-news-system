@@ -2,8 +2,9 @@
  * Listen to Today's Headlines — podcast-style audio UX
  */
 
+.has-hl-mini .mobile-dock__shell,
 .has-hl-mini .bottom-nav {
-  padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
+  margin-bottom: 3.5rem;
 }
 
 .trending-shorts__ctas {

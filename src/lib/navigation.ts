@@ -88,7 +88,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
   },
 ];
 
-export type BottomNavIcon = "home" | "reels" | "live" | "menu";
+export type BottomNavIcon = "home" | "listen" | "reels" | "live" | "menu";
 
 export type BottomNavTab = {
   id: string;
@@ -98,9 +98,16 @@ export type BottomNavTab = {
   icon: BottomNavIcon;
 };
 
-/** Production bottom nav — Home | Reels | Live | Menu */
+/** Mobile dock — Home · Listen · Reels · Live · Menu */
 export const BOTTOM_NAV_TABS: BottomNavTab[] = [
   { id: "home", label: "Home", labelHi: "होम", href: "/", icon: "home" },
+  {
+    id: "listen",
+    label: "Listen",
+    labelHi: "सुनें",
+    href: "/listen",
+    icon: "listen",
+  },
   {
     id: "reels",
     label: "Reels",

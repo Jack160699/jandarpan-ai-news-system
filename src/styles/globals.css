@@ -31,6 +31,8 @@
 @import "./quick-update-card.css";
 @import "./shorts-reel-card.css";
 @import "./feed-rhythm.css";
+@import "./mobile-feed-premium.css";
+@import "./mobile-dock-nav.css";
 @import "./loading.css";
 @import "./premium-loading.css";
 @import "./production.css";

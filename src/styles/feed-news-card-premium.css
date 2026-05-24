@@ -65,8 +65,8 @@ html:not([data-theme="dark"]) .feed-news-card__main {
 /* Link row — image left, content right */
 .feed-news-card__link {
   display: flex;
-  align-items: stretch;
-  gap: 0.875rem;
+  align-items: flex-start;
+  gap: var(--feed-pad);
   padding: var(--feed-pad);
   padding-bottom: 0.75rem;
   text-decoration: none;

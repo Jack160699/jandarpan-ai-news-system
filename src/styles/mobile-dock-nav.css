@@ -1,0 +1,162 @@
+/**
+ * Mobile floating dock — glass pill, premium active states
+ */
+
+.mobile-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-bottom-nav);
+  pointer-events: none;
+  padding-inline: max(0.75rem, var(--safe-left), var(--safe-right));
+  padding-bottom: max(0.5rem, var(--safe-bottom));
+}
+
+.mobile-dock__shell {
+  pointer-events: auto;
+  max-width: 24.5rem;
+  margin-inline: auto;
+}
+
+.mobile-dock__pill {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0.125rem;
+  min-height: 3.625rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-rule) 65%, transparent);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.08) inset,
+    0 12px 40px rgb(0 0 0 / 0.22),
+    0 2px 8px rgb(0 0 0 / 0.08);
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+}
+
+html:not([data-theme="dark"]) .mobile-dock__pill {
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.9) inset,
+    0 14px 36px rgb(42 32 18 / 0.12),
+    0 2px 6px rgb(42 32 18 / 0.06);
+}
+
+html[data-theme="dark"] .mobile-dock__pill {
+  background: color-mix(in srgb, #1e1e22 78%, transparent);
+  border-color: rgb(255 255 255 / 0.08);
+}
+
+.mobile-dock__item {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.125rem;
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  text-decoration: none;
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 220ms var(--ease-out);
+}
+
+.mobile-dock__item:active {
+  transform: scale(0.94);
+  transition-duration: 80ms;
+}
+
+.mobile-dock__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  transition:
+    background 220ms var(--ease-out),
+    box-shadow 220ms var(--ease-out);
+}
+
+.mobile-dock__icon {
+  width: 1.3125rem;
+  height: 1.3125rem;
+  flex-shrink: 0;
+}
+
+.mobile-dock__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-dock__item.is-active {
+  color: var(--color-primary);
+}
+
+.mobile-dock__item.is-active .mobile-dock__icon-wrap {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 22%, transparent),
+    0 0 20px color-mix(in srgb, var(--color-primary) 28%, transparent);
+}
+
+.mobile-dock__item--live.is-active .mobile-dock__icon-wrap--live {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 30%, transparent),
+    0 0 22px color-mix(in srgb, var(--color-primary) 40%, transparent);
+}
+
+.mobile-dock__item.is-pending {
+  opacity: 0.72;
+}
+
+.mobile-dock__item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-md);
+}
+
+/* Layout offset — dock is taller than legacy bar */
+:root {
+  --mobile-dock-height: 4.25rem;
+  --mobile-dock-total: calc(var(--mobile-dock-height) + var(--safe-bottom) + 0.5rem);
+}
+
+.has-bottom-nav {
+  --bottom-nav-height: var(--mobile-dock-height);
+  --main-pad-bottom: var(--mobile-dock-total);
+}
+
+.has-bottom-nav main,
+.has-bottom-nav .page-shell,
+.has-bottom-nav .nr-root,
+.has-bottom-nav .app-feed {
+  padding-bottom: var(--mobile-dock-total);
+}
+
+@media (min-width: 768px) {
+  .mobile-dock {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-dock__item:active {
+    transform: none;
+  }
+}
