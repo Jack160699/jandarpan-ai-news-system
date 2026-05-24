@@ -1,3 +1,4 @@
+import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
 import { defaultMonetizationSettings } from "@/lib/monetization/placements";
 import type { TenantConfig } from "@/lib/tenant/types";
 
@@ -24,10 +25,10 @@ export const JAN_DARPAN_CHHATTISGARH_TENANT: TenantConfig = {
     shortNameHi: "जन दर्पण",
     taglineEn: "Chhattisgarh's premium digital news mirror",
     taglineHi: "छत्तीसगढ़ का प्रीमियम डिजिटल समाचार दर्पण",
-    logoUrl: "/brand/jan-darpan-chhattisgarh-logo.png",
-    logoMarkUrl: "/brand/jan-darpan-mark.png",
-    faviconUrl: "/brand/jan-darpan-mark.png",
-    ogImageUrl: "/brand/jan-darpan-chhattisgarh-og.png",
+    logoUrl: JAN_DARPAN_BRAND_ASSETS.logo,
+    logoMarkUrl: JAN_DARPAN_BRAND_ASSETS.mark,
+    faviconUrl: JAN_DARPAN_BRAND_ASSETS.mark,
+    ogImageUrl: JAN_DARPAN_BRAND_ASSETS.og,
     conceptLabel: "Regional Digital News",
   },
   typography: {

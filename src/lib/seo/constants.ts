@@ -1,4 +1,5 @@
 import { BRAND } from "@/lib/brand";
+import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
 
 /** Production deploy — override via NEXT_PUBLIC_SITE_URL or NEXT_PUBLIC_APP_URL */
 export const SITE_URL =
@@ -48,4 +49,4 @@ export const NOINDEX_ROBOTS = {
   googleBot: { index: false, follow: false },
 } as const;
 
-export const PUBLISHER_LOGO_URL = `${SITE_URL}/brand/jan-darpan-mark.png`;
+export const PUBLISHER_LOGO_URL = `${SITE_URL}${JAN_DARPAN_BRAND_ASSETS.mark}`;

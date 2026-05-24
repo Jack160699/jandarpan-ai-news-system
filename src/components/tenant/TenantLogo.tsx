@@ -4,9 +4,12 @@ import Image from "next/image";
 import { useTenant } from "@/providers/TenantProvider";
 import { useLanguage } from "@/providers/LanguageProvider";
 
-/** Official banner aspect (~5:1) — width/height for Next.js layout stability */
-const BANNER_WIDTH = 420;
-const BANNER_HEIGHT = 84;
+import {
+  JAN_DARPAN_LOGO_INTRINSIC,
+} from "@/lib/brand/assets";
+
+const BANNER_WIDTH = JAN_DARPAN_LOGO_INTRINSIC.width;
+const BANNER_HEIGHT = JAN_DARPAN_LOGO_INTRINSIC.height;
 
 type TenantLogoProps = {
   className?: string;
@@ -44,7 +47,8 @@ export function TenantLogo({
             priority
             fetchPriority="high"
             quality={92}
-            sizes="(max-width: 767px) 42vw, 200px"
+            sizes="(max-width: 767px) 36vw, 168px"
+            style={{ objectFit: "contain" }}
           />
         </span>
       </span>

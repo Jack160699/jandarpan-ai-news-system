@@ -1,0 +1,40 @@
+/**
+ * Homepage ticker motion — single rhythm for Trending + LIVE strips
+ * Durations: platform/tokens.css (--trending-marquee-duration, --live-marquee-duration)
+ */
+
+@keyframes marquee-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.trending-strip__track,
+.breaking-ticker--live .breaking-ticker__track {
+  animation-name: marquee-drift;
+  animation-timing-function: var(--marquee-easing, linear);
+  animation-iteration-count: infinite;
+}
+
+.trending-strip__track {
+  animation-duration: var(--trending-marquee-duration, 38s);
+}
+
+.breaking-ticker--live .breaking-ticker__track {
+  animation-duration: var(--live-marquee-duration, var(--trending-marquee-duration, 38s));
+}
+
+.trending-strip--paused .trending-strip__track,
+.breaking-ticker--paused .breaking-ticker__track {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trending-strip__track,
+  .breaking-ticker--live .breaking-ticker__track {
+    animation: none !important;
+  }
+}

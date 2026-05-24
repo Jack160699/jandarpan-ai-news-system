@@ -128,8 +128,9 @@
   --duration-fast: 0.16s;
   --duration-normal: 0.24s;
   --ticker-duration: 120s;
-  --live-marquee-duration: 22s;
+  --marquee-easing: linear;
   --trending-marquee-duration: 38s;
+  --live-marquee-duration: 38s;
 }
 
 @media (min-width: 768px) {

@@ -2,6 +2,8 @@
 import { BRAND_VOICE } from "@/lib/brand/voice";
 import { JAN_DARPAN_CHHATTISGARH_TENANT } from "@/lib/tenant/presets/jan-darpan-chhattisgarh";
 
+export { JAN_DARPAN_BRAND_ASSETS, JAN_DARPAN_LOGO_INTRINSIC } from "@/lib/brand/assets";
+
 const t = JAN_DARPAN_CHHATTISGARH_TENANT;
 
 export const BRAND = {

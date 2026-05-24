@@ -43,9 +43,9 @@
 }
 
 .route-loading__logo {
-  height: 1.25rem;
+  height: 1.875rem;
   width: auto;
-  max-width: min(70vw, 11rem);
+  max-width: min(62vw, 10rem);
   object-fit: contain;
 }
 

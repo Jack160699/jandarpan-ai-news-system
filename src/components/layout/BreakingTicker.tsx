@@ -35,13 +35,7 @@ export function BreakingTicker({ items, freshIds }: BreakingTickerProps) {
 
       <div className="breaking-ticker__viewport">
         {hasHeadlines ? (
-          <div
-            className="breaking-ticker__track"
-            role="list"
-            style={
-              { "--live-ticker-items": items.length } as React.CSSProperties
-            }
-          >
+          <div className="breaking-ticker__track" role="list">
             {doubled.map((item, index) => (
               <TrackedStoryLink
                 key={`${item.id}-${index}`}

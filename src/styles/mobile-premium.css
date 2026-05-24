@@ -36,7 +36,7 @@ html[data-theme="dark"] .main-header--mobile-premium.main-header--scrolled {
   }
 
   .main-header--mobile-premium .main-header__brand {
-    max-width: calc(100% - 8.25rem);
+    max-width: min(46vw, 9.25rem);
   }
 
   .main-header--mobile-premium .main-header__btn {
@@ -171,20 +171,6 @@ html[data-theme="dark"] .category-navbar__fade--end {
   align-items: center;
   gap: 0.5rem;
   width: max-content;
-  animation: trending-marquee var(--trending-marquee-duration, 38s) linear infinite;
-}
-
-.trending-strip--paused .trending-strip__track {
-  animation-play-state: paused;
-}
-
-@keyframes trending-marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
 }
 
 .trending-strip__pill {
@@ -207,7 +193,8 @@ html[data-theme="dark"] .category-navbar__fade--end {
 }
 
 .breaking-ticker--live .breaking-ticker__pill:first-of-type {
-  border-color: color-mix(in srgb, var(--color-primary) 24%, var(--color-rule));
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-rule));
 }
 
 /* ── Hero premium ── */
@@ -407,8 +394,6 @@ html[data-theme="dark"] .quick-actions {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .trending-strip__track,
-  .breaking-ticker__track,
   .breaking-ticker--live .breaking-ticker__label {
     animation: none !important;
   }
