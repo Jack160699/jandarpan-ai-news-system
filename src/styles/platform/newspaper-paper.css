@@ -1,0 +1,148 @@
+/**
+ * Light-mode newspaper paper texture — editorial printed feel
+ * Asset: /public/backgrounds/newspaper-light-texture.png
+ * Dark mode: unchanged (solid AMOLED surfaces)
+ */
+
+:root {
+  --paper-texture-url: url("/backgrounds/newspaper-light-texture.png");
+  --paper-texture-tint: #f5f1e8;
+  --paper-texture-wash: rgb(245 241 232 / 0.9);
+  --paper-texture-wash-strong: rgb(245 241 232 / 0.94);
+  --paper-texture-size: 720px auto;
+}
+
+/* ── Document + shell (texture shows through transparent layers) ── */
+html:not([data-theme="dark"]) body {
+  background-color: var(--paper-texture-tint);
+  background-image:
+    linear-gradient(
+      180deg,
+      var(--paper-texture-wash-strong) 0%,
+      var(--paper-texture-wash) 42%,
+      rgb(245 241 232 / 0.88) 100%
+    ),
+    var(--paper-texture-url);
+  background-size: 100% 100%, var(--paper-texture-size);
+  background-repeat: no-repeat, repeat;
+  background-position: center top, center top;
+  background-attachment: scroll, scroll;
+}
+
+html:not([data-theme="dark"]) .app-shell,
+html:not([data-theme="dark"]) .app-shell__main,
+html:not([data-theme="dark"]) .app-feed,
+html:not([data-theme="dark"]) .home-page,
+html:not([data-theme="dark"]) .home-page__content,
+html:not([data-theme="dark"]) .home-body,
+html:not([data-theme="dark"]) .route-transition__viewport {
+  background: transparent;
+}
+
+/* ── Chrome — frosted paper (readable over texture) ── */
+html:not([data-theme="dark"]) .main-header {
+  background: color-mix(in srgb, var(--color-surface) 92%, var(--paper-texture-tint));
+  border-bottom-color: var(--color-rule-strong);
+}
+
+html:not([data-theme="dark"]) .main-header--mobile-premium {
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--paper-texture-tint));
+}
+
+html:not([data-theme="dark"]) .main-header--mobile-premium.main-header--scrolled {
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--paper-texture-tint));
+}
+
+html:not([data-theme="dark"]) .category-navbar,
+html:not([data-theme="dark"]) .category-navbar--premium {
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--paper-texture-tint));
+}
+
+html:not([data-theme="dark"]) .stack-band {
+  border-bottom-color: var(--color-rule-strong);
+}
+
+html:not([data-theme="dark"]) .trending-strip,
+html:not([data-theme="dark"]) .breaking-ticker {
+  background: color-mix(in srgb, var(--color-ticker-bg) 88%, transparent);
+}
+
+html:not([data-theme="dark"]) .category-navbar__fade--start {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-surface) 96%, var(--paper-texture-tint)) 0%,
+    transparent 100%
+  );
+}
+
+html:not([data-theme="dark"]) .category-navbar__fade--end {
+  background: linear-gradient(
+    270deg,
+    color-mix(in srgb, var(--color-surface) 96%, var(--paper-texture-tint)) 0%,
+    transparent 100%
+  );
+}
+
+html:not([data-theme="dark"]) .bottom-mobile-nav {
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--paper-texture-tint));
+  border-top-color: var(--color-rule-strong);
+}
+
+/* ── Elevated cards — solid paper for contrast ── */
+html:not([data-theme="dark"]) .news-card,
+html:not([data-theme="dark"]) .hero-news-card__article,
+html:not([data-theme="dark"]) .hero-news-card__article--premium {
+  background: var(--color-surface);
+  border-color: var(--color-rule);
+  box-shadow: var(--shadow-card);
+}
+
+html:not([data-theme="dark"]) .news-grid,
+html:not([data-theme="dark"]) .shorts-section,
+html:not([data-theme="dark"]) .hero-news-card {
+  border-top-color: var(--color-rule-strong);
+}
+
+html:not([data-theme="dark"]) .trending-strip__pill,
+html:not([data-theme="dark"]) .breaking-ticker__pill {
+  background: var(--color-surface);
+  border-color: var(--color-rule);
+}
+
+html:not([data-theme="dark"]) .quick-actions {
+  background: color-mix(in srgb, var(--color-surface) 96%, var(--paper-texture-tint));
+  border-color: var(--color-rule);
+}
+
+html:not([data-theme="dark"]) .live-wire--daily,
+html:not([data-theme="dark"]) .live-wire {
+  background: transparent;
+  border-block-color: var(--color-rule-strong);
+}
+
+html:not([data-theme="dark"]) .live-card__link {
+  background: var(--color-surface);
+  border-color: var(--color-rule);
+}
+
+/* ── Dark mode — no texture ── */
+html[data-theme="dark"] body {
+  background-color: var(--color-paper);
+  background-image: none;
+}
+
+html[data-theme="dark"] .app-shell {
+  background: var(--color-paper);
+}
+
+@media (max-width: 767px) {
+  html:not([data-theme="dark"]) body {
+    background-size: 100% 100%, 640px auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-theme="dark"]) body {
+    background-attachment: scroll, scroll;
+  }
+}

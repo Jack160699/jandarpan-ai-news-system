@@ -5,7 +5,7 @@
 
 :root {
   /* ── Surfaces (light) — newspaper paper ── */
-  --ds-surface: #f6f1e8;
+  --ds-surface: #f5f1e8;
   --ds-surface-raised: #fffdf8;
   --ds-surface-sunken: #efe7da;
   --ds-surface-overlay: rgb(255 253 248 / 0.92);
