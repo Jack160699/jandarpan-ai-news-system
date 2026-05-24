@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LayoutGrid } from "lucide-react";
 import { useHeaderScrolled } from "@/hooks/useHeaderScrolled";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useLanguage } from "@/providers/LanguageProvider";
@@ -16,7 +17,7 @@ export function MainHeader() {
   const { tenant, headerLocation } = useTenant();
   const { language, t } = useLanguage();
   const { setSearchOpen } = useReaderPreferences();
-  const { startNavigation } = useNavigation();
+  const { startNavigation, openMenu } = useNavigation();
   const isMobile = useIsMobile();
   const scrolled = useHeaderScrolled();
   const brandName =
@@ -58,6 +59,17 @@ export function MainHeader() {
           </Link>
 
           <div className="main-header__actions">
+            {!isMobile ? (
+              <button
+                type="button"
+                className="main-header__btn main-header__btn--menu tap-target"
+                aria-label={t.nav.menu}
+                aria-haspopup="dialog"
+                onClick={() => openMenu()}
+              >
+                <LayoutGrid size={20} strokeWidth={1.75} aria-hidden />
+              </button>
+            ) : null}
             <ThemeToggleButton compact />
             <Link
               href="/live"

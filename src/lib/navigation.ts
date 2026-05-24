@@ -88,7 +88,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
   },
 ];
 
-export type BottomNavIcon = "home" | "video" | "live" | "profile";
+export type BottomNavIcon = "home" | "video" | "live" | "menu";
 
 export type BottomNavTab = {
   id: string;
@@ -98,7 +98,7 @@ export type BottomNavTab = {
   icon: BottomNavIcon;
 };
 
-/** Production bottom nav — Home, Videos, Live, Profile */
+/** Production bottom nav — Home, Video, Live, Menu */
 export const BOTTOM_NAV_TABS: BottomNavTab[] = [
   { id: "home", label: "Home", labelHi: "होम", href: "/", icon: "home" },
   {
@@ -116,11 +116,11 @@ export const BOTTOM_NAV_TABS: BottomNavTab[] = [
     icon: "live",
   },
   {
-    id: "profile",
-    label: "Profile",
-    labelHi: "प्रोफाइल",
-    href: "/archive",
-    icon: "profile",
+    id: "menu",
+    label: "Menu",
+    labelHi: "मेन्यू",
+    href: "#menu",
+    icon: "menu",
   },
 ];
 

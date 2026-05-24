@@ -46,6 +46,7 @@ export type Dictionary = {
     districts: string;
     search: string;
     menu: string;
+    trendingShort: string;
     categoriesTitle: string;
     districtsTitle: string;
     savedStories: string;
@@ -221,6 +222,10 @@ export type Dictionary = {
     standardsTitle: string;
     contactTitle: string;
     followTitle: string;
+    taglineFooter: string;
+    quickLinksTitle: string;
+    editorialContactsTitle: string;
+    publisherLine: string;
     corrections: string;
     editorialEmail: string;
     tipsEmail: string;

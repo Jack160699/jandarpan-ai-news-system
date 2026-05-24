@@ -136,6 +136,24 @@ html:not([data-theme="dark"]) .quick-actions {
   border-color: var(--color-rule);
 }
 
+html:not([data-theme="dark"]) .site-footer.jd-footer {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-surface) 94%, var(--paper-texture-tint)) 0%,
+    color-mix(in srgb, var(--color-surface) 98%, var(--paper-texture-tint)) 100%
+  );
+  border-top-color: var(--color-rule-strong);
+}
+
+html:not([data-theme="dark"]) .jd-footer__chip,
+html:not([data-theme="dark"]) .jd-footer__district,
+html:not([data-theme="dark"]) .jd-footer__contact-card,
+html:not([data-theme="dark"]) .jd-footer__social-btn {
+  background: var(--color-surface);
+  border-color: var(--color-rule);
+  box-shadow: var(--shadow-card);
+}
+
 html:not([data-theme="dark"]) .live-wire--daily,
 html:not([data-theme="dark"]) .live-wire {
   background: transparent;

@@ -11,7 +11,7 @@
   --stack-live-h: var(--live-strip-height);
   --stack-ticker-h: var(--ticker-height);
 
-  --stack-chrome-h: calc(var(--stack-header-h) + var(--stack-category-h));
+  --stack-chrome-h: var(--stack-header-h);
   --stack-home-extra-h: calc(
     var(--stack-trending-h) + var(--stack-ticker-h)
   );
@@ -60,28 +60,12 @@
 
 /* Disable nested sticky — layers stack inside one shell */
 .app-sticky-stack .main-header,
-.app-sticky-stack .category-navbar {
-  position: relative;
-  top: auto;
-  z-index: auto;
-}
-
 .app-sticky-stack .main-header {
   flex: 0 0 var(--stack-header-h);
   height: var(--stack-header-h);
   min-height: var(--stack-header-h);
   max-height: var(--stack-header-h);
   border-bottom: none;
-}
-
-.app-sticky-stack .category-navbar {
-  border-bottom: none;
-}
-
-.app-sticky-stack .category-navbar {
-  flex: 0 0 var(--stack-category-h);
-  min-height: var(--stack-category-h);
-  max-height: var(--stack-category-h);
 }
 
 /* Stack bands — homepage layers 3–5 */
@@ -180,13 +164,6 @@
     box-shadow: 0 1px 0 rgb(0 0 0 / 0.04);
   }
 
-  .app-sticky-stack .category-navbar {
-    position: sticky;
-    top: calc(var(--safe-top) + var(--stack-header-h));
-    z-index: var(--z-nav);
-    border-bottom: 1px solid var(--color-rule);
-  }
-
   .app-sticky-stack[data-stack-mode="home"] {
     --scroll-margin: calc(var(--safe-top) + var(--stack-chrome-h) + 0.75rem);
   }
@@ -195,6 +172,6 @@
 @media (min-width: 1024px) {
   :root {
     --stack-header-h: 4.5rem;
-    --stack-chrome-h: calc(var(--stack-header-h) + var(--stack-category-h));
+    --stack-chrome-h: var(--stack-header-h);
   }
 }

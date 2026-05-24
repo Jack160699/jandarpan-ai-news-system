@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { DEFAULT_TRENDING_TOPICS } from "@/lib/navigation";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type TrendingStripProps = {
   topics?: string[];
 };
 
 export function TrendingStrip({ topics }: TrendingStripProps) {
+  const { t } = useLanguage();
   const [paused, setPaused] = useState(false);
   const items = topics?.length ? topics : [...DEFAULT_TRENDING_TOPICS];
   const doubled = [...items, ...items];
@@ -22,10 +24,7 @@ export function TrendingStrip({ topics }: TrendingStripProps) {
       onPointerCancel={() => setPaused(false)}
     >
       <span className="trending-strip__label" aria-hidden>
-        🔥 Trending
-      </span>
-      <span className="trending-strip__sep" aria-hidden>
-        |
+        {t.nav.trendingShort}
       </span>
       <div className="trending-strip__viewport">
         <div className="trending-strip__track">

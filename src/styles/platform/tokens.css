@@ -76,10 +76,10 @@
   --section-gap-lg: 1.375rem;
 
   --header-height: 3.75rem;
-  --nav-height: 3.125rem;
-  --ticker-height: 2.875rem;
-  --trending-height: 2.625rem;
-  --live-strip-height: 2.875rem;
+  --nav-height: 0px;
+  --ticker-height: 2.5rem;
+  --trending-height: 2.375rem;
+  --live-strip-height: 2.5rem;
   --bottom-nav-height: 3.75rem;
 
   --safe-top: env(safe-area-inset-top, 0px);
@@ -135,7 +135,7 @@
   --ticker-duration: 120s;
   --marquee-easing: linear;
   --trending-marquee-duration: 38s;
-  --live-marquee-duration: 60s;
+  --live-marquee-duration: 120s;
 }
 
 @media (min-width: 768px) {

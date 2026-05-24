@@ -16,6 +16,10 @@ type NavigationContextValue = {
   hash: string;
   isNavigating: boolean;
   pendingPath: string | null;
+  menuOpen: boolean;
+  openMenu: () => void;
+  closeMenu: () => void;
+  toggleMenu: () => void;
   startNavigation: (href: string) => void;
   completeNavigation: () => void;
 };
@@ -26,6 +30,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [hash, setHash] = useState("");
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const syncHash = () => setHash(window.location.hash);
@@ -33,6 +38,32 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     window.addEventListener("hashchange", syncHash);
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  const openMenu = useCallback(() => setMenuOpen(true), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const toggleMenu = useCallback(() => setMenuOpen((v) => !v), []);
 
   const startNavigation = useCallback((href: string) => {
     const path = href.split("#")[0] || "/";
@@ -49,10 +80,24 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       hash,
       isNavigating: pendingPath !== null,
       pendingPath,
+      menuOpen,
+      openMenu,
+      closeMenu,
+      toggleMenu,
       startNavigation,
       completeNavigation,
     }),
-    [pathname, hash, pendingPath, startNavigation, completeNavigation]
+    [
+      pathname,
+      hash,
+      pendingPath,
+      menuOpen,
+      openMenu,
+      closeMenu,
+      toggleMenu,
+      startNavigation,
+      completeNavigation,
+    ]
   );
 
   return (

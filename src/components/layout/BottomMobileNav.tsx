@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LayoutGrid } from "lucide-react";
 import { BOTTOM_NAV_TABS } from "@/lib/navigation";
 import {
   isBottomNavActive,
@@ -10,35 +11,58 @@ import {
 import { triggerHaptic } from "@/lib/mobile/haptics";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
-import { IconHome, IconLive, IconProfile, IconVideo } from "@/components/navigation/NavIcons";
+import { IconHome, IconLive, IconVideo } from "@/components/navigation/NavIcons";
 
 const ICONS = {
   home: IconHome,
   video: IconVideo,
   live: IconLive,
-  profile: IconProfile,
 } as const;
 
 const TAB_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]> = {
   home: "home",
   videos: "video",
   live: "live",
-  profile: "profile",
+  menu: "menu",
 };
 
 export function BottomMobileNav() {
-  const { pathname, hash, pendingPath, startNavigation } = useNavigation();
+  const { pathname, hash, pendingPath, startNavigation, menuOpen, openMenu } =
+    useNavigation();
   const { t } = useLanguage();
 
   return (
     <nav className="bottom-mobile-nav" aria-label="Main">
       <div className="bottom-mobile-nav__inner">
         {BOTTOM_NAV_TABS.map((tab) => {
-          const Icon = ICONS[tab.icon];
-          const active =
-            isBottomNavActive(tab, pathname, hash) ||
-            isBottomNavPending(tab, pendingPath);
+          const isMenu = tab.id === "menu";
+          const Icon = isMenu ? null : ICONS[tab.icon as keyof typeof ICONS];
+          const active = isMenu
+            ? menuOpen
+            : isBottomNavActive(tab, pathname, hash) ||
+              isBottomNavPending(tab, pendingPath);
           const label = t.nav[TAB_KEYS[tab.id] ?? "home"];
+
+          if (isMenu) {
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={`bottom-mobile-nav__item bottom-mobile-nav__item--menu tap-target${active ? " is-active" : ""}`}
+                aria-expanded={menuOpen}
+                aria-haspopup="dialog"
+                aria-label={label}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  openMenu();
+                }}
+              >
+                <LayoutGrid className="bottom-mobile-nav__icon" strokeWidth={1.75} aria-hidden />
+                <span>{label}</span>
+              </button>
+            );
+          }
+
           const href = resolveNavHref(tab.href, pathname);
 
           return (
@@ -53,7 +77,7 @@ export function BottomMobileNav() {
                 startNavigation(href);
               }}
             >
-              <Icon className="bottom-mobile-nav__icon" />
+              {Icon ? <Icon className="bottom-mobile-nav__icon" /> : null}
               <span>{label}</span>
             </Link>
           );
