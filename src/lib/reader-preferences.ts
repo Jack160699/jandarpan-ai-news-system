@@ -15,6 +15,8 @@ export type ReaderPreferences = {
   languageChosen: boolean;
   /** Hyperlocal district slug (Chhattisgarh) for regional personalization */
   homeDistrict?: string | null;
+  /** Super menu feed interests — drives homepage ranking hints */
+  feedInterests?: string[];
 };
 
 export const PREFS_STORAGE_KEY = "cgb-reader-prefs";

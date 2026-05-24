@@ -81,7 +81,7 @@ function DockIcon({
 }
 
 export function BottomMobileNav() {
-  const { pathname, hash, pendingPath, startNavigation, menuOpen, openMenu } =
+  const { pathname, hash, pendingPath, startNavigation, menuOpen, toggleMenu } =
     useNavigation();
   const { t } = useLanguage();
 
@@ -109,7 +109,7 @@ export function BottomMobileNav() {
                   aria-label={label}
                   onClick={() => {
                     triggerHaptic("selection");
-                    openMenu();
+                    toggleMenu();
                   }}
                 >
                   <DockIcon tab={tab} active={active} />

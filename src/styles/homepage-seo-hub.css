@@ -1,0 +1,130 @@
+.seo-hub {
+  margin-top: 2rem;
+  padding: 2rem 0 3rem;
+  border-top: 1px solid var(--color-rule);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-primary) 4%, var(--color-paper)) 100%
+  );
+}
+
+.seo-hub__head {
+  max-width: 40rem;
+  margin-bottom: 1.25rem;
+}
+
+.seo-hub__kicker {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.seo-hub__title {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.seo-hub__desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+.seo-hub__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.seo-hub__item {
+  border-radius: 1rem;
+  border: 1px solid var(--color-rule);
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  overflow: hidden;
+}
+
+.seo-hub__item.is-open {
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-rule));
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.seo-hub__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+}
+
+.seo-hub__item-title {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.seo-hub__keywords {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.seo-hub__chev {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.seo-hub__chev.is-open {
+  transform: rotate(180deg);
+}
+
+.seo-hub__panel {
+  padding: 0 0.85rem 0.85rem;
+  overflow: hidden;
+}
+
+.seo-hub__panel-desc {
+  margin: 0 0 0.55rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.seo-hub__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.seo-hub__primary {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.seo-hub__link {
+  padding: 0.3rem 0.55rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-rule);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--color-text-secondary);
+}

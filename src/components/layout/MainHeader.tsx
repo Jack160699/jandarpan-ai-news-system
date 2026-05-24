@@ -17,7 +17,7 @@ export function MainHeader() {
   const { tenant, headerLocation } = useTenant();
   const { language, t } = useLanguage();
   const { setSearchOpen } = useReaderPreferences();
-  const { startNavigation, openMenu } = useNavigation();
+  const { startNavigation, toggleMenu, menuOpen } = useNavigation();
   const isMobile = useIsMobile();
   const scrolled = useHeaderScrolled();
   const brandName =
@@ -64,8 +64,9 @@ export function MainHeader() {
                 type="button"
                 className="main-header__btn main-header__btn--menu tap-target"
                 aria-label={t.nav.menu}
+                aria-expanded={menuOpen}
                 aria-haspopup="dialog"
-                onClick={() => openMenu()}
+                onClick={() => toggleMenu()}
               >
                 <LayoutGrid size={20} strokeWidth={1.75} aria-hidden />
               </button>

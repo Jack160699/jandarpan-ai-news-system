@@ -21,6 +21,7 @@ import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
 import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
 import { HomepageFooter } from "@/components/footer/HomepageFooter";
 import { useLocalizedFeed } from "@/hooks/useLocalizedFeed";
+import { HomepageSeoHub } from "@/sections/homepage/HomepageSeoHub";
 
 const HyperlocalFeeds = dynamic(
   () =>
@@ -116,6 +117,7 @@ function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
         </div>
       </div>
 
+      <HomepageSeoHub />
       <HomepageFooter />
     </div>
   );

@@ -11,6 +11,7 @@ import { HeadlinesMiniPlayer } from "@/components/listen/HeadlinesMiniPlayer";
 import { ArticleSpeechProvider } from "@/providers/ArticleSpeechProvider";
 import { HeadlinesListenProvider } from "@/providers/HeadlinesListenProvider";
 import { NavigationProvider } from "@/providers/NavigationProvider";
+import { ReaderAccountProvider } from "@/providers/ReaderAccountProvider";
 import { NavProgress } from "./NavProgress";
 import { NativeTouchLayer } from "@/components/mobile/NativeTouchLayer";
 import { PullToRefresh } from "@/components/mobile/PullToRefresh";
@@ -86,9 +87,11 @@ export function AppChrome({ children }: AppChromeProps) {
       <HeadlinesListenProvider>
         <ArticleSpeechProvider>
           <NavigationProvider>
-            <NativeTouchLayer>
-              <ShortsLanguageShell>{children}</ShortsLanguageShell>
-            </NativeTouchLayer>
+            <ReaderAccountProvider>
+              <NativeTouchLayer>
+                <ShortsLanguageShell>{children}</ShortsLanguageShell>
+              </NativeTouchLayer>
+            </ReaderAccountProvider>
           </NavigationProvider>
         </ArticleSpeechProvider>
       </HeadlinesListenProvider>
@@ -99,9 +102,11 @@ export function AppChrome({ children }: AppChromeProps) {
     <HeadlinesListenProvider>
       <ArticleSpeechProvider>
       <NavigationProvider>
-        <NativeTouchLayer>
-          <AppChromeShell>{children}</AppChromeShell>
-        </NativeTouchLayer>
+        <ReaderAccountProvider>
+          <NativeTouchLayer>
+            <AppChromeShell>{children}</AppChromeShell>
+          </NativeTouchLayer>
+        </ReaderAccountProvider>
       </NavigationProvider>
       </ArticleSpeechProvider>
     </HeadlinesListenProvider>

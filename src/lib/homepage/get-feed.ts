@@ -19,6 +19,7 @@ import {
 } from "@/lib/news/live-feed";
 import { logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { getServerPreferredSections } from "@/lib/super-menu/server-interests";
 import { buildTenantRegionalPersonalization } from "@/lib/tenant/personalization";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
@@ -28,7 +29,16 @@ async function buildFeedFromPool(
   displayLanguage: Awaited<ReturnType<typeof getServerReaderLanguage>>
 ): Promise<GeneratedHomepageFeed | null> {
   const tenant = await getTenantConfig();
+  const interestSections = await getServerPreferredSections();
   const personalization = buildTenantRegionalPersonalization(tenant);
+  if (interestSections.length) {
+    personalization.preferredSections = [
+      ...new Set([
+        ...interestSections,
+        ...(personalization.preferredSections ?? []),
+      ]),
+    ];
+  }
   const feed = buildGeneratedHomepageFeed(pool, {
     personalization,
     displayLanguage,
