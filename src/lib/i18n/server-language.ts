@@ -6,5 +6,5 @@ export async function getServerReaderLanguage(): Promise<NewsroomLanguage> {
   const jar = await cookies();
   const raw = jar.get(LANGUAGE_STORAGE_KEY)?.value;
   if (isAppLanguage(raw)) return raw;
-  return "hi";
+  return "en";
 }

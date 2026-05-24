@@ -1,5 +1,5 @@
 import { EmptyState } from "@/components/ui/EmptyState";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export function HomepageEmpty() {
   const configured = isSupabaseConfigured();

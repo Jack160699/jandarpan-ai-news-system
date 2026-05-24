@@ -36,7 +36,7 @@ export function HeroNewsCard({
   const [saved, setSaved] = useState(false);
 
   const isLive = lead.isLive;
-  const isBreaking = lead.ranking.isBreaking;
+  const isBreaking = lead.ranking?.isBreaking ?? false;
   const showLiveBadge = isLive || isBreaking;
   const sourceLabel = pickDeskLabel(language, lead.desk);
 

@@ -23,10 +23,41 @@ import { getServerPreferredSections } from "@/lib/super-menu/server-interests";
 import { buildTenantRegionalPersonalization } from "@/lib/tenant/personalization";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
+import { homeDebug } from "@/lib/homepage/feed-safety";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+
+const FEED_LANG_FALLBACKS: NewsroomLanguage[] = ["hi", "en"];
+
+async function buildFeedWithLanguageFallback(
+  pool: GeneratedArticleRow[],
+  displayLanguage: NewsroomLanguage
+): Promise<GeneratedHomepageFeed | null> {
+  const tried = new Set<NewsroomLanguage>();
+  const chain = [
+    displayLanguage,
+    ...FEED_LANG_FALLBACKS.filter((l) => l !== displayLanguage),
+  ];
+
+  for (const lang of chain) {
+    if (tried.has(lang)) continue;
+    tried.add(lang);
+    const feed = await buildFeedFromPool(pool, lang);
+    if (feed) {
+      if (lang !== displayLanguage) {
+        homeDebug("homepage feed language fallback", {
+          requested: displayLanguage,
+          used: lang,
+        });
+      }
+      return feed;
+    }
+  }
+  return null;
+}
 
 async function buildFeedFromPool(
   pool: GeneratedArticleRow[],
-  displayLanguage: Awaited<ReturnType<typeof getServerReaderLanguage>>
+  displayLanguage: NewsroomLanguage
 ): Promise<GeneratedHomepageFeed | null> {
   const tenant = await getTenantConfig();
   const interestSections = await getServerPreferredSections();
@@ -72,7 +103,7 @@ export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed 
     diagnostics.source === "static_fallback" ||
     diagnostics.source === "wire_api"
   ) {
-    const feed = await buildFeedFromPool(pool, displayLanguage);
+    const feed = await buildFeedWithLanguageFallback(pool, displayLanguage);
     if (feed) {
       feed.footerIntelligence = {
         ...feed.footerIntelligence,
@@ -89,7 +120,7 @@ export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed 
   const getCachedFeedInternal = unstable_cache(
     async () => {
       const { rows: freshPool } = await resolveLiveArticlePool(120);
-      return buildFeedFromPool(freshPool, displayLanguage);
+      return buildFeedWithLanguageFallback(freshPool, displayLanguage);
     },
     ["homepage-generated-feed-v5", tenant.slug, displayLanguage],
     {
@@ -103,7 +134,9 @@ export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed 
     }
   );
 
-  const feed = (await getCachedFeedInternal()) ?? (await buildFeedFromPool(pool, displayLanguage));
+  const feed =
+    (await getCachedFeedInternal()) ??
+    (await buildFeedWithLanguageFallback(pool, displayLanguage));
 
   if (feed?.trending?.length) {
     await cacheSetJson(cacheKey, feed, INFRA_CONFIG.homepageCacheSeconds);

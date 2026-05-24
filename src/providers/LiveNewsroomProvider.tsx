@@ -23,6 +23,11 @@ import {
 } from "@/lib/realtime/merge-feed";
 import type { LiveHomepageSnapshot } from "@/lib/realtime/types";
 import { localizeGeneratedFeed } from "@/lib/i18n/strict-locale";
+import { normalizeAppLanguage } from "@/lib/i18n/safe-language";
+import {
+  ensureHomepageFeed,
+  homeDebug,
+} from "@/lib/homepage/feed-safety";
 import { useLanguageOptional } from "@/providers/LanguageProvider";
 
 type LiveNewsroomContextValue = {
@@ -52,8 +57,9 @@ export function LiveNewsroomProvider({
   enabled = true,
 }: LiveNewsroomProviderProps) {
   const languageCtx = useLanguageOptional();
-  const displayLanguage = languageCtx?.language ?? "hi";
+  const displayLanguage = normalizeAppLanguage(languageCtx?.language);
   const languageReady = languageCtx?.ready ?? false;
+  const contentLocked = languageCtx?.contentLocked ?? true;
 
   const [feed, setFeed] = useState(initialFeed);
   const [localeReady, setLocaleReady] = useState(false);
@@ -63,17 +69,29 @@ export function LiveNewsroomProvider({
   }, []);
 
   useEffect(() => {
-    if (!localeReady || !languageReady) {
+    if (!localeReady || !languageReady || contentLocked) {
       setFeed(initialFeed);
       return;
     }
     try {
-      setFeed(localizeGeneratedFeed(initialFeed, displayLanguage));
+      const localized = localizeGeneratedFeed(initialFeed, displayLanguage);
+      const next = ensureHomepageFeed(initialFeed, localized);
+      homeDebug("LiveNewsroom localize", {
+        language: displayLanguage,
+        trending: next.trending.length,
+      });
+      setFeed(next);
     } catch (err) {
       console.error("[LiveNewsroom] localize feed", err);
       setFeed(initialFeed);
     }
-  }, [initialFeed, displayLanguage, localeReady, languageReady]);
+  }, [
+    initialFeed,
+    displayLanguage,
+    localeReady,
+    languageReady,
+    contentLocked,
+  ]);
   const [lastSyncedAt, setLastSyncedAt] = useState(initialFeed.fetchedAt);
   const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
   const [pendingSnapshot, setPendingSnapshot] =

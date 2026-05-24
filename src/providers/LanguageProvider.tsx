@@ -119,20 +119,28 @@ export function LanguageProvider({
 
   const setLanguage = useCallback(
     (lang: AppLanguage) => {
-      persist(lang, true);
+      const safe = normalizeAppLanguage(lang);
+      persist(safe, true);
       dismissGate();
-      router.refresh();
+      requestAnimationFrame(() => router.refresh());
     },
     [persist, dismissGate, router]
   );
 
   const confirmLanguage = useCallback(
     (lang: AppLanguage) => {
-      persist(lang, true);
+      const safe = normalizeAppLanguage(lang);
+      persist(safe, true);
       dismissGate();
-      router.refresh();
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[Language] confirmLanguage", {
+          selected: safe,
+          hydrated: ready,
+        });
+      }
+      requestAnimationFrame(() => router.refresh());
     },
-    [persist, dismissGate, router]
+    [persist, dismissGate, router, ready]
   );
 
   const safeLanguage = normalizeAppLanguage(language);
@@ -143,7 +151,7 @@ export function LanguageProvider({
 
   const value = useMemo(
     () => ({
-      language,
+      language: safeLanguage,
       t,
       ready,
       showLanguageGate,
@@ -154,7 +162,7 @@ export function LanguageProvider({
       confirmLanguage,
     }),
     [
-      language,
+      safeLanguage,
       t,
       ready,
       showLanguageGate,

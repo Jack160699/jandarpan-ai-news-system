@@ -13,6 +13,10 @@ import {
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
+import {
+  hasValidHomeLead,
+  homeDebug,
+} from "@/lib/homepage/feed-safety";
 
 export function isMatchingLanguage(
   sourceLanguage: string | null | undefined,
@@ -82,7 +86,7 @@ export function localizeGeneratedFeed(
     return match || alert.headline.length > 0;
   });
 
-  return {
+  const next: GeneratedHomepageFeed = {
     ...feed,
     breakingTicker: breakingTicker.length
       ? breakingTicker
@@ -100,6 +104,15 @@ export function localizeGeneratedFeed(
       trendingSearches: getTrendingSearchesForLanguage(selectedLanguage),
     },
   };
+
+  if (!hasValidHomeLead(next)) {
+    homeDebug("strict locale emptied feed — keeping server snapshot", {
+      language: selectedLanguage,
+    });
+    return feed;
+  }
+
+  return next;
 }
 
 export type { LocalizedArticleFields };

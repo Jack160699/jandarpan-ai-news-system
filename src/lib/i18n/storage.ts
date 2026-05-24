@@ -16,7 +16,7 @@ export type StoredLanguageState = {
 
 export function loadStoredLanguage(): StoredLanguageState {
   if (typeof window === "undefined") {
-    return { language: "hi", chosen: false };
+    return { language: "en", chosen: false };
   }
 
   try {

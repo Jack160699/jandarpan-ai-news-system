@@ -15,7 +15,11 @@ import { buildOpenGraphImageUrl, optimizeCdnImageUrl } from "@/lib/news/ai/edito
 import { resolveFallbackImage } from "@/lib/news/images/fallbacks";
 import { isDisplayableImage } from "@/lib/news/images/validate";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
-import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
+import {
+  resolveLocalizedFields,
+  resolveLocalizedFieldsStrict,
+} from "@/lib/i18n/resolve-article";
+import { homeDebug } from "@/lib/homepage/feed-safety";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
 import { localizeGeneratedFeed } from "@/lib/i18n/strict-locale";
 import {
@@ -89,8 +93,16 @@ export function toHomeArticle(
   },
   displayLanguage: NewsroomLanguage = "hi"
 ): HomeArticle | null {
-  const localized = resolveLocalizedFieldsStrict(row, displayLanguage);
-  if (!localized) return null;
+  let localized: LocalizedArticleFields | null = resolveLocalizedFieldsStrict(
+    row,
+    displayLanguage
+  );
+  let localeMatch = true;
+  if (!localized) {
+    localized = resolveLocalizedFields(row, displayLanguage);
+    localeMatch = false;
+  }
+  if (!localized?.headline?.trim()) return null;
 
   const { hero, og } = resolveImageUrls(row);
   const hours = hoursSince(row.published_at);
@@ -136,7 +148,7 @@ export function toHomeArticle(
       section,
       section === "chhattisgarh" || section === "raipur"
     ),
-    localeMatch: true,
+    localeMatch,
   };
 }
 
@@ -193,6 +205,14 @@ export function buildGeneratedHomepageFeed(
       )
     )
     .filter((a): a is HomeArticle => a !== null);
+
+  if (!ranked.length) {
+    homeDebug("buildGeneratedHomepageFeed: no articles for language", {
+      displayLanguage,
+      poolSize: rows.length,
+    });
+    return null;
+  }
 
   const usedIds = new Set<string>();
 
