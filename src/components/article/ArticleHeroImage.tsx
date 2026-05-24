@@ -1,9 +1,7 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
+import { MediaImage } from "@/components/media/MediaImage";
 import { buildResponsiveSizes } from "@/lib/news/images/responsive-sizes";
-import { IMAGE_BLUR } from "@/lib/image-placeholder";
 
 type ArticleHeroImageProps = {
   src: string;
@@ -11,6 +9,7 @@ type ArticleHeroImageProps = {
   priority?: boolean;
   fallbackSrc?: string;
   sizes?: string;
+  category?: string;
 };
 
 export function ArticleHeroImage({
@@ -19,27 +18,25 @@ export function ArticleHeroImage({
   priority = true,
   fallbackSrc,
   sizes = buildResponsiveSizes(),
+  category = "national",
 }: ArticleHeroImageProps) {
-  const [failed, setFailed] = useState(false);
-  const displaySrc =
-    failed && fallbackSrc?.trim() ? fallbackSrc : src?.trim() ?? "";
-
+  const displaySrc = src?.trim() || fallbackSrc?.trim() || "";
   if (!displaySrc) return null;
 
   return (
     <figure className="article-figure">
       <div className="article-figure__media">
-        <Image
+        <MediaImage
           src={displaySrc}
           alt=""
-          fill
-          priority={priority}
-          loading={priority ? undefined : "lazy"}
-          placeholder="blur"
-          blurDataURL={IMAGE_BLUR}
           sizes={sizes}
-          className="image-ink object-cover"
-          onError={() => setFailed(true)}
+          aspect="16:9"
+          category={category}
+          priority={priority}
+          cinematic
+          hoverZoom
+          className="h-full w-full"
+          imageClassName="image-ink"
         />
       </div>
       {credit ? (

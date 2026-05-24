@@ -57,9 +57,13 @@ export type Dictionary = {
   cardActions: {
     groupLabel: string;
     whatsapp: string;
+    share: string;
     listen: string;
     pause: string;
     resume: string;
+    like: string;
+    liked: string;
+    comment: string;
   };
   common: {
     all: string;

@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useMemo, useState } from "react";
-import { IMAGE_BLUR } from "@/lib/image-placeholder";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { blurForCategory } from "@/lib/image-placeholder";
 import { widthFromSizes } from "@/lib/images/homepage-sizes";
 import {
   aspectClassName,
+  imgPositionClass,
   normalizeMediaAspect,
   type MediaAspect,
   type ThumbAspect,
@@ -20,6 +21,8 @@ export type MediaImageProps = {
   alt: string;
   sizes: string;
   aspect?: ThumbAspect;
+  /** CDN crop when `aspect` is `fill` (parent-sized box) */
+  cropAspect?: ThumbAspect;
   category?: string;
   source?: string | null;
   articleUrl?: string;
@@ -28,8 +31,14 @@ export type MediaImageProps = {
   imageClassName?: string;
   /** Extra scrim for text-on-image */
   cinematic?: boolean;
-  /** Parent supplies aspect box (e.g. .nr-card__media) */
+  /** Subtle bottom gradient only */
+  subtleScrim?: boolean;
+  /** Parent supplies aspect box (e.g. .feed-news-card__media) */
   fillParent?: boolean;
+  /** Soft zoom on hover */
+  hoverZoom?: boolean;
+  /** Subtle frame shadow */
+  shadow?: boolean;
 };
 
 function tierUrl(
@@ -48,11 +57,30 @@ function tierUrl(
   }
 }
 
+function cropAspectFor(
+  aspectNorm: MediaAspect,
+  cropAspectProp: ThumbAspect | undefined
+): MediaAspect {
+  if (aspectNorm !== "fill") return aspectNorm;
+  const crop = normalizeMediaAspect(cropAspectProp);
+  return crop === "fill" ? "16:9" : crop;
+}
+
+function NewspaperIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function MediaImage({
   src,
   alt,
   sizes,
   aspect = "16:9",
+  cropAspect: cropAspectProp,
   category,
   source,
   articleUrl,
@@ -60,9 +88,13 @@ export function MediaImage({
   className = "",
   imageClassName = "",
   cinematic = true,
+  subtleScrim = false,
   fillParent = false,
+  hoverZoom = true,
+  shadow = true,
 }: MediaImageProps) {
   const aspectNorm = normalizeMediaAspect(aspect);
+  const cropAspect = cropAspectFor(aspectNorm, cropAspectProp);
   const width = widthFromSizes(sizes);
   const [tier, setTier] = useState<LoadTier>(0);
   const [loaded, setLoaded] = useState(false);
@@ -76,14 +108,15 @@ export function MediaImage({
           source,
           articleUrl,
         },
-        aspectNorm === "fill" ? "16:9" : aspectNorm
+        cropAspect
       );
     }
     const url = src?.trim();
     if (!url) return null;
     const optimized = optimizeCdnUrl(url, {
       width,
-      aspect: aspectNorm === "fill" ? "16:9" : aspectNorm,
+      aspect: cropAspect,
+      quality: priority ? 82 : 76,
     });
     return {
       url,
@@ -92,10 +125,18 @@ export function MediaImage({
       placeholderUrl: optimized,
       isSynthetic: false,
     };
-  }, [src, category, source, articleUrl, aspectNorm, width]);
+  }, [src, category, source, articleUrl, cropAspect, width, priority]);
 
   const displaySrc = media ? tierUrl(media, tier) : "";
   const showImage = Boolean(displaySrc) && tier < 3;
+  const blurData = blurForCategory(category);
+  const fallbackBg =
+    tier >= 2 && media?.placeholderUrl ? media.placeholderUrl : undefined;
+
+  useEffect(() => {
+    setTier(0);
+    setLoaded(false);
+  }, [displaySrc]);
 
   const handleError = useCallback(() => {
     setLoaded(false);
@@ -123,13 +164,18 @@ export function MediaImage({
       ? "media-frame media-frame--fill"
       : `media-frame ${aspectClassName(aspectNorm)}`;
 
-  const imgPosClass =
-    aspectNorm === "4:5"
-      ? "media-frame__img--4-5"
-      : "media-frame__img--16-9";
+  const frameMods = [
+    hoverZoom ? "media-frame--zoom" : "",
+    shadow ? "media-frame--shadow" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const imgPosClass = imgPositionClass(cropAspect);
+  const quality = priority ? 84 : 76;
 
   return (
-    <div className={`${frameClass} ${className}`.trim()}>
+    <div className={`${frameClass} ${frameMods} ${className}`.trim()}>
       <div className="media-frame__inner">
         {showImage ? (
           <>
@@ -144,10 +190,11 @@ export function MediaImage({
               priority={priority}
               fetchPriority={priority ? "high" : "auto"}
               loading={priority ? undefined : "lazy"}
+              decoding="async"
               placeholder="blur"
-              blurDataURL={IMAGE_BLUR}
+              blurDataURL={blurData}
               sizes={sizes}
-              quality={priority ? 82 : 74}
+              quality={quality}
               className={`media-frame__img ${imgPosClass} ${imageClassName} ${loaded ? "media-frame__img--loaded" : "media-frame__img--loading"}`.trim()}
               onLoad={handleLoad}
               onError={handleError}
@@ -155,6 +202,11 @@ export function MediaImage({
             {cinematic ? (
               <span
                 className="media-frame__scrim media-frame__scrim--cinematic"
+                aria-hidden
+              />
+            ) : subtleScrim ? (
+              <span
+                className="media-frame__scrim media-frame__scrim--subtle"
                 aria-hidden
               />
             ) : (
@@ -166,7 +218,19 @@ export function MediaImage({
           </>
         ) : (
           <div className="media-frame__fallback" aria-hidden>
-            <span className="media-frame__fallback-mark" />
+            {fallbackBg ? (
+              <span
+                className="media-frame__fallback-bg"
+                style={{ backgroundImage: `url(${fallbackBg})` }}
+              />
+            ) : null}
+            <span className="media-frame__fallback-mark">
+              {category ? (
+                category.slice(0, 2).toUpperCase()
+              ) : (
+                <NewspaperIcon />
+              )}
+            </span>
           </div>
         )}
       </div>

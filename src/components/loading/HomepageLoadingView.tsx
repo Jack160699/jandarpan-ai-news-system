@@ -2,6 +2,11 @@
  * Full homepage loading — mirrors daily HomepageView layout
  */
 
+import { FeedNewsCardSkeleton } from "@/components/feed/FeedNewsCardSkeleton";
+import { HeroNewsCardSkeleton } from "@/components/layout/HeroNewsCardSkeleton";
+import { QuickUpdateCardSkeleton } from "@/components/quick-update/QuickUpdateCardSkeleton";
+import { ShortsReelCardSkeleton } from "@/components/shorts/ShortsReelCardSkeleton";
+
 export function MastheadSkeleton() {
   return (
     <header className="pl-masthead pl-stagger-item" aria-hidden>
@@ -24,18 +29,9 @@ export function BreakingTickerSkeleton() {
 
 export function BreakingHeroSkeleton() {
   return (
-    <section className="pl-hero pl-stagger-item" aria-hidden>
-      <div className="pl-shimmer-block pl-hero__flag" />
-      <div className="pl-shimmer-block pl-hero__headline" />
-      <div className="pl-shimmer-block pl-hero__headline pl-hero__headline--2" />
-      <div className="pl-shimmer-block pl-hero__meta" />
-      <div className="pl-shimmer-block pl-hero__media" />
-      <div className="pl-hero__row">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="pl-shimmer-block pl-hero__chip" />
-        ))}
-      </div>
-    </section>
+    <div className="pl-stagger-item">
+      <HeroNewsCardSkeleton />
+    </div>
   );
 }
 
@@ -63,17 +59,9 @@ export function SectionHeaderSkeleton() {
 
 export function StoryCardSkeleton({ compact = false }: { compact?: boolean }) {
   return (
-    <article
-      className={`pl-story-card pl-stagger-item ${compact ? "pl-story-card--compact" : ""}`.trim()}
-      aria-hidden
-    >
-      <div className="pl-shimmer-block pl-story-card__thumb" />
-      <div className={compact ? "pl-story-card__body" : undefined}>
-        <div className="pl-shimmer-block pl-story-card__title" />
-        <div className="pl-shimmer-block pl-story-card__title pl-story-card__title--2" />
-        <div className="pl-shimmer-block pl-story-card__meta" />
-      </div>
-    </article>
+    <div className="pl-stagger-item">
+      <FeedNewsCardSkeleton variant={compact ? "compact" : "standard"} />
+    </div>
   );
 }
 
@@ -92,16 +80,8 @@ export function LiveWireListSkeleton({ rows = 6 }: { rows?: number }) {
   return (
     <section aria-hidden>
       <SectionHeaderSkeleton />
-      <div className="pl-wire-list">
-        {Array.from({ length: rows }, (_, i) => (
-          <div key={i} className="pl-wire-row pl-stagger-item">
-            <div className="pl-shimmer-block pl-wire-row__dot" />
-            <div className="pl-wire-row__lines">
-              <div className="pl-shimmer-block" style={{ height: "0.75rem", width: "92%" }} />
-              <div className="pl-shimmer-block" style={{ height: "0.5625rem", width: "40%" }} />
-            </div>
-          </div>
-        ))}
+      <div className="pl-stagger-item">
+        <QuickUpdateCardSkeleton rows={rows} variant="feed" />
       </div>
     </section>
   );
@@ -111,10 +91,13 @@ export function ShortsRailSkeleton() {
   return (
     <section aria-hidden>
       <SectionHeaderSkeleton />
-      <div className="pl-rail">
+      <div className="pl-rail shorts-section__rail--snap">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="pl-rail__slot pl-stagger-item">
-            <div className="pl-shimmer-block pl-rail__card" />
+          <div
+            key={i}
+            className="pl-rail__slot pl-stagger-item shorts-section__slot--reel"
+          >
+            <ShortsReelCardSkeleton />
           </div>
         ))}
       </div>

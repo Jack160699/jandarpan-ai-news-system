@@ -2,6 +2,7 @@
  * Read published generated_articles — homepage + story source of truth
  */
 
+import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { createAnonServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { logNewsroom } from "@/lib/newsroom/logger";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
@@ -9,12 +10,22 @@ import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 const GENERATED_SELECT =
   "id,event_id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,homepage_pin,pinned_at,editorial_metadata,created_at";
 
+const MIN_POOL_LOG = 3;
+
 export async function fetchGeneratedArticlePool(
   limit = 280
 ): Promise<GeneratedArticleRow[]> {
-  if (!isSupabaseConfigured()) return [];
+  if (!isSupabaseConfigured()) {
+    warnLiveFeed("generated_pool_skip", {
+      reason: "supabase_not_configured",
+      hint: "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on Vercel",
+    });
+    return [];
+  }
 
   const supabase = createAnonServerClient();
+  const startedAt = Date.now();
+
   const { data, error } = await supabase
     .from("generated_articles")
     .select(GENERATED_SELECT)
@@ -22,6 +33,12 @@ export async function fetchGeneratedArticlePool(
     .limit(limit);
 
   if (error) {
+    errorLiveFeed("generated_pool_query_error", {
+      message: error.message,
+      code: error.code,
+      hint: error.hint,
+      durationMs: Date.now() - startedAt,
+    });
     logNewsroom("generated", "fetch_pool_failed", { error: error.message });
     return [];
   }
@@ -36,6 +53,19 @@ export async function fetchGeneratedArticlePool(
     if (status === "rejected" || status === "pending") return false;
     return Boolean(row.published_at);
   });
+
+  logLiveFeed("generated_pool", {
+    publicCount: publicRows.length,
+    rawCount: rows.length,
+    durationMs: Date.now() - startedAt,
+  });
+
+  if (publicRows.length < MIN_POOL_LOG) {
+    warnLiveFeed("generated_pool_sparse", {
+      publicCount: publicRows.length,
+      hint: "Run /api/cron/orchestrate or /api/fetch-news with CRON_SECRET; check RLS on generated_articles",
+    });
+  }
 
   logNewsroom("generated", "fetch_pool", {
     count: publicRows.length,

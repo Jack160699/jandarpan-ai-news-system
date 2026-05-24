@@ -10,10 +10,18 @@ export type LiveHomepageSnapshot = {
   localBreakingAlerts: GeneratedHomepageFeed["localBreakingAlerts"];
 };
 
-export type LivePollResult = {
-  ok: true;
-  snapshot: LiveHomepageSnapshot;
-} | {
-  ok: false;
-  error: string;
+export type LivePollMeta = {
+  source?: string;
+  poolSize?: number;
+  rateLimited?: boolean;
 };
+
+export type LivePollResult =
+  | { ok: true; snapshot: LiveHomepageSnapshot; meta?: LivePollMeta }
+  | {
+      ok: false;
+      error: string;
+      code?: string;
+      retryable?: boolean;
+      meta?: LivePollMeta;
+    };

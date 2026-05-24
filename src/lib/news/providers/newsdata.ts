@@ -94,13 +94,15 @@ async function fetchNewsDataQuery(params: Record<string, string>): Promise<{
   try {
     const { data } = await fetchJson<NewsDataResponse>(
       `${NEWSDATA_BASE}?${qs.toString()}`,
-      { timeoutMs: 20_000, retries: 2 }
+      { timeoutMs: 20_000, retries: 2, provider: "newsdata" }
     );
 
     if (data.status && data.status !== "success") {
+      const msg = data.message ?? `NewsData status: ${data.status}`;
+      const isQuota = /rate|quota|limit|429/i.test(msg);
       return {
         articles: [],
-        error: data.message ?? `NewsData status: ${data.status}`,
+        error: isQuota ? `NewsData quota/rate limit: ${msg}` : msg,
       };
     }
 

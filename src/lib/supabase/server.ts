@@ -7,15 +7,31 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/supabase/types";
+import { LIVE_FETCH_INIT } from "@/lib/news/fetch-policy";
 import { getPublicSupabaseEnv } from "@/lib/supabase/env";
 import { assertServerOnly } from "@/utils/env";
 
 export { createAdminServerClient, createAdminClient } from "@/lib/supabase/admin";
 
-const serverFetch =
+const baseFetch =
   typeof globalThis.fetch === "function"
     ? globalThis.fetch.bind(globalThis)
     : undefined;
+
+/**
+ * Supabase REST — bypass Next cache but preserve Supabase Headers (apikey, Authorization).
+ * Do NOT use withLiveFetchInit here: it replaces Headers objects and drops apikey.
+ */
+function supabaseFetch(url: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  if (!baseFetch) {
+    throw new Error("fetch is not available in this runtime");
+  }
+  return baseFetch(url, {
+    ...init,
+    cache: LIVE_FETCH_INIT.cache,
+    next: LIVE_FETCH_INIT.next,
+  });
+}
 
 function anonOptions() {
   return {
@@ -23,7 +39,7 @@ function anonOptions() {
       persistSession: false as const,
       autoRefreshToken: false as const,
     },
-    global: serverFetch ? { fetch: serverFetch } : undefined,
+    global: baseFetch ? { fetch: supabaseFetch } : undefined,
   };
 }
 

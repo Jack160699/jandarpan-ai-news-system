@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { StoryCard } from "@/components/homepage/StoryCard";
+import { FeedListWithNativeAds } from "@/components/monetization/FeedListWithNativeAds";
 import { SectionHeader } from "@/components/homepage/SectionHeader";
 import { categoryPath } from "@/lib/seo/categories";
 import type { RegionalSectionBlock } from "@/lib/homepage/types";
@@ -68,14 +69,17 @@ export function CategoryStreams({ streams }: CategoryStreamsProps) {
                 }
                 role="list"
               >
-                {stream.articles.map((article) => (
-                  <li key={article.id}>
+                <FeedListWithNativeAds
+                  items={stream.articles}
+                  feedId={`category-${stream.id}`}
+                  getKey={(article) => article.id}
+                  renderItem={(article) => (
                     <StoryCard
                       article={article}
                       variant={layoutEven ? "editorial" : "compact"}
                     />
-                  </li>
-                ))}
+                  )}
+                />
               </ul>
             </div>
           );

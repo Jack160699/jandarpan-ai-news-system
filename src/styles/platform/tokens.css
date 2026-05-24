@@ -67,13 +67,13 @@
   --tenant-accent-soft: var(--color-primary-soft);
 
   --container-max: 80rem;
-  --gutter-mobile: 1.0625rem;
-  --gutter-tablet: 1.25rem;
-  --gutter-desktop: 1.375rem;
+  --gutter-mobile: 1rem;
+  --gutter-tablet: 1.125rem;
+  --gutter-desktop: 1.25rem;
   --gutter: var(--gutter-mobile);
-  --section-gap: 0.75rem;
-  --section-gap-md: 1rem;
-  --section-gap-lg: 1.375rem;
+  --section-gap: 1.25rem;
+  --section-gap-md: 1.25rem;
+  --section-gap-lg: 1.5rem;
 
   --header-height: 3.75rem;
   --nav-height: 0px;
@@ -119,15 +119,15 @@
   --text-xl: 1.5rem;
   --text-meta: 1rem;
   --text-ticker: 0.9375rem;
-  --text-card: 1.1875rem;
-  --text-card-lg: 1.25rem;
+  --text-card: 1.0625rem;
+  --text-card-lg: 1.1875rem;
   --text-hero-mobile: clamp(2.125rem, 7vw, 2.75rem);
   --text-hero-desktop: clamp(2.375rem, 2.5vw, 3rem);
   --text-hero: var(--text-hero-mobile);
-  --leading-tight: 1.28;
-  --leading-snug: 1.42;
+  --leading-tight: 1.32;
+  --leading-snug: 1.45;
   --leading-normal: 1.58;
-  --leading-relaxed: 1.68;
+  --leading-relaxed: 1.62;
 
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -149,9 +149,9 @@
 @media (min-width: 768px) {
   :root {
     --gutter: var(--gutter-tablet);
-    --section-gap: 0.75rem;
-    --section-gap-md: 1rem;
-    --section-gap-lg: 1.375rem;
+    --section-gap: 1.25rem;
+    --section-gap-md: 1.25rem;
+    --section-gap-lg: 1.5rem;
     --main-pad-bottom: 0;
   }
 }

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { StoryCard } from "@/components/homepage/StoryCard";
+import { FeedListWithNativeAds } from "@/components/monetization/FeedListWithNativeAds";
 import { SectionHeader } from "@/components/homepage/SectionHeader";
 import type { HomeArticle } from "@/lib/homepage/types";
 
@@ -11,10 +14,7 @@ export function QuickReads({ articles }: QuickReadsProps) {
   if (!articles.length) return null;
 
   return (
-    <section
-      className="nr-section"
-      aria-labelledby="nr-shorts-title"
-    >
+    <section className="nr-section" aria-labelledby="nr-shorts-title">
       <div className="nr-wrap">
         <div className="flex items-end justify-between gap-4">
           <SectionHeader
@@ -33,15 +33,19 @@ export function QuickReads({ articles }: QuickReadsProps) {
       </div>
 
       <div
-        className="nr-shorts__scroll"
+        className="nr-shorts__scroll nr-shorts__scroll--with-ads"
         role="list"
         aria-label="Quick read stories"
       >
-        {articles.map((article) => (
-          <div key={article.id} role="listitem" className="nr-shorts__slot">
+        <FeedListWithNativeAds
+          items={articles}
+          feedId="quick-reads"
+          itemWrapper="div"
+          getKey={(article) => article.id}
+          renderItem={(article) => (
             <StoryCard article={article} variant="compact" />
-          </div>
-        ))}
+          )}
+        />
       </div>
     </section>
   );

@@ -1,14 +1,6 @@
 "use client";
 
-import { ArticleCardActions } from "@/components/article/ArticleCardActions";
-import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
-import { CardThumbnail } from "@/components/cards/CardThumbnail";
-import {
-  IMG_CARD_COMPACT,
-  IMG_CARD_EDITORIAL,
-  IMG_CARD_LEAD,
-} from "@/lib/images/homepage-sizes";
-import { useLocaleFormat } from "@/lib/i18n/hooks";
+import { FeedNewsCard } from "@/components/feed/FeedNewsCard";
 import { useLanguage } from "@/providers/LanguageProvider";
 import type { HomeArticle } from "@/lib/homepage/types";
 
@@ -28,8 +20,12 @@ type StoryCardProps = {
   showFreshBadge?: boolean;
 };
 
-function showImage(variant: StoryCardVariant): boolean {
-  return variant !== "wire";
+function mapVariant(
+  variant: StoryCardVariant
+): "standard" | "compact" | "lead" {
+  if (variant === "editorial-lead") return "lead";
+  if (variant === "compact") return "compact";
+  return "standard";
 }
 
 export function StoryCard({
@@ -40,84 +36,39 @@ export function StoryCard({
   showFreshBadge = false,
 }: StoryCardProps) {
   const { t } = useLanguage();
-  const { time } = useLocaleFormat();
-  const hasImage = showImage(variant);
+  const feedVariant = mapVariant(variant);
   const showSummary =
-    variant === "editorial-lead" || variant === "editorial";
+    variant === "editorial-lead" ||
+    variant === "editorial" ||
+    variant === "breaking";
 
   return (
-    <article
-      className={`bh-card nr-card nr-card--daily nr-card--${variant}`}
-    >
-      <TrackedStoryLink
-        href={`/story/${article.slug}`}
-        slug={article.slug}
-        category={article.section}
-        region={article.section}
-        surface={variant === "breaking" ? "breaking" : "homepage"}
-        listPosition={rank}
-        className="nr-card__link tap-target motion-press"
-        prefetch={priority ? undefined : false}
-      >
-        {hasImage ? (
-          <div className="nr-card__media">
-            <CardThumbnail
-              src={article.imageUrl}
-              alt=""
-              aspect="fill"
-              category={article.tags[0] ?? article.section}
-              overlay="none"
-              priority={priority}
-              sizes={
-                variant === "editorial-lead"
-                  ? IMG_CARD_LEAD
-                  : variant === "compact"
-                    ? IMG_CARD_COMPACT
-                    : IMG_CARD_EDITORIAL
-              }
-              badges={
-                showFreshBadge ? (
-                  <span className="pcard__flag pcard__flag--fresh">
-                    {t.home.fresh}
-                  </span>
-                ) : article.ranking.isBreaking || variant === "breaking" ? (
-                  <span className="pcard__flag pcard__flag--breaking">
-                    {t.common.breakingLabel}
-                  </span>
-                ) : null
-              }
-            />
-          </div>
-        ) : null}
-
-        <div className="nr-card__body">
-          {typeof rank === "number" && variant === "trending" ? (
-            <span className="nr-card__rank">{rank}</span>
-          ) : null}
-
-          <h3 className="nr-card__headline">{article.headline}</h3>
-
-          {showSummary && article.summary ? (
-            <p className="nr-card__summary">{article.summary}</p>
-          ) : null}
-
-          <p className="nr-card__meta">
-            <span>{article.categoryLabel}</span>
-            <span aria-hidden> · </span>
-            <time dateTime={article.publishedAt}>
-              {time(article.publishedAt)}
-            </time>
-          </p>
-        </div>
-      </TrackedStoryLink>
-      <ArticleCardActions
-        articleId={article.id}
-        headline={article.headline}
-        summary={article.summary}
-        slugOrPath={article.slug}
-        langHint={article.language === "hi" ? "hi-IN" : "auto"}
-        enableSpeedCycle
-      />
-    </article>
+    <FeedNewsCard
+      articleId={article.id}
+      slug={article.slug}
+      headline={article.headline}
+      summary={article.summary}
+      imageUrl={variant === "wire" ? undefined : article.imageUrl}
+      categoryLabel={article.categoryLabel}
+      publishedAt={article.publishedAt}
+      readingTime={article.readingTime}
+      language={article.language}
+      section={article.section}
+      imageCategory={article.tags[0] ?? article.section}
+      variant={feedVariant}
+      priority={priority}
+      rank={variant === "trending" ? rank : undefined}
+      showSummary={showSummary}
+      isLive={article.isLive}
+      isBreaking={article.ranking.isBreaking || variant === "breaking"}
+      badge={
+        showFreshBadge
+          ? t.home.fresh
+          : undefined
+      }
+      langHint={article.language === "hi" ? "hi-IN" : "auto"}
+      surface={variant === "breaking" ? "breaking" : "homepage"}
+      listPosition={rank}
+    />
   );
 }

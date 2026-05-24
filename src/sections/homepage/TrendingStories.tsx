@@ -2,6 +2,7 @@
 
 import { LocalizedSectionHeader } from "@/components/homepage/LocalizedSectionHeader";
 import { StoryCard } from "@/components/homepage/StoryCard";
+import { FeedListWithNativeAds } from "@/components/monetization/FeedListWithNativeAds";
 import { MotionFeed, Reveal } from "@/components/motion";
 import { useLanguage } from "@/providers/LanguageProvider";
 import type { HomeArticle } from "@/lib/homepage/types";
@@ -38,15 +39,18 @@ export function TrendingStories({ articles, freshIds }: TrendingStoriesProps) {
 
           {rest.length > 0 ? (
             <MotionFeed as="ul" className="nr-trending-list" role="list">
-              {rest.map((article, index) => (
-                <li key={article.id}>
+              <FeedListWithNativeAds
+                items={rest}
+                feedId="trending-alt"
+                getKey={(article) => article.id}
+                renderItem={(article, index) => (
                   <StoryCard
                     article={article}
                     variant="trending"
                     rank={index + 2}
                   />
-                </li>
-              ))}
+                )}
+              />
             </MotionFeed>
           ) : null}
         </div>

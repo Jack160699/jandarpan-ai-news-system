@@ -28,7 +28,7 @@ export function optimizeCdnUrl(
   if (!url?.trim() || !url.startsWith("http")) return url;
 
   const aspect = opts.aspect ?? "16:9";
-  const crop = cdnCropForAspect(aspect === "fill" ? "16:9" : aspect);
+  const crop = cdnCropForAspect(aspect);
   const w = clampWidth(opts.width ?? crop.w);
   const h = Math.round(w * (crop.h / crop.w));
   const q = opts.quality ?? 75;

@@ -99,8 +99,15 @@ export async function fetchGNewsCategory(
   try {
     const { data } = await fetchJson<GNewsResponse>(
       `${GNEWS_BASE}?${params.toString()}`,
-      { timeoutMs: 18_000, retries: 2 }
+      { timeoutMs: 18_000, retries: 2, provider: "gnews" }
     );
+
+    if (data.errors?.length) {
+      const errMsg = data.errors.join("; ");
+      if (/rate|quota|limit/i.test(errMsg)) {
+        return { articles: [], error: `GNews quota/rate limit: ${errMsg}` };
+      }
+    }
 
     const articles =
       data.articles

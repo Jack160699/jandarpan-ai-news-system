@@ -4,6 +4,7 @@ import Link from "next/link";
 import { memo, useState } from "react";
 import { HorizontalLazyRail } from "@/components/homepage/HorizontalLazyRail";
 import { ShortPreviewCard } from "@/components/shorts/ShortPreviewCard";
+import { useLanguage } from "@/providers/LanguageProvider";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
 
 type ShortsSectionProps = {
@@ -13,48 +14,58 @@ type ShortsSectionProps = {
 const ShortSlot = memo(function ShortSlot({
   short,
   active,
+  index,
   onActivate,
 }: {
   short: NewsShortCard;
   active: boolean;
+  index: number;
   onActivate: () => void;
 }) {
   return (
-    <ShortPreviewCard short={short} active={active} onActivate={onActivate} />
+    <ShortPreviewCard
+      short={short}
+      active={active}
+      index={index}
+      onActivate={onActivate}
+    />
   );
 });
 
 export function ShortsSection({ shorts }: ShortsSectionProps) {
+  const { t } = useLanguage();
   const [activeId, setActiveId] = useState(shorts[0]?.articleId ?? "");
   if (!shorts.length) return null;
 
-  const featured = shorts.slice(0, 6);
+  const featured = shorts.slice(0, 8);
 
   return (
     <section
       id="shorts"
-      className="shorts-section pl-scroll-target"
+      className="shorts-section shorts-section--cinematic pl-scroll-target"
       aria-labelledby="shorts-section-title"
     >
       <header className="shorts-section__header pl-container">
         <h2 id="shorts-section-title" className="shorts-section__title hi">
-          Shorts · रील्स
+          {t.shorts.title}
+          <span className="shorts-section__title-hi"> · रील्स</span>
         </h2>
         <Link href="/shorts" className="shorts-section__cta" prefetch={false}>
-          All →
+          {t.shorts.watch} →
         </Link>
       </header>
       <HorizontalLazyRail
         items={featured}
         getKey={(short) => short.articleId}
-        ariaLabel="News shorts"
-        className="shorts-section__rail"
-        slotClassName="shorts-section__slot"
+        ariaLabel={t.shorts.feedAria}
+        className="shorts-section__rail shorts-section__rail--snap"
+        slotClassName="shorts-section__slot shorts-section__slot--reel"
         initialCount={4}
         batchSize={2}
-        renderItem={(short) => (
+        renderItem={(short, index) => (
           <ShortSlot
             short={short}
+            index={index}
             active={activeId === short.articleId}
             onActivate={() => setActiveId(short.articleId)}
           />

@@ -50,11 +50,15 @@ export const ta: Dictionary = {
     listen: "கேளுங்கள்",
   },
   cardActions: {
-    groupLabel: "பகிர் மற்றும் கேளுங்கள்",
+    groupLabel: "செயல்கள்",
     whatsapp: "WhatsApp",
+    share: "பகிர்",
     listen: "கேளுங்கள்",
     pause: "இடைநிறுத்து",
     resume: "தொடர்க",
+    like: "விருப்பம்",
+    liked: "விருப்பமானது",
+    comment: "செய்தி திற",
   },
   common: {
     all: "அனைத்தும்",

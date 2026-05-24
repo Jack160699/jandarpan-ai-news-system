@@ -1,0 +1,288 @@
+/**
+ * Feed rhythm & spacing — OTT-style mobile browsing hierarchy
+ * Canonical: 16px gutter/pad · 20px section & card gaps
+ */
+
+:root {
+  --rhythm-gutter: 1rem;
+  --rhythm-section: 1.25rem;
+  --rhythm-section-lg: 1.5rem;
+  --rhythm-card-pad: 1rem;
+  --rhythm-card-gap: 1.25rem;
+  --rhythm-stack: 0.75rem;
+  --rhythm-touch: 2.75rem;
+
+  /* Feed typography scale */
+  --rhythm-headline-sm: 1rem;
+  --rhythm-headline: 1.0625rem;
+  --rhythm-headline-lg: 1.1875rem;
+  --rhythm-headline-lead: clamp(1.25rem, 4.8vw, 1.4375rem);
+  --rhythm-body: 0.9375rem;
+  --rhythm-meta: 0.8125rem;
+  --rhythm-leading-tight: 1.32;
+  --rhythm-leading-body: 1.5;
+  --rhythm-leading-meta: 1.4;
+}
+
+/* Align platform tokens */
+:root {
+  --gutter-mobile: var(--rhythm-gutter);
+  --gutter: var(--rhythm-gutter);
+  --section-gap: var(--rhythm-section);
+  --section-gap-md: var(--rhythm-section);
+  --section-gap-lg: var(--rhythm-section-lg);
+}
+
+/* ── Homepage vertical stack ── */
+.home-feed-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rhythm-section);
+  width: 100%;
+  min-width: 0;
+}
+
+.home-page__content {
+  padding-block: var(--rhythm-section);
+}
+
+.home-page__content > .hero-news-card--premium {
+  margin-bottom: 0;
+}
+
+/* ── Feed sections ── */
+.feed-section {
+  width: 100%;
+  min-width: 0;
+}
+
+.feed-section + .feed-section:not(.feed-section--bleed) {
+  padding-top: 0;
+}
+
+.feed-section__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--rhythm-card-pad);
+  margin-bottom: var(--rhythm-card-pad);
+  padding-inline: 0;
+}
+
+.feed-section__title {
+  margin: 0;
+  font-family: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
+  font-size: clamp(1.1875rem, 4.2vw, 1.375rem);
+  font-weight: 700;
+  line-height: var(--rhythm-leading-tight);
+  letter-spacing: -0.025em;
+  color: var(--color-ink);
+}
+
+.feed-section__title-hi {
+  font-weight: 600;
+  opacity: 0.65;
+  margin-left: 0.25rem;
+}
+
+.feed-section__action {
+  flex-shrink: 0;
+  font-size: var(--rhythm-meta);
+  font-weight: 600;
+}
+
+.feed-section__body {
+  min-width: 0;
+}
+
+/* Lazy section inherits stack spacing */
+.hp-lazy-section.feed-section {
+  min-height: auto;
+}
+
+.hp-lazy-section.feed-section[data-loaded="false"] {
+  min-height: 12rem;
+}
+
+/* ── Rhythm list (alternating cards) ── */
+.feed-rhythm-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rhythm-card-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.feed-rhythm-list > li {
+  margin: 0;
+}
+
+/* ── Feed card typography & spacing overrides ── */
+.feed-news-card {
+  --feed-pad: var(--rhythm-card-pad);
+  --feed-gap-y: var(--rhythm-card-gap);
+  margin-bottom: 0;
+}
+
+.feed-news-card__link {
+  gap: var(--rhythm-card-pad);
+  padding-bottom: calc(var(--rhythm-card-pad) * 0.75);
+}
+
+.feed-news-card__content {
+  gap: 0.375rem;
+}
+
+.feed-news-card__headline {
+  font-size: var(--rhythm-headline);
+  font-weight: 700;
+  line-height: var(--rhythm-leading-tight);
+}
+
+.feed-news-card--lead .feed-news-card__headline {
+  font-size: var(--rhythm-headline-lead);
+  line-height: 1.28;
+}
+
+.feed-news-card__summary {
+  font-size: var(--rhythm-body);
+  line-height: var(--rhythm-leading-body);
+}
+
+.feed-news-card__meta {
+  font-size: var(--rhythm-meta);
+  line-height: var(--rhythm-leading-meta);
+  margin-top: 0.25rem;
+  padding-top: 0.125rem;
+}
+
+/* Emphasis beat — larger thumb, always show deck */
+.feed-news-card--emphasis .feed-news-card__media {
+  width: 7.25rem;
+}
+
+.feed-news-card--emphasis .feed-news-card__headline {
+  font-size: var(--rhythm-headline-lg);
+}
+
+.feed-news-card--emphasis .feed-news-card__summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+}
+
+/* Compact beat — tighter for rhythm contrast */
+.feed-news-card--compact .feed-news-card__link {
+  padding-top: calc(var(--rhythm-card-pad) * 0.875);
+  padding-bottom: calc(var(--rhythm-card-pad) * 0.625);
+}
+
+.feed-news-card--compact .feed-news-card__headline {
+  font-size: var(--rhythm-headline-sm);
+}
+
+/* ── News grid rhythm ── */
+.news-grid.feed-section .news-grid__header {
+  margin-bottom: var(--rhythm-card-pad);
+}
+
+.news-grid__layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rhythm-card-gap);
+}
+
+.news-grid__lead {
+  margin-bottom: 0;
+}
+
+.news-grid__list.feed-rhythm-list {
+  margin-top: 0;
+}
+
+/* ── Wire / shorts / ads in stack ── */
+.home-feed-stack .live-wire--daily {
+  padding-block: 0;
+  border-block: none;
+  background: transparent;
+}
+
+.home-feed-stack .live-wire__head {
+  margin-bottom: var(--rhythm-card-pad);
+  padding-inline: 0;
+}
+
+.home-feed-stack .live-wire__title {
+  font-size: clamp(1.125rem, 4vw, 1.3125rem);
+  line-height: var(--rhythm-leading-tight);
+}
+
+.home-feed-stack .shorts-section--cinematic {
+  padding-block: 0;
+  border-top: none;
+  margin-bottom: 0;
+}
+
+.home-feed-stack .shorts-section__header {
+  margin-bottom: var(--rhythm-card-pad);
+}
+
+.home-feed-stack .native-ad-feed-item,
+.home-feed-stack .quick-update-feed {
+  margin-bottom: 0;
+}
+
+.home-feed-stack .quick-update-feed {
+  border-radius: 16px;
+}
+
+/* ── Home body (desktop sidebar) ── */
+.home-body {
+  gap: var(--rhythm-section);
+}
+
+@media (min-width: 1024px) {
+  .home-body {
+    gap: var(--rhythm-section-lg);
+  }
+}
+
+/* ── Depth layering — subtle page canvas ── */
+html[data-theme="dark"] .home-page {
+  background: var(--color-paper);
+}
+
+html[data-theme="dark"] .home-feed-stack .feed-news-card__main {
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.04) inset,
+    0 6px 28px rgb(0 0 0 / 0.35),
+    0 1px 0 rgb(0 0 0 / 0.4);
+}
+
+html:not([data-theme="dark"]) .home-feed-stack .feed-news-card__main {
+  background: var(--color-surface);
+}
+
+/* NR legacy sections — looser when inside feed stack */
+.home-feed-stack .nr-section {
+  padding-block: 0;
+  border-top: none;
+}
+
+.home-feed-stack .nr-section__header {
+  margin-bottom: var(--rhythm-card-pad);
+}
+
+/* Touch targets */
+.feed-news-card__actions .hero-card-actions__btn,
+.shorts-reel-card__action,
+.quick-update__link {
+  min-width: var(--rhythm-touch);
+  min-height: var(--rhythm-touch);
+}
+
+@media (min-width: 768px) {
+  .feed-news-card--emphasis .feed-news-card__media {
+    width: 8rem;
+  }
+}

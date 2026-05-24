@@ -14,18 +14,13 @@ import {
   triggerAiProcessing,
 } from "@/lib/news/pipeline/scalable-ingest";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
+import { hasAnyNewsProviderConfigured } from "@/lib/news/env";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-function hasAnyProviderConfigured(): boolean {
-  return Boolean(
-    process.env.GNEWS_API_KEY?.trim() ||
-      process.env.NEWSDATA_API_KEY?.trim() ||
-      true
-  );
-}
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   return handleFetchNews(request);
@@ -60,7 +55,7 @@ async function handleFetchNews(request: Request) {
     );
   }
 
-  if (!hasAnyProviderConfigured()) {
+  if (!hasAnyNewsProviderConfigured()) {
     return NextResponse.json(
       {
         ok: false,

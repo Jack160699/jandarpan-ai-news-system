@@ -1,12 +1,20 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { ArticleCardActions } from "@/components/article/ArticleCardActions";
+import { motion, useReducedMotion } from "framer-motion";
+import { Bookmark } from "lucide-react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
 import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
+import { HeroCardActions } from "@/components/layout/HeroCardActions";
 import { BreakingHeroReel } from "@/sections/homepage/BreakingHeroReel";
 import { IMG_HERO_LEAD, IMG_HERO_THUMB } from "@/lib/images/homepage-sizes";
 import { formatHomeTime } from "@/lib/homepage/format";
+import { triggerHaptic } from "@/lib/mobile/haptics";
+import {
+  loadReadingMemory,
+  toggleBookmark,
+} from "@/lib/reading-memory";
 import { useLanguage } from "@/providers/LanguageProvider";
 import type { HomeArticle } from "@/lib/homepage/types";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
@@ -22,94 +30,166 @@ export function HeroNewsCard({
   topStories,
   featuredShort,
 }: HeroNewsCardProps) {
-  const { t } = useLanguage();
-  const showBadge = lead.isLive || lead.ranking.isBreaking;
+  const { t, language } = useLanguage();
+  const reduceMotion = useReducedMotion();
+  const [saved, setSaved] = useState(false);
+
+  const isLive = lead.isLive;
+  const isBreaking = lead.ranking.isBreaking;
+  const showLiveBadge = isLive || isBreaking;
+  const sourceLabel =
+    language === "en" ? lead.desk.name : lead.desk.nameHi;
+
+  useEffect(() => {
+    const memory = loadReadingMemory();
+    setSaved(memory.bookmarks.includes(lead.slug));
+  }, [lead.slug]);
+
+  const onBookmark = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const memory = loadReadingMemory();
+      const next = toggleBookmark(memory, lead.slug);
+      const isSaved = next.bookmarks.includes(lead.slug);
+      setSaved(isSaved);
+      triggerHaptic(isSaved ? "success" : "light");
+    },
+    [lead.slug]
+  );
+
+  const cardMotion = reduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 12 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
+      };
 
   return (
-    <section
+    <motion.section
       className="hero-news-card hero-news-card--premium pl-scroll-target"
       aria-labelledby="hero-lead-title"
+      {...cardMotion}
     >
       <article className="hero-news-card__article hero-news-card__article--premium">
+        <div className="hero-news-card__media-stack">
+          <TrackedStoryLink
+            href={`/story/${lead.slug}`}
+            slug={lead.slug}
+            category={lead.section}
+            region={lead.section}
+            surface="breaking"
+            className="hero-news-card__visual-link"
+          >
+            <div className="hero-news-card__visual hero-news-card__visual--premium">
+              <HomeArticleImage
+                src={lead.imageUrl}
+                alt=""
+                priority
+                sizes={IMG_HERO_LEAD}
+                category={lead.tags[0] ?? lead.section}
+              />
+              <span className="hero-news-card__visual-overlay" aria-hidden />
+            </div>
+          </TrackedStoryLink>
+
+          <div className="hero-news-card__float-top">
+            <span className="hero-news-card__category-badge">
+              {lead.categoryLabel}
+            </span>
+            {showLiveBadge ? (
+              <span
+                className="hero-news-card__live-badge"
+                role="status"
+              >
+                <span className="hero-news-card__live-dot" aria-hidden />
+                {isLive ? t.common.live : t.common.breakingLabel}
+              </span>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            className={`hero-news-card__bookmark tap-target${saved ? " is-saved" : ""}`}
+            aria-label={saved ? t.article.bookmarked : t.article.bookmark}
+            aria-pressed={saved}
+            onClick={onBookmark}
+          >
+            <Bookmark
+              className="hero-news-card__bookmark-icon"
+              strokeWidth={2}
+              fill={saved ? "currentColor" : "none"}
+              aria-hidden
+            />
+          </button>
+
+          {featuredShort ? (
+            <Link
+              href={`/shorts/${featuredShort.slug}`}
+              className="hero-news-card__play tap-target"
+              aria-label={t.shorts.watch}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span aria-hidden>▶</span>
+            </Link>
+          ) : null}
+        </div>
+
         <TrackedStoryLink
           href={`/story/${lead.slug}`}
           slug={lead.slug}
           category={lead.section}
           region={lead.section}
           surface="breaking"
-          className="hero-news-card__link hero-news-card__link--premium"
+          className="hero-news-card__body-link"
         >
-          <div className="hero-news-card__copy">
-            {showBadge ? (
-              <span className="hero-news-card__live-badge">
-                <span className="hero-news-card__live-dot" aria-hidden />
-                {lead.isLive ? t.common.live : t.common.breakingLabel}
-              </span>
+          <h2
+            id="hero-lead-title"
+            className="hero-news-card__headline hero-news-card__headline--premium hi"
+            lang={lead.language === "hi" ? "hi" : undefined}
+          >
+            {lead.headline}
+          </h2>
+
+          {lead.summary ? (
+            <p className="hero-news-card__summary">{lead.summary}</p>
+          ) : null}
+
+          <div className="hero-news-card__meta hero-news-card__meta--premium">
+            <time dateTime={lead.publishedAt}>
+              {formatHomeTime(lead.publishedAt)}
+            </time>
+            {lead.readingTime ? (
+              <>
+                <span className="hero-news-card__meta-sep" aria-hidden>
+                  ·
+                </span>
+                <span>{lead.readingTime}</span>
+              </>
             ) : null}
-
-            <h2
-              id="hero-lead-title"
-              className="hero-news-card__headline hero-news-card__headline--premium hi"
-              lang={lead.language === "hi" ? "hi" : undefined}
-            >
-              {lead.headline}
-            </h2>
-
-            {lead.summary ? (
-              <p className="hero-news-card__summary">{lead.summary}</p>
-            ) : null}
-
-            <div className="hero-news-card__meta hero-news-card__meta--premium">
-              <span className="hero-news-card__meta-category">
-                {lead.categoryLabel}
-              </span>
-              <span aria-hidden> · </span>
-              <time dateTime={lead.publishedAt}>
-                {formatHomeTime(lead.publishedAt)}
-              </time>
-              {lead.readingTime ? (
-                <>
-                  <span aria-hidden> · </span>
-                  <span>{lead.readingTime}</span>
-                </>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="hero-news-card__visual hero-news-card__visual--premium">
-            <HomeArticleImage
-              src={lead.imageUrl}
-              alt=""
-              priority
-              sizes={IMG_HERO_LEAD}
-              category={lead.tags[0] ?? lead.section}
-            />
-            <span className="hero-news-card__visual-overlay" aria-hidden />
-            {featuredShort ? (
-              <Link
-                href={`/shorts/${featuredShort.slug}`}
-                className="hero-news-card__play"
-                aria-label="Watch video"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span aria-hidden>▶</span>
-              </Link>
-            ) : null}
+            <span className="hero-news-card__meta-sep" aria-hidden>
+              ·
+            </span>
+            <span className="hero-news-card__meta-source">{sourceLabel}</span>
           </div>
         </TrackedStoryLink>
-        <ArticleCardActions
+
+        <HeroCardActions
           articleId={lead.id}
           headline={lead.headline}
           summary={lead.summary}
           slugOrPath={lead.slug}
+          commentHref={`/story/${lead.slug}`}
           langHint={lead.language === "hi" ? "hi-IN" : "auto"}
-          className="hero-news-card__actions"
-          enableSpeedCycle
         />
       </article>
 
       {(topStories.length > 0 || featuredShort) ? (
-        <aside className="hero-news-card__sidebar pl-hide-mobile" aria-label="Top stories">
+        <aside
+          className="hero-news-card__sidebar pl-hide-mobile"
+          aria-label="Top stories"
+        >
           {topStories.length > 0 ? (
             <div className="hero-news-card__rail">
               {topStories.map((story, index) => (
@@ -175,12 +255,14 @@ export function HeroNewsCard({
                     category={story.tags[0] ?? story.section}
                   />
                 </div>
-                <h4 className="hero-news-card__rail-title hi">{story.headline}</h4>
+                <h4 className="hero-news-card__rail-title hi">
+                  {story.headline}
+                </h4>
               </TrackedStoryLink>
             </article>
           ))}
         </div>
       ) : null}
-    </section>
+    </motion.section>
   );
 }

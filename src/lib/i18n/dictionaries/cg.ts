@@ -49,11 +49,15 @@ export const cg: Dictionary = {
     listen: "सुनौ",
   },
   cardActions: {
-    groupLabel: "शेयर अउ सुनौ",
+    groupLabel: "कार्रवाई",
     whatsapp: "WhatsApp",
+    share: "शेयर",
     listen: "सुनौ",
     pause: "रोकौ",
     resume: "फेर सुनौ",
+    like: "पसंद",
+    liked: "पसंद भय गे",
+    comment: "कहानी खोलौ",
   },
   common: {
     all: "सब",

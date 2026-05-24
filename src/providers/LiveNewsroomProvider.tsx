@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -121,10 +122,24 @@ export function LiveNewsroomProvider({
     [markFresh]
   );
 
-  const { triggerPoll } = useNewsroomPolling({
+  const { triggerPoll, isSyncing } = useNewsroomPolling({
     enabled,
     onSnapshot: handleSnapshot,
+    onError: (code) => {
+      console.warn("[LiveNewsroom] background sync failed:", code);
+    },
   });
+
+  useEffect(() => {
+    if (isSyncing) {
+      document.documentElement.setAttribute("data-live-syncing", "1");
+    } else {
+      document.documentElement.removeAttribute("data-live-syncing");
+    }
+    return () => {
+      document.documentElement.removeAttribute("data-live-syncing");
+    };
+  }, [isSyncing]);
 
   useRealtimeTrigger(triggerPoll, enabled);
 

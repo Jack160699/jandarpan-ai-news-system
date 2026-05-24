@@ -14,14 +14,21 @@ type TrendingShortsRailProps = {
 const ShortSlot = memo(function ShortSlot({
   short,
   active,
+  index,
   onActivate,
 }: {
   short: NewsShortCard;
   active: boolean;
+  index: number;
   onActivate: () => void;
 }) {
   return (
-    <ShortPreviewCard short={short} active={active} onActivate={onActivate} />
+    <ShortPreviewCard
+      short={short}
+      active={active}
+      index={index}
+      onActivate={onActivate}
+    />
   );
 });
 
@@ -51,13 +58,14 @@ export function TrendingShortsRail({ shorts }: TrendingShortsRailProps) {
         items={featured}
         getKey={(short) => short.articleId}
         ariaLabel="News reels"
-        className="trending-shorts__scroll motion-rail"
-        slotClassName="trending-shorts__slot"
+        className="trending-shorts__scroll motion-rail shorts-section__rail--snap"
+        slotClassName="trending-shorts__slot trending-shorts__slot--reel"
         initialCount={3}
         batchSize={3}
-        renderItem={(short) => (
+        renderItem={(short, index) => (
           <ShortSlot
             short={short}
+            index={index}
             active={activeId === short.articleId}
             onActivate={() => setActiveId(short.articleId)}
           />

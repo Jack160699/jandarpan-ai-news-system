@@ -1,4 +1,5 @@
 import { StoryCard } from "@/components/homepage/StoryCard";
+import { FeedListWithNativeAds } from "@/components/monetization/FeedListWithNativeAds";
 import { SectionHeader } from "@/components/homepage/SectionHeader";
 import type { EditorsPicksBlock } from "@/lib/homepage/types";
 
@@ -30,11 +31,14 @@ export function EditorsPicks({ picks }: EditorsPicksProps) {
 
         {supporting.length > 0 ? (
           <ul className="nr-editors__grid" role="list">
-            {supporting.map((article) => (
-              <li key={article.id}>
+            <FeedListWithNativeAds
+              items={supporting}
+              feedId="editors-picks"
+              getKey={(article) => article.id}
+              renderItem={(article) => (
                 <StoryCard article={article} variant="editorial" />
-              </li>
-            ))}
+              )}
+            />
           </ul>
         ) : null}
       </div>

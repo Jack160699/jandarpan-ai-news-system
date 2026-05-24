@@ -258,7 +258,8 @@
   font-weight: 800;
 }
 
-.live-wire--daily .bwire-feed {
+.live-wire--daily .bwire-feed,
+.live-wire--daily .quick-update-feed {
   border-radius: var(--ds-radius-sm);
 }
 

@@ -31,9 +31,8 @@ export async function fetchAllNewsProviders(): Promise<HybridFetchResult> {
 
   const hasAnyProvider = providers.some((p) => p.articles.length > 0);
   const configuredCount = [
-    process.env.GNEWS_API_KEY,
-    process.env.NEWSDATA_API_KEY,
-    true,
+    process.env.GNEWS_API_KEY?.trim(),
+    process.env.NEWSDATA_API_KEY?.trim(),
   ].filter(Boolean).length;
 
   console.log(

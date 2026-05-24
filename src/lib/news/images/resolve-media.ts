@@ -62,8 +62,15 @@ export function resolveMedia(input: ResolveMediaInput, aspect: MediaAspect = "16
 
   const optimize = (url: string) =>
     optimizeCdnUrl(url, {
-      aspect,
-      width: aspect === "4:5" ? 640 : 720,
+      aspect: aspect === "fill" ? "16:9" : aspect,
+      width:
+        aspect === "4:5"
+          ? 640
+          : aspect === "4:3"
+            ? 720
+            : aspect === "1:1"
+              ? 560
+              : 720,
     });
 
   return {

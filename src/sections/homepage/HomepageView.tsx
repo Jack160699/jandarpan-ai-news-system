@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
-import { AdSlot } from "@/components/monetization/AdSlot";
 import {
   BreakingTicker,
   HeroNewsCard,
@@ -56,7 +55,7 @@ export function HomepageView({ feed }: HomepageViewProps) {
         />
 
         <div className="home-body">
-          <div className="home-body__main">
+          <div className="home-body__main home-feed-stack">
             <LazyHomeSection
               id="wire"
               minHeight="200px"
@@ -84,9 +83,6 @@ export function HomepageView({ feed }: HomepageViewProps) {
               <HyperlocalFeeds feeds={feed.hyperlocalFeeds.slice(0, 6)} />
             </LazyHomeSection>
 
-            <div className="nr-ad-slot">
-              <AdSlot slotId="home_mid_feed" />
-            </div>
           </div>
 
           <aside className="home-body__aside" aria-label="Local desk">

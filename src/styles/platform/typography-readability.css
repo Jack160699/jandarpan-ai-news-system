@@ -182,11 +182,14 @@
   line-height: var(--leading-relaxed);
 }
 
-.bwire-item__headline {
+.bwire-item__headline,
+.quick-update__headline {
   font-size: var(--text-card);
   line-height: var(--leading-snug);
 }
 
-.bwire-item__loc {
+.bwire-item__loc,
+.quick-update__line {
   font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
 }

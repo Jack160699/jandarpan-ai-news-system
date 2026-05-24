@@ -15,6 +15,7 @@
 
 /* Feature surfaces (content preserved) */
 @import "./design-system.css";
+@import "./media-system.css";
 @import "./cards-premium.css";
 @import "./reader.css";
 @import "./article-reading.css";
@@ -24,6 +25,12 @@
 @import "./search.css";
 @import "./footer-premium.css";
 @import "./article-card-actions.css";
+@import "./hero-news-card-premium.css";
+@import "./feed-news-card-premium.css";
+@import "./native-ads-premium.css";
+@import "./quick-update-card.css";
+@import "./shorts-reel-card.css";
+@import "./feed-rhythm.css";
 @import "./loading.css";
 @import "./premium-loading.css";
 @import "./production.css";

@@ -1,8 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { REALTIME_CONFIG, jitteredPollMs } from "@/lib/realtime/config";
 import type { LiveHomepageSnapshot, LivePollResult } from "@/lib/realtime/types";
+
+const POLL_TIMEOUT_MS = 25_000;
+const MAX_ATTEMPTS = 3;
+const RETRY_BASE_MS = 1_200;
 
 type UseNewsroomPollingOptions = {
   enabled?: boolean;
@@ -10,20 +14,93 @@ type UseNewsroomPollingOptions = {
   onError?: (error: string) => void;
 };
 
-async function fetchLiveSnapshot(): Promise<LiveHomepageSnapshot | null> {
-  const res = await fetch("/api/homepage/live", {
-    method: "GET",
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-  });
-  if (!res.ok) return null;
-  const data = (await res.json()) as LivePollResult;
-  if (!data.ok) return null;
-  return data.snapshot;
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function fetchLiveSnapshotOnce(): Promise<LivePollResult> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), POLL_TIMEOUT_MS);
+
+  try {
+    const res = await fetch("/api/homepage/live", {
+      method: "GET",
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+
+    const data = (await res.json()) as LivePollResult;
+
+    if (!res.ok) {
+      return data.ok === false
+        ? data
+        : {
+            ok: false,
+            error: `http_${res.status}`,
+            code: `HTTP_${res.status}`,
+            retryable: res.status >= 500 || res.status === 429,
+          };
+    }
+
+    return data;
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return {
+        ok: false,
+        error: "timeout",
+        code: "TIMEOUT",
+        retryable: true,
+      };
+    }
+    return {
+      ok: false,
+      error: "network_error",
+      code: "NETWORK",
+      retryable: true,
+    };
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
+
+async function fetchLiveSnapshotWithRetry(): Promise<LiveHomepageSnapshot | null> {
+  let lastError = "fetch_failed";
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const result = await fetchLiveSnapshotOnce();
+
+    if (result.ok) {
+      if (attempt > 0) {
+        console.log("[live-poll] recovered after", attempt, "retries");
+      }
+      if (result.meta?.rateLimited) {
+        console.warn("[live-poll] upstream rate limited — showing cached/wire content");
+      }
+      return result.snapshot;
+    }
+
+    lastError = result.error;
+    const retryable = result.retryable !== false;
+
+    console.warn("[live-poll] attempt failed", {
+      attempt: attempt + 1,
+      error: result.error,
+      code: result.code,
+      retryable,
+      meta: result.meta,
+    });
+
+    if (!retryable || attempt >= MAX_ATTEMPTS - 1) break;
+    await sleep(RETRY_BASE_MS * (attempt + 1));
+  }
+
+  console.error("[live-poll] all attempts failed:", lastError);
+  return null;
 }
 
 /**
- * Background polling with visibility pause, jitter, and debounced triggers.
+ * Background polling with visibility pause, jitter, debounced triggers, retry + timeout.
  */
 export function useNewsroomPolling({
   enabled = true,
@@ -35,6 +112,7 @@ export function useNewsroomPolling({
   const inflightRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const versionRef = useRef<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     onSnapshotRef.current = onSnapshot;
@@ -46,8 +124,9 @@ export function useNewsroomPolling({
     if (typeof document !== "undefined" && document.hidden && !force) return;
 
     inflightRef.current = true;
+    setIsSyncing(true);
     try {
-      const snapshot = await fetchLiveSnapshot();
+      const snapshot = await fetchLiveSnapshotWithRetry();
       if (!snapshot) {
         onErrorRef.current?.("fetch_failed");
         return;
@@ -59,6 +138,7 @@ export function useNewsroomPolling({
       onErrorRef.current?.("network_error");
     } finally {
       inflightRef.current = false;
+      setIsSyncing(false);
     }
   }, [enabled]);
 
@@ -101,5 +181,5 @@ export function useNewsroomPolling({
     };
   }, [enabled, poll, schedulePoll]);
 
-  return { pollNow: () => poll(true), triggerPoll: schedulePoll };
+  return { pollNow: () => poll(true), triggerPoll: schedulePoll, isSyncing };
 }

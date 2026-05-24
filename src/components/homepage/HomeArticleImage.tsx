@@ -41,8 +41,11 @@ export function HomeArticleImage({
         category={category}
         source={source}
         aspect={aspect}
+        cropAspect={aspect === "fill" ? "16:9" : aspect}
         fillParent
+        hoverZoom
         cinematic={false}
+        subtleScrim
         imageClassName={className}
         className="h-full w-full"
       />
