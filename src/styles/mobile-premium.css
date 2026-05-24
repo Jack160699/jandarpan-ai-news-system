@@ -247,9 +247,9 @@ html[data-theme="dark"] .category-navbar__fade--end {
 }
 
 .hero-news-card__headline--premium {
-  font-size: clamp(1.25rem, 5.2vw, 1.5rem);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
+  font-size: var(--text-hero);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.025em;
 }
 
 .hero-news-card__summary {

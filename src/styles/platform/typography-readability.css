@@ -1,0 +1,202 @@
+/**
+ * Readability layer — component rhythm on top of platform/tokens.css
+ * Optimized for 35+ Indian news readers on mobile Chrome.
+ */
+
+/* ── Category navigation ── */
+.category-navbar__tab {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  padding: 0 0.9375rem;
+}
+
+.category-navbar__tab.is-active {
+  font-weight: 800;
+}
+
+.category-navbar--premium .category-navbar__tab {
+  font-size: var(--text-base);
+  padding: 0 0.9375rem;
+}
+
+/* ── Trending + LIVE strips ── */
+.trending-strip__label {
+  font-size: var(--text-sm);
+  font-weight: 800;
+}
+
+.trending-strip__pill,
+.breaking-ticker__pill {
+  font-size: var(--text-ticker);
+  line-height: var(--leading-snug);
+  padding: 0.375rem 0.75rem;
+}
+
+.breaking-ticker__label {
+  font-size: var(--text-sm);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 0.25rem 0.5625rem;
+}
+
+.breaking-ticker__fallback {
+  font-size: var(--text-ticker);
+  line-height: var(--leading-snug);
+}
+
+/* ── Hero ── */
+.hero-news-card__headline,
+.hero-news-card__headline--premium {
+  font-size: var(--text-hero);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.025em;
+}
+
+.hero-news-card__meta,
+.hero-news-card__meta--premium {
+  font-size: var(--text-meta);
+  line-height: var(--leading-snug);
+  margin-top: 0.375rem;
+}
+
+.hero-news-card__kicker,
+.hero-news-card__live-badge {
+  font-size: var(--text-sm);
+}
+
+.hero-news-card__summary {
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+}
+
+.hero-news-card__rail-title {
+  font-size: var(--text-card);
+  line-height: var(--leading-snug);
+}
+
+.hero-news-card__rail-time {
+  font-size: var(--text-meta);
+  margin-top: 0.375rem;
+}
+
+.hero-news-card__rail-link {
+  padding: 0.75rem 0;
+  gap: 0.875rem;
+}
+
+.hero-news-card--premium .hero-news-card__copy {
+  padding: 1.125rem var(--gutter) 1rem;
+  gap: 0.75rem;
+}
+
+/* ── News grid cards ── */
+.news-grid__title,
+.shorts-section__title {
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+}
+
+.news-card__link {
+  padding: 1rem var(--gutter);
+}
+
+.news-card__headline {
+  font-size: var(--text-card);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+}
+
+.news-card--lead .news-card__headline {
+  font-size: var(--text-card-lg);
+  font-weight: 700;
+  line-height: var(--leading-tight);
+}
+
+.news-card__meta {
+  font-size: var(--text-meta);
+  line-height: var(--leading-snug);
+  margin-top: 0.5rem;
+  gap: 0.25rem 0.5rem;
+}
+
+.news-card--compact .news-card__link {
+  padding: 0.875rem;
+  gap: 0.875rem;
+}
+
+.news-card--compact .news-card__headline {
+  font-size: var(--text-card);
+}
+
+/* ── Chrome / bottom nav ── */
+.main-header__city {
+  font-size: var(--text-sm);
+}
+
+.main-header__weather {
+  font-size: var(--text-xs);
+}
+
+.bottom-mobile-nav__item {
+  font-size: var(--text-xs);
+  min-height: 3rem;
+  gap: 0.1875rem;
+}
+
+.bottom-mobile-nav__icon {
+  width: 1.4375rem;
+  height: 1.4375rem;
+}
+
+.floating-live-btn {
+  font-size: var(--text-sm);
+}
+
+.shorts-section__cta {
+  font-size: var(--text-base);
+}
+
+/* ── Live wire + feed items ── */
+.live-wire__title {
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+}
+
+.live-wire__sub,
+.live-wire__cta {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+.live-wire__count {
+  font-size: var(--text-xs);
+}
+
+.live-card__headline {
+  font-size: var(--text-card);
+  line-height: var(--leading-snug);
+}
+
+.live-card--breaking .live-card__headline {
+  font-size: var(--text-card-lg);
+  line-height: var(--leading-tight);
+}
+
+.live-card__time {
+  font-size: var(--text-meta);
+}
+
+.live-card__deck {
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+
+.bwire-item__headline {
+  font-size: var(--text-card);
+  line-height: var(--leading-snug);
+}
+
+.bwire-item__loc {
+  font-size: var(--text-sm);
+}
