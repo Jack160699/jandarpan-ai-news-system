@@ -84,10 +84,10 @@
   /* Unified ticker strip badges (LIVE + Trend) */
   --strip-band-height: 2.375rem;
   --strip-badge-height: 2.125rem;
-  --strip-badge-padding-x: 0.875rem;
-  --strip-badge-font-size: 0.9375rem;
+  --strip-badge-padding-x: 0.5rem;
+  --strip-badge-font-size: 0.8125rem;
   --strip-badge-font-weight: 700;
-  --strip-inner-gap: 0.5rem;
+  --strip-inner-gap: 0.375rem;
   --bottom-nav-height: 3.75rem;
 
   --safe-top: env(safe-area-inset-top, 0px);

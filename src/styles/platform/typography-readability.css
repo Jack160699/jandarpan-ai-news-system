@@ -23,14 +23,14 @@
 /* ── Trending + LIVE strips (geometry in ticker-strips.css) ── */
 .trending-strip__label,
 .breaking-ticker__label {
-  font-size: var(--strip-badge-font-size, 0.9375rem);
+  font-size: var(--strip-badge-font-size, 0.8125rem);
   font-weight: var(--strip-badge-font-weight, 700);
 }
 
 .trending-strip__pill,
 .breaking-ticker__pill,
 .breaking-ticker__fallback {
-  font-size: var(--strip-badge-font-size, 0.9375rem);
+  font-size: var(--strip-badge-font-size, 0.8125rem);
   line-height: 1.25;
 }
 

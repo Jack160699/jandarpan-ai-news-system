@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { MOBILE_MENU_NAV } from "@/lib/navigation/menu";
@@ -12,30 +12,66 @@ import { useNavigation } from "@/providers/NavigationProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
 
+const DRAWER_MS = 300;
+const SWIPE_CLOSE_PX = 72;
+
 export function MobileNavDrawer() {
   const { menuOpen, closeMenu, pathname, startNavigation } = useNavigation();
   const { t, language } = useLanguage();
   const { tenant } = useTenant();
   const panelRef = useRef<HTMLElement>(null);
+  const touchStartX = useRef(0);
+  const [present, setPresent] = useState(false);
+  const [animOpen, setAnimOpen] = useState(false);
+
   const brandName =
     language === "en" ? tenant.branding.nameEn : tenant.branding.nameHi;
 
   useEffect(() => {
-    if (!menuOpen) return;
-    panelRef.current?.focus();
+    if (menuOpen) {
+      setPresent(true);
+      const id = requestAnimationFrame(() => setAnimOpen(true));
+      return () => cancelAnimationFrame(id);
+    }
+    setAnimOpen(false);
+    const t = window.setTimeout(() => setPresent(false), DRAWER_MS);
+    return () => window.clearTimeout(t);
   }, [menuOpen]);
 
-  if (typeof document === "undefined" || !menuOpen) return null;
+  useEffect(() => {
+    if (!animOpen) return;
+    panelRef.current?.focus();
+  }, [animOpen]);
 
-  const onNavigate = (href: string) => {
-    triggerHaptic("selection");
-    startNavigation(href);
-    closeMenu();
-  };
+  const onNavigate = useCallback(
+    (href: string) => {
+      triggerHaptic("selection");
+      startNavigation(href);
+      closeMenu();
+    },
+    [closeMenu, startNavigation]
+  );
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0]?.clientX ?? 0;
+  }, []);
+
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      const endX = e.changedTouches[0]?.clientX ?? 0;
+      if (endX - touchStartX.current > SWIPE_CLOSE_PX) {
+        triggerHaptic("selection");
+        closeMenu();
+      }
+    },
+    [closeMenu]
+  );
+
+  if (typeof document === "undefined" || !present) return null;
 
   return createPortal(
     <div
-      className={`mobile-nav-drawer${menuOpen ? " mobile-nav-drawer--open" : ""}`}
+      className={`mobile-nav-drawer mobile-nav-drawer--visible${animOpen ? " mobile-nav-drawer--open" : ""}`}
       role="presentation"
     >
       <button
@@ -51,6 +87,8 @@ export function MobileNavDrawer() {
         aria-modal="true"
         aria-labelledby="mobile-nav-drawer-title"
         tabIndex={-1}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
         <header className="mobile-nav-drawer__head">
           <div className="mobile-nav-drawer__brand">
