@@ -16,9 +16,9 @@ import { LiveNewsroomProvider, useLiveNewsroom } from "@/providers/LiveNewsroomP
 import { useLanguage } from "@/providers/LanguageProvider";
 import {
   HyperlocalSkeleton,
-  LiveWireSkeleton,
 } from "@/sections/homepage/HomepageSectionSkeletons";
-import { LiveWire } from "@/sections/homepage/LiveWire";
+import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
+import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
 
 const HyperlocalFeeds = dynamic(
   () =>
@@ -74,12 +74,13 @@ function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
         <div className="home-body">
           <div className="home-body__main home-feed-stack">
             <LazyHomeSection
-              id="wire"
-              minHeight="200px"
-              fallback={<LiveWireSkeleton />}
+              id="highlights-desk"
+              minHeight="0"
+              className="home-highlights-desk-lazy"
+              fallback={<HighlightsDeskSkeleton />}
               style={{ "--stagger": 2 } as CSSProperties}
             >
-              <LiveWire items={feed.liveWire} freshIds={freshIds} />
+              <HomeDeskSplit feed={feed} freshIds={freshIds} />
             </LazyHomeSection>
 
             {feed.newsShorts.length > 0 ? (

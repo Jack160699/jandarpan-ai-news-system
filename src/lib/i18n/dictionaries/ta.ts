@@ -105,6 +105,17 @@ export const ta: Dictionary = {
     newUpdatesAvailable: "புதிய புதுப்பிப்புகள்",
     refreshFeed: "புதுப்பிக்கவும்",
     dismissUpdates: "நிராகரி",
+    nationalHighlights: "தேசிய சிறப்புகள்",
+    districtHighlights: "மாவட்ட சிறப்புகள்",
+    districtLive: "நேரலை",
+    districtEmpty: "இந்த மாவட்டத்திற்கு இப்போது செய்திகள் இல்லை.",
+    districtStories: "செய்திகள்",
+    featuredDistricts: {
+      bilaspur: "பிலாஸ்பூர்",
+      raipur: "ராய்ப்பூர்",
+      durg: "துர்க்",
+      rajnandgaon: "ராஜ்நந்த்காவ்",
+    },
     categories: {
       politics: "அரசியல்",
       chhattisgarh: "சத்தீஸ்கர்",

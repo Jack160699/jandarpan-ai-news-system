@@ -15,9 +15,9 @@ import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { buildTickerHeadlines } from "@/lib/homepage/ticker-headlines";
 import {
   HyperlocalSkeleton,
-  LiveWireSkeleton,
 } from "@/sections/homepage/HomepageSectionSkeletons";
-import { LiveWire } from "@/sections/homepage/LiveWire";
+import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
+import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
 import { useLanguage } from "@/providers/LanguageProvider";
 
 const HyperlocalFeeds = dynamic(
@@ -57,12 +57,13 @@ export function HomepageView({ feed }: HomepageViewProps) {
         <div className="home-body">
           <div className="home-body__main home-feed-stack">
             <LazyHomeSection
-              id="wire"
-              minHeight="200px"
-              fallback={<LiveWireSkeleton />}
+              id="highlights-desk"
+              minHeight="0"
+              className="home-highlights-desk-lazy"
+              fallback={<HighlightsDeskSkeleton />}
               style={{ "--stagger": 2 } as CSSProperties}
             >
-              <LiveWire items={feed.liveWire} />
+              <HomeDeskSplit feed={feed} />
             </LazyHomeSection>
 
             {feed.newsShorts.length > 0 ? (

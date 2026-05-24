@@ -104,6 +104,17 @@ export const hi: Dictionary = {
     newUpdatesAvailable: "नई खबरें उपलब्ध",
     refreshFeed: "फ़ीड रिफ़्रेश करें",
     dismissUpdates: "बंद करें",
+    nationalHighlights: "राष्ट्रीय हाइलाइट्स",
+    districtHighlights: "जिला हाइलाइट्स",
+    districtLive: "लाइव",
+    districtEmpty: "इस जिले की अभी कोई खबर नहीं है।",
+    districtStories: "खबरें",
+    featuredDistricts: {
+      bilaspur: "बिलासपुर",
+      raipur: "रायपुर",
+      durg: "दुर्ग",
+      rajnandgaon: "राजनांदगाँव",
+    },
     categories: {
       politics: "राजनीति",
       chhattisgarh: "छत्तीसगढ़",

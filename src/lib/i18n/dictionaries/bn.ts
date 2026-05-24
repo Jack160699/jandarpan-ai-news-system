@@ -104,6 +104,17 @@ export const bn: Dictionary = {
     newUpdatesAvailable: "নতুন আপডেট উপলব্ধ",
     refreshFeed: "ফিড রিফ্রেশ",
     dismissUpdates: "বন্ধ করুন",
+    nationalHighlights: "জাতীয় হাইলাইট",
+    districtHighlights: "জেলা হাইলাইট",
+    districtLive: "লাইভ",
+    districtEmpty: "এই জেলায় এখন কোনো খবর নেই।",
+    districtStories: "খবর",
+    featuredDistricts: {
+      bilaspur: "বিলাসপুর",
+      raipur: "রায়পুর",
+      durg: "দুর্গ",
+      rajnandgaon: "রাজনান্দগাঁও",
+    },
     categories: {
       politics: "রাজনীতি",
       chhattisgarh: "ছত্তীসগড়",

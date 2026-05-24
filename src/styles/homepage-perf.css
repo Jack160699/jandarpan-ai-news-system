@@ -19,6 +19,10 @@
   contain-intrinsic-size: auto 280px;
 }
 
+.home-highlights-desk-lazy[data-loaded="false"] {
+  contain-intrinsic-size: auto 14rem;
+}
+
 /* Below-fold sections skip layout/paint until near viewport */
 .hp-defer-paint {
   content-visibility: auto;

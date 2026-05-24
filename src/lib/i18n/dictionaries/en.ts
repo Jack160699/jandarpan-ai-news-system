@@ -104,6 +104,17 @@ export const en: Dictionary = {
     newUpdatesAvailable: "New updates available",
     refreshFeed: "Refresh",
     dismissUpdates: "Dismiss",
+    nationalHighlights: "National Highlights",
+    districtHighlights: "District Highlights",
+    districtLive: "Live",
+    districtEmpty: "No stories for this district right now.",
+    districtStories: "stories",
+    featuredDistricts: {
+      bilaspur: "Bilaspur",
+      raipur: "Raipur",
+      durg: "Durg",
+      rajnandgaon: "Rajnandgaon",
+    },
     categories: {
       politics: "Politics",
       chhattisgarh: "Chhattisgarh",

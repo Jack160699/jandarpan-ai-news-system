@@ -197,8 +197,12 @@
 }
 
 /* ── Wire / shorts / ads in stack ── */
-.home-feed-stack .live-wire--daily {
+.home-feed-stack .live-wire--daily,
+.home-feed-stack .live-wire,
+.home-feed-stack .live-wire--embedded {
   padding-block: 0;
+  margin-block: 0;
+  border: none;
   border-block: none;
   background: transparent;
 }

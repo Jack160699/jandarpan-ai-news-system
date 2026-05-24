@@ -110,6 +110,17 @@ export type Dictionary = {
     newUpdatesAvailable: string;
     refreshFeed: string;
     dismissUpdates: string;
+    nationalHighlights: string;
+    districtHighlights: string;
+    districtLive: string;
+    districtEmpty: string;
+    districtStories: string;
+    featuredDistricts: {
+      bilaspur: string;
+      raipur: string;
+      durg: string;
+      rajnandgaon: string;
+    };
     categories: {
       politics: string;
       chhattisgarh: string;
