@@ -57,7 +57,20 @@ export function useEditorialIntelligenceOptional() {
 type Props = { children: ReactNode };
 
 export function EditorialIntelligenceProvider({ children }: Props) {
-  const [memory, setMemory] = useState<ReadingMemory>(() => loadReadingMemory());
+  const [memory, setMemory] = useState<ReadingMemory>(() => {
+    if (typeof window === "undefined") {
+      return {
+        version: 1,
+        articles: {},
+        sections: {},
+        bookmarks: [],
+        lastPath: "/",
+        lastSlug: null,
+        sessionStarted: 0,
+      };
+    }
+    return loadReadingMemory();
+  });
   const [live, setLive] = useState<LiveEditionState>(() =>
     getLiveEditionState()
   );

@@ -52,22 +52,23 @@ export function localizeGeneratedFeed(
   const trending = filterHomeArticles(feed.trending);
   const shorts = filterHomeArticles(feed.shorts);
 
-  const lead = feed.editorsPicks.lead.localeMatch !== false
-    ? feed.editorsPicks.lead
-    : breakingTicker[0] ?? liveWire[0] ?? trending[0] ?? null;
+  const leadCandidates = [
+    feed.editorsPicks.lead.localeMatch !== false ? feed.editorsPicks.lead : null,
+    breakingTicker[0],
+    liveWire[0],
+    trending[0],
+    regionalHighlights[0],
+    feed.editorsPicks.lead,
+  ].filter((a): a is HomeArticle => Boolean(a?.headline?.trim()));
+
+  const lead = leadCandidates[0] ?? feed.editorsPicks.lead;
 
   const supporting = filterHomeArticles(feed.editorsPicks.supporting);
 
-  const editorsPicks =
-    lead
-      ? {
-          lead,
-          supporting: supporting.filter((a) => a.id !== lead.id).slice(0, 4),
-        }
-      : {
-          lead: breakingTicker[0] ?? liveWire[0] ?? trending[0] ?? feed.editorsPicks.lead,
-          supporting: [],
-        };
+  const editorsPicks = {
+    lead,
+    supporting: supporting.filter((a) => a.id !== lead.id).slice(0, 4),
+  };
 
   const hyperlocalFeeds = feed.hyperlocalFeeds.map((f) => ({
     ...f,

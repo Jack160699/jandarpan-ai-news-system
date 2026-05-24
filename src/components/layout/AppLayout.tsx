@@ -1,8 +1,16 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { MobileNavDrawer } from "@/components/navigation/MobileNavDrawer";
+
+const SuperMenuDrawer = dynamic(
+  () =>
+    import("@/components/super-menu/SuperMenuDrawer").then((m) => ({
+      default: m.SuperMenuDrawer,
+    })),
+  { ssr: false, loading: () => null }
+);
 import { MainHeader } from "./MainHeader";
 import { BottomMobileNav } from "./BottomMobileNav";
 import {
@@ -30,7 +38,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       </div>
       <div className="app-feed">{children}</div>
       <BottomMobileNav />
-      <MobileNavDrawer />
+      <SuperMenuDrawer />
     </>
   );
 }

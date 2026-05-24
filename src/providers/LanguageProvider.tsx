@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import { normalizeAppLanguage } from "@/lib/i18n/safe-language";
 import { resolveGateHighlightLanguage } from "@/lib/i18n/browser-language";
 import { filterGateOptions } from "@/lib/i18n/gate-languages";
 import {
@@ -134,7 +135,8 @@ export function LanguageProvider({
     [persist, dismissGate, router]
   );
 
-  const t = useMemo(() => getDictionary(language), [language]);
+  const safeLanguage = normalizeAppLanguage(language);
+  const t = useMemo(() => getDictionary(safeLanguage), [safeLanguage]);
 
   const showLanguageGate = ready && gateOpen;
   const contentLocked = !ready || gateOpen;

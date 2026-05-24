@@ -19,7 +19,10 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
 };
 
 export function getDictionary(language: AppLanguage): Dictionary {
-  return dictionaries[language] ?? dictionaries[getLanguageConfig(language).dictionaryFallback];
+  const dict = dictionaries[language];
+  if (dict) return dict;
+  const fallback = getLanguageConfig(language).dictionaryFallback;
+  return dictionaries[fallback] ?? dictionaries.hi;
 }
 
 export { en, hi, cg, mr, bn, ta, ur };

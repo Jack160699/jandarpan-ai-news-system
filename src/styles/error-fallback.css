@@ -1,0 +1,70 @@
+.error-fallback {
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: linear-gradient(
+    165deg,
+    #0a0608 0%,
+    #1a0a0e 45%,
+    #0f0a0c 100%
+  );
+}
+
+.error-fallback__card {
+  width: min(100%, 22rem);
+  padding: 1.5rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.04);
+  backdrop-filter: blur(12px);
+  text-align: center;
+}
+
+.error-fallback__brand {
+  margin: 0 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e85d6a;
+}
+
+.error-fallback__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.error-fallback__message {
+  margin: 0.65rem 0 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgb(255 255 255 / 0.72);
+}
+
+.error-fallback__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.error-fallback__btn {
+  min-height: 2.75rem;
+  border: none;
+  border-radius: 9999px;
+  background: #a01830;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.error-fallback__link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #f5b0b8;
+  text-decoration: none;
+}

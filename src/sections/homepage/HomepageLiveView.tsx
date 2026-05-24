@@ -37,7 +37,9 @@ type HomepageLiveViewProps = {
 
 export function HomepageLiveView({ feed: serverFeed }: HomepageLiveViewProps) {
   const feed = useLocalizedFeed(serverFeed) ?? serverFeed;
-  if (!feed) return null;
+  if (!feed?.editorsPicks?.lead) {
+    return null;
+  }
 
   return (
     <LiveNewsroomProvider initialFeed={feed}>
@@ -63,7 +65,9 @@ function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
     ...supporting.slice(0, 3),
   ].filter((a, i, arr) => arr.findIndex((x) => x.id === a.id) === i);
 
-  const heroLead = feed.breakingTicker[0] ?? lead;
+  const heroLead =
+    feed.breakingTicker[0] ?? lead ?? feed.trending[0] ?? feed.liveWire[0];
+  if (!heroLead) return null;
 
   return (
     <div className="home-page">

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { localizeGeneratedFeed } from "@/lib/i18n/strict-locale";
+import { normalizeAppLanguage } from "@/lib/i18n/safe-language";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { useLanguage } from "@/providers/LanguageProvider";
 
@@ -10,9 +11,16 @@ export function useLocalizedFeed(
   feed: GeneratedHomepageFeed | null | undefined
 ): GeneratedHomepageFeed | null {
   const { language, ready } = useLanguage();
+  const safeLang = normalizeAppLanguage(language);
 
   return useMemo(() => {
-    if (!feed || !ready) return feed ?? null;
-    return localizeGeneratedFeed(feed, language);
-  }, [feed, language, ready]);
+    if (!feed) return null;
+    if (!ready) return feed;
+    try {
+      return localizeGeneratedFeed(feed, safeLang);
+    } catch (err) {
+      console.error("[useLocalizedFeed]", err);
+      return feed;
+    }
+  }, [feed, safeLang, ready]);
 }

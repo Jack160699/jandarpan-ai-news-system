@@ -2,9 +2,10 @@
 
 /**
  * React hook — browser Supabase client + auth subscription.
+ * Client-only: never instantiates Supabase during SSR.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
@@ -20,31 +21,39 @@ export type UseSupabaseState = {
 };
 
 export function useSupabase(): UseSupabaseState {
-  const configured = isSupabaseConfigured();
+  const configured =
+    typeof window !== "undefined" && isSupabaseConfigured();
+  const [client, setClient] = useState<SupabaseClient<Database> | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(configured);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const client = useMemo(() => {
-    if (!configured) return null;
-    try {
-      return createBrowserClient();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create Supabase client");
-      return null;
-    }
-  }, [configured]);
-
   useEffect(() => {
-    if (!client) {
+    if (!configured) {
       setLoading(false);
       return;
     }
 
     let mounted = true;
+    let supabase: SupabaseClient<Database> | null = null;
 
-    client.auth
+    try {
+      supabase = createBrowserClient();
+      setClient(supabase);
+    } catch (e) {
+      if (mounted) {
+        setError(
+          e instanceof Error ? e.message : "Failed to create Supabase client"
+        );
+        setLoading(false);
+      }
+      return;
+    }
+
+    setLoading(true);
+
+    supabase.auth
       .getSession()
       .then(({ data, error: sessionError }) => {
         if (!mounted) return;
@@ -61,7 +70,8 @@ export function useSupabase(): UseSupabaseState {
 
     const {
       data: { subscription },
-    } = client.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
     });
@@ -70,7 +80,14 @@ export function useSupabase(): UseSupabaseState {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [client]);
+  }, [configured]);
 
-  return { client, user, session, loading, configured, error };
+  return {
+    client,
+    user,
+    session,
+    loading,
+    configured,
+    error,
+  };
 }

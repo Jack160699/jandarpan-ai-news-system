@@ -14,6 +14,7 @@ type SuperMenuProfileProps = {
 export function SuperMenuProfile({ onNavigate }: SuperMenuProfileProps) {
   const { language } = useLanguage();
   const {
+    mounted,
     isLoggedIn,
     displayName,
     avatarInitial,
@@ -23,6 +24,14 @@ export function SuperMenuProfile({ onNavigate }: SuperMenuProfileProps) {
     signInWithGoogle,
     signOut,
   } = useReaderAccount();
+
+  if (!mounted) {
+    return (
+      <div className="sm-profile sm-profile--skeleton" aria-hidden>
+        <div className="sm-profile__card" style={{ minHeight: "4.5rem" }} />
+      </div>
+    );
+  }
 
   return (
     <div className="sm-profile">

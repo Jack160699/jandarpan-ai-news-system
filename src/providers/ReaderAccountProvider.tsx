@@ -19,6 +19,8 @@ const ACCOUNT_KEY = "cgb-reader-account";
 const STREAK_KEY = "cgb-reader-streak";
 const INTERESTS_COOKIE = "cgb-feed-interests";
 
+const DEFAULT_INTERESTS = ["cg-news", "politics", "business"];
+
 function syncInterestsCookie(ids: string[]) {
   if (typeof document === "undefined") return;
   const val = encodeURIComponent(JSON.stringify(ids));
@@ -32,6 +34,7 @@ type GuestProfile = {
 };
 
 type ReaderAccountContextValue = {
+  mounted: boolean;
   user: User | null;
   isLoggedIn: boolean;
   loading: boolean;
@@ -50,6 +53,23 @@ type ReaderAccountContextValue = {
 const ReaderAccountContext = createContext<ReaderAccountContextValue | null>(
   null
 );
+
+const DEFAULT_VALUE: ReaderAccountContextValue = {
+  mounted: false,
+  user: null,
+  isLoggedIn: false,
+  loading: false,
+  displayName: "Guest Reader",
+  avatarInitial: "R",
+  isPremium: false,
+  streakDays: 1,
+  savedCount: 0,
+  interests: DEFAULT_INTERESTS,
+  toggleInterest: () => {},
+  setInterests: () => {},
+  signInWithGoogle: async () => {},
+  signOut: async () => {},
+};
 
 function loadGuest(): GuestProfile {
   if (typeof window === "undefined") {
@@ -90,22 +110,29 @@ function loadGuest(): GuestProfile {
 
 export function ReaderAccountProvider({ children }: { children: ReactNode }) {
   const { user, client, loading: authLoading, configured } = useSupabase();
+  const [mounted, setMounted] = useState(false);
   const [guest, setGuest] = useState<GuestProfile | null>(null);
-  const [interests, setInterestsState] = useState<string[]>([]);
+  const [interests, setInterestsState] = useState<string[]>(DEFAULT_INTERESTS);
   const [savedCount, setSavedCount] = useState(0);
 
   useEffect(() => {
+    setMounted(true);
     setGuest(loadGuest());
-    const prefs = loadPreferences();
-    setInterestsState(
-      prefs.feedInterests?.length
-        ? prefs.feedInterests
-        : ["cg-news", "politics", "business"]
-    );
-    setSavedCount(loadReadingMemory().bookmarks.length);
+    try {
+      const prefs = loadPreferences();
+      setInterestsState(
+        prefs.feedInterests?.length
+          ? prefs.feedInterests
+          : DEFAULT_INTERESTS
+      );
+      setSavedCount(loadReadingMemory().bookmarks.length);
+    } catch {
+      /* ignore storage errors */
+    }
   }, []);
 
   const toggleInterest = useCallback((id: string) => {
+    if (!mounted) return;
     setInterestsState((prev) => {
       const valid = FEED_INTERESTS.some((i) => i.id === id);
       if (!valid) return prev;
@@ -116,16 +143,20 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
       syncInterestsCookie(next);
       return next;
     });
-  }, []);
+  }, [mounted]);
 
   const setInterests = useCallback((ids: string[]) => {
-    const next = ids.filter((id) => FEED_INTERESTS.some((i) => i.id === id)).slice(0, 12);
+    if (!mounted) return;
+    const next = ids
+      .filter((id) => FEED_INTERESTS.some((i) => i.id === id))
+      .slice(0, 12);
     setInterestsState(next);
     savePreferences({ feedInterests: next });
     syncInterestsCookie(next);
-  }, []);
+  }, [mounted]);
 
   const signInWithGoogle = useCallback(async () => {
+    if (typeof window === "undefined") return;
     if (!client || !configured) {
       window.location.href = "/login";
       return;
@@ -150,6 +181,7 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
+      mounted,
       user,
       isLoggedIn: Boolean(user),
       loading: authLoading,
@@ -165,6 +197,7 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
       signOut,
     }),
     [
+      mounted,
       user,
       authLoading,
       displayName,
@@ -188,7 +221,7 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
 export function useReaderAccount(): ReaderAccountContextValue {
   const ctx = useContext(ReaderAccountContext);
   if (!ctx) {
-    throw new Error("useReaderAccount must be used within ReaderAccountProvider");
+    return DEFAULT_VALUE;
   }
   return ctx;
 }

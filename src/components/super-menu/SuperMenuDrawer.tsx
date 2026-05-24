@@ -2,39 +2,50 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion, useReducedMotion } from "framer-motion";
+import dynamic from "next/dynamic";
 import { X, Sparkles } from "lucide-react";
 import { triggerHaptic } from "@/lib/mobile/haptics";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
+import { normalizeAppLanguage } from "@/lib/i18n/safe-language";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
 import { SuperMenuProfile } from "./SuperMenuProfile";
 import { SuperMenuFeed } from "./SuperMenuFeed";
-import { SuperMenuMarket } from "./SuperMenuMarket";
 import { SuperMenuUtilities } from "./SuperMenuUtilities";
 import { SuperMenuCategories } from "./SuperMenuCategories";
 import { SuperMenuSettings } from "./SuperMenuSettings";
 
+const SuperMenuMarket = dynamic(
+  () => import("./SuperMenuMarket").then((m) => ({ default: m.SuperMenuMarket })),
+  { ssr: false, loading: () => <div className="sm-section sm-section--skeleton" aria-hidden /> }
+);
+
 const DRAWER_MS = 320;
 const SWIPE_CLOSE_PX = 72;
 
-/** Premium AI-powered super menu — replaces legacy category grid */
+/** Premium AI-powered super menu — client-only portal */
 export function SuperMenuDrawer() {
   const { menuOpen, closeMenu, startNavigation } = useNavigation();
   const { language } = useLanguage();
+  const safeLang = normalizeAppLanguage(language);
   const { tenant } = useTenant();
   const panelRef = useRef<HTMLElement>(null);
   const touchStartX = useRef(0);
+  const [mounted, setMounted] = useState(false);
   const [present, setPresent] = useState(false);
   const [animOpen, setAnimOpen] = useState(false);
-  const reduceMotion = useReducedMotion();
 
   const brandName =
-    language === "en" ? tenant.branding.nameEn : tenant.branding.nameHi;
+    safeLang === "en" ? tenant.branding.nameEn : tenant.branding.nameHi;
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     if (menuOpen) {
       setPresent(true);
       const id = requestAnimationFrame(() => setAnimOpen(true));
@@ -43,7 +54,7 @@ export function SuperMenuDrawer() {
     setAnimOpen(false);
     const t = window.setTimeout(() => setPresent(false), DRAWER_MS);
     return () => window.clearTimeout(t);
-  }, [menuOpen]);
+  }, [menuOpen, mounted]);
 
   useEffect(() => {
     if (!animOpen) return;
@@ -74,7 +85,7 @@ export function SuperMenuDrawer() {
     [closeMenu]
   );
 
-  if (typeof document === "undefined" || !present) return null;
+  if (!mounted || !present) return null;
 
   return createPortal(
     <div
@@ -84,21 +95,18 @@ export function SuperMenuDrawer() {
       <button
         type="button"
         className="super-menu__backdrop"
-        aria-label={pickBilingualLabel(language, "Close menu", "मेन्यू बंद करें")}
+        aria-label={pickBilingualLabel(safeLang, "Close menu", "मेन्यू बंद करें")}
         onClick={closeMenu}
       />
-      <motion.aside
+      <aside
         ref={panelRef}
-        className="super-menu__panel"
+        className={`super-menu__panel${animOpen ? " super-menu__panel--open" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="super-menu-title"
         tabIndex={-1}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
-        initial={reduceMotion ? false : { x: "100%" }}
-        animate={{ x: animOpen ? 0 : "100%" }}
-        transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       >
         <header className="super-menu__head">
           <div className="super-menu__brand">
@@ -109,18 +117,14 @@ export function SuperMenuDrawer() {
               </p>
               <p className="super-menu__kicker">
                 <Sparkles size={12} aria-hidden />
-                {pickBilingualLabel(
-                  language,
-                  "AI News Hub",
-                  "AI न्यूज़ हब"
-                )}
+                {pickBilingualLabel(safeLang, "AI News Hub", "AI न्यूज़ हब")}
               </p>
             </div>
           </div>
           <button
             type="button"
             className="super-menu__close tap-target"
-            aria-label={pickBilingualLabel(language, "Close", "बंद")}
+            aria-label={pickBilingualLabel(safeLang, "Close", "बंद")}
             onClick={() => {
               triggerHaptic("selection");
               closeMenu();
@@ -133,12 +137,12 @@ export function SuperMenuDrawer() {
         <div className="super-menu__scroll">
           <SuperMenuProfile onNavigate={onNavigate} />
           <SuperMenuFeed onNavigate={onNavigate} />
-          <SuperMenuMarket />
+          {menuOpen ? <SuperMenuMarket /> : null}
           <SuperMenuUtilities onNavigate={onNavigate} />
           <SuperMenuCategories onNavigate={onNavigate} />
           <SuperMenuSettings onNavigate={onNavigate} />
         </div>
-      </motion.aside>
+      </aside>
     </div>,
     document.body
   );

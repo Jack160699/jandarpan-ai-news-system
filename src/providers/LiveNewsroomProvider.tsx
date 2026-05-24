@@ -53,14 +53,27 @@ export function LiveNewsroomProvider({
 }: LiveNewsroomProviderProps) {
   const languageCtx = useLanguageOptional();
   const displayLanguage = languageCtx?.language ?? "hi";
+  const languageReady = languageCtx?.ready ?? false;
 
-  const [feed, setFeed] = useState(() =>
-    localizeGeneratedFeed(initialFeed, displayLanguage)
-  );
+  const [feed, setFeed] = useState(initialFeed);
+  const [localeReady, setLocaleReady] = useState(false);
 
   useEffect(() => {
-    setFeed(localizeGeneratedFeed(initialFeed, displayLanguage));
-  }, [initialFeed, displayLanguage]);
+    setLocaleReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!localeReady || !languageReady) {
+      setFeed(initialFeed);
+      return;
+    }
+    try {
+      setFeed(localizeGeneratedFeed(initialFeed, displayLanguage));
+    } catch (err) {
+      console.error("[LiveNewsroom] localize feed", err);
+      setFeed(initialFeed);
+    }
+  }, [initialFeed, displayLanguage, localeReady, languageReady]);
   const [lastSyncedAt, setLastSyncedAt] = useState(initialFeed.fetchedAt);
   const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
   const [pendingSnapshot, setPendingSnapshot] =
