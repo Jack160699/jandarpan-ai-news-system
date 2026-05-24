@@ -43,6 +43,12 @@ class ArticleSpeechController {
   private utterance: SpeechSynthesisUtterance | null = null;
   private mounted = false;
   private mediaPlayHandler: ((e: Event) => void) | null = null;
+  /** Stable reference for useSyncExternalStore — must not allocate per read */
+  private snapshot: ArticleSpeechSnapshot = {
+    articleId: null,
+    status: "idle",
+    rate: 1,
+  };
 
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
@@ -50,11 +56,24 @@ class ArticleSpeechController {
   }
 
   getSnapshot(): ArticleSpeechSnapshot {
-    return {
+    return this.snapshot;
+  }
+
+  private syncSnapshot(): boolean {
+    const prev = this.snapshot;
+    if (
+      prev.articleId === this.articleId &&
+      prev.status === this.status &&
+      prev.rate === this.rate
+    ) {
+      return false;
+    }
+    this.snapshot = {
       articleId: this.articleId,
       status: this.status,
       rate: this.rate,
     };
+    return true;
   }
 
   isActive(articleId: string): boolean {
@@ -99,6 +118,7 @@ class ArticleSpeechController {
   }
 
   private emit(): void {
+    if (!this.syncSnapshot()) return;
     for (const l of this.listeners) l();
   }
 

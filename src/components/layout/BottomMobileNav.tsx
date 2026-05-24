@@ -13,11 +13,31 @@ import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
 import { IconHome, IconLive, IconVideo } from "@/components/navigation/NavIcons";
 
-const ICONS = {
+const ICONS: Record<
+  Exclude<import("@/lib/navigation").BottomNavIcon, "menu">,
+  typeof IconHome
+> = {
   home: IconHome,
   video: IconVideo,
   live: IconLive,
-} as const;
+};
+
+function BottomNavIcon({
+  tab,
+  className,
+}: {
+  tab: (typeof BOTTOM_NAV_TABS)[number];
+  className: string;
+}) {
+  if (tab.icon === "menu") {
+    return <LayoutGrid className={className} strokeWidth={1.75} aria-hidden />;
+  }
+  const Icon = ICONS[tab.icon];
+  if (!Icon) {
+    return <span className={className} aria-hidden />;
+  }
+  return <Icon className={className} />;
+}
 
 const TAB_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]> = {
   home: "home",
@@ -36,7 +56,6 @@ export function BottomMobileNav() {
       <div className="bottom-mobile-nav__inner">
         {BOTTOM_NAV_TABS.map((tab) => {
           const isMenu = tab.id === "menu";
-          const Icon = isMenu ? null : ICONS[tab.icon as keyof typeof ICONS];
           const active = isMenu
             ? menuOpen
             : isBottomNavActive(tab, pathname, hash) ||
@@ -57,7 +76,7 @@ export function BottomMobileNav() {
                   openMenu();
                 }}
               >
-                <LayoutGrid className="bottom-mobile-nav__icon" strokeWidth={1.75} aria-hidden />
+                <BottomNavIcon tab={tab} className="bottom-mobile-nav__icon" />
                 <span>{label}</span>
               </button>
             );
@@ -77,7 +96,7 @@ export function BottomMobileNav() {
                 startNavigation(href);
               }}
             >
-              {Icon ? <Icon className="bottom-mobile-nav__icon" /> : null}
+              <BottomNavIcon tab={tab} className="bottom-mobile-nav__icon" />
               <span>{label}</span>
             </Link>
           );

@@ -37,7 +37,9 @@ type HomepageLiveViewProps = {
 export function HomepageLiveView({ feed }: HomepageLiveViewProps) {
   return (
     <LiveNewsroomProvider initialFeed={feed}>
-      <HomepageLiveContent trendingTopics={feed.footerIntelligence.trendingSearches} />
+      <HomepageLiveContent
+        trendingTopics={feed.footerIntelligence?.trendingSearches ?? []}
+      />
     </LiveNewsroomProvider>
   );
 }

@@ -13,11 +13,29 @@ import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
 import { IconHome, IconLive, IconVideo } from "./NavIcons";
 
-const ICONS = {
+const ICONS: Record<
+  Exclude<import("@/lib/navigation").BottomNavIcon, "menu">,
+  typeof IconHome
+> = {
   home: IconHome,
   video: IconVideo,
   live: IconLive,
-} as const;
+};
+
+function BottomNavTabIcon({
+  tab,
+  className,
+}: {
+  tab: (typeof BOTTOM_NAV_TABS)[number];
+  className: string;
+}) {
+  if (tab.icon === "menu") {
+    return <LayoutGrid className={className} strokeWidth={1.75} aria-hidden />;
+  }
+  const Icon = ICONS[tab.icon];
+  if (!Icon) return <span className={className} aria-hidden />;
+  return <Icon className={className} />;
+}
 
 const TAB_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]> = {
   home: "home",
@@ -36,7 +54,6 @@ export function BottomNav() {
       <div className="bottom-nav__inner">
         {BOTTOM_NAV_TABS.map((tab) => {
           const isMenu = tab.id === "menu";
-          const Icon = isMenu ? null : ICONS[tab.icon as keyof typeof ICONS];
           const active = isMenu
             ? menuOpen
             : isBottomNavActive(tab, pathname, hash) ||
@@ -59,7 +76,7 @@ export function BottomNav() {
                 }}
               >
                 <span className="bottom-nav__icon-wrap">
-                  <LayoutGrid className="bottom-nav__icon" strokeWidth={1.75} aria-hidden />
+                  <BottomNavTabIcon tab={tab} className="bottom-nav__icon" />
                 </span>
                 <span className="bottom-nav__label">{label}</span>
               </button>
@@ -81,7 +98,7 @@ export function BottomNav() {
               }}
             >
               <span className="bottom-nav__icon-wrap">
-                {Icon ? <Icon className="bottom-nav__icon" /> : null}
+                <BottomNavTabIcon tab={tab} className="bottom-nav__icon" />
               </span>
               <span className="bottom-nav__label">{label}</span>
             </Link>

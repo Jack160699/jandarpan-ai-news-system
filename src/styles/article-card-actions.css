@@ -155,10 +155,10 @@ html[data-theme="dark"] .article-card-actions__btn--listen.is-speaking {
   box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
-.hero-news-card__actions.article-card-actions {
-  margin-top: 0.75rem;
-  padding-top: 0;
-  border-top: none;
+.hero-news-card__article--premium .hero-news-card__actions.article-card-actions {
+  margin: 0;
+  padding: 0.5rem var(--gutter) 0.75rem;
+  border-top: 1px solid var(--color-rule);
 }
 
 .article-page__actions.article-card-actions {

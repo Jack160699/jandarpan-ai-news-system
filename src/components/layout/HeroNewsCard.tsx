@@ -74,16 +74,6 @@ export function HeroNewsCard({
                 </>
               ) : null}
             </div>
-
-            <ArticleCardActions
-              articleId={lead.id}
-              headline={lead.headline}
-              summary={lead.summary}
-              slugOrPath={lead.slug}
-              langHint={lead.language === "hi" ? "hi-IN" : "auto"}
-              className="hero-news-card__actions"
-              enableSpeedCycle
-            />
           </div>
 
           <div className="hero-news-card__visual hero-news-card__visual--premium">
@@ -107,6 +97,15 @@ export function HeroNewsCard({
             ) : null}
           </div>
         </TrackedStoryLink>
+        <ArticleCardActions
+          articleId={lead.id}
+          headline={lead.headline}
+          summary={lead.summary}
+          slugOrPath={lead.slug}
+          langHint={lead.language === "hi" ? "hi-IN" : "auto"}
+          className="hero-news-card__actions"
+          enableSpeedCycle
+        />
       </article>
 
       {(topStories.length > 0 || featuredShort) ? (

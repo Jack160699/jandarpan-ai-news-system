@@ -57,11 +57,19 @@ export function ArticleCardActions({
   const paused = speech?.isPaused(articleId) ?? false;
   const active = speech?.isActive(articleId) ?? false;
 
+  const actions = t.cardActions ?? {
+    groupLabel: "Share and listen",
+    whatsapp: "WhatsApp",
+    listen: "Listen",
+    pause: "Pause",
+    resume: "Resume",
+  };
+
   const listenLabel = paused
-    ? t.cardActions.resume
+    ? actions.resume
     : speaking
-      ? t.cardActions.pause
-      : t.cardActions.listen;
+      ? actions.pause
+      : actions.listen;
 
   const onWhatsApp = (e: MouseEvent) => {
     stopBubble(e);
@@ -85,7 +93,7 @@ export function ArticleCardActions({
     <div
       className={`article-card-actions${className ? ` ${className}` : ""}`}
       role="group"
-      aria-label={t.cardActions.groupLabel}
+      aria-label={actions.groupLabel}
       onClick={stopBubble}
       onPointerDown={stopBubble}
     >
@@ -94,11 +102,11 @@ export function ArticleCardActions({
         className="article-card-actions__btn article-card-actions__btn--wa tap-target"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={t.cardActions.whatsapp}
+        aria-label={actions.whatsapp}
         onClick={onWhatsApp}
       >
         <WhatsAppIcon className="article-card-actions__icon" />
-        <span className="article-card-actions__label">{t.cardActions.whatsapp}</span>
+        <span className="article-card-actions__label">{actions.whatsapp}</span>
       </a>
 
       <button
