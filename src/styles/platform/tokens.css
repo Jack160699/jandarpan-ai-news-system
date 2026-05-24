@@ -125,17 +125,21 @@
 }
 
 html[data-theme="dark"] {
-  --color-paper: #121212;
-  --color-surface: #1a1a1a;
-  --color-surface-muted: #242424;
-  --color-ink: #f2f2f2;
-  --color-ink-secondary: #d4d4d4;
-  --color-ink-muted: #a3a3a3;
-  --color-ink-faint: #737373;
+  --color-paper: #000000;
+  --color-surface: #050505;
+  --color-surface-muted: #0a0a0a;
+  --color-ink: #ffffff;
+  --color-ink-secondary: rgb(255 255 255 / 0.72);
+  --color-ink-muted: rgb(255 255 255 / 0.72);
+  --color-ink-faint: rgb(255 255 255 / 0.45);
   --color-primary: #ef5350;
   --color-primary-soft: rgb(239 83 80 / 0.12);
-  --color-ticker-bg: #0a0a0a;
-  --shadow-card: 0 1px 0 rgb(255 255 255 / 0.04);
-  --shadow-card-hover: 0 8px 24px rgb(0 0 0 / 0.35);
-  --shadow-hero: 0 8px 28px rgb(0 0 0 / 0.4);
+  --color-rule: rgb(255 255 255 / 0.05);
+  --color-rule-strong: rgb(255 255 255 / 0.08);
+  --color-ticker-bg: #000000;
+  --color-ticker-text: #ffffff;
+  --color-ticker-muted: rgb(255 255 255 / 0.72);
+  --shadow-card: 0 4px 20px rgb(0 0 0 / 0.45);
+  --shadow-card-hover: 0 8px 28px rgb(0 0 0 / 0.55);
+  --shadow-hero: 0 4px 20px rgb(0 0 0 / 0.45);
 }

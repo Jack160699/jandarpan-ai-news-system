@@ -191,6 +191,25 @@
   white-space: nowrap;
 }
 
+html[data-theme="dark"] .home-live-strip {
+  background: var(--color-paper);
+  border-bottom-color: var(--color-rule);
+  color: var(--color-ink-secondary);
+}
+
+html[data-theme="dark"] .hero-news-card__article,
+html[data-theme="dark"] .news-card {
+  background: var(--color-surface);
+  border-color: rgb(255 255 255 / 0.05);
+  box-shadow: var(--shadow-card);
+}
+
+html[data-theme="dark"] .hero-news-card__visual,
+html[data-theme="dark"] .news-card__media,
+html[data-theme="dark"] .hero-news-card__rail-thumb {
+  background: var(--color-surface-muted);
+}
+
 /* Homepage layout */
 .home-page {
   width: 100%;

@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { MainHeader } from "./MainHeader";
 import { CategoryNavbar } from "./CategoryNavbar";
 import { BottomMobileNav } from "./BottomMobileNav";
-import { FloatingLiveButton } from "./FloatingLiveButton";
 
 type AppLayoutProps = {
   children: ReactNode;
@@ -18,7 +17,6 @@ export function AppLayout({ children }: AppLayoutProps) {
       <CategoryNavbar />
       {children}
       <BottomMobileNav />
-      <FloatingLiveButton />
     </>
   );
 }

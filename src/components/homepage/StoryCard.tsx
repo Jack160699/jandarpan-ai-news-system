@@ -83,10 +83,6 @@ export function StoryCard({
                   <span className="pcard__flag pcard__flag--breaking">
                     {t.common.breakingLabel}
                   </span>
-                ) : article.isLive ? (
-                  <span className="pcard__flag pcard__flag--live">
-                    {t.common.live}
-                  </span>
                 ) : null
               }
             />

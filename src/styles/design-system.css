@@ -207,23 +207,23 @@
   --ease-breath: var(--ds-ease);
 }
 
-/* ── Dark theme — premium charcoal, warm accents ── */
+/* ── Dark theme — premium AMOLED black ── */
 html[data-theme="dark"] {
-  --ds-surface: #141312;
-  --ds-surface-raised: #1f1d1b;
-  --ds-surface-sunken: #2a2724;
-  --ds-surface-overlay: rgb(31 29 27 / 0.94);
-  --ds-surface-elevated: #262422;
-  --ds-surface-inset: #0f0e0d;
+  --ds-surface: #000000;
+  --ds-surface-raised: #050505;
+  --ds-surface-sunken: #0a0a0a;
+  --ds-surface-overlay: rgb(5 5 5 / 0.94);
+  --ds-surface-elevated: #050505;
+  --ds-surface-inset: #000000;
 
-  --ds-ink: #f5f2ef;
-  --ds-ink-secondary: #d4cfc8;
-  --ds-ink-tertiary: #a39e96;
-  --ds-ink-quaternary: #736d66;
-  --ds-ink-inverse: #141312;
+  --ds-ink: #ffffff;
+  --ds-ink-secondary: rgb(255 255 255 / 0.72);
+  --ds-ink-tertiary: rgb(255 255 255 / 0.72);
+  --ds-ink-quaternary: rgb(255 255 255 / 0.45);
+  --ds-ink-inverse: #000000;
 
-  --ds-separator: rgb(255 255 255 / 0.08);
-  --ds-separator-strong: rgb(255 255 255 / 0.14);
+  --ds-separator: rgb(255 255 255 / 0.05);
+  --ds-separator-strong: rgb(255 255 255 / 0.08);
 
   --ds-accent: #fb923c;
   --ds-accent-hover: #fdba74;
@@ -238,8 +238,8 @@ html[data-theme="dark"] {
 
   --ds-card-bg: var(--ds-surface-raised);
   --ds-card-border: var(--ds-separator);
-  --ds-card-shadow: 0 1px 0 rgb(255 255 255 / 0.04), 0 4px 16px rgb(0 0 0 / 0.35);
-  --ds-card-shadow-hover: 0 1px 0 rgb(255 255 255 / 0.06), 0 8px 28px rgb(0 0 0 / 0.45);
+  --ds-card-shadow: 0 4px 20px rgb(0 0 0 / 0.45);
+  --ds-card-shadow-hover: 0 8px 28px rgb(0 0 0 / 0.55);
 
   --ds-gradient-thumb: linear-gradient(
     180deg,
@@ -253,7 +253,7 @@ html[data-theme="dark"] {
     transparent 60%
   );
 
-  --paper-shadow: #2a2724;
+  --paper-shadow: #0a0a0a;
 }
 
 /* ── Typography utilities ── */

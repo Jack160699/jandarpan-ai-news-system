@@ -5,6 +5,7 @@ import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
 import { BreakingHeroReel } from "@/sections/homepage/BreakingHeroReel";
 import { IMG_HERO_LEAD, IMG_HERO_THUMB } from "@/lib/images/homepage-sizes";
 import { formatHomeTime } from "@/lib/homepage/format";
+import { useLanguage } from "@/providers/LanguageProvider";
 import type { HomeArticle } from "@/lib/homepage/types";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
 
@@ -19,7 +20,7 @@ export function HeroNewsCard({
   topStories,
   featuredShort,
 }: HeroNewsCardProps) {
-  const showLive = lead.isLive || lead.ranking.isBreaking;
+  const { t } = useLanguage();
 
   return (
     <section className="hero-news-card pl-scroll-target" aria-labelledby="hero-lead-title">
@@ -34,9 +35,11 @@ export function HeroNewsCard({
             className="hero-news-card__link"
           >
             <div className="hero-news-card__copy">
-              <span className="hero-news-card__kicker">
-                {showLive ? "LIVE" : "Breaking"}
-              </span>
+              {lead.ranking.isBreaking ? (
+                <span className="hero-news-card__kicker">
+                  {t.common.breakingLabel}
+                </span>
+              ) : null}
               <h2
                 id="hero-lead-title"
                 className="hero-news-card__headline hi"

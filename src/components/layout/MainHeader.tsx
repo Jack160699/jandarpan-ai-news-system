@@ -10,14 +10,13 @@ import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { SearchOverlay } from "@/components/reader/SearchOverlay";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
-import { MobileNavDrawer } from "@/components/navigation/MobileNavDrawer";
-import { IconMenu, IconMoon, IconSearch, IconSun } from "@/components/navigation/NavIcons";
+import { IconMoon, IconSearch, IconSun } from "@/components/navigation/NavIcons";
 
 export function MainHeader() {
   const { tenant, headerLocation } = useTenant();
   const { language, setLanguage, t, languageOptions } = useLanguage();
   const { prefs, toggleTheme, setSearchOpen } = useReaderPreferences();
-  const { menuOpen, setMenuOpen, openMenu, startNavigation } = useNavigation();
+  const { startNavigation } = useNavigation();
   const [langOpen, setLangOpen] = useState(false);
   const isMobile = useIsMobile();
   const brandName =
@@ -61,34 +60,14 @@ export function MainHeader() {
 
           <div className="main-header__actions">
             {isMobile ? (
-              <>
-                <Link
-                  href="/live"
-                  className="main-header__live"
-                  aria-label={t.nav.live}
-                  onClick={() => startNavigation("/live")}
-                >
-                  <span className="breaking-ticker__dot" aria-hidden />
-                  LIVE
-                </Link>
-                <Link
-                  href="/search"
-                  className="main-header__btn"
-                  aria-label={t.header.search}
-                  onClick={() => startNavigation("/search")}
-                >
-                  <IconSearch />
-                </Link>
-                <button
-                  type="button"
-                  className="main-header__btn"
-                  aria-label={t.nav.menu}
-                  aria-expanded={menuOpen}
-                  onClick={openMenu}
-                >
-                  <IconMenu />
-                </button>
-              </>
+              <Link
+                href="/search"
+                className="main-header__btn"
+                aria-label={t.header.search}
+                onClick={() => startNavigation("/search")}
+              >
+                <IconSearch />
+              </Link>
             ) : (
               <>
                 <button
@@ -147,7 +126,6 @@ export function MainHeader() {
         </div>
       </header>
 
-      <MobileNavDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
       <SearchOverlay />
     </>
   );

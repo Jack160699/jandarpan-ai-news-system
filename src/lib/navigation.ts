@@ -54,8 +54,6 @@ export type BottomNavTab = {
   labelHi: string;
   href: string;
   icon: BottomNavIcon;
-  /** Non-route actions — must be wired in BottomNav */
-  action?: "menu";
 };
 
 /** Production bottom nav — Home, Videos, Live, Profile */
@@ -63,8 +61,8 @@ export const BOTTOM_NAV_TABS: BottomNavTab[] = [
   { id: "home", label: "Home", labelHi: "होम", href: "/", icon: "home" },
   {
     id: "videos",
-    label: "Shorts",
-    labelHi: "शॉर्ट्स",
+    label: "Video",
+    labelHi: "वीडियो",
     href: "/shorts",
     icon: "video",
   },

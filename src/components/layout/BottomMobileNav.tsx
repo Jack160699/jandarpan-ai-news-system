@@ -46,7 +46,7 @@ export function BottomMobileNav() {
               key={tab.id}
               href={href}
               prefetch={tab.id === "home"}
-              className={`bottom-mobile-nav__item${active ? " is-active" : ""}`}
+              className={`bottom-mobile-nav__item${tab.id === "live" ? " bottom-mobile-nav__item--live" : ""}${active ? " is-active" : ""}`}
               aria-current={active ? "page" : undefined}
               onClick={() => {
                 triggerHaptic(tab.id === "live" ? "medium" : "selection");

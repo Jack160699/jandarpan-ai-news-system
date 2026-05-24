@@ -38,14 +38,7 @@ export function PremiumVideoCard({
             overlay="bottom"
             priority={priority}
             sizes={imageSizes}
-            badges={
-              isLive ? (
-                <span className="pcard__flag pcard__flag--live">
-                  <span className="ds-pulse-dot" aria-hidden />
-                  LIVE
-                </span>
-              ) : null
-            }
+            badges={undefined}
           />
           <span className="pcard__play" aria-hidden />
         </div>
