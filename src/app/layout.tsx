@@ -4,10 +4,12 @@ import {
   Noto_Serif_Bengali,
   Noto_Serif_Devanagari,
   Noto_Serif_Tamil,
+  Noto_Sans_Arabic,
   Playfair_Display,
   Source_Serif_4,
 } from "next/font/google";
 import { AppChrome } from "@/components/navigation/AppChrome";
+import { LanguageGateScript } from "@/components/reader/LanguageGateScript";
 import { ThemeScript } from "@/components/reader/ThemeScript";
 import { TenantRoot } from "@/components/tenant/TenantRoot";
 import { EditorialIntelligenceProvider } from "@/providers/EditorialIntelligenceProvider";
@@ -63,7 +65,14 @@ const dmMono = DM_Mono({
   display: "swap",
 });
 
-const fontClassName = `${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${notoBengali.variable} ${notoTamil.variable} ${dmMono.variable} native-scroll min-h-full`;
+const notoArabic = Noto_Sans_Arabic({
+  variable: "--font-urdu",
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const fontClassName = `${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${notoBengali.variable} ${notoTamil.variable} ${notoArabic.variable} ${dmMono.variable} native-scroll min-h-full`;
 
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenantConfig();
@@ -92,7 +101,7 @@ export default async function RootLayout({
   return (
     <html
       lang={langCfg.hreflang}
-      dir="ltr"
+      dir={langCfg.script === "arabic" ? "rtl" : "ltr"}
       data-tenant={tenant.slug}
       data-language={readerLang}
       data-script={langCfg.scriptAttr}
@@ -101,6 +110,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full antialiased text-[var(--ink-primary)]">
         <ThemeScript />
+        <LanguageGateScript />
         <TenantRoot tenant={stripTenantForClient(tenant)}>
           <ReaderPreferencesProvider>
             <LanguageProvider

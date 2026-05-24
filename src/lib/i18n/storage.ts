@@ -72,4 +72,15 @@ export function applyLanguageToDocument(language: AppLanguage) {
   root.setAttribute("data-language", language);
   root.setAttribute("data-script", config.scriptAttr);
   root.lang = config.bcp47.split("-")[0];
+  root.dir = config.script === "arabic" ? "rtl" : "ltr";
+}
+
+export function lockLanguageGateDocument() {
+  if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-lang-gate", "locked");
+}
+
+export function unlockLanguageGateDocument() {
+  if (typeof document === "undefined") return;
+  document.documentElement.removeAttribute("data-lang-gate");
 }

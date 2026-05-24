@@ -9,11 +9,17 @@ export const NEWSROOM_LANGUAGES = [
   "mr",
   "bn",
   "ta",
+  "ur",
 ] as const;
 
 export type NewsroomLanguage = (typeof NEWSROOM_LANGUAGES)[number];
 
-export type LanguageScript = "devanagari" | "latin" | "bengali" | "tamil";
+export type LanguageScript =
+  | "devanagari"
+  | "latin"
+  | "bengali"
+  | "tamil"
+  | "arabic";
 
 export type LanguageConfig = {
   id: NewsroomLanguage;
@@ -131,6 +137,22 @@ export const LANGUAGE_CONFIG: Record<NewsroomLanguage, LanguageConfig> = {
     dictionaryFallback: "hi",
     isIndic: true,
   },
+  ur: {
+    id: "ur",
+    label: "Urdu",
+    native: "اردو",
+    shortCode: "Ur",
+    bcp47: "ur-PK",
+    ogLocale: "ur_PK",
+    hreflang: "ur",
+    script: "arabic",
+    scriptAttr: "arabic",
+    fontFamily: "var(--font-urdu), var(--font-body), serif",
+    lineHeight: 1.85,
+    letterSpacing: "0",
+    dictionaryFallback: "hi",
+    isIndic: false,
+  },
 };
 
 export type LanguageOption = {
@@ -168,6 +190,7 @@ export function normalizeArticleLanguage(
   if (v === "mr" || v === "marathi") return "mr";
   if (v === "bn" || v === "bengali" || v === "bangla") return "bn";
   if (v === "ta" || v === "tamil") return "ta";
+  if (v === "ur" || v === "urdu") return "ur";
   return "hi";
 }
 
@@ -180,6 +203,7 @@ export function readingTimeLabel(minutes: number, lang: NewsroomLanguage): strin
     mr: `${m} मिनिटे`,
     bn: `${m} মিনিট`,
     ta: `${m} நிமிடம்`,
+    ur: `${m} منٹ`,
   };
   return labels[lang];
 }

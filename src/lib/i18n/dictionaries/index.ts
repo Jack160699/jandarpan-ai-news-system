@@ -6,6 +6,7 @@ import { en } from "./en";
 import { hi } from "./hi";
 import { mr } from "./mr";
 import { ta } from "./ta";
+import { ur } from "./ur";
 
 export const dictionaries: Record<AppLanguage, Dictionary> = {
   en,
@@ -14,10 +15,11 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
   mr,
   bn,
   ta,
+  ur,
 };
 
 export function getDictionary(language: AppLanguage): Dictionary {
   return dictionaries[language] ?? dictionaries[getLanguageConfig(language).dictionaryFallback];
 }
 
-export { en, hi, cg, mr, bn, ta };
+export { en, hi, cg, mr, bn, ta, ur };

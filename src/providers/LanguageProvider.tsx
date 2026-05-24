@@ -11,10 +11,14 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import { resolveGateHighlightLanguage } from "@/lib/i18n/browser-language";
+import { filterGateOptions } from "@/lib/i18n/gate-languages";
 import {
   applyLanguageToDocument,
   loadStoredLanguage,
+  lockLanguageGateDocument,
   saveStoredLanguage,
+  unlockLanguageGateDocument,
 } from "@/lib/i18n/storage";
 import type { AppLanguage, Dictionary, LanguageOption } from "@/lib/i18n/types";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
@@ -25,8 +29,12 @@ type LanguageContextValue = {
   language: AppLanguage;
   t: Dictionary;
   ready: boolean;
+  /** Gate visible — mandatory on every full page load / refresh */
   showLanguageGate: boolean;
+  /** Main app chrome hidden until gate confirmed */
+  contentLocked: boolean;
   languageOptions: LanguageOption[];
+  gateLanguageOptions: LanguageOption[];
   setLanguage: (language: AppLanguage) => void;
   confirmLanguage: (language: AppLanguage) => void;
 };
@@ -63,61 +71,97 @@ export function LanguageProvider({
   enabledLanguages,
 }: LanguageProviderProps) {
   const router = useRouter();
+
   const languageOptions = useMemo(() => {
     if (!enabledLanguages?.length) return LANGUAGE_OPTIONS;
     const allowed = new Set(enabledLanguages);
     return LANGUAGE_OPTIONS.filter((o) => allowed.has(o.id as NewsroomLanguage));
   }, [enabledLanguages]);
 
+  const gateLanguageOptions = useMemo(
+    () => filterGateOptions(enabledLanguages),
+    [enabledLanguages]
+  );
+
   const [language, setLanguageState] = useState<AppLanguage>(defaultLanguage);
-  const [chosen, setChosen] = useState(false);
   const [ready, setReady] = useState(false);
+  /** Resets on every full page load — gate required again after refresh */
+  const [gateOpen, setGateOpen] = useState(true);
 
   useEffect(() => {
+    lockLanguageGateDocument();
     const stored = loadStoredLanguage();
-    setLanguageState(stored.language);
-    setChosen(stored.chosen);
-    applyLanguageToDocument(stored.language);
-    syncReaderPrefsLanguage(stored.language, stored.chosen);
+    const highlight = resolveGateHighlightLanguage(
+      stored.chosen ? stored.language : null
+    );
+    setLanguageState(stored.chosen ? stored.language : highlight);
+    applyLanguageToDocument(stored.chosen ? stored.language : highlight);
+    syncReaderPrefsLanguage(
+      stored.chosen ? stored.language : highlight,
+      stored.chosen
+    );
+    setGateOpen(true);
     setReady(true);
   }, []);
 
   const persist = useCallback((lang: AppLanguage, hasChosen: boolean) => {
     setLanguageState(lang);
-    setChosen(hasChosen);
     saveStoredLanguage(lang, hasChosen);
     applyLanguageToDocument(lang);
     syncReaderPrefsLanguage(lang, hasChosen);
   }, []);
 
+  const dismissGate = useCallback(() => {
+    setGateOpen(false);
+    unlockLanguageGateDocument();
+  }, []);
+
   const setLanguage = useCallback(
     (lang: AppLanguage) => {
       persist(lang, true);
+      dismissGate();
       router.refresh();
     },
-    [persist, router]
+    [persist, dismissGate, router]
   );
 
   const confirmLanguage = useCallback(
     (lang: AppLanguage) => {
       persist(lang, true);
+      dismissGate();
+      router.refresh();
     },
-    [persist]
+    [persist, dismissGate, router]
   );
 
   const t = useMemo(() => getDictionary(language), [language]);
+
+  const showLanguageGate = ready && gateOpen;
+  const contentLocked = !ready || gateOpen;
 
   const value = useMemo(
     () => ({
       language,
       t,
       ready,
-      showLanguageGate: ready && !chosen,
+      showLanguageGate,
+      contentLocked,
       languageOptions,
+      gateLanguageOptions,
       setLanguage,
       confirmLanguage,
     }),
-    [language, t, ready, chosen, languageOptions, setLanguage, confirmLanguage]
+    [
+      language,
+      t,
+      ready,
+      showLanguageGate,
+      contentLocked,
+      languageOptions,
+      gateLanguageOptions,
+      setLanguage,
+      confirmLanguage,
+    ]
   );
 
   return (
@@ -137,7 +181,6 @@ export function useLanguageOptional() {
   return useContext(LanguageContext);
 }
 
-/** Re-export for components that only need the translator */
 export function useTranslation() {
   return useLanguage();
 }

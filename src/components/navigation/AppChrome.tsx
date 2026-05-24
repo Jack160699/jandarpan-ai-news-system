@@ -5,6 +5,8 @@ import { AdSlot } from "@/components/monetization/AdSlot";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SkipLink } from "@/components/ui/SkipLink";
 import { LanguageGate } from "@/components/reader/LanguageGate";
+import { useLanguage } from "@/providers/LanguageProvider";
+import { cn } from "@/lib/cn";
 import { HeadlinesMiniPlayer } from "@/components/listen/HeadlinesMiniPlayer";
 import { ArticleSpeechProvider } from "@/providers/ArticleSpeechProvider";
 import { HeadlinesListenProvider } from "@/providers/HeadlinesListenProvider";
@@ -22,6 +24,55 @@ type AppChromeProps = {
 
 const MINIMAL_CHROME_PREFIXES = ["/dashboard", "/admin"];
 
+function ShortsLanguageShell({ children }: AppChromeProps) {
+  const { contentLocked } = useLanguage();
+
+  return (
+    <div
+      className={cn(contentLocked && "app-shell--lang-locked")}
+      aria-hidden={contentLocked ? true : undefined}
+    >
+      <LanguageGate />
+      <div className="app-shell__content">{children}</div>
+    </div>
+  );
+}
+
+function AppChromeShell({ children }: AppChromeProps) {
+  const { contentLocked } = useLanguage();
+
+  return (
+    <div
+      className={cn(
+        "app-shell has-bottom-nav",
+        contentLocked && "app-shell--lang-locked"
+      )}
+      data-hydrated="false"
+      aria-hidden={contentLocked ? true : undefined}
+    >
+      <AppHydration />
+      <SkipLink />
+      <NavProgress />
+      <LanguageGate />
+      <div className="app-shell__content">
+        <div className="pl-hide-mobile">
+          <div className="pl-container">
+            <AdSlot slotId="global_header" />
+          </div>
+        </div>
+        <AppLayout>
+          <PullToRefresh>
+            <ScrollRetention>
+              <RouteTransition>{children}</RouteTransition>
+            </ScrollRetention>
+          </PullToRefresh>
+        </AppLayout>
+        <HeadlinesMiniPlayer />
+      </div>
+    </div>
+  );
+}
+
 export function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname();
   const minimal = MINIMAL_CHROME_PREFIXES.some((p) => pathname.startsWith(p));
@@ -31,7 +82,17 @@ export function AppChrome({ children }: AppChromeProps) {
   }
 
   if (pathname === "/shorts") {
-    return <>{children}</>;
+    return (
+      <HeadlinesListenProvider>
+        <ArticleSpeechProvider>
+          <NavigationProvider>
+            <NativeTouchLayer>
+              <ShortsLanguageShell>{children}</ShortsLanguageShell>
+            </NativeTouchLayer>
+          </NavigationProvider>
+        </ArticleSpeechProvider>
+      </HeadlinesListenProvider>
+    );
   }
 
   return (
@@ -39,25 +100,7 @@ export function AppChrome({ children }: AppChromeProps) {
       <ArticleSpeechProvider>
       <NavigationProvider>
         <NativeTouchLayer>
-          <div className="app-shell has-bottom-nav" data-hydrated="false">
-            <AppHydration />
-            <SkipLink />
-            <NavProgress />
-            <LanguageGate />
-            <div className="pl-hide-mobile">
-              <div className="pl-container">
-                <AdSlot slotId="global_header" />
-              </div>
-            </div>
-            <AppLayout>
-              <PullToRefresh>
-                <ScrollRetention>
-                  <RouteTransition>{children}</RouteTransition>
-                </ScrollRetention>
-              </PullToRefresh>
-            </AppLayout>
-            <HeadlinesMiniPlayer />
-          </div>
+          <AppChromeShell>{children}</AppChromeShell>
         </NativeTouchLayer>
       </NavigationProvider>
       </ArticleSpeechProvider>

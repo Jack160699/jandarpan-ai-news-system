@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { CG_DISTRICTS } from "@/lib/regional/districts";
 import { NAV_CATEGORIES } from "@/lib/navigation";
 import type { HyperlocalFeedSummary } from "@/lib/homepage/types";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 type RegionalQuickNavProps = {
   hyperlocalFeeds?: HyperlocalFeedSummary[];
@@ -17,6 +20,7 @@ export function RegionalQuickNav({
   hyperlocalFeeds = [],
   trendingTags = [],
 }: RegionalQuickNavProps) {
+  const { language } = useLanguage();
   const feedSlugs = new Set(hyperlocalFeeds.map((f) => f.districtSlug));
   const districts =
     hyperlocalFeeds.length > 0
@@ -61,8 +65,9 @@ export function RegionalQuickNav({
                   href={`/district/${d.slug}`}
                   className={`nr-chip nr-chip--district${"active" in d && d.active ? " nr-chip--active" : ""}`}
                 >
-                  <span className="nr-chip__hi">{d.nameHi}</span>
-                  <span className="nr-chip__en">{d.name}</span>
+                  <span>
+                    {language === "en" ? d.name : d.nameHi}
+                  </span>
                 </Link>
               </li>
             ))}
@@ -97,7 +102,7 @@ export function RegionalQuickNav({
               return (
                 <li key={cat.id}>
                   <Link href={href} className="nr-chip nr-chip--nav tap-target">
-                    {cat.labelHi ?? cat.label}
+                    {language === "en" ? cat.label : cat.labelHi ?? cat.label}
                   </Link>
                 </li>
               );
