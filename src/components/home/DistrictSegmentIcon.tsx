@@ -27,10 +27,10 @@ const DISTRICT_VISUALS: Record<FeaturedDistrictSlug, DistrictVisual> = {
     glowClass: "shadow-[0_0_12px_rgba(56,189,248,0.35)]",
   },
   bilaspur: {
-    Icon: TrainFront,
+    Icon: Landmark,
     idleClass:
-      "text-amber-700 ring-amber-200/90 bg-amber-50 dark:text-amber-300 dark:ring-amber-800/50 dark:bg-amber-950/45",
-    glowClass: "shadow-[0_0_12px_rgba(245,158,11,0.32)]",
+      "text-violet-700 ring-violet-200/90 bg-violet-50 dark:text-violet-300 dark:ring-violet-800/50 dark:bg-violet-950/45",
+    glowClass: "shadow-[0_0_12px_rgba(139,92,246,0.32)]",
   },
   durg: {
     Icon: Factory,
@@ -39,10 +39,10 @@ const DISTRICT_VISUALS: Record<FeaturedDistrictSlug, DistrictVisual> = {
     glowClass: "shadow-[0_0_12px_rgba(16,185,129,0.3)]",
   },
   rajnandgaon: {
-    Icon: Landmark,
+    Icon: TrainFront,
     idleClass:
-      "text-violet-700 ring-violet-200/90 bg-violet-50 dark:text-violet-300 dark:ring-violet-800/50 dark:bg-violet-950/45",
-    glowClass: "shadow-[0_0_12px_rgba(139,92,246,0.32)]",
+      "text-amber-700 ring-amber-200/90 bg-amber-50 dark:text-amber-300 dark:ring-amber-800/50 dark:bg-amber-950/45",
+    glowClass: "shadow-[0_0_12px_rgba(245,158,11,0.32)]",
   },
 };
 

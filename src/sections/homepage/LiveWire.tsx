@@ -28,7 +28,7 @@ export function LiveWire({ items, freshIds, embedded }: LiveWireProps) {
         className={`${embedded ? "" : "nr-wrap "}live-wire__head live-wire__head--daily`.trim()}
       >
         <h2 id="nr-wire-title" className="live-wire__title">
-          {t.home.nationalHighlights}
+          {t.home.globalBrief}
         </h2>
         <Link href="/live" className="live-wire__cta tap-target">
           {t.live.viewAll} →

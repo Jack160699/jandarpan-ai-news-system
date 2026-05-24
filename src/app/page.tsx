@@ -32,7 +32,10 @@ async function HomeFeed() {
       {feed ? (
         <HomepageLiveView feed={feed} />
       ) : (
-        <HomepageEmpty />
+        <>
+          <HomepageEmpty />
+          <Footer />
+        </>
       )}
     </>
   );
@@ -45,7 +48,6 @@ export default function Home() {
         <Suspense fallback={<HomepageLoadingView />}>
           <HomeFeed />
         </Suspense>
-        <Footer />
       </main>
     </PageShell>
   );

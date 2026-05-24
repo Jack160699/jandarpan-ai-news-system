@@ -5,7 +5,13 @@
 import type { NewsCategory } from "@/lib/types/news-article";
 import type { HomeSectionId } from "@/lib/homepage/types";
 
-export type CategorySeoSlug = NewsCategory | HomeSectionId;
+export type CategorySeoSlug =
+  | NewsCategory
+  | HomeSectionId
+  | "jobs"
+  | "crime"
+  | "startup"
+  | "agriculture";
 
 export type CategorySeoConfig = {
   slug: CategorySeoSlug;
@@ -149,6 +155,50 @@ export const CATEGORY_SEO: CategorySeoConfig[] = [
     keywords: [...BASE_KEYWORDS, "CG culture", "Bollywood news"],
     newsCategory: "entertainment",
     sectionId: "world",
+  },
+  {
+    slug: "jobs",
+    path: "/category/jobs",
+    titleEn: "Jobs & Careers",
+    titleHi: "नौकरी और करियर",
+    descriptionEn: "Government jobs, recruitment, and career updates in Chhattisgarh.",
+    descriptionHi: "सरकारी नौकरी, भर्ती और करियर अपडेट — छत्तीसगढ़।",
+    keywords: [...BASE_KEYWORDS, "CG jobs", "sarkari naukri", "recruitment"],
+    newsCategory: "business",
+    sectionId: "business",
+  },
+  {
+    slug: "crime",
+    path: "/category/crime",
+    titleEn: "Crime & Law",
+    titleHi: "अपराध और कानून",
+    descriptionEn: "Crime reports, courts, and law-enforcement coverage in CG.",
+    descriptionHi: "अपराध, अदालत और कानून व्यवस्था — छत्तीसगढ़।",
+    keywords: [...BASE_KEYWORDS, "crime news CG", "police", "court"],
+    newsCategory: "politics",
+    sectionId: "india",
+  },
+  {
+    slug: "startup",
+    path: "/category/startup",
+    titleEn: "Startup & Innovation",
+    titleHi: "स्टार्टअप और इनोवेशन",
+    descriptionEn: "Startups, founders, and innovation economy across Chhattisgarh.",
+    descriptionHi: "स्टार्टअप, उद्यमी और इनोवेशन — छत्तीसगढ़।",
+    keywords: [...BASE_KEYWORDS, "startup India", "founder", "innovation"],
+    newsCategory: "technology",
+    sectionId: "business",
+  },
+  {
+    slug: "agriculture",
+    path: "/category/agriculture",
+    titleEn: "Agriculture & Rural",
+    titleHi: "कृषि और ग्रामीण",
+    descriptionEn: "Farming, MSP, monsoon, and rural economy across Chhattisgarh.",
+    descriptionHi: "खेती, एमएसपी, मानसून और ग्रामीण अर्थव्यवस्था।",
+    keywords: [...BASE_KEYWORDS, "kisan", "MSP", "monsoon CG", "agriculture"],
+    newsCategory: "business",
+    sectionId: "business",
   },
 ];
 

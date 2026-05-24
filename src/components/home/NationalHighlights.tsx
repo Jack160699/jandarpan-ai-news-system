@@ -72,19 +72,19 @@ export function NationalHighlights({
   return (
     <Reveal
       as="section"
-      id={embedded ? "national-highlights" : "wire"}
+      id={embedded ? "global-brief" : "wire"}
       className={cn(
         "scroll-mt-24 w-full min-w-0",
-        embedded && "national-highlights-panel"
+        embedded && "global-brief-panel"
       )}
-      aria-labelledby="national-highlights-title"
+      aria-labelledby="global-brief-title"
     >
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2
-          id="national-highlights-title"
+          id="global-brief-title"
           className="m-0 font-[family-name:var(--font-hindi,var(--font-display))] text-[clamp(1.125rem,4.2vw,1.3125rem)] font-bold leading-tight tracking-tight text-stone-900 dark:text-stone-50"
         >
-          {t.home.nationalHighlights}
+          {t.home.globalBrief}
         </h2>
         <motion.div whileHover={reduceMotion ? undefined : { x: 2 }}>
           <Link

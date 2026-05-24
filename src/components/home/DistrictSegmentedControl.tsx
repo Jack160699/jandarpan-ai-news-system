@@ -17,35 +17,6 @@ type DistrictSegmentedControlProps = {
   onSelect: (slug: FeaturedDistrictSlug) => void;
 };
 
-/** Compact LIVE chip — dot only visible space, label abbreviated */
-function DistrictLiveChip({
-  label,
-  reduceMotion,
-}: {
-  label: string;
-  reduceMotion: boolean | null;
-}) {
-  return (
-    <motion.span
-      layout="position"
-      initial={reduceMotion ? false : { opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-      className="inline-flex max-w-full shrink-0 items-center gap-0.5 rounded-full bg-white/20 px-1 py-px"
-    >
-      <span className="relative flex h-1.5 w-1.5 shrink-0">
-        {!reduceMotion ? (
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/80 opacity-70" />
-        ) : null}
-        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-      </span>
-      <span className="text-[7px] font-extrabold uppercase leading-none tracking-[0.14em] text-white">
-        {label}
-      </span>
-    </motion.span>
-  );
-}
-
 export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
   selected,
   counts,
@@ -94,7 +65,7 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
       >
         <div
           role="tablist"
-          aria-label={t.home.districtHighlights}
+          aria-label={t.home.districtWire}
           className={cn(
             "relative inline-flex w-max min-w-full gap-0 rounded-[18px] p-1",
             "border border-stone-200/90 bg-stone-100/75 shadow-[0_2px_14px_rgba(28,20,16,0.06)]",
@@ -119,7 +90,7 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
                 role="tab"
                 data-district-segment={slug}
                 aria-selected={isActive}
-                aria-label={`${label}${isActive ? `, ${t.home.districtLive}` : ""}`}
+                aria-label={label}
                 layout={reduceMotion ? false : "position"}
                 onClick={() => handleSelect(slug)}
                 whileHover={
@@ -128,14 +99,14 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
                 whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                 transition={{ type: "spring", stiffness: 480, damping: 32 }}
                 className={cn(
-                  "tap-target relative z-10 flex h-12 shrink-0 snap-center flex-col items-center justify-center",
-                  "gap-0.5 overflow-hidden px-2 transition-[flex-basis,min-width] duration-200",
+                  "tap-target relative z-10 flex h-10 shrink-0 snap-center items-center justify-center",
+                  "gap-1.5 overflow-hidden px-2.5 transition-[flex-basis,min-width] duration-200",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 focus-visible:ring-offset-1",
                   isFirst && "rounded-l-[14px]",
                   isLast && "rounded-r-[14px]",
                   isActive
-                    ? "min-w-[6.75rem] flex-[1.35] sm:min-w-[7.25rem]"
-                    : "min-w-[5.25rem] flex-1 sm:min-w-[5.5rem]",
+                    ? "min-w-[6.25rem] flex-[1.25] sm:min-w-[6.75rem]"
+                    : "min-w-[5rem] flex-1 sm:min-w-[5.25rem]",
                   !isActive &&
                     "text-stone-700 hover:bg-white/50 dark:text-stone-200 dark:hover:bg-white/5"
                 )}
@@ -163,7 +134,6 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
                   </motion.div>
                 ) : null}
 
-                {/* Row 1: icon + district name — name always visible */}
                 <span className="relative z-10 flex w-full min-w-0 max-w-full items-center gap-1.5">
                   <DistrictSegmentIcon slug={slug} isActive={isActive} />
                   <span
@@ -178,16 +148,6 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
                     {label}
                   </span>
                 </span>
-
-                {/* Row 2: compact LIVE — only active; reserves space via fixed tab height */}
-                {isActive ? (
-                  <DistrictLiveChip
-                    label={t.home.districtLive}
-                    reduceMotion={reduceMotion}
-                  />
-                ) : (
-                  <span className="h-[11px] shrink-0" aria-hidden />
-                )}
               </motion.button>
             );
           })}

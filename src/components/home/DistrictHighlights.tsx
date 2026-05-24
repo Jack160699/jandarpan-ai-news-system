@@ -63,16 +63,16 @@ export function DistrictHighlights({
   return (
     <Reveal
       as="section"
-      id="district-highlights"
+      id="district-wire"
       className="scroll-mt-24 w-full min-w-0 space-y-3"
-      aria-labelledby="district-highlights-title"
+      aria-labelledby="district-wire-title"
     >
       <div className="flex items-baseline justify-between gap-3">
         <h2
-          id="district-highlights-title"
+          id="district-wire-title"
           className="m-0 font-[family-name:var(--font-hindi,var(--font-display))] text-[clamp(1.125rem,4.2vw,1.3125rem)] font-bold leading-tight tracking-tight text-stone-900 dark:text-stone-50"
         >
-          {t.home.districtHighlights}
+          {t.home.districtWire}
         </h2>
         <Link
           href="/live"

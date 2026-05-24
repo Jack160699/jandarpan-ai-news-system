@@ -34,7 +34,7 @@ export const NationalSegmentedControl = memo(function NationalSegmentedControl({
   return (
     <div
       role="tablist"
-      aria-label={t.home.nationalHighlights}
+      aria-label={t.home.globalBrief}
       className={cn(
         "relative flex w-full gap-0 rounded-[18px] p-1",
         "border border-red-900/20 bg-stone-900/90 shadow-[0_4px_24px_rgba(0,0,0,0.35)]",

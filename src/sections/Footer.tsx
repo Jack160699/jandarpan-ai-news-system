@@ -1,29 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { FooterTodayLive } from "@/components/footer/FooterTodayLive";
 import { FooterSocialIcon } from "@/components/footer/FooterSocialIcon";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
-import {
-  FOOTER_QUICK_LINKS,
-  FOOTER_SOCIAL,
-  FOOTER_DISTRICT_SLUGS,
-} from "@/lib/footer/config";
-import { CG_DISTRICTS } from "@/lib/regional/districts";
+import { FOOTER_QUICK_LINKS, FOOTER_SOCIAL } from "@/lib/footer/config";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useTenant } from "@/providers/TenantProvider";
 
-const districtMap = new Map(CG_DISTRICTS.map((d) => [d.slug, d]));
+type FooterProps = {
+  breakingHeadline?: string | null;
+  localInfo?: string | null;
+};
 
-export function Footer() {
+export function Footer({ breakingHeadline, localInfo }: FooterProps) {
   const { t, language } = useLanguage();
   const { tenant } = useTenant();
   const brandName =
     language === "en" ? tenant.branding.nameEn : tenant.branding.nameHi;
   const year = new Date().getFullYear();
-
-  const districts = FOOTER_DISTRICT_SLUGS.map((slug) => districtMap.get(slug)).filter(
-    (d): d is NonNullable<typeof d> => Boolean(d)
-  );
 
   return (
     <footer id="footer" className="jd-footer site-footer" role="contentinfo">
@@ -51,25 +46,10 @@ export function Footer() {
           </ul>
         </section>
 
-        <section className="jd-footer__block" aria-labelledby="footer-districts">
-          <h2 id="footer-districts" className="jd-footer__label">
-            {t.footer.districtsTitle}
-          </h2>
-          <ul className="jd-footer__district-grid">
-            {districts.map((d) => (
-              <li key={d.slug}>
-                <Link
-                  href={`/district/${d.slug}`}
-                  className="jd-footer__district tap-target"
-                >
-                  <span className="jd-footer__district-name">
-                    {language === "en" ? d.name : d.nameHi}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <FooterTodayLive
+          breakingHeadline={breakingHeadline}
+          localInfo={localInfo}
+        />
 
         <section
           className="jd-footer__block jd-footer__block--social"

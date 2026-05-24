@@ -110,12 +110,12 @@ export type Dictionary = {
     newUpdatesAvailable: string;
     refreshFeed: string;
     dismissUpdates: string;
-    nationalHighlights: string;
+    globalBrief: string;
     nationalNewsTab: string;
     internationalNewsTab: string;
     nationalSegmentEmpty: string;
     allUpdates: string;
-    districtHighlights: string;
+    districtWire: string;
     districtLive: string;
     districtLivePrefix: string;
     districtLiveStoriesLabel: string;
@@ -253,6 +253,13 @@ export type Dictionary = {
     followTitle: string;
     taglineFooter: string;
     quickLinksTitle: string;
+    todayLive: {
+      title: string;
+      liveBadge: string;
+      timezone: string;
+      defaultBreaking: string;
+      defaultLocal: string;
+    };
     publisherLine: string;
     corrections: string;
     editorialEmail: string;
@@ -264,15 +271,16 @@ export type Dictionary = {
     copyright: string;
     newsTips: string;
     links: {
-      home: string;
-      live: string;
-      shorts: string;
-      listen: string;
-      chhattisgarh: string;
-      politics: string;
+      business: string;
       sports: string;
-      search: string;
-      archive: string;
+      jobs: string;
+      technology: string;
+      politics: string;
+      entertainment: string;
+      education: string;
+      startup: string;
+      agriculture: string;
+      crime: string;
     };
   };
   ptr: {

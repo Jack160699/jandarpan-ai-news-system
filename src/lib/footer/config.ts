@@ -1,23 +1,31 @@
 /** Editorial footer — static content & nav */
 
-export const FOOTER_QUICK_LINKS = [
-  { href: "/", key: "home" as const },
-  { href: "/live", key: "live" as const },
-  { href: "/category/politics", key: "politics" as const },
-  { href: "/category/sports", key: "sports" as const },
-  { href: "/search", key: "search" as const },
-  { href: "/archive", key: "archive" as const },
-] as const;
+export type FooterQuickLinkKey =
+  | "business"
+  | "sports"
+  | "jobs"
+  | "technology"
+  | "politics"
+  | "entertainment"
+  | "education"
+  | "startup"
+  | "agriculture"
+  | "crime";
 
-export const FOOTER_DISTRICT_SLUGS = [
-  "raipur",
-  "bilaspur",
-  "durg",
-  "korba",
-  "bastar",
-  "raigarh",
-  "rajnandgaon",
-  "dhamtari",
+export const FOOTER_QUICK_LINKS: {
+  href: string;
+  key: FooterQuickLinkKey;
+}[] = [
+  { href: "/category/business", key: "business" },
+  { href: "/category/sports", key: "sports" },
+  { href: "/category/jobs", key: "jobs" },
+  { href: "/category/technology", key: "technology" },
+  { href: "/category/politics", key: "politics" },
+  { href: "/category/entertainment", key: "entertainment" },
+  { href: "/category/education", key: "education" },
+  { href: "/category/startup", key: "startup" },
+  { href: "/category/agriculture", key: "agriculture" },
+  { href: "/category/crime", key: "crime" },
 ] as const;
 
 export type FooterSocialId =

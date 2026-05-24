@@ -19,6 +19,7 @@ import {
 } from "@/sections/homepage/HomepageSectionSkeletons";
 import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
 import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
+import { HomepageFooter } from "@/components/footer/HomepageFooter";
 
 const HyperlocalFeeds = dynamic(
   () =>
@@ -109,6 +110,8 @@ function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
           </aside>
         </div>
       </div>
+
+      <HomepageFooter />
     </div>
   );
 }
