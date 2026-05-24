@@ -10,6 +10,8 @@ import {
   ShortsSection,
 } from "@/components/layout";
 import { LazyHomeSection } from "@/components/homepage/LazyHomeSection";
+import { TrendingStrip } from "@/components/homepage/TrendingStrip";
+import { QuickActionButtons } from "@/components/homepage/QuickActionButtons";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
 import { LiveNewsroomStatus } from "@/components/live-newsroom/LiveNewsroomStatus";
 import { NewUpdatesBanner } from "@/components/live-newsroom/NewUpdatesBanner";
@@ -58,7 +60,9 @@ function HomepageLiveContent() {
 
   return (
     <div className="home-page">
-      <div className="home-live-strip">
+      <TrendingStrip topics={feed.footerIntelligence.trendingSearches} />
+
+      <div className="home-live-strip home-live-strip--premium">
         <LiveNewsroomStatus />
       </div>
 
@@ -74,6 +78,8 @@ function HomepageLiveContent() {
           topStories={topStories}
           featuredShort={feed.newsShorts[0]}
         />
+
+        <QuickActionButtons />
 
         <div className="home-body">
           <div className="home-body__main">

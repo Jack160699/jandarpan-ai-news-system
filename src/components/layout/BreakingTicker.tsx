@@ -10,17 +10,18 @@ type BreakingTickerProps = {
   freshIds?: ReadonlySet<string>;
 };
 
-export function BreakingTicker({ items, freshIds }: BreakingTickerProps) {
+export function BreakingTicker({ items }: BreakingTickerProps) {
   const [paused, setPaused] = useState(false);
   const { t } = useLanguage();
 
   if (!items.length) return null;
 
+  const lead = items[0];
   const doubled = [...items, ...items];
 
   return (
     <section
-      className={`breaking-ticker pl-scroll-target${paused ? " breaking-ticker--paused" : ""}`}
+      className={`breaking-ticker breaking-ticker--premium pl-scroll-target${paused ? " breaking-ticker--paused" : ""}`}
       aria-label={t.home.tickerAria}
       onPointerDown={() => setPaused(true)}
       onPointerUp={() => setPaused(false)}
@@ -31,7 +32,20 @@ export function BreakingTicker({ items, freshIds }: BreakingTickerProps) {
         <span className="breaking-ticker__dot" aria-hidden />
         {t.common.live}
       </div>
-      <div className="breaking-ticker__viewport">
+      <div className="breaking-ticker__static">
+        <span className="breaking-ticker__prefix">{t.common.breakingLabel}:</span>
+        <TrackedStoryLink
+          href={`/story/${lead.slug}`}
+          slug={lead.slug}
+          category={lead.section}
+          region={lead.section}
+          surface="breaking"
+          className="breaking-ticker__lead"
+        >
+          {lead.headline}
+        </TrackedStoryLink>
+      </div>
+      <div className="breaking-ticker__viewport breaking-ticker__viewport--marquee">
         <div className="breaking-ticker__track">
           {doubled.map((item, i) => (
             <TrackedStoryLink
@@ -45,11 +59,6 @@ export function BreakingTicker({ items, freshIds }: BreakingTickerProps) {
               surface="breaking"
               className="breaking-ticker__item"
             >
-              {item.ranking.isBreaking ? (
-                <span className="breaking-ticker__tag">
-                  {t.common.breakingLabel}
-                </span>
-              ) : null}
               <span className="breaking-ticker__headline">{item.headline}</span>
             </TrackedStoryLink>
           ))}

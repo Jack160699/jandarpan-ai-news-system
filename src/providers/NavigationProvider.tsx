@@ -18,6 +18,10 @@ type NavigationContextValue = {
   pendingPath: string | null;
   startNavigation: (href: string) => void;
   completeNavigation: () => void;
+  menuOpen: boolean;
+  setMenuOpen: (open: boolean) => void;
+  openMenu: () => void;
+  closeMenu: () => void;
 };
 
 const NavigationContext = createContext<NavigationContextValue | null>(null);
@@ -26,6 +30,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [hash, setHash] = useState("");
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const syncHash = () => setHash(window.location.hash);
@@ -33,6 +38,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     window.addEventListener("hashchange", syncHash);
     return () => window.removeEventListener("hashchange", syncHash);
   }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname, hash]);
 
   const startNavigation = useCallback((href: string) => {
     const path = href.split("#")[0] || "/";
@@ -51,8 +60,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       pendingPath,
       startNavigation,
       completeNavigation,
+      menuOpen,
+      setMenuOpen,
+      openMenu: () => setMenuOpen(true),
+      closeMenu: () => setMenuOpen(false),
     }),
-    [pathname, hash, pendingPath, startNavigation, completeNavigation]
+    [pathname, hash, pendingPath, startNavigation, completeNavigation, menuOpen]
   );
 
   return (

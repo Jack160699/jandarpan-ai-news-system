@@ -49,9 +49,11 @@
   --section-gap-md: 0.875rem;
   --section-gap-lg: 1.125rem;
 
-  --header-height: 3.5rem;
-  --nav-height: 3rem;
-  --ticker-height: 2.5rem;
+  --header-height: 3.25rem;
+  --nav-height: 2.875rem;
+  --ticker-height: 2.375rem;
+  --trending-height: 2.125rem;
+  --live-strip-height: 2.375rem;
   --bottom-nav-height: 3.75rem;
 
   --safe-top: env(safe-area-inset-top, 0px);
@@ -62,7 +64,10 @@
   --sticky-header: var(--safe-top);
   --sticky-nav: calc(var(--safe-top) + var(--header-height));
   --sticky-ticker: calc(var(--sticky-nav) + var(--nav-height));
-  --scroll-margin: calc(var(--sticky-ticker) + 0.25rem);
+  --sticky-home-trending: calc(var(--sticky-nav) + var(--nav-height));
+  --sticky-home-live: calc(var(--sticky-home-trending) + var(--trending-height));
+  --sticky-home-ticker: calc(var(--sticky-home-live) + var(--live-strip-height));
+  --scroll-margin: calc(var(--sticky-home-ticker) + var(--ticker-height) + 0.25rem);
 
   --z-header: 100;
   --z-nav: 90;

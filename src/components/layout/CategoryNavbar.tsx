@@ -101,7 +101,8 @@ export function CategoryNavbar() {
   if (!categories.length) return null;
 
   return (
-    <nav className="category-navbar" aria-label="News categories">
+    <nav className="category-navbar category-navbar--premium" aria-label="News categories">
+      <span className="category-navbar__fade category-navbar__fade--start" aria-hidden />
       <div className="category-navbar__inner">
         <div ref={scrollRef} className="category-navbar__scroll">
           <div className="category-navbar__track">
@@ -118,7 +119,7 @@ export function CategoryNavbar() {
               const label = labelFor(cat, t, language);
               const href = categoryHref(cat);
               const isHash = href.startsWith("#");
-              const tabClass = `category-navbar__tab${active ? " is-active" : ""}`;
+              const tabClass = `category-navbar__tab${active ? " is-active" : ""}${cat.id === "live" ? " category-navbar__tab--live" : ""}`;
 
               if (isHash) {
                 return (
@@ -156,6 +157,7 @@ export function CategoryNavbar() {
           </div>
         </div>
       </div>
+      <span className="category-navbar__fade category-navbar__fade--end" aria-hidden />
     </nav>
   );
 }
