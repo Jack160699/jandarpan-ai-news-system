@@ -77,9 +77,17 @@
 
   --header-height: 3.75rem;
   --nav-height: 0px;
-  --ticker-height: 2.5rem;
+  --ticker-height: 2.375rem;
   --trending-height: 2.375rem;
-  --live-strip-height: 2.5rem;
+  --live-strip-height: 2.375rem;
+
+  /* Unified ticker strip badges (LIVE + Trend) */
+  --strip-band-height: 2.375rem;
+  --strip-badge-height: 2.125rem;
+  --strip-badge-padding-x: 0.875rem;
+  --strip-badge-font-size: 0.9375rem;
+  --strip-badge-font-weight: 700;
+  --strip-inner-gap: 0.5rem;
   --bottom-nav-height: 3.75rem;
 
   --safe-top: env(safe-area-inset-top, 0px);

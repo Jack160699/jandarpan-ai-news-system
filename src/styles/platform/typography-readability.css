@@ -20,30 +20,18 @@
   padding: 0 0.9375rem;
 }
 
-/* ── Trending + LIVE strips ── */
-.trending-strip__label {
-  font-size: 0.6875rem;
-  font-weight: 800;
+/* ── Trending + LIVE strips (geometry in ticker-strips.css) ── */
+.trending-strip__label,
+.breaking-ticker__label {
+  font-size: var(--strip-badge-font-size, 0.9375rem);
+  font-weight: var(--strip-badge-font-weight, 700);
 }
 
 .trending-strip__pill,
-.breaking-ticker__pill {
-  font-size: var(--text-ticker);
-  line-height: var(--leading-snug);
-  padding: 0.3125rem 0.625rem;
-}
-
-.breaking-ticker__label {
-  font-size: 0.625rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  padding: 0.125rem 0.375rem;
-  min-width: 2.5rem;
-}
-
+.breaking-ticker__pill,
 .breaking-ticker__fallback {
-  font-size: var(--text-ticker);
-  line-height: var(--leading-snug);
+  font-size: var(--strip-badge-font-size, 0.9375rem);
+  line-height: 1.25;
 }
 
 /* ── Hero ── */
@@ -142,6 +130,7 @@
 .bottom-mobile-nav__item {
   font-size: var(--text-xs);
   min-height: 3rem;
+  min-width: 3rem;
   gap: 0.1875rem;
 }
 

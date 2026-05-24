@@ -98,9 +98,15 @@ export type BottomNavTab = {
   icon: BottomNavIcon;
 };
 
-/** Production bottom nav — Home, Video, Live, Menu */
+/** Production bottom nav — Menu, Video, Live, Home (Home far right) */
 export const BOTTOM_NAV_TABS: BottomNavTab[] = [
-  { id: "home", label: "Home", labelHi: "होम", href: "/", icon: "home" },
+  {
+    id: "menu",
+    label: "Menu",
+    labelHi: "मेन्यू",
+    href: "#menu",
+    icon: "menu",
+  },
   {
     id: "videos",
     label: "Video",
@@ -115,13 +121,7 @@ export const BOTTOM_NAV_TABS: BottomNavTab[] = [
     href: "/live",
     icon: "live",
   },
-  {
-    id: "menu",
-    label: "Menu",
-    labelHi: "मेन्यू",
-    href: "#menu",
-    icon: "menu",
-  },
+  { id: "home", label: "Home", labelHi: "होम", href: "/", icon: "home" },
 ];
 
 export const HEADER_LOCATION = {
