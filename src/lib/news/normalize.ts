@@ -35,7 +35,7 @@ export function canonicalArticleUrl(raw: string): string {
     ];
     for (const p of stripParams) u.searchParams.delete(p);
     u.hostname = u.hostname.replace(/^www\./, "");
-    let path = u.pathname.replace(/\/+$/, "") || "/";
+    const path = u.pathname.replace(/\/+$/, "") || "/";
     return `${u.protocol}//${u.hostname}${path}${u.search ? `?${u.searchParams.toString()}` : ""}`;
   } catch {
     return raw.trim().toLowerCase();

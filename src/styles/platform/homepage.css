@@ -353,14 +353,7 @@ html:not([data-theme="dark"]) .hero-news-card__headline {
 }
 
 .hero-news-card__mobile-rail {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding-bottom: 0.375rem;
-  scrollbar-width: none;
-  margin-inline: calc(-1 * var(--gutter));
-  padding-inline: var(--gutter);
-  scroll-snap-type: x mandatory;
+  display: none;
 }
 
 .hero-news-card__mobile-rail::-webkit-scrollbar {

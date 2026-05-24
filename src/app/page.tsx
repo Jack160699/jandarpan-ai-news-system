@@ -4,7 +4,6 @@ import { HomepageLoadingView } from "@/components/loading";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
-import { getTenantConfig } from "@/lib/tenant/resolve";
 import { Footer } from "@/sections/Footer";
 import { HomepageEmpty } from "@/sections/homepage";
 import { HomepageLiveView } from "@/sections/homepage/HomepageLiveView";
@@ -15,10 +14,7 @@ export const metadata = buildHomeMetadata();
 export const revalidate = 60;
 
 async function HomeFeed() {
-  const [feed, tenant] = await Promise.all([
-    getCachedGeneratedHomepageFeed(),
-    getTenantConfig(),
-  ]);
+  const feed = await getCachedGeneratedHomepageFeed();
 
   const trending = buildTrendingKeywords({ limit: 12 });
   const storyCount = feed

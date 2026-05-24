@@ -18,10 +18,14 @@ export function ReaderAnalyticsTracker({
   surface = "story",
 }: ReaderAnalyticsTrackerProps) {
   const { track } = useAnalyticsCollector();
-  const startedAt = useRef(Date.now());
+  const startedAt = useRef(0);
   const maxScroll = useRef(0);
   const sentView = useRef(false);
   const sentMilestones = useRef(new Set<number>());
+
+  useEffect(() => {
+    startedAt.current = Date.now();
+  }, []);
 
   useEffect(() => {
     if (sentView.current) return;

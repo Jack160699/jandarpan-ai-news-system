@@ -3,10 +3,7 @@
  * Supabase public keys are safe in the browser; service role is server-only.
  */
 
-import {
-  isSupabaseConfigured,
-  type SupabaseEnvDiagnostics,
-} from "@/lib/supabase/env";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export {
   getPublicSupabaseEnv,

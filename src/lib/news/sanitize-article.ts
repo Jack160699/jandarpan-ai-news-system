@@ -204,7 +204,7 @@ export function sanitizeNewsArticle(
   const titleRaw = normalizeNewsEncoding(article.title);
   const title = truncate(titleRaw, MAX_TITLE) ?? "";
 
-  let article_url = safeArticleUrl(article.article_url, title, article.provider);
+  const article_url = safeArticleUrl(article.article_url, title, article.provider);
   if (article_url && article_url !== article.article_url) {
     warnings.push("article_url_repaired");
     softFixed++;
@@ -230,13 +230,13 @@ export function sanitizeNewsArticle(
     softFixed++;
   }
 
-  let image_url = safeImageUrl(article.image_url, article_url ?? undefined);
+  const image_url = safeImageUrl(article.image_url, article_url ?? undefined);
   if (!image_url && article.image_url) {
     warnings.push("image_url_stripped");
     softFixed++;
   }
 
-  let published_at = safeParsePublishedAt(article.published_at);
+  const published_at = safeParsePublishedAt(article.published_at);
   if (!article.published_at) {
     warnings.push("published_at_defaulted");
     softFixed++;

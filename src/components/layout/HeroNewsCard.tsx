@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Bookmark } from "lucide-react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
-import { DistrictNewsSlider } from "@/components/homepage/DistrictNewsSlider";
+import { DistrictNewsSlider } from "@/components/home/DistrictNewsSlider";
 import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
 import { HeroCardActions } from "@/components/layout/HeroCardActions";
 import { BreakingHeroReel } from "@/sections/homepage/BreakingHeroReel";

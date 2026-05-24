@@ -28,6 +28,12 @@ export function districtLabelFor(
   index: number,
   language: "en" | "hi" | string
 ): string {
+  if (index === 0) {
+    return language === "hi" ? DISTRICTS[0].labelHi : DISTRICTS[0].label;
+  }
+  if (index === 1) {
+    return language === "hi" ? DISTRICTS[1].labelHi : DISTRICTS[1].label;
+  }
   const fromSection = SECTION_DISTRICT[article.section];
   if (fromSection) {
     return language === "hi" ? fromSection.labelHi : fromSection.label;
