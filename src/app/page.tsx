@@ -45,7 +45,7 @@ async function HomeFeed() {
 export default function Home() {
   return (
     <PageShell variant="news">
-      <main id="main-content" className="nr-root relative z-[2]" role="main">
+      <main id="main-content" className="nr-root" role="main">
         <Suspense fallback={<HomepageLoadingView />}>
           <HomeFeed />
         </Suspense>

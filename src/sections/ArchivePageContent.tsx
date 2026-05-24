@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { EditionLineage } from "@/components/institution";
+import { ProfileSettingsPanel } from "@/components/profile/ProfileSettingsPanel";
 import { LivingArchive } from "@/sections/LivingArchive";
 import { useLanguage } from "@/providers/LanguageProvider";
 
@@ -11,18 +12,27 @@ export function ArchivePageContent() {
   return (
     <main
       data-narrative-root
-      className="home-news-flow mobile-comfort relative z-[2] pb-24 pt-8 md:pt-12"
+      className="home-news-flow mobile-comfort relative z-[2] pb-24 pt-6 md:pt-10"
     >
-      <div className="editorial-container mb-12">
+      <div className="editorial-container">
         <Link href="/" className="article-page__back tap-target">
           {t.archive.backToEdition}
         </Link>
-        <p className="archive-marker mt-8">{t.archive.marker}</p>
-        <h1 className="display-lg mt-4 max-w-[14ch]">{t.archive.title}</h1>
-        <p className="deck mt-6 max-w-2xl">{t.archive.description}</p>
-        <EditionLineage className="mt-8" />
+        <p className="archive-marker mt-6">{t.nav.profile}</p>
+        <h1 className="display-lg mt-3 max-w-[16ch]">{t.profile.title}</h1>
+        <p className="deck mt-4 max-w-2xl">{t.profile.subtitle}</p>
+        <EditionLineage className="mt-6" />
       </div>
-      <LivingArchive />
+
+      <div className="editorial-container mt-10">
+        <ProfileSettingsPanel />
+      </div>
+
+      <div className="editorial-container mt-12">
+        <h2 className="profile-settings__saved-heading">{t.nav.savedStories}</h2>
+        <p className="deck mt-3 max-w-2xl">{t.archive.description}</p>
+        <LivingArchive />
+      </div>
     </main>
   );
 }

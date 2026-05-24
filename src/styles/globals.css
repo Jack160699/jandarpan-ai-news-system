@@ -2,8 +2,10 @@
 @import "./platform/tokens.css";
 @import "./platform/base.css";
 @import "./platform/chrome.css";
+@import "./stack-layout.css";
 @import "./platform/homepage.css";
 @import "./mobile-premium.css";
+@import "./profile-settings.css";
 @import "./brand-jan-darpan.css";
 
 /* Feature surfaces (content preserved) */

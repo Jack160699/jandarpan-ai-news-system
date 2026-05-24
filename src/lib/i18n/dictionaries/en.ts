@@ -178,6 +178,17 @@ export const en: Dictionary = {
     livingArchive: "Saved stories",
     empty: "No saved stories yet",
   },
+  profile: {
+    title: "Profile",
+    subtitle: "Your preferences, alerts, and saved reading.",
+    settings: "Settings",
+    appearanceHint: "Light or dark reading mode",
+    notifications: "Notifications",
+    notificationsHint: "Breaking alerts and live desk updates",
+    listenHint: "Hands-free headline playback",
+    region: "Region",
+    regionHint: "Personalize your feed for your district",
+  },
   trust: {
     verified: "Verified",
     reviewed: "Editorially reviewed",

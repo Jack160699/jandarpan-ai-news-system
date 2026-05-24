@@ -172,6 +172,17 @@ export const mr: Dictionary = {
     livingArchive: "सेव्ह बातम्या",
     empty: "अद्याप सेव्ह बातमी नाही",
   },
+  profile: {
+    title: "प्रोफाइल",
+    subtitle: "तुमची पसंती, अलर्ट आणि सेव्ह बातम्या.",
+    settings: "सेटिंग्ज",
+    appearanceHint: "लाइट किंवा डार्क रीडिंग",
+    notifications: "सूचना",
+    notificationsHint: "ब्रेकिंग अलर्ट आणि लाइव्ह अपडेट",
+    listenHint: "हँड्स-फ्री हेडलाइन",
+    region: "प्रदेश",
+    regionHint: "तुमच्या जिल्ह्यासाठी फीड वैयक्तिक करा",
+  },
   trust: {
     verified: "सत्यापित",
     reviewed: "संपादकीय तपासणी",

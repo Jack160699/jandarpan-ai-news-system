@@ -5,15 +5,15 @@ import { BRAND } from "@/lib/brand";
 import { PRODUCTION_ROBOTS, SITE_URL, webPageJsonLd } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Saved stories",
+  title: "Profile",
   description:
-    "Your saved stories from Jan Darpan Chhattisgarh — read again anytime.",
+    "Your profile, preferences, and saved stories from Jan Darpan Chhattisgarh.",
   alternates: { canonical: "/archive" },
   robots: PRODUCTION_ROBOTS,
   openGraph: {
-    title: `Saved stories · ${BRAND.nameEn}`,
+    title: `Profile · ${BRAND.nameEn}`,
     description:
-      "Bookmarked Chhattisgarh news stories — read again anytime.",
+      "Preferences, alerts, and bookmarked Chhattisgarh news stories.",
     type: "website",
     url: `${SITE_URL}/archive`,
     locale: "hi_IN",
@@ -21,16 +21,16 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: `Saved stories · ${BRAND.nameEn}`,
+    title: `Profile · ${BRAND.nameEn}`,
     description:
-      "Bookmarked Chhattisgarh news stories — read again anytime.",
+      "Preferences, alerts, and bookmarked Chhattisgarh news stories.",
   },
 };
 
 export default function ArchivePage() {
   const jsonLd = webPageJsonLd(
-    "Saved stories",
-    "Stories you saved from Jan Darpan Chhattisgarh regional coverage.",
+    "Profile",
+    "Your preferences, alerts, and saved stories from Jan Darpan Chhattisgarh.",
     "/archive"
   );
 

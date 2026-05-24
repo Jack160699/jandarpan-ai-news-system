@@ -178,6 +178,17 @@ export const hi: Dictionary = {
     livingArchive: "सेव की गई खबरें",
     empty: "अभी कोई सेव खबर नहीं",
   },
+  profile: {
+    title: "प्रोफ़ाइल",
+    subtitle: "आपकी पसंद, अलर्ट और सेव की खबरें।",
+    settings: "सेटिंग्स",
+    appearanceHint: "लाइट या डार्क रीडिंग मोड",
+    notifications: "सूचनाएँ",
+    notificationsHint: "ब्रेकिंग अलर्ट और लाइव डेस्क अपडेट",
+    listenHint: "हैंड्स-फ्री हेडलाइन प्लेबैक",
+    region: "क्षेत्र",
+    regionHint: "अपने जिले के लिए फ़ीड को व्यक्तिगत बनाएँ",
+  },
   trust: {
     verified: "सत्यापित",
     reviewed: "संपादकीय समीक्षा",

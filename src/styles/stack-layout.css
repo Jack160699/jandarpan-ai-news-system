@@ -1,0 +1,214 @@
+/**
+ * Unified sticky stack architecture — mobile news app chrome
+ * ONE sticky container; layers are static inside; no competing top offsets.
+ */
+
+:root {
+  /* Layer heights — canonical names */
+  --stack-header-h: var(--header-height);
+  --stack-category-h: var(--nav-height);
+  --stack-trending-h: var(--trending-height);
+  --stack-live-h: var(--live-strip-height);
+  --stack-ticker-h: var(--ticker-height);
+
+  --stack-chrome-h: calc(var(--stack-header-h) + var(--stack-category-h));
+  --stack-home-extra-h: calc(
+    var(--stack-trending-h) + var(--stack-live-h) + var(--stack-ticker-h)
+  );
+  --stack-home-h: calc(var(--stack-chrome-h) + var(--stack-home-extra-h));
+
+  --z-chrome-stack: 120;
+
+  --scroll-margin: calc(var(--safe-top) + var(--stack-chrome-h) + 0.75rem);
+}
+
+.app-sticky-stack[data-stack-mode="home"] {
+  --scroll-margin: calc(var(--safe-top) + var(--stack-home-h) + 0.75rem);
+}
+
+.app-sticky-stack[data-has-ticker="false"] {
+  --stack-ticker-h: 0px;
+}
+
+/* ── Single sticky shell ── */
+.app-sticky-stack {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-chrome-stack);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  padding-top: var(--safe-top);
+  background: var(--color-paper);
+  border-bottom: 1px solid var(--color-rule);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.04);
+  isolation: isolate;
+}
+
+.app-sticky-stack__layer {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.app-sticky-stack__layer--home {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Disable nested sticky — layers stack inside one shell */
+.app-sticky-stack .main-header,
+.app-sticky-stack .category-navbar {
+  position: relative;
+  top: auto;
+  z-index: auto;
+}
+
+.app-sticky-stack .main-header {
+  flex: 0 0 var(--stack-header-h);
+  height: var(--stack-header-h);
+  min-height: var(--stack-header-h);
+  max-height: var(--stack-header-h);
+  border-bottom: none;
+}
+
+.app-sticky-stack .category-navbar {
+  border-bottom: none;
+}
+
+.app-sticky-stack .category-navbar {
+  flex: 0 0 var(--stack-category-h);
+  min-height: var(--stack-category-h);
+  max-height: var(--stack-category-h);
+}
+
+/* Stack bands — homepage layers 3–5 */
+.stack-band {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.stack-band--trending {
+  height: var(--stack-trending-h);
+  min-height: var(--stack-trending-h);
+  max-height: var(--stack-trending-h);
+}
+
+.stack-band--live {
+  height: var(--stack-live-h);
+  min-height: var(--stack-live-h);
+  max-height: var(--stack-live-h);
+  display: flex;
+  align-items: center;
+  padding-inline: var(--gutter);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-primary) 6%, var(--color-paper)) 0%,
+    var(--color-paper) 45%
+  );
+}
+
+.stack-band--ticker {
+  height: var(--stack-ticker-h);
+  min-height: var(--stack-ticker-h);
+  max-height: var(--stack-ticker-h);
+}
+
+.stack-band--trending .trending-strip,
+.stack-band--live .live-newsroom-status,
+.stack-band--ticker .breaking-ticker {
+  position: relative;
+  top: auto;
+  z-index: auto;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.stack-band--trending .trending-strip {
+  padding-block: 0;
+}
+
+.stack-band:last-child {
+  border-bottom: none;
+}
+
+/* Main feed — flows after stack in document order */
+.app-feed {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.home-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.home-page__content {
+  padding-top: var(--section-gap-md);
+}
+
+/* Hero isolation — overlays stay inside card, not chrome stack */
+.hero-news-card--premium {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+
+.hero-news-card__visual--premium {
+  isolation: isolate;
+}
+
+.hero-news-card__visual-overlay,
+.hero-news-card__play {
+  z-index: 2;
+}
+
+/* Desktop: chrome layers stick independently; homepage bands scroll in document flow */
+@media (min-width: 768px) {
+  .app-sticky-stack {
+    position: static;
+    padding-top: 0;
+    box-shadow: none;
+    border-bottom: none;
+  }
+
+  .app-sticky-stack .main-header {
+    position: sticky;
+    top: var(--safe-top);
+    z-index: var(--z-header);
+    box-shadow: 0 1px 0 rgb(0 0 0 / 0.04);
+  }
+
+  .app-sticky-stack .category-navbar {
+    position: sticky;
+    top: calc(var(--safe-top) + var(--stack-header-h));
+    z-index: var(--z-nav);
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .app-sticky-stack[data-stack-mode="home"] {
+    --scroll-margin: calc(var(--safe-top) + var(--stack-chrome-h) + 0.75rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --stack-header-h: 4.5rem;
+    --stack-chrome-h: calc(var(--stack-header-h) + var(--stack-category-h));
+  }
+}

@@ -4,9 +4,8 @@
 
 /* Breaking ticker */
 .breaking-ticker {
-  position: sticky;
-  top: var(--sticky-ticker);
-  z-index: var(--z-ticker);
+  position: relative;
+  z-index: auto;
   display: flex;
   align-items: stretch;
   min-height: var(--ticker-height);

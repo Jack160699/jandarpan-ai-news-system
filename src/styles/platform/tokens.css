@@ -63,11 +63,7 @@
 
   --sticky-header: var(--safe-top);
   --sticky-nav: calc(var(--safe-top) + var(--header-height));
-  --sticky-ticker: calc(var(--sticky-nav) + var(--nav-height));
-  --sticky-home-trending: calc(var(--sticky-nav) + var(--nav-height));
-  --sticky-home-live: calc(var(--sticky-home-trending) + var(--trending-height));
-  --sticky-home-ticker: calc(var(--sticky-home-live) + var(--live-strip-height));
-  --scroll-margin: calc(var(--sticky-home-ticker) + var(--ticker-height) + 0.25rem);
+  --scroll-margin: calc(var(--safe-top) + var(--stack-chrome-h) + 0.75rem);
 
   --z-header: 100;
   --z-nav: 90;
@@ -123,7 +119,6 @@
     --gutter: var(--gutter-desktop);
     --header-height: 4.5rem;
     --sticky-nav: calc(var(--safe-top) + var(--header-height));
-    --sticky-ticker: calc(var(--sticky-nav) + var(--nav-height));
     --section-gap-lg: 1.5rem;
     --text-hero: var(--text-hero-desktop);
   }

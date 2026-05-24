@@ -182,6 +182,17 @@ export type Dictionary = {
     livingArchive: string;
     empty: string;
   };
+  profile: {
+    title: string;
+    subtitle: string;
+    settings: string;
+    appearanceHint: string;
+    notifications: string;
+    notificationsHint: string;
+    listenHint: string;
+    region: string;
+    regionHint: string;
+  };
   trust: {
     verified: string;
     reviewed: string;

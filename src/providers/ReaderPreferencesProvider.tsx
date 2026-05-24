@@ -34,6 +34,7 @@ type ReaderPreferencesContextValue = {
   setEdition: (edition: EditionChoice) => void;
   setFontScale: (scale: FontScale) => void;
   cycleFontScale: () => void;
+  setHomeDistrict: (slug: string | null) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
 };
@@ -136,6 +137,11 @@ export function ReaderPreferencesProvider({
     update({ fontScale: next });
   }, [update, prefs.fontScale]);
 
+  const setHomeDistrict = useCallback(
+    (homeDistrict: string | null) => update({ homeDistrict }),
+    [update]
+  );
+
   const value = useMemo(
     () => ({
       prefs,
@@ -146,6 +152,7 @@ export function ReaderPreferencesProvider({
       setEdition,
       setFontScale,
       cycleFontScale,
+      setHomeDistrict,
       searchOpen,
       setSearchOpen,
     }),
@@ -158,6 +165,7 @@ export function ReaderPreferencesProvider({
       setEdition,
       setFontScale,
       cycleFontScale,
+      setHomeDistrict,
       searchOpen,
     ]
   );

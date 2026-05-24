@@ -4,16 +4,14 @@ import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import { AdSlot } from "@/components/monetization/AdSlot";
 import {
-  BreakingTicker,
   HeroNewsCard,
   NewsGrid,
   ShortsSection,
 } from "@/components/layout";
+import { HomepageStackBands } from "@/components/layout/HomepageStackBands";
 import { LazyHomeSection } from "@/components/homepage/LazyHomeSection";
-import { TrendingStrip } from "@/components/homepage/TrendingStrip";
 import { QuickActionButtons } from "@/components/homepage/QuickActionButtons";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
-import { LiveNewsroomStatus } from "@/components/live-newsroom/LiveNewsroomStatus";
 import { NewUpdatesBanner } from "@/components/live-newsroom/NewUpdatesBanner";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { LiveNewsroomProvider, useLiveNewsroom } from "@/providers/LiveNewsroomProvider";
@@ -21,7 +19,6 @@ import { useLanguage } from "@/providers/LanguageProvider";
 import {
   HyperlocalSkeleton,
   LiveWireSkeleton,
-  TrendingShortsSkeleton,
 } from "@/sections/homepage/HomepageSectionSkeletons";
 import { LiveWire } from "@/sections/homepage/LiveWire";
 
@@ -40,12 +37,16 @@ type HomepageLiveViewProps = {
 export function HomepageLiveView({ feed }: HomepageLiveViewProps) {
   return (
     <LiveNewsroomProvider initialFeed={feed}>
-      <HomepageLiveContent />
+      <HomepageLiveContent trendingTopics={feed.footerIntelligence.trendingSearches} />
     </LiveNewsroomProvider>
   );
 }
 
-function HomepageLiveContent() {
+type HomepageLiveContentProps = {
+  trendingTopics: string[];
+};
+
+function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
   const { feed, freshIds } = useLiveNewsroom();
   const { t } = useLanguage();
 
@@ -56,19 +57,10 @@ function HomepageLiveContent() {
   ].filter((a, i, arr) => arr.findIndex((x) => x.id === a.id) === i);
 
   const heroLead = feed.breakingTicker[0] ?? lead;
-  const hasTicker = feed.breakingTicker.length > 0;
 
   return (
     <div className="home-page">
-      <TrendingStrip topics={feed.footerIntelligence.trendingSearches} />
-
-      <div className="home-live-strip home-live-strip--premium">
-        <LiveNewsroomStatus />
-      </div>
-
-      {hasTicker ? (
-        <BreakingTicker items={feed.breakingTicker} freshIds={freshIds} />
-      ) : null}
+      <HomepageStackBands trendingTopics={trendingTopics} />
 
       <NewUpdatesBanner />
 

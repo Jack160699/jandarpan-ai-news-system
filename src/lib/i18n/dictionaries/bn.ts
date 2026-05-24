@@ -172,6 +172,17 @@ export const bn: Dictionary = {
     livingArchive: "সেভ করা খবর",
     empty: "এখনও সেভ করা খবর নেই",
   },
+  profile: {
+    title: "প্রোফাইল",
+    subtitle: "আপনার পছন্দ, অ্যালার্ট ও সেভ করা খবর।",
+    settings: "সেটিংস",
+    appearanceHint: "লাইট বা ডার্ক রিডিং মোড",
+    notifications: "বিজ্ঞপ্তি",
+    notificationsHint: "ব্রেকিং অ্যালার্ট ও লাইভ আপডেট",
+    listenHint: "হ্যান্ডস-ফ্রি হেডলাইন",
+    region: "অঞ্চল",
+    regionHint: "আপনার জেলার জন্য ফিড ব্যক্তিগত করুন",
+  },
   trust: {
     verified: "যাচাইকৃত",
     reviewed: "সম্পাদকীয় পর্যালোচনা",

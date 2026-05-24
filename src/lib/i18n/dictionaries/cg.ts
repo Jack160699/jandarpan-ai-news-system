@@ -172,6 +172,17 @@ export const cg: Dictionary = {
     livingArchive: "सेव खबर",
     empty: "अभी कोई सेव खबर नइ",
   },
+  profile: {
+    title: "प्रोफ़ाइल",
+    subtitle: "अपन पसंद, अलर्ट अउ सेव खबर।",
+    settings: "सेटिंग",
+    appearanceHint: "लाइट अथवा डार्क रीडिंग",
+    notifications: "सूचना",
+    notificationsHint: "ब्रेकिंग अलर्ट अउ लाइव अपडेट",
+    listenHint: "हैंड्स-फ्री हेडलाइन",
+    region: "क्षेत्र",
+    regionHint: "अपन जिला ले फीड व्यक्तिगत करौ",
+  },
   trust: {
     verified: "सत्यापित",
     reviewed: "संपादकीय जाँच",
