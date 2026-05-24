@@ -127,7 +127,7 @@
   --ease-snappy: cubic-bezier(0.33, 1, 0.68, 1);
   --duration-fast: 0.16s;
   --duration-normal: 0.24s;
-  --ticker-duration: 72s;
+  --ticker-duration: 120s;
 }
 
 @media (min-width: 768px) {

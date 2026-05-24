@@ -241,8 +241,8 @@ html[data-theme="dark"] .trending-strip__pill {
 }
 
 .breaking-ticker--marquee .breaking-ticker__item {
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-weight: 500;
+  letter-spacing: 0.012em;
 }
 
 /* ── Hero premium ── */

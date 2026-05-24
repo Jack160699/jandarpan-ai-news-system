@@ -1,16 +1,11 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
+import { useTickerMarqueeDuration } from "@/hooks/useTickerMarqueeDuration";
 import { useLanguage } from "@/providers/LanguageProvider";
 import type { HomeArticle } from "@/lib/homepage/types";
-
-/** Seconds for one full marquee loop — scales with headline count for readability */
-function tickerDurationSeconds(count: number): number {
-  if (count <= 0) return 0;
-  return Math.min(120, Math.max(56, count * 14));
-}
 
 type BreakingTickerProps = {
   items: HomeArticle[];
@@ -20,25 +15,42 @@ type BreakingTickerProps = {
 export function BreakingTicker({ items, freshIds }: BreakingTickerProps) {
   const [paused, setPaused] = useState(false);
   const { t } = useLanguage();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
-  const duration = useMemo(() => tickerDurationSeconds(items.length), [items.length]);
+  const itemsKey = useMemo(
+    () => items.map((item) => `${item.id}:${item.headline}`).join("|"),
+    [items]
+  );
+
   const marqueeItems = useMemo(
     () => (items.length ? [...items, ...items] : []),
     [items]
   );
 
+  const duration = useTickerMarqueeDuration(trackRef, viewportRef, {
+    itemCount: items.length,
+    itemsKey,
+  });
+
   const hasHeadlines = items.length > 0;
+
+  const pause = () => setPaused(true);
+  const resume = () => setPaused(false);
 
   return (
     <section
       className={`breaking-ticker breaking-ticker--premium breaking-ticker--marquee pl-scroll-target${paused ? " breaking-ticker--paused" : ""}`}
       aria-label={t.home.tickerAria}
-      onPointerEnter={() => setPaused(true)}
-      onPointerLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
+      onPointerEnter={pause}
+      onPointerLeave={resume}
+      onPointerDown={pause}
+      onPointerUp={resume}
+      onPointerCancel={resume}
+      onFocus={pause}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-          setPaused(false);
+          resume();
         }
       }}
     >
@@ -49,9 +61,10 @@ export function BreakingTicker({ items, freshIds }: BreakingTickerProps) {
 
       <span className="breaking-ticker__rail-divider" aria-hidden />
 
-      <div className="breaking-ticker__viewport">
+      <div ref={viewportRef} className="breaking-ticker__viewport">
         {hasHeadlines ? (
           <div
+            ref={trackRef}
             className="breaking-ticker__track"
             style={
               {
