@@ -6,6 +6,7 @@ export const JAN_DARPAN_BRAND_ASSETS = {
   logo: "/brand/jan-darpan-chhattisgarh-logo.png",
   mark: "/brand/jan-darpan-mark.png",
   og: "/brand/jan-darpan-chhattisgarh-og.png",
+  paperTexture: "/backgrounds/newspaper-light-texture.png",
 } as const;
 
 /** Banner intrinsic ratio for next/image (~5:1) */

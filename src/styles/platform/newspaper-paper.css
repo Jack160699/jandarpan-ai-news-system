@@ -1,32 +1,48 @@
 /**
- * Light-mode newspaper paper texture — editorial printed feel
- * Asset: /public/backgrounds/newspaper-light-texture.png
- * Dark mode: unchanged (solid AMOLED surfaces)
+ * Light-mode newspaper paper texture
+ * Asset (required): /public/backgrounds/newspaper-light-texture.png
+ * Dark mode: solid surfaces only — no texture layer
  */
 
 :root {
+  --paper-texture-path: /backgrounds/newspaper-light-texture.png;
   --paper-texture-url: url("/backgrounds/newspaper-light-texture.png");
   --paper-texture-tint: #f5f1e8;
-  --paper-texture-wash: rgb(245 241 232 / 0.9);
-  --paper-texture-wash-strong: rgb(245 241 232 / 0.94);
+  --paper-texture-wash: rgb(245 241 232 / 0.62);
+  --paper-texture-wash-top: rgb(245 241 232 / 0.72);
   --paper-texture-size: 720px auto;
+  --paper-texture-layer-opacity: 1;
 }
 
-/* ── Document + shell (texture shows through transparent layers) ── */
-html:not([data-theme="dark"]) body {
+/* Fixed texture plane — not overridden by later `background:` shorthands on body */
+html:not([data-theme="dark"])::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
   background-color: var(--paper-texture-tint);
   background-image:
     linear-gradient(
       180deg,
-      var(--paper-texture-wash-strong) 0%,
-      var(--paper-texture-wash) 42%,
-      rgb(245 241 232 / 0.88) 100%
+      var(--paper-texture-wash-top) 0%,
+      var(--paper-texture-wash) 45%,
+      rgb(245 241 232 / 0.55) 100%
     ),
     var(--paper-texture-url);
   background-size: 100% 100%, var(--paper-texture-size);
   background-repeat: no-repeat, repeat;
   background-position: center top, center top;
-  background-attachment: scroll, scroll;
+  opacity: var(--paper-texture-layer-opacity);
+  transform: translateZ(0);
+}
+
+/* Content stack above texture */
+html:not([data-theme="dark"]) body {
+  position: relative;
+  z-index: 1;
+  background-color: transparent;
+  background-image: none;
 }
 
 html:not([data-theme="dark"]) .app-shell,
@@ -35,11 +51,17 @@ html:not([data-theme="dark"]) .app-feed,
 html:not([data-theme="dark"]) .home-page,
 html:not([data-theme="dark"]) .home-page__content,
 html:not([data-theme="dark"]) .home-body,
-html:not([data-theme="dark"]) .route-transition__viewport {
+html:not([data-theme="dark"]) .route-transition__viewport,
+html:not([data-theme="dark"]) .route-transition-host {
   background: transparent;
 }
 
-/* ── Chrome — frosted paper (readable over texture) ── */
+html:not([data-theme="dark"]) .app-sticky-stack {
+  background: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  border-bottom-color: var(--color-rule-strong);
+}
+
+/* ── Chrome — frosted paper ── */
 html:not([data-theme="dark"]) .main-header {
   background: color-mix(in srgb, var(--color-surface) 92%, var(--paper-texture-tint));
   border-bottom-color: var(--color-rule-strong);
@@ -64,7 +86,7 @@ html:not([data-theme="dark"]) .stack-band {
 
 html:not([data-theme="dark"]) .trending-strip,
 html:not([data-theme="dark"]) .breaking-ticker {
-  background: color-mix(in srgb, var(--color-ticker-bg) 88%, transparent);
+  background: color-mix(in srgb, var(--color-ticker-bg) 78%, transparent) !important;
 }
 
 html:not([data-theme="dark"]) .category-navbar__fade--start {
@@ -88,7 +110,7 @@ html:not([data-theme="dark"]) .bottom-mobile-nav {
   border-top-color: var(--color-rule-strong);
 }
 
-/* ── Elevated cards — solid paper for contrast ── */
+/* ── Elevated cards — solid for readability ── */
 html:not([data-theme="dark"]) .news-card,
 html:not([data-theme="dark"]) .hero-news-card__article,
 html:not([data-theme="dark"]) .hero-news-card__article--premium {
@@ -125,7 +147,12 @@ html:not([data-theme="dark"]) .live-card__link {
   border-color: var(--color-rule);
 }
 
-/* ── Dark mode — no texture ── */
+/* ── Dark mode — remove texture layer ── */
+html[data-theme="dark"]::before {
+  content: none;
+  display: none;
+}
+
 html[data-theme="dark"] body {
   background-color: var(--color-paper);
   background-image: none;
@@ -136,13 +163,19 @@ html[data-theme="dark"] .app-shell {
 }
 
 @media (max-width: 767px) {
-  html:not([data-theme="dark"]) body {
+  html:not([data-theme="dark"])::before {
     background-size: 100% 100%, 640px auto;
   }
 }
 
+/* Debug: add class `paper-texture-debug` on <html> to verify asset loads */
+html.paper-texture-debug:not([data-theme="dark"])::before {
+  opacity: 0.45;
+  z-index: 999998;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  html:not([data-theme="dark"]) body {
-    background-attachment: scroll, scroll;
+  html:not([data-theme="dark"])::before {
+    position: absolute;
   }
 }
