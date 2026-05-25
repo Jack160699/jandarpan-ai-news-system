@@ -5,7 +5,6 @@
 @import "./platform/base.css";
 @import "./platform/chrome.css";
 @import "./mobile-nav-drawer.css";
-@import "./super-menu.css";
 @import "./stack-layout.css";
 @import "./platform/homepage.css";
 @import "./platform/ticker-strips.css";
@@ -13,6 +12,7 @@
 @import "./platform/typography-readability.css";
 @import "./profile-settings.css";
 @import "./brand-jan-darpan.css";
+@import "./super-menu.css";
 
 /* Feature surfaces (content preserved) */
 @import "./design-system.css";

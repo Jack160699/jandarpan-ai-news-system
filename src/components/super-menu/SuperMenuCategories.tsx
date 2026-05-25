@@ -24,13 +24,14 @@ export function SuperMenuCategories({ onNavigate }: SuperMenuCategoriesProps) {
     <SuperMenuBlock
       id="sm-categories"
       title={pickBilingualLabel(language, "Categories", "श्रेणियाँ")}
+      className="sm-block--tight"
     >
-      <ul className="sm-cat-minimal" role="list">
+      <ul className="sm-cat-grid" role="list">
         {MENU_CATEGORIES.map((item) => (
           <li key={item.id}>
             <Link
               href={item.href}
-              className={`sm-cat-minimal__item tap-target${isActive(item.href) ? " is-active" : ""}`}
+              className={`sm-cat-grid__item tap-target${isActive(item.href) ? " is-active" : ""}`}
               aria-current={isActive(item.href) ? "page" : undefined}
               onClick={() => onNavigate(item.href)}
             >

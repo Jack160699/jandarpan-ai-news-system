@@ -65,27 +65,30 @@ export function SuperMenuCgRates({ menuOpen }: SuperMenuCgRatesProps) {
   );
 
   return (
-    <SuperMenuBlock id="sm-cg-rates" title={title}>
+    <SuperMenuBlock id="sm-cg-rates" title={title} className="sm-block--tight">
       {!snap ? (
-        <div className="sm-rates sm-rates--loading" aria-hidden>
+        <ul className="sm-rate-lines sm-rate-lines--loading" aria-hidden>
           {[1, 2, 3].map((i) => (
-            <div key={i} className="sm-rates__row sm-rates__row--sk" />
+            <li key={i} className="sm-rate-line sm-rate-line--sk" />
           ))}
-        </div>
+        </ul>
       ) : (
         <>
-          <p className="sm-rates__meta">{formatUpdated(snap.updatedAt, language)}</p>
-          <ul className="sm-rates" role="list">
+          <p className="sm-rate-lines__meta">
+            {formatUpdated(snap.updatedAt, language)}
+          </p>
+          <ul className="sm-rate-lines" role="list">
             {snap.rates.map((r) => (
-              <li key={r.id} className="sm-rates__row" role="listitem">
-                <span className="sm-rates__label">
+              <li key={r.id} className="sm-rate-line" role="listitem">
+                <span className="sm-rate-line__label">
                   {pickBilingualLabel(language, r.labelEn, r.labelHi)}
                 </span>
-                <span className="sm-rates__value">
+                <span className="sm-rate-line__dots" aria-hidden />
+                <span className="sm-rate-line__value">
                   {r.value}
                   <span
-                    className={`sm-rates__chg sm-rates__chg--${r.direction}`}
-                    aria-label={`${r.changePct >= 0 ? "+" : ""}${r.changePct.toFixed(2)} percent`}
+                    className={`sm-rate-line__chg sm-rate-line__chg--${r.direction}`}
+                    aria-hidden
                   >
                     {arrow(r.direction)}
                   </span>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { MENU_SETTINGS_LINKS, labelForLink } from "@/lib/super-menu/config";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { useLanguage } from "@/providers/LanguageProvider";
@@ -17,16 +18,18 @@ export function SuperMenuSettings({ onNavigate }: SuperMenuSettingsProps) {
     <SuperMenuBlock
       id="sm-settings"
       title={pickBilingualLabel(language, "Settings", "सेटिंग्स")}
+      className="sm-block--tight sm-block--last"
     >
-      <ul className="sm-simple-list" role="list">
+      <ul className="sm-settings-links" role="list">
         {MENU_SETTINGS_LINKS.map((item) => (
           <li key={item.id}>
             <Link
               href={item.href}
-              className="sm-simple-link tap-target"
+              className="sm-settings-links__item tap-target"
               onClick={() => onNavigate(item.href)}
             >
-              {labelForLink(item, language)}
+              <span>{labelForLink(item, language)}</span>
+              <ChevronRight size={14} strokeWidth={2} aria-hidden />
             </Link>
           </li>
         ))}

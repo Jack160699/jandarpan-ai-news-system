@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock3, MapPin } from "lucide-react";
 import { useMenuBriefing } from "@/hooks/useMenuBriefing";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { useLanguage } from "@/providers/LanguageProvider";
@@ -16,20 +15,12 @@ type SuperMenuTodayLiveProps = {
 
 function formatIstTime(language: string) {
   const locale = language === "en" ? "en-IN" : "hi-IN";
-  const now = new Date();
-  const time = new Intl.DateTimeFormat(locale, {
+  return new Intl.DateTimeFormat(locale, {
     timeZone: IST,
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
-  }).format(now);
-  const day = new Intl.DateTimeFormat(locale, {
-    timeZone: IST,
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(now);
-  return { time, day };
+  }).format(new Date());
 }
 
 export function SuperMenuTodayLive({ menuOpen }: SuperMenuTodayLiveProps) {
@@ -58,10 +49,7 @@ export function SuperMenuTodayLive({ menuOpen }: SuperMenuTodayLiveProps) {
     return () => window.clearInterval(id);
   }, [open]);
 
-  const { time, day } = useMemo(
-    () => formatIstTime(language),
-    [language, tick]
-  );
+  const time = useMemo(() => formatIstTime(language), [language, tick]);
 
   const breaking =
     briefing.breakingHeadline?.trim() ||
@@ -73,27 +61,18 @@ export function SuperMenuTodayLive({ menuOpen }: SuperMenuTodayLiveProps) {
     <SuperMenuBlock
       id="sm-today-live"
       title={t.footer.todayLive.title}
+      className="sm-block--tight"
     >
-      <div className="sm-today">
-        <div className="sm-today__row">
-          <span className="sm-today__live">
-            <span className="sm-today__dot" aria-hidden />
+      <div className="sm-today-v2">
+        <div className="sm-today-v2__meta">
+          <span className="sm-today-v2__live">
+            <span className="sm-today-v2__dot" aria-hidden />
             {t.footer.todayLive.liveBadge}
           </span>
-          <span className="sm-today__time">
-            <Clock3 size={14} strokeWidth={2} aria-hidden />
-            {time}
-          </span>
+          <time className="sm-today-v2__time">{time}</time>
         </div>
-        <p className="sm-today__day">{day}</p>
-        <p className="sm-today__headline">{breaking}</p>
-        <p className="sm-today__alert">
-          <MapPin size={14} strokeWidth={2} aria-hidden />
-          <span>{local}</span>
-        </p>
-        <p className="sm-today__tz">
-          {pickBilingualLabel(language, "India Standard Time", "भारतीय मानक समय")}
-        </p>
+        <p className="sm-today-v2__headline">{breaking}</p>
+        <p className="sm-today-v2__alert">{local}</p>
       </div>
     </SuperMenuBlock>
   );

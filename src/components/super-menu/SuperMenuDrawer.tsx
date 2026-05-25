@@ -19,7 +19,7 @@ import { SuperMenuSettings } from "./SuperMenuSettings";
 const DRAWER_MS = 280;
 const SWIPE_CLOSE_PX = 72;
 
-/** Minimal regional menu — utility-first for CG readers */
+/** Minimal regional menu — compact fintech-style drawer */
 export function SuperMenuDrawer() {
   const { menuOpen, closeMenu, startNavigation } = useNavigation();
   const { language } = useLanguage();
@@ -97,24 +97,35 @@ export function SuperMenuDrawer() {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <header className="super-menu__head">
-          <div className="super-menu__brand">
-            <TenantLogo variant="mark" showText={false} className="super-menu__logo" />
-            <p id="super-menu-title" className="super-menu__title">
-              {brandName}
-            </p>
-          </div>
+        <header className="super-menu__head super-menu__head--brand">
           <button
             type="button"
-            className="super-menu__close tap-target"
+            className="super-menu__close super-menu__close--float tap-target"
             aria-label={pickBilingualLabel(safeLang, "Close", "बंद")}
             onClick={() => {
               triggerHaptic("selection");
               closeMenu();
             }}
           >
-            <X size={20} strokeWidth={2} aria-hidden />
+            <X size={17} strokeWidth={2.25} aria-hidden />
           </button>
+          <div className="super-menu__head-center">
+            <TenantLogo
+              variant="banner"
+              showText={false}
+              className="super-menu__logo-hero"
+            />
+            <p className="super-menu__subtitle">
+              {pickBilingualLabel(
+                safeLang,
+                "AI Regional Newsroom",
+                "AI क्षेत्रीय न्यूज़रूम"
+              )}
+            </p>
+            <span id="super-menu-title" className="sr-only">
+              {brandName}
+            </span>
+          </div>
         </header>
 
         <div className="super-menu__scroll">
