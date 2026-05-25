@@ -1,0 +1,129 @@
+/* Modular newsroom platform — hub pages + shimmer */
+
+@keyframes nr-shimmer {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.nr-shimmer {
+  animation: nr-shimmer 1.2s ease-in-out infinite;
+}
+
+.nr-topic-hub__kicker,
+.nr-district-hub__kicker,
+.nr-global-page__kicker {
+  margin: 0;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.nr-topic-hub__title,
+.nr-district-hub__title,
+.nr-global-page__title {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.35rem, 4.5vw, 1.75rem);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.nr-topic-hub__desc,
+.nr-district-hub__meta,
+.nr-global-page__meta {
+  margin: 0.45rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.nr-topic-hub__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.nr-topic-hub__chip,
+.nr-district-hub__section-chip {
+  padding: 0.32rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--color-rule) 45%, transparent);
+  background: color-mix(in srgb, var(--color-paper) 50%, transparent);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--color-text-secondary);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.nr-topic-hub__chip:active,
+.nr-district-hub__section-chip:active {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-rule));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.nr-district-hub__sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.nr-district-hub__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.nr-global-page__tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin: 0.75rem 0 1rem;
+  padding: 0.25rem;
+  border-radius: 1.125rem;
+  border: 1px solid color-mix(in srgb, var(--color-rule) 40%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 80%, #0a0808);
+}
+
+.nr-global-page__tab {
+  flex: 1;
+  text-align: center;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--color-text-muted);
+  transition: background 0.2s ease;
+}
+
+.nr-global-page__tab.is-active {
+  background: linear-gradient(180deg, #ff0000, #b30000);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(179, 0, 0, 0.35);
+}
+
+.nr-global-page__feed {
+  border-radius: 1.75rem;
+  border: 1px solid color-mix(in srgb, var(--color-rule) 38%, transparent);
+  background: color-mix(in srgb, var(--color-paper) 40%, transparent);
+  overflow: hidden;
+}
+
+.anr-h2 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+}

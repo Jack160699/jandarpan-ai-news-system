@@ -30,7 +30,7 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "jobs",
     slug: "jobs",
-    path: "/category/jobs",
+    path: "/topics/jobs",
     titleEn: "Jobs & Careers",
     titleHi: "नौकरी और करियर",
     descriptionEn:
@@ -46,7 +46,7 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "yojana",
     slug: "sarkari-yojana",
-    path: "/search?q=sarkari+yojana",
+    path: "/topics/yojana",
     titleEn: "Sarkari Yojana",
     titleHi: "सरकारी योजना",
     descriptionEn: "Schemes, subsidies, and welfare updates for Chhattisgarh residents.",
@@ -73,7 +73,7 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "stocks",
     slug: "stock-market",
-    path: "/search?q=stock+market",
+    path: "/topics/markets",
     titleEn: "Markets & Business",
     titleHi: "बाजार और व्यापार",
     descriptionEn: "Nifty, Sensex, and Indian stock movers explained for readers.",
@@ -87,7 +87,7 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "ai-news",
     slug: "ai-news",
-    path: "/search?q=artificial+intelligence",
+    path: "/topics/technology",
     titleEn: "Technology",
     titleHi: "टेक्नोलॉजी",
     descriptionEn: "Artificial intelligence, startups, and tech policy from India and CG.",
@@ -138,7 +138,7 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "education",
     slug: "education",
-    path: "/category/education",
+    path: "/topics/education",
     titleEn: "Education",
     titleHi: "शिक्षा",
     descriptionEn: "Board exams, university, scholarships, and school news.",
@@ -151,7 +151,7 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "districts",
     slug: "district-news",
-    path: "/category/chhattisgarh",
+    path: "/topics/district-news",
     titleEn: "District News",
     titleHi: "जिला समाचार",
     descriptionEn: "Hyperlocal coverage from every major CG district bureau.",
@@ -201,7 +201,7 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "fact-check",
     slug: "fact-check",
-    path: "/fact-check-policy",
+    path: "/topics/fact-check",
     titleEn: "Fact Check",
     titleHi: "फैक्ट चेक",
     descriptionEn: "Verified reporting standards and misinformation debunks.",
@@ -295,7 +295,7 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "cricket",
     slug: "ipl-cricket",
-    path: "/search?q=cricket",
+    path: "/topics/sports",
     titleEn: "Sports & Cricket",
     titleHi: "खेल और क्रिकेट",
     descriptionEn: "Cricket scores, IPL, and Team India updates.",

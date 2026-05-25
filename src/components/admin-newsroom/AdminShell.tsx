@@ -7,6 +7,10 @@ import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 const NAV = [
   { href: "/admin/editorial", label: "Overview" },
   { href: "/admin/stories", label: "Stories" },
+  { href: "/admin/articles", label: "Articles" },
+  { href: "/admin/districts", label: "Districts" },
+  { href: "/admin/topics", label: "Topics" },
+  { href: "/admin/sources", label: "Sources" },
   { href: "/admin/live-wire", label: "Live wire" },
   { href: "/admin/images", label: "Images" },
   { href: "/admin/analytics", label: "Analytics" },
