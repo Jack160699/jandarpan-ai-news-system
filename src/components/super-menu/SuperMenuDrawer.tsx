@@ -13,7 +13,7 @@ import { TenantLogo } from "@/components/tenant/TenantLogo";
 import { SuperMenuProfile } from "./SuperMenuProfile";
 import { SuperMenuTodayLive } from "./SuperMenuTodayLive";
 import { SuperMenuCgRates } from "./SuperMenuCgRates";
-import { SuperMenuCategories } from "./SuperMenuCategories";
+import { SuperMenuIplScores } from "./SuperMenuIplScores";
 import { SuperMenuSettings } from "./SuperMenuSettings";
 
 const DRAWER_MS = 280;
@@ -132,7 +132,7 @@ export function SuperMenuDrawer() {
           <SuperMenuProfile onNavigate={onNavigate} />
           <SuperMenuTodayLive menuOpen={menuOpen} />
           <SuperMenuCgRates menuOpen={menuOpen} />
-          <SuperMenuCategories onNavigate={onNavigate} />
+          <SuperMenuIplScores menuOpen={menuOpen} />
           <SuperMenuSettings onNavigate={onNavigate} />
         </div>
       </aside>
