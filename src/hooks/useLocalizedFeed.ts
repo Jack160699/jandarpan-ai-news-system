@@ -7,6 +7,7 @@ import {
   ensureHomepageFeed,
   hasValidHomeLead,
   homeDebug,
+  normalizeHomepageFeed,
 } from "@/lib/homepage/feed-safety";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { useLanguage } from "@/providers/LanguageProvider";
@@ -18,8 +19,8 @@ import { useLanguage } from "@/providers/LanguageProvider";
 export function useLocalizedFeed(
   feed: GeneratedHomepageFeed | null | undefined
 ): GeneratedHomepageFeed | null {
-  const { language, ready, contentLocked } = useLanguage();
-  const safeLang = normalizeAppLanguage(language);
+  const { language, ready, contentLocked, mounted: langMounted } = useLanguage();
+  const safeLang = normalizeAppLanguage(language) || "en";
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -28,20 +29,22 @@ export function useLocalizedFeed(
   }, [safeLang, ready]);
 
   return useMemo(() => {
-    if (!feed) return null;
+    const base = normalizeHomepageFeed(feed);
+    if (!base) return null;
 
-    if (!mounted || !ready || contentLocked) {
-      homeDebug("useLocalizedFeed passthrough (pre-hydration or gate)", {
+    if (!mounted || !langMounted || !ready || contentLocked) {
+      homeDebug("useLocalizedFeed passthrough", {
         mounted,
+        langMounted,
         ready,
         contentLocked,
       });
-      return feed;
+      return base;
     }
 
     try {
-      const localized = localizeGeneratedFeed(feed, safeLang);
-      const result = ensureHomepageFeed(feed, localized);
+      const localized = localizeGeneratedFeed(base, safeLang);
+      const result = ensureHomepageFeed(base, localized);
       homeDebug("useLocalizedFeed applied", {
         language: safeLang,
         articles: result.trending.length + result.liveWire.length,
@@ -50,7 +53,7 @@ export function useLocalizedFeed(
       return result;
     } catch (err) {
       console.error("[useLocalizedFeed]", err);
-      return feed;
+      return base;
     }
-  }, [feed, safeLang, ready, mounted, contentLocked]);
+  }, [feed, safeLang, ready, mounted, langMounted, contentLocked]);
 }

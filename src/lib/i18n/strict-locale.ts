@@ -50,38 +50,47 @@ export function localizeGeneratedFeed(
   feed: GeneratedHomepageFeed,
   selectedLanguage: NewsroomLanguage
 ): GeneratedHomepageFeed {
-  const breakingTicker = filterHomeArticles(feed.breakingTicker);
-  const liveWire = filterHomeArticles(feed.liveWire);
-  const regionalHighlights = filterHomeArticles(feed.regionalHighlights);
-  const trending = filterHomeArticles(feed.trending);
-  const shorts = filterHomeArticles(feed.shorts);
+  const picks = feed.editorsPicks;
+  const baseLead = picks?.lead;
+  if (!baseLead?.headline?.trim()) {
+    homeDebug("localizeGeneratedFeed: missing lead — skip", {
+      language: selectedLanguage,
+    });
+    return feed;
+  }
+
+  const breakingTicker = filterHomeArticles(feed.breakingTicker ?? []);
+  const liveWire = filterHomeArticles(feed.liveWire ?? []);
+  const regionalHighlights = filterHomeArticles(feed.regionalHighlights ?? []);
+  const trending = filterHomeArticles(feed.trending ?? []);
+  const shorts = filterHomeArticles(feed.shorts ?? []);
 
   const leadCandidates = [
-    feed.editorsPicks.lead.localeMatch !== false ? feed.editorsPicks.lead : null,
+    baseLead.localeMatch !== false ? baseLead : null,
     breakingTicker[0],
     liveWire[0],
     trending[0],
     regionalHighlights[0],
-    feed.editorsPicks.lead,
+    baseLead,
   ].filter((a): a is HomeArticle => Boolean(a?.headline?.trim()));
 
-  const lead = leadCandidates[0] ?? feed.editorsPicks.lead;
+  const lead = leadCandidates[0] ?? baseLead;
 
-  const supporting = filterHomeArticles(feed.editorsPicks.supporting);
+  const supporting = filterHomeArticles(picks?.supporting ?? []);
 
   const editorsPicks = {
     lead,
     supporting: supporting.filter((a) => a.id !== lead.id).slice(0, 4),
   };
 
-  const hyperlocalFeeds = feed.hyperlocalFeeds.map((f) => ({
+  const hyperlocalFeeds = (feed.hyperlocalFeeds ?? []).map((f) => ({
     ...f,
     districtName:
       selectedLanguage === "en" ? f.districtName : f.districtNameHi,
     topHeadline: f.topHeadline,
   }));
 
-  const localBreakingAlerts = feed.localBreakingAlerts.filter((alert) => {
+  const localBreakingAlerts = (feed.localBreakingAlerts ?? []).filter((alert) => {
     const match = breakingTicker.some((a) => a.slug === alert.slug);
     return match || alert.headline.length > 0;
   });

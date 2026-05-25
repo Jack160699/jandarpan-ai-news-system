@@ -1,4 +1,45 @@
-import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
+import type {
+  GeneratedHomepageFeed,
+  HomeArticle,
+  EditorsPicksBlock,
+} from "@/lib/homepage/types";
+
+/** Guarantee arrays + editorsPicks exist — prevents post-hydration crashes */
+export function normalizeHomepageFeed(
+  feed: GeneratedHomepageFeed | null | undefined
+): GeneratedHomepageFeed | null {
+  if (!feed) return null;
+
+  const lead = feed.editorsPicks?.lead;
+  if (!lead) return null;
+
+  const editorsPicks: EditorsPicksBlock = {
+    lead,
+    supporting: feed.editorsPicks?.supporting ?? [],
+  };
+
+  return {
+    ...feed,
+    breakingTicker: feed.breakingTicker ?? [],
+    liveWire: feed.liveWire ?? [],
+    trending: feed.trending ?? [],
+    shorts: feed.shorts ?? [],
+    newsShorts: feed.newsShorts ?? [],
+    regionalHighlights: feed.regionalHighlights ?? [],
+    categoryStreams: feed.categoryStreams ?? [],
+    hyperlocalFeeds: feed.hyperlocalFeeds ?? [],
+    localBreakingAlerts: feed.localBreakingAlerts ?? [],
+    editorsPicks,
+    footerIntelligence: feed.footerIntelligence ?? {
+      fetchedAt: new Date().toISOString(),
+      storyCount: 0,
+      breakingCount: 0,
+      trendingCount: 0,
+      avgConfidence: 0,
+      trendingSearches: [],
+    },
+  };
+}
 
 /** True when feed can safely render hero + ticker */
 export function hasValidHomeLead(
@@ -10,10 +51,10 @@ export function hasValidHomeLead(
 
 export function countHomeArticles(feed: GeneratedHomepageFeed): number {
   return (
-    feed.trending.length +
-    feed.liveWire.length +
-    feed.breakingTicker.length +
-    (feed.editorsPicks.lead ? 1 : 0)
+    (feed.trending?.length ?? 0) +
+    (feed.liveWire?.length ?? 0) +
+    (feed.breakingTicker?.length ?? 0) +
+    (feed.editorsPicks?.lead ? 1 : 0)
   );
 }
 

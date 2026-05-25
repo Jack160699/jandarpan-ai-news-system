@@ -6,11 +6,11 @@ const TICKER_HEADLINE_LIMIT = 12;
 /** Latest headlines from the active homepage feed — newest first, deduped */
 export function buildTickerHeadlines(feed: GeneratedHomepageFeed): HomeArticle[] {
   const pool: HomeArticle[] = [
-    ...feed.breakingTicker,
-    ...feed.liveWire,
-    ...feed.trending,
-    feed.editorsPicks.lead,
-    ...feed.editorsPicks.supporting,
+    ...(feed.breakingTicker ?? []),
+    ...(feed.liveWire ?? []),
+    ...(feed.trending ?? []),
+    ...(feed.editorsPicks?.lead ? [feed.editorsPicks.lead] : []),
+    ...(feed.editorsPicks?.supporting ?? []),
   ];
 
   const seen = new Set<string>();

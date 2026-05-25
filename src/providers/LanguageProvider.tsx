@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -30,9 +31,8 @@ type LanguageContextValue = {
   language: AppLanguage;
   t: Dictionary;
   ready: boolean;
-  /** Gate visible — mandatory on every full page load / refresh */
+  mounted: boolean;
   showLanguageGate: boolean;
-  /** Main app chrome hidden until gate confirmed */
   contentLocked: boolean;
   languageOptions: LanguageOption[];
   gateLanguageOptions: LanguageOption[];
@@ -72,6 +72,7 @@ export function LanguageProvider({
   enabledLanguages,
 }: LanguageProviderProps) {
   const router = useRouter();
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const languageOptions = useMemo(() => {
     if (!enabledLanguages?.length) return LANGUAGE_OPTIONS;
@@ -86,30 +87,54 @@ export function LanguageProvider({
 
   const [language, setLanguageState] = useState<AppLanguage>(defaultLanguage);
   const [ready, setReady] = useState(false);
-  /** Resets on every full page load — gate required again after refresh */
+  const [mounted, setMounted] = useState(false);
   const [gateOpen, setGateOpen] = useState(true);
 
   useEffect(() => {
-    lockLanguageGateDocument();
+    setMounted(true);
     const stored = loadStoredLanguage();
     const highlight = resolveGateHighlightLanguage(
       stored.chosen ? stored.language : null
     );
-    setLanguageState(stored.chosen ? stored.language : highlight);
-    applyLanguageToDocument(stored.chosen ? stored.language : highlight);
-    syncReaderPrefsLanguage(
-      stored.chosen ? stored.language : highlight,
-      stored.chosen
-    );
-    setGateOpen(true);
+    const initial = stored.chosen ? stored.language : highlight;
+    const safe = normalizeAppLanguage(initial);
+
+    setLanguageState(safe);
+    applyLanguageToDocument(safe);
+    syncReaderPrefsLanguage(safe, stored.chosen);
+
+    if (stored.chosen) {
+      setGateOpen(false);
+      unlockLanguageGateDocument();
+    } else {
+      setGateOpen(true);
+      lockLanguageGateDocument();
+    }
+
     setReady(true);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.debug("[Language] hydrated", {
+        language: safe,
+        chosen: stored.chosen,
+        gateOpen: !stored.chosen,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
   }, []);
 
   const persist = useCallback((lang: AppLanguage, hasChosen: boolean) => {
-    setLanguageState(lang);
-    saveStoredLanguage(lang, hasChosen);
-    applyLanguageToDocument(lang);
-    syncReaderPrefsLanguage(lang, hasChosen);
+    const safe = normalizeAppLanguage(lang);
+    setLanguageState(safe);
+    saveStoredLanguage(safe, hasChosen);
+    applyLanguageToDocument(safe);
+    syncReaderPrefsLanguage(safe, hasChosen);
+    return safe;
   }, []);
 
   const dismissGate = useCallback(() => {
@@ -117,43 +142,50 @@ export function LanguageProvider({
     unlockLanguageGateDocument();
   }, []);
 
+  /** Background server refresh — never blocks first paint after Continue */
+  const scheduleServerRefresh = useCallback(() => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    refreshTimerRef.current = window.setTimeout(() => {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[Language] background router.refresh");
+      }
+      router.refresh();
+    }, 1200);
+  }, [router]);
+
   const setLanguage = useCallback(
     (lang: AppLanguage) => {
-      const safe = normalizeAppLanguage(lang);
-      persist(safe, true);
+      persist(lang, true);
       dismissGate();
-      requestAnimationFrame(() => router.refresh());
+      scheduleServerRefresh();
     },
-    [persist, dismissGate, router]
+    [persist, dismissGate, scheduleServerRefresh]
   );
 
   const confirmLanguage = useCallback(
     (lang: AppLanguage) => {
-      const safe = normalizeAppLanguage(lang);
-      persist(safe, true);
+      const safe = persist(lang, true);
       dismissGate();
       if (process.env.NODE_ENV !== "production") {
-        console.debug("[Language] confirmLanguage", {
-          selected: safe,
-          hydrated: ready,
-        });
+        console.debug("[Language] confirmLanguage", { selected: safe });
       }
-      requestAnimationFrame(() => router.refresh());
+      scheduleServerRefresh();
     },
-    [persist, dismissGate, router, ready]
+    [persist, dismissGate, scheduleServerRefresh]
   );
 
   const safeLanguage = normalizeAppLanguage(language);
   const t = useMemo(() => getDictionary(safeLanguage), [safeLanguage]);
 
-  const showLanguageGate = ready && gateOpen;
-  const contentLocked = !ready || gateOpen;
+  const showLanguageGate = mounted && ready && gateOpen;
+  const contentLocked = !mounted || !ready || gateOpen;
 
   const value = useMemo(
     () => ({
       language: safeLanguage,
       t,
       ready,
+      mounted,
       showLanguageGate,
       contentLocked,
       languageOptions,
@@ -165,6 +197,7 @@ export function LanguageProvider({
       safeLanguage,
       t,
       ready,
+      mounted,
       showLanguageGate,
       contentLocked,
       languageOptions,

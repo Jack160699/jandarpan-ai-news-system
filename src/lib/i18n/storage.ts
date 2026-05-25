@@ -3,6 +3,8 @@ import type { AppLanguage } from "./types";
 import { PREFS_STORAGE_KEY } from "@/lib/reader-preferences";
 
 export const LANGUAGE_STORAGE_KEY = "cgb-language";
+/** Legacy / user-facing alias */
+export const LANGUAGE_STORAGE_KEY_ALIAS = "jd-language";
 export const LANGUAGE_CHOSEN_KEY = "cgb-language-chosen";
 
 export function isAppLanguage(value: string | null | undefined): value is AppLanguage {
@@ -14,13 +16,21 @@ export type StoredLanguageState = {
   chosen: boolean;
 };
 
+function readLanguageKey(): string | null {
+  if (typeof window === "undefined") return null;
+  return (
+    localStorage.getItem(LANGUAGE_STORAGE_KEY) ??
+    localStorage.getItem(LANGUAGE_STORAGE_KEY_ALIAS)
+  );
+}
+
 export function loadStoredLanguage(): StoredLanguageState {
   if (typeof window === "undefined") {
     return { language: "en", chosen: false };
   }
 
   try {
-    const rawLang = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    const rawLang = readLanguageKey();
     const chosenFlag = localStorage.getItem(LANGUAGE_CHOSEN_KEY);
 
     if (rawLang && isAppLanguage(rawLang)) {
@@ -36,7 +46,7 @@ export function loadStoredLanguage(): StoredLanguageState {
     /* ignore */
   }
 
-  return { language: "hi", chosen: false };
+  return { language: "en", chosen: false };
 }
 
 function migrateFromReaderPrefs(): StoredLanguageState | null {
@@ -62,6 +72,7 @@ function migrateFromReaderPrefs(): StoredLanguageState | null {
 export function saveStoredLanguage(language: AppLanguage, chosen: boolean) {
   if (typeof window === "undefined") return;
   localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  localStorage.setItem(LANGUAGE_STORAGE_KEY_ALIAS, language);
   localStorage.setItem(LANGUAGE_CHOSEN_KEY, chosen ? "1" : "0");
   document.cookie = `${LANGUAGE_STORAGE_KEY}=${language}; path=/; max-age=31536000; SameSite=Lax`;
 }
