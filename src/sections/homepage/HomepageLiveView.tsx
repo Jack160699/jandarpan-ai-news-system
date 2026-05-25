@@ -27,7 +27,6 @@ import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
 import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
 import { HomepageFooter } from "@/components/footer/HomepageFooter";
 import { useLocalizedFeed } from "@/hooks/useLocalizedFeed";
-import { HomepageSeoHub } from "@/sections/homepage/HomepageSeoHub";
 import { HomepageFeedFallback } from "@/sections/homepage/HomepageFeedFallback";
 
 const HyperlocalFeeds = dynamic(
@@ -154,21 +153,23 @@ function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
                 <NewsGrid
                   id="trending"
                   title={t.home.trending}
-                  articles={feed.trending.slice(0, 8)}
+                  articles={feed.trending.slice(0, 6)}
                   freshIds={freshIds}
                 />
               </HomeSectionErrorBoundary>
             ) : null}
 
-            <HomeSectionErrorBoundary name="hyperlocal">
-              <LazyHomeSection
-                minHeight="200px"
-                fallback={<HyperlocalSkeleton />}
-                style={{ "--stagger": 5 } as CSSProperties}
-              >
-                <HyperlocalFeeds feeds={(feed.hyperlocalFeeds ?? []).slice(0, 6)} />
-              </LazyHomeSection>
-            </HomeSectionErrorBoundary>
+            {(feed.hyperlocalFeeds?.length ?? 0) > 0 ? (
+              <HomeSectionErrorBoundary name="hyperlocal">
+                <LazyHomeSection
+                  minHeight="160px"
+                  fallback={<HyperlocalSkeleton />}
+                  style={{ "--stagger": 5 } as CSSProperties}
+                >
+                  <HyperlocalFeeds feeds={feed.hyperlocalFeeds.slice(0, 4)} />
+                </LazyHomeSection>
+              </HomeSectionErrorBoundary>
+            ) : null}
           </div>
 
           <aside className="home-body__aside" aria-label="Local desk">
@@ -179,9 +180,6 @@ function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
         </div>
       </div>
 
-      <HomeSectionErrorBoundary name="seo-hub">
-        <HomepageSeoHub />
-      </HomeSectionErrorBoundary>
       <HomepageFooter />
     </div>
   );

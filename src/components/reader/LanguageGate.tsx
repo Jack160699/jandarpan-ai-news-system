@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check } from "lucide-react";
+import { LanguageGatePolicySheet } from "@/components/reader/LanguageGatePolicySheet";
+import type { PolicySlug } from "@/lib/legal/policies";
 import { LanguageGateBackground } from "@/components/reader/LanguageGateBackground";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
 import {
@@ -14,6 +15,7 @@ import {
   gateCopyLocaleFromLanguage,
   getGateCopy,
   type GateCopyLocale,
+  type GateLegalCopy,
 } from "@/lib/i18n/gate-copy";
 import { isGateLanguage } from "@/lib/i18n/gate-languages";
 import { getLanguageConfig } from "@/lib/i18n/languages";
@@ -21,20 +23,23 @@ import { loadStoredLanguage } from "@/lib/i18n/storage";
 import type { AppLanguage } from "@/lib/i18n/types";
 import { cn } from "@/lib/cn";
 import { useLanguage } from "@/providers/LanguageProvider";
-import { useTenant } from "@/providers/TenantProvider";
 
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-const POLICY_LINKS = [
-  { href: "/terms", key: "terms" as const },
-  { href: "/privacy", key: "privacy" as const },
-  { href: "/cookies", key: "cookies" as const },
-  { href: "/ads-policy", key: "ads" as const },
+type PolicyLinkKey = keyof Pick<
+  GateLegalCopy,
+  "terms" | "privacy" | "cookies" | "ads"
+>;
+
+const POLICY_LINKS: { slug: PolicySlug; key: PolicyLinkKey }[] = [
+  { slug: "terms", key: "terms" },
+  { slug: "privacy", key: "privacy" },
+  { slug: "cookies", key: "cookies" },
+  { slug: "ads-policy", key: "ads" },
 ];
 
 export function LanguageGate() {
-  const { tenant } = useTenant();
   const {
     showLanguageGate,
     language,
@@ -66,13 +71,24 @@ export function LanguageGate() {
   const [selected, setSelected] = useState<AppLanguage>(initialSelection);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [visible, setVisible] = useState(false);
+  const [openPolicy, setOpenPolicy] = useState<PolicySlug | null>(null);
 
-  const canContinue = legalAccepted;
+  const canContinue = legalAccepted && !openPolicy;
+
+  const openPolicySheet = useCallback(
+    (slug: PolicySlug, e: React.MouseEvent | React.KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setOpenPolicy(slug);
+    },
+    []
+  );
 
   useEffect(() => {
     if (showLanguageGate) {
       setSelected(initialSelection);
       setLegalAccepted(false);
+      setOpenPolicy(null);
       document.body.style.overflow = "hidden";
       const id = requestAnimationFrame(() => setVisible(true));
       return () => {
@@ -234,34 +250,43 @@ export function LanguageGate() {
             })}
           </div>
 
-          <label className="mt-3.5 flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/[0.08] bg-black/20 px-2.5 py-2.5 sm:mt-4">
+          <div className="lang-gate__legal-row sm:mt-4">
             <input
+              id="lang-gate-legal-checkbox"
               type="checkbox"
               className="lang-gate__checkbox mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-white/30 accent-[#e11d2e]"
               checked={legalAccepted}
               onChange={(e) => setLegalAccepted(e.target.checked)}
               aria-describedby="lang-gate-legal-disclaimer"
             />
-            <span className="min-w-0 font-[family-name:var(--font-ui)] text-[11px] leading-snug text-white/75">
-              <span>{copy.legal.agreeIntro} </span>
+            <p className="m-0 min-w-0 font-[family-name:var(--font-ui)] text-[11px] leading-snug text-white/75">
+              <label
+                htmlFor="lang-gate-legal-checkbox"
+                className="cursor-pointer"
+              >
+                {copy.legal.agreeIntro}
+              </label>{" "}
               {POLICY_LINKS.map((link, i) => (
-                <span key={link.href}>
+                <span key={link.slug}>
                   {i > 0 && i < POLICY_LINKS.length - 1 ? ", " : null}
                   {i === POLICY_LINKS.length - 1 && i > 0 ? " and " : null}
-                  <Link
-                    href={link.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-red-300 underline decoration-red-400/40 underline-offset-2 hover:text-red-200"
-                    onClick={(e) => e.stopPropagation()}
+                  <button
+                    type="button"
+                    className="lang-gate__policy-link"
+                    onClick={(e) => openPolicySheet(link.slug, e)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        openPolicySheet(link.slug, e);
+                      }
+                    }}
                   >
                     {copy.legal[link.key]}
-                  </Link>
+                  </button>
                 </span>
               ))}
               <span>.</span>
-            </span>
-          </label>
+            </p>
+          </div>
 
           <p
             id="lang-gate-legal-disclaimer"
@@ -299,6 +324,11 @@ export function LanguageGate() {
           </p>
         </motion.div>
       </div>
+
+      <LanguageGatePolicySheet
+        slug={openPolicy}
+        onClose={() => setOpenPolicy(null)}
+      />
     </div>
   );
 }

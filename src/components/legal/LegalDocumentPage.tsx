@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LegalPolicyContent } from "@/components/legal/LegalPolicyContent";
 import { PageShell } from "@/components/layout/PageShell";
 import type { PolicyDocument } from "@/lib/legal/policies";
 
@@ -25,18 +26,7 @@ export function LegalDocumentPage({ doc }: LegalDocumentPageProps) {
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
           Last updated {doc.updated}
         </p>
-        <div className="mt-8 space-y-6">
-          {doc.sections.map((section) => (
-            <section key={section.heading}>
-              <h2 className="m-0 text-base font-bold text-stone-800 dark:text-stone-100">
-                {section.heading}
-              </h2>
-              <p className="mt-2 text-[15px] leading-relaxed text-stone-600 dark:text-stone-300">
-                {section.body}
-              </p>
-            </section>
-          ))}
-        </div>
+        <LegalPolicyContent doc={doc} variant="page" />
       </main>
     </PageShell>
   );

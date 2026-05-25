@@ -238,3 +238,7 @@ export function useLiveNewsroom(): LiveNewsroomContextValue {
   }
   return ctx;
 }
+
+export function useLiveNewsroomOptional(): LiveNewsroomContextValue | null {
+  return useContext(LiveNewsroomContext);
+}

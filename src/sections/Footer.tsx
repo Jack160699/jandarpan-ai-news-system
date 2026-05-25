@@ -1,19 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { FooterTodayLive } from "@/components/footer/FooterTodayLive";
 import { FooterSocialIcon } from "@/components/footer/FooterSocialIcon";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
-import { FOOTER_QUICK_LINKS, FOOTER_SOCIAL } from "@/lib/footer/config";
+import { FOOTER_SOCIAL } from "@/lib/footer/config";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useTenant } from "@/providers/TenantProvider";
 
-type FooterProps = {
-  breakingHeadline?: string | null;
-  localInfo?: string | null;
-};
-
-export function Footer({ breakingHeadline, localInfo }: FooterProps) {
+export function Footer() {
   const { t, language } = useLanguage();
   const { tenant } = useTenant();
   const brandName =
@@ -30,26 +24,6 @@ export function Footer({ breakingHeadline, localInfo }: FooterProps) {
             <p className="jd-footer__brand-tagline">{t.footer.taglineFooter}</p>
           </div>
         </div>
-
-        <section className="jd-footer__block" aria-labelledby="footer-quick-links">
-          <h2 id="footer-quick-links" className="jd-footer__label">
-            {t.footer.quickLinksTitle}
-          </h2>
-          <ul className="jd-footer__chips">
-            {FOOTER_QUICK_LINKS.map((item) => (
-              <li key={item.href}>
-                <Link href={item.href} className="jd-footer__chip tap-target">
-                  {t.footer.links[item.key]}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <FooterTodayLive
-          breakingHeadline={breakingHeadline}
-          localInfo={localInfo}
-        />
 
         <section
           className="jd-footer__block jd-footer__block--social"

@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Bookmark, Flame, Sparkles } from "lucide-react";
-import { labelForLink, MENU_ACCOUNT_LINKS } from "@/lib/super-menu/config";
+import { Bookmark, Globe, Moon } from "lucide-react";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
+import { HeaderLanguageSwitcher } from "@/components/navigation/HeaderLanguageSwitcher";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
+import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
+import { SuperMenuBlock } from "./SuperMenuBlock";
 
 type SuperMenuProfileProps = {
   onNavigate: (href: string) => void;
@@ -13,103 +15,74 @@ type SuperMenuProfileProps = {
 
 export function SuperMenuProfile({ onNavigate }: SuperMenuProfileProps) {
   const { language } = useLanguage();
-  const {
-    mounted,
-    isLoggedIn,
-    displayName,
-    avatarInitial,
-    isPremium,
-    streakDays,
-    savedCount,
-    signInWithGoogle,
-    signOut,
-  } = useReaderAccount();
+  const { mounted, isLoggedIn, displayName, signInWithGoogle, signOut } =
+    useReaderAccount();
+  const { prefs, toggleTheme } = useReaderPreferences();
 
   if (!mounted) {
-    return (
-      <div className="sm-profile sm-profile--skeleton" aria-hidden>
-        <div className="sm-profile__card" style={{ minHeight: "4.5rem" }} />
-      </div>
-    );
+    return <div className="sm-profile-sk" aria-hidden />;
   }
 
   return (
-    <div className="sm-profile">
-      <div className="sm-profile__card">
-        <div className="sm-profile__avatar" aria-hidden>
-          {avatarInitial}
-        </div>
-        <div className="sm-profile__meta">
-          <p className="sm-profile__name">{displayName}</p>
-          <div className="sm-profile__badges">
-            {isPremium ? (
-              <span className="sm-badge sm-badge--premium">
-                <Sparkles size={12} aria-hidden />
-                {pickBilingualLabel(language, "Premium", "प्रीमियम")}
-              </span>
-            ) : (
-              <span className="sm-badge sm-badge--ghost">
-                {pickBilingualLabel(language, "Free", "मुफ़्त")}
-              </span>
-            )}
-            <span className="sm-badge sm-badge--streak">
-              <Flame size={12} aria-hidden />
-              {streakDays} {pickBilingualLabel(language, "day streak", "दिन स्ट्रीक")}
-            </span>
-          </div>
-        </div>
-      </div>
+    <SuperMenuBlock
+      id="sm-profile"
+      title={pickBilingualLabel(language, "Profile", "प्रोफ़ाइल")}
+    >
+      <p className="sm-profile-name">{displayName}</p>
 
       {isLoggedIn ? (
         <button
           type="button"
-          className="sm-profile__auth-btn sm-profile__auth-btn--outline tap-target"
+          className="sm-row-btn tap-target"
           onClick={() => void signOut()}
         >
           {pickBilingualLabel(language, "Sign out", "साइन आउट")}
         </button>
       ) : (
-        <div className="sm-profile__auth-row">
+        <div className="sm-profile-auth">
           <Link
             href="/login"
-            className="sm-profile__auth-btn tap-target"
+            className="sm-row-btn sm-row-btn--primary tap-target"
             onClick={() => onNavigate("/login")}
           >
             {pickBilingualLabel(language, "Login / Sign up", "लॉगिन / साइन अप")}
           </Link>
-          <button
-            type="button"
-            className="sm-profile__auth-btn sm-profile__auth-btn--google tap-target"
-            onClick={() => void signInWithGoogle()}
-          >
-            Google
-          </button>
         </div>
       )}
 
-      <ul className="sm-profile__quick" role="list">
-        {MENU_ACCOUNT_LINKS.slice(0, 3).map((link) => (
-          <li key={link.id}>
-            <Link
-              href={link.href}
-              className="sm-profile__quick-item tap-target"
-              onClick={() => onNavigate(link.href)}
-            >
-              {link.id === "saved" ? (
-                <Bookmark size={16} strokeWidth={2} aria-hidden />
-              ) : link.id === "listen" ? (
-                <span aria-hidden>🎧</span>
-              ) : (
-                <Bell size={16} strokeWidth={2} aria-hidden />
-              )}
-              <span>{labelForLink(link, language)}</span>
-              {link.id === "saved" && savedCount > 0 ? (
-                <span className="sm-profile__count">{savedCount}</span>
-              ) : null}
-            </Link>
-          </li>
-        ))}
+      <ul className="sm-simple-list" role="list">
+        <li>
+          <Link
+            href="/archive"
+            className="sm-simple-link tap-target"
+            onClick={() => onNavigate("/archive")}
+          >
+            <Bookmark size={18} strokeWidth={2} aria-hidden />
+            {pickBilingualLabel(language, "Saved Stories", "सेव की खबरें")}
+          </Link>
+        </li>
+        <li className="sm-simple-link sm-simple-link--row">
+          <span>
+            <Globe size={18} strokeWidth={2} aria-hidden />
+            {pickBilingualLabel(language, "Language", "भाषा")}
+          </span>
+          <HeaderLanguageSwitcher compact />
+        </li>
+        <li>
+          <button
+            type="button"
+            className="sm-simple-link tap-target"
+            onClick={toggleTheme}
+          >
+            <Moon size={18} strokeWidth={2} aria-hidden />
+            {pickBilingualLabel(
+              language,
+              prefs.theme === "light" ? "Dark theme" : "Light theme",
+              prefs.theme === "light" ? "डार्क थीम" : "लाइट थीम"
+            )}
+          </button>
+        </li>
       </ul>
-    </div>
+    </SuperMenuBlock>
   );
 }

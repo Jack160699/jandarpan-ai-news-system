@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import dynamic from "next/dynamic";
-import { X, Sparkles } from "lucide-react";
+import { X } from "lucide-react";
 import { triggerHaptic } from "@/lib/mobile/haptics";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { normalizeAppLanguage } from "@/lib/i18n/safe-language";
@@ -12,20 +11,15 @@ import { useNavigation } from "@/providers/NavigationProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
 import { SuperMenuProfile } from "./SuperMenuProfile";
-import { SuperMenuFeed } from "./SuperMenuFeed";
-import { SuperMenuUtilities } from "./SuperMenuUtilities";
+import { SuperMenuTodayLive } from "./SuperMenuTodayLive";
+import { SuperMenuCgRates } from "./SuperMenuCgRates";
 import { SuperMenuCategories } from "./SuperMenuCategories";
 import { SuperMenuSettings } from "./SuperMenuSettings";
 
-const SuperMenuMarket = dynamic(
-  () => import("./SuperMenuMarket").then((m) => ({ default: m.SuperMenuMarket })),
-  { ssr: false, loading: () => <div className="sm-section sm-section--skeleton" aria-hidden /> }
-);
-
-const DRAWER_MS = 320;
+const DRAWER_MS = 280;
 const SWIPE_CLOSE_PX = 72;
 
-/** Premium AI-powered super menu — client-only portal */
+/** Minimal regional menu — utility-first for CG readers */
 export function SuperMenuDrawer() {
   const { menuOpen, closeMenu, startNavigation } = useNavigation();
   const { language } = useLanguage();
@@ -56,11 +50,6 @@ export function SuperMenuDrawer() {
     return () => window.clearTimeout(t);
   }, [menuOpen, mounted]);
 
-  useEffect(() => {
-    if (!animOpen) return;
-    panelRef.current?.focus();
-  }, [animOpen]);
-
   const onNavigate = useCallback(
     (href: string) => {
       triggerHaptic("selection");
@@ -89,7 +78,7 @@ export function SuperMenuDrawer() {
 
   return createPortal(
     <div
-      className={`super-menu${animOpen ? " super-menu--open" : ""}`}
+      className={`super-menu super-menu--minimal${animOpen ? " super-menu--open" : ""}`}
       role="presentation"
     >
       <button
@@ -111,15 +100,9 @@ export function SuperMenuDrawer() {
         <header className="super-menu__head">
           <div className="super-menu__brand">
             <TenantLogo variant="mark" showText={false} className="super-menu__logo" />
-            <div>
-              <p id="super-menu-title" className="super-menu__title">
-                {brandName}
-              </p>
-              <p className="super-menu__kicker">
-                <Sparkles size={12} aria-hidden />
-                {pickBilingualLabel(safeLang, "AI News Hub", "AI न्यूज़ हब")}
-              </p>
-            </div>
+            <p id="super-menu-title" className="super-menu__title">
+              {brandName}
+            </p>
           </div>
           <button
             type="button"
@@ -136,9 +119,8 @@ export function SuperMenuDrawer() {
 
         <div className="super-menu__scroll">
           <SuperMenuProfile onNavigate={onNavigate} />
-          <SuperMenuFeed onNavigate={onNavigate} />
-          {menuOpen ? <SuperMenuMarket /> : null}
-          <SuperMenuUtilities onNavigate={onNavigate} />
+          <SuperMenuTodayLive menuOpen={menuOpen} />
+          <SuperMenuCgRates menuOpen={menuOpen} />
           <SuperMenuCategories onNavigate={onNavigate} />
           <SuperMenuSettings onNavigate={onNavigate} />
         </div>
