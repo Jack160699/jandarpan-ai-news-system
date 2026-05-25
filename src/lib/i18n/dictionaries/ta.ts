@@ -120,7 +120,9 @@ export const ta: Dictionary = {
       bilaspur: "பிலாஸ்பூர்",
       raipur: "ராய்ப்பூர்",
       durg: "துர்க்",
-      rajnandgaon: "ராஜ்நந்த்காவ்",
+      raigarh: "ராய்கர்",
+      korba: "கோர்பா",
+      jagdalpur: "ஜகதல்பூர்",
     },
     categories: {
       politics: "அரசியல்",

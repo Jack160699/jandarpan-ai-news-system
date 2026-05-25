@@ -119,7 +119,9 @@ export const hi: Dictionary = {
       bilaspur: "बिलासपुर",
       raipur: "रायपुर",
       durg: "दुर्ग",
-      rajnandgaon: "राजनांदगाँव",
+      raigarh: "रायगढ़",
+      korba: "कोरबा",
+      jagdalpur: "जगदलपुर",
     },
     categories: {
       politics: "राजनीति",

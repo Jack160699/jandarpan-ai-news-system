@@ -28,6 +28,7 @@ import {
 import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
 import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
 import { HomepageFooter } from "@/components/footer/HomepageFooter";
+import { HomepageSeoHub } from "@/sections/homepage/HomepageSeoHub";
 import { useLocalizedFeed } from "@/hooks/useLocalizedFeed";
 import { HomepageFeedFallback } from "@/sections/homepage/HomepageFeedFallback";
 
@@ -194,6 +195,10 @@ function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
           </aside>
         </div>
       </div>
+
+      <HomeSectionErrorBoundary name="explore-topics">
+        <HomepageSeoHub />
+      </HomeSectionErrorBoundary>
 
       <HomepageFooter />
     </div>

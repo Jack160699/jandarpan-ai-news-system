@@ -1,100 +1,65 @@
-/* District + national highlights — layout shell (segment UI uses Tailwind) */
+/* District + national highlights — layout shell */
 
 .home-highlights-desk {
   display: flex;
   flex-direction: column;
-  gap: var(--rhythm-section-lg, 1.5rem);
+  gap: var(--rhythm-section-lg, 1.35rem);
   width: 100%;
   min-width: 0;
+  padding-bottom: 0.25rem;
 }
 
 .home-highlights-desk__block {
   min-width: 0;
 }
 
-.home-highlights-desk .live-wire,
-.home-highlights-desk .live-wire--embedded,
-.home-highlights-desk .live-wire--daily {
-  padding-block: 0;
-  margin-block: 0;
-  background: transparent;
-  border: none;
-}
-
-.home-feed-stack > .hp-lazy-section.feed-section:first-child {
-  margin-top: 0;
-}
-
-.home-feed-stack > .hp-lazy-section.feed-section:first-child[data-loaded="false"] {
-  min-height: 0;
-  contain-intrinsic-size: auto 12rem;
+.district-wire-panel__feed .district-feed__empty,
+.global-brief-panel .national-highlights-feed p[role="status"] {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  padding: 0.65rem 0.25rem 0.5rem;
+  text-align: left;
 }
 
 .home-highlights-desk .hp-lazy-section__content {
   display: flex;
   flex-direction: column;
-  gap: var(--rhythm-section-lg, 1.5rem);
-}
-
-.live-wire--embedded .live-wire__head,
-.live-wire--embedded .quick-update-feed {
-  padding-inline: 0;
-}
-
-.live-wire--embedded {
-  scroll-margin-top: 5rem;
-}
-
-.live-wire--embedded .live-wire__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.25rem;
-}
-
-.live-wire--embedded .live-wire__title {
-  margin: 0;
-  font-family: var(--font-hindi), var(--font-display), Georgia, serif;
-  font-size: clamp(1.125rem, 4.2vw, 1.3125rem);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.2;
-  color: var(--color-ink, #1c1410);
-}
-
-.live-wire--embedded .live-wire__cta {
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--color-primary, #a01830);
-  white-space: nowrap;
-  text-decoration: none;
-}
-
-.home-feed-stack .live-wire--daily,
-.home-feed-stack .live-wire,
-.home-feed-stack .live-wire--embedded {
-  padding-block: 0;
-  margin-block: 0;
-  border: none;
-  background: transparent;
-}
-
-.district-feed {
-  min-height: 3.5rem;
-}
-
-.district-feed__empty {
-  font-size: 0.875rem;
-  color: var(--color-ink-muted, #6b5f54);
-  padding: 0.5rem 0;
+  gap: var(--rhythm-section-lg, 1.35rem);
 }
 
 #district-wire .quick-update-feed,
-.home-highlights-desk .live-wire--embedded .quick-update-feed {
-  border-radius: 16px;
+.home-highlights-desk .quick-update-feed {
+  border-radius: 1rem;
 }
 
-html[data-theme="dark"] .live-wire--embedded .live-wire__title {
-  color: var(--color-ink, #f3efe8);
+.district-feed {
+  min-height: 2.75rem;
+}
+
+.district-feed__empty {
+  margin: 0;
+}
+
+/* National cards — premium rounded */
+.national-highlights-feed .national-news-card,
+.home-highlights-desk .national-news-card {
+  border-radius: 1.75rem;
+}
+
+@media (max-width: 480px) {
+  .home-highlights-desk {
+    gap: 1.15rem;
+  }
+
+  .seo-hub {
+    padding-bottom: calc(6rem + var(--safe-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seo-hub__item,
+  .seo-hub__trigger,
+  .seo-hub__link {
+    transition: none;
+  }
 }

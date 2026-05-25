@@ -14,6 +14,18 @@ export type SeoHubCluster = {
   links: { labelEn: string; labelHi: string; href: string }[];
 };
 
+/** Primary explore-topics accordions (homepage) */
+export const SEO_HOMEPAGE_PRIMARY_IDS = [
+  "jobs",
+  "cricket",
+  "stocks",
+  "districts",
+  "yojana",
+  "fact-check",
+  "education",
+  "ai-news",
+] as const;
+
 export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "jobs",
@@ -62,8 +74,8 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
     id: "stocks",
     slug: "stock-market",
     path: "/search?q=stock+market",
-    titleEn: "Stock Market",
-    titleHi: "शेयर बाजार",
+    titleEn: "Markets & Business",
+    titleHi: "बाजार और व्यापार",
     descriptionEn: "Nifty, Sensex, and Indian stock movers explained for readers.",
     descriptionHi: "निफ्टी, सेंसेक्स और शेयर बाजार की खबरें सरल भाषा में।",
     keywords: ["Nifty 50", "Sensex today", "share market Hindi"],
@@ -76,8 +88,8 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
     id: "ai-news",
     slug: "ai-news",
     path: "/search?q=artificial+intelligence",
-    titleEn: "AI News",
-    titleHi: "AI समाचार",
+    titleEn: "Technology",
+    titleHi: "टेक्नोलॉजी",
     descriptionEn: "Artificial intelligence, startups, and tech policy from India and CG.",
     descriptionHi: "कृत्रिम बुद्धिमत्ता, स्टार्टअप और टेक नीति की खबरें।",
     keywords: ["AI news India", "tech AI Hindi"],
@@ -140,7 +152,7 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
     id: "districts",
     slug: "district-news",
     path: "/category/chhattisgarh",
-    titleEn: "Local District News",
+    titleEn: "District News",
     titleHi: "जिला समाचार",
     descriptionEn: "Hyperlocal coverage from every major CG district bureau.",
     descriptionHi: "हर बड़े जिले की हाइपरलोकल कवरेज।",
@@ -284,8 +296,8 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
     id: "cricket",
     slug: "ipl-cricket",
     path: "/search?q=cricket",
-    titleEn: "IPL & Cricket",
-    titleHi: "IPL और क्रिकेट",
+    titleEn: "Sports & Cricket",
+    titleHi: "खेल और क्रिकेट",
     descriptionEn: "Cricket scores, IPL, and Team India updates.",
     descriptionHi: "क्रिकेट स्कोर, IPL और टीम इंडिया अपडेट।",
     keywords: ["IPL news", "cricket Hindi"],
@@ -295,3 +307,11 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
     ],
   },
 ];
+
+const clusterById = new Map(SEO_HOMEPAGE_CLUSTERS.map((c) => [c.id, c]));
+
+export function getSeoHomepagePrimaryClusters(): SeoHubCluster[] {
+  return SEO_HOMEPAGE_PRIMARY_IDS.map((id) => clusterById.get(id)!).filter(
+    Boolean
+  );
+}

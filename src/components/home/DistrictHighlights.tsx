@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/cn";
 import { DistrictFeed } from "@/components/home/DistrictFeed";
 import { DistrictSegmentedControl } from "@/components/home/DistrictSegmentedControl";
 import { Reveal } from "@/components/motion";
@@ -58,13 +59,11 @@ export function DistrictHighlights({
     [selected]
   );
 
-  if (!articles.length) return null;
-
   return (
     <Reveal
       as="section"
       id="district-wire"
-      className="scroll-mt-24 w-full min-w-0 space-y-3"
+      className="district-wire-panel scroll-mt-24 w-full min-w-0 space-y-3"
       aria-labelledby="district-wire-title"
     >
       <div className="flex items-baseline justify-between gap-3">
@@ -89,18 +88,20 @@ export function DistrictHighlights({
       />
 
       <div
-        ref={feedRef}
-        className={
-          feedLoading
-            ? "scroll-mt-[5.5rem] opacity-70 transition-opacity duration-200"
-            : "scroll-mt-[5.5rem]"
-        }
+        className={cn(
+          "district-wire-panel__feed rounded-[20px] border p-2.5 transition-opacity duration-200",
+          "border-stone-200/50 bg-stone-100/35 backdrop-blur-md",
+          "dark:border-stone-700/45 dark:bg-stone-950/55 dark:shadow-[0_8px_32px_rgba(0,0,0,0.35)]",
+          feedLoading && "opacity-70"
+        )}
       >
-        <DistrictFeed
-          district={selected}
-          items={filtered}
-          freshIds={freshIds}
-        />
+        <div ref={feedRef} className="scroll-mt-[5.5rem]">
+          <DistrictFeed
+            district={selected}
+            items={filtered}
+            freshIds={freshIds}
+          />
+        </div>
       </div>
     </Reveal>
   );

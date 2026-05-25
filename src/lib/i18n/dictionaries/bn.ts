@@ -119,7 +119,9 @@ export const bn: Dictionary = {
       bilaspur: "বিলাসপুর",
       raipur: "রায়পুর",
       durg: "দুর্গ",
-      rajnandgaon: "রাজনান্দগাঁও",
+      raigarh: "রায়গড়",
+      korba: "কোরবা",
+      jagdalpur: "জগদলপুর",
     },
     categories: {
       politics: "রাজনীতি",

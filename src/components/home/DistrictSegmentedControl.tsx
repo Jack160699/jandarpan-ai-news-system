@@ -67,10 +67,10 @@ export const DistrictSegmentedControl = memo(function DistrictSegmentedControl({
           role="tablist"
           aria-label={t.home.districtWire}
           className={cn(
-            "relative inline-flex w-max min-w-full gap-0 rounded-[18px] p-1",
-            "border border-stone-200/90 bg-stone-100/75 shadow-[0_2px_14px_rgba(28,20,16,0.06)]",
-            "backdrop-blur-md backdrop-saturate-150",
-            "dark:border-stone-600/50 dark:bg-stone-900/55 dark:shadow-[0_4px_24px_rgba(0,0,0,0.35)]"
+            "relative inline-flex w-max min-w-full gap-0 rounded-[24px] p-1",
+            "border border-stone-200/60 bg-stone-100/40 shadow-[0_2px_12px_rgba(0,0,0,0.06)]",
+            "backdrop-blur-xl backdrop-saturate-150",
+            "dark:border-stone-600/40 dark:bg-stone-950/70 dark:shadow-[0_4px_28px_rgba(0,0,0,0.4)]"
           )}
         >
           {FEATURED_DISTRICT_SLUGS.map((slug, index) => {

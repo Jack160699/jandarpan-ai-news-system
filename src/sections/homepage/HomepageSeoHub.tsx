@@ -5,13 +5,15 @@ import { useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
-import { SEO_HOMEPAGE_CLUSTERS } from "@/lib/seo/homepage-hub";
+import { getSeoHomepagePrimaryClusters } from "@/lib/seo/homepage-hub";
 import { useLanguage } from "@/providers/LanguageProvider";
 
 export function HomepageSeoHub() {
   const { language } = useLanguage();
   const reduceMotion = useReducedMotion();
   const [openId, setOpenId] = useState<string | null>(null);
+
+  const clusters = useMemo(() => getSeoHomepagePrimaryClusters(), []);
 
   const jsonLd = useMemo(
     () => ({
@@ -22,7 +24,7 @@ export function HomepageSeoHub() {
         "Jan Darpan News Topics",
         "जन दर्पण समाचार विषय"
       ),
-      itemListElement: SEO_HOMEPAGE_CLUSTERS.map((c, i) => ({
+      itemListElement: clusters.map((c, i) => ({
         "@type": "ListItem",
         position: i + 1,
         name: pickBilingualLabel(language, c.titleEn, c.titleHi),
@@ -34,7 +36,7 @@ export function HomepageSeoHub() {
         ),
       })),
     }),
-    [language]
+    [language, clusters]
   );
 
   return (
@@ -69,7 +71,7 @@ export function HomepageSeoHub() {
         </header>
 
         <div className="seo-hub__list" role="list">
-          {SEO_HOMEPAGE_CLUSTERS.map((cluster) => {
+          {clusters.map((cluster) => {
             const open = openId === cluster.id;
             const title = pickBilingualLabel(
               language,

@@ -125,7 +125,9 @@ export type Dictionary = {
       bilaspur: string;
       raipur: string;
       durg: string;
-      rajnandgaon: string;
+      raigarh: string;
+      korba: string;
+      jagdalpur: string;
     };
     categories: {
       politics: string;

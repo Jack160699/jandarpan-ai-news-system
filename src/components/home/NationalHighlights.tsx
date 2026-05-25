@@ -61,8 +61,6 @@ export function NationalHighlights({
     [selected]
   );
 
-  if (!pool.length) return null;
-
   const activeCount = counts[selected];
   const activeLabel =
     selected === "national"
@@ -103,9 +101,9 @@ export function NationalHighlights({
 
       <div
         className={cn(
-          "space-y-3 rounded-[20px] border p-3",
-          "border-stone-200/80 bg-stone-100/40 backdrop-blur-md",
-          "dark:border-stone-700/50 dark:bg-stone-950/60 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+          "global-brief-panel space-y-3 rounded-[24px] border p-3",
+          "border-stone-200/50 bg-stone-100/35 backdrop-blur-xl",
+          "dark:border-stone-700/45 dark:bg-stone-950/65 dark:shadow-[0_8px_36px_rgba(0,0,0,0.42)]"
         )}
       >
         <NationalSegmentedControl
@@ -142,8 +140,8 @@ export function NationalHighlights({
 
         <div
           className={cn(
-            "rounded-2xl border px-2 py-0.5 transition-opacity duration-200",
-            "border-stone-200/60 bg-white/70 dark:border-stone-800/80 dark:bg-stone-900/50",
+            "rounded-[28px] border px-2 py-0.5 transition-opacity duration-200",
+            "border-stone-200/45 bg-white/50 dark:border-stone-800/70 dark:bg-stone-900/45",
             feedLoading && "opacity-70"
           )}
         >

@@ -2,25 +2,50 @@
  * Featured homepage districts — filter pool without changing APIs.
  */
 
-import { CG_DISTRICTS } from "@/lib/regional/districts";
+import { CG_DISTRICTS, type CgDistrict } from "@/lib/regional/districts";
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
 
 export const FEATURED_DISTRICT_SLUGS = [
   "bilaspur",
   "raipur",
   "durg",
-  "rajnandgaon",
+  "raigarh",
+  "korba",
+  "jagdalpur",
 ] as const;
 
 export type FeaturedDistrictSlug = (typeof FEATURED_DISTRICT_SLUGS)[number];
 
 const FEATURED_SET = new Set<string>(FEATURED_DISTRICT_SLUGS);
 
-const DISTRICT_BY_SLUG = new Map(
-  CG_DISTRICTS.filter((d) => FEATURED_SET.has(d.slug)).map((d) => [d.slug, d])
-);
+/** Jagdalpur tab maps to Bastar bureau coverage */
+const JAGDALPUR_MATCH = ["jagdalpur", "जगदलपुर", "bastar", "बस्तर"];
 
-export function getFeaturedDistrict(slug: FeaturedDistrictSlug) {
+type FeaturedDistrictMeta = CgDistrict & { slug: FeaturedDistrictSlug };
+
+const DISTRICT_BY_SLUG = new Map<FeaturedDistrictSlug, FeaturedDistrictMeta>();
+
+for (const d of CG_DISTRICTS) {
+  if (FEATURED_SET.has(d.slug)) {
+    DISTRICT_BY_SLUG.set(d.slug as FeaturedDistrictSlug, {
+      ...d,
+      slug: d.slug as FeaturedDistrictSlug,
+    });
+  }
+}
+
+const bastar = CG_DISTRICTS.find((d) => d.slug === "bastar");
+if (bastar) {
+  DISTRICT_BY_SLUG.set("jagdalpur", {
+    ...bastar,
+    slug: "jagdalpur",
+    name: "Jagdalpur",
+    nameHi: "जगदलपुर",
+    aliases: [...JAGDALPUR_MATCH],
+  });
+}
+
+export function getFeaturedDistrict(slug: FeaturedDistrictSlug): FeaturedDistrictMeta {
   return DISTRICT_BY_SLUG.get(slug)!;
 }
 
@@ -36,12 +61,20 @@ function articleSearchBlob(article: HomeArticle): string {
     .toLowerCase();
 }
 
+function matchesJagdalpur(text: string): boolean {
+  return JAGDALPUR_MATCH.some((alias) => text.includes(alias.toLowerCase()));
+}
+
 /** Match district from headline/tags; null when no explicit district signal */
 export function resolveFeaturedDistrictSlug(
   article: HomeArticle
 ): FeaturedDistrictSlug | null {
   const text = articleSearchBlob(article);
+
+  if (matchesJagdalpur(text)) return "jagdalpur";
+
   for (const slug of FEATURED_DISTRICT_SLUGS) {
+    if (slug === "jagdalpur") continue;
     const district = DISTRICT_BY_SLUG.get(slug);
     if (!district) continue;
     if (district.aliases.some((alias) => text.includes(alias.toLowerCase()))) {
@@ -78,9 +111,8 @@ export function buildDistrictArticlePool(
 
   for (const article of feed.liveWire) push(article);
   for (const article of feed.regionalHighlights) push(article);
-  for (const article of feed.trending) {
-    if (resolveFeaturedDistrictSlug(article)) push(article);
-  }
+  for (const article of feed.trending.slice(0, 16)) push(article);
+  for (const article of feed.editorsPicks.supporting ?? []) push(article);
 
   return out;
 }
@@ -97,12 +129,10 @@ export function filterArticlesByDistrict(
 export function countArticlesByDistrict(
   articles: HomeArticle[]
 ): Record<FeaturedDistrictSlug, number> {
-  const counts: Record<FeaturedDistrictSlug, number> = {
-    bilaspur: 0,
-    raipur: 0,
-    durg: 0,
-    rajnandgaon: 0,
-  };
+  const counts = Object.fromEntries(
+    FEATURED_DISTRICT_SLUGS.map((s) => [s, 0])
+  ) as Record<FeaturedDistrictSlug, number>;
+
   for (const article of articles) {
     counts[assignFeaturedDistrictSlug(article)] += 1;
   }
