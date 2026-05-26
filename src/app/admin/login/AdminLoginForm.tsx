@@ -39,7 +39,7 @@ export function AdminLoginForm() {
   );
   const [busy, setBusy] = useState(false);
   const emergencyClient =
-    process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE !== "0";
+    process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE === "1";
   const [checkingSession, setCheckingSession] = useState(!emergencyClient);
 
   useEffect(() => {

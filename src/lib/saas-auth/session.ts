@@ -15,6 +15,7 @@ import {
   TENANT_COOKIE_AUTH,
 } from "@/lib/security/constants";
 import { secureCookieOptions } from "@/lib/security/cookies";
+import { safeGetUser } from "@/lib/auth/auth-safe";
 import { traceAdminBoot } from "@/lib/observability/admin-boot";
 import {
   isSessionRevoked,
@@ -117,7 +118,7 @@ async function loadMembership(
   email: string,
   tenantSlug?: string | null
 ): Promise<TenantMembership | null> {
-  traceAdminBoot("WORKSPACE_LOAD", "membership_lookup");
+  traceAdminBoot("TENANT_LOAD", "membership_lookup");
   return withTimeoutFallback(
     loadMembershipInner(userId, email, tenantSlug),
     null,
@@ -190,12 +191,14 @@ export async function getDashboardSession(
   const client = createUserAuthClient(accessToken);
   traceAdminBoot("AUTH_INIT", "getUser");
 
-  const { data: userData, error } = await withTimeout(
-    client.auth.getUser(),
-    { label: "AUTH_INIT_getUser", timeoutMs: AUTH_CALL_TIMEOUT_MS }
+  const { user, error, timedOut } = await safeGetUser(
+    client,
+    "AUTH_INIT_getUser"
   );
 
-  if (error || !userData.user) return null;
+  if (timedOut || error || !user) return null;
+
+  const userData = { user };
 
   let membership = await loadMembership(
     userData.user.id,

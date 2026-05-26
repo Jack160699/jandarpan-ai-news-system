@@ -1,20 +1,17 @@
 import { isAdminEmergencyMode, traceAdminEmergency } from "@/lib/admin/emergency-mode";
 import { AdminLoginMinimal } from "./AdminLoginMinimal";
-import AdminLoginFullPage from "./AdminLoginFullPage";
+import { AdminLoginForm } from "./AdminLoginForm";
 
-type AdminLoginPageProps = {
-  searchParams: Promise<{
-    error?: string;
-    recovery?: string;
-    next?: string;
-  }>;
-};
-
-export default async function AdminLoginPage(props: AdminLoginPageProps) {
+/**
+ * Login renders synchronously — no server session probe (avoids bootstrap deadlock).
+ * AdminLoginForm checks session client-side with timeout after paint.
+ */
+export default function AdminLoginPage() {
   if (isAdminEmergencyMode()) {
     traceAdminEmergency("LOGIN_RENDER", "emergency_minimal");
     return <AdminLoginMinimal />;
   }
 
-  return <AdminLoginFullPage searchParams={props.searchParams} />;
+  traceAdminEmergency("LOGIN_RENDER", "production_form");
+  return <AdminLoginForm />;
 }

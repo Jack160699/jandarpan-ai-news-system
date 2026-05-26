@@ -4,25 +4,23 @@
 
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeGetUser } from "@/lib/auth/auth-safe";
 import type { Database } from "@/lib/supabase/types";
 import { getPublicSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
-import { withTimeoutFallback } from "@/lib/utils/withTimeout";
 
 export type SupabaseMiddlewareResult = {
   response: NextResponse;
   user: { id: string; email?: string } | null;
+  /** True when getUser timed out — caller may fail-open for client-side auth */
+  timedOut: boolean;
 };
 
-/**
- * Refreshes the Supabase auth session and returns the user (if any).
- * Call from root middleware after tenant headers are set.
- */
 export async function updateSupabaseSession(
   request: NextRequest,
   response: NextResponse
 ): Promise<SupabaseMiddlewareResult> {
   if (!isSupabaseConfigured()) {
-    return { response, user: null };
+    return { response, user: null, timedOut: false };
   }
 
   const { url, anonKey } = getPublicSupabaseEnv();
@@ -48,13 +46,11 @@ export async function updateSupabaseSession(
     },
   });
 
-  const {
-    data: { user },
-  } = await withTimeoutFallback(
-    supabase.auth.getUser(),
-    { data: { user: null }, error: null },
-    { label: "middleware_getUser", timeoutMs: 4_000 }
-  );
+  const { user, timedOut } = await safeGetUser(supabase, "middleware_getUser");
 
-  return { response: supabaseResponse, user: user ?? null };
+  return {
+    response: supabaseResponse,
+    user: user ?? null,
+    timedOut,
+  };
 }

@@ -1,17 +1,23 @@
 /**
- * Emergency admin recovery — bypass blocking auth/bootstrap.
+ * Emergency admin recovery — OPT-IN ONLY.
  *
- * ON by default until you set BOTH to "0":
- *   ADMIN_EMERGENCY_MODE=0
- *   NEXT_PUBLIC_ADMIN_EMERGENCY_MODE=0
+ * Enable when Supabase is down or admin is inaccessible:
+ *   ADMIN_EMERGENCY_MODE=1
+ *   NEXT_PUBLIC_ADMIN_EMERGENCY_MODE=1
  *
- * Progressive restore order: middleware → auth gate → tenant → team → realtime → security sessions
+ * Disable for normal production (default):
+ *   unset both, or set to 0
  */
 
 export function isAdminEmergencyMode(): boolean {
-  if (process.env.ADMIN_EMERGENCY_MODE === "0") return false;
-  if (process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE === "0") return false;
-  return true;
+  return (
+    process.env.ADMIN_EMERGENCY_MODE === "1" ||
+    process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE === "1"
+  );
+}
+
+export function isAdminEmergencyModeClient(): boolean {
+  return process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE === "1";
 }
 
 export function isAdminEmergencyPath(pathname: string): boolean {
@@ -27,7 +33,12 @@ export const ADMIN_EMERGENCY_MOCK = {
 };
 
 export function traceAdminEmergency(
-  tag: "ADMIN_ROUTE" | "LOGIN_RENDER" | "MIDDLEWARE_BYPASS" | "LAYOUT_RENDER" | "CLIENT_HYDRATION",
+  tag:
+    | "ADMIN_ROUTE"
+    | "LOGIN_RENDER"
+    | "MIDDLEWARE_BYPASS"
+    | "LAYOUT_RENDER"
+    | "CLIENT_HYDRATION",
   detail?: string
 ): void {
   const msg = detail ? `[${tag}] ${detail}` : `[${tag}]`;

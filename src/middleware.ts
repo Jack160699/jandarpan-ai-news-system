@@ -18,6 +18,7 @@ import {
 } from "@/lib/tenant/registry";
 import { TENANT_COOKIE, TENANT_HEADER } from "@/lib/tenant/resolve";
 import { ACCESS_COOKIE } from "@/lib/saas-auth/cookies";
+import { traceMiddleware } from "@/lib/observability/admin-boot";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -108,11 +109,16 @@ export async function middleware(request: NextRequest) {
   }
 
   let authUser: { id: string; email?: string } | null = null;
+  let authTimedOut = false;
 
   if (isSupabaseConfigured()) {
     const session = await updateSupabaseSession(request, response);
     response = session.response;
     authUser = session.user;
+    authTimedOut = session.timedOut;
+    if (session.timedOut) {
+      traceMiddleware("auth_timed_out", { pathname });
+    }
   }
 
   if (isProductionDeployment() && !isProductionExemptPath(pathname)) {
@@ -122,9 +128,16 @@ export async function middleware(request: NextRequest) {
   }
 
   const legacyAccess = request.cookies.get(ACCESS_COOKIE)?.value;
-  const hasAuth =
-    Boolean(authUser?.id) ||
-    Boolean(legacyAccess && legacyAccess.length > 20);
+  const hasLegacyCookie = Boolean(legacyAccess && legacyAccess.length > 20);
+  let hasAuth = Boolean(authUser?.id) || hasLegacyCookie;
+
+  /** Supabase slow on Edge — allow admin HTML through; client gate verifies via API */
+  const authDegraded =
+    authTimedOut && hasLegacyCookie && !authUser?.id && pathname.startsWith(ADMIN_PREFIX);
+  if (authDegraded) {
+    traceMiddleware("admin_fail_open_degraded", { pathname });
+    hasAuth = true;
+  }
 
   const roleCookie = request.cookies.get(ROLE_COOKIE)?.value;
   const role = roleCookie ? normalizeDashboardRole(roleCookie) : null;
@@ -179,7 +192,7 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(login));
   }
 
-  if (hasAuth && role && !recoveryMode) {
+  if (hasAuth && role && !recoveryMode && !authDegraded) {
     const rbac = checkPathRbac(pathname, role);
     if (!rbac.allowed && rbac.redirectTo) {
       const redirectUrl = new URL(rbac.redirectTo, request.url);

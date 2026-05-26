@@ -1,14 +1,18 @@
 /**
- * Admin initialization tracing — console phases for runtime debugging.
+ * Admin initialization tracing — enable with ADMIN_DEBUG=1
  */
 
 export type AdminBootPhase =
   | "ADMIN_BOOT"
   | "AUTH_INIT"
-  | "TEAM_LOAD"
+  | "AUTH_TIMEOUT"
+  | "SESSION_REFRESH"
+  | "TENANT_LOAD"
   | "WORKSPACE_LOAD"
+  | "TEAM_LOAD"
   | "TIMEOUT"
-  | "RECOVERY_MODE";
+  | "RECOVERY_MODE"
+  | "MIDDLEWARE";
 
 function shouldTrace(): boolean {
   return (
@@ -34,6 +38,7 @@ export function traceAdminTimeout(
   timeoutMs: number,
   extra?: Record<string, unknown>
 ): void {
+  traceAdminBoot("AUTH_TIMEOUT", label, { timeoutMs, ...extra });
   traceAdminBoot("TIMEOUT", label, { timeoutMs, ...extra });
 }
 
@@ -42,4 +47,8 @@ export function traceAdminRecovery(
   extra?: Record<string, unknown>
 ): void {
   traceAdminBoot("RECOVERY_MODE", reason, extra);
+}
+
+export function traceMiddleware(detail: string, extra?: Record<string, unknown>): void {
+  traceAdminBoot("MIDDLEWARE", detail, extra);
 }

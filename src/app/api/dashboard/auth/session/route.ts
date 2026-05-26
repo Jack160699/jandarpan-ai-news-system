@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
-import { getDashboardSession } from "@/lib/saas-auth/session";
+import { getDashboardSessionSafe } from "@/lib/saas-auth/session-safe";
 import type { DashboardPermission } from "@/lib/saas-auth/types";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
-  const session = await getDashboardSession(request);
+  const result = await getDashboardSessionSafe(request);
+
+  if (!result.ok) {
+    return NextResponse.json(
+      { ok: false, error: result.reason, message: result.message },
+      { status: result.reason === "timeout" ? 503 : 500 }
+    );
+  }
+
+  const session = result.session;
   if (!session) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }

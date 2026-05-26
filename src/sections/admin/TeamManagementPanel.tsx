@@ -108,10 +108,10 @@ export function TeamManagementPanel() {
   }, []);
 
   const refresh = useCallback(async () => {
-    if (process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE !== "0") {
+    if (process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE === "1") {
       setLoading(false);
       setRecoveryMode(true);
-      setError("Recovery mode: team API loads when emergency bypass is disabled.");
+      setError("Emergency mode: team API disabled. Unset NEXT_PUBLIC_ADMIN_EMERGENCY_MODE.");
       return;
     }
     traceAdminBoot("TEAM_LOAD", "start");

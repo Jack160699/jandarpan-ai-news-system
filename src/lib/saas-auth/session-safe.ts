@@ -2,6 +2,7 @@
  * Timed dashboard session resolution — never blocks admin boot indefinitely.
  */
 
+import { GET_USER_TIMEOUT_MS } from "@/lib/auth/auth-safe";
 import { traceAdminBoot, traceAdminTimeout } from "@/lib/observability/admin-boot";
 import { getDashboardSession } from "@/lib/saas-auth/session";
 import type { DashboardSession } from "@/lib/saas-auth/types";
@@ -11,7 +12,9 @@ export type SessionLoadResult =
   | { ok: true; session: DashboardSession | null }
   | { ok: false; reason: "timeout" | "error"; message: string };
 
+/** Workspace + tenant bootstrap budget */
 const AUTH_INIT_TIMEOUT_MS = 8_000;
+export { GET_USER_TIMEOUT_MS };
 
 export async function getDashboardSessionSafe(
   request?: Request

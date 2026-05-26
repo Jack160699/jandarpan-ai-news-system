@@ -52,6 +52,8 @@ type AdminProviderProps = {
   tenantName?: string;
   /** Skip dashboard preload — emergency recovery */
   emergencyMode?: boolean;
+  /** When false, shell renders but workspace fetch waits for client auth */
+  authReady?: boolean;
 };
 
 export function AdminProvider({
@@ -60,6 +62,7 @@ export function AdminProvider({
   role = "",
   tenantName = "",
   emergencyMode = false,
+  authReady = true,
 }: AdminProviderProps) {
   const [data, setData] = useState<EditorialDashboardSnapshot | null>(null);
   const [error, setError] = useState<string | null>(
@@ -67,7 +70,7 @@ export function AdminProvider({
       ? "Recovery mode: workspace data loads on demand."
       : null
   );
-  const [loading, setLoading] = useState(!emergencyMode);
+  const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [theme, setThemeState] = useState<Theme>("dark");
@@ -83,7 +86,9 @@ export function AdminProvider({
   }, []);
 
   const refresh = useCallback(async () => {
+    if (!authReady && !emergencyMode) return;
     traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_start");
+    setLoading(true);
     try {
       const res = await withTimeout(
         fetch("/api/editorial/dashboard", {
@@ -118,10 +123,11 @@ export function AdminProvider({
       setLoading(false);
       return;
     }
+    if (!authReady) return;
     refresh();
     const id = setInterval(refresh, POLL_MS);
     return () => clearInterval(id);
-  }, [refresh, emergencyMode]);
+  }, [refresh, emergencyMode, authReady]);
 
   const runAction = useCallback(
     async (

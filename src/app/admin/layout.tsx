@@ -19,5 +19,6 @@ export default function AdminLayout({
     return <div className="anr-root anr-root--emergency">{children}</div>;
   }
 
+  traceAdminEmergency("LAYOUT_RENDER", "production_shell");
   return <AdminSafeGuard>{children}</AdminSafeGuard>;
 }
