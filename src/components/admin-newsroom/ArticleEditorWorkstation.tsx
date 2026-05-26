@@ -31,6 +31,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { traceStability } from "@/lib/observability/stability-trace";
 
 type ArticleEditorWorkstationProps = {
   articleId: string;
@@ -55,6 +56,8 @@ type EditorArticle = {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
+const AUTOSAVE_DEBOUNCE_MS = 1500;
+const LOAD_TIMEOUT_MS = 8000;
 
 function readingEase(text: string): number {
   const clean = text.replace(/\s+/g, " ").trim();
@@ -90,8 +93,12 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
   const [previewTab, setPreviewTab] = useState("og");
   const [markdownMode, setMarkdownMode] = useState(false);
   const [markdownDraft, setMarkdownDraft] = useState("");
+  const [editorHtml, setEditorHtml] = useState("<p></p>");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const lastPayloadRef = useRef("");
+  const saveDebounceRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const loadAbortRef = useRef<AbortController | null>(null);
+  const editorHydratedRef = useRef(false);
 
   const editor = useEditor({
     extensions: [
@@ -111,37 +118,69 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
   });
 
   useEffect(() => {
+    editorHydratedRef.current = false;
+    loadAbortRef.current?.abort();
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const res = await fetch(`/api/editorial/article/${articleId}`, {
-        cache: "no-store",
-        credentials: "include",
-      });
+      traceStability("EDITOR_BOOT", "editor_article_fetch_start", { articleId });
+      const timeout = window.setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
+      let res: Response;
+      try {
+        res = await fetch(`/api/editorial/article/${articleId}`, {
+          cache: "no-store",
+          credentials: "include",
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timeout);
+      }
       const json = (await res.json()) as { ok: boolean; article?: EditorArticle };
       if (!cancelled && json.ok && json.article) {
         setArticle(json.article);
         const initialMarkdown = json.article.article_body ?? "";
         setMarkdownDraft(initialMarkdown);
         const html = (await marked.parse(initialMarkdown)) as string;
-        editor?.commands.setContent(html || "<p></p>");
+        setEditorHtml(html || "<p></p>");
+        traceStability("EDITOR_BOOT", "editor_article_fetch_ok", {
+          hasBody: Boolean(initialMarkdown?.length),
+        });
       }
       if (!cancelled) setLoading(false);
     })();
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [articleId, editor]);
+  }, [articleId]);
 
-  const payload = useMemo(() => {
+  useEffect(() => {
+    if (!editor) return;
+    const onUpdate = () => {
+      setEditorHtml(editor.getHTML());
+    };
+    editor.on("update", onUpdate);
+    return () => {
+      editor.off("update", onUpdate);
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    if (!editor || !article) return;
+    if (editorHydratedRef.current) return;
+    editorHydratedRef.current = true;
+    editor.commands.setContent(editorHtml || "<p></p>");
+    traceStability("EDITOR_BOOT", "editor_hydrated_content_set", { articleId });
+  }, [editor, article, editorHtml, articleId]);
+
+  const basePayload = useMemo(() => {
     if (!article) return null;
-    const html = editor?.getHTML() ?? "";
-    const bodyMarkdown = markdownMode ? markdownDraft : turndown.turndown(html);
     return {
       slug: article.slug,
       headline: article.headline,
       summary: article.summary ?? "",
-      article_body: bodyMarkdown,
       hero_image_url: article.hero_image_url ?? "",
       seo_title: article.seo_title ?? "",
       seo_description: article.seo_description ?? "",
@@ -149,20 +188,36 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
       tags: article.tags ?? [],
       published_at: article.published_at,
       translations: article.translations ?? {},
+      editorial_metadata: article.editorial_metadata ?? {},
+    };
+  }, [article]);
+
+  const payload = useMemo(() => {
+    if (!basePayload) return null;
+    const bodyMarkdown = markdownMode
+      ? markdownDraft
+      : turndown.turndown(editorHtml || "");
+    return {
+      ...basePayload,
+      article_body: bodyMarkdown,
+    };
+  }, [basePayload, markdownMode, markdownDraft, editorHtml]);
+
+  const saveDraft = useCallback(async (reason: "manual" | "debounced" | "interval") => {
+    if (!payload) return;
+    const serialized = JSON.stringify({
+      ...payload,
       editorial_metadata: {
-        ...(article.editorial_metadata ?? {}),
+        ...(payload.editorial_metadata ?? {}),
         draft_state: {
           updatedAt: new Date().toISOString(),
           authoring: true,
+          reason,
         },
       },
-    };
-  }, [article, editor, markdownMode, markdownDraft]);
-
-  const saveDraft = useCallback(async () => {
-    if (!payload) return;
-    const serialized = JSON.stringify(payload);
+    });
     if (serialized === lastPayloadRef.current) return;
+    traceStability("SESSION_REFRESH", "editor_autosave_start", { reason });
     setSaveState("saving");
     const res = await fetch(`/api/editorial/article/${articleId}`, {
       method: "PATCH",
@@ -172,16 +227,29 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
     });
     if (!res.ok) {
       setSaveState("error");
+      traceStability("EDITOR_CRASH", "editor_autosave_failed", { status: res.status });
       return;
     }
     setSaveState("saved");
     setLastSavedAt(new Date().toISOString());
     lastPayloadRef.current = serialized;
     setTimeout(() => setSaveState("idle"), 1200);
+    traceStability("SESSION_REFRESH", "editor_autosave_done", { reason });
   }, [articleId, payload]);
 
   useEffect(() => {
-    const id = window.setInterval(saveDraft, 5000);
+    if (!payload) return;
+    if (saveDebounceRef.current) window.clearTimeout(saveDebounceRef.current);
+    saveDebounceRef.current = window.setTimeout(() => {
+      void saveDraft("debounced");
+    }, AUTOSAVE_DEBOUNCE_MS);
+    return () => {
+      if (saveDebounceRef.current) window.clearTimeout(saveDebounceRef.current);
+    };
+  }, [payload, saveDraft]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => void saveDraft("interval"), 30_000);
     return () => window.clearInterval(id);
   }, [saveDraft]);
 
@@ -195,9 +263,7 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
     return () => channel.close();
   }, [articleId]);
 
-  const bodyText = markdownMode
-    ? markdownDraft
-    : turndown.turndown(editor?.getHTML() ?? "");
+  const bodyText = markdownMode ? markdownDraft : turndown.turndown(editorHtml || "");
   const seo = seoScore({
     headline: article?.headline ?? "",
     slug: article?.slug ?? "",
@@ -235,7 +301,7 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
               <Badge variant={saveState === "error" ? "destructive" : saveState === "saving" ? "warning" : "success"}>
                 {saveState === "saving" ? "Saving..." : saveState === "error" ? "Save failed" : "Draft synced"}
               </Badge>
-              <Button variant="outline" size="sm" onClick={saveDraft}>
+              <Button variant="outline" size="sm" onClick={() => void saveDraft("manual")}>
                 {saveState === "saving" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                 Save now
               </Button>
@@ -471,7 +537,7 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
                   >
                     Clear schedule
                   </Button>
-                  <Button onClick={saveDraft}>
+                  <Button onClick={() => void saveDraft("manual")}>
                     <CalendarClock className="h-4 w-4" />
                     Save schedule
                   </Button>

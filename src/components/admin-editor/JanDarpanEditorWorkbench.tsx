@@ -26,8 +26,11 @@ import {
 } from "@/lib/editorial-editor/seo";
 import { buildDraftPayload } from "@/lib/editorial-editor/storage";
 import { NEWSROOM_LANGUAGES } from "@/lib/i18n/languages";
+import { traceStability } from "@/lib/observability/stability-trace";
 
 const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
+const AUTOSAVE_DEBOUNCE_MS = 1500;
+const LOAD_TIMEOUT_MS = 8000;
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -51,6 +54,8 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   const [headlineOptions, setHeadlineOptions] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const lastPayloadRef = useRef("");
+  const saveDebounceRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const loadAbortRef = useRef<AbortController | null>(null);
 
   const versions = useMemo(() => {
     const raw = article?.editorial_metadata?.editor_versions;
@@ -60,22 +65,38 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   const seoMeta = (article?.editorial_metadata?.seo ?? {}) as Record<string, string>;
 
   const loadArticle = useCallback(async () => {
+    loadAbortRef.current?.abort();
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
     setLoading(true);
-    const res = await fetch(`/api/editorial/article/${articleId}`, {
-      cache: "no-store",
-      credentials: "include",
-    });
-    const json = await res.json();
-    if (json.ok && json.article) {
-      const row = json.article as EditorArticleRecord;
-      setArticle(row);
-      const md = row.article_body ?? "";
-      setMarkdown(md);
-      const html = (await marked.parse(md)) as string;
-      setEditorHtml(html || "<p></p>");
-      setEditorReady(true);
+    setEditorReady(false);
+    traceStability("EDITOR_BOOT", "jd_editor_fetch_start", { articleId });
+    const timeout = window.setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
+    try {
+      const res = await fetch(`/api/editorial/article/${articleId}`, {
+        cache: "no-store",
+        credentials: "include",
+        signal: controller.signal,
+      });
+      const json = await res.json();
+      if (json.ok && json.article) {
+        const row = json.article as EditorArticleRecord;
+        setArticle(row);
+        const md = row.article_body ?? "";
+        setMarkdown(md);
+        const html = (await marked.parse(md)) as string;
+        setEditorHtml(html || "<p></p>");
+        setEditorReady(true);
+        traceStability("EDITOR_BOOT", "jd_editor_fetch_ok", { articleId });
+      }
+    } catch (e) {
+      traceStability("EDITOR_CRASH", "jd_editor_fetch_failed", {
+        message: e instanceof Error ? e.message : "unknown",
+      });
+    } finally {
+      window.clearTimeout(timeout);
+      setLoading(false);
     }
-    setLoading(false);
   }, [articleId]);
 
   useEffect(() => {
@@ -103,12 +124,24 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   }, [article, bodyMarkdown, seoMeta]);
 
   const saveDraft = useCallback(
-    async (withVersion = false) => {
+    async (withVersion = false, reason: "manual" | "debounced" | "interval" = "manual") => {
       if (!payload) return;
-      const body = { ...payload, save_version: withVersion };
+      const body = {
+        ...payload,
+        save_version: withVersion,
+        editorial_metadata: {
+          ...(payload.editorial_metadata ?? {}),
+          draft_state: {
+            updatedAt: new Date().toISOString(),
+            authoring: true,
+            reason,
+          },
+        },
+      };
       const serialized = JSON.stringify(body);
       if (serialized === lastPayloadRef.current && !withVersion) return;
 
+      traceStability("SESSION_REFRESH", "jd_editor_autosave_start", { reason });
       setSaveState("saving");
       const res = await fetch(`/api/editorial/article/${articleId}`, {
         method: "PATCH",
@@ -119,6 +152,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
       const json = await res.json();
       if (!res.ok) {
         setSaveState("error");
+        traceStability("EDITOR_CRASH", "jd_editor_autosave_failed", { status: res.status });
         return;
       }
       setSaveState("saved");
@@ -143,7 +177,18 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   );
 
   useEffect(() => {
-    const id = window.setInterval(() => void saveDraft(false), 5000);
+    if (!payload) return;
+    if (saveDebounceRef.current) window.clearTimeout(saveDebounceRef.current);
+    saveDebounceRef.current = window.setTimeout(() => {
+      void saveDraft(false, "debounced");
+    }, AUTOSAVE_DEBOUNCE_MS);
+    return () => {
+      if (saveDebounceRef.current) window.clearTimeout(saveDebounceRef.current);
+    };
+  }, [payload, saveDraft]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => void saveDraft(false, "interval"), 30_000);
     return () => window.clearInterval(id);
   }, [saveDraft]);
 

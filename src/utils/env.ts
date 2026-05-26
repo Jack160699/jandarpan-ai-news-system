@@ -40,7 +40,11 @@ export function getServerEnvSummary(): Record<string, boolean> {
   return {
     supabasePublic: isSupabaseConfigured(),
     supabaseAdmin: isSupabaseFullyConfigured(),
-    cron: Boolean(process.env.CRON_SECRET?.trim()),
+    cron: Boolean(
+      process.env.CRON_SECRET?.trim() ||
+        process.env.CRON_API_SECRET?.trim() ||
+        process.env.ADMIN_SECRET?.trim()
+    ),
     openai: Boolean(process.env.OPENAI_API_KEY?.trim()),
     gnews: Boolean(process.env.GNEWS_API_KEY?.trim()),
     newsdata: Boolean(process.env.NEWSDATA_API_KEY?.trim()),

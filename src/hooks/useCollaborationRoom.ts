@@ -10,7 +10,10 @@ import type {
   PresenceMember,
 } from "@/lib/collaboration/types";
 import { buildCollabChannelName } from "@/lib/security/realtime-guard";
+import { traceStability } from "@/lib/observability/stability-trace";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+
+const RECONNECT_LOG_INTERVAL_MS = 15_000;
 
 type UseCollaborationRoomOptions = {
   tenantId: string;
@@ -36,6 +39,7 @@ export function useCollaborationRoom({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const localVersionRef = useRef(0);
   const onRemoteDocRef = useRef(onRemoteDoc);
+  const lastReconnectLogRef = useRef(0);
 
   useEffect(() => {
     onRemoteDocRef.current = onRemoteDoc;
@@ -119,6 +123,16 @@ export function useCollaborationRoom({
       })
       .subscribe(async (status) => {
         setConnected(status === "SUBSCRIBED");
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          const now = Date.now();
+          if (now - lastReconnectLogRef.current >= RECONNECT_LOG_INTERVAL_MS) {
+            lastReconnectLogRef.current = now;
+            traceStability("SUBSCRIPTION_RECONNECT", "collab_room_channel", {
+              status,
+              roomId,
+            });
+          }
+        }
         if (status === "SUBSCRIBED") {
           await channel.track({
             email,

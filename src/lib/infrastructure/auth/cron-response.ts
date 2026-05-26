@@ -4,12 +4,15 @@
 
 import { NextResponse } from "next/server";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
-import type { CronAuthResult } from "@/lib/infrastructure/auth/cron-auth";
+import {
+  getActiveCronSecret,
+  type CronAuthResult,
+} from "@/lib/infrastructure/auth/cron-auth";
 
 export function cronAuthFailureResponse(
   auth: CronAuthResult
 ): NextResponse {
-  const cronSecret = process.env.CRON_SECRET?.trim();
+  const cronSecret = getActiveCronSecret().secret;
   const headers = noStoreHeaders();
 
   if (!cronSecret) {

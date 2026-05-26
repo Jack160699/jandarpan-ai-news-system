@@ -144,6 +144,47 @@ export async function recordSourceFailure(
   await persistHealth(record);
 }
 
+async function syncPlatformSourceMetrics(
+  sourceId: string,
+  patch: { lastSuccessAt?: string; articlesDelta?: number }
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    const supabase = createAdminClient();
+    const update: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (patch.lastSuccessAt) {
+      update.last_success_at = patch.lastSuccessAt;
+      update.health_status = "healthy";
+    }
+
+    if (patch.articlesDelta && patch.articlesDelta > 0) {
+      const { data: row } = await supabase
+        .from("platform_article_sources")
+        .select("articles_fetched_24h")
+        .eq("source_id", sourceId)
+        .maybeSingle();
+
+      const current =
+        (row as { articles_fetched_24h?: number } | null)?.articles_fetched_24h ??
+        0;
+      update.articles_fetched_24h = current + patch.articlesDelta;
+    }
+
+    if (Object.keys(update).length > 1) {
+      await supabase
+        .from("platform_article_sources")
+        .update(update as never)
+        .eq("source_id", sourceId);
+    }
+  } catch (err) {
+    console.warn("[rss-health] platform source sync failed:", err);
+  }
+}
+
 async function persistHealth(record: SourceHealthRecord): Promise<void> {
   memoryHealth.set(record.source_id, record);
 
@@ -164,6 +205,13 @@ async function persistHealth(record: SourceHealthRecord): Promise<void> {
       },
       { onConflict: "source_id" }
     );
+
+    if (record.last_success) {
+      await syncPlatformSourceMetrics(record.source_id, {
+        lastSuccessAt: record.last_success,
+        articlesDelta: record.last_article_count ?? 0,
+      });
+    }
   } catch (err) {
     console.warn("[rss-health] persist failed:", err);
   }

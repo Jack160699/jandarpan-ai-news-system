@@ -3,13 +3,16 @@
 /**
  * React hook — browser Supabase client + auth subscription.
  * Client-only: never instantiates Supabase during SSR.
+ *
+ * Uses a module-level singleton listener to avoid duplicate onAuthStateChange storms.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { traceStability } from "@/lib/observability/stability-trace";
 
 export type UseSupabaseState = {
   client: SupabaseClient<Database> | null;
@@ -20,74 +23,125 @@ export type UseSupabaseState = {
   error: string | null;
 };
 
-export function useSupabase(): UseSupabaseState {
-  const configured =
-    typeof window !== "undefined" && isSupabaseConfigured();
-  const [client, setClient] = useState<SupabaseClient<Database> | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type AuthSnapshot = {
+  client: SupabaseClient<Database> | null;
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  error: string | null;
+};
 
-  useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      return;
-    }
+let snapshot: AuthSnapshot = {
+  client: null,
+  user: null,
+  session: null,
+  loading: false,
+  error: null,
+};
 
-    let mounted = true;
-    let supabase: SupabaseClient<Database> | null = null;
+const listeners = new Set<() => void>();
+let initStarted = false;
 
-    try {
-      supabase = createBrowserClient();
-      setClient(supabase);
-    } catch (e) {
-      if (mounted) {
-        setError(
-          e instanceof Error ? e.message : "Failed to create Supabase client"
-        );
-        setLoading(false);
-      }
-      return;
-    }
+function emit() {
+  for (const l of listeners) l();
+}
 
-    setLoading(true);
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+}
 
-    supabase.auth
+function getSnapshot(): AuthSnapshot {
+  return snapshot;
+}
+
+function ensureAuthBootstrap() {
+  if (initStarted) return;
+  if (typeof window === "undefined" || !isSupabaseConfigured()) {
+    snapshot = { ...snapshot, loading: false };
+    return;
+  }
+
+  initStarted = true;
+  snapshot = { ...snapshot, loading: true };
+  emit();
+
+  try {
+    const supabase = createBrowserClient();
+    snapshot = { ...snapshot, client: supabase, error: null };
+    emit();
+
+    void supabase.auth
       .getSession()
       .then(({ data, error: sessionError }) => {
-        if (!mounted) return;
-        if (sessionError) setError(sessionError.message);
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
-        setLoading(false);
+        snapshot = {
+          ...snapshot,
+          session: data.session,
+          user: data.session?.user ?? null,
+          loading: false,
+          error: sessionError?.message ?? null,
+        };
+        emit();
       })
       .catch((e: unknown) => {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : "Session error");
-        setLoading(false);
+        snapshot = {
+          ...snapshot,
+          loading: false,
+          error: e instanceof Error ? e.message : "Session error",
+        };
+        emit();
       });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!mounted) return;
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      traceStability("SESSION_REFRESH", "supabase_auth_state_change", { event });
+      snapshot = {
+        ...snapshot,
+        session: nextSession,
+        user: nextSession?.user ?? null,
+        loading: false,
+      };
+      emit();
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
+    void subscription;
+  } catch (e) {
+    snapshot = {
+      ...snapshot,
+      loading: false,
+      error: e instanceof Error ? e.message : "Failed to create Supabase client",
     };
+    emit();
+  }
+}
+
+export function useSupabase(): UseSupabaseState {
+  const configured =
+    typeof window !== "undefined" && isSupabaseConfigured();
+
+  useEffect(() => {
+    if (configured) ensureAuthBootstrap();
   }, [configured]);
 
+  const state = useSyncExternalStore(
+    subscribe,
+    () => (configured ? getSnapshot() : { ...getSnapshot(), loading: false }),
+    () => ({
+      client: null,
+      user: null,
+      session: null,
+      loading: false,
+      error: null,
+    })
+  );
+
   return {
-    client,
-    user,
-    session,
-    loading,
+    client: configured ? state.client : null,
+    user: configured ? state.user : null,
+    session: configured ? state.session : null,
+    loading: configured ? state.loading : false,
     configured,
-    error,
+    error: configured ? state.error : null,
   };
 }

@@ -9,6 +9,10 @@ import { isTimeoutError, withTimeout, withTimeoutFallback } from "@/lib/utils/wi
 const GET_USER_TIMEOUT_MS = 4_000;
 const REFRESH_TIMEOUT_MS = 4_000;
 const MAX_REFRESH_ATTEMPTS = 1;
+/** Minimum interval between refreshSession calls (production hardening) */
+const MIN_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
+
+let lastRefreshAt = 0;
 
 export type SafeUserResult = {
   user: User | null;
@@ -65,6 +69,15 @@ export async function safeRefreshSession(
   client: Pick<SupabaseClient, "auth">,
   label = "SESSION_REFRESH"
 ): Promise<SafeSessionResult> {
+  const now = Date.now();
+  if (now - lastRefreshAt < MIN_REFRESH_INTERVAL_MS) {
+    traceAdminBoot("SESSION_REFRESH", "throttled", {
+      label,
+      nextInMs: MIN_REFRESH_INTERVAL_MS - (now - lastRefreshAt),
+    });
+    return safeGetSession(client, label);
+  }
+
   if (refreshInFlight) {
     traceAdminBoot("SESSION_REFRESH", "dedupe_in_flight");
     return refreshInFlight;
@@ -78,6 +91,7 @@ export async function safeRefreshSession(
         label,
         timeoutMs: REFRESH_TIMEOUT_MS,
       });
+      lastRefreshAt = Date.now();
       return {
         session: result.data.session ?? null,
         error: result.error,
@@ -123,4 +137,8 @@ export function staleAuthCookieHints(): string[] {
   return ["nr-dashboard-access", "nr-dashboard-refresh"];
 }
 
-export { MAX_REFRESH_ATTEMPTS, GET_USER_TIMEOUT_MS };
+export {
+  MAX_REFRESH_ATTEMPTS,
+  GET_USER_TIMEOUT_MS,
+  MIN_REFRESH_INTERVAL_MS,
+};

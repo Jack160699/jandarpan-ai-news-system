@@ -15,6 +15,8 @@ import {
 import type { ArticleValidationStats } from "@/lib/news/sanitize-article";
 import { runParallelApiProviders } from "@/lib/news/providers/run-provider";
 import { runRssBatched } from "@/lib/news/providers/rss-batch";
+import { getActiveCronSecret } from "@/lib/infrastructure/auth/cron-auth";
+import { bootstrapPlatformSources } from "@/lib/platform-admin/bootstrap";
 import type { ExecutionDeadline } from "@/lib/serverless/deadline";
 
 export type ScalableIngestResult = {
@@ -54,6 +56,8 @@ export type ScalableIngestResult = {
 export async function runScalableIngestion(
   deadline: ExecutionDeadline
 ): Promise<ScalableIngestResult> {
+  await bootstrapPlatformSources().catch(() => 0);
+
   const startedAt = Date.now();
   const completedProviders: string[] = [];
   const skippedProviders: string[] = [];
@@ -321,7 +325,7 @@ export async function runScalableIngestion(
 }
 
 export function triggerAiProcessing(requestUrl: string): void {
-  const secret = process.env.CRON_SECRET?.trim();
+  const secret = getActiveCronSecret().secret;
   if (!secret || !process.env.OPENAI_API_KEY?.trim()) return;
 
   const origin = new URL(requestUrl).origin;

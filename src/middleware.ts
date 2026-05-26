@@ -6,6 +6,7 @@ import {
   traceAdminEmergency,
 } from "@/lib/admin/emergency-mode";
 import {
+  isCronPath,
   isDebugPath,
   isProductionDeployment,
   isProductionExemptPath,
@@ -59,8 +60,31 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
+function isIngestionApiPath(pathname: string): boolean {
+  if (pathname === "/api/health") return true;
+  if (pathname.startsWith("/api/debug/") && isProductionExemptPath(pathname)) {
+    return true;
+  }
+  return (
+    isCronPath(pathname) ||
+    pathname === "/api/fetch-news" ||
+    pathname === "/api/process-ai" ||
+    pathname === "/api/generate-articles" ||
+    pathname === "/api/process-editorial-images" ||
+    pathname === "/api/rss-health"
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ─── Cron / ingestion APIs: skip session + RBAC (auth handled in route) ───
+  if (isIngestionApiPath(pathname)) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    return applySecurityHeaders(response);
+  }
 
   // ─── EMERGENCY: admin routes pass through instantly (no auth / Supabase) ───
   if (isAdminEmergencyMode() && isAdminEmergencyPath(pathname)) {

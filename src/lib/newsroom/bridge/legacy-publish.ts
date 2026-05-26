@@ -81,7 +81,8 @@ export async function publishToLegacyArticles(
       .from("news_articles")
       .upsert(batch, {
         onConflict: "article_url",
-        ignoreDuplicates: true,
+        // Refresh existing wire rows (published_at, title, images) — do not freeze on old URLs
+        ignoreDuplicates: false,
       })
       .select("id");
 
@@ -92,9 +93,10 @@ export async function publishToLegacyArticles(
       continue;
     }
 
-    const batchInserted = data?.length ?? 0;
-    result.inserted += batchInserted;
-    result.skippedDuplicates += batch.length - batchInserted;
+    const batchUpserted = data?.length ?? 0;
+    result.inserted += batchUpserted;
+    // Rows returned from upsert — treat remainder as unchanged conflicts (rare)
+    result.skippedDuplicates += Math.max(0, batch.length - batchUpserted);
     for (const row of data ?? []) {
       if (row.id != null) result.articleIds.push(String(row.id));
     }

@@ -10,7 +10,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { traceStability } from "@/lib/observability/stability-trace";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { normalizeAppLanguage } from "@/lib/i18n/safe-language";
 import { resolveGateHighlightLanguage } from "@/lib/i18n/browser-language";
@@ -72,6 +73,7 @@ export function LanguageProvider({
   enabledLanguages,
 }: LanguageProviderProps) {
   const router = useRouter();
+  const pathname = usePathname() ?? "/";
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const languageOptions = useMemo(() => {
@@ -144,14 +146,15 @@ export function LanguageProvider({
 
   /** Background server refresh — never blocks first paint after Continue */
   const scheduleServerRefresh = useCallback(() => {
+    if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard")) {
+      return;
+    }
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = window.setTimeout(() => {
-      if (process.env.NODE_ENV !== "production") {
-        console.debug("[Language] background router.refresh");
-      }
+      traceStability("ROUTER_REFRESH", "language_change_refresh", { pathname });
       router.refresh();
     }, 1200);
-  }, [router]);
+  }, [router, pathname]);
 
   const setLanguage = useCallback(
     (lang: AppLanguage) => {

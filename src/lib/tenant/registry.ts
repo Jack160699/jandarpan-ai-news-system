@@ -2,7 +2,6 @@
  * Tenant registry — static presets + optional Supabase overlay
  */
 
-import { createAdminServerClient } from "@/lib/supabase";
 import { CG_BHASKAR_TENANT } from "@/lib/tenant/presets/cg-bhaskar";
 import { HAMAR_CHHATTISGARH_TENANT } from "@/lib/tenant/presets/hamar-chhattisgarh";
 import { JAN_DARPAN_CHHATTISGARH_TENANT } from "@/lib/tenant/presets/jan-darpan-chhattisgarh";
@@ -59,6 +58,7 @@ export async function loadTenantFromDatabase(
   slug: string
 ): Promise<TenantConfig | null> {
   try {
+    const { createAdminServerClient } = await import("@/lib/supabase/admin");
     const supabase = createAdminServerClient();
     const { data, error } = await supabase
       .from("newsroom_tenants")
@@ -97,6 +97,7 @@ export async function upsertTenantToDatabase(
   config: TenantConfig
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    const { createAdminServerClient } = await import("@/lib/supabase/admin");
     const supabase = createAdminServerClient();
     const {
       id: _id,

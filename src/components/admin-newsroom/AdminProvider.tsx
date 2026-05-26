@@ -6,11 +6,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { EditorialDashboardSnapshot } from "@/lib/editorial-dashboard/types";
 import { traceAdminEmergency } from "@/lib/admin/emergency-mode";
 import { traceAdminBoot } from "@/lib/observability/admin-boot";
+import { traceStability } from "@/lib/observability/stability-trace";
 import { isTimeoutError, withTimeout } from "@/lib/utils/withTimeout";
 
 /** Hobby-safe admin dashboard polling (default 60s) */
@@ -74,6 +76,8 @@ export function AdminProvider({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [theme, setThemeState] = useState<Theme>("dark");
+  const inFlightRef = useRef<AbortController | null>(null);
+  const lastFetchAtRef = useRef<number>(0);
 
   useEffect(() => {
     const stored = localStorage.getItem("anr-theme") as Theme | null;
@@ -87,13 +91,25 @@ export function AdminProvider({
 
   const refresh = useCallback(async () => {
     if (!authReady && !emergencyMode) return;
+    if (inFlightRef.current) {
+      traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_dedup_in_flight");
+      traceStability("RENDER_LOOP", "admin_provider_refresh_dedupe");
+      return;
+    }
+
+    const startedAt = Date.now();
+    lastFetchAtRef.current = startedAt;
+    const controller = new AbortController();
+    inFlightRef.current = controller;
     traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_start");
+    traceStability("SESSION_REFRESH", "admin_dashboard_fetch_start");
     setLoading(true);
     try {
       const res = await withTimeout(
         fetch("/api/editorial/dashboard", {
           cache: "no-store",
           credentials: "include",
+          signal: controller.signal,
         }),
         { label: "WORKSPACE_LOAD", timeoutMs: 8_000 }
       );
@@ -109,13 +125,23 @@ export function AdminProvider({
         setError(
           "Dashboard load timed out. Editorial tools remain available in degraded mode."
         );
+      } else if (err instanceof DOMException && err.name === "AbortError") {
+        traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_aborted");
+        traceStability("SESSION_REFRESH", "admin_dashboard_fetch_aborted");
       } else {
         setError("Network error");
       }
     } finally {
       setLoading(false);
+      if (inFlightRef.current === controller) inFlightRef.current = null;
+      traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_done", {
+        ms: Date.now() - startedAt,
+      });
+      traceStability("SESSION_REFRESH", "admin_dashboard_fetch_done", {
+        ms: Date.now() - startedAt,
+      });
     }
-  }, []);
+  }, [authReady, emergencyMode]);
 
   useEffect(() => {
     if (emergencyMode) {

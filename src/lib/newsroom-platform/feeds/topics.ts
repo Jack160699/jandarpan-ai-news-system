@@ -1,6 +1,8 @@
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { ContentType, FeedPage, PlatformArticle } from "../content/types";
 import { contentTypesForTopic, getPlatformTopic, isPlatformTopicSlug } from "../config/topics";
+import { ingestCategoriesForContentTypes } from "../db/category-bridge";
+import { queryNewsArticlesAsPlatform } from "../db/news-articles-bridge";
 import { queryArticles, queryGeneratedAsPlatform } from "../db/queries";
 import { articleRowToPlatform } from "../db/types-map";
 import { sortByTrending } from "../content/validate";
@@ -53,6 +55,7 @@ export async function fetchTopicFeed(
   }
 
   const types = await contentTypesForTopic(topic);
+  const ingestCategories = ingestCategoriesForContentTypes(types);
   const offset = (page - 1) * pageSize;
   const items: PlatformArticle[] = [];
 
@@ -60,6 +63,13 @@ export async function fetchTopicFeed(
     const rows = await queryArticles({ category: cat, limit: pageSize, offset });
     items.push(...rows.map(articleRowToPlatform));
   }
+
+  const wireRows = await queryNewsArticlesAsPlatform({
+    categories: ingestCategories,
+    limit: pageSize,
+    offset,
+  });
+  items.push(...wireRows);
 
   const generated = await queryGeneratedAsPlatform({ limit: pageSize, offset });
   for (const g of generated) {

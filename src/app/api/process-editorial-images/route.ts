@@ -1,22 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { processEditorialImageQueue } from "@/lib/news/ai/generate-editorial-image";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-function isAuthorized(request: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
-  const auth = request.headers.get("authorization");
-  return auth === `Bearer ${secret}`;
-}
-
 /**
  * POST /api/process-editorial-images — drain editorial image queue
  */
 export async function POST(request: NextRequest) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = verifyCronRequest(request);
+  if (!auth.authorized) {
+    return cronAuthFailureResponse(auth);
   }
 
   let limit = 5;

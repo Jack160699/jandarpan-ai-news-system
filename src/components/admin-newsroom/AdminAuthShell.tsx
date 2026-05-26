@@ -4,26 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { AdminProvider } from "@/components/admin-newsroom/AdminProvider";
 import { AdminRecoveryCard } from "@/components/admin-newsroom/AdminRecoveryCard";
+import { adminAuthController, type AdminSessionPayload } from "@/lib/auth/auth-controller";
 import {
   ADMIN_EMERGENCY_MOCK,
   isAdminEmergencyModeClient,
 } from "@/lib/admin/emergency-mode";
 import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { traceAdminBoot, traceAdminRecovery } from "@/lib/observability/admin-boot";
+import { traceStability } from "@/lib/observability/stability-trace";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
 import type { DashboardPermission } from "@/lib/saas-auth/types";
-import { isTimeoutError, withTimeout } from "@/lib/utils/withTimeout";
-
-type SessionPayload = {
-  ok: boolean;
-  user?: { id: string; email: string };
-  membership?: {
-    role: string;
-    tenantName: string;
-    tenantSlug: string;
-  };
-  error?: string;
-};
 
 type BootState =
   | "shell"
@@ -39,8 +29,6 @@ type AdminAuthShellProps = {
   superAdminOnly?: boolean;
 };
 
-const SESSION_FETCH_MS = 8_000;
-
 export function AdminAuthShell({
   children,
   permission,
@@ -48,7 +36,7 @@ export function AdminAuthShell({
 }: AdminAuthShellProps) {
   const pathname = usePathname() ?? "/admin/editorial";
   const [boot, setBoot] = useState<BootState>("shell");
-  const [session, setSession] = useState<SessionPayload | null>(null);
+  const [session, setSession] = useState<AdminSessionPayload | null>(null);
 
   useEffect(() => {
     if (isAdminEmergencyModeClient()) {
@@ -60,76 +48,60 @@ export function AdminAuthShell({
           role: ADMIN_EMERGENCY_MOCK.role,
           tenantName: ADMIN_EMERGENCY_MOCK.tenantName,
           tenantSlug: "jan-darpan",
+          tenantId: "emergency",
         },
       });
       return;
     }
 
-    let cancelled = false;
+    const controller = new AbortController();
     traceAdminBoot("AUTH_INIT", "client_fetch_start", { pathname });
+    traceStability("SESSION_REFRESH", "admin_shell_boot", { pathname });
 
     (async () => {
-      try {
-        const res = await withTimeout(
-          fetch("/api/dashboard/auth/session", {
-            credentials: "include",
-            cache: "no-store",
-          }),
-          { label: "AUTH_INIT", timeoutMs: SESSION_FETCH_MS }
-        );
-        const json = (await res.json()) as SessionPayload;
+      const json = await adminAuthController.getSession({ signal: controller.signal });
 
-        if (cancelled) return;
+      setSession(json);
 
-        if (!json.ok || !json.membership) {
-          traceAdminBoot("AUTH_INIT", "guest");
-          setBoot("guest");
-          return;
-        }
-
-        const role = json.membership.role;
-
-        if (!canAccessAdminRoute(role, pathname)) {
-          traceAdminRecovery("forbidden_route", { pathname, role });
-          setSession(json);
-          setBoot("forbidden");
-          return;
-        }
-
-        if (permission && !roleHasPermission(role, permission)) {
-          traceAdminRecovery("missing_permission", { permission });
-          setSession(json);
-          setBoot("forbidden");
-          return;
-        }
-
-        if (superAdminOnly && !isSuperAdmin(role)) {
-          traceAdminRecovery("super_admin_required");
-          setSession(json);
-          setBoot("forbidden");
-          return;
-        }
-
-        traceAdminBoot("AUTH_INIT", "ready", {
-          role,
-          tenant: json.membership.tenantSlug,
-        });
-        setSession(json);
-        setBoot("ready");
-      } catch (err) {
-        if (cancelled) return;
-        if (isTimeoutError(err)) {
-          traceAdminRecovery("auth_client_timeout", { pathname });
-          setBoot("degraded");
-        } else {
-          setBoot("error");
-        }
+      if (!json.ok || !json.membership) {
+        traceAdminBoot("AUTH_INIT", "guest");
+        setBoot(json.error === "timeout" ? "degraded" : "guest");
+        return;
       }
-    })();
 
-    return () => {
-      cancelled = true;
-    };
+      const role = json.membership.role;
+
+      if (!canAccessAdminRoute(role, pathname)) {
+        traceAdminRecovery("forbidden_route", { pathname, role });
+        setBoot("forbidden");
+        return;
+      }
+
+      if (permission && !roleHasPermission(role, permission)) {
+        traceAdminRecovery("missing_permission", { permission });
+        setBoot("forbidden");
+        return;
+      }
+
+      if (superAdminOnly && !isSuperAdmin(role)) {
+        traceAdminRecovery("super_admin_required");
+        setBoot("forbidden");
+        return;
+      }
+
+      traceAdminBoot("AUTH_INIT", "ready", {
+        role,
+        tenant: json.membership.tenantSlug,
+      });
+      setBoot("ready");
+    })().catch((err) => {
+      traceStability("AUTH_LOOP", "admin_shell_boot_error", {
+        message: err instanceof Error ? err.message : "unknown",
+      });
+      setBoot("error");
+    });
+
+    return () => controller.abort();
   }, [pathname, permission, superAdminOnly]);
 
   useEffect(() => {

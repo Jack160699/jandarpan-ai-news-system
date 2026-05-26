@@ -13,6 +13,12 @@ const CATEGORY_TO_SECTION: Partial<Record<string, HomeSectionId>> = {
   tech: "business",
   fact_checks: "india",
   yojana: "chhattisgarh",
+  // Ingest pipeline categories (news_articles)
+  local: "chhattisgarh",
+  politics: "india",
+  business: "business",
+  world: "world",
+  technology: "business",
 };
 
 export function platformArticleToHomeArticle(article: PlatformArticle): HomeArticle {

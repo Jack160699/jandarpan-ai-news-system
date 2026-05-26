@@ -3,6 +3,7 @@
 import { Loader2, Lock, MessageSquare, Send, Users } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCollaborationRoom } from "@/hooks/useCollaborationRoom";
+import { adminAuthController } from "@/lib/auth/auth-controller";
 import type { EditorLock, InlineComment } from "@/lib/collaboration/types";
 
 type CollaborationBarProps = {
@@ -31,17 +32,18 @@ export function CollaborationBar({
   const lockTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    fetch("/api/dashboard/auth/session", { credentials: "include" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.ok) {
-          setSession({
-            userId: json.user.id,
-            email: json.user.email,
-            tenantId: json.membership.tenantId,
-          });
-        }
+    let cancelled = false;
+    void adminAuthController.getSession().then((json) => {
+      if (cancelled || !json.ok || !json.user || !json.membership) return;
+      setSession({
+        userId: json.user.id,
+        email: json.user.email,
+        tenantId: json.membership.tenantId,
       });
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const { members, connected, broadcastDoc, setTyping } = useCollaborationRoom({

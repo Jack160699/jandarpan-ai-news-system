@@ -2,17 +2,51 @@ name: Enterprise Workers
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  schedule:
+    # Every 30 minutes — primary live ingestion trigger (Vercel/cron-job.org backup)
+    - cron: "*/30 * * * *"
 
 jobs:
-  test:
+  newsroom-pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Ingest wire + RSS
+        env:
+          APP_URL: ${{ secrets.PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Set GitHub secrets: PRODUCTION_URL, CRON_SECRET"
+            exit 1
+          fi
+          curl -fsS -X POST "$APP_URL/api/fetch-news" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json"
 
-      - name: Test workflow
-        run: echo "Enterprise workers active"
+      - name: Drain worker job queue
+        env:
+          APP_URL: ${{ secrets.PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -X POST "$APP_URL/api/cron/jobs" \
+            -H "Authorization: Bearer $CRON_SECRET"
+
+      - name: Run full orchestration
+        env:
+          APP_URL: ${{ secrets.PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -X POST "$APP_URL/api/cron/orchestrate" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "{}"
+
+      - name: Worker health check
+        env:
+          APP_URL: ${{ secrets.PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS "$APP_URL/api/cron/workers/health" \
+            -H "Authorization: Bearer $CRON_SECRET"

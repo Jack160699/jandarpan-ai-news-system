@@ -52,12 +52,6 @@ export function buildDraftPayload(input: {
     tags: input.article.tags ?? [],
     published_at: input.article.published_at,
     translations: input.article.translations ?? {},
-    editorial_metadata: {
-      ...meta,
-      draft_state: {
-        updatedAt: new Date().toISOString(),
-        authoring: true,
-      },
-    },
+    editorial_metadata: meta,
   };
 }

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
 import { getEditorialThresholds } from "@/lib/news/ai/editorial-guards";
 import { processEditorialImageQueue } from "@/lib/news/ai/generate-editorial-image";
@@ -6,19 +8,13 @@ import { processEditorialImageQueue } from "@/lib/news/ai/generate-editorial-ima
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-function isAuthorized(request: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return false;
-  const auth = request.headers.get("authorization");
-  return auth === `Bearer ${secret}`;
-}
-
 /**
  * POST /api/generate-articles — batch editorial generation from news_events
  */
 export async function POST(request: NextRequest) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = verifyCronRequest(request);
+  if (!auth.authorized) {
+    return cronAuthFailureResponse(auth);
   }
 
   if (!process.env.OPENAI_API_KEY?.trim()) {
