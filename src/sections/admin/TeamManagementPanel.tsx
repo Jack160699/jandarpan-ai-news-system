@@ -1,14 +1,17 @@
 "use client";
 
 import {
-  ChevronDown,
+  Activity,
+  KeyRound,
+  Mail,
   MoreHorizontal,
-  Plus,
   Search,
+  Shield,
   UserPlus,
   Users,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { TeamAvatar } from "@/components/admin-team/TeamAvatar";
 import { AdminConfirmDialog } from "@/components/admin-newsroom/ui/AdminConfirmDialog";
 import { AdminModal } from "@/components/admin-newsroom/ui/AdminModal";
 import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
@@ -27,9 +30,20 @@ type TeamMember = {
   status: MembershipStatus;
   createdAt: string;
   lastLoginAt: string | null;
+  avatarHue: number;
+  permissions: string[];
 };
 
-const PAGE_SIZE = 8;
+type TeamActivity = {
+  id: string;
+  action: string;
+  userEmail: string | null;
+  resourceId: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
+
+const PAGE_SIZE = 10;
 
 const ROLE_LABELS: Record<CanonicalRole, string> = {
   super_admin: "Super admin",
@@ -38,13 +52,15 @@ const ROLE_LABELS: Record<CanonicalRole, string> = {
   journalist: "Journalist",
 };
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return (parts[0]?.slice(0, 2) ?? "JD").toUpperCase();
-}
+const ACTION_LABELS: Record<string, string> = {
+  team_create: "Staff created",
+  team_invite: "Invitation sent",
+  team_role_change: "Role updated",
+  team_suspend: "Access suspended",
+  team_reactivate: "Access restored",
+  team_remove: "Removed from newsroom",
+  team_password_reset: "Password reset",
+};
 
 function statusTone(
   status: MembershipStatus
@@ -55,12 +71,13 @@ function statusTone(
   return "neutral";
 }
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, withTime = false): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-IN", {
+  return new Date(iso).toLocaleString("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",
+    ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
   });
 }
 
@@ -69,21 +86,27 @@ type ConfirmState = {
   member: TeamMember;
 } | null;
 
+type ModalMode = "create" | "invite" | null;
+
 export function TeamManagementPanel() {
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [activity, setActivity] = useState<TeamActivity[]>([]);
+  const [tenantName, setTenantName] = useState("Jan Darpan");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [tab, setTab] = useState<"members" | "activity">("members");
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<CanonicalRole | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<MembershipStatus | "all">(
-    "all"
-  );
+  const [statusFilter, setStatusFilter] = useState<MembershipStatus | "all">("all");
   const [page, setPage] = useState(0);
-  const [createOpen, setCreateOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [busy, setBusy] = useState(false);
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<TeamMember | null>(null);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetPassword, setResetPassword] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [formName, setFormName] = useState("");
@@ -93,7 +116,7 @@ export function TeamManagementPanel() {
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
-    window.setTimeout(() => setToast(null), 2800);
+    window.setTimeout(() => setToast(null), 3200);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -108,6 +131,8 @@ export function TeamManagementPanel() {
         return;
       }
       setTeam(json.team as TeamMember[]);
+      setActivity(json.activity as TeamActivity[]);
+      if (json.tenant?.name) setTenantName(json.tenant.name);
       setError(null);
     } catch {
       setError("Network error");
@@ -151,13 +176,11 @@ export function TeamManagementPanel() {
     safePage * PAGE_SIZE + PAGE_SIZE
   );
 
-  useEffect(() => {
-    setPage(0);
-  }, [search, roleFilter, statusFilter]);
+  useEffect(() => setPage(0), [search, roleFilter, statusFilter]);
 
   async function patchMember(
     membershipId: string,
-    patch: { role?: CanonicalRole; status?: MembershipStatus }
+    patch: { role?: CanonicalRole; status?: MembershipStatus; password?: string }
   ) {
     setBusy(true);
     try {
@@ -169,11 +192,11 @@ export function TeamManagementPanel() {
       });
       const json = await res.json();
       if (!json.ok) {
-        showToast(json.error ?? "Update failed");
+        showToast(String(json.error ?? "Update failed"));
         return false;
       }
       await refresh();
-      showToast("Team updated");
+      showToast("Saved");
       return true;
     } catch {
       showToast("Network error");
@@ -184,7 +207,7 @@ export function TeamManagementPanel() {
     }
   }
 
-  async function createStaff(e: React.FormEvent) {
+  async function submitMemberForm(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
@@ -193,24 +216,29 @@ export function TeamManagementPanel() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          mode: modalMode,
           fullName: formName,
           email: formEmail,
-          password: formPassword,
+          password: modalMode === "create" ? formPassword : undefined,
           role: formRole,
         }),
       });
       const json = await res.json();
       if (!json.ok) {
-        showToast(json.error ?? "Could not create user");
+        showToast(String(json.error ?? "Request failed"));
         return;
       }
-      setCreateOpen(false);
+      setModalMode(null);
       setFormName("");
       setFormEmail("");
       setFormPassword("");
       setFormRole("editor");
       await refresh();
-      showToast(`${formEmail} added to newsroom`);
+      showToast(
+        modalMode === "invite"
+          ? `Invitation sent to ${formEmail}`
+          : `${formEmail} is ready to sign in`
+      );
     } catch {
       showToast("Network error");
     } finally {
@@ -231,9 +259,10 @@ export function TeamManagementPanel() {
         });
         const json = await res.json();
         if (!json.ok) {
-          showToast(json.error ?? "Remove failed");
+          showToast(String(json.error ?? "Remove failed"));
           return;
         }
+        if (selected?.id === confirm.member.id) setSelected(null);
         showToast("Removed from newsroom");
       } else {
         const status: MembershipStatus =
@@ -248,6 +277,17 @@ export function TeamManagementPanel() {
     }
   }
 
+  async function submitPasswordReset(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selected) return;
+    const ok = await patchMember(selected.id, { password: resetPassword });
+    if (ok) {
+      setResetOpen(false);
+      setResetPassword("");
+      showToast("Password updated");
+    }
+  }
+
   const stats = useMemo(
     () => ({
       total: team.length,
@@ -257,137 +297,215 @@ export function TeamManagementPanel() {
     [team]
   );
 
+  const memberActivity = useMemo(() => {
+    if (!selected) return activity.slice(0, 12);
+    return activity.filter((a) => a.resourceId === selected.id).slice(0, 8);
+  }, [activity, selected]);
+
   if (loading && team.length === 0) {
     return (
-      <div className="anr-team">
-        <div className="anr-skeleton" style={{ height: "14rem" }} />
+      <div className="anr-team anr-team--premium">
+        <div className="anr-skeleton anr-team__skeleton" />
       </div>
     );
   }
 
   if (error && team.length === 0) {
-    return (
-      <EmptyState
-        title="Team unavailable"
-        hint={error}
-      />
-    );
+    return <EmptyState title="Team unavailable" hint={error} />;
   }
 
   return (
-    <div className="anr-team">
-      <div className="anr-kpis anr-team__kpis">
-        <article className="anr-kpi">
-          <span>Total staff</span>
-          <strong>{stats.total}</strong>
-        </article>
-        <article className="anr-kpi">
-          <span>Active</span>
-          <strong className="anr-kpi--ok">{stats.active}</strong>
-        </article>
-        <article className="anr-kpi">
-          <span>Pending invites</span>
-          <strong>{stats.invited}</strong>
-        </article>
-      </div>
-
-      <AdminCard
-        title="Newsroom team"
-        className="anr-team__card"
-        action={
+    <div className="anr-team anr-team--premium">
+      <header className="anr-team__hero">
+        <div>
+          <p className="anr-team__eyebrow">{tenantName} · Tenant workspace</p>
+          <h2 className="anr-team__hero-title">People & permissions</h2>
+          <p className="anr-meta">
+            Manage newsroom staff, roles, and Jan Darpan tenant memberships.
+          </p>
+        </div>
+        <div className="anr-team__hero-actions">
+          <button
+            type="button"
+            className="anr-btn anr-btn--ghost"
+            onClick={() => {
+              setModalMode("invite");
+              setFormPassword("");
+            }}
+          >
+            <Mail size={14} />
+            Invite
+          </button>
           <button
             type="button"
             className="anr-btn anr-btn--primary"
-            onClick={() => setCreateOpen(true)}
+            onClick={() => setModalMode("create")}
           >
             <UserPlus size={14} />
-            Add staff
+            Create user
           </button>
-        }
-      >
-        <div className="anr-team__filters">
-          <div className="anr-team__search">
-            <Search size={14} aria-hidden />
-            <input
-              className="anr-input"
-              placeholder="Search name or email…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search team"
-            />
-          </div>
-          <select
-            className="anr-input anr-team__select"
-            value={roleFilter}
-            onChange={(e) =>
-              setRoleFilter(e.target.value as CanonicalRole | "all")
-            }
-            aria-label="Filter by role"
-          >
-            <option value="all">All roles</option>
-            {CANONICAL_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {ROLE_LABELS[r]}
-              </option>
-            ))}
-          </select>
-          <select
-            className="anr-input anr-team__select"
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as MembershipStatus | "all")
-            }
-            aria-label="Filter by status"
-          >
-            <option value="all">All statuses</option>
-            <option value="active">Active</option>
-            <option value="invited">Invited</option>
-            <option value="suspended">Suspended</option>
-          </select>
         </div>
+      </header>
 
-        {filtered.length === 0 ? (
-          <div className="anr-team__empty">
-            <Users size={32} strokeWidth={1.25} aria-hidden />
-            <p>No team members match your filters</p>
-            <button
-              type="button"
-              className="anr-btn anr-btn--primary"
-              onClick={() => setCreateOpen(true)}
-            >
-              <Plus size={14} />
-              Create first staff account
-            </button>
+      <div className="anr-team__stats">
+        <article className="anr-team-stat">
+          <Users size={16} />
+          <div>
+            <span>Total</span>
+            <strong>{stats.total}</strong>
           </div>
-        ) : (
-          <>
-            <div className="anr-table-wrap anr-team__table-wrap">
-              <table className="anr-table anr-team__table">
-                <thead>
-                  <tr>
-                    <th>Member</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Joined</th>
-                    <th>Last login</th>
-                    <th aria-label="Actions" />
-                  </tr>
-                </thead>
-                <tbody>
+        </article>
+        <article className="anr-team-stat anr-team-stat--ok">
+          <Shield size={16} />
+          <div>
+            <span>Active</span>
+            <strong>{stats.active}</strong>
+          </div>
+        </article>
+        <article className="anr-team-stat anr-team-stat--pending">
+          <Mail size={16} />
+          <div>
+            <span>Invited</span>
+            <strong>{stats.invited}</strong>
+          </div>
+        </article>
+      </div>
+
+      <div className="anr-team__tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "members"}
+          className={tab === "members" ? "is-active" : ""}
+          onClick={() => setTab("members")}
+        >
+          Members
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "activity"}
+          className={tab === "activity" ? "is-active" : ""}
+          onClick={() => setTab("activity")}
+        >
+          <Activity size={14} />
+          Activity
+        </button>
+      </div>
+
+      {tab === "activity" ? (
+        <AdminCard title="Team activity" className="anr-team__card">
+          {activity.length === 0 ? (
+            <p className="anr-meta anr-team__activity-empty">
+              No team events yet. Changes appear here automatically.
+            </p>
+          ) : (
+            <ul className="anr-team-activity">
+              {activity.map((item) => (
+                <li key={item.id}>
+                  <span className="anr-team-activity__dot" />
+                  <div>
+                    <strong>
+                      {ACTION_LABELS[item.action] ?? item.action}
+                    </strong>
+                    <span className="anr-meta">
+                      {item.userEmail ?? "system"} ·{" "}
+                      {formatDate(item.createdAt, true)}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </AdminCard>
+      ) : (
+        <div className="anr-team__layout">
+          <AdminCard className="anr-team__card anr-team__table-card">
+            <div className="anr-team__filters">
+              <div className="anr-team__search">
+                <Search size={14} aria-hidden />
+                <input
+                  className="anr-input"
+                  placeholder="Search people…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <select
+                className="anr-input anr-team__pill"
+                value={roleFilter}
+                onChange={(e) =>
+                  setRoleFilter(e.target.value as CanonicalRole | "all")
+                }
+              >
+                <option value="all">All roles</option>
+                {CANONICAL_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="anr-input anr-team__pill"
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as MembershipStatus | "all")
+                }
+              >
+                <option value="all">All status</option>
+                <option value="active">Active</option>
+                <option value="invited">Invited</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+
+            {filtered.length === 0 ? (
+              <div className="anr-team__empty">
+                <Users size={36} strokeWidth={1.2} />
+                <p>No people match your filters</p>
+                <button
+                  type="button"
+                  className="anr-btn anr-btn--primary"
+                  onClick={() => setModalMode("create")}
+                >
+                  Add staff
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="anr-team-table">
+                  <div className="anr-team-table__head">
+                    <span>Member</span>
+                    <span>Role</span>
+                    <span>Status</span>
+                    <span>Joined</span>
+                    <span>Last login</span>
+                    <span />
+                  </div>
                   {pageItems.map((member) => (
-                    <tr key={member.id}>
-                      <td>
-                        <div className="anr-team__member">
-                          <span className="anr-team__avatar" aria-hidden>
-                            {initials(member.displayName)}
-                          </span>
-                          <div>
-                            <strong>{member.displayName}</strong>
-                            <span className="anr-meta">{member.email}</span>
-                          </div>
+                    <div
+                      key={member.id}
+                      className={`anr-team-table__row ${selected?.id === member.id ? "is-selected" : ""}`}
+                      onClick={() => setSelected(member)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") setSelected(member);
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="anr-team-table__member">
+                        <TeamAvatar
+                          name={member.displayName}
+                          email={member.email}
+                          hue={member.avatarHue}
+                          size="md"
+                        />
+                        <div>
+                          <strong>{member.displayName}</strong>
+                          <span>{member.email}</span>
                         </div>
-                      </td>
-                      <td>
+                      </div>
+                      <div onClick={(e) => e.stopPropagation()}>
                         <select
                           className="anr-input anr-team__role-select"
                           value={member.role}
@@ -397,7 +515,6 @@ export function TeamManagementPanel() {
                               role: e.target.value as CanonicalRole,
                             })
                           }
-                          aria-label={`Role for ${member.email}`}
                         >
                           {CANONICAL_ROLES.map((r) => (
                             <option key={r} value={r}>
@@ -405,144 +522,238 @@ export function TeamManagementPanel() {
                             </option>
                           ))}
                         </select>
-                      </td>
-                      <td>
+                      </div>
+                      <div>
                         <StatusBadge
                           label={member.status}
                           tone={statusTone(member.status)}
                         />
-                      </td>
-                      <td className="anr-meta">{formatDate(member.createdAt)}</td>
-                      <td className="anr-meta">
-                        {formatDate(member.lastLoginAt)}
-                      </td>
-                      <td className="anr-team__actions-cell">
-                        <div
-                          className="anr-team__menu-wrap"
-                          ref={menuId === member.id ? menuRef : undefined}
+                      </div>
+                      <span className="anr-team-table__muted">
+                        {formatDate(member.createdAt)}
+                      </span>
+                      <span className="anr-team-table__muted">
+                        {formatDate(member.lastLoginAt, true)}
+                      </span>
+                      <div
+                        className="anr-team__menu-wrap"
+                        onClick={(e) => e.stopPropagation()}
+                        ref={menuId === member.id ? menuRef : undefined}
+                      >
+                        <button
+                          type="button"
+                          className="anr-btn anr-btn--ghost anr-team__menu-btn"
+                          aria-label="Actions"
+                          onClick={() =>
+                            setMenuId((id) =>
+                              id === member.id ? null : member.id
+                            )
+                          }
                         >
-                          <button
-                            type="button"
-                            className="anr-btn anr-btn--ghost anr-team__menu-btn"
-                            aria-label={`Actions for ${member.displayName}`}
-                            aria-expanded={menuId === member.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setMenuId((id) =>
-                                id === member.id ? null : member.id
-                              );
-                            }}
-                          >
-                            <MoreHorizontal size={16} />
-                          </button>
-                          {menuId === member.id ? (
-                            <div className="anr-team__menu" role="menu">
-                              {member.status === "suspended" ? (
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  onClick={() =>
-                                    setConfirm({
-                                      type: "reactivate",
-                                      member,
-                                    })
-                                  }
-                                >
-                                  Reactivate
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  role="menuitem"
-                                  onClick={() =>
-                                    setConfirm({ type: "suspend", member })
-                                  }
-                                >
-                                  Suspend access
-                                </button>
-                              )}
+                          <MoreHorizontal size={16} />
+                        </button>
+                        {menuId === member.id ? (
+                          <div className="anr-team__menu">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelected(member);
+                                setResetOpen(true);
+                                setMenuId(null);
+                              }}
+                            >
+                              <KeyRound size={14} />
+                              Reset password
+                            </button>
+                            {member.status === "suspended" ? (
                               <button
                                 type="button"
-                                role="menuitem"
-                                className="anr-team__menu-danger"
                                 onClick={() =>
-                                  setConfirm({ type: "remove", member })
+                                  setConfirm({ type: "reactivate", member })
                                 }
                               >
-                                Remove from newsroom
+                                Reactivate
                               </button>
-                            </div>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setConfirm({ type: "suspend", member })
+                                }
+                              >
+                                Suspend
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="anr-team__menu-danger"
+                              onClick={() =>
+                                setConfirm({ type: "remove", member })
+                              }
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+                <div className="anr-team__pagination">
+                  <span className="anr-meta">
+                    {safePage * PAGE_SIZE + 1}–
+                    {Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of{" "}
+                    {filtered.length}
+                  </span>
+                  <div>
+                    <button
+                      type="button"
+                      className="anr-btn anr-btn--ghost"
+                      disabled={safePage <= 0}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      Prev
+                    </button>
+                    <button
+                      type="button"
+                      className="anr-btn anr-btn--ghost"
+                      disabled={safePage >= pageCount - 1}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </AdminCard>
 
-            <div className="anr-team__pagination">
-              <span className="anr-meta">
-                {filtered.length === 0
-                  ? "0 members"
-                  : `${safePage * PAGE_SIZE + 1}–${Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
-              </span>
-              <div className="anr-team__pagination-btns">
-                <button
-                  type="button"
-                  className="anr-btn anr-btn--ghost"
-                  disabled={safePage <= 0}
-                  onClick={() => setPage((p) => Math.max(0, p - 1))}
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  className="anr-btn anr-btn--ghost"
-                  disabled={safePage >= pageCount - 1}
-                  onClick={() =>
-                    setPage((p) => Math.min(pageCount - 1, p + 1))
-                  }
-                >
-                  Next
-                </button>
+          <aside className="anr-team-drawer">
+            {selected ? (
+              <>
+                <div className="anr-team-drawer__profile">
+                  <TeamAvatar
+                    name={selected.displayName}
+                    email={selected.email}
+                    hue={selected.avatarHue}
+                    size="lg"
+                  />
+                  <div>
+                    <h3>{selected.displayName}</h3>
+                    <p className="anr-meta">{selected.email}</p>
+                    <StatusBadge
+                      label={ROLE_LABELS[selected.role]}
+                      tone="neutral"
+                    />
+                  </div>
+                </div>
+                <section className="anr-team-drawer__section">
+                  <h4>Permissions</h4>
+                  <ul className="anr-team-perms">
+                    {selected.permissions.map((p) => (
+                      <li key={p}>{p}</li>
+                    ))}
+                  </ul>
+                </section>
+                <section className="anr-team-drawer__section">
+                  <h4>Membership</h4>
+                  <dl className="anr-team-meta">
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{selected.status}</dd>
+                    </div>
+                    <div>
+                      <dt>Joined</dt>
+                      <dd>{formatDate(selected.createdAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Last login</dt>
+                      <dd>{formatDate(selected.lastLoginAt, true)}</dd>
+                    </div>
+                    <div>
+                      <dt>Tenant</dt>
+                      <dd>{tenantName}</dd>
+                    </div>
+                  </dl>
+                </section>
+                <section className="anr-team-drawer__section">
+                  <h4>Recent activity</h4>
+                  {memberActivity.length === 0 ? (
+                    <p className="anr-meta">No events for this member</p>
+                  ) : (
+                    <ul className="anr-team-activity anr-team-activity--compact">
+                      {memberActivity.map((item) => (
+                        <li key={item.id}>
+                          <span className="anr-team-activity__dot" />
+                          <div>
+                            <strong>
+                              {ACTION_LABELS[item.action] ?? item.action}
+                            </strong>
+                            <span className="anr-meta">
+                              {formatDate(item.createdAt, true)}
+                            </span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+                <div className="anr-team-drawer__actions">
+                  <button
+                    type="button"
+                    className="anr-btn anr-btn--ghost"
+                    onClick={() => setResetOpen(true)}
+                  >
+                    <KeyRound size={14} />
+                    Reset password
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="anr-team-drawer__placeholder">
+                <Users size={28} strokeWidth={1.2} />
+                <p>Select a team member to view permissions and activity</p>
               </div>
-            </div>
-          </>
-        )}
-      </AdminCard>
+            )}
+          </aside>
+        </div>
+      )}
 
       <AdminModal
-        open={createOpen}
-        title="Create newsroom staff"
-        subtitle="Creates Supabase Auth user + Jan Darpan tenant membership"
-        onClose={() => !busy && setCreateOpen(false)}
+        open={modalMode !== null}
+        title={modalMode === "invite" ? "Invite to newsroom" : "Create staff account"}
+        subtitle={
+          modalMode === "invite"
+            ? "Sends Supabase invite email · Jan Darpan tenant membership"
+            : "Creates auth user with password · active membership"
+        }
+        onClose={() => !busy && setModalMode(null)}
         wide
         footer={
           <div className="anr-modal__actions">
             <button
               type="button"
               className="anr-btn anr-btn--ghost"
-              onClick={() => setCreateOpen(false)}
+              onClick={() => setModalMode(null)}
               disabled={busy}
             >
               Cancel
             </button>
             <button
               type="submit"
-              form="anr-create-staff-form"
+              form="anr-team-member-form"
               className="anr-btn anr-btn--primary"
               disabled={busy}
             >
-              {busy ? "Creating…" : "Create staff"}
+              {busy ? "Saving…" : modalMode === "invite" ? "Send invite" : "Create user"}
             </button>
           </div>
         }
       >
         <form
-          id="anr-create-staff-form"
+          id="anr-team-member-form"
           className="anr-team__form"
-          onSubmit={createStaff}
+          onSubmit={submitMemberForm}
         >
           <label className="anr-team__field">
             <span>Full name</span>
@@ -550,9 +761,7 @@ export function TeamManagementPanel() {
               className="anr-input"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
-              placeholder="e.g. Priya Sharma"
               required
-              autoComplete="name"
             />
           </label>
           <label className="anr-team__field">
@@ -562,45 +771,78 @@ export function TeamManagementPanel() {
               type="email"
               value={formEmail}
               onChange={(e) => setFormEmail(e.target.value)}
-              placeholder="staff@jandarpan.com"
               required
-              autoComplete="email"
             />
           </label>
+          {modalMode === "create" ? (
+            <label className="anr-team__field">
+              <span>Password</span>
+              <input
+                className="anr-input"
+                type="password"
+                value={formPassword}
+                onChange={(e) => setFormPassword(e.target.value)}
+                minLength={8}
+                required
+              />
+            </label>
+          ) : null}
           <label className="anr-team__field">
-            <span>Password</span>
+            <span>Role</span>
+            <select
+              className="anr-input"
+              value={formRole}
+              onChange={(e) => setFormRole(e.target.value as CanonicalRole)}
+            >
+              {CANONICAL_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </form>
+      </AdminModal>
+
+      <AdminModal
+        open={resetOpen && selected !== null}
+        title="Reset password"
+        subtitle={selected?.email}
+        onClose={() => !busy && setResetOpen(false)}
+        footer={
+          <div className="anr-modal__actions">
+            <button
+              type="button"
+              className="anr-btn anr-btn--ghost"
+              onClick={() => setResetOpen(false)}
+              disabled={busy}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="anr-reset-password-form"
+              className="anr-btn anr-btn--primary"
+              disabled={busy}
+            >
+              {busy ? "Updating…" : "Update password"}
+            </button>
+          </div>
+        }
+      >
+        <form id="anr-reset-password-form" onSubmit={submitPasswordReset}>
+          <label className="anr-team__field">
+            <span>New password</span>
             <input
               className="anr-input"
               type="password"
-              value={formPassword}
-              onChange={(e) => setFormPassword(e.target.value)}
-              placeholder="Min. 8 characters"
-              required
+              value={resetPassword}
+              onChange={(e) => setResetPassword(e.target.value)}
               minLength={8}
+              required
               autoComplete="new-password"
             />
           </label>
-          <label className="anr-team__field">
-            <span>Role</span>
-            <div className="anr-team__role-picker">
-              <select
-                className="anr-input"
-                value={formRole}
-                onChange={(e) => setFormRole(e.target.value as CanonicalRole)}
-              >
-                {CANONICAL_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="anr-team__chevron" aria-hidden />
-            </div>
-          </label>
-          <p className="anr-meta anr-team__form-hint">
-            Super admins have full access including this team page. Moderators can
-            publish; editors write desk content; journalists are read-focused.
-          </p>
         </form>
       </AdminModal>
 
@@ -616,10 +858,10 @@ export function TeamManagementPanel() {
         message={
           confirm
             ? confirm.type === "remove"
-              ? `${confirm.member.displayName} will lose access to this tenant. Their Supabase account remains.`
+              ? `${confirm.member.displayName} loses tenant access. Auth account is kept.`
               : confirm.type === "suspend"
-                ? `${confirm.member.displayName} will not be able to sign in until reactivated.`
-                : `${confirm.member.displayName} will regain active newsroom access.`
+                ? `${confirm.member.displayName} cannot sign in until reactivated.`
+                : `${confirm.member.displayName} will regain active access.`
             : ""
         }
         confirmLabel={
@@ -635,7 +877,11 @@ export function TeamManagementPanel() {
         onConfirm={() => void runConfirm()}
       />
 
-      {toast ? <div className="anr-toast" role="status">{toast}</div> : null}
+      {toast ? (
+        <div className="anr-toast anr-toast--success" role="status">
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }

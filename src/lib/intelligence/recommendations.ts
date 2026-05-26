@@ -28,6 +28,10 @@ export function buildEditorialRecommendations(input: {
   pendingCount: number;
   highRiskCount: number;
   duplicateCount: number;
+  trendAlerts?: number;
+  districtAlerts?: number;
+  semanticClusters?: number;
+  translationGaps?: number;
 }): EditorialRecommendation[] {
   const recs: EditorialRecommendation[] = [];
   let id = 0;
@@ -57,6 +61,42 @@ export function buildEditorialRecommendations(input: {
       priority: "medium",
       action: "Merge duplicate clusters",
       reason: `${input.duplicateCount} duplicate headline clusters detected`,
+    });
+  }
+
+  if ((input.semanticClusters ?? 0) > 0) {
+    recs.push({
+      id: nextId(),
+      priority: "medium",
+      action: "Review semantic signal clusters",
+      reason: `${input.semanticClusters} embedding clusters need desk merge`,
+    });
+  }
+
+  if ((input.trendAlerts ?? 0) > 0) {
+    recs.push({
+      id: nextId(),
+      priority: "high",
+      action: "Assign trend desk coverage",
+      reason: `${input.trendAlerts} topics accelerating in last hour`,
+    });
+  }
+
+  if ((input.districtAlerts ?? 0) > 0) {
+    recs.push({
+      id: nextId(),
+      priority: "high",
+      action: "Activate district risk protocol",
+      reason: `${input.districtAlerts} districts elevated for misinfo/breaking`,
+    });
+  }
+
+  if ((input.translationGaps ?? 0) > 5) {
+    recs.push({
+      id: nextId(),
+      priority: "medium",
+      action: "Run AI translation batch",
+      reason: `${input.translationGaps} stories missing Hindi/English editions`,
     });
   }
 

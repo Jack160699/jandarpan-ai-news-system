@@ -111,3 +111,120 @@ export type NewsroomAnalyticsReport = {
   breakingVelocity: BreakingVelocityRow[];
   categoryIntelligence: CategoryIntelligenceRow[];
 };
+
+export type RankedArticle = ArticlePerformanceRow & {
+  rank: number;
+  rankScore: number;
+  rankFactors: string[];
+};
+
+export type LiveReadersSnapshot = {
+  activeReaders: number;
+  activeSessions5m: number;
+  peakReaders24h: number;
+  viewsPerMinute: number;
+};
+
+export type AudienceRetentionPoint = {
+  label: string;
+  returningSessions: number;
+  newSessions: number;
+  retentionRate: number;
+};
+
+export type SeoRankingRow = {
+  slug: string;
+  headline: string;
+  seoScore: number;
+  organicViews: number;
+  ctr: number;
+  searchClicks: number;
+  positionEstimate: number;
+};
+
+export type SourcePerformanceRow = {
+  sourceKey: string;
+  sourceName: string;
+  provider: string;
+  articles: number;
+  views: number;
+  avgTrust: number;
+  avgEngagement: number;
+};
+
+export type NewsroomProductivity = {
+  articlesPublished: number;
+  articlesDraft: number;
+  workflowTransitions: number;
+  avgTimeToPublishHours: number | null;
+  deskActions24h: number;
+};
+
+export type PublishingVelocityPoint = {
+  label: string;
+  published: number;
+  drafted: number;
+};
+
+export type AiConfidenceTrendPoint = {
+  label: string;
+  avgConfidence: number;
+  articleCount: number;
+};
+
+export type DistrictEngagementRow = {
+  district: string;
+  views: number;
+  clicks: number;
+  ctr: number;
+  articles: number;
+  engagementScore: number;
+};
+
+export type CtrAnalytics = {
+  overall: number;
+  bySurface: Array<{ surface: string; ctr: number; views: number; clicks: number }>;
+  topClickDrivers: Array<{ slug: string; headline: string; ctr: number; clicks: number }>;
+};
+
+export type ScrollDepthBucket = {
+  bucket: string;
+  count: number;
+  pct: number;
+};
+
+export type AdminInsight = {
+  id: string;
+  severity: "info" | "warning" | "success";
+  title: string;
+  detail: string;
+};
+
+export type ScheduledReportRow = {
+  id: string;
+  name: string;
+  frequency: "daily" | "weekly" | "monthly";
+  format: "csv" | "json";
+  windowHours: number;
+  email: string | null;
+  enabled: boolean;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+};
+
+export type EnterpriseAnalyticsReport = NewsroomAnalyticsReport & {
+  liveReaders: LiveReadersSnapshot;
+  rankedArticles: RankedArticle[];
+  districtEngagement: DistrictEngagementRow[];
+  seoRankings: SeoRankingRow[];
+  ctrAnalytics: CtrAnalytics;
+  audienceRetention: AudienceRetentionPoint[];
+  scrollDepth: ScrollDepthBucket[];
+  sourcePerformance: SourcePerformanceRow[];
+  productivity: NewsroomProductivity;
+  publishingVelocity: PublishingVelocityPoint[];
+  aiConfidenceTrend: AiConfidenceTrendPoint[];
+  geographicAnalytics: RegionalTrendRow[];
+  adminInsights: AdminInsight[];
+  scheduledReports: ScheduledReportRow[];
+};

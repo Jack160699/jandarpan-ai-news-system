@@ -6,11 +6,13 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  PenLine,
   ChevronLeft,
   ChevronRight,
   Compass,
   FileText,
   Image as ImageIcon,
+  Images,
   LayoutDashboard,
   Menu,
   Moon,
@@ -21,6 +23,8 @@ import {
   UserCircle2,
   Brain,
   Users,
+  GitBranch,
+  MessagesSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -32,6 +36,9 @@ import { isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 const NAV = [
   { href: "/admin/editorial", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/intelligence", label: "Intelligence", icon: Brain },
+  { href: "/admin/editor", label: "Editor", icon: PenLine },
+  { href: "/admin/workflow", label: "Workflow", icon: GitBranch },
+  { href: "/admin/collaboration", label: "Collaboration", icon: MessagesSquare },
   { href: "/admin/stories", label: "Stories", icon: BookOpen },
   { href: "/admin/articles", label: "Articles", icon: FileText },
   { href: "/admin/districts", label: "Districts", icon: Compass },
@@ -39,6 +46,7 @@ const NAV = [
   { href: "/admin/sources", label: "Sources", icon: Radio },
   { href: "/admin/live-wire", label: "Live wire", icon: Activity },
   { href: "/admin/images", label: "Images", icon: ImageIcon },
+  { href: "/admin/media", label: "Media", icon: Images },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/team", label: "Team", icon: Users },
 ] as const;

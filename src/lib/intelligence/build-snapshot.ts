@@ -1,32 +1,53 @@
 /**
- * Orchestrates full newsroom intelligence snapshot from Supabase
+ * Orchestrates full newsroom intelligence snapshot from Supabase + vector layer
  */
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { suggestTranslations } from "@/lib/intelligence/ai-translations";
 import { detectBreakingCandidates } from "@/lib/intelligence/breaking-detector";
 import { buildDistrictHeatmap } from "@/lib/intelligence/district-heatmap";
+import { buildDistrictRiskAlerts } from "@/lib/intelligence/district-risk-alerts";
 import {
   detectDuplicateStories,
   countDuplicateClusters,
 } from "@/lib/intelligence/duplicate-detection";
 import { buildEventClusterInsights } from "@/lib/intelligence/event-clusters";
+import { buildEventRelationshipGraph } from "@/lib/intelligence/event-graph";
 import { scoreFakeNewsRisk } from "@/lib/intelligence/fake-news-risk";
+import { suggestFactChecks } from "@/lib/intelligence/fact-check-suggestions";
+import {
+  analyzeLiveSignals,
+  type RawSignal,
+} from "@/lib/intelligence/ingestion-analyzer";
 import { getMultilingualPipelineStatus } from "@/lib/intelligence/multilingual-pipeline";
+import { scorePoliticalSensitivity } from "@/lib/intelligence/political-sensitivity";
 import { buildEditorialRecommendations } from "@/lib/intelligence/recommendations";
 import { findSeoOpportunities } from "@/lib/intelligence/seo-opportunities";
+import { analyzeSentiment } from "@/lib/intelligence/sentiment-analysis";
+import {
+  loadSourceReputationMemory,
+  syncReputationFromIngestion,
+} from "@/lib/intelligence/source-reputation-memory";
 import {
   buildSourceTrustEngine,
   aggregateArticleTrust,
 } from "@/lib/intelligence/source-trust";
 import { buildAutomatedSummary } from "@/lib/intelligence/summaries";
+import { detectTrendAcceleration } from "@/lib/intelligence/trend-acceleration";
 import {
   forecastTrends,
   buildTopicMomentum,
 } from "@/lib/intelligence/trend-forecast";
 import type {
   ArticleIntelligenceCard,
+  ConfidenceHeatCell,
   NewsroomIntelligenceSnapshot,
 } from "@/lib/intelligence/types";
+import { clusterByEmbeddings } from "@/lib/intelligence/vector/semantic-cluster";
+import {
+  batchEmbedSignals,
+  findSimilarByText,
+} from "@/lib/intelligence/vector/vector-store";
 import { predictViralSpread } from "@/lib/intelligence/viral-prediction";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { NewsEventRow } from "@/lib/types/newsroom";
@@ -50,7 +71,19 @@ export async function buildNewsroomIntelligenceSnapshot(
     articlesQuery = articlesQuery.eq("tenant_id", tenantId);
   }
 
-  const [articlesRes, eventsRes, healthRes] = await Promise.all([
+  let signalsQuery = supabase
+    .from("news_signals")
+    .select(
+      "id, title, provider, source, region, category, published_at, created_at, article_url, raw_content"
+    )
+    .order("created_at", { ascending: false })
+    .limit(80);
+
+  if (tenantId) {
+    signalsQuery = signalsQuery.eq("tenant_id", tenantId);
+  }
+
+  const [articlesRes, eventsRes, healthRes, signalsRes] = await Promise.all([
     articlesQuery,
     supabase
       .from("news_events")
@@ -60,10 +93,12 @@ export async function buildNewsroomIntelligenceSnapshot(
       .order("urgency_score", { ascending: false })
       .limit(30),
     supabase.from("rss_source_health").select("*"),
+    signalsQuery,
   ]);
 
   const articles = (articlesRes.data ?? []) as GeneratedArticleRow[];
   const events = eventsRes.data ?? [];
+  const signals = (signalsRes.data ?? []) as RawSignal[];
 
   const eventMap = new Map(events.map((e) => [e.id, e as NewsEventRow]));
 
@@ -90,16 +125,76 @@ export async function buildNewsroomIntelligenceSnapshot(
     }
   }
 
-  const sourceTrust = buildSourceTrustEngine({
-    sourceHealth: healthRes.data ?? [],
-    attributions,
-  });
+  const [sourceTrust, sourceReputation, embeddedCount] = await Promise.all([
+    Promise.resolve(
+      buildSourceTrustEngine({
+        sourceHealth: healthRes.data ?? [],
+        attributions,
+      })
+    ),
+    loadSourceReputationMemory(tenantId),
+    batchEmbedSignals(
+      signals.slice(0, 25).map((s) => ({
+        id: s.id,
+        title: s.title,
+        raw_content: s.raw_content,
+        provider: s.provider,
+      })),
+      tenantId
+    ).catch(() => 0),
+  ]);
+
+  void syncReputationFromIngestion({
+    tenantId,
+    signals: signals.map((s) => ({
+      provider: s.provider,
+      source: s.source,
+      title: s.title,
+    })),
+  }).catch(() => undefined);
 
   const duplicates = detectDuplicateStories(
     articles.map((a) => ({ id: a.id, headline: a.headline, slug: a.slug }))
   );
 
+  const semanticClusters = await clusterByEmbeddings({
+    items: signals.slice(0, 20).map((s) => ({
+      id: s.id,
+      text: s.title,
+    })),
+    threshold: 0.82,
+  }).catch(() => []);
+
+  const vectorDuplicates: NewsroomIntelligenceSnapshot["vectorDuplicates"] = [];
+  for (const a of articles.slice(0, 8)) {
+    const matches = await findSimilarByText({
+      text: a.headline,
+      tenantId,
+      entityType: "signal",
+      limit: 3,
+    }).catch(() => []);
+    for (const m of matches) {
+      if (m.similarity < 0.8) continue;
+      vectorDuplicates.push({
+        entityId: m.entityId,
+        entityType: m.entityType,
+        similarity: m.similarity,
+        headline: (m.metadata.title as string) ?? a.headline,
+      });
+    }
+  }
+
   const eventClusters = buildEventClusterInsights(events);
+  const eventGraph = buildEventRelationshipGraph(
+    events.map((e) => ({
+      id: e.id,
+      canonical_title: e.canonical_title,
+      region: e.region,
+      category: e.category,
+      signal_ids: e.signal_ids ?? [],
+      urgency_score: Number(e.urgency_score),
+    }))
+  );
 
   const breakingCandidates = detectBreakingCandidates(
     articles.map((a) => ({
@@ -144,10 +239,50 @@ export async function buildNewsroomIntelligenceSnapshot(
   const trendForecasts = forecastTrends(articles);
   const topicMomentum = buildTopicMomentum(articles);
   const districtHeatmap = buildDistrictHeatmap(articles);
+  const translationSuggestions = suggestTranslations({
+    articles: articles.map((a) => ({
+      id: a.id,
+      headline: a.headline,
+      language: a.language,
+      translations: a.translations as Record<string, unknown> | null,
+      region: (a.geo_metadata as { district?: string })?.district ?? null,
+    })),
+  });
   const multilingual = getMultilingualPipelineStatus(articles);
+  multilingual.pendingCount += translationSuggestions.length;
+
+  const trendAcceleration = detectTrendAcceleration(
+    articles.map((a) => ({
+      created_at: a.created_at,
+      headline: a.headline,
+      tags: a.tags ?? undefined,
+    }))
+  );
+
+  const liveSignalFeed = analyzeLiveSignals(signals);
+
+  const breakingByDistrict = new Map<string, number>();
+  for (const a of articles) {
+    const slug =
+      (a.geo_metadata as { districtSlug?: string })?.districtSlug ?? "unknown";
+    if (breakingCandidates.some((b) => b.articleId === a.id)) {
+      breakingByDistrict.set(slug, (breakingByDistrict.get(slug) ?? 0) + 1);
+    }
+  }
+
+  const districtRiskAlerts = buildDistrictRiskAlerts(
+    districtHeatmap,
+    breakingByDistrict
+  );
+
+  const confidenceHeatmap = buildConfidenceHeatmap(articles, sourceTrust);
 
   const articleCards: ArticleIntelligenceCard[] = [];
   const topRisks: NewsroomIntelligenceSnapshot["topRisks"] = [];
+  const sentiments: NewsroomIntelligenceSnapshot["sentiments"] = [];
+  const politicalSensitivity: NewsroomIntelligenceSnapshot["politicalSensitivity"] =
+    [];
+  const factCheckQueue: NewsroomIntelligenceSnapshot["factCheckQueue"] = [];
   let highRiskCount = 0;
 
   const dupByArticle = new Map(duplicates.map((d) => [d.articleId, d]));
@@ -176,6 +311,37 @@ export async function buildNewsroomIntelligenceSnapshot(
       highRiskCount += 1;
       topRisks.push({
         ...fakeNewsRisk,
+        articleId: a.id,
+        headline: a.headline,
+      });
+    }
+
+    const sentiment = analyzeSentiment(`${a.headline} ${a.summary ?? ""}`);
+    sentiments.push({
+      articleId: a.id,
+      label: sentiment.label,
+      score: sentiment.score,
+      polarity: sentiment.polarity,
+    });
+
+    const political = scorePoliticalSensitivity(
+      `${a.headline} ${a.summary ?? ""} ${a.article_body ?? ""}`
+    );
+    politicalSensitivity.push({
+      articleId: a.id,
+      score: political.score,
+      level: political.level,
+      topics: political.topics,
+    });
+
+    const fc = suggestFactChecks({
+      headline: a.headline,
+      summary: a.summary ?? "",
+      sourceCount: attr.length,
+    });
+    for (const suggestion of fc.slice(0, 2)) {
+      factCheckQueue.push({
+        ...suggestion,
         articleId: a.id,
         headline: a.headline,
       });
@@ -250,6 +416,11 @@ export async function buildNewsroomIntelligenceSnapshot(
     pendingCount,
     highRiskCount,
     duplicateCount: countDuplicateClusters(duplicates),
+    trendAlerts: trendAcceleration.filter((t) => t.alert).length,
+    districtAlerts: districtRiskAlerts.length,
+    semanticClusters: semanticClusters.filter((c) => c.memberIds.length > 1)
+      .length,
+    translationGaps: translationSuggestions.length,
   });
 
   const avgTrust =
@@ -258,8 +429,38 @@ export async function buildNewsroomIntelligenceSnapshot(
       : 0;
   const avgViral =
     viralPredictions.length > 0
-      ? viralPredictions.reduce((s, v) => s + v.viralScore, 0) / viralPredictions.length
+      ? viralPredictions.reduce((s, v) => s + v.viralScore, 0) /
+        viralPredictions.length
       : 0;
+
+  const signals24h = signals.filter((s) => {
+    const age = Date.now() - new Date(s.created_at).getTime();
+    return age <= 24 * 60 * 60 * 1000;
+  }).length;
+
+  const providerCounts = new Map<string, number>();
+  for (const s of signals) {
+    providerCounts.set(s.provider, (providerCounts.get(s.provider) ?? 0) + 1);
+  }
+
+  const ingestionAnalysis: NewsroomIntelligenceSnapshot["ingestionAnalysis"] = {
+    signalsIngested24h: signals24h,
+    embeddedCount,
+    avgMisinfoRisk:
+      liveSignalFeed.length > 0
+        ? liveSignalFeed.reduce((sum, i) => sum + i.misinfoRisk, 0) /
+          liveSignalFeed.length
+        : 0,
+    avgBreakingProbability:
+      liveSignalFeed.length > 0
+        ? liveSignalFeed.reduce((sum, i) => sum + i.breakingProbability, 0) /
+          liveSignalFeed.length
+        : 0,
+    topProviders: [...providerCounts.entries()]
+      .map(([provider, count]) => ({ provider, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6),
+  };
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -271,22 +472,75 @@ export async function buildNewsroomIntelligenceSnapshot(
       duplicateClusters: countDuplicateClusters(duplicates),
       avgTrustScore: Math.round(avgTrust * 1000) / 1000,
       avgViralScore: Math.round(avgViral * 1000) / 1000,
+      semanticClusters: semanticClusters.filter((c) => c.memberIds.length > 1)
+        .length,
+      liveSignals: liveSignalFeed.length,
+      districtAlerts: districtRiskAlerts.length,
+      vectorIndexed: embeddedCount,
     },
     fakeNewsRisks: [],
     topRisks: topRisks.slice(0, 10),
     sourceTrust,
+    sourceReputation,
     duplicates,
+    vectorDuplicates: vectorDuplicates.slice(0, 15),
     eventClusters,
+    semanticClusters: semanticClusters.slice(0, 12),
+    eventGraph,
     viralPredictions,
     trendForecasts,
+    trendAcceleration,
     topicMomentum,
     recommendations,
     districtHeatmap,
+    districtRiskAlerts,
+    confidenceHeatmap,
     breakingCandidates,
     seoOpportunities,
     multilingual,
     articleCards: articleCards.slice(0, 40),
+    liveSignalFeed: liveSignalFeed.slice(0, 40),
+    ingestionAnalysis,
+    sentiments: sentiments.slice(0, 20),
+    politicalSensitivity: politicalSensitivity
+      .filter((p) => p.score >= 0.25)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 15),
+    factCheckQueue: factCheckQueue.slice(0, 20),
   };
+}
+
+function buildConfidenceHeatmap(
+  articles: GeneratedArticleRow[],
+  sourceTrust: ReturnType<typeof buildSourceTrustEngine>
+): ConfidenceHeatCell[] {
+  const buckets = new Map<string, { sum: number; count: number }>();
+
+  for (const a of articles) {
+    const meta = rowMeta(a);
+    const conf = (meta.ai_confidence as number) ?? 0.55;
+    const region =
+      (a.geo_metadata as { district?: string })?.district ?? "National";
+    const b = buckets.get(region) ?? { sum: 0, count: 0 };
+    b.sum += conf;
+    b.count += 1;
+    buckets.set(region, b);
+  }
+
+  for (const st of sourceTrust.slice(0, 5)) {
+    const key = `Source: ${st.sourceName}`;
+    buckets.set(key, { sum: st.trustScore, count: 1 });
+  }
+
+  return [...buckets.entries()]
+    .map(([label, b]) => ({
+      key: label.toLowerCase().replace(/\s+/g, "-"),
+      label,
+      confidence: Math.round((b.sum / b.count) * 100) / 100,
+      count: b.count,
+    }))
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 16);
 }
 
 function rowMeta(row: GeneratedArticleRow): Record<string, unknown> {

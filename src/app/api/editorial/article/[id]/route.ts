@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { logEditorialAudit } from "@/lib/dashboard/audit";
+import { appendEditorVersion } from "@/lib/editorial-editor/storage";
+import type { EditorVersionSnapshot } from "@/lib/editorial-editor/types";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 
@@ -54,6 +56,36 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
   }
 
+  const saveVersion = body.save_version === true;
+  const incomingMeta =
+    body.editorial_metadata && typeof body.editorial_metadata === "object"
+      ? (body.editorial_metadata as Record<string, unknown>)
+      : {};
+
+  let editorial_metadata: Record<string, unknown> | undefined = incomingMeta;
+
+  if (saveVersion && typeof body.headline === "string" && typeof body.article_body === "string") {
+    const { data: current } = await createAdminServerClient()
+      .from("generated_articles")
+      .select("editorial_metadata")
+      .eq("id", id)
+      .maybeSingle();
+
+    const versions = appendEditorVersion(current?.editorial_metadata ?? null, {
+      savedAt: new Date().toISOString(),
+      headline: body.headline as string,
+      summary: (body.summary as string) ?? "",
+      article_body: body.article_body as string,
+      slug: (body.slug as string) ?? "",
+    });
+
+    editorial_metadata = {
+      ...(current?.editorial_metadata as Record<string, unknown> | undefined),
+      ...incomingMeta,
+      editor_versions: versions,
+    };
+  }
+
   const patch = {
     slug: typeof body.slug === "string" ? body.slug.trim() : undefined,
     headline: typeof body.headline === "string" ? body.headline.trim() : undefined,
@@ -76,10 +108,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       body.translations && typeof body.translations === "object"
         ? body.translations
         : undefined,
-    editorial_metadata:
-      body.editorial_metadata && typeof body.editorial_metadata === "object"
-        ? body.editorial_metadata
-        : undefined,
+    editorial_metadata,
     reviewed_at: new Date().toISOString(),
   };
 
@@ -98,5 +127,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     payload: { fields: Object.keys(patch).filter((k) => patch[k as keyof typeof patch] !== undefined) },
   });
 
-  return NextResponse.json({ ok: true, message: "Draft autosaved" });
+  const versions = (editorial_metadata?.editor_versions ?? []) as EditorVersionSnapshot[];
+
+  return NextResponse.json({
+    ok: true,
+    message: "Draft autosaved",
+    versions,
+  });
 }

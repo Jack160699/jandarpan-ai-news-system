@@ -489,7 +489,7 @@ export function StoriesTable({ articles: articlesProp }: StoriesTableProps) {
               </div>
               <div className="mt-2">
                 <Link
-                  href={`/admin/stories/${selectedStory.id}`}
+                  href={`/admin/editor/${selectedStory.id}`}
                   className="anr-btn"
                 >
                   Open full editor

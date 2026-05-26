@@ -8,7 +8,16 @@ import {
   normalizeDashboardRole,
   type CanonicalRole,
 } from "@/lib/saas-auth/roles";
+import { permissionLabelsForRole } from "@/lib/newsroom-auth/role-permissions";
 import type { MembershipStatus } from "@/lib/saas-auth/types";
+
+export function avatarHueFromEmail(email: string): number {
+  let hash = 0;
+  for (let i = 0; i < email.length; i++) {
+    hash = email.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 360;
+}
 
 export type TeamMemberRecord = {
   id: string;
@@ -19,6 +28,17 @@ export type TeamMemberRecord = {
   status: MembershipStatus;
   createdAt: string;
   lastLoginAt: string | null;
+  avatarHue: number;
+  permissions: string[];
+};
+
+export type TeamActivityRecord = {
+  id: string;
+  action: string;
+  userEmail: string | null;
+  resourceId: string | null;
+  payload: Record<string, unknown>;
+  createdAt: string;
 };
 
 export { CANONICAL_ROLES };
@@ -39,15 +59,19 @@ function mapRow(row: {
     email.split("@")[0] ||
     "Staff";
 
+  const role = normalizeDashboardRole(row.role);
+
   return {
     id: row.id,
     userId: row.user_id,
     email,
     displayName,
-    role: normalizeDashboardRole(row.role),
+    role,
     status: row.status as MembershipStatus,
     createdAt: row.created_at,
     lastLoginAt: row.last_login_at ?? null,
+    avatarHue: avatarHueFromEmail(email),
+    permissions: permissionLabelsForRole(role),
   };
 }
 
@@ -66,7 +90,86 @@ export async function listTenantTeamMembers(
     .order("created_at", { ascending: false });
 
   if (error || !data) return [];
-  return data.map(mapRow);
+
+  const members = data.map(mapRow);
+  return enrichMembersWithAuthSignIn(members);
+}
+
+async function enrichMembersWithAuthSignIn(
+  members: TeamMemberRecord[]
+): Promise<TeamMemberRecord[]> {
+  const supabase = createAdminServerClient();
+  const { data: authData } = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (!authData?.users?.length) return members;
+
+  const byId = new Map(
+    authData.users.map((u) => [
+      u.id,
+      {
+        lastSignIn: u.last_sign_in_at ?? null,
+        metaName:
+          (u.user_metadata?.full_name as string | undefined)?.trim() || null,
+      },
+    ])
+  );
+
+  return members.map((m) => {
+    const auth = byId.get(m.userId);
+    if (!auth) return m;
+    const lastLoginAt =
+      m.lastLoginAt ||
+      (auth.lastSignIn ? new Date(auth.lastSignIn).toISOString() : null);
+    return {
+      ...m,
+      displayName: m.displayName || auth.metaName || m.displayName,
+      lastLoginAt,
+    };
+  });
+}
+
+export async function listTeamActivity(
+  tenantId: string,
+  limit = 40
+): Promise<TeamActivityRecord[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const supabase = createAdminServerClient();
+  const { data } = await supabase
+    .from("editorial_audit_log")
+    .select("id, action, user_email, resource_id, payload, created_at")
+    .eq("tenant_id", tenantId)
+    .like("action", "team_%")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    action: row.action,
+    userEmail: row.user_email,
+    resourceId: row.resource_id,
+    payload: (row.payload ?? {}) as Record<string, unknown>,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function touchMembershipLastLogin(
+  userId: string,
+  tenantId: string
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  const supabase = createAdminServerClient();
+  await supabase
+    .from("tenant_memberships")
+    .update({
+      last_login_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId)
+    .eq("tenant_id", tenantId);
 }
 
 export async function countSuperAdmins(
@@ -186,6 +289,126 @@ export async function createNewsroomStaff(input: {
   }
 
   return { ok: true, member: mapRow(membership) };
+}
+
+export async function inviteNewsroomMember(input: {
+  tenantId: string;
+  email: string;
+  fullName: string;
+  role: CanonicalRole;
+  invitedBy: string;
+}): Promise<{ ok: boolean; error?: string; member?: TeamMemberRecord }> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "supabase_not_configured" };
+  }
+
+  const email = input.email.trim().toLowerCase();
+  const displayName = input.fullName.trim();
+  const role = normalizeDashboardRole(input.role);
+
+  if (!email || !displayName) {
+    return { ok: false, error: "email_name_required" };
+  }
+
+  const supabase = createAdminServerClient();
+  const siteUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000")
+  ).replace(/\/$/, "");
+
+  let userId: string;
+  const existing = await findAuthUserByEmail(email);
+
+  if (existing) {
+    userId = existing.id;
+  } else {
+    const redirectTo = `${siteUrl}/admin/login`;
+    const { data: invited, error: inviteError } =
+      await supabase.auth.admin.inviteUserByEmail(email, {
+        data: { full_name: displayName },
+        redirectTo,
+      });
+
+    if (inviteError) {
+      const { data: created, error: createError } =
+        await supabase.auth.admin.createUser({
+          email,
+          email_confirm: false,
+          user_metadata: { full_name: displayName },
+        });
+      if (createError || !created.user) {
+        return {
+          ok: false,
+          error: inviteError.message ?? createError?.message ?? "invite_failed",
+        };
+      }
+      userId = created.user.id;
+    } else {
+      userId = invited.user.id;
+    }
+  }
+
+  const { data: membership, error: memberError } = await supabase
+    .from("tenant_memberships")
+    .upsert(
+      {
+        tenant_id: input.tenantId,
+        user_id: userId,
+        email,
+        display_name: displayName,
+        role,
+        status: "invited",
+        invited_by: input.invitedBy,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "tenant_id,user_id" }
+    )
+    .select(
+      "id, user_id, email, display_name, role, status, created_at, last_login_at"
+    )
+    .single();
+
+  if (memberError || !membership) {
+    return { ok: false, error: memberError?.message ?? "membership_upsert_failed" };
+  }
+
+  return { ok: true, member: mapRow(membership) };
+}
+
+export async function resetTeamMemberPassword(input: {
+  tenantId: string;
+  membershipId: string;
+  password: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "supabase_not_configured" };
+  }
+
+  if (!input.password || input.password.length < 8) {
+    return { ok: false, error: "password_min_8_chars" };
+  }
+
+  const supabase = createAdminServerClient();
+
+  const { data: member } = await supabase
+    .from("tenant_memberships")
+    .select("user_id")
+    .eq("id", input.membershipId)
+    .eq("tenant_id", input.tenantId)
+    .maybeSingle();
+
+  if (!member?.user_id) {
+    return { ok: false, error: "membership_not_found" };
+  }
+
+  const { error } = await supabase.auth.admin.updateUserById(member.user_id, {
+    password: input.password,
+  });
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 export async function updateTeamMemberRole(input: {

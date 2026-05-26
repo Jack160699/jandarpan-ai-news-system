@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { Database } from "@/lib/supabase/types";
 import { getPublicSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
 import { bootstrapNewsroomAuth } from "@/lib/newsroom-auth/bootstrap";
+import { touchMembershipLastLogin } from "@/lib/newsroom-auth/team-management";
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
@@ -94,6 +95,10 @@ export async function POST(request: Request) {
     userId: data.user.id,
     email: data.user.email ?? email,
   });
+
+  if (bootstrap.ok && bootstrap.tenantId) {
+    await touchMembershipLastLogin(data.user.id, bootstrap.tenantId);
+  }
 
   const response = NextResponse.json({
     ok: true,

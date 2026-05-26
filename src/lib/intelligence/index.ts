@@ -13,3 +13,17 @@ export { buildDistrictHeatmap } from "@/lib/intelligence/district-heatmap";
 export { detectBreakingCandidates } from "@/lib/intelligence/breaking-detector";
 export { findSeoOpportunities } from "@/lib/intelligence/seo-opportunities";
 export { getMultilingualPipelineStatus } from "@/lib/intelligence/multilingual-pipeline";
+export { analyzeSentiment } from "@/lib/intelligence/sentiment-analysis";
+export { scorePoliticalSensitivity } from "@/lib/intelligence/political-sensitivity";
+export { detectTrendAcceleration } from "@/lib/intelligence/trend-acceleration";
+export { suggestFactChecks } from "@/lib/intelligence/fact-check-suggestions";
+export { buildDistrictRiskAlerts } from "@/lib/intelligence/district-risk-alerts";
+export { analyzeLiveSignals } from "@/lib/intelligence/ingestion-analyzer";
+export { buildEventRelationshipGraph } from "@/lib/intelligence/event-graph";
+export {
+  loadSourceReputationMemory,
+  updateSourceReputationMemory,
+  syncReputationFromIngestion,
+} from "@/lib/intelligence/source-reputation-memory";
+export { batchEmbedSignals, findSimilarByText, upsertEmbedding } from "@/lib/intelligence/vector/vector-store";
+export { clusterByEmbeddings } from "@/lib/intelligence/vector/semantic-cluster";

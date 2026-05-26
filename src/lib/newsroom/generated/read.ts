@@ -8,7 +8,7 @@ import { logNewsroom } from "@/lib/newsroom/logger";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 const GENERATED_SELECT =
-  "id,event_id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,homepage_pin,pinned_at,editorial_metadata,created_at";
+  "id,event_id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,created_at";
 
 const MIN_POOL_LOG = 3;
 
@@ -50,6 +50,8 @@ export async function fetchGeneratedArticlePool(
 
   const publicRows = rows.filter((row) => {
     const status = row.editorial_status ?? "approved";
+    const workflow = (row as { workflow_status?: string }).workflow_status;
+    if (workflow && workflow !== "published") return false;
     if (status === "rejected" || status === "pending") return false;
     return Boolean(row.published_at);
   });

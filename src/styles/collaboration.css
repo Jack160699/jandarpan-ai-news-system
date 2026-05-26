@@ -1,0 +1,363 @@
+/* Collaboration — Figma × Notion × Linear */
+
+.collab-bar {
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--anr-border, rgba(255, 255, 255, 0.08));
+  background: rgba(9, 9, 11, 0.75);
+  backdrop-filter: blur(10px);
+}
+
+.collab-bar__left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.collab-bar__live {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--anr-muted);
+}
+
+.collab-bar__live.is-on {
+  color: #22c55e;
+}
+
+.collab-bar__live.is-on::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+}
+
+.collab-bar__presence {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.collab-bar__avatar {
+  position: relative;
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.collab-bar__typing {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  animation: collab-pulse 1s infinite;
+}
+
+@keyframes collab-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.collab-bar__lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+}
+
+.collab-bar__lock.is-own {
+  color: #22c55e;
+}
+
+.collab-bar__lock.is-blocked {
+  color: #f97316;
+}
+
+.collab-bar__readonly {
+  font-size: 0.72rem;
+  color: #f97316;
+}
+
+.collab-bar__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  justify-content: flex-end;
+}
+
+.collab-bar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--anr-border);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.collab-bar__btn--primary {
+  background: #6366f1;
+  border-color: transparent;
+  color: #fff;
+}
+
+.collab-bar__comments {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--anr-border);
+}
+
+.collab-bar__comments ul {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.collab-bar__comments li {
+  padding: 0.35rem 0;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.collab-bar__comment-form {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.collab-bar__comment-form input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--anr-border);
+  background: #09090b;
+  color: inherit;
+  font-size: 0.8rem;
+}
+
+.collab-bar__spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Hub */
+.collab-hub__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.collab-hub__kicker {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #6366f1;
+  margin: 0;
+}
+
+.collab-hub h2 {
+  margin: 0.15rem 0 0;
+  font-size: 1.35rem;
+}
+
+.collab-hub__live {
+  font-size: 0.72rem;
+  color: var(--anr-muted);
+}
+
+.collab-hub__live.is-on {
+  color: #22c55e;
+}
+
+.collab-hub__presence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.collab-hub__pill {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.collab-hub__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 1100px) {
+  .collab-hub__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.collab-hub__panel {
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--anr-border);
+  background: rgba(24, 24, 27, 0.85);
+  backdrop-filter: blur(12px);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.collab-hub__panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--anr-muted);
+  font-weight: 500;
+}
+
+.collab-hub__feed,
+.collab-hub__notifs,
+.collab-hub__approvals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  overflow: auto;
+  font-size: 0.8rem;
+}
+
+.collab-hub__feed li {
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  display: grid;
+  gap: 0.1rem;
+}
+
+.collab-hub__feed time {
+  font-size: 0.65rem;
+  color: var(--anr-muted);
+}
+
+.collab-hub__panel--chat {
+  display: flex;
+  flex-direction: column;
+}
+
+.collab-hub__chat {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.collab-hub__chat-msg {
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.collab-hub__chat-msg strong {
+  display: block;
+  font-size: 0.68rem;
+  color: #a5b4fc;
+}
+
+.collab-hub__chat-input {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.collab-hub__chat-input input {
+  flex: 1;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--anr-border);
+  background: #09090b;
+  color: inherit;
+  font-size: 0.8rem;
+}
+
+.collab-hub__notifs li button {
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.collab-hub__notifs li[data-read="true"] {
+  opacity: 0.5;
+}
+
+.collab-hub__badge {
+  margin-left: 0.35rem;
+  font-style: normal;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+}
+
+.collab-hub__subhead {
+  margin-top: 1rem !important;
+}
+
+.collab-hub__approvals li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.collab-hub__approval-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.collab-hub__approval-actions button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.2rem;
+}
+
+.collab-hub__empty {
+  color: var(--anr-muted);
+  font-size: 0.78rem;
+}

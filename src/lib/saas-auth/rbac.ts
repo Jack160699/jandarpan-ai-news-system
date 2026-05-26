@@ -34,7 +34,13 @@ const ROLE_PERMISSIONS: Record<CanonicalRole, DashboardPermission[]> = {
     "editorial:write",
     "providers:read",
   ],
-  journalist: ["analytics:read", "content:read", "monitoring:read"],
+  journalist: [
+    "analytics:read",
+    "content:read",
+    "content:write",
+    "editorial:write",
+    "monitoring:read",
+  ],
 };
 
 export function roleHasPermission(
