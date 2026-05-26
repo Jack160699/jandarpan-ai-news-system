@@ -21,6 +21,12 @@ const VALID: WorkerId[] = [
   "ai_enrich",
   "editorial_generate",
   "editorial_images",
+  "job_processor",
+  "intelligence_embed",
+  "intelligence_snapshot",
+  "analytics_aggregate",
+  "dam_analyze",
+  "event_cluster",
 ];
 
 type RouteParams = { params: Promise<{ name: string }> };

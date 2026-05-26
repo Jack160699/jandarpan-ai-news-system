@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 export default function AdminTopicsPage() {
   return (
     <AdminPageGate permission="content:read">
-      <AdminShell title="Topics" subtitle="Topic clusters and editorial themes.">
+      <AdminShell
+        title="Topics"
+        subtitle="SEO topics, performance, trend analysis — Supabase platform_topics."
+      >
         <PlatformTopicsPanel />
       </AdminShell>
     </AdminPageGate>

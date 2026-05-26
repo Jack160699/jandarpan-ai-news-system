@@ -34,6 +34,13 @@ export type DistrictRow = {
   priority_tier: number;
   enabled: boolean;
   metadata: Record<string, unknown>;
+  sections?: string[];
+  homepage_config?: Record<string, unknown>;
+  editor_user_ids?: string[];
+  trend_score?: number;
+  article_count_cache?: number;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type TopicRow = {
@@ -44,6 +51,14 @@ export type TopicRow = {
   description_hi: string | null;
   keywords: string[];
   enabled: boolean;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  content_types?: string[];
+  trend_score?: number;
+  article_count_cache?: number;
+  ai_keyword_suggestions?: string[];
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type BreakingNewsRow = {
@@ -63,6 +78,19 @@ export type ArticleSourceRow = {
   url: string | null;
   enabled: boolean;
   trust_score: number;
+  source_id?: string | null;
+  category?: string | null;
+  language?: string | null;
+  region?: string | null;
+  tier?: string | null;
+  health_status?: string;
+  failure_count?: number;
+  consecutive_failures?: number;
+  last_success_at?: string | null;
+  reliability_score?: number;
+  articles_fetched_24h?: number;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type AiLogRow = {

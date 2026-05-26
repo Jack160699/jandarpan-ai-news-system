@@ -27,7 +27,7 @@ export function AppFab() {
   const isListen = pathname === "/listen";
   const hideOnShorts = pathname.startsWith("/shorts");
 
-  if (hideOnShorts || pathname.startsWith("/admin") || pathname.startsWith("/dashboard")) {
+  if (hideOnShorts || pathname.startsWith("/admin")) {
     return null;
   }
 

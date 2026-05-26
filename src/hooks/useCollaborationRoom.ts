@@ -9,9 +9,11 @@ import type {
   DocBroadcastPayload,
   PresenceMember,
 } from "@/lib/collaboration/types";
+import { buildCollabChannelName } from "@/lib/security/realtime-guard";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type UseCollaborationRoomOptions = {
+  tenantId: string;
   roomId: string;
   roomType: "article" | "tenant";
   userId: string;
@@ -21,6 +23,7 @@ type UseCollaborationRoomOptions = {
 };
 
 export function useCollaborationRoom({
+  tenantId,
   roomId,
   roomType,
   userId,
@@ -58,13 +61,10 @@ export function useCollaborationRoom({
   );
 
   useEffect(() => {
-    if (!enabled || !isSupabaseConfigured() || !roomId) return;
+    if (!enabled || !isSupabaseConfigured() || !roomId || !tenantId) return;
 
     const supabase = createBrowserClient();
-    const channelName =
-      roomType === "article"
-        ? `collab:article:${roomId}`
-        : `collab:tenant:${roomId}`;
+    const channelName = buildCollabChannelName({ tenantId, roomType, roomId });
 
     const channel = supabase.channel(channelName, {
       config: { broadcast: { self: false }, presence: { key: userId } },
@@ -140,7 +140,7 @@ export function useCollaborationRoom({
       void supabase.removeChannel(channel);
       channelRef.current = null;
     };
-  }, [roomId, roomType, userId, email, enabled, upsertSelf]);
+  }, [tenantId, roomId, roomType, userId, email, enabled, upsertSelf]);
 
   const broadcastDoc = useCallback(
     (html: string, typing = false) => {

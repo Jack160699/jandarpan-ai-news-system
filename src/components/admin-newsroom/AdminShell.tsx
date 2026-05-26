@@ -3,13 +3,17 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
+  HeartPulse,
   BarChart3,
   Bell,
   BookOpen,
+  CreditCard,
   PenLine,
   ChevronLeft,
   ChevronRight,
   Compass,
+  Settings,
+  Database,
   FileText,
   Image as ImageIcon,
   Images,
@@ -25,6 +29,7 @@ import {
   Users,
   GitBranch,
   MessagesSquare,
+  ServerCog,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -32,6 +37,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
 import { isSuperAdmin } from "@/lib/newsroom-auth/rbac";
+import { roleHasPermission } from "@/lib/saas-auth/rbac";
 
 const NAV = [
   { href: "/admin/editorial", label: "Overview", icon: LayoutDashboard },
@@ -45,10 +51,15 @@ const NAV = [
   { href: "/admin/topics", label: "Topics", icon: Sparkles },
   { href: "/admin/sources", label: "Sources", icon: Radio },
   { href: "/admin/live-wire", label: "Live wire", icon: Activity },
+  { href: "/admin/health", label: "Health", icon: HeartPulse },
+  { href: "/admin/ingestion", label: "Ingestion", icon: Database },
   { href: "/admin/images", label: "Images", icon: ImageIcon },
   { href: "/admin/media", label: "Media", icon: Images },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/billing", label: "Billing", icon: CreditCard },
   { href: "/admin/team", label: "Team", icon: Users },
+  { href: "/admin/schema", label: "Schema", icon: ServerCog },
 ] as const;
 
 type AdminShellProps = {
@@ -75,9 +86,15 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
   }
   const visibleNav = useMemo(
     () =>
-      NAV.filter(
-        (item) => item.href !== "/admin/team" || isSuperAdmin(role)
-      ),
+      NAV.filter((item) => {
+        if (item.href === "/admin/team" || item.href === "/admin/schema") {
+          return isSuperAdmin(role);
+        }
+        if (item.href === "/admin/billing") {
+          return roleHasPermission(role, "billing:read");
+        }
+        return true;
+      }),
     [role]
   );
 

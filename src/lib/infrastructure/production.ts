@@ -95,7 +95,7 @@ export function getProductionEnvChecks(): {
       !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
     ) {
       warnings.push(
-        "Supabase auth is required — /admin and /dashboard use session cookies in production"
+        "Supabase auth is required — /admin uses session cookies in production"
       );
     }
     for (const key of Object.keys(process.env)) {

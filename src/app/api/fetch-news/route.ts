@@ -25,6 +25,8 @@ import {
 } from "@/lib/news/pipeline/scalable-ingest";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { recordCronRun } from "@/lib/observability/cron-monitor";
+import { trackOpsError } from "@/lib/observability/errors";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -212,10 +214,31 @@ async function handleFetchNews(request: Request) {
       });
     }
 
+    await recordCronRun({
+      job: "fetch-news",
+      ok: payload.ok,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs,
+      degraded: payload.degraded,
+    });
+
     return NextResponse.json(payload, { headers: noStoreHeaders() });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     const durationMs = Date.now() - startedAt;
+    await trackOpsError({
+      source: "fetch-news",
+      message,
+      severity: "critical",
+      err,
+    });
+    await recordCronRun({
+      job: "fetch-news",
+      ok: false,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs,
+      error: message,
+    });
     logIngestFailure({
       reason: "fatal",
       error: message,

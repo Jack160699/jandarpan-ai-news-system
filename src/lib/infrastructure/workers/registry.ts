@@ -4,6 +4,7 @@
 
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
+import { monitorWorkerResult } from "@/lib/observability/worker-monitor";
 import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 import { processAiQueueBatch } from "@/lib/news/ai/process";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
@@ -13,6 +14,7 @@ import {
   processEditorialImageQueue,
 } from "@/lib/news/ai/generate-editorial-image";
 import { runScalableIngestion } from "@/lib/news/pipeline/scalable-ingest";
+import { INTELLIGENCE_WORKERS } from "@/lib/infrastructure/workers/intelligence-workers";
 import type { QueueWorker, WorkerContext, WorkerResult } from "@/lib/infrastructure/workers/types";
 
 async function runIngestWorker(ctx: WorkerContext): Promise<WorkerResult> {
@@ -174,6 +176,7 @@ export const QUEUE_WORKERS: QueueWorker[] = [
     run: runEditorialWorker,
   },
   { id: "editorial_images", label: "Editorial images", run: runImagesWorker },
+  ...INTELLIGENCE_WORKERS,
 ];
 
 export async function runQueueWorker(
@@ -200,7 +203,7 @@ export async function runQueueWorker(
       durationMs: result.durationMs,
       metadata: result.metadata,
     });
-    return result;
+    return monitorWorkerResult(result);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "worker_failed";
     logIngestionAnalytics({
@@ -208,11 +211,12 @@ export async function runQueueWorker(
       worker: workerId,
       error: msg,
     });
-    return {
+    const failed = {
       worker: workerId,
       ok: false,
       durationMs: 0,
       error: msg,
-    };
+    } satisfies WorkerResult;
+    return monitorWorkerResult(failed);
   }
 }

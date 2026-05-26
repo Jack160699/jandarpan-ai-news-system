@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./src/lib/security/headers";
 
 const nextConfig: NextConfig = {
-  // Temporary MVP deployment configuration — unblock production while lint debt is cleared
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -10,14 +10,15 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   async headers() {
+    const headers = Object.entries(securityHeaders()).map(([key, value]) => ({
+      key,
+      value,
+    }));
+
     return [
       {
         source: "/:path*",
-        headers: [
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        ],
+        headers,
       },
     ];
   },

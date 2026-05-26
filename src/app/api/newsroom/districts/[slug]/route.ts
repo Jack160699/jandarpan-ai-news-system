@@ -15,12 +15,13 @@ export async function GET(request: Request, context: RouteContext) {
   const pageSize = Number(searchParams.get("pageSize") ?? "12");
   const section = searchParams.get("section") ?? undefined;
 
+  const { isSupabaseConfigured } = await import("@/lib/supabase");
   const feed = await fetchDistrictFeed({
     district: slug,
     page,
     pageSize,
     section,
-    useMock: true,
+    useMock: !isSupabaseConfigured(),
   });
 
   return NextResponse.json(feed, {

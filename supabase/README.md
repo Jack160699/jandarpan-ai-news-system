@@ -19,3 +19,17 @@ After migration 010, create a **public** Storage bucket `editorial-images` in Su
 After `004`, re-run ingestion so existing rows receive `slug` values.
 
 If `/api/fetch-news` inserts rows but the homepage is empty, run `005` — ingestion uses the service role (bypasses RLS); the homepage uses the anon key.
+
+## Schema stabilization (034+)
+
+Production drift (missing ingestion tables, `embedding_json`, stale PostgREST cache) is fixed by:
+
+- `034_production_schema_stabilization.sql` — idempotent reconcile + `get_schema_health()`
+- Docs: `supabase/docs/SCHEMA_DIFF_REPORT.md`, `SUPABASE_DEPLOYMENT_034.md`
+
+```bash
+npx supabase db push --linked --yes
+npm run schema:verify
+```
+
+Admin dashboard: `/admin/schema` (super_admin). See `PRODUCTION_SAFETY_CHECKLIST.md`.

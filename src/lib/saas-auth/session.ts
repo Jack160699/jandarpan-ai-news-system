@@ -9,6 +9,15 @@ import { getDefaultTenant, getTenantBySlug } from "@/lib/tenant/registry";
 import { bootstrapNewsroomAuth } from "@/lib/newsroom-auth/bootstrap";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 import type { DashboardSession, TenantMembership } from "@/lib/saas-auth/types";
+import {
+  ROLE_COOKIE,
+  TENANT_COOKIE_AUTH,
+} from "@/lib/security/constants";
+import { secureCookieOptions } from "@/lib/security/cookies";
+import {
+  isSessionRevoked,
+  touchSecuritySession,
+} from "@/lib/security/session-store";
 
 export const ACCESS_COOKIE = "nr-dashboard-access";
 export const REFRESH_COOKIE = "nr-dashboard-refresh";
@@ -122,6 +131,10 @@ export async function getDashboardSession(
     return null;
   }
 
+  if (await isSessionRevoked(accessToken)) {
+    return null;
+  }
+
   if (accessToken === "dev" || accessToken === "dev-admin") {
     if (isProdRuntime()) return null;
     return {
@@ -159,6 +172,8 @@ export async function getDashboardSession(
 
   if (!membership) return null;
 
+  await touchSecuritySession(accessToken);
+
   return {
     userId: userData.user.id,
     email: userData.user.email ?? membership.email,
@@ -168,32 +183,39 @@ export async function getDashboardSession(
   };
 }
 
+export async function setMembershipContextCookies(
+  role: string,
+  tenantSlug: string
+) {
+  const cookieStore = await cookies();
+  const opts = secureCookieOptions(60 * 60 * 24 * 7);
+
+  cookieStore.set(ROLE_COOKIE, role, opts);
+  cookieStore.set(TENANT_COOKIE_AUTH, tenantSlug, opts);
+}
+
+export async function clearMembershipContextCookies() {
+  const cookieStore = await cookies();
+  cookieStore.delete(ROLE_COOKIE);
+  cookieStore.delete(TENANT_COOKIE_AUTH);
+}
+
 export async function setSessionCookies(
   accessToken: string,
   refreshToken: string
 ) {
   const cookieStore = await cookies();
-  const secure = process.env.NODE_ENV === "production";
+  const accessOpts = secureCookieOptions(60 * 60 * 24 * 7);
+  const refreshOpts = secureCookieOptions(60 * 60 * 24 * 30);
 
-  cookieStore.set(ACCESS_COOKIE, accessToken, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-
-  cookieStore.set(REFRESH_COOKIE, refreshToken, {
-    httpOnly: true,
-    secure,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  cookieStore.set(ACCESS_COOKIE, accessToken, accessOpts);
+  cookieStore.set(REFRESH_COOKIE, refreshToken, refreshOpts);
 }
 
 export async function clearSessionCookies() {
   const cookieStore = await cookies();
   cookieStore.delete(ACCESS_COOKIE);
   cookieStore.delete(REFRESH_COOKIE);
+  cookieStore.delete(ROLE_COOKIE);
+  cookieStore.delete(TENANT_COOKIE_AUTH);
 }

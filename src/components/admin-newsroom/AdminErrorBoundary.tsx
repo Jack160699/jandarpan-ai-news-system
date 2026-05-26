@@ -21,6 +21,17 @@ export class AdminErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error("[AdminErrorBoundary]", error, info.componentStack);
+    void fetch("/api/admin/ops/errors", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        source: "admin_ui",
+        message: error.message,
+        severity: "medium",
+        metadata: { componentStack: info.componentStack?.slice(0, 500) },
+      }),
+    }).catch(() => null);
   }
 
   private handleRetry = () => {

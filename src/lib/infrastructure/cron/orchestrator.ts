@@ -4,6 +4,7 @@
 
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
+import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 import {
   QUEUE_WORKERS,
@@ -32,6 +33,10 @@ const DEFAULT_PIPELINE: WorkerId[] = [
   "ai_enrich",
   "editorial_generate",
   "editorial_images",
+  "job_processor",
+  "intelligence_embed",
+  "intelligence_snapshot",
+  "analytics_aggregate",
 ];
 
 export async function runCronOrchestration(
@@ -105,13 +110,24 @@ export async function runCronOrchestration(
     },
   });
 
-  return {
+  const result = {
     ok,
     durationMs,
     timedOutSafely: deadline.timedOutSafely,
     workers: results,
     degraded,
   };
+
+  await recordCronRun({
+    job: "orchestrate",
+    ok,
+    startedAt: new Date(started).toISOString(),
+    durationMs,
+    degraded,
+    workers: results,
+  });
+
+  return result;
 }
 
 export function listWorkers() {

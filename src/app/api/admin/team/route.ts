@@ -23,6 +23,8 @@ import {
   teamPatchBodySchema,
   teamPostBodySchema,
 } from "@/lib/newsroom-auth/team-schemas";
+import { guardSuperAdminAction } from "@/lib/security/super-admin";
+import { getClientIp } from "@/lib/security/request-context";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -140,6 +142,15 @@ export async function PATCH(request: Request) {
   const guard = await requireSuperAdminSession(request);
   if (!guard.ok) return guard.response;
 
+  const superBlock = await guardSuperAdminAction(
+    guard.session,
+    "team.patch",
+    request
+  );
+  if (superBlock) return superBlock;
+
+  const clientIp = getClientIp(request);
+
   let body: unknown;
   try {
     body = await request.json();
@@ -195,6 +206,8 @@ export async function PATCH(request: Request) {
       membershipId,
       role,
       actorUserId,
+      actorEmail: guard.session.email,
+      ipAddress: clientIp,
     });
 
     if (result.ok) {
@@ -222,6 +235,8 @@ export async function PATCH(request: Request) {
       membershipId,
       status,
       actorUserId,
+      actorEmail: guard.session.email,
+      ipAddress: clientIp,
     });
 
     if (result.ok) {

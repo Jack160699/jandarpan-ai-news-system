@@ -29,6 +29,8 @@ export async function fetchGeneratedArticlePool(
   const { data, error } = await supabase
     .from("generated_articles")
     .select(GENERATED_SELECT)
+    .not("published_at", "is", null)
+    .in("editorial_status", ["approved", "published", "live"])
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 

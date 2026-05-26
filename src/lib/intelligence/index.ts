@@ -1,5 +1,13 @@
 export type * from "@/lib/intelligence/types";
-export { buildNewsroomIntelligenceSnapshot } from "@/lib/intelligence/build-snapshot";
+export {
+  buildNewsroomIntelligenceSnapshot,
+  saveIntelligenceSnapshot,
+} from "@/lib/intelligence/build-snapshot";
+export {
+  getCachedIntelligenceSnapshot,
+  requestSnapshotRefresh,
+  isSnapshotStale,
+} from "@/lib/intelligence/snapshot-cache";
 export { enrichArticleIntelligence } from "@/lib/intelligence/enrich-article";
 export { scoreFakeNewsRisk } from "@/lib/intelligence/fake-news-risk";
 export { buildSourceTrustEngine, aggregateArticleTrust } from "@/lib/intelligence/source-trust";

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { legacyDashboardApiHeaders } from "@/lib/admin-platform/api-deprecation";
 import { runDashboardAction } from "@/lib/dashboard/actions";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
 
@@ -28,5 +29,8 @@ export async function POST(request: Request) {
     body
   );
 
-  return NextResponse.json(result, { status: result.ok ? 200 : 500 });
+  return NextResponse.json(result, {
+    status: result.ok ? 200 : 500,
+    headers: legacyDashboardApiHeaders("/api/editorial/actions"),
+  });
 }

@@ -26,7 +26,7 @@ export async function reloadPostgrestSchema(): Promise<{
     message.includes("function") ||
     message.includes("does not exist")
   ) {
-    return { ok: false, error: "reload_rpc_missing_run_migration_032" };
+    return { ok: false, error: "reload_rpc_missing_run_migration_034" };
   }
 
   return { ok: false, error: message };

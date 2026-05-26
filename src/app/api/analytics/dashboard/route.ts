@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { buildNewsroomAnalyticsReport } from "@/lib/analytics/aggregate";
 import { buildEnterpriseAnalyticsReport } from "@/lib/analytics/enterprise-aggregate";
+import {
+  getCachedAnalyticsReport,
+  setCachedAnalyticsReport,
+} from "@/lib/infrastructure/cache/analytics";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
+import { edgeCacheHeaders } from "@/lib/infrastructure/cache/edge";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,11 +24,22 @@ export async function GET(request: Request) {
 
   const tenantId = guard.session.membership.tenantId;
 
-  if (enterprise) {
-    const report = await buildEnterpriseAnalyticsReport(tenantId, hours);
-    return NextResponse.json({ ok: true, report });
+  const cached = await getCachedAnalyticsReport(tenantId, hours, enterprise);
+  if (cached) {
+    return NextResponse.json(
+      { ok: true, report: cached, cached: true },
+      { headers: edgeCacheHeaders({ sMaxAge: 30, private: true }) }
+    );
   }
 
-  const report = await buildNewsroomAnalyticsReport(tenantId, hours);
-  return NextResponse.json({ ok: true, report });
+  const report = enterprise
+    ? await buildEnterpriseAnalyticsReport(tenantId, hours)
+    : await buildNewsroomAnalyticsReport(tenantId, hours);
+
+  await setCachedAnalyticsReport(tenantId, hours, enterprise, report);
+
+  return NextResponse.json(
+    { ok: true, report, cached: false },
+    { headers: edgeCacheHeaders({ sMaxAge: 30, private: true }) }
+  );
 }

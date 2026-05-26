@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { buildEnterpriseAnalyticsReport } from "@/lib/analytics/enterprise-aggregate";
+import {
+  getCachedAnalyticsReport,
+  requestAnalyticsRefresh,
+} from "@/lib/analytics/snapshot-cache";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
 
 export const runtime = "nodejs";
@@ -16,7 +20,22 @@ export async function GET(request: Request) {
   );
 
   const tenantId = guard.session.membership.tenantId;
+  const cached = await getCachedAnalyticsReport(tenantId, hours);
+
+  if (cached) {
+    return NextResponse.json({
+      ok: true,
+      report: cached,
+      _cache: { source: "precomputed" },
+    });
+  }
+
+  void requestAnalyticsRefresh(tenantId, hours);
   const report = await buildEnterpriseAnalyticsReport(tenantId, hours);
 
-  return NextResponse.json({ ok: true, report });
+  return NextResponse.json({
+    ok: true,
+    report,
+    _cache: { source: "live", refreshEnqueued: true },
+  });
 }

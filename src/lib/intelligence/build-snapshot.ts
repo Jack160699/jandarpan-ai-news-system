@@ -51,10 +51,48 @@ import {
 import { predictViralSpread } from "@/lib/intelligence/viral-prediction";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { NewsEventRow } from "@/lib/types/newsroom";
+import { cacheSetJson } from "@/lib/infrastructure/cache";
+import { WORKER_CACHE_KEYS } from "@/lib/infrastructure/cache/keys";
+
+export type BuildSnapshotMode = "read" | "worker";
+
+export type BuildSnapshotOptions = {
+  /** read = skip embeddings/clustering (API fast path); worker = full precompute */
+  mode?: BuildSnapshotMode;
+};
+
+export async function saveIntelligenceSnapshot(
+  tenantId: string | null | undefined,
+  snapshot: NewsroomIntelligenceSnapshot,
+  buildDurationMs: number
+): Promise<void> {
+  const supabase = createAdminServerClient();
+  const tenantKey = tenantId ?? "global";
+
+  await supabase.from("intelligence_snapshots").upsert(
+    {
+      tenant_id: tenantId ?? null,
+      snapshot: snapshot as unknown as Record<string, unknown>,
+      build_duration_ms: buildDurationMs,
+      built_at: new Date().toISOString(),
+    },
+    { onConflict: "tenant_id" }
+  );
+
+  const ttl = Number(process.env.INTELLIGENCE_CACHE_TTL_SEC) || 60;
+  await cacheSetJson(
+    WORKER_CACHE_KEYS.intelligence(tenantKey),
+    snapshot,
+    ttl
+  );
+}
 
 export async function buildNewsroomIntelligenceSnapshot(
-  tenantId?: string | null
+  tenantId?: string | null,
+  options?: BuildSnapshotOptions
 ): Promise<NewsroomIntelligenceSnapshot | null> {
+  const mode = options?.mode ?? "read";
+  const runHeavyWork = mode === "worker";
   if (!isSupabaseConfigured()) return null;
 
   const supabase = createAdminServerClient();
@@ -133,54 +171,62 @@ export async function buildNewsroomIntelligenceSnapshot(
       })
     ),
     loadSourceReputationMemory(tenantId),
-    batchEmbedSignals(
-      signals.slice(0, 25).map((s) => ({
-        id: s.id,
-        title: s.title,
-        raw_content: s.raw_content,
-        provider: s.provider,
-      })),
-      tenantId
-    ).catch(() => 0),
+    runHeavyWork
+      ? batchEmbedSignals(
+          signals.slice(0, 25).map((s) => ({
+            id: s.id,
+            title: s.title,
+            raw_content: s.raw_content,
+            provider: s.provider,
+          })),
+          tenantId
+        ).catch(() => 0)
+      : Promise.resolve(0),
   ]);
 
-  void syncReputationFromIngestion({
-    tenantId,
-    signals: signals.map((s) => ({
-      provider: s.provider,
-      source: s.source,
-      title: s.title,
-    })),
-  }).catch(() => undefined);
+  if (runHeavyWork) {
+    void syncReputationFromIngestion({
+      tenantId,
+      signals: signals.map((s) => ({
+        provider: s.provider,
+        source: s.source,
+        title: s.title,
+      })),
+    }).catch(() => undefined);
+  }
 
   const duplicates = detectDuplicateStories(
     articles.map((a) => ({ id: a.id, headline: a.headline, slug: a.slug }))
   );
 
-  const semanticClusters = await clusterByEmbeddings({
-    items: signals.slice(0, 20).map((s) => ({
-      id: s.id,
-      text: s.title,
-    })),
-    threshold: 0.82,
-  }).catch(() => []);
+  const semanticClusters = runHeavyWork
+    ? await clusterByEmbeddings({
+        items: signals.slice(0, 20).map((s) => ({
+          id: s.id,
+          text: s.title,
+        })),
+        threshold: 0.82,
+      }).catch(() => [])
+    : [];
 
   const vectorDuplicates: NewsroomIntelligenceSnapshot["vectorDuplicates"] = [];
-  for (const a of articles.slice(0, 8)) {
-    const matches = await findSimilarByText({
-      text: a.headline,
-      tenantId,
-      entityType: "signal",
-      limit: 3,
-    }).catch(() => []);
-    for (const m of matches) {
-      if (m.similarity < 0.8) continue;
-      vectorDuplicates.push({
-        entityId: m.entityId,
-        entityType: m.entityType,
-        similarity: m.similarity,
-        headline: (m.metadata.title as string) ?? a.headline,
-      });
+  if (runHeavyWork) {
+    for (const a of articles.slice(0, 8)) {
+      const matches = await findSimilarByText({
+        text: a.headline,
+        tenantId,
+        entityType: "signal",
+        limit: 3,
+      }).catch(() => []);
+      for (const m of matches) {
+        if (m.similarity < 0.8) continue;
+        vectorDuplicates.push({
+          entityId: m.entityId,
+          entityType: m.entityType,
+          similarity: m.similarity,
+          headline: (m.metadata.title as string) ?? a.headline,
+        });
+      }
     }
   }
 
@@ -238,7 +284,7 @@ export async function buildNewsroomIntelligenceSnapshot(
 
   const trendForecasts = forecastTrends(articles);
   const topicMomentum = buildTopicMomentum(articles);
-  const districtHeatmap = buildDistrictHeatmap(articles);
+  const districtHeatmap = await buildDistrictHeatmap(articles);
   const translationSuggestions = suggestTranslations({
     articles: articles.map((a) => ({
       id: a.id,

@@ -1,0 +1,299 @@
+/**
+ * Postgres-backed job queue with deduplication, retries, and dead-letter routing
+ */
+
+import { createAdminClient } from "@/lib/supabase";
+import { nextRetryAt, shouldMoveToDeadLetter } from "@/lib/infrastructure/jobs/retry";
+import type {
+  EnqueueJobInput,
+  JobHandler,
+  JobHandlerResult,
+  JobType,
+  WorkerJobRow,
+} from "@/lib/infrastructure/jobs/types";
+import { recordJobRun } from "@/lib/infrastructure/jobs/monitor";
+
+const DEFAULT_BATCH = Number(process.env.WORKER_JOB_BATCH) || 8;
+
+export async function enqueueJob(input: EnqueueJobInput): Promise<string | null> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: existing } = await supabase
+    .from("worker_jobs")
+    .select("id")
+    .eq("job_type", input.jobType)
+    .eq("dedupe_key", input.dedupeKey)
+    .in("status", ["pending", "claimed"])
+    .maybeSingle();
+
+  if (existing?.id) {
+    await supabase
+      .from("worker_jobs")
+      .update({
+        priority: Math.max(input.priority ?? 0, 0),
+        scheduled_at: (input.scheduledAt ?? new Date()).toISOString(),
+        payload: input.payload ?? {},
+        updated_at: now,
+      })
+      .eq("id", existing.id);
+    return existing.id;
+  }
+
+  const { data, error } = await supabase
+    .from("worker_jobs")
+    .insert({
+      tenant_id: input.tenantId ?? null,
+      job_type: input.jobType,
+      dedupe_key: input.dedupeKey,
+      payload: input.payload ?? {},
+      status: "pending",
+      priority: input.priority ?? 0,
+      max_attempts: input.maxAttempts ?? 5,
+      scheduled_at: (input.scheduledAt ?? new Date()).toISOString(),
+      timeout_ms: input.timeoutMs ?? 120_000,
+      updated_at: now,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[worker-jobs] enqueue:", error.message);
+    return null;
+  }
+
+  return data?.id ?? null;
+}
+
+export async function enqueueJobs(
+  jobs: EnqueueJobInput[]
+): Promise<number> {
+  let count = 0;
+  for (const job of jobs) {
+    const id = await enqueueJob(job);
+    if (id) count += 1;
+  }
+  return count;
+}
+
+export async function claimJobBatch(
+  limit = DEFAULT_BATCH,
+  jobTypes?: JobType[]
+): Promise<WorkerJobRow[]> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  let query = supabase
+    .from("worker_jobs")
+    .select("*")
+    .eq("status", "pending")
+    .lte("scheduled_at", now)
+    .order("priority", { ascending: false })
+    .order("scheduled_at", { ascending: true })
+    .limit(limit);
+
+  if (jobTypes?.length) {
+    query = query.in("job_type", jobTypes);
+  }
+
+  const { data: pending, error } = await query;
+  if (error || !pending?.length) return [];
+
+  const ids = pending.map((r) => r.id);
+  await supabase
+    .from("worker_jobs")
+    .update({
+      status: "claimed",
+      claimed_at: now,
+      updated_at: now,
+    })
+    .in("id", ids);
+
+  return pending as WorkerJobRow[];
+}
+
+export async function completeJob(
+  jobId: string,
+  result?: Record<string, unknown>
+): Promise<void> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+  await supabase
+    .from("worker_jobs")
+    .update({
+      status: "completed",
+      completed_at: now,
+      result: result ?? {},
+      updated_at: now,
+    })
+    .eq("id", jobId);
+}
+
+export async function failJob(
+  job: WorkerJobRow,
+  errorMessage: string,
+  retryable = true
+): Promise<void> {
+  const supabase = createAdminClient();
+  const attempts = job.attempts + 1;
+  const now = new Date().toISOString();
+
+  if (
+    !retryable ||
+    shouldMoveToDeadLetter(attempts, job.max_attempts)
+  ) {
+    await supabase
+      .from("worker_jobs")
+      .update({
+        status: "dead",
+        attempts,
+        last_error: errorMessage,
+        updated_at: now,
+      })
+      .eq("id", job.id);
+
+    await supabase.from("worker_dead_letters").insert({
+      job_id: job.id,
+      tenant_id: job.tenant_id,
+      job_type: job.job_type,
+      dedupe_key: job.dedupe_key,
+      payload: job.payload,
+      attempts,
+      last_error: errorMessage,
+    });
+    return;
+  }
+
+  const retryAt = nextRetryAt(attempts);
+  await supabase
+    .from("worker_jobs")
+    .update({
+      status: "pending",
+      attempts,
+      last_error: errorMessage,
+      scheduled_at: retryAt.toISOString(),
+      claimed_at: null,
+      updated_at: now,
+    })
+    .eq("id", job.id);
+}
+
+async function isJobTimedOut(job: WorkerJobRow): Promise<boolean> {
+  if (!job.claimed_at) return false;
+  const elapsed = Date.now() - new Date(job.claimed_at).getTime();
+  return elapsed > job.timeout_ms;
+}
+
+export async function processJobBatch(
+  handlers: Map<JobType, JobHandler>,
+  options?: { limit?: number; jobTypes?: JobType[]; workerId?: string }
+): Promise<{
+  processed: number;
+  completed: number;
+  failed: number;
+  dead: number;
+}> {
+  const jobs = await claimJobBatch(options?.limit, options?.jobTypes);
+  let completed = 0;
+  let failed = 0;
+  let dead = 0;
+
+  for (const job of jobs) {
+    const started = Date.now();
+    const handler = handlers.get(job.job_type as JobType);
+
+    if (!handler) {
+      await failJob(job, `no_handler:${job.job_type}`, false);
+      dead += 1;
+      continue;
+    }
+
+    if (await isJobTimedOut(job)) {
+      await failJob(job, "timeout_precheck", true);
+      failed += 1;
+      continue;
+    }
+
+    try {
+      const result: JobHandlerResult = await Promise.race([
+        handler(job),
+        new Promise<JobHandlerResult>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("job_timeout")),
+            job.timeout_ms
+          )
+        ),
+      ]);
+
+      const durationMs = Date.now() - started;
+
+      if (result.ok) {
+        await completeJob(job.id, result.result);
+        completed += 1;
+        await recordJobRun({
+          workerId: options?.workerId ?? "job_processor",
+          jobId: job.id,
+          jobType: job.job_type,
+          tenantId: job.tenant_id,
+          ok: true,
+          durationMs,
+          metadata: result.result,
+        });
+      } else {
+        await failJob(job, result.error ?? "job_failed", result.retryable !== false);
+        if (job.attempts + 1 >= job.max_attempts) dead += 1;
+        else failed += 1;
+        await recordJobRun({
+          workerId: options?.workerId ?? "job_processor",
+          jobId: job.id,
+          jobType: job.job_type,
+          tenantId: job.tenant_id,
+          ok: false,
+          durationMs,
+          error: result.error,
+        });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "job_exception";
+      await failJob(job, msg, true);
+      failed += 1;
+      await recordJobRun({
+        workerId: options?.workerId ?? "job_processor",
+        jobId: job.id,
+        jobType: job.job_type,
+        tenantId: job.tenant_id,
+        ok: false,
+        durationMs: Date.now() - started,
+        error: msg,
+      });
+    }
+  }
+
+  return {
+    processed: jobs.length,
+    completed,
+    failed,
+    dead,
+  };
+}
+
+export async function countPendingJobs(jobType?: JobType): Promise<number> {
+  const supabase = createAdminClient();
+  let query = supabase
+    .from("worker_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+
+  if (jobType) query = query.eq("job_type", jobType);
+
+  const { count } = await query;
+  return count ?? 0;
+}
+
+export async function countDeadLetters(): Promise<number> {
+  const supabase = createAdminClient();
+  const { count } = await supabase
+    .from("worker_dead_letters")
+    .select("id", { count: "exact", head: true });
+  return count ?? 0;
+}

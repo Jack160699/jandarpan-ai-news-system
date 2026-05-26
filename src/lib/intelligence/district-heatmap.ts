@@ -3,14 +3,14 @@
  */
 
 import { geoFromRecord } from "@/lib/regional/geo-tagging";
-import { PLATFORM_DISTRICTS } from "@/lib/newsroom-platform/config/districts";
+import { loadPlatformDistricts } from "@/lib/newsroom-platform/config/districts";
 import type { DistrictHeatCell } from "@/lib/intelligence/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
-export function buildDistrictHeatmap(
+export async function buildDistrictHeatmap(
   articles: GeneratedArticleRow[],
   windowHours = 72
-): DistrictHeatCell[] {
+): Promise<DistrictHeatCell[]> {
   const since = Date.now() - windowHours * 3_600_000;
   const cells = new Map<
     string,
@@ -41,7 +41,8 @@ export function buildDistrictHeatmap(
 
   const maxCount = Math.max(1, ...[...cells.values()].map((c) => c.count));
 
-  const districtMeta = new Map(PLATFORM_DISTRICTS.map((d) => [d.slug, d.nameEn]));
+  const districts = await loadPlatformDistricts();
+  const districtMeta = new Map(districts.map((d) => [d.slug, d.nameEn]));
 
   return [...cells.entries()]
     .map(([slug, c]) => ({

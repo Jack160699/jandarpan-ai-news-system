@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic";
 export default function AdminDistrictsPage() {
   return (
     <AdminPageGate permission="content:read">
-      <AdminShell title="Districts" subtitle="Regional coverage map and desk routing.">
+      <AdminShell
+        title="Districts"
+        subtitle="District hubs, analytics, editors, homepage config — Supabase platform_districts."
+      >
         <PlatformDistrictsPanel />
       </AdminShell>
     </AdminPageGate>

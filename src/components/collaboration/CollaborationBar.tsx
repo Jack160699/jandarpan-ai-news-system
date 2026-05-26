@@ -45,6 +45,7 @@ export function CollaborationBar({
   }, []);
 
   const { members, connected, broadcastDoc, setTyping } = useCollaborationRoom({
+    tenantId: session?.tenantId ?? "",
     roomId: articleId,
     roomType: "article",
     userId: session?.userId ?? "",

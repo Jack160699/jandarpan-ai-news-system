@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { legacyDashboardApiHeaders } from "@/lib/admin-platform/api-deprecation";
 import { fetchSaasDashboard } from "@/lib/dashboard/fetch-snapshot";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
 
@@ -17,5 +18,8 @@ export async function GET(request: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true, ...snapshot });
+  return NextResponse.json(
+    { ok: true, ...snapshot },
+    { headers: legacyDashboardApiHeaders("/api/editorial/dashboard") }
+  );
 }

@@ -4,7 +4,13 @@ export type WorkerId =
   | "ingest"
   | "ai_enrich"
   | "editorial_generate"
-  | "editorial_images";
+  | "editorial_images"
+  | "job_processor"
+  | "intelligence_embed"
+  | "intelligence_snapshot"
+  | "analytics_aggregate"
+  | "dam_analyze"
+  | "event_cluster";
 
 export type WorkerResult = {
   worker: WorkerId;

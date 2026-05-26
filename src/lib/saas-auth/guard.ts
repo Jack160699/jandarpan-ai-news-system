@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
 import { getDashboardSession } from "@/lib/saas-auth/session";
 import type { DashboardPermission, DashboardSession } from "@/lib/saas-auth/types";
+import { logSecurityAudit } from "@/lib/security/audit";
+import { getClientIp, getUserAgent } from "@/lib/security/request-context";
 
 export type GuardResult =
   | { ok: true; session: DashboardSession }
@@ -27,6 +29,17 @@ export async function requireDashboardSession(
     permission &&
     !roleHasPermission(session.membership.role, permission)
   ) {
+    await logSecurityAudit({
+      tenantId: session.membership.tenantId,
+      actorUserId: session.userId,
+      actorEmail: session.email,
+      action: "api.forbidden",
+      resourceType: "permission",
+      resourceId: permission,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
+
     return {
       ok: false,
       response: NextResponse.json(

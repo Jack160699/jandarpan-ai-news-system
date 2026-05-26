@@ -23,7 +23,7 @@ type AppChromeProps = {
   children: React.ReactNode;
 };
 
-const MINIMAL_CHROME_PREFIXES = ["/dashboard", "/admin"];
+const MINIMAL_CHROME_PREFIXES = ["/admin"];
 
 function ShortsLanguageShell({ children }: AppChromeProps) {
   const { contentLocked } = useLanguage();

@@ -4,6 +4,8 @@
 
 The intelligence engine powers `/admin/intelligence` (Intelligence Center). It ingests `news_signals`, analyzes `generated_articles` and `news_events`, and returns a unified snapshot via `GET /api/editorial/intelligence`.
 
+**Worker mode (recommended):** embeddings, clustering, and full snapshots run in background workers; the API serves precomputed data from Redis + `intelligence_snapshots`. See [WORKER_ARCHITECTURE.md](./WORKER_ARCHITECTURE.md).
+
 ## AI pipeline
 
 ```

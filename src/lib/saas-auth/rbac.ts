@@ -51,6 +51,10 @@ export function roleHasPermission(
   return ROLE_PERMISSIONS[canonical]?.includes(permission) ?? false;
 }
 
+/**
+ * Legacy /dashboard route permissions (routes 308-redirect to /admin/*).
+ * Prefer `canAccessAdminRoute` from `@/lib/newsroom-auth/rbac`.
+ */
 export function canAccessDashboardRoute(
   role: DashboardRole | string,
   route: string
@@ -65,6 +69,9 @@ export function canAccessDashboardRoute(
     "/dashboard/analytics": "analytics:read",
     "/dashboard/monitoring": "monitoring:read",
     "/dashboard/providers": "providers:read",
+    "/admin/editorial": "content:read",
+    "/admin/stories": "editorial:write",
+    "/admin/billing": "billing:read",
   };
 
   const perm = map[route];

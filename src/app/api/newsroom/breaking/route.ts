@@ -10,7 +10,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Number(searchParams.get("limit") ?? "12");
 
-  const feed = await fetchBreakingFeed({ limit, useMock: true });
+  const { isSupabaseConfigured } = await import("@/lib/supabase");
+  const feed = await fetchBreakingFeed({
+    limit,
+    useMock: !isSupabaseConfigured(),
+  });
 
   return NextResponse.json(feed, {
     headers: {

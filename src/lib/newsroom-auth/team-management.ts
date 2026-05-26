@@ -21,6 +21,7 @@ import {
   type TeamMember,
   type TenantMembershipDbRow,
 } from "@/lib/types/team";
+import { logPermissionChange } from "@/lib/security/audit";
 
 export function avatarHueFromEmail(email: string): number {
   let hash = 0;
@@ -412,6 +413,8 @@ export async function updateTeamMemberRole(input: {
   membershipId: string;
   role: CanonicalRole;
   actorUserId: string;
+  actorEmail?: string;
+  ipAddress?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   if (!isSupabaseConfigured()) return { ok: true };
 
@@ -452,6 +455,19 @@ export async function updateTeamMemberRole(input: {
     .eq("tenant_id", input.tenantId);
 
   if (error) return { ok: false, error: formatTeamApiError(error.message) };
+
+  await logPermissionChange({
+    tenantId: input.tenantId,
+    targetUserId: target.user_id,
+    changedByUserId: input.actorUserId,
+    changedByEmail: input.actorEmail,
+    previousRole: target.role,
+    newRole: role,
+    previousStatus: target.status,
+    newStatus: target.status,
+    ipAddress: input.ipAddress,
+  });
+
   return { ok: true };
 }
 
@@ -460,6 +476,8 @@ export async function setTeamMemberStatus(input: {
   membershipId: string;
   status: MembershipStatus;
   actorUserId: string;
+  actorEmail?: string;
+  ipAddress?: string | null;
 }): Promise<{ ok: boolean; error?: string }> {
   if (!isSupabaseConfigured()) return { ok: true };
 
@@ -495,6 +513,19 @@ export async function setTeamMemberStatus(input: {
     .eq("tenant_id", input.tenantId);
 
   if (error) return { ok: false, error: formatTeamApiError(error.message) };
+
+  await logPermissionChange({
+    tenantId: input.tenantId,
+    targetUserId: target.user_id,
+    changedByUserId: input.actorUserId,
+    changedByEmail: input.actorEmail,
+    previousRole: target.role,
+    newRole: target.role,
+    previousStatus: target.status,
+    newStatus: input.status,
+    ipAddress: input.ipAddress,
+  });
+
   return { ok: true };
 }
 

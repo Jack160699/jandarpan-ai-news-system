@@ -19,7 +19,7 @@ export function isPostgrestSchemaError(message?: string | null): boolean {
 export function formatTeamApiError(error?: string | null): string {
   if (!error) return "Request failed";
   if (isPostgrestSchemaError(error)) {
-    return "Database schema is out of date. Apply migration 032_fix_team_membership_schema_sync.sql in Supabase, then retry.";
+    return "Database schema is out of date. Apply migration 034_production_schema_stabilization.sql in Supabase, reload PostgREST schema, then retry.";
   }
   return error;
 }

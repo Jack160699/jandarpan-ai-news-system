@@ -1,11 +1,8 @@
+import { isSupabaseConfigured } from "@/lib/supabase";
 import type { ContentType, FeedPage, PlatformArticle } from "../content/types";
-import {
-  contentTypesForTopic,
-  getPlatformTopic,
-  isPlatformTopicSlug,
-  type PlatformTopicSlug,
-} from "../config/topics";
-import { MOCK_ARTICLES } from "../content/mock/articles";
+import { contentTypesForTopic, getPlatformTopic, isPlatformTopicSlug } from "../config/topics";
+import { queryArticles, queryGeneratedAsPlatform } from "../db/queries";
+import { articleRowToPlatform } from "../db/types-map";
 import { sortByTrending } from "../content/validate";
 import { ISR } from "../config/isr";
 
@@ -18,26 +15,13 @@ export type TopicFeedOptions = {
 
 export async function fetchTopicFeed(
   options: TopicFeedOptions
-): Promise<FeedPage<PlatformArticle> & { topic: PlatformTopicSlug | null }> {
+): Promise<FeedPage<PlatformArticle> & { topic: string | null }> {
   const page = options.page ?? 1;
   const pageSize = options.pageSize ?? 12;
-  const useMock = options.useMock ?? true;
+  const useMock = options.useMock ?? false;
 
-  if (!isPlatformTopicSlug(options.slug)) {
-    return {
-      items: [],
-      total: 0,
-      page,
-      pageSize,
-      fetchedAt: new Date().toISOString(),
-      source: "mock",
-      topic: null,
-    };
-  }
-
-  const topic = options.slug;
-
-  if (!useMock) {
+  const isTopic = await isPlatformTopicSlug(options.slug);
+  if (!isTopic) {
     return {
       items: [],
       total: 0,
@@ -45,27 +29,60 @@ export async function fetchTopicFeed(
       pageSize,
       fetchedAt: new Date().toISOString(),
       source: "supabase",
+      topic: null,
+    };
+  }
+
+  const topic = options.slug;
+
+  if (useMock || !isSupabaseConfigured()) {
+    const { MOCK_ARTICLES } = await import("../content/mock/articles");
+    const types = new Set((await contentTypesForTopic(topic)) as ContentType[]);
+    const filtered = MOCK_ARTICLES.filter((a) => types.has(a.category));
+    const sorted = sortByTrending(filtered);
+    const start = (page - 1) * pageSize;
+    return {
+      items: sorted.slice(start, start + pageSize),
+      total: sorted.length,
+      page,
+      pageSize,
+      fetchedAt: new Date().toISOString(),
+      source: "mock",
       topic,
     };
   }
 
-  const types = new Set(contentTypesForTopic(topic) as ContentType[]);
-  const filtered = MOCK_ARTICLES.filter((a) => types.has(a.category));
-  const sorted = sortByTrending(filtered);
-  const start = (page - 1) * pageSize;
+  const types = await contentTypesForTopic(topic);
+  const offset = (page - 1) * pageSize;
+  const items: PlatformArticle[] = [];
+
+  for (const cat of types) {
+    const rows = await queryArticles({ category: cat, limit: pageSize, offset });
+    items.push(...rows.map(articleRowToPlatform));
+  }
+
+  const generated = await queryGeneratedAsPlatform({ limit: pageSize, offset });
+  for (const g of generated) {
+    if (types.some((t) => g.category === t || g.tags.some((tag) => tag.includes(t)))) {
+      items.push(g);
+    }
+  }
+
+  const sorted = sortByTrending(items);
+  const slice = sorted.slice(0, pageSize);
 
   return {
-    items: sorted.slice(start, start + pageSize),
+    items: slice,
     total: sorted.length,
     page,
     pageSize,
     fetchedAt: new Date().toISOString(),
-    source: "mock",
+    source: "supabase",
     topic,
   };
 }
 
-export function getTopicHubMeta(slug: string) {
+export async function getTopicHubMeta(slug: string) {
   return getPlatformTopic(slug);
 }
 

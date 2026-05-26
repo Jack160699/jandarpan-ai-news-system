@@ -32,4 +32,16 @@ export const INFRA_CONFIG = {
 
   cronOrchestrateEnabled:
     process.env.CRON_ORCHESTRATE_ENABLED !== "false",
+
+  /** Observability */
+  sentryEnabled: Boolean(process.env.SENTRY_DSN?.trim()),
+  dashboardCacheTtlSec: Number(process.env.DASHBOARD_CACHE_TTL_SEC) || 45,
+  intelligenceCacheTtlSec: Number(process.env.INTELLIGENCE_CACHE_TTL_SEC) || 60,
+  analyticsCacheTtlSec: Number(process.env.ANALYTICS_CACHE_TTL_SEC) || 120,
+  apiRateLimitPerMinute: Number(process.env.API_RATE_LIMIT_PER_MINUTE) || 120,
+
+  workerJobBatch: Number(process.env.WORKER_JOB_BATCH) || 8,
+  damAnalyzeBatch: Number(process.env.DAM_ANALYZE_BATCH) || 4,
+  intelligenceWorkersEnabled:
+    process.env.INTELLIGENCE_WORKERS_ENABLED !== "false",
 } as const;

@@ -1,72 +1,29 @@
 import type { DistrictHubMeta } from "../content/types";
+import {
+  getPlatformDistrictHub,
+  getPlatformDistrictSlugs,
+  loadPlatformDistrictsHub,
+} from "@/lib/platform-admin/districts";
 
-/** Featured district wire slugs (homepage + /districts/*) */
-export const PLATFORM_DISTRICT_SLUGS = [
-  "raipur",
-  "bilaspur",
-  "durg",
-  "raigarh",
-  "korba",
-  "jagdalpur",
-] as const;
+export type PlatformDistrictSlug = string;
 
-export type PlatformDistrictSlug = (typeof PLATFORM_DISTRICT_SLUGS)[number];
+/** @deprecated Use loadPlatformDistricts() — loaded from Supabase */
+export const PLATFORM_DISTRICT_SLUGS: readonly string[] = [];
 
-export const PLATFORM_DISTRICTS: DistrictHubMeta[] = [
-  {
-    slug: "raipur",
-    nameEn: "Raipur",
-    nameHi: "रायपुर",
-    storyCount: 0,
-    liveCount: 0,
-    sections: ["top", "crime", "politics", "jobs", "weather", "alerts"],
-  },
-  {
-    slug: "bilaspur",
-    nameEn: "Bilaspur",
-    nameHi: "बिलासपुर",
-    storyCount: 0,
-    liveCount: 0,
-    sections: ["top", "crime", "politics", "jobs", "weather", "alerts"],
-  },
-  {
-    slug: "durg",
-    nameEn: "Durg",
-    nameHi: "दुर्ग",
-    storyCount: 0,
-    liveCount: 0,
-    sections: ["top", "crime", "politics", "jobs", "weather", "alerts"],
-  },
-  {
-    slug: "raigarh",
-    nameEn: "Raigarh",
-    nameHi: "रायगढ़",
-    storyCount: 0,
-    liveCount: 0,
-    sections: ["top", "crime", "politics", "jobs", "weather", "alerts"],
-  },
-  {
-    slug: "korba",
-    nameEn: "Korba",
-    nameHi: "कोरबा",
-    storyCount: 0,
-    liveCount: 0,
-    sections: ["top", "crime", "politics", "jobs", "weather", "alerts"],
-  },
-  {
-    slug: "jagdalpur",
-    nameEn: "Jagdalpur",
-    nameHi: "जगदलपुर",
-    storyCount: 0,
-    liveCount: 0,
-    sections: ["top", "crime", "politics", "jobs", "weather", "alerts"],
-  },
-];
+/** @deprecated Use loadPlatformDistricts() */
+export const PLATFORM_DISTRICTS: DistrictHubMeta[] = [];
 
-export function getPlatformDistrict(slug: string): DistrictHubMeta | null {
-  return PLATFORM_DISTRICTS.find((d) => d.slug === slug) ?? null;
+export async function loadPlatformDistricts(): Promise<DistrictHubMeta[]> {
+  return loadPlatformDistrictsHub();
 }
 
-export function isPlatformDistrictSlug(slug: string): slug is PlatformDistrictSlug {
-  return (PLATFORM_DISTRICT_SLUGS as readonly string[]).includes(slug);
+export async function getPlatformDistrict(
+  slug: string
+): Promise<DistrictHubMeta | null> {
+  return getPlatformDistrictHub(slug);
+}
+
+export async function isPlatformDistrictSlug(slug: string): Promise<boolean> {
+  const slugs = await getPlatformDistrictSlugs();
+  return slugs.includes(slug);
 }

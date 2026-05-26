@@ -64,6 +64,29 @@ export async function cacheSetJson<T>(
 export const CACHE_KEYS = {
   homepageFeed: "nr:homepage:feed:v1",
   providerHealth: "nr:providers:health:v1",
+  intelligenceSnapshot: "ops:intelligence:snapshot",
+  analyticsReport: "ops:analytics:report",
+  dashboardSnapshot: "ops:dashboard:snapshot",
+  opsMetrics: "ops:metrics",
+  opsErrors: "ops:errors:recent",
 } as const;
 
 export { NEWS_CACHE_KEYS } from "@/lib/infrastructure/cache/keys";
+export { checkRateLimit, rateLimitHeaders } from "@/lib/infrastructure/cache/rate-limit";
+export { withDedup, isDuplicateRequest } from "@/lib/infrastructure/cache/dedup";
+export {
+  getOrBuildDashboard,
+  getCachedDashboard,
+  setCachedDashboard,
+  DASHBOARD_CACHE_META,
+} from "@/lib/infrastructure/cache/dashboard";
+export {
+  getCachedAnalyticsReport,
+  setCachedAnalyticsReport,
+  ANALYTICS_CACHE_TTL_SEC,
+} from "@/lib/infrastructure/cache/analytics";
+export {
+  getOrBuildHomepageFeed,
+  getCachedHomepageFeed,
+  setCachedHomepageFeed,
+} from "@/lib/infrastructure/cache/homepage";

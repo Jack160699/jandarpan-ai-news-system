@@ -22,4 +22,4 @@ Mock-first modular architecture for regional newsroom feeds. APIs and Supabase r
 
 ## Admin
 
-`/admin/articles`, `/admin/districts`, `/admin/topics`, `/admin/sources` — placeholder panels over mock config.
+`/admin/articles`, `/admin/districts`, `/admin/topics`, `/admin/sources`, `/admin/settings` — Supabase-backed via `/api/admin/platform/*`.

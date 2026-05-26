@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { platformArticlesToHomeArticles } from "@/lib/newsroom-platform/content/adapters";
 import { fetchTopicFeed } from "@/lib/newsroom-platform/feeds/topics";
 import { getPlatformTopic } from "@/lib/newsroom-platform/config/topics";
@@ -13,10 +14,14 @@ type TopicHubViewProps = {
 };
 
 export async function TopicHubView({ slug, language = "en" }: TopicHubViewProps) {
-  const meta = getPlatformTopic(slug);
+  const meta = await getPlatformTopic(slug);
   if (!meta) notFound();
 
-  const feed = await fetchTopicFeed({ slug, pageSize: 12, useMock: true });
+  const feed = await fetchTopicFeed({
+    slug,
+    pageSize: 12,
+    useMock: !isSupabaseConfigured(),
+  });
   const homeArticles = platformArticlesToHomeArticles(feed.items);
   const title = language === "hi" ? meta.titleHi : meta.titleEn;
   const desc = language === "hi" ? meta.descriptionHi : meta.descriptionEn;

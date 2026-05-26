@@ -9,7 +9,7 @@ export default function AdminArticlesPage() {
     <AdminPageGate permission="content:read">
       <AdminShell
         title="Articles"
-        subtitle="Platform article corpus — mock data until Supabase sync."
+        subtitle="Unified generated_articles + platform_articles — search, filters, workflow, SEO, publish."
       >
         <PlatformArticlesPanel />
       </AdminShell>

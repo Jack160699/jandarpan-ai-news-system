@@ -26,6 +26,7 @@ export function CollaborationHubPanel() {
   const [loading, setLoading] = useState(true);
 
   const { members, connected } = useCollaborationRoom({
+    tenantId: session?.tenantId ?? "",
     roomId: session?.tenantId ?? "",
     roomType: "tenant",
     userId: session?.userId ?? "",

@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { PageShell } from "@/components/layout/PageShell";
 import { platformArticlesToHomeArticles } from "@/lib/newsroom-platform/content/adapters";
 import { fetchDistrictFeed } from "@/lib/newsroom-platform/feeds/district";
-import { getPlatformDistrict, isPlatformDistrictSlug } from "@/lib/newsroom-platform/config/districts";
+import {
+  getPlatformDistrict,
+  isPlatformDistrictSlug,
+} from "@/lib/newsroom-platform/config/districts";
 import { StoryCard } from "@/components/homepage/StoryCard";
 
 type DistrictHubViewProps = {
@@ -11,9 +15,15 @@ type DistrictHubViewProps = {
 };
 
 export async function DistrictHubView({ district }: DistrictHubViewProps) {
-  if (!isPlatformDistrictSlug(district)) notFound();
-  const meta = getPlatformDistrict(district)!;
-  const feed = await fetchDistrictFeed({ district, pageSize: 12, useMock: true });
+  if (!(await isPlatformDistrictSlug(district))) notFound();
+  const meta = await getPlatformDistrict(district);
+  if (!meta) notFound();
+
+  const feed = await fetchDistrictFeed({
+    district,
+    pageSize: 12,
+    useMock: !isSupabaseConfigured(),
+  });
   const articles = platformArticlesToHomeArticles(feed.items);
 
   return (

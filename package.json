@@ -9,9 +9,13 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "supabase:types": "npx supabase gen types typescript --linked > src/lib/supabase/database.generated.ts"
+    "supabase:types": "npx supabase gen types typescript --linked > src/lib/supabase/database.generated.ts",
+    "supabase:push": "npx supabase db push --linked",
+    "schema:verify": "node scripts/verify-schema.mjs",
+    "schema:checksum": "npx supabase db query --linked \"select public.get_schema_health()->>'schema_checksum' as checksum\" -o json"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.53.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.1",
     "@tiptap/extension-code-block": "^3.23.6",
@@ -32,6 +36,7 @@
     "lucide-react": "^1.16.0",
     "marked": "^18.0.4",
     "next": "16.2.6",
+    "otplib": "^12.0.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",

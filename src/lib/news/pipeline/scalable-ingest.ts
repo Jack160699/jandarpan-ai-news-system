@@ -3,6 +3,7 @@
  */
 
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
+import { evaluateIngestionAlert } from "@/lib/observability/alerts";
 import { createAdminServerClient } from "@/lib/supabase";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
 import { clusterRecentSignals, logNewsroom } from "@/lib/newsroom";
@@ -246,6 +247,13 @@ export async function runScalableIngestion(
     },
   });
 
+  void evaluateIngestionAlert({
+    status,
+    inserted,
+    totalFetched,
+    errors: errors.slice(0, 10),
+  });
+
   if (inserted > 0 || signalsInserted > 0) {
     const { refreshSnapshotFromDatabase } = await import(
       "@/lib/news/live-feed/resolve-pool"
@@ -253,6 +261,16 @@ export async function runScalableIngestion(
     await refreshSnapshotFromDatabase(120).catch((err) => {
       console.warn("[ingest] snapshot refresh failed:", err);
     });
+  }
+
+  if (signalsInserted > 0 && process.env.INTELLIGENCE_WORKERS_ENABLED !== "false") {
+    const { publishIngestCompleted } = await import(
+      "@/lib/infrastructure/events/event-bus"
+    );
+    void publishIngestCompleted({
+      signalsInserted,
+      logId: logRow?.id ?? null,
+    }).catch(() => undefined);
   }
 
   logNewsroom("pipeline", "INGESTION_FINAL_REPORT", {

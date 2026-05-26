@@ -13,11 +13,12 @@ export async function GET(request: Request) {
   const page = Number(searchParams.get("page") ?? "1");
   const pageSize = Number(searchParams.get("pageSize") ?? "8");
 
+  const { isSupabaseConfigured } = await import("@/lib/supabase");
   const feed = await fetchGlobalBriefFeed({
     segment: segment === "international" ? "international" : "national",
     page,
     pageSize,
-    useMock: true,
+    useMock: !isSupabaseConfigured(),
   });
 
   return NextResponse.json(feed, {
