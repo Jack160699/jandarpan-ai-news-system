@@ -18,11 +18,14 @@ import {
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { StoriesTable } from "@/components/admin-newsroom/StoriesTable";
 import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
+import { AdminWidgetBoundary } from "@/components/admin-newsroom/ui/AdminWidgetBoundary";
+import { ClientOnly } from "@/components/admin-newsroom/ui/ClientOnly";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
 import { QueueTable } from "@/components/admin-newsroom/ui/QueueTable";
+import { traceDashboardRender } from "@/lib/observability/dashboard-render-trace";
 
 function useAnimatedNumber(value: number, durationMs = 700) {
   const [display, setDisplay] = useState(0);
@@ -60,6 +63,13 @@ function MissionMetricCard({
   live?: boolean;
 }) {
   const animated = useAnimatedNumber(value);
+  const safeSpark = useMemo(
+    () =>
+      (Array.isArray(spark) ? spark : []).filter(
+        (p) => Number.isFinite(p?.i) && Number.isFinite(p?.v)
+      ),
+    [spark]
+  );
   return (
     <article className={`anr-kpi anr-kpi--mission ${live ? "anr-kpi--live" : ""}`}>
       <div className="anr-kpi__head">
@@ -71,7 +81,7 @@ function MissionMetricCard({
       <strong>{Math.round(animated).toLocaleString("en-IN")}</strong>
       <div className="anr-kpi__spark">
         <ResponsiveContainer width="100%" height={36}>
-          <AreaChart data={spark}>
+          <AreaChart data={safeSpark}>
             <Area
               type="monotone"
               dataKey="v"
@@ -90,6 +100,11 @@ function MissionMetricCard({
 export function EditorialOverview() {
   const { data, loading, error } = useAdminNewsroom();
   const mounted = useHasMounted();
+
+  traceDashboardRender("DASHBOARD_RENDER", "EditorialOverview_render", {
+    loading,
+    hasData: Boolean(data),
+  });
 
   if (loading && !data) {
     return (
@@ -115,18 +130,29 @@ export function EditorialOverview() {
     return null;
   }
 
-  const pending = data.generatedArticles.filter((a) => a.editorial_status === "pending");
-  const approved = data.generatedArticles.filter((a) => a.editorial_status === "approved");
-  const rejected = data.generatedArticles.filter((a) => a.editorial_status === "rejected");
-  const breaking = data.generatedArticles.filter((a) => a.is_breaking);
-  const aiConfRows = data.generatedArticles.filter((a) => a.ai_confidence != null);
+  const generated = Array.isArray(data.generatedArticles) ? data.generatedArticles : [];
+  const ingestionLogs = Array.isArray(data.ingestion?.recentLogs)
+    ? data.ingestion.recentLogs
+    : [];
+  const ingestionFailures = Array.isArray(data.ingestion?.recentFailures)
+    ? data.ingestion.recentFailures
+    : [];
+  const sourceReliability = Array.isArray(data.sourceReliability) ? data.sourceReliability : [];
+  const sourceHealth = Array.isArray(data.sourceHealth) ? data.sourceHealth : [];
+  const aiQueue = Array.isArray(data.aiQueue) ? data.aiQueue : [];
+
+  const pending = generated.filter((a) => a.editorial_status === "pending");
+  const approved = generated.filter((a) => a.editorial_status === "approved");
+  const rejected = generated.filter((a) => a.editorial_status === "rejected");
+  const breaking = generated.filter((a) => a.is_breaking);
+  const aiConfRows = generated.filter((a) => a.ai_confidence != null);
   const avgConfidence =
     aiConfRows.reduce((sum, a) => sum + (a.ai_confidence ?? 0), 0) /
     Math.max(1, aiConfRows.length);
 
   const ingestionOverTime = useMemo(() => {
     if (!mounted) return [];
-    return data.ingestion.recentLogs
+    return ingestionLogs
       .slice(0, 12)
       .reverse()
       .map((log) => ({
@@ -134,10 +160,10 @@ export function EditorialOverview() {
           hour: "2-digit",
           minute: "2-digit",
         }),
-        inserted: log.inserted,
-        failed: log.failed_validation,
+        inserted: Number.isFinite(log.inserted) ? log.inserted : 0,
+        failed: Number.isFinite(log.failed_validation) ? log.failed_validation : 0,
       }));
-  }, [mounted, data.ingestion.recentLogs]);
+  }, [mounted, ingestionLogs]);
 
   const approvalsVsRejects = [
     { name: "Approved", value: approved.length, color: "#22c55e" },
@@ -146,7 +172,7 @@ export function EditorialOverview() {
   ];
 
   const districtActivity = Object.entries(
-    data.generatedArticles.reduce<Record<string, number>>((acc, article) => {
+    generated.reduce<Record<string, number>>((acc, article) => {
       const district = article.source_attribution[0]?.source ?? "General";
       acc[district] = (acc[district] ?? 0) + 1;
       return acc;
@@ -155,9 +181,15 @@ export function EditorialOverview() {
     .slice(0, 8)
     .map(([district, count]) => ({ district, count }));
 
-  const sourceReliabilityTrend = data.sourceReliability
+  const sourceReliabilityTrend = sourceReliability
     .slice(0, 8)
-    .map((s) => ({ source: s.source.slice(0, 12), confidence: Math.round(s.avgConfidence * 100) }));
+    .map((s) => ({
+      source: (s.source ?? "").slice(0, 12) || "Source",
+      confidence: Number.isFinite(s.avgConfidence)
+        ? Math.round(s.avgConfidence * 100)
+        : 0,
+    }))
+    .filter((row) => Number.isFinite(row.confidence));
 
   const pulseFeed = [
     ...approved.slice(0, 4).map((a) => ({
@@ -170,12 +202,12 @@ export function EditorialOverview() {
       text: `Breaking alert: ${a.headline}`,
       at: a.created_at,
     })),
-    ...data.ingestion.recentFailures.slice(0, 3).map((f) => ({
+    ...ingestionFailures.slice(0, 3).map((f) => ({
       tone: "warning",
       text: `Ingestion failure: ${f.title ?? "Untitled"} (${f.reason})`,
       at: f.created_at,
     })),
-    ...data.aiQueue
+    ...aiQueue
       .filter((q) => q.error)
       .slice(0, 3)
       .map((q) => ({
@@ -187,12 +219,22 @@ export function EditorialOverview() {
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, 12);
 
-  const sourceStable = data.sourceHealth.filter((s) => s.healthy).length;
+  const sourceStable = sourceHealth.filter((s) => s.healthy).length;
   const queuePressure =
     (data.counts.pending + data.counts.aiQueuePending + data.counts.imageQueuePending) /
     Math.max(1, data.counts.generated);
   const queueTone = toneFromHealth(1 - Math.min(1, queuePressure));
   const confidenceTone = toneFromHealth(avgConfidence || 0);
+
+  traceDashboardRender("CHART_DATA", "ingestion_over_time", {
+    len: ingestionOverTime.length,
+  });
+  traceDashboardRender("CHART_DATA", "district_activity", {
+    len: districtActivity.length,
+  });
+  traceDashboardRender("CHART_DATA", "source_reliability", {
+    len: sourceReliabilityTrend.length,
+  });
 
   return (
     <>
@@ -227,69 +269,95 @@ export function EditorialOverview() {
       </div>
 
       <div className="anr-grid anr-grid--2">
-        <AdminCard title="Ingestion over time" description="Inserted vs failed articles">
-          <div className="anr-chart">
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={ingestionOverTime}>
-                <defs>
-                  <linearGradient id="ingestionFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
-                <XAxis dataKey="time" tick={{ fill: "#99a1b0", fontSize: 11 }} />
-                <YAxis tick={{ fill: "#99a1b0", fontSize: 11 }} />
-                <Tooltip />
-                <Area type="monotone" dataKey="inserted" stroke="#f59e0b" fill="url(#ingestionFill)" />
-                <Area type="monotone" dataKey="failed" stroke="#fb7185" fill="rgba(251,113,133,0.12)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </AdminCard>
-        <AdminCard title="Approvals vs rejects" description="Publishing moderation split">
-          <div className="anr-chart">
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={approvalsVsRejects} dataKey="value" nameKey="name" innerRadius={48} outerRadius={82}>
-                  {approvalsVsRejects.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </AdminCard>
+        <AdminWidgetBoundary name="Ingestion over time">
+          <AdminCard title="Ingestion over time" description="Inserted vs failed articles">
+            {traceDashboardRender("WIDGET_RENDER", "ingestion_over_time")}
+            <ClientOnly fallback={<div className="anr-skeleton" style={{ height: "220px" }} />}>
+              <div className="anr-chart">
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={Array.isArray(ingestionOverTime) ? ingestionOverTime : []}>
+                    <defs>
+                      <linearGradient id="ingestionFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                    <XAxis dataKey="time" tick={{ fill: "#99a1b0", fontSize: 11 }} />
+                    <YAxis tick={{ fill: "#99a1b0", fontSize: 11 }} />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="inserted" stroke="#f59e0b" fill="url(#ingestionFill)" />
+                    <Area type="monotone" dataKey="failed" stroke="#fb7185" fill="rgba(251,113,133,0.12)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </ClientOnly>
+          </AdminCard>
+        </AdminWidgetBoundary>
+        <AdminWidgetBoundary name="Approvals vs rejects">
+          <AdminCard title="Approvals vs rejects" description="Publishing moderation split">
+            {traceDashboardRender("WIDGET_RENDER", "approvals_vs_rejects")}
+            <ClientOnly fallback={<div className="anr-skeleton" style={{ height: "220px" }} />}>
+              <div className="anr-chart">
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={Array.isArray(approvalsVsRejects) ? approvalsVsRejects : []}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={48}
+                      outerRadius={82}
+                    >
+                      {approvalsVsRejects.map((entry) => (
+                        <Cell key={entry.name} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </ClientOnly>
+          </AdminCard>
+        </AdminWidgetBoundary>
       </div>
 
       <div className="anr-grid anr-grid--2">
-        <AdminCard title="District activity heatmap" description="District publishing activity">
-          <div className="anr-chart">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={districtActivity}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
-                <XAxis dataKey="district" tick={{ fill: "#99a1b0", fontSize: 11 }} />
-                <YAxis tick={{ fill: "#99a1b0", fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="count" fill="#f59e0b" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </AdminCard>
-        <AdminCard title="Source reliability trend" description="Source confidence monitor">
-          <div className="anr-chart">
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={sourceReliabilityTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
-                <XAxis dataKey="source" tick={{ fill: "#99a1b0", fontSize: 11 }} />
-                <YAxis tick={{ fill: "#99a1b0", fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="confidence" fill="#22c55e" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </AdminCard>
+        <AdminWidgetBoundary name="District activity heatmap">
+          <AdminCard title="District activity heatmap" description="District publishing activity">
+            {traceDashboardRender("WIDGET_RENDER", "district_activity")}
+            <ClientOnly fallback={<div className="anr-skeleton" style={{ height: "220px" }} />}>
+              <div className="anr-chart">
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={Array.isArray(districtActivity) ? districtActivity : []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                    <XAxis dataKey="district" tick={{ fill: "#99a1b0", fontSize: 11 }} />
+                    <YAxis tick={{ fill: "#99a1b0", fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#f59e0b" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </ClientOnly>
+          </AdminCard>
+        </AdminWidgetBoundary>
+        <AdminWidgetBoundary name="Source reliability trend">
+          <AdminCard title="Source reliability trend" description="Source confidence monitor">
+            {traceDashboardRender("WIDGET_RENDER", "source_reliability")}
+            <ClientOnly fallback={<div className="anr-skeleton" style={{ height: "220px" }} />}>
+              <div className="anr-chart">
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={Array.isArray(sourceReliabilityTrend) ? sourceReliabilityTrend : []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+                    <XAxis dataKey="source" tick={{ fill: "#99a1b0", fontSize: 11 }} />
+                    <YAxis tick={{ fill: "#99a1b0", fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="confidence" fill="#22c55e" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </ClientOnly>
+          </AdminCard>
+        </AdminWidgetBoundary>
       </div>
 
       <div className="anr-grid anr-grid--3">
@@ -311,11 +379,11 @@ export function EditorialOverview() {
           <div className="anr-state-grid">
             <div className="anr-state-pill anr-state-pill--stable">Stable: {sourceStable}</div>
             <div className="anr-state-pill anr-state-pill--warning">
-              Warning: {data.sourceHealth.length - sourceStable}
+              Warning: {sourceHealth.length - sourceStable}
             </div>
           </div>
           <ul className="anr-pulse-list">
-            {data.sourceHealth.slice(0, 5).map((source) => (
+            {sourceHealth.slice(0, 5).map((source) => (
               <li
                 key={source.source_id}
                 className={`anr-pulse-item ${source.healthy ? "anr-pulse-item--stable" : "anr-pulse-item--warning"}`}
@@ -369,7 +437,7 @@ export function EditorialOverview() {
                 </tr>
               </thead>
               <tbody>
-                {data.ingestion.recentLogs.slice(0, 6).map((log) => (
+                {ingestionLogs.slice(0, 6).map((log) => (
                   <tr key={log.id}>
                     <td>{log.status}</td>
                     <td>{log.inserted}</td>
@@ -392,7 +460,7 @@ export function EditorialOverview() {
             </div>
             <div className="anr-widget">
               <h4>Failed ingestion</h4>
-              <p>{data.ingestion.recentFailures.length}</p>
+              <p>{ingestionFailures.length}</p>
             </div>
             <div className="anr-widget">
               <h4>Image generation queue</h4>
@@ -407,7 +475,7 @@ export function EditorialOverview() {
       </div>
 
       <AdminCard title={`Pending review (${pending.length})`} />
-      <StoriesTable articles={pending.length ? pending : data.generatedArticles.slice(0, 8)} />
+      <StoriesTable articles={pending.length ? pending : generated.slice(0, 8)} />
     </>
   );
 }
