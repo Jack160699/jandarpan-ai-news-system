@@ -13,6 +13,7 @@ import type { EditorialDashboardSnapshot } from "@/lib/editorial-dashboard/types
 import { traceAdminEmergency } from "@/lib/admin/emergency-mode";
 import { apiClient } from "@/lib/api/api-client";
 import { tracePerf } from "@/lib/observability/performance-monitor";
+import { fetchEditorialDashboard } from "@/lib/query/dashboard-fetch";
 import { useEditorialDashboardQuery } from "@/lib/query/hooks/use-editorial-dashboard";
 import { queryKeys } from "@/lib/query/query-keys";
 import { useAdminIdentity } from "@/providers/AdminSessionProvider";
@@ -94,24 +95,33 @@ export function AdminProvider({
 
   const refresh = useCallback(async () => {
     tracePerf("QUERY", "dashboard_manual_refresh");
-    await dashboardQuery.refetch();
-  }, [dashboardQuery]);
+    await queryClient.fetchQuery({
+      queryKey: queryKeys.editorial.dashboard,
+      queryFn: () => fetchEditorialDashboard({ force: true, reason: "manual" }),
+      staleTime: 0,
+    });
+  }, [queryClient]);
 
   const actionMutation = useMutation({
     mutationFn: async (input: {
       action: string;
       payload: Record<string, string | number | boolean | undefined>;
     }) => {
-      const result = await apiClient.post<{ ok: boolean; message?: string; error?: string }>(
-        "/api/editorial/actions",
-        { action: input.action, ...input.payload },
-        { label: "editorial_action" }
-      );
+      const result = await apiClient.post<{
+        ok: boolean;
+        message?: string;
+        error?: string;
+        snapshot?: EditorialDashboardSnapshot;
+      }>("/api/editorial/actions", { action: input.action, ...input.payload }, {
+        label: "editorial_action",
+      });
       if (!result.ok) throw new Error(result.error);
       return result.data;
     },
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.editorial.dashboard });
+    onSuccess: (json) => {
+      if (json.snapshot) {
+        queryClient.setQueryData(queryKeys.editorial.dashboard, json.snapshot);
+      }
     },
   });
 
@@ -175,14 +185,17 @@ export function AdminProvider({
     }
   }, [emergencyMode]);
 
+  const dashboardData = dashboardQuery.data ?? null;
+  const dashboardLoading = dashboardQuery.isLoading && !dashboardData;
+
   const value = useMemo(
     () => ({
       email,
       role,
       tenantName,
-      data: dashboardQuery.data ?? null,
+      data: dashboardData,
       error,
-      loading: dashboardQuery.isFetching && !dashboardQuery.data,
+      loading: dashboardLoading,
       theme,
       setTheme,
       refresh,
@@ -194,8 +207,8 @@ export function AdminProvider({
       email,
       role,
       tenantName,
-      dashboardQuery.data,
-      dashboardQuery.isFetching,
+      dashboardData,
+      dashboardLoading,
       error,
       theme,
       setTheme,

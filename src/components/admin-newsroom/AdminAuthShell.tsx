@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useRemountTrace } from "@/hooks/useRemountTrace";
 import { usePathname } from "next/navigation";
-import { AdminProvider } from "@/components/admin-newsroom/AdminProvider";
 import { AdminRecoveryCard } from "@/components/admin-newsroom/AdminRecoveryCard";
 import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { traceAdminBoot, traceAdminRecovery } from "@/lib/observability/admin-boot";
@@ -30,16 +30,16 @@ export function AdminAuthShell({
   superAdminOnly,
 }: AdminAuthShellProps) {
   const pathname = usePathname() ?? "/admin/editorial";
+  useRemountTrace("AdminAuthShell", "LAYOUT_REMOUNT");
+
   const {
     status,
-    authReady,
     isDegraded,
-    email,
-    role,
-    tenantName,
     session,
     refreshSession,
   } = useAdminSession();
+
+  const guestRedirectedRef = useRef(false);
 
   const boot = useMemo((): BootState => {
     if (status === "loading") return "shell";
@@ -72,6 +72,8 @@ export function AdminAuthShell({
 
   useEffect(() => {
     if (boot !== "guest") return;
+    if (guestRedirectedRef.current) return;
+    guestRedirectedRef.current = true;
     const next = encodeURIComponent(pathname);
     window.location.replace(`/admin/login?next=${next}`);
   }, [boot, pathname]);
@@ -100,7 +102,7 @@ export function AdminAuthShell({
   }
 
   return (
-    <AdminProvider email={email} role={role} tenantName={tenantName} authReady={authReady}>
+    <>
       {isDegraded ? (
         <div className="anr-emergency-banner" role="status">
           <strong>Degraded mode.</strong> Auth verification timed out. Some data may be
@@ -112,6 +114,6 @@ export function AdminAuthShell({
         </div>
       ) : null}
       {children}
-    </AdminProvider>
+    </>
   );
 }

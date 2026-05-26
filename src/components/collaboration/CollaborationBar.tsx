@@ -91,25 +91,29 @@ export function CollaborationBar({
     };
   }, [session, articleId, acquireLock]);
 
+  const editorHtmlRef = useRef(editorHtml);
+  editorHtmlRef.current = editorHtml;
+
   useEffect(() => {
     if (!session || !lock?.isOwner) return;
     if (typingTimer.current) clearTimeout(typingTimer.current);
     typingTimer.current = setTimeout(() => {
-      broadcastDoc(editorHtml, false);
+      const html = editorHtmlRef.current;
+      broadcastDoc(html, false);
       setTyping(false);
       const version = Date.now();
       fetch("/api/collaboration/doc", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ articleId, version, html: editorHtml }),
+        body: JSON.stringify({ articleId, version, html }),
       });
-    }, 800);
+    }, 1_200);
     setTyping(true);
     return () => {
       if (typingTimer.current) clearTimeout(typingTimer.current);
     };
-  }, [editorHtml, session, lock, articleId, broadcastDoc, setTyping]);
+  }, [session, lock?.isOwner, articleId, broadcastDoc, setTyping]);
 
   async function loadComments() {
     const res = await fetch(

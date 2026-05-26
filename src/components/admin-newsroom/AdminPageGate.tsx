@@ -1,8 +1,6 @@
 import { AdminAuthShell } from "@/components/admin-newsroom/AdminAuthShell";
 import { AdminEmergencyBanner } from "@/components/admin-newsroom/AdminEmergencyBanner";
-import { AdminProvider } from "@/components/admin-newsroom/AdminProvider";
 import {
-  ADMIN_EMERGENCY_MOCK,
   isAdminEmergencyMode,
   traceAdminEmergency,
 } from "@/lib/admin/emergency-mode";
@@ -25,15 +23,10 @@ export function AdminPageGate({
   if (isAdminEmergencyMode()) {
     traceAdminEmergency("ADMIN_ROUTE", "emergency_bypass");
     return (
-      <AdminProvider
-        email={ADMIN_EMERGENCY_MOCK.email}
-        role={ADMIN_EMERGENCY_MOCK.role}
-        tenantName={ADMIN_EMERGENCY_MOCK.tenantName}
-        emergencyMode
-      >
+      <>
         <AdminEmergencyBanner />
         {children}
-      </AdminProvider>
+      </>
     );
   }
 

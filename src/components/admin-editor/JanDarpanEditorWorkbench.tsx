@@ -59,7 +59,10 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
     return Array.isArray(raw) ? (raw as EditorVersionSnapshot[]) : [];
   }, [article]);
 
-  const seoMeta = (article?.editorial_metadata?.seo ?? {}) as Record<string, string>;
+  const seoMeta = useMemo(
+    () => (article?.editorial_metadata?.seo ?? {}) as Record<string, string>,
+    [article?.editorial_metadata?.seo]
+  );
 
   const { conflict: draftConflict } = useEditorDraftRecovery(articleId, article);
 
@@ -97,14 +100,9 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
     });
   }, [article, bodyMarkdown, seoMeta]);
 
-  const autosavePayload = useMemo(() => {
-    if (!payload) return null;
-    return { ...payload } as Record<string, unknown>;
-  }, [payload]);
-
   const { saveState, lastSavedAt, saveNow } = useEditorAutosave(
     articleId,
-    autosavePayload
+    payload as Record<string, unknown> | null
   );
 
   const saveDraft = useCallback(
@@ -209,7 +207,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
 
   const compareVersion = versions.find((v) => v.id === compareId);
 
-  const loading = articleQuery.isLoading || !article || !editorReady;
+  const loading = (articleQuery.isLoading && !article) || !editorReady;
 
   if (loading) {
     return <div className="jd-editor-page__loading">Loading editor…</div>;

@@ -34,12 +34,19 @@ export function MediaDamPanel() {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [watermark, setWatermark] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedQuery(query), 400);
+    return () => window.clearTimeout(id);
+  }, [query]);
+
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (query.trim()) params.set("q", query.trim());
+      if (debouncedQuery.trim()) params.set("q", debouncedQuery.trim());
       if (filter !== "all") params.set("type", filter);
       if (folderId) params.set("folderId", folderId);
 
@@ -60,10 +67,10 @@ export function MediaDamPanel() {
     } finally {
       setLoading(false);
     }
-  }, [query, filter, folderId]);
+  }, [debouncedQuery, filter, folderId]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   async function uploadFiles(files: FileList | File[]) {
@@ -75,13 +82,16 @@ export function MediaDamPanel() {
         if (folderId) form.append("folderId", folderId);
         if (watermark) form.append("watermark", "1");
 
-        await fetch("/api/dam/upload", {
+        const res = await fetch("/api/dam/upload", {
           method: "POST",
           credentials: "include",
           body: form,
         });
+        if (!res.ok) {
+          setError("One or more uploads failed");
+        }
       }
-      await load();
+      await load({ silent: true });
     } finally {
       setUploading(false);
       setDragOver(false);
