@@ -6,12 +6,26 @@ import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion"
 import { memoryCacheDelete, memoryCacheGet, memoryCacheSet } from "@/lib/infrastructure/cache/memory";
 import { isRedisConfigured, redisDel, redisGet, redisSet } from "@/lib/infrastructure/cache/redis";
 
+/** True when Redis is configured but unreachable — APIs continue via memory/DB */
+let redisDegradedLogged = false;
+
+export function isRedisDegradedMode(): boolean {
+  return isRedisConfigured() && redisDegradedLogged;
+}
+
 export async function cacheGet(key: string): Promise<string | null> {
   if (isRedisConfigured()) {
-    const hit = await redisGet(key);
-    if (hit !== null) {
-      logIngestionAnalytics({ event: "cache_hit", metadata: { key, layer: "redis" } });
-      return hit;
+    try {
+      const hit = await redisGet(key);
+      if (hit !== null) {
+        logIngestionAnalytics({ event: "cache_hit", metadata: { key, layer: "redis" } });
+        return hit;
+      }
+    } catch {
+      if (!redisDegradedLogged) {
+        redisDegradedLogged = true;
+        logIngestionAnalytics({ event: "degraded", metadata: { layer: "redis", reason: "read_failure" } });
+      }
     }
   }
 
@@ -32,7 +46,14 @@ export async function cacheSet(
 ): Promise<void> {
   memoryCacheSet(key, value, ttlSeconds);
   if (isRedisConfigured()) {
-    await redisSet(key, value, ttlSeconds);
+    try {
+      await redisSet(key, value, ttlSeconds);
+    } catch {
+      if (!redisDegradedLogged) {
+        redisDegradedLogged = true;
+        logIngestionAnalytics({ event: "degraded", metadata: { layer: "redis", reason: "write_failure" } });
+      }
+    }
   }
 }
 

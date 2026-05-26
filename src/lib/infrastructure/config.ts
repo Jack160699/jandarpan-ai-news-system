@@ -35,9 +35,12 @@ export const INFRA_CONFIG = {
 
   /** Observability */
   sentryEnabled: Boolean(process.env.SENTRY_DSN?.trim()),
-  dashboardCacheTtlSec: Number(process.env.DASHBOARD_CACHE_TTL_SEC) || 45,
-  intelligenceCacheTtlSec: Number(process.env.INTELLIGENCE_CACHE_TTL_SEC) || 60,
+  dashboardCacheTtlSec: Number(process.env.DASHBOARD_CACHE_TTL_SEC) || 60,
+  intelligenceCacheTtlSec: Number(process.env.INTELLIGENCE_CACHE_TTL_SEC) || 90,
   analyticsCacheTtlSec: Number(process.env.ANALYTICS_CACHE_TTL_SEC) || 120,
+  adminPollDefaultMs: Number(process.env.NEXT_PUBLIC_ADMIN_POLL_MS) || 60_000,
+  adminPollAnalyticsMs:
+    Number(process.env.NEXT_PUBLIC_ADMIN_ANALYTICS_POLL_MS) || 120_000,
   apiRateLimitPerMinute: Number(process.env.API_RATE_LIMIT_PER_MINUTE) || 120,
 
   workerJobBatch: Number(process.env.WORKER_JOB_BATCH) || 8,

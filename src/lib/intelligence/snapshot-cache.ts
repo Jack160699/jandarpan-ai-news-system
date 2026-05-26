@@ -85,13 +85,29 @@ export async function getCachedIntelligenceSnapshot(
   };
 }
 
+const refreshInflight = new Map<string, number>();
+
 export async function requestSnapshotRefresh(
   tenantId?: string | null
 ): Promise<void> {
+  const key = tenantId ?? "global";
+  const debounceMs = Number(process.env.INTELLIGENCE_REFRESH_DEBOUNCE_MS) || 120_000;
+  const now = Date.now();
+  const until = refreshInflight.get(key) ?? 0;
+  if (until > now) return;
+  refreshInflight.set(key, now + debounceMs);
+
+  const { isDuplicateRequest } = await import("@/lib/infrastructure/cache/dedup");
+  const duplicate = await isDuplicateRequest(
+    `intel:refresh:${key}`,
+    Math.floor(debounceMs / 1000)
+  );
+  if (duplicate) return;
+
   const { enqueueJob } = await import("@/lib/infrastructure/jobs/queue");
   await enqueueJob({
     jobType: "intelligence_snapshot",
-    dedupeKey: `intelligence_snapshot:${tenantId ?? "global"}`,
+    dedupeKey: `intelligence_snapshot:${key}`,
     tenantId,
     priority: 12,
   });

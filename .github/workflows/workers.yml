@@ -1,0 +1,164 @@
+# Enterprise worker scheduler — Hobby-safe (replaces Vercel cron)
+name: Enterprise Workers
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+    - cron: "*/15 * * * *"
+    - cron: "*/20 * * * *"
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      worker:
+        description: "Run a single worker (jobs|snapshot|embed|health|all)"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - jobs
+          - snapshot
+          - embed
+          - health
+
+jobs:
+  queue-processor:
+    if: github.event.schedule == '*/10 * * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.worker == 'jobs' || github.event.inputs.worker == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    concurrency:
+      group: enterprise-worker-jobs
+      cancel-in-progress: false
+    steps:
+      - name: Drain worker job queue
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::APP_URL and CRON_SECRET secrets are required"
+            exit 1
+          fi
+          ENDPOINT="${APP_URL%/}/api/cron/jobs"
+          echo "[WORKER_START] POST ${ENDPOINT}"
+          for attempt in 1 2 3; do
+            http_code=$(curl -sS -o /tmp/worker.json -w "%{http_code}" \
+              -X POST "${ENDPOINT}" \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -H "Accept: application/json" \
+              --max-time 110 \
+              --retry 2 --retry-delay 5 --retry-all-errors || true)
+            echo "Attempt ${attempt}: HTTP ${http_code}"
+            cat /tmp/worker.json || true
+            echo ""
+            if [ "${http_code}" = "200" ] || [ "${http_code}" = "201" ]; then
+              break
+            fi
+            if [ "${attempt}" -lt 3 ]; then sleep 8; fi
+          done
+          if [ "${http_code}" != "200" ] && [ "${http_code}" != "201" ]; then
+            echo "::error::[WORKER_FAILURE] queue processor HTTP ${http_code}"
+            exit 1
+          fi
+          ok=$(node -e "try{const j=JSON.parse(require('fs').readFileSync('/tmp/worker.json','utf8'));process.stdout.write(j.ok!==false?'true':'false')}catch{process.stdout.write('false')}")
+          if [ "${ok}" != "true" ]; then
+            echo "::error::[WORKER_FAILURE] queue processor returned ok=false"
+            exit 1
+          fi
+          echo "[WORKER_SUCCESS] queue processor"
+
+  intelligence-snapshot:
+    if: github.event.schedule == '*/15 * * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.worker == 'snapshot' || github.event.inputs.worker == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    concurrency:
+      group: enterprise-worker-snapshot
+      cancel-in-progress: false
+    steps:
+      - name: Run intelligence snapshot worker
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          ENDPOINT="${APP_URL%/}/api/cron/worker/intelligence_snapshot"
+          echo "[WORKER_START] POST ${ENDPOINT}"
+          http_code=$(curl -sS -o /tmp/worker.json -w "%{http_code}" \
+            -X POST "${ENDPOINT}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            --max-time 110 --retry 2 --retry-delay 5 --retry-all-errors || true)
+          echo "HTTP ${http_code}"
+          cat /tmp/worker.json || true
+          echo ""
+          if [ "${http_code}" != "200" ] && [ "${http_code}" != "201" ]; then
+            echo "::error::[WORKER_FAILURE] intelligence_snapshot HTTP ${http_code}"
+            exit 1
+          fi
+          echo "[WORKER_SUCCESS] intelligence_snapshot"
+
+  intelligence-embed:
+    if: github.event.schedule == '*/20 * * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.worker == 'embed' || github.event.inputs.worker == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    concurrency:
+      group: enterprise-worker-embed
+      cancel-in-progress: false
+    steps:
+      - name: Run intelligence embed worker
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          ENDPOINT="${APP_URL%/}/api/cron/worker/intelligence_embed"
+          echo "[WORKER_START] POST ${ENDPOINT}"
+          http_code=$(curl -sS -o /tmp/worker.json -w "%{http_code}" \
+            -X POST "${ENDPOINT}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            --max-time 110 --retry 2 --retry-delay 5 --retry-all-errors || true)
+          echo "HTTP ${http_code}"
+          cat /tmp/worker.json || true
+          echo ""
+          if [ "${http_code}" != "200" ] && [ "${http_code}" != "201" ]; then
+            echo "::error::[WORKER_FAILURE] intelligence_embed HTTP ${http_code}"
+            exit 1
+          fi
+          echo "[WORKER_SUCCESS] intelligence_embed"
+
+  workers-health:
+    if: github.event.schedule == '0 */6 * * *' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.worker == 'health' || github.event.inputs.worker == 'all'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: enterprise-worker-health
+      cancel-in-progress: false
+    steps:
+      - name: Worker health check
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          ENDPOINT="${APP_URL%/}/api/cron/workers/health"
+          echo "[HEALTH_START] GET ${ENDPOINT}"
+          http_code=$(curl -sS -o /tmp/health.json -w "%{http_code}" \
+            -X GET "${ENDPOINT}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            --max-time 60 --retry 2 --retry-delay 5 --retry-all-errors || true)
+          echo "HTTP ${http_code}"
+          cat /tmp/health.json || true
+          echo ""
+          if [ "${http_code}" != "200" ]; then
+            echo "::error::[HEALTH_FAILURE] HTTP ${http_code}"
+            exit 1
+          fi
+          critical=$(node -e "try{const j=JSON.parse(require('fs').readFileSync('/tmp/health.json','utf8'));process.stdout.write(j.critical===true?'true':'false')}catch{process.stdout.write('true')}")
+          if [ "${critical}" = "true" ]; then
+            echo "::error::[HEALTH_CRITICAL] Worker health reported critical failure"
+            exit 1
+          fi
+          echo "[HEALTH_SUCCESS] workers healthy"

@@ -13,12 +13,26 @@ export function embeddingDimensions(): number {
   return DIM;
 }
 
+export type EmbedTextsResult = {
+  embeddings: (number[] | null)[];
+  error?: string;
+  retryable?: boolean;
+};
+
 export async function embedTexts(
   texts: string[]
 ): Promise<(number[] | null)[]> {
+  const result = await embedTextsSafe(texts);
+  return result.embeddings;
+}
+
+/** Defensive OpenAI client — never throws; surfaces retry hints for workers */
+export async function embedTextsSafe(
+  texts: string[]
+): Promise<EmbedTextsResult> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey || texts.length === 0) {
-    return texts.map(() => null);
+    return { embeddings: texts.map(() => null) };
   }
 
   const inputs = texts.map((t) => t.slice(0, 8000));
@@ -31,9 +45,24 @@ export async function embedTexts(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ model: MODEL, input: inputs }),
+      signal: AbortSignal.timeout(45_000),
     });
 
-    if (!res.ok) return texts.map(() => null);
+    if (!res.ok) {
+      const retryable = res.status === 429 || res.status >= 500;
+      let detail = `openai_http_${res.status}`;
+      try {
+        const errJson = (await res.json()) as { error?: { message?: string } };
+        if (errJson.error?.message) detail = errJson.error.message.slice(0, 200);
+      } catch {
+        /* ignore parse */
+      }
+      return {
+        embeddings: texts.map(() => null),
+        error: detail,
+        retryable,
+      };
+    }
 
     const json = (await res.json()) as {
       data?: Array<{ embedding?: number[]; index?: number }>;
@@ -44,9 +73,14 @@ export async function embedTexts(
       const idx = row.index ?? 0;
       if (row.embedding?.length === DIM) out[idx] = row.embedding;
     }
-    return out;
-  } catch {
-    return texts.map(() => null);
+    return { embeddings: out };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "openai_embed_failed";
+    return {
+      embeddings: texts.map(() => null),
+      error: msg,
+      retryable: true,
+    };
   }
 }
 

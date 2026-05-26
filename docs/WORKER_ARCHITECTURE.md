@@ -10,7 +10,7 @@ Scalable async processing for AI, intelligence, analytics, and DAM — replacing
 | Enterprise analytics rebuilt every 12s poll | `analytics_snapshots` + Redis cache |
 | DAM vision AI runs inline on upload | `dam_analyze` jobs via `dam_analyze_queue` |
 | No unified retries / DLQ | `worker_jobs` + `worker_dead_letters` + exponential backoff |
-| Cron only daily orchestrate | Distributed crons: jobs (10m), embed (20m), snapshot (15m), health (6h) |
+| Cron only daily orchestrate | GitHub Actions: jobs (10m), embed (20m), snapshot (15m), health (6h) |
 
 ---
 
@@ -20,7 +20,7 @@ Scalable async processing for AI, intelligence, analytics, and DAM — replacing
 flowchart TB
   subgraph triggers [Triggers]
     GH[GitHub Actions ingest]
-    VC[Vercel Cron]
+    GHW[GitHub Actions Workers]
     API[Admin API polls]
     EVT[Event Bus]
   end
@@ -53,9 +53,9 @@ flowchart TB
   GH --> ING
   ING --> EVT
   EVT --> WJ
-  VC --> JP
-  VC --> EMB
-  VC --> SNAP
+  GHW --> JP
+  GHW --> EMB
+  GHW --> SNAP
 
   JP --> WJ
   EMB --> WJ
@@ -171,7 +171,7 @@ Per-job timeout via `timeout_ms` (default 120s) with `Promise.race`.
 
 - Multiple cron invocations are safe: `claimJobBatch` uses status transition `pending → claimed`.
 - Increase throughput: raise `WORKER_JOB_BATCH`, add more frequent `/api/cron/jobs` schedule.
-- Split heavy workers onto dedicated crons (already in `vercel.json`).
+- Split heavy workers onto dedicated schedules (see `.github/workflows/workers.yml`).
 
 ### Vertical (within invocation)
 
@@ -241,11 +241,11 @@ WORKER_RETRY_MAX_MS=300000
 DAM_ANALYZE_BATCH=4
 ```
 
-### 3. Vercel crons
+### 3. GitHub Actions workers (Hobby-safe)
 
-`vercel.json` includes new schedules. Deploy to Vercel Pro (crons require Pro for sub-daily in some plans).
+See [GITHUB_ACTIONS_WORKERS.md](./GITHUB_ACTIONS_WORKERS.md). `vercel.json` has **no crons** on Hobby.
 
-Ensure `CRON_SECRET` is set in Vercel project env. Cron requests must send:
+Ensure `CRON_SECRET` is set in Vercel **and** GitHub repository secrets. Worker requests must send:
 
 ```
 Authorization: Bearer <CRON_SECRET>

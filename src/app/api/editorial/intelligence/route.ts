@@ -10,6 +10,8 @@ import {
   enrichArticleIntelligence,
 } from "@/lib/intelligence";
 import { checkRateLimit, rateLimitHeaders } from "@/lib/infrastructure/cache/rate-limit";
+import { edgeCacheHeaders } from "@/lib/infrastructure/cache/edge";
+import { isCacheDegraded } from "@/lib/infrastructure/workers/run-guard";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import {
   getCachedIntelligenceSnapshot,
@@ -45,25 +47,49 @@ export async function GET(request: Request) {
     await getCachedIntelligenceSnapshot(tenantId);
 
   if (cached && meta && !isSnapshotStale(meta)) {
-    return NextResponse.json({
-      ok: true,
-      ...cached,
-      _cache: { source: meta.source, builtAt: meta.builtAt, ageMs: meta.ageMs },
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        ...cached,
+        _cache: { source: meta.source, builtAt: meta.builtAt, ageMs: meta.ageMs },
+      },
+      {
+        headers: {
+          ...edgeCacheHeaders({
+            sMaxAge: INFRA_CONFIG.intelligenceCacheTtlSec,
+            staleWhileRevalidate: INFRA_CONFIG.intelligenceCacheTtlSec * 2,
+            private: true,
+          }),
+          "X-Cache-Degraded": isCacheDegraded() ? "1" : "0",
+        },
+      }
+    );
   }
 
   if (cached && meta) {
     void requestSnapshotRefresh(tenantId);
-    return NextResponse.json({
-      ok: true,
-      ...cached,
-      _cache: {
-        source: "stale",
-        builtAt: meta.builtAt,
-        ageMs: meta.ageMs,
-        refreshEnqueued: true,
+    return NextResponse.json(
+      {
+        ok: true,
+        ...cached,
+        _cache: {
+          source: "stale",
+          builtAt: meta.builtAt,
+          ageMs: meta.ageMs,
+          refreshEnqueued: true,
+        },
       },
-    });
+      {
+        headers: {
+          ...edgeCacheHeaders({
+            sMaxAge: 30,
+            staleWhileRevalidate: 120,
+            private: true,
+          }),
+          "X-Cache-Degraded": isCacheDegraded() ? "1" : "0",
+        },
+      }
+    );
   }
 
   void requestSnapshotRefresh(tenantId);

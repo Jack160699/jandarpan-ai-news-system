@@ -46,7 +46,7 @@ export function IntelligenceCenterPanel() {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 20_000);
+    const id = setInterval(refresh, 60_000);
     return () => clearInterval(id);
   }, [refresh]);
 

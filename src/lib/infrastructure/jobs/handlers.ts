@@ -54,6 +54,15 @@ const embedSignals: JobHandler = async (job) => {
     job.tenant_id
   );
 
+  if (signals.length > 0 && embedded === 0) {
+    return {
+      ok: false,
+      error: "embed_batch_empty",
+      retryable: true,
+      result: { embedded, signalCount: signals.length },
+    };
+  }
+
   return { ok: true, result: { embedded, signalCount: signals.length } };
 };
 

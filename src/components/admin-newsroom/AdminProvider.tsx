@@ -10,7 +10,8 @@ import {
 } from "react";
 import type { EditorialDashboardSnapshot } from "@/lib/editorial-dashboard/types";
 
-const POLL_MS = 12_000;
+/** Hobby-safe admin dashboard polling (default 60s) */
+const POLL_MS = Number(process.env.NEXT_PUBLIC_ADMIN_POLL_MS) || 60_000;
 
 type Theme = "dark" | "light";
 

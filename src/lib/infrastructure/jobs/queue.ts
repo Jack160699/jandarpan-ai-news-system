@@ -100,16 +100,20 @@ export async function claimJobBatch(
   if (error || !pending?.length) return [];
 
   const ids = pending.map((r) => r.id);
-  await supabase
+  const { data: claimed, error: claimError } = await supabase
     .from("worker_jobs")
     .update({
       status: "claimed",
       claimed_at: now,
       updated_at: now,
     })
-    .in("id", ids);
+    .in("id", ids)
+    .eq("status", "pending")
+    .select("*");
 
-  return pending as WorkerJobRow[];
+  if (claimError || !claimed?.length) return [];
+
+  return claimed as WorkerJobRow[];
 }
 
 export async function completeJob(

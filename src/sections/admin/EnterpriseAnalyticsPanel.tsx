@@ -19,7 +19,8 @@ import type { EnterpriseAnalyticsReport } from "@/lib/analytics/types";
 import { AnalyticsPanel } from "@/sections/admin/AnalyticsPanel";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
 
-const POLL_MS = 12_000;
+/** Hobby-safe analytics polling (default 120s) */
+const POLL_MS = Number(process.env.NEXT_PUBLIC_ADMIN_ANALYTICS_POLL_MS) || 120_000;
 const CHART_TOOLTIP = {
   contentStyle: {
     background: "rgba(12,12,16,0.95)",
