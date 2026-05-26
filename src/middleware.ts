@@ -12,6 +12,7 @@ import {
   getTenantBySlug,
 } from "@/lib/tenant/registry";
 import { TENANT_COOKIE, TENANT_HEADER } from "@/lib/tenant/resolve";
+import { ACCESS_COOKIE } from "@/lib/saas-auth/session";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -76,7 +77,19 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const hasAuth = Boolean(authUser?.id);
+  const legacyAccess = request.cookies.get(ACCESS_COOKIE)?.value;
+  const hasAuth =
+    Boolean(authUser?.id) ||
+    Boolean(legacyAccess && legacyAccess.length > 20);
+
+  if (
+    pathname === "/admin/login" &&
+    hasAuth &&
+    request.nextUrl.searchParams.get("error") !== "forbidden"
+  ) {
+    const dest = request.nextUrl.searchParams.get("next") ?? "/admin/editorial";
+    return NextResponse.redirect(new URL(dest, request.url));
+  }
 
   if (isProtectedPrefix(pathname, DASHBOARD_PREFIX, DASHBOARD_PUBLIC) && !hasAuth) {
     const login = new URL("/dashboard/login", request.url);

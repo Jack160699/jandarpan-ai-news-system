@@ -983,6 +983,23 @@
   overflow: hidden;
 }
 
+.anr-login--compact {
+  min-height: 100dvh;
+  padding: 1rem;
+}
+
+.anr-login__inner--compact {
+  max-width: 380px;
+  gap: 1.25rem;
+}
+
+.anr-login__inner--center {
+  min-height: 40vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .anr-login__bg {
   position: absolute;
   inset: 0;
@@ -1065,37 +1082,45 @@
   gap: 1rem;
 }
 
-.anr-login__logo {
-  display: grid;
-  place-items: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 12px;
-  font-weight: 800;
-  font-size: 0.95rem;
-  letter-spacing: -0.04em;
-  color: #09090b;
-  background: linear-gradient(135deg, #fbbf24, #f59e0b 45%, #ea580c);
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.12),
-    0 12px 32px rgba(245, 158, 11, 0.25);
+.anr-login__brand--stack {
+  flex-direction: column;
+  text-align: center;
+  gap: 0.75rem;
 }
 
-.anr-login__eyebrow {
-  margin: 0;
-  font-size: 0.65rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: #f59e0b;
+.anr-login__logo-img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 24px rgba(245, 158, 11, 0.35));
+}
+
+.anr-login__headings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
 }
 
 .anr-login__title {
-  margin: 0.15rem 0 0;
-  font-size: 1.35rem;
+  margin: 0;
+  font-size: 1.25rem;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: #fafafa;
+}
+
+.anr-login__subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #a1a1aa;
+  font-weight: 400;
+}
+
+.anr-login__label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #a1a1aa;
 }
 
 .anr-login__card {
@@ -1105,27 +1130,17 @@
     0 24px 48px rgba(0, 0, 0, 0.45) !important;
 }
 
-.anr-login__footer {
-  text-align: center;
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: #a1a1aa;
-}
-
-.anr-login__footer-muted {
-  margin-top: 0.35rem;
-  color: #71717a;
-  font-size: 0.6875rem;
-}
-
 @media (max-width: 480px) {
-  .anr-login {
-    padding: 1rem;
-    align-items: flex-start;
-    padding-top: 2.5rem;
+  .anr-login--compact {
+    padding: 0.75rem;
+    align-items: center;
+  }
+
+  .anr-login__inner--compact {
+    max-width: 100%;
   }
 
   .anr-login__title {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
 }

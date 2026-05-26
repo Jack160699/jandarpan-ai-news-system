@@ -1,9 +1,33 @@
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
-import { isSupabaseConfigured } from "@/lib/supabase";
-import { signInWithPassword } from "@/lib/supabase/auth";
+import type { Database } from "@/lib/supabase/types";
+import { getPublicSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
+import {
+  ACCESS_COOKIE,
+  REFRESH_COOKIE,
+} from "@/lib/saas-auth/session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: Parameters<NextResponse["cookies"]["set"]>[2];
+};
+
+function applyCookies(response: NextResponse, cookies: CookieToSet[]) {
+  const secure = process.env.NODE_ENV === "production";
+  for (const { name, value, options } of cookies) {
+    response.cookies.set(name, value, {
+      path: "/",
+      sameSite: "lax",
+      httpOnly: true,
+      secure,
+      ...options,
+    });
+  }
+}
 
 export async function POST(request: Request) {
   let body: { email?: string; password?: string };
@@ -33,18 +57,57 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await signInWithPassword(email, password);
+  const pendingCookies: CookieToSet[] = [];
+  const { url, anonKey } = getPublicSupabaseEnv();
 
-  if (!result.ok) {
+  const supabase = createServerClient<Database>(url, anonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        for (const cookie of cookiesToSet) {
+          pendingCookies.push({
+            name: cookie.name,
+            value: cookie.value,
+            options: cookie.options,
+          });
+        }
+      },
+    },
+  });
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error || !data.session) {
     return NextResponse.json(
-      { ok: false, error: result.error },
+      { ok: false, error: error?.message ?? "login_failed" },
       { status: 401 }
     );
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     ok: true,
-    email: result.user.email,
-    userId: result.user.id,
+    email: data.user.email,
+    userId: data.user.id,
   });
+
+  applyCookies(response, pendingCookies);
+  applyCookies(response, [
+    {
+      name: ACCESS_COOKIE,
+      value: data.session.access_token,
+      options: { maxAge: 60 * 60 * 24 * 7 },
+    },
+    {
+      name: REFRESH_COOKIE,
+      value: data.session.refresh_token,
+      options: { maxAge: 60 * 60 * 24 * 30 },
+    },
+  ]);
+
+  return response;
 }

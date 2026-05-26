@@ -35,6 +35,8 @@ async function loadMembership(
 
   if (error || !memberships?.length) return null;
 
+  let fallback: TenantMembership | null = null;
+
   for (const row of memberships) {
     const { data: tenant } = await supabase
       .from("newsroom_tenants")
@@ -43,13 +45,12 @@ async function loadMembership(
       .maybeSingle();
 
     if (!tenant) continue;
-    if (tenantSlug && tenant.slug !== tenantSlug) continue;
 
     const config = (tenant.config ?? {}) as {
       branding?: { nameEn?: string };
     };
 
-    return {
+    const membership: TenantMembership = {
       id: row.id,
       tenantId: row.tenant_id,
       tenantSlug: tenant.slug,
@@ -59,9 +60,15 @@ async function loadMembership(
       role: row.role as DashboardRole,
       status: row.status as TenantMembership["status"],
     };
+
+    if (!tenantSlug || tenant.slug === tenantSlug) {
+      return membership;
+    }
+
+    if (!fallback) fallback = membership;
   }
 
-  return null;
+  return fallback;
 }
 
 function devBypassMembership(tenantSlug?: string | null): TenantMembership {

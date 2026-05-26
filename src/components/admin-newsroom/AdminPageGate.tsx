@@ -15,17 +15,17 @@ export async function AdminPageGate({
   children,
   permission,
 }: AdminPageGateProps) {
-  const session = await getDashboardSession();
-
-  if (!session) {
-    redirect("/admin/login");
-  }
-
   const headersList = await headers();
   const pathname =
     headersList.get("x-pathname") ??
     headersList.get("x-invoke-path") ??
     "/admin/editorial";
+
+  const session = await getDashboardSession();
+
+  if (!session) {
+    redirect(`/admin/login?next=${encodeURIComponent(pathname)}`);
+  }
 
   if (!canAccessAdminRoute(session.membership.role, pathname)) {
     redirect("/admin/login?error=forbidden");

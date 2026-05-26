@@ -1,20 +1,24 @@
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AdminLoginForm } from "./AdminLoginForm";
+import { getDashboardSession } from "@/lib/saas-auth/session";
 
-function LoginFallback() {
-  return (
-    <div className="anr-login-root flex min-h-dvh items-center justify-center bg-zinc-950">
-      <div className="flex items-center gap-2 text-sm text-zinc-400">
-        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
-        Loading newsroom console…
-      </div>
-    </div>
-  );
-}
+export const dynamic = "force-dynamic";
 
-export default function AdminLoginPage() {
+export default async function AdminLoginPage() {
+  const session = await getDashboardSession();
+  if (session) {
+    redirect("/admin/editorial");
+  }
+
   return (
-    <Suspense fallback={<LoginFallback />}>
+    <Suspense
+      fallback={
+        <div className="anr-login-root flex min-h-dvh items-center justify-center">
+          <span className="text-sm text-zinc-500">Loading…</span>
+        </div>
+      }
+    >
       <AdminLoginForm />
     </Suspense>
   );

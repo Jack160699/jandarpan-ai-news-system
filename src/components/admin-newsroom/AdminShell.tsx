@@ -22,7 +22,7 @@ import {
   Brain,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
@@ -48,7 +48,6 @@ type AdminShellProps = {
 
 export function AdminShell({ title, subtitle, children }: AdminShellProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const { email, role, tenantName, data, theme, setTheme, toast } =
     useAdminNewsroom();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -61,8 +60,7 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
       method: "POST",
       credentials: "include",
     });
-    router.replace("/admin/login");
-    router.refresh();
+    window.location.assign("/admin/login");
   }
   const activeLabel = useMemo(
     () => NAV.find((item) => item.href === pathname)?.label ?? "Admin",
