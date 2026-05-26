@@ -20,12 +20,14 @@ import {
   Sun,
   UserCircle2,
   Brain,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
+import { isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 
 const NAV = [
   { href: "/admin/editorial", label: "Overview", icon: LayoutDashboard },
@@ -38,6 +40,7 @@ const NAV = [
   { href: "/admin/live-wire", label: "Live wire", icon: Activity },
   { href: "/admin/images", label: "Images", icon: ImageIcon },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/team", label: "Team", icon: Users },
 ] as const;
 
 type AdminShellProps = {
@@ -62,9 +65,17 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
     });
     window.location.assign("/admin/login");
   }
+  const visibleNav = useMemo(
+    () =>
+      NAV.filter(
+        (item) => item.href !== "/admin/team" || isSuperAdmin(role)
+      ),
+    [role]
+  );
+
   const activeLabel = useMemo(
-    () => NAV.find((item) => item.href === pathname)?.label ?? "Admin",
-    [pathname]
+    () => visibleNav.find((item) => item.href === pathname)?.label ?? "Admin",
+    [pathname, visibleNav]
   );
 
   useEffect(() => {
@@ -99,7 +110,7 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
             ) : null}
           </div>
           <nav className="anr-nav">
-            {NAV.map((item) => {
+            {visibleNav.map((item) => {
               const href = item.href;
               const active = pathname === item.href;
               const Icon = item.icon;

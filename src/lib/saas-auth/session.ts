@@ -47,6 +47,7 @@ async function loadMembership(
       .maybeSingle();
 
     if (!tenant) continue;
+    if (row.status === "suspended") continue;
 
     const config = (tenant.config ?? {}) as {
       branding?: { nameEn?: string };

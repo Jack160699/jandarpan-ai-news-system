@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { inviteTeamMember, listTeamMembers, updateMemberRole } from "@/lib/dashboard/team";
 import { logEditorialAudit } from "@/lib/dashboard/audit";
+import { isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
 import type { DashboardRole } from "@/lib/saas-auth/types";
 
@@ -15,6 +16,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const guard = await requireDashboardSession(request, "team:write");
   if (!guard.ok) return guard.response;
+  if (!isSuperAdmin(guard.session.membership.role)) {
+    return NextResponse.json({ ok: false, error: "super_admin_required" }, { status: 403 });
+  }
 
   const body = (await request.json()) as { email?: string; role?: DashboardRole };
   if (!body.email || !body.role) {
@@ -42,6 +46,9 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   const guard = await requireDashboardSession(request, "team:write");
   if (!guard.ok) return guard.response;
+  if (!isSuperAdmin(guard.session.membership.role)) {
+    return NextResponse.json({ ok: false, error: "super_admin_required" }, { status: 403 });
+  }
 
   const body = (await request.json()) as {
     membershipId?: string;

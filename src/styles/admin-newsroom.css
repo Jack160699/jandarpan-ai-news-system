@@ -1144,3 +1144,310 @@
     font-size: 1.1rem;
   }
 }
+
+/* ─── Team management ─── */
+.anr-card__head--split {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.anr-card__action {
+  flex-shrink: 0;
+}
+
+.anr-team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.anr-team__kpis {
+  margin-bottom: 0;
+}
+
+.anr-kpi--ok {
+  color: var(--anr-success, #22c55e);
+}
+
+.anr-team__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.anr-team__search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1 1 12rem;
+  min-width: 0;
+  border: 1px solid var(--anr-border);
+  border-radius: 10px;
+  padding: 0 0.55rem;
+  background: var(--anr-surface-2);
+}
+
+.anr-team__search .anr-input {
+  border: none;
+  background: transparent;
+  flex: 1;
+  min-width: 0;
+}
+
+.anr-team__select {
+  flex: 0 1 auto;
+  min-width: 7.5rem;
+}
+
+.anr-team__table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.anr-team__member {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 10rem;
+}
+
+.anr-team__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: var(--anr-accent-soft);
+  color: var(--anr-accent);
+  flex-shrink: 0;
+}
+
+.anr-team__member strong {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.anr-team__role-select {
+  min-width: 8.5rem;
+  font-size: 0.72rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.anr-team__actions-cell {
+  width: 3rem;
+  text-align: right;
+}
+
+.anr-team__menu-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.anr-team__menu-btn {
+  padding: 0.35rem;
+}
+
+.anr-team__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 11rem;
+  border: 1px solid var(--anr-border);
+  border-radius: 10px;
+  background: var(--anr-surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  padding: 0.28rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.anr-team__menu button {
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--anr-text);
+  font-size: 0.74rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.anr-team__menu button:hover {
+  background: var(--anr-surface-2);
+}
+
+.anr-team__menu-danger {
+  color: var(--anr-danger) !important;
+}
+
+.anr-team__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.anr-team__pagination-btns {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.anr-team__empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--anr-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.anr-team__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.anr-team__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  font-size: 0.74rem;
+  color: var(--anr-muted);
+}
+
+.anr-team__field .anr-input {
+  color: var(--anr-text);
+}
+
+.anr-team__form-hint {
+  margin: 0;
+}
+
+.anr-team__role-picker {
+  position: relative;
+}
+
+.anr-team__chevron {
+  position: absolute;
+  right: 0.55rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Modal */
+.anr-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.anr-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+}
+
+.anr-modal {
+  position: relative;
+  z-index: 1;
+  width: min(440px, 100%);
+  max-height: min(90vh, 640px);
+  overflow: auto;
+  border: 1px solid var(--anr-border);
+  border-radius: 14px;
+  background: var(--anr-surface);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+
+.anr-modal--wide {
+  width: min(520px, 100%);
+}
+
+.anr-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--anr-border);
+}
+
+.anr-modal__head h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.anr-modal__body {
+  padding: 1rem;
+}
+
+.anr-modal__foot {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--anr-border);
+}
+
+.anr-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.anr-modal__message {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--anr-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .anr-team__table thead th:nth-child(5),
+  .anr-team__table tbody td:nth-child(5) {
+    display: none;
+  }
+
+  .anr-team__filters {
+    flex-direction: column;
+  }
+
+  .anr-team__select {
+    width: 100%;
+  }
+
+  .anr-card__head--split .anr-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .anr-team__table thead th:nth-child(4),
+  .anr-team__table tbody td:nth-child(4) {
+    display: none;
+  }
+
+  .anr-team__member {
+    min-width: 0;
+  }
+}

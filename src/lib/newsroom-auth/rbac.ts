@@ -17,10 +17,16 @@ const ADMIN_ROUTE_PERMISSIONS: Record<string, DashboardPermission> = {
   "/admin/images": "editorial:write",
   "/admin/analytics": "analytics:read",
   "/admin/ingestion": "monitoring:read",
+  "/admin/team": "team:read",
 };
 
 export function canAccessAdminRoute(role: DashboardRole | string, pathname: string): boolean {
   const base = pathname.split("?")[0];
+
+  if (base === "/admin/team") {
+    return isSuperAdmin(role);
+  }
+
   if (base.startsWith("/admin/stories/")) {
     return roleHasPermission(role, "editorial:write");
   }

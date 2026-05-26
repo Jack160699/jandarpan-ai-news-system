@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminProvider } from "@/components/admin-newsroom/AdminProvider";
-import { canAccessAdminRoute } from "@/lib/newsroom-auth/rbac";
+import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
 import { getDashboardSession } from "@/lib/saas-auth/session";
 import type { DashboardPermission } from "@/lib/saas-auth/types";
@@ -9,11 +9,14 @@ import type { DashboardPermission } from "@/lib/saas-auth/types";
 type AdminPageGateProps = {
   children: React.ReactNode;
   permission?: DashboardPermission;
+  /** Restrict route to super_admin (e.g. /admin/team) */
+  superAdminOnly?: boolean;
 };
 
 export async function AdminPageGate({
   children,
   permission,
+  superAdminOnly,
 }: AdminPageGateProps) {
   const headersList = await headers();
   const pathname =
@@ -35,6 +38,10 @@ export async function AdminPageGate({
     permission &&
     !roleHasPermission(session.membership.role, permission)
   ) {
+    redirect("/admin/login?error=forbidden");
+  }
+
+  if (superAdminOnly && !isSuperAdmin(session.membership.role)) {
     redirect("/admin/login?error=forbidden");
   }
 
