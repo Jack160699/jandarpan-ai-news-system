@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -15,7 +17,6 @@ import {
   breadcrumbListJsonLd,
   buildTrendingKeywords,
   categoryHubJsonLd,
-  getAllCategorySlugs,
   getCategorySeo,
   getCategoryHubLinks,
   matchesCategoryArticle,
@@ -23,15 +24,9 @@ import {
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
-export const revalidate = 60;
-
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
-
-export function generateStaticParams() {
-  return getAllCategorySlugs().map((slug) => ({ slug }));
-}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
