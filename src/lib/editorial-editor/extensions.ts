@@ -1,5 +1,10 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
+import {
+  applyEditorImageFallback,
+  EDITOR_IMAGE_PLACEHOLDER,
+  shouldUseEditorImagePlaceholder,
+} from "@/lib/editorial-editor/image-placeholder";
 
 declare module "@tiptap/core" {
   interface Commands<ReturnType> {
@@ -99,6 +104,42 @@ export const ResizableImage = Image.extend({
         }),
       },
       alt: { default: null },
+    };
+  },
+  addNodeView() {
+    return ({ node }) => {
+      const figure = document.createElement("figure");
+      figure.className = "jd-editor-figure";
+      const img = document.createElement("img");
+      img.decoding = "async";
+      img.loading = "lazy";
+
+      const sync = (current: typeof node) => {
+        const src = (current.attrs.src as string | null)?.trim();
+        img.alt = (current.attrs.alt as string | null) ?? "Embedded image";
+        const width = (current.attrs.width as string | null) ?? "100%";
+        img.style.width = width;
+        img.style.maxWidth = "100%";
+        img.style.height = "auto";
+        delete img.dataset.fallbackApplied;
+        img.classList.remove("jd-editor-image--fallback");
+        const needsPlaceholder = shouldUseEditorImagePlaceholder(src);
+        img.src = needsPlaceholder ? EDITOR_IMAGE_PLACEHOLDER : src || EDITOR_IMAGE_PLACEHOLDER;
+        if (needsPlaceholder || !src) img.classList.add("jd-editor-image--fallback");
+      };
+
+      sync(node);
+      img.addEventListener("error", () => applyEditorImageFallback(img));
+      figure.appendChild(img);
+
+      return {
+        dom: figure,
+        update: (updated) => {
+          if (updated.type.name !== this.name) return false;
+          sync(updated);
+          return true;
+        },
+      };
     };
   },
 });

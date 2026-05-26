@@ -11,7 +11,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "react";
 import type { DamAsset, DamLibrarySnapshot, DamMediaType } from "@/lib/dam/types";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
 
@@ -59,8 +59,9 @@ export function MediaDamPanel() {
         setError(json.error ?? "Failed to load library");
         return;
       }
-      const { ok: _ok, ...snapshot } = json;
-      setData(snapshot as DamLibrarySnapshot);
+      const snapshot = json as DamLibrarySnapshot & { ok?: boolean };
+      delete snapshot.ok;
+      setData(snapshot);
       setError(null);
     } catch {
       setError("Network error");
@@ -70,7 +71,10 @@ export function MediaDamPanel() {
   }, [debouncedQuery, filter, folderId]);
 
   useEffect(() => {
-    void load();
+    const timer = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   async function uploadFiles(files: FileList | File[]) {
@@ -131,6 +135,19 @@ export function MediaDamPanel() {
     });
     if (selected?.id === id) setSelected(null);
     load();
+  }
+
+  function setImageFallback(event: SyntheticEvent<HTMLImageElement>, label = "preview unavailable") {
+    const image = event.currentTarget;
+    image.onerror = null;
+    image.src =
+      "data:image/svg+xml;utf8," +
+      encodeURIComponent(
+        `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='360'>
+          <rect width='100%' height='100%' fill='#111827'/>
+          <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='#9ca3af' font-family='Arial' font-size='20'>${label}</text>
+        </svg>`
+      );
   }
 
   if (loading && !data) {
@@ -302,6 +319,8 @@ export function MediaDamPanel() {
                             ?.publicUrl ?? asset.publicUrl
                         }
                         alt=""
+                        loading="lazy"
+                        onError={(event) => setImageFallback(event, "thumbnail unavailable")}
                       />
                     ) : asset.mediaType === "video" ? (
                       <Film size={32} />
@@ -346,6 +365,8 @@ export function MediaDamPanel() {
                   src={selected.publicUrl}
                   alt=""
                   className="dam__preview"
+                  loading="lazy"
+                  onError={(event) => setImageFallback(event)}
                 />
               ) : null}
 

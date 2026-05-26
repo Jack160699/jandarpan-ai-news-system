@@ -18,15 +18,10 @@ import {
   getTenantBySlug,
 } from "@/lib/tenant/registry";
 import { TENANT_COOKIE, TENANT_HEADER } from "@/lib/tenant/resolve";
-import { ACCESS_COOKIE } from "@/lib/saas-auth/cookies";
 import { traceMiddleware } from "@/lib/observability/admin-boot";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import {
-  INACTIVITY_TIMEOUT_SEC,
-  LAST_ACTIVITY_COOKIE,
-  ROLE_COOKIE,
-} from "@/lib/security/constants";
+import { ROLE_COOKIE } from "@/lib/security/constants";
 import { checkPathRbac } from "@/lib/security/middleware-rbac";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 import { securityHeaders } from "@/lib/security/headers";
@@ -58,6 +53,18 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
     response.headers.set(key, value);
   }
   return response;
+}
+
+function redirectWithCookies(
+  request: NextRequest,
+  pathname: string,
+  response: NextResponse
+): NextResponse {
+  const redirect = NextResponse.redirect(new URL(pathname, request.url));
+  response.cookies.getAll().forEach((cookie) => {
+    redirect.cookies.set(cookie);
+  });
+  return applySecurityHeaders(redirect);
 }
 
 function isIngestionApiPath(pathname: string): boolean {
@@ -133,13 +140,11 @@ export async function middleware(request: NextRequest) {
   }
 
   let authUser: { id: string; email?: string } | null = null;
-  let authTimedOut = false;
 
   if (isSupabaseConfigured()) {
     const session = await updateSupabaseSession(request, response);
     response = session.response;
     authUser = session.user;
-    authTimedOut = session.timedOut;
     if (session.timedOut) {
       traceMiddleware("auth_timed_out", { pathname });
     }
@@ -151,72 +156,29 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const legacyAccess = request.cookies.get(ACCESS_COOKIE)?.value;
-  const hasLegacyCookie = Boolean(legacyAccess && legacyAccess.length > 20);
-  let hasAuth = Boolean(authUser?.id) || hasLegacyCookie;
-
-  /** Supabase slow on Edge — allow admin HTML through; client gate verifies via API */
-  const authDegraded =
-    authTimedOut && hasLegacyCookie && !authUser?.id && pathname.startsWith(ADMIN_PREFIX);
-  if (authDegraded) {
-    traceMiddleware("admin_fail_open_degraded", { pathname });
-    hasAuth = true;
-  }
+  const hasAuth = Boolean(authUser?.id);
 
   const roleCookie = request.cookies.get(ROLE_COOKIE)?.value;
   const role = roleCookie ? normalizeDashboardRole(roleCookie) : null;
 
-  const lastActivity = request.cookies.get(LAST_ACTIVITY_COOKIE)?.value;
-  const now = Math.floor(Date.now() / 1000);
-  if (hasAuth && lastActivity) {
-    const last = parseInt(lastActivity, 10);
-    if (!Number.isNaN(last) && now - last > INACTIVITY_TIMEOUT_SEC) {
-      const loginUrl = pathname.startsWith(ADMIN_PREFIX)
-        ? "/admin/login?error=session_timeout"
-        : "/dashboard/login?error=session_timeout";
-      const redirect = NextResponse.redirect(new URL(loginUrl, request.url));
-      redirect.cookies.set(ACCESS_COOKIE, "", { path: "/", maxAge: 0 });
-      redirect.cookies.set(LAST_ACTIVITY_COOKIE, "", { path: "/", maxAge: 0 });
-      return applySecurityHeaders(redirect);
-    }
-  }
-
-  if (hasAuth) {
-    response.cookies.set(LAST_ACTIVITY_COOKIE, String(now), {
-      path: "/",
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      maxAge: INACTIVITY_TIMEOUT_SEC,
-    });
-  }
-
-  const loginError = request.nextUrl.searchParams.get("error");
-  const recoveryMode =
-    request.nextUrl.searchParams.get("recovery") === "1" ||
-    loginError === "forbidden" ||
-    loginError === "session_timeout";
-
-  if (pathname === "/admin/login" && hasAuth && !recoveryMode) {
+  if (pathname === "/admin/login" && hasAuth) {
     const dest = request.nextUrl.searchParams.get("next") ?? "/admin/editorial";
-    return applySecurityHeaders(
-      NextResponse.redirect(new URL(dest, request.url))
-    );
+    return redirectWithCookies(request, dest, response);
   }
 
   if (isProtectedPrefix(pathname, DASHBOARD_PREFIX, DASHBOARD_PUBLIC) && !hasAuth) {
     const login = new URL("/dashboard/login", request.url);
     login.searchParams.set("next", pathname);
-    return applySecurityHeaders(NextResponse.redirect(login));
+    return redirectWithCookies(request, `${login.pathname}${login.search}`, response);
   }
 
   if (isProtectedPrefix(pathname, ADMIN_PREFIX, ADMIN_PUBLIC) && !hasAuth) {
     const login = new URL("/admin/login", request.url);
     login.searchParams.set("next", pathname);
-    return applySecurityHeaders(NextResponse.redirect(login));
+    return redirectWithCookies(request, `${login.pathname}${login.search}`, response);
   }
 
-  if (hasAuth && role && !recoveryMode && !authDegraded) {
+  if (hasAuth && role) {
     const rbac = checkPathRbac(pathname, role);
     if (!rbac.allowed && rbac.redirectTo) {
       const redirectUrl = new URL(rbac.redirectTo, request.url);
@@ -230,7 +192,11 @@ export async function middleware(request: NextRequest) {
       if (redirectUrl.pathname === pathname) {
         return response;
       }
-      return applySecurityHeaders(NextResponse.redirect(redirectUrl));
+      return redirectWithCookies(
+        request,
+        `${redirectUrl.pathname}${redirectUrl.search}`,
+        response
+      );
     }
   }
 

@@ -25,7 +25,7 @@ export async function updateSupabaseSession(
 
   const { url, anonKey } = getPublicSupabaseEnv();
 
-  let supabaseResponse = response;
+  const supabaseResponse = response;
 
   const supabase = createServerClient<Database>(url, anonKey, {
     cookies: {
@@ -35,9 +35,6 @@ export async function updateSupabaseSession(
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value }) => {
           request.cookies.set(name, value);
-        });
-        supabaseResponse = NextResponse.next({
-          request: { headers: request.headers },
         });
         cookiesToSet.forEach(({ name, value, options }) => {
           supabaseResponse.cookies.set(name, value, options);

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,58 +29,17 @@ export function AdminLoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/admin/editorial";
   const errorParam = searchParams.get("error");
+  const rememberedEmail =
+    typeof window !== "undefined" ? window.localStorage.getItem(REMEMBER_KEY) ?? "" : "";
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(rememberedEmail);
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(Boolean(rememberedEmail));
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(
     errorParam ? friendlyError(errorParam) : null
   );
   const [busy, setBusy] = useState(false);
-  const emergencyClient =
-    process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE === "1";
-  const [checkingSession, setCheckingSession] = useState(!emergencyClient);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(REMEMBER_KEY);
-      if (stored) {
-        setEmail(stored);
-        setRemember(true);
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  useEffect(() => {
-    if (emergencyClient) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/dashboard/auth/session", {
-          credentials: "include",
-          cache: "no-store",
-          signal: AbortSignal.timeout(5_000),
-        });
-        if (!cancelled && res.ok) {
-          const json = await res.json();
-          if (json.ok) {
-            window.location.replace(next);
-            return;
-          }
-        }
-      } catch {
-        /* not signed in */
-      } finally {
-        if (!cancelled) setCheckingSession(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [next]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -113,17 +72,6 @@ export function AdminLoginForm() {
     } finally {
       setBusy(false);
     }
-  }
-
-  if (checkingSession) {
-    return (
-      <div className="anr-login anr-login--compact">
-        <div className="anr-login__bg" aria-hidden />
-        <div className="anr-login__inner anr-login__inner--center">
-          <Loader2 className="h-6 w-6 animate-spin text-amber-500" aria-label="Loading" />
-        </div>
-      </div>
-    );
   }
 
   return (

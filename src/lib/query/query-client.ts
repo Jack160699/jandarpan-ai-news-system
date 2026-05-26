@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { tracePerf } from "@/lib/observability/performance-monitor";
 import { traceRemount } from "@/lib/observability/remount-trace";
 
-const ADMIN_STALE_MS = 30_000;
+const ADMIN_STALE_MS = 60_000;
 const ADMIN_GC_MS = 5 * 60_000;
 
 function createAdminQueryClient(): QueryClient {
@@ -12,13 +12,8 @@ function createAdminQueryClient(): QueryClient {
         staleTime: ADMIN_STALE_MS,
         gcTime: ADMIN_GC_MS,
         refetchOnWindowFocus: false,
-        /** Avoid admin-wide refetch storms when realtime websocket reconnects */
         refetchOnReconnect: false,
-        retry: (failureCount, error) => {
-          if (failureCount >= 1) return false;
-          const msg = error instanceof Error ? error.message : "";
-          return msg !== "unauthorized";
-        },
+        retry: 1,
         retryDelay: 1_500,
       },
       mutations: {

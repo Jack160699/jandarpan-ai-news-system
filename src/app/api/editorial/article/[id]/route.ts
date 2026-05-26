@@ -3,6 +3,10 @@ import { logEditorialAudit } from "@/lib/dashboard/audit";
 import { appendEditorVersion } from "@/lib/editorial-editor/storage";
 import type { EditorVersionSnapshot } from "@/lib/editorial-editor/types";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
+import {
+  isMissingColumnError,
+  traceSchemaMismatch,
+} from "@/lib/observability/schema-mismatch-trace";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 
 type RouteContext = {
@@ -22,13 +26,38 @@ export async function GET(request: Request, context: RouteContext) {
 
   const { id } = await context.params;
   const supabase = createAdminServerClient();
-  const { data, error } = await supabase
+
+  const selectWithTranslations =
+    "id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,language,tags,published_at,editorial_status,translations,editorial_metadata,created_at";
+  const selectWithoutTranslations =
+    "id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,language,tags,published_at,editorial_status,editorial_metadata,created_at";
+
+  let { data, error } = await supabase
     .from("generated_articles")
-    .select(
-      "id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,language,tags,published_at,editorial_status,translations,editorial_metadata,created_at"
-    )
+    .select(selectWithTranslations)
     .eq("id", id)
     .maybeSingle();
+
+  // Degraded mode: DB missing translations column (migration not applied).
+  if (error && isMissingColumnError(error.message, "translations")) {
+    traceSchemaMismatch("generated_articles.translations missing (GET fallback)", {
+      route: "GET /api/editorial/article/[id]",
+      id,
+    });
+    const retry = await supabase
+      .from("generated_articles")
+      .select(selectWithoutTranslations)
+      .eq("id", id)
+      .maybeSingle();
+    data = retry.data as typeof data;
+    error = retry.error;
+    if (data && typeof data === "object") {
+      (data as any).translations = null;
+      (data as any).__schema = {
+        translations: "missing",
+      };
+    }
+  }
 
   if (error || !data) {
     return NextResponse.json(
@@ -113,7 +142,31 @@ export async function PATCH(request: Request, context: RouteContext) {
   };
 
   const supabase = createAdminServerClient();
-  const { error } = await supabase.from("generated_articles").update(patch).eq("id", id);
+  let { error } = await supabase.from("generated_articles").update(patch).eq("id", id);
+
+  // Degraded mode: if translations column missing, retry without it (and persist into metadata).
+  if (error && isMissingColumnError(error.message, "translations")) {
+    traceSchemaMismatch("generated_articles.translations missing (PATCH fallback)", {
+      route: "PATCH /api/editorial/article/[id]",
+      id,
+    });
+    const metaFallback =
+      patch.translations && typeof patch.translations === "object"
+        ? {
+            ...(editorial_metadata ?? {}),
+            translations: patch.translations,
+            translations_updated_at: new Date().toISOString(),
+          }
+        : editorial_metadata;
+
+    const retryPatch = {
+      ...patch,
+      translations: undefined,
+      editorial_metadata: metaFallback,
+    };
+    const retry = await supabase.from("generated_articles").update(retryPatch).eq("id", id);
+    error = retry.error;
+  }
 
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });

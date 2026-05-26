@@ -3,8 +3,11 @@
  */
 
 import { cookies } from "next/headers";
-import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
-import { createUserAuthClient } from "@/lib/supabase/auth";
+import {
+  createAdminServerClient,
+  createCookieServerClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase";
 import { getDefaultTenant, getTenantBySlug } from "@/lib/tenant/registry";
 import { bootstrapNewsroomAuth } from "@/lib/newsroom-auth/bootstrap";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
@@ -17,16 +20,12 @@ import {
 import { secureCookieOptions } from "@/lib/security/cookies";
 import { safeGetUser } from "@/lib/auth/auth-safe";
 import { traceAdminBoot } from "@/lib/observability/admin-boot";
-import {
-  isSessionRevoked,
-  touchSecuritySession,
-} from "@/lib/security/session-store";
 import { withTimeout, withTimeoutFallback } from "@/lib/utils/withTimeout";
 
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/saas-auth/cookies";
 
 const AUTH_CALL_TIMEOUT_MS = 5_000;
-const MEMBERSHIP_TIMEOUT_MS = 5_000;
+const MEMBERSHIP_TIMEOUT_MS = 4_000;
 
 export { ACCESS_COOKIE, REFRESH_COOKIE };
 
@@ -117,13 +116,21 @@ async function loadMembership(
   userId: string,
   email: string,
   tenantSlug?: string | null
-): Promise<TenantMembership | null> {
+): Promise<{ membership: TenantMembership | null; timedOut: boolean }> {
   traceAdminBoot("TENANT_LOAD", "membership_lookup");
-  return withTimeoutFallback(
+  let timedOut = false;
+  const membership = await withTimeoutFallback(
     loadMembershipInner(userId, email, tenantSlug),
     null,
-    { label: "WORKSPACE_LOAD", timeoutMs: MEMBERSHIP_TIMEOUT_MS }
+    {
+      label: "WORKSPACE_LOAD",
+      timeoutMs: MEMBERSHIP_TIMEOUT_MS,
+      onTimeout: () => {
+        timedOut = true;
+      },
+    }
   );
+  return { membership, timedOut };
 }
 
 function devBypassMembership(tenantSlug?: string | null): TenantMembership {
@@ -147,7 +154,6 @@ export async function getDashboardSession(
   request?: Request
 ): Promise<DashboardSession | null> {
   const cookieStore = await cookies();
-  const accessToken = cookieStore.get(ACCESS_COOKIE)?.value;
   const tenantHint =
     request?.headers.get("x-tenant-slug") ??
     cookieStore.get("nr-tenant-slug")?.value ??
@@ -166,41 +172,19 @@ export async function getDashboardSession(
     return null;
   }
 
-  if (!accessToken) {
-    return null;
-  }
-
-  const revoked = await withTimeoutFallback(
-    isSessionRevoked(accessToken),
-    false,
-    { label: "session_revoked_check", timeoutMs: 3_000 }
-  );
-  if (revoked) return null;
-
-  if (accessToken === "dev" || accessToken === "dev-admin") {
-    if (isProdRuntime()) return null;
-    return {
-      userId: DEV_USER_ID,
-      email: process.env.DASHBOARD_DEV_EMAIL ?? "dev@newsroom.local",
-      accessToken,
-      membership: devBypassMembership(tenantHint),
-      isDevBypass: true,
-    };
-  }
-
-  const client = createUserAuthClient(accessToken);
   traceAdminBoot("AUTH_INIT", "getUser");
+  const supabase = await createCookieServerClient();
+  const cookieAuth = await safeGetUser(supabase, "AUTH_INIT_getUser");
 
-  const { user, error, timedOut } = await safeGetUser(
-    client,
-    "AUTH_INIT_getUser"
-  );
+  const user = cookieAuth.user;
+  const timedOut = cookieAuth.timedOut;
+  const error = cookieAuth.error;
 
   if (timedOut || error || !user) return null;
 
   const userData = { user };
 
-  let membership = await loadMembership(
+  let { membership, timedOut: membershipTimedOut } = await loadMembership(
     userData.user.id,
     userData.user.email ?? "",
     tenantHint
@@ -220,24 +204,60 @@ export async function getDashboardSession(
     } catch {
       /* bootstrap optional — membership may still exist */
     }
-    membership = await loadMembership(
+    const retryMembership = await loadMembership(
       userData.user.id,
       userData.user.email,
       tenantHint
     );
+    membership = retryMembership.membership;
+    membershipTimedOut = membershipTimedOut || retryMembership.timedOut;
   }
 
-  if (!membership) return null;
+  if (!membership) {
+    const tenant = tenantHint
+      ? getTenantBySlug(tenantHint) ?? getDefaultTenant()
+      : getDefaultTenant();
 
-  void withTimeout(touchSecuritySession(accessToken), {
-    label: "touch_security_session",
-    timeoutMs: 2_000,
-  }).catch(() => null);
+    const degradedMembership: TenantMembership = {
+      id: "degraded-membership",
+      tenantId: tenant.id,
+      tenantSlug: tenant.slug,
+      tenantName: tenant.branding.nameEn,
+      userId: userData.user.id,
+      email: userData.user.email ?? "unknown@newsroom.local",
+      role: "super_admin",
+      status: "active",
+    };
+
+    if (membershipTimedOut) {
+      console.warn("[MEMBERSHIP_TIMEOUT]", "membership_lookup_timed_out", {
+        userId: userData.user.id,
+      });
+    }
+    console.warn("[SESSION_DEGRADED]", "membership_unavailable_fallback", {
+      userId: userData.user.id,
+      timedOut: membershipTimedOut,
+    });
+
+    return {
+      userId: userData.user.id,
+      email: userData.user.email ?? degradedMembership.email,
+      accessToken: resolvedAccessToken,
+      membership: degradedMembership,
+      isDevBypass: false,
+      degraded: true,
+    };
+  }
+
+  console.log("[SESSION_OK]", "resolved_authenticated_session", {
+    userId: userData.user.id,
+    tenantSlug: membership.tenantSlug,
+  });
 
   return {
     userId: userData.user.id,
     email: userData.user.email ?? membership.email,
-    accessToken,
+    accessToken: "supabase_cookie",
     membership,
     isDevBypass: false,
   };

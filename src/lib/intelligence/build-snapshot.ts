@@ -53,6 +53,10 @@ import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { NewsEventRow } from "@/lib/types/newsroom";
 import { cacheSetJson } from "@/lib/infrastructure/cache";
 import { WORKER_CACHE_KEYS } from "@/lib/infrastructure/cache/keys";
+import {
+  isMissingColumnError,
+  traceSchemaMismatch,
+} from "@/lib/observability/schema-mismatch-trace";
 
 export type BuildSnapshotMode = "read" | "worker";
 
@@ -97,10 +101,15 @@ export async function buildNewsroomIntelligenceSnapshot(
 
   const supabase = createAdminServerClient();
 
+  const selectWithTranslations =
+    "id, slug, headline, summary, article_body, seo_title, seo_description, editorial_status, published_at, created_at, language, translations, editorial_metadata, geo_metadata, event_id, tags";
+  const selectWithoutTranslations =
+    "id, slug, headline, summary, article_body, seo_title, seo_description, editorial_status, published_at, created_at, language, editorial_metadata, geo_metadata, event_id, tags";
+
   let articlesQuery = supabase
     .from("generated_articles")
     .select(
-      "id, slug, headline, summary, article_body, seo_title, seo_description, editorial_status, published_at, created_at, language, translations, editorial_metadata, geo_metadata, event_id, tags"
+      selectWithTranslations
     )
     .order("created_at", { ascending: false })
     .limit(100);
@@ -133,6 +142,28 @@ export async function buildNewsroomIntelligenceSnapshot(
     supabase.from("rss_source_health").select("*"),
     signalsQuery,
   ]);
+
+  // Degraded mode: DB missing translations column (migration not applied).
+  if (
+    articlesRes.error &&
+    isMissingColumnError(articlesRes.error.message, "translations")
+  ) {
+    traceSchemaMismatch("generated_articles.translations missing (snapshot fallback)", {
+      fn: "buildNewsroomIntelligenceSnapshot",
+      tenantId: tenantId ?? null,
+    });
+    let retryQuery = supabase
+      .from("generated_articles")
+      .select(selectWithoutTranslations)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (tenantId) {
+      retryQuery = retryQuery.eq("tenant_id", tenantId);
+    }
+    const retry = await retryQuery;
+    (articlesRes as any).data = retry.data;
+    (articlesRes as any).error = retry.error;
+  }
 
   const articles = (articlesRes.data ?? []) as GeneratedArticleRow[];
   const events = eventsRes.data ?? [];

@@ -11,11 +11,31 @@ import {
   setCachedDashboard,
 } from "@/lib/infrastructure/cache/dashboard";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { createCookieServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  const supabase = await createCookieServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  const cookieHeader = request.headers.get("cookie");
+  console.log("[EDITORIAL_DASHBOARD_AUTH]", {
+    hasCookies: Boolean(cookieHeader && cookieHeader.length > 0),
+    userResolved: Boolean(user?.id),
+    authError: authError?.message ?? null,
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      { ok: false, error: "unauthorized" },
+      { status: 401 }
+    );
+  }
+
   const auth = await requireEditorialAuth(request, "content:read");
   if (!auth.ok) return auth.response;
 

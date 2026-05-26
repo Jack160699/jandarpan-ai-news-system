@@ -1,50 +1,76 @@
 import { NextResponse } from "next/server";
-import { roleHasPermission } from "@/lib/saas-auth/rbac";
-import { getDashboardSessionSafe } from "@/lib/saas-auth/session-safe";
-import type { DashboardPermission } from "@/lib/saas-auth/types";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
-export const dynamic = "force-dynamic";
+export async function GET() {
+try {
+const cookieStore = await cookies();
 
-export async function GET(request: Request) {
-  const result = await getDashboardSessionSafe(request);
+```
+const response = NextResponse.json({
+  ok: true,
+});
 
-  if (!result.ok) {
-    return NextResponse.json(
-      { ok: false, error: result.reason, message: result.message },
-      { status: result.reason === "timeout" ? 503 : 500 }
-    );
-  }
+const supabase = createServerClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
 
-  const session = result.session;
-  if (!session) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-  }
+      set(name: string, value: string, options: any) {
+        response.cookies.set(name, value, options);
+      },
 
-  return NextResponse.json({
-    ok: true,
-    user: {
-      id: session.userId,
-      email: session.email,
-      isDevBypass: session.isDevBypass,
+      remove(name: string, options: any) {
+        response.cookies.set(name, "", {
+          ...options,
+          maxAge: 0,
+        });
+      },
     },
-    membership: session.membership,
-    permissions: getPermissionsForRole(session.membership.role),
-  });
+  }
+);
+
+const {
+  data: { user },
+  error,
+} = await supabase.auth.getUser();
+
+if (error || !user) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "unauthorized",
+    },
+    {
+      status: 401,
+    }
+  );
 }
 
-function getPermissionsForRole(role: string): DashboardPermission[] {
-  const all: DashboardPermission[] = [
-    "analytics:read",
-    "content:read",
-    "content:write",
-    "editorial:write",
-    "publish:write",
-    "team:read",
-    "team:write",
-    "billing:read",
-    "billing:write",
-    "monitoring:read",
-    "providers:read",
-  ];
-  return all.filter((p) => roleHasPermission(role as never, p));
+return NextResponse.json({
+  ok: true,
+  user,
+});
+```
+
+} catch (error) {
+console.error("session route error", error);
+
+```
+return NextResponse.json(
+  {
+    ok: false,
+    error: "server_error",
+  },
+  {
+    status: 500,
+  }
+);
+```
+
+}
 }

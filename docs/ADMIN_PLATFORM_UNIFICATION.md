@@ -171,7 +171,7 @@ Implementation: `src/lib/admin-platform/legacy-redirects.ts`, `src/middleware.ts
 |----------|--------|
 | `POST /api/dashboard/auth/login` | **Stable** — use from `/admin/login` |
 | `POST /api/dashboard/auth/logout` | **Stable** |
-| `GET /api/dashboard/auth/session` | **Stable** |
+| `GET /api/dashboard/auth/session` | **Removed from client flows** — server layout and middleware resolve auth |
 | `GET /api/dashboard/snapshot` | **Deprecated** — `Deprecation` header; use `/api/editorial/dashboard` |
 | `POST /api/dashboard/actions` | **Deprecated** — use `/api/editorial/actions` |
 | `GET/POST/PATCH /api/dashboard/team` | **Removed** — 410 + `successor: /api/admin/team` |

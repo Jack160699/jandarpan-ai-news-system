@@ -7,7 +7,7 @@
  * Uses a module-level singleton listener to avoid duplicate onAuthStateChange storms.
  */
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import { createBrowserClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/types";
@@ -72,14 +72,13 @@ function ensureAuthBootstrap() {
     emit();
 
     void supabase.auth
-      .getSession()
-      .then(({ data, error: sessionError }) => {
+      .getUser()
+      .then(({ data, error: userError }) => {
         snapshot = {
           ...snapshot,
-          session: data.session,
-          user: data.session?.user ?? null,
+          user: data.user ?? null,
           loading: false,
-          error: sessionError?.message ?? null,
+          error: userError?.message ?? null,
         };
         emit();
       })

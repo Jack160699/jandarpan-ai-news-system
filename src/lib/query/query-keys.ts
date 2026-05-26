@@ -3,9 +3,6 @@
  */
 
 export const queryKeys = {
-  admin: {
-    session: ["admin", "session"] as const,
-  },
   editorial: {
     dashboard: ["editorial", "dashboard"] as const,
     article: (id: string) => ["editorial", "article", id] as const,

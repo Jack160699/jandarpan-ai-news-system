@@ -1,34 +1,16 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  type ReactNode,
-} from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-  ADMIN_EMERGENCY_MOCK,
-  isAdminEmergencyModeClient,
-} from "@/lib/admin/emergency-mode";
-import type {
-  AdminSessionResponse,
-  AdminSessionStatus,
-} from "@/lib/auth/admin-session-types";
-import { staleAuthCookieHints } from "@/lib/auth/auth-safe";
-import { tracePerf, traceDegraded } from "@/lib/observability/performance-monitor";
-import { useAdminSessionQuery } from "@/lib/query/hooks/use-admin-session-query";
-import { invalidateQueryKey } from "@/lib/query/safe-invalidate";
-import { queryKeys } from "@/lib/query/query-keys";
-import { roleHasPermission } from "@/lib/saas-auth/rbac";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import type { User } from "@supabase/supabase-js";
+import { ADMIN_EMERGENCY_MOCK, isAdminEmergencyModeClient } from "@/lib/admin/emergency-mode";
+import type { AdminSessionResponse, AdminSessionStatus } from "@/lib/auth/admin-session-types";
 import type { DashboardPermission } from "@/lib/saas-auth/types";
 
 export type AdminSessionContextValue = {
   status: AdminSessionStatus;
   session: AdminSessionResponse | null;
   authReady: boolean;
-  isDegraded: boolean;
+  isDegraded: false;
   isEmergency: boolean;
   userId: string | null;
   email: string;
@@ -37,7 +19,7 @@ export type AdminSessionContextValue = {
   tenantSlug: string | null;
   tenantName: string;
   permissions: DashboardPermission[];
-  hasPermission: (p: DashboardPermission) => boolean;
+  hasPermission: (_p: DashboardPermission) => boolean;
   refreshSession: () => Promise<void>;
   invalidateSession: () => void;
   clearStaleCookies: () => void;
@@ -73,70 +55,35 @@ const EMERGENCY_SESSION: AdminSessionResponse = {
   ],
 };
 
-function resolveStatus(
-  emergency: boolean,
-  query: ReturnType<typeof useAdminSessionQuery>
-): AdminSessionStatus {
-  if (emergency) return "ready";
-  if (query.isLoading && !query.data) return "loading";
-  if (query.isError) return "error";
-  const data = query.data;
-  if (!data) return "loading";
-  if (!data.ok) {
-    if (data.error === "timeout") return "degraded";
-    return "guest";
-  }
-  if (!data.membership) return "guest";
-  return "ready";
-}
-
 type AdminSessionProviderProps = {
   children: ReactNode;
+  initialUser: User | null;
 };
 
-export function AdminSessionProvider({ children }: AdminSessionProviderProps) {
-  const queryClient = useQueryClient();
+export function AdminSessionProvider({ children, initialUser }: AdminSessionProviderProps) {
   const isEmergency = isAdminEmergencyModeClient();
-  const sessionQuery = useAdminSessionQuery(!isEmergency);
-
-  const status = resolveStatus(isEmergency, sessionQuery);
-  const authReady = status === "ready" || status === "degraded";
-  const isDegraded = status === "degraded";
-
-  if (isDegraded) {
-    traceDegraded("auth", "session_timeout");
-  }
-
-  const refreshSession = useCallback(async () => {
-    tracePerf("AUTH", "session_manual_refresh");
-    await invalidateQueryKey(queryClient, queryKeys.admin.session, "session_manual");
-    await sessionQuery.refetch();
-  }, [queryClient, sessionQuery]);
-
-  const invalidateSession = useCallback(() => {
-    tracePerf("AUTH", "session_invalidate");
-    queryClient.setQueryData(queryKeys.admin.session, {
-      ok: false,
-      error: "unauthorized",
-    });
-  }, [queryClient]);
-
-  const clearStaleCookies = useCallback(() => {
-    tracePerf("AUTH", "stale_cookie_cleanup_hint");
-    for (const name of staleAuthCookieHints()) {
-      document.cookie = `${name}=; path=/; max-age=0`;
-    }
-  }, []);
+  const status: AdminSessionStatus = isEmergency || initialUser ? "ready" : "guest";
+  const authReady = status === "ready";
 
   const value = useMemo<AdminSessionContextValue>(() => {
-    const session = isEmergency ? EMERGENCY_SESSION : sessionQuery.data ?? null;
+    const session: AdminSessionResponse | null = isEmergency
+      ? EMERGENCY_SESSION
+      : initialUser
+        ? {
+            ok: true,
+            user: {
+              id: initialUser.id,
+              email: initialUser.email ?? "",
+            },
+          }
+        : null;
     const membership = session?.membership;
     const permissions = session?.permissions ?? [];
     return {
       status,
       session,
       authReady,
-      isDegraded,
+      isDegraded: false,
       isEmergency,
       userId: session?.user?.id ?? null,
       email: session?.user?.email ?? membership?.email ?? "",
@@ -145,24 +92,16 @@ export function AdminSessionProvider({ children }: AdminSessionProviderProps) {
       tenantSlug: membership?.tenantSlug ?? null,
       tenantName: membership?.tenantName ?? "Newsroom",
       permissions,
-      hasPermission: (p: DashboardPermission) => {
-        if (!membership?.role) return false;
-        return roleHasPermission(membership.role, p);
-      },
-      refreshSession,
-      invalidateSession,
-      clearStaleCookies,
+      hasPermission: () => false,
+      refreshSession: async () => {},
+      invalidateSession: () => {},
+      clearStaleCookies: () => {},
     };
   }, [
     status,
     authReady,
-    isDegraded,
     isEmergency,
-    isEmergency ? "e" : sessionQuery.dataUpdatedAt,
-    sessionQuery.data,
-    refreshSession,
-    invalidateSession,
-    clearStaleCookies,
+    initialUser,
   ]);
 
   return (

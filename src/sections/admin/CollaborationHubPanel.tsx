@@ -15,24 +15,21 @@ import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { useCollaborationRoom } from "@/hooks/useCollaborationRoom";
 import type { CollaborationSnapshot } from "@/lib/collaboration/types";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
+import { useAdminSession } from "@/providers/AdminSessionProvider";
 
 export function CollaborationHubPanel() {
   const [hub, setHub] = useState<CollaborationSnapshot | null>(null);
-  const [session, setSession] = useState<{
-    userId: string;
-    email: string;
-    tenantId: string;
-  } | null>(null);
   const [chatText, setChatText] = useState("");
   const [loading, setLoading] = useState(true);
+  const adminSession = useAdminSession();
 
   const { members, connected } = useCollaborationRoom({
-    tenantId: session?.tenantId ?? "",
-    roomId: session?.tenantId ?? "",
+    tenantId: adminSession.tenantId ?? "",
+    roomId: adminSession.tenantId ?? "",
     roomType: "tenant",
-    userId: session?.userId ?? "",
-    email: session?.email ?? "",
-    enabled: Boolean(session?.tenantId),
+    userId: adminSession.userId ?? "",
+    email: adminSession.email ?? "",
+    enabled: Boolean(adminSession.tenantId && adminSession.userId),
   });
 
   const load = useCallback(async () => {
@@ -49,17 +46,6 @@ export function CollaborationHubPanel() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/dashboard/auth/session", { credentials: "include" })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.ok) {
-          setSession({
-            userId: json.user.id,
-            email: json.user.email,
-            tenantId: json.membership.tenantId,
-          });
-        }
-      });
     load();
     const id = setInterval(load, 12_000);
     return () => clearInterval(id);

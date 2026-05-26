@@ -36,7 +36,6 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
-import { useAdminSessionOptional } from "@/providers/AdminSessionProvider";
 import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
@@ -82,15 +81,11 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
 
   useHydrationSafe("admin_shell");
 
-  const adminSession = useAdminSessionOptional();
-
   async function signOut() {
     await fetch("/api/dashboard/auth/logout", {
       method: "POST",
       credentials: "include",
     });
-    adminSession?.invalidateSession();
-    adminSession?.clearStaleCookies();
     resetAdminQueryClient();
     window.location.assign("/admin/login");
   }

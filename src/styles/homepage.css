@@ -1189,3 +1189,249 @@
 .hp-empty {
   /* migrated to nr-* — kept empty to avoid breakage in stale imports */
 }
+
+/* ──────────────────────────────────────────────────────────
+   Mobile-first density pass (320–768)
+   - compact spacing, tighter card rhythm
+   - no horizontal scroll
+   - fluid type with clamp()
+────────────────────────────────────────────────────────── */
+
+.nr,
+.nr-wrap,
+.nr-section,
+.nr-categories,
+.nr-intel,
+.nr-wire__list,
+.nr-shorts__scroll {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@media (max-width: 768px) {
+  .nr {
+    --nr-gap: clamp(0.7rem, 3.1vw, 1rem);
+  }
+
+  .nr-section {
+    padding-block: var(--nr-gap);
+  }
+
+  .nr-section__header {
+    margin-bottom: 0.85rem;
+    gap: 0.55rem;
+  }
+
+  .nr-section__title {
+    font-size: clamp(1.15rem, 5.8vw, 1.42rem);
+    margin-top: 0.15rem;
+  }
+
+  .nr-section__title-hi {
+    font-size: clamp(0.7rem, 2.8vw, 0.8rem);
+    padding-top: 0.2rem;
+  }
+
+  .nr-section__desc {
+    font-size: clamp(0.78rem, 3.1vw, 0.9rem);
+    margin-top: 0.35rem;
+    line-height: 1.45;
+  }
+
+  .nr-ticker {
+    min-height: 2.2rem;
+  }
+
+  .nr-ticker__label {
+    padding-inline: 0.62rem;
+    font-size: 0.58rem;
+  }
+
+  .nr-ticker__track {
+    gap: 1.2rem;
+    padding-left: 0.6rem;
+  }
+
+  .nr-ticker__item {
+    font-size: 0.71rem;
+  }
+
+  .nr-editors__headline {
+    font-size: clamp(1.2rem, 6vw, 1.55rem);
+    margin-top: 0.4rem;
+  }
+
+  .nr-editors__deck {
+    font-size: clamp(0.84rem, 3.5vw, 0.95rem);
+    margin-top: 0.55rem;
+    line-height: 1.45;
+  }
+
+  .nr-editors__grid {
+    margin-top: 1rem;
+    gap: 0.9rem;
+  }
+
+  .nr-editors__card-title {
+    font-size: clamp(0.9rem, 3.8vw, 1rem);
+    margin-top: 0.45rem;
+  }
+
+  .nr-wire__link {
+    grid-template-columns: 3.6rem 1fr;
+    gap: 0.58rem;
+    padding: 0.68rem var(--nr-pad);
+  }
+
+  .nr-wire__headline {
+    font-size: clamp(0.8rem, 3.3vw, 0.92rem);
+    margin-top: 0.15rem;
+  }
+
+  .nr-regional__lead {
+    gap: 0.75rem;
+    padding-bottom: 0.82rem;
+  }
+
+  .nr-regional__headline {
+    font-size: clamp(1rem, 4.8vw, 1.2rem);
+  }
+
+  .nr-regional__summary {
+    font-size: clamp(0.78rem, 3.25vw, 0.9rem);
+    margin-top: 0.35rem;
+    -webkit-line-clamp: 2;
+  }
+
+  .nr-regional__row {
+    padding-block: 0.65rem;
+    gap: 0.62rem;
+  }
+
+  .nr-regional__row-title {
+    font-size: clamp(0.84rem, 3.25vw, 0.95rem);
+    line-height: 1.34;
+  }
+
+  .nr-trending__link,
+  .nr-card--trending .nr-card__link {
+    grid-template-columns: 2rem 1fr;
+    gap: 0.52rem;
+    padding-block: 0.68rem;
+  }
+
+  .nr-trending__rank {
+    font-size: clamp(1.04rem, 5vw, 1.22rem);
+  }
+
+  .nr-trending__headline,
+  .nr-card--trending .nr-card__headline {
+    font-size: clamp(0.84rem, 3.5vw, 0.97rem);
+    line-height: 1.32;
+  }
+
+  .nr-shorts__scroll {
+    gap: 0.62rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .nr-shorts__card,
+  .nr-shorts__slot {
+    flex-basis: min(66vw, 9.25rem);
+  }
+
+  .nr-shorts__title,
+  .nr-card--compact .nr-card__headline {
+    font-size: clamp(0.78rem, 3.25vw, 0.9rem);
+    margin-top: 0.42rem;
+  }
+
+  .nr-categories {
+    gap: 0.8rem;
+    padding-inline: var(--nr-pad);
+  }
+
+  .nr-categories__block {
+    padding: 0.8rem;
+    border-radius: 10px;
+  }
+
+  .nr-categories__head {
+    margin-bottom: 0.58rem;
+    padding-bottom: 0.44rem;
+  }
+
+  .nr-categories__label {
+    font-size: clamp(0.92rem, 3.8vw, 1.04rem);
+  }
+
+  .nr-categories__cards {
+    margin-top: 0.62rem;
+    gap: 0.72rem;
+  }
+
+  .nr-categories__cards .nr-card--editorial .nr-card__link {
+    grid-template-columns: 5.2rem 1fr;
+    gap: 0.55rem;
+  }
+
+  .nr-card__headline {
+    font-size: clamp(0.87rem, 3.45vw, 1rem);
+    margin-top: 0.4rem;
+  }
+
+  .nr-card__summary {
+    font-size: clamp(0.76rem, 3.15vw, 0.88rem);
+    margin-top: 0.36rem;
+    line-height: 1.45;
+  }
+
+  .nr-card__meta {
+    margin-top: 0.4rem;
+    gap: 0.14rem 0.28rem;
+  }
+
+  .nr-card__footer {
+    margin-top: 0.46rem;
+  }
+
+  .nr-intel__grid {
+    gap: 0.72rem;
+    margin-top: 0.82rem;
+  }
+
+  .nr-intel__value {
+    font-size: clamp(1.12rem, 5.8vw, 1.45rem);
+  }
+
+  .nr-intel__chips {
+    margin-top: 0.52rem;
+    gap: 0.36rem;
+  }
+
+  .nr-intel__chip {
+    font-size: 0.67rem;
+    padding: 0.26rem 0.5rem;
+  }
+}
+
+@media (max-width: 412px) {
+  .nr-wrap {
+    padding-inline: clamp(0.38rem, 2.2vw, 0.55rem);
+  }
+
+  .nr-wire__link,
+  .nr-card--wire .nr-card__link {
+    grid-template-columns: 3.1rem 1fr;
+    padding-inline: clamp(0.38rem, 2.2vw, 0.55rem);
+  }
+
+  .nr-categories__cards .nr-card--editorial .nr-card__link {
+    grid-template-columns: 4.5rem 1fr;
+  }
+
+  .nr-card__tags li {
+    font-size: 0.58rem;
+    padding: 0.08rem 0.28rem;
+  }
+}

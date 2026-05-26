@@ -10,7 +10,7 @@ export const EDITORIAL_IMAGES = {
   schoolIndia:
     "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=82",
   assemblyPolitics:
-    "https://images.unsplash.com/photo-1529107386315-e1a269ed48e0?auto=format&fit=crop&w=1200&q=82",
+    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=82",
   ruralHealth:
     "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=82",
   metroStreet:

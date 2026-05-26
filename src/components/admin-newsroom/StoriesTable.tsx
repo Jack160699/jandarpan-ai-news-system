@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type SyntheticEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import {
@@ -47,6 +47,25 @@ export function StoriesTable({ articles: articlesProp }: StoriesTableProps) {
     () => articles.find((a) => a.id === activeId) ?? null,
     [articles, activeId]
   );
+
+  const HERO_THUMB_FALLBACK =
+    "data:image/svg+xml;utf8," +
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+        <rect width="100%" height="100%" fill="#111827"/>
+        <text x="50%" y="52%" text-anchor="middle" dominant-baseline="middle" fill="#9ca3af" font-family="Arial,sans-serif" font-size="18">Image unavailable</text>
+      </svg>`
+    );
+
+  function setHeroImageFallback(
+    event: SyntheticEvent<HTMLImageElement>
+  ): void {
+    const img = event.currentTarget;
+    img.onerror = null;
+    if (img.dataset.fallbackApplied === "1") return;
+    img.dataset.fallbackApplied = "1";
+    img.src = HERO_THUMB_FALLBACK;
+  }
 
   const districts = useMemo(
     () =>
@@ -429,6 +448,7 @@ export function StoriesTable({ articles: articlesProp }: StoriesTableProps) {
                 src={selectedStory.hero_image_url}
                 alt={selectedStory.headline}
                 className="anr-story-drawer__hero"
+                onError={setHeroImageFallback}
               />
             ) : null}
             <p className="anr-meta">{selectedStory.summary ?? "No preview summary available."}</p>

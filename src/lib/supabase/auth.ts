@@ -66,15 +66,18 @@ export async function getServerAuthSession(): Promise<AuthSessionState> {
   }
 
   const supabase = await createCookieServerClient();
-  const { data, error } = await supabase.auth.getSession();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
   if (error) {
     return { user: null, session: null, error: error.message };
   }
 
   return {
-    user: data.session?.user ?? null,
-    session: data.session,
+    user: user ?? null,
+    session: null,
   };
 }
 

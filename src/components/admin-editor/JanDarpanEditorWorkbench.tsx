@@ -19,6 +19,7 @@ import {
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { CollaborationBar } from "@/components/collaboration/CollaborationBar";
 import type { EditorArticleRecord, EditorVersionSnapshot } from "@/lib/editorial-editor/types";
+import { EDITOR_IMAGE_PLACEHOLDER } from "@/lib/editorial-editor/image-placeholder";
 import {
   computeSeoScore,
   readingEaseScore,
@@ -55,6 +56,15 @@ const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fen
 type JanDarpanEditorWorkbenchProps = {
   articleId: string;
 };
+
+function sanitizeEditorHtmlImages(html: string): string {
+  // Known-dead Unsplash source that otherwise causes repeated 404s.
+  const brokenSrcRe =
+    /src=(["'])https?:\/\/images\.unsplash\.com\/photo-1529107386315-e1a269ed48e0[^"']*\1/g;
+  return html.replace(brokenSrcRe, (_match, quote: string) => {
+    return `src=${quote}${EDITOR_IMAGE_PLACEHOLDER}${quote}`;
+  });
+}
 
 export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbenchProps) {
   const articleQuery = useEditorArticleQuery(articleId);
@@ -125,6 +135,14 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
         articleQuery.error instanceof Error
           ? articleQuery.error.message
           : "Failed to load article";
+      // Non-fatal schema mismatch: continue editor boot in degraded mode.
+      if (message.toLowerCase().includes("does not exist") && message.toLowerCase().includes("translations")) {
+        setBootError("Schema mismatch: translations column missing. Editor running in degraded mode.");
+        setEditorReady(true);
+        setBootState("ready");
+        traceEditorBoot("EDITOR_ERROR", "editor_query_schema_mismatch", { message });
+        return;
+      }
       setBootState("error");
       setBootError(message);
       setEditorReady(false);
@@ -143,7 +161,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
       try {
         const html = await marked.parse(md);
         if (cancelled) return;
-        setEditorHtml((html as string) || "<p></p>");
+        setEditorHtml(sanitizeEditorHtmlImages((html as string) || "<p></p>"));
       } catch (error) {
         if (cancelled) return;
         const message =
@@ -286,7 +304,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
       }
       if (typeof r.body === "string") {
         const html = (await marked.parse(r.body as string)) as string;
-        setEditorHtml(html);
+        setEditorHtml(sanitizeEditorHtmlImages(html));
         setMarkdown(r.body as string);
       }
       if (typeof r.seo_title === "string") {
@@ -374,7 +392,8 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
         articleId={articleId}
         editorHtml={editorHtml}
         onRemoteHtml={(html) => {
-          setEditorHtml(html);
+          const sanitized = sanitizeEditorHtmlImages(html);
+          setEditorHtml(sanitized);
           setMarkdown(turndown.turndown(html));
         }}
       />
@@ -460,7 +479,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
           <NewsroomTipTapEditor
             key={`${articleId}-${bootAttempt}`}
             initialHtml={editorHtml}
-            onHtmlChange={setEditorHtml}
+            onHtmlChange={(html) => setEditorHtml(sanitizeEditorHtmlImages(html))}
             markdownMode={markdownMode}
             markdown={markdown}
             onMarkdownChange={setMarkdown}
@@ -473,7 +492,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
               onClick={async () => {
                 if (markdownMode) {
                   const html = (await marked.parse(markdown)) as string;
-                  setEditorHtml(html || "<p></p>");
+                  setEditorHtml(sanitizeEditorHtmlImages(html || "<p></p>"));
                   setMarkdownMode(false);
                 }
               }}

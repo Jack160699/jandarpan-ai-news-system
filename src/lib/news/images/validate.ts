@@ -23,6 +23,10 @@ export type ImageCandidate = {
 const PLACEHOLDER_RE =
   /placeholder|placehold\.co|via\.placeholder|default\.(jpg|png|gif)|no-?image|1x1|pixel\.|spacer\.|blank\.|dummy|data:image|about:blank/i;
 
+/** Hard-coded URLs that consistently 404 — skip before Next/Image fetch. */
+const KNOWN_BROKEN_IMAGE_RE =
+  /photo-1529107386315-e1a269ed48e0/i;
+
 const LOGO_ICON_RE =
   /\/(logo|icon|favicon|avatar|badge|sprite|emoji|button|banner-ad|ads?|advert|promo-thumb|brand-mark)[\/._-]|logo\.|icon\.|favicon\.|\.svg(\?|$)|sprite|avatar-|profile-pic/i;
 
@@ -68,6 +72,10 @@ export function isRejectedImageUrl(url: string): { rejected: boolean; reason?: s
 
   if (PLACEHOLDER_RE.test(lower)) {
     return { rejected: true, reason: "placeholder" };
+  }
+
+  if (KNOWN_BROKEN_IMAGE_RE.test(lower)) {
+    return { rejected: true, reason: "known_broken" };
   }
 
   if (LOGO_ICON_RE.test(lower)) {
