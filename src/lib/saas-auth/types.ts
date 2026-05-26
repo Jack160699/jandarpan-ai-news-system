@@ -1,6 +1,8 @@
 export type DashboardRole =
   | "owner"
+  | "super_admin"
   | "admin"
+  | "publisher"
   | "editor"
   | "viewer"
   | "billing";

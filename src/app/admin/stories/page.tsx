@@ -4,16 +4,12 @@ import { StoriesTable } from "@/components/admin-newsroom/StoriesTable";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = {
-  searchParams: Promise<{ key?: string }>;
-};
-
-export default function AdminStoriesPage({ searchParams }: PageProps) {
+export default function AdminStoriesPage() {
   return (
-    <AdminPageGate searchParams={searchParams}>
+    <AdminPageGate permission="editorial:write">
       <AdminShell
-        title="Stories"
-        subtitle="Approve, edit, feature, and regenerate AI editorials."
+        title="Stories moderation"
+        subtitle="Review, approve, and publish generated articles."
       >
         <StoriesTable />
       </AdminShell>

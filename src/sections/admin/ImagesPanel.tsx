@@ -1,6 +1,11 @@
 "use client";
 
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
+import { ActionButton } from "@/components/admin-newsroom/ui/ActionButton";
+import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
+import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
+import { MetricCard } from "@/components/admin-newsroom/ui/MetricCard";
+import { QueueTable } from "@/components/admin-newsroom/ui/QueueTable";
 
 export function ImagesPanel() {
   const { data, loading, error, runAction, busyId } = useAdminNewsroom();
@@ -18,15 +23,11 @@ export function ImagesPanel() {
     <>
       {error ? <p className="anr-error">{error}</p> : null}
       <div className="anr-kpis">
-        <div className="anr-kpi">
-          <span>Pending images</span>
-          <strong>{data.counts.imageQueuePending}</strong>
-        </div>
+        <MetricCard label="Pending images" value={data.counts.imageQueuePending} />
       </div>
 
-      <div className="anr-card">
-        <div className="anr-card__head">Editorial image queue</div>
-        <div className="anr-table-wrap">
+      <AdminCard title="Editorial image queue" description="Visual generation quality queue.">
+        <QueueTable>
           <table className="anr-table">
             <thead>
               <tr>
@@ -52,9 +53,7 @@ export function ImagesPanel() {
                     <td>{row.attempts}</td>
                     <td>{row.image_source ?? "—"}</td>
                     <td>
-                      <button
-                        type="button"
-                        className="anr-btn"
+                      <ActionButton
                         disabled={busy}
                         onClick={() =>
                           runAction("regenerate_image", {
@@ -63,7 +62,7 @@ export function ImagesPanel() {
                         }
                       >
                         Regenerate
-                      </button>
+                      </ActionButton>
                     </td>
                   </tr>
                 );
@@ -71,10 +70,10 @@ export function ImagesPanel() {
             </tbody>
           </table>
           {!data.imageQueue.length ? (
-            <p className="anr-empty">Image queue is empty.</p>
+            <EmptyState title="Image queue is empty." hint="New editorial image jobs appear here." />
           ) : null}
-        </div>
-      </div>
+        </QueueTable>
+      </AdminCard>
     </>
   );
 }

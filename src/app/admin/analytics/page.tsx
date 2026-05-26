@@ -4,13 +4,9 @@ import { AnalyticsPanel } from "@/sections/admin/AnalyticsPanel";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = {
-  searchParams: Promise<{ key?: string }>;
-};
-
-export default function AdminAnalyticsPage({ searchParams }: PageProps) {
+export default function AdminAnalyticsPage() {
   return (
-    <AdminPageGate searchParams={searchParams}>
+    <AdminPageGate permission="analytics:read">
       <AdminShell
         title="Analytics"
         subtitle="Confidence, sources, trending, and ingestion health."

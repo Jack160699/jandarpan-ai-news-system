@@ -14,20 +14,22 @@ import {
 import { TENANT_COOKIE, TENANT_HEADER } from "@/lib/tenant/resolve";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { ACCESS_COOKIE } from "@/lib/saas-auth/session";
 
 const DASHBOARD_PUBLIC = ["/dashboard/login"];
 const DASHBOARD_PREFIX = "/dashboard";
 
-function isDashboardProtected(pathname: string): boolean {
-  if (!pathname.startsWith(DASHBOARD_PREFIX)) return false;
-  return !DASHBOARD_PUBLIC.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
+const ADMIN_PUBLIC = ["/admin/login"];
+const ADMIN_PREFIX = "/admin";
 
-function hasDashboardSession(request: NextRequest): boolean {
-  const legacy = request.cookies.get(ACCESS_COOKIE)?.value;
-  if (legacy) return true;
-  return request.cookies.getAll().some((c) => c.name.includes("-auth-token"));
+function isProtectedPrefix(
+  pathname: string,
+  prefix: string,
+  publicPaths: string[]
+): boolean {
+  if (!pathname.startsWith(prefix)) return false;
+  return !publicPaths.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
 }
 
 export async function middleware(request: NextRequest) {
@@ -43,6 +45,7 @@ export async function middleware(request: NextRequest) {
   if (tenant) {
     requestHeaders.set(TENANT_HEADER, tenant.slug);
   }
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
 
   let response = NextResponse.next({
     request: { headers: requestHeaders },
@@ -57,9 +60,12 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  let authUser: { id: string; email?: string } | null = null;
+
   if (isSupabaseConfigured()) {
     const session = await updateSupabaseSession(request, response);
     response = session.response;
+    authUser = session.user;
   }
 
   const { pathname } = request.nextUrl;
@@ -70,8 +76,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (isDashboardProtected(pathname) && !hasDashboardSession(request)) {
+  const hasAuth = Boolean(authUser?.id);
+
+  if (isProtectedPrefix(pathname, DASHBOARD_PREFIX, DASHBOARD_PUBLIC) && !hasAuth) {
     const login = new URL("/dashboard/login", request.url);
+    login.searchParams.set("next", pathname);
+    return NextResponse.redirect(login);
+  }
+
+  if (isProtectedPrefix(pathname, ADMIN_PREFIX, ADMIN_PUBLIC) && !hasAuth) {
+    const login = new URL("/admin/login", request.url);
     login.searchParams.set("next", pathname);
     return NextResponse.redirect(login);
   }

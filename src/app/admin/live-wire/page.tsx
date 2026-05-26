@@ -4,16 +4,12 @@ import { LiveWirePanel } from "@/sections/admin/LiveWirePanel";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = {
-  searchParams: Promise<{ key?: string }>;
-};
-
-export default function AdminLiveWirePage({ searchParams }: PageProps) {
+export default function AdminLiveWirePage() {
   return (
-    <AdminPageGate searchParams={searchParams}>
+    <AdminPageGate permission="content:read">
       <AdminShell
         title="Live wire"
-        subtitle="Event clusters and fast-publish candidates."
+        subtitle="Breaking signals and real-time editorial alerts."
       >
         <LiveWirePanel />
       </AdminShell>

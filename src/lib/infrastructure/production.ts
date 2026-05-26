@@ -63,7 +63,6 @@ const RECOMMENDED_PRODUCTION_ENV = [
   "OPENAI_API_KEY",
   "GNEWS_API_KEY",
   "NEWSDATA_API_KEY",
-  "ADMIN_SECRET",
   "NEWSROOM_CLUSTER_EVENTS",
 ] as const;
 
@@ -91,9 +90,12 @@ export function getProductionEnvChecks(): {
     if (!process.env.CRON_SECRET?.trim()) {
       warnings.push("CRON_SECRET is required in production");
     }
-    if (!process.env.ADMIN_SECRET?.trim()) {
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
+      !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+    ) {
       warnings.push(
-        "ADMIN_SECRET is unset — /admin routes will be blocked in production"
+        "Supabase auth is required — /admin and /dashboard use session cookies in production"
       );
     }
     for (const key of Object.keys(process.env)) {

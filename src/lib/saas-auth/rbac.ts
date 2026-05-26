@@ -1,19 +1,22 @@
 import type { DashboardPermission, DashboardRole } from "@/lib/saas-auth/types";
 
+const SUPER_ADMIN_PERMISSIONS: DashboardPermission[] = [
+  "analytics:read",
+  "content:read",
+  "content:write",
+  "editorial:write",
+  "publish:write",
+  "team:read",
+  "team:write",
+  "billing:read",
+  "billing:write",
+  "monitoring:read",
+  "providers:read",
+];
+
 const ROLE_PERMISSIONS: Record<DashboardRole, DashboardPermission[]> = {
-  owner: [
-    "analytics:read",
-    "content:read",
-    "content:write",
-    "editorial:write",
-    "publish:write",
-    "team:read",
-    "team:write",
-    "billing:read",
-    "billing:write",
-    "monitoring:read",
-    "providers:read",
-  ],
+  owner: SUPER_ADMIN_PERMISSIONS,
+  super_admin: SUPER_ADMIN_PERMISSIONS,
   admin: [
     "analytics:read",
     "content:read",
@@ -25,12 +28,20 @@ const ROLE_PERMISSIONS: Record<DashboardRole, DashboardPermission[]> = {
     "monitoring:read",
     "providers:read",
   ],
-  editor: [
+  publisher: [
     "analytics:read",
     "content:read",
     "content:write",
     "editorial:write",
     "publish:write",
+    "monitoring:read",
+    "providers:read",
+  ],
+  editor: [
+    "analytics:read",
+    "content:read",
+    "content:write",
+    "editorial:write",
     "providers:read",
   ],
   viewer: ["analytics:read", "content:read", "monitoring:read"],

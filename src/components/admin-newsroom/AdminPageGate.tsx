@@ -1,33 +1,50 @@
-import { isAdminAuthorized } from "@/lib/editorial-dashboard/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { AdminProvider } from "@/components/admin-newsroom/AdminProvider";
+import { canAccessAdminRoute } from "@/lib/newsroom-auth/rbac";
+import { roleHasPermission } from "@/lib/saas-auth/rbac";
+import { getDashboardSession } from "@/lib/saas-auth/session";
+import type { DashboardPermission } from "@/lib/saas-auth/types";
 
 type AdminPageGateProps = {
-  searchParams: Promise<{ key?: string }>;
   children: React.ReactNode;
+  permission?: DashboardPermission;
 };
 
-export async function AdminPageGate({ searchParams, children }: AdminPageGateProps) {
-  const { key } = await searchParams;
+export async function AdminPageGate({
+  children,
+  permission,
+}: AdminPageGateProps) {
+  const session = await getDashboardSession();
 
-  if (!isAdminAuthorized(key)) {
-    return (
-      <main className="min-h-screen bg-neutral-950 p-8 text-neutral-200">
-        <h1 className="text-xl font-semibold">Unauthorized</h1>
-        <p className="mt-2 text-sm text-neutral-400">
-          Open any admin page with{" "}
-          <code className="text-amber-400">?key=ADMIN_SECRET</code> (set{" "}
-          <code className="text-amber-400">ADMIN_SECRET</code> in env).
-        </p>
-        <ul className="mt-4 text-sm text-neutral-500 list-disc pl-5">
-          <li>/admin/editorial</li>
-          <li>/admin/stories</li>
-          <li>/admin/live-wire</li>
-          <li>/admin/images</li>
-          <li>/admin/analytics</li>
-        </ul>
-      </main>
-    );
+  if (!session) {
+    redirect("/admin/login");
   }
 
-  return <AdminProvider adminKey={key!}>{children}</AdminProvider>;
+  const headersList = await headers();
+  const pathname =
+    headersList.get("x-pathname") ??
+    headersList.get("x-invoke-path") ??
+    "/admin/editorial";
+
+  if (!canAccessAdminRoute(session.membership.role, pathname)) {
+    redirect("/admin/login?error=forbidden");
+  }
+
+  if (
+    permission &&
+    !roleHasPermission(session.membership.role, permission)
+  ) {
+    redirect("/admin/login?error=forbidden");
+  }
+
+  return (
+    <AdminProvider
+      email={session.email}
+      role={session.membership.role}
+      tenantName={session.membership.tenantName}
+    >
+      {children}
+    </AdminProvider>
+  );
 }

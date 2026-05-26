@@ -6,13 +6,19 @@ import { cookies } from "next/headers";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { createUserAuthClient } from "@/lib/supabase/auth";
 import { getDefaultTenant, getTenantBySlug } from "@/lib/tenant/registry";
-import { isAdminAuthorized } from "@/lib/editorial-dashboard/auth";
 import type { DashboardRole, DashboardSession, TenantMembership } from "@/lib/saas-auth/types";
 
 export const ACCESS_COOKIE = "nr-dashboard-access";
 export const REFRESH_COOKIE = "nr-dashboard-refresh";
 
 const DEV_USER_ID = "00000000-0000-4000-8000-00000000d001";
+
+function isProdRuntime(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production"
+  );
+}
 
 async function loadMembership(
   userId: string,
@@ -86,7 +92,7 @@ export async function getDashboardSession(
     null;
 
   if (!isSupabaseConfigured()) {
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development" && !isProdRuntime()) {
       return {
         userId: DEV_USER_ID,
         email: "dev@newsroom.local",
@@ -99,25 +105,11 @@ export async function getDashboardSession(
   }
 
   if (!accessToken) {
-    const devKey = request
-      ? new URL(request.url).searchParams.get("key")
-      : null;
-    if (
-      process.env.NODE_ENV === "development" &&
-      isAdminAuthorized(devKey)
-    ) {
-      return {
-        userId: DEV_USER_ID,
-        email: process.env.DASHBOARD_DEV_EMAIL ?? "admin@newsroom.local",
-        accessToken: "dev-admin",
-        membership: devBypassMembership(tenantHint),
-        isDevBypass: true,
-      };
-    }
     return null;
   }
 
   if (accessToken === "dev" || accessToken === "dev-admin") {
+    if (isProdRuntime()) return null;
     return {
       userId: DEV_USER_ID,
       email: process.env.DASHBOARD_DEV_EMAIL ?? "dev@newsroom.local",
@@ -138,18 +130,7 @@ export async function getDashboardSession(
     tenantHint
   );
 
-  if (!membership) {
-    if (process.env.NODE_ENV === "development") {
-      return {
-        userId: userData.user.id,
-        email: userData.user.email ?? "dev@newsroom.local",
-        accessToken,
-        membership: devBypassMembership(tenantHint),
-        isDevBypass: true,
-      };
-    }
-    return null;
-  }
+  if (!membership) return null;
 
   return {
     userId: userData.user.id,

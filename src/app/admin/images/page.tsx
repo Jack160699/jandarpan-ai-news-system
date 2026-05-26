@@ -4,16 +4,12 @@ import { ImagesPanel } from "@/sections/admin/ImagesPanel";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = {
-  searchParams: Promise<{ key?: string }>;
-};
-
-export default function AdminImagesPage({ searchParams }: PageProps) {
+export default function AdminImagesPage() {
   return (
-    <AdminPageGate searchParams={searchParams}>
+    <AdminPageGate permission="editorial:write">
       <AdminShell
-        title="Editorial images"
-        subtitle="Hero image queue, retries, and regeneration."
+        title="Images"
+        subtitle="Hero assets, regeneration queue, and visual QA."
       >
         <ImagesPanel />
       </AdminShell>

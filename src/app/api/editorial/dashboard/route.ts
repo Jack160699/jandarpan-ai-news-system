@@ -3,16 +3,15 @@
  */
 
 import { NextResponse } from "next/server";
-import { verifyAdminRequest } from "@/lib/editorial-dashboard/auth";
+import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
 import { fetchEditorialDashboard } from "@/lib/editorial-dashboard/fetch-dashboard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!verifyAdminRequest(request)) {
-    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireEditorialAuth(request, "content:read");
+  if (!auth.ok) return auth.response;
 
   const snapshot = await fetchEditorialDashboard();
   if (!snapshot) {

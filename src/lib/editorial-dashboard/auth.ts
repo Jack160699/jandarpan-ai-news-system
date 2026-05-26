@@ -1,36 +1,21 @@
 /**
- * Editorial dashboard authentication
+ * Editorial / admin API authentication — Supabase session + tenant RBAC
  */
 
-import { isProductionDeployment } from "@/lib/infrastructure/production";
+import { requireDashboardSession } from "@/lib/saas-auth/guard";
+import type { DashboardPermission, DashboardSession } from "@/lib/saas-auth/types";
 
-export function getExpectedAdminSecret(): string | null {
-  return (
-    process.env.ADMIN_SECRET?.trim() ||
-    process.env.CRON_SECRET?.trim() ||
-    null
-  );
-}
+export type EditorialAuthResult =
+  | { ok: true; session: DashboardSession }
+  | { ok: false; response: Response };
 
-export function isAdminAuthorized(key: string | undefined | null): boolean {
-  const expected = getExpectedAdminSecret();
-  if (!expected) return !isProductionDeployment();
-  return key === expected;
-}
-
-export function verifyAdminRequest(request: Request): boolean {
-  const expected = getExpectedAdminSecret();
-  if (!expected) return !isProductionDeployment();
-
-  const url = new URL(request.url);
-  const queryKey = url.searchParams.get("key");
-  if (queryKey === expected) return true;
-
-  const auth = request.headers.get("authorization");
-  if (auth === `Bearer ${expected}`) return true;
-
-  const headerKey = request.headers.get("x-admin-key");
-  if (headerKey === expected) return true;
-
-  return false;
+export async function requireEditorialAuth(
+  request: Request,
+  permission: DashboardPermission = "content:read"
+): Promise<EditorialAuthResult> {
+  const guard = await requireDashboardSession(request, permission);
+  if (!guard.ok) {
+    return { ok: false, response: guard.response };
+  }
+  return { ok: true, session: guard.session };
 }

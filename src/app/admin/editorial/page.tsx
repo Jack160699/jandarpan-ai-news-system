@@ -4,13 +4,9 @@ import { EditorialOverview } from "@/sections/admin/EditorialOverview";
 
 export const dynamic = "force-dynamic";
 
-type PageProps = {
-  searchParams: Promise<{ key?: string }>;
-};
-
-export default function AdminEditorialPage({ searchParams }: PageProps) {
+export default function AdminEditorialPage() {
   return (
-    <AdminPageGate searchParams={searchParams}>
+    <AdminPageGate permission="content:read">
       <AdminShell
         title="Editorial overview"
         subtitle="Supervise ingestion, queues, and breaking editorial flow."

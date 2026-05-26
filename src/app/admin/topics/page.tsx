@@ -4,12 +4,10 @@ import { PlatformTopicsPanel } from "@/components/admin-newsroom/PlatformAdminPa
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { searchParams: Promise<{ key?: string }> };
-
-export default function AdminTopicsPage({ searchParams }: PageProps) {
+export default function AdminTopicsPage() {
   return (
-    <AdminPageGate searchParams={searchParams}>
-      <AdminShell title="Topics" subtitle="SEO topic hubs and routing.">
+    <AdminPageGate permission="content:read">
+      <AdminShell title="Topics" subtitle="Topic clusters and editorial themes.">
         <PlatformTopicsPanel />
       </AdminShell>
     </AdminPageGate>

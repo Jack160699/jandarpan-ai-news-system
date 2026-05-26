@@ -1,6 +1,8 @@
 "use client";
 
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
+import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
+import { QueueTable } from "@/components/admin-newsroom/ui/QueueTable";
 
 export function LiveWirePanel() {
   const { data, loading, error } = useAdminNewsroom();
@@ -13,9 +15,8 @@ export function LiveWirePanel() {
   return (
     <>
       {error ? <p className="anr-error">{error}</p> : null}
-      <div className="anr-card">
-        <div className="anr-card__head">Event clusters (live wire feed)</div>
-        <div className="anr-table-wrap">
+      <AdminCard title="Event clusters (live wire feed)">
+        <QueueTable>
           <table className="anr-table">
             <thead>
               <tr>
@@ -45,12 +46,11 @@ export function LiveWirePanel() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
+        </QueueTable>
+      </AdminCard>
 
-      <div className="anr-card">
-        <div className="anr-card__head">AI processing queue</div>
-        <div className="anr-table-wrap">
+      <AdminCard title="AI processing queue">
+        <QueueTable>
           <table className="anr-table">
             <thead>
               <tr>
@@ -69,8 +69,8 @@ export function LiveWirePanel() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
+        </QueueTable>
+      </AdminCard>
     </>
   );
 }

@@ -4,12 +4,10 @@ import { PlatformDistrictsPanel } from "@/components/admin-newsroom/PlatformAdmi
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { searchParams: Promise<{ key?: string }> };
-
-export default function AdminDistrictsPage({ searchParams }: PageProps) {
+export default function AdminDistrictsPage() {
   return (
-    <AdminPageGate searchParams={searchParams}>
-      <AdminShell title="Districts" subtitle="Featured district wire configuration.">
+    <AdminPageGate permission="content:read">
+      <AdminShell title="Districts" subtitle="Regional coverage map and desk routing.">
         <PlatformDistrictsPanel />
       </AdminShell>
     </AdminPageGate>

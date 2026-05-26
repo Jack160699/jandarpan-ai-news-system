@@ -4,11 +4,9 @@ import { PlatformArticlesPanel } from "@/components/admin-newsroom/PlatformAdmin
 
 export const dynamic = "force-dynamic";
 
-type PageProps = { searchParams: Promise<{ key?: string }> };
-
-export default function AdminArticlesPage({ searchParams }: PageProps) {
+export default function AdminArticlesPage() {
   return (
-    <AdminPageGate searchParams={searchParams}>
+    <AdminPageGate permission="content:read">
       <AdminShell
         title="Articles"
         subtitle="Platform article corpus — mock data until Supabase sync."

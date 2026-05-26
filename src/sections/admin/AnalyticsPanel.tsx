@@ -2,6 +2,9 @@
 
 import { ConfidenceBadge } from "@/components/admin-newsroom/ConfidenceBadge";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
+import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
+import { MetricCard } from "@/components/admin-newsroom/ui/MetricCard";
+import { QueueTable } from "@/components/admin-newsroom/ui/QueueTable";
 
 export function AnalyticsPanel() {
   const { data, loading, error } = useAdminNewsroom();
@@ -24,26 +27,13 @@ export function AnalyticsPanel() {
     <>
       {error ? <p className="anr-error">{error}</p> : null}
       <div className="anr-kpis">
-        <div className="anr-kpi">
-          <span>Avg confidence</span>
-          <strong>{Math.round(avgConf * 100)}%</strong>
-        </div>
-        <div className="anr-kpi">
-          <span>Ranking avg</span>
-          <strong>{Math.round(data.trending.rankingAvg * 100)}%</strong>
-        </div>
-        <div className="anr-kpi">
-          <span>Breaking marked</span>
-          <strong>{data.trending.breakingCount}</strong>
-        </div>
-        <div className="anr-kpi">
-          <span>Generated</span>
-          <strong>{data.counts.generated}</strong>
-        </div>
+        <MetricCard label="Avg confidence" value={`${Math.round(avgConf * 100)}%`} />
+        <MetricCard label="Ranking avg" value={`${Math.round(data.trending.rankingAvg * 100)}%`} />
+        <MetricCard label="Breaking marked" value={data.trending.breakingCount} />
+        <MetricCard label="Generated" value={data.counts.generated} />
       </div>
 
-      <div className="anr-card">
-        <div className="anr-card__head">Top headlines by confidence</div>
+      <AdminCard title="Top headlines by confidence">
         <ul style={{ margin: 0, padding: "0.75rem 1rem", listStyle: "none" }}>
           {data.trending.topHeadlines.map((item, i) => (
             <li
@@ -62,11 +52,10 @@ export function AnalyticsPanel() {
             </li>
           ))}
         </ul>
-      </div>
+      </AdminCard>
 
-      <div className="anr-card">
-        <div className="anr-card__head">Source reliability</div>
-        <div className="anr-table-wrap">
+      <AdminCard title="Source reliability">
+        <QueueTable>
           <table className="anr-table">
             <thead>
               <tr>
@@ -89,15 +78,14 @@ export function AnalyticsPanel() {
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
+        </QueueTable>
+      </AdminCard>
 
-      <div className="anr-card">
-        <div className="anr-card__head">Trending searches</div>
+      <AdminCard title="Trending searches">
         <p style={{ padding: "0.75rem 1rem", margin: 0, fontSize: "0.8125rem" }}>
           {data.trending.trendingSearches.join(" · ") || "—"}
         </p>
-      </div>
+      </AdminCard>
     </>
   );
 }
