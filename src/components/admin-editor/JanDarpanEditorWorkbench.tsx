@@ -26,36 +26,33 @@ import {
 } from "@/lib/editorial-editor/seo";
 import { buildDraftPayload } from "@/lib/editorial-editor/storage";
 import { NEWSROOM_LANGUAGES } from "@/lib/i18n/languages";
-import { traceStability } from "@/lib/observability/stability-trace";
+import { useEditorArticleQuery } from "@/lib/query/hooks/use-editor-article";
+import {
+  persistArticleDraft,
+  useEditorAutosave,
+  useEditorDraftRecovery,
+} from "@/modules/editor";
 
 const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
-const AUTOSAVE_DEBOUNCE_MS = 1500;
-const LOAD_TIMEOUT_MS = 8000;
-
-type SaveState = "idle" | "saving" | "saved" | "error";
 
 type JanDarpanEditorWorkbenchProps = {
   articleId: string;
 };
 
 export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbenchProps) {
+  const articleQuery = useEditorArticleQuery(articleId);
   const [article, setArticle] = useState<EditorArticleRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saveState, setSaveState] = useState<SaveState>("idle");
   const [markdownMode, setMarkdownMode] = useState(false);
   const [markdown, setMarkdown] = useState("");
   const [editorHtml, setEditorHtml] = useState("<p></p>");
   const [editorReady, setEditorReady] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [showPreview, setShowPreview] = useState(false);
   const [compareId, setCompareId] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [headlineOptions, setHeadlineOptions] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
-  const lastPayloadRef = useRef("");
-  const saveDebounceRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
-  const loadAbortRef = useRef<AbortController | null>(null);
+  const hydratedIdRef = useRef<string | null>(null);
 
   const versions = useMemo(() => {
     const raw = article?.editorial_metadata?.editor_versions;
@@ -64,44 +61,21 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
 
   const seoMeta = (article?.editorial_metadata?.seo ?? {}) as Record<string, string>;
 
-  const loadArticle = useCallback(async () => {
-    loadAbortRef.current?.abort();
-    const controller = new AbortController();
-    loadAbortRef.current = controller;
-    setLoading(true);
-    setEditorReady(false);
-    traceStability("EDITOR_BOOT", "jd_editor_fetch_start", { articleId });
-    const timeout = window.setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
-    try {
-      const res = await fetch(`/api/editorial/article/${articleId}`, {
-        cache: "no-store",
-        credentials: "include",
-        signal: controller.signal,
-      });
-      const json = await res.json();
-      if (json.ok && json.article) {
-        const row = json.article as EditorArticleRecord;
-        setArticle(row);
-        const md = row.article_body ?? "";
-        setMarkdown(md);
-        const html = (await marked.parse(md)) as string;
-        setEditorHtml(html || "<p></p>");
-        setEditorReady(true);
-        traceStability("EDITOR_BOOT", "jd_editor_fetch_ok", { articleId });
-      }
-    } catch (e) {
-      traceStability("EDITOR_CRASH", "jd_editor_fetch_failed", {
-        message: e instanceof Error ? e.message : "unknown",
-      });
-    } finally {
-      window.clearTimeout(timeout);
-      setLoading(false);
-    }
-  }, [articleId]);
+  const { conflict: draftConflict } = useEditorDraftRecovery(articleId, article);
 
   useEffect(() => {
-    void loadArticle();
-  }, [loadArticle]);
+    if (!articleQuery.data) return;
+    if (hydratedIdRef.current === articleId) return;
+    hydratedIdRef.current = articleId;
+    const row = articleQuery.data;
+    setArticle(row);
+    const md = row.article_body ?? "";
+    setMarkdown(md);
+    void marked.parse(md).then((html) => {
+      setEditorHtml((html as string) || "<p></p>");
+      setEditorReady(true);
+    });
+  }, [articleQuery.data, articleId]);
 
   const bodyMarkdown = useMemo(() => {
     if (markdownMode) return markdown;
@@ -123,74 +97,32 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
     });
   }, [article, bodyMarkdown, seoMeta]);
 
-  const saveDraft = useCallback(
-    async (withVersion = false, reason: "manual" | "debounced" | "interval" = "manual") => {
-      if (!payload) return;
-      const body = {
-        ...payload,
-        save_version: withVersion,
-        editorial_metadata: {
-          ...(payload.editorial_metadata ?? {}),
-          draft_state: {
-            updatedAt: new Date().toISOString(),
-            authoring: true,
-            reason,
-          },
-        },
-      };
-      const serialized = JSON.stringify(body);
-      if (serialized === lastPayloadRef.current && !withVersion) return;
+  const autosavePayload = useMemo(() => {
+    if (!payload) return null;
+    return { ...payload } as Record<string, unknown>;
+  }, [payload]);
 
-      traceStability("SESSION_REFRESH", "jd_editor_autosave_start", { reason });
-      setSaveState("saving");
-      const res = await fetch(`/api/editorial/article/${articleId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: serialized,
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        setSaveState("error");
-        traceStability("EDITOR_CRASH", "jd_editor_autosave_failed", { status: res.status });
-        return;
-      }
-      setSaveState("saved");
-      setLastSavedAt(new Date().toISOString());
-      lastPayloadRef.current = serialized;
-      if (json.versions) {
-        setArticle((prev) =>
-          prev
-            ? {
-                ...prev,
-                editorial_metadata: {
-                  ...(prev.editorial_metadata ?? {}),
-                  editor_versions: json.versions,
-                },
-              }
-            : prev
-        );
-      }
-      setTimeout(() => setSaveState("idle"), 1400);
-    },
-    [articleId, payload]
+  const { saveState, lastSavedAt, saveNow } = useEditorAutosave(
+    articleId,
+    autosavePayload
   );
 
-  useEffect(() => {
-    if (!payload) return;
-    if (saveDebounceRef.current) window.clearTimeout(saveDebounceRef.current);
-    saveDebounceRef.current = window.setTimeout(() => {
-      void saveDraft(false, "debounced");
-    }, AUTOSAVE_DEBOUNCE_MS);
-    return () => {
-      if (saveDebounceRef.current) window.clearTimeout(saveDebounceRef.current);
-    };
-  }, [payload, saveDraft]);
-
-  useEffect(() => {
-    const id = window.setInterval(() => void saveDraft(false, "interval"), 30_000);
-    return () => window.clearInterval(id);
-  }, [saveDraft]);
+  const saveDraft = useCallback(
+    async (withVersion = false) => {
+      if (!payload) return;
+      if (withVersion) {
+        const result = await persistArticleDraft(
+          articleId,
+          { ...payload, save_version: true } as Record<string, unknown>,
+          "manual"
+        );
+        if (!result.ok) return;
+      } else {
+        saveNow();
+      }
+    },
+    [articleId, payload, saveNow]
+  );
 
   const seo = computeSeoScore({
     headline: article?.headline ?? "",
@@ -277,7 +209,9 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
 
   const compareVersion = versions.find((v) => v.id === compareId);
 
-  if (loading || !article || !editorReady) {
+  const loading = articleQuery.isLoading || !article || !editorReady;
+
+  if (loading) {
     return <div className="jd-editor-page__loading">Loading editor…</div>;
   }
 
@@ -288,6 +222,11 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
 
   return (
     <div className="jd-editor-page">
+      {draftConflict ? (
+        <div className="anr-emergency-banner" role="status">
+          <strong>Local draft detected.</strong> A newer offline snapshot may exist on this device.
+        </div>
+      ) : null}
       <CollaborationBar
         articleId={articleId}
         editorHtml={editorHtml}

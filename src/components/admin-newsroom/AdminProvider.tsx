@@ -6,17 +6,16 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { EditorialDashboardSnapshot } from "@/lib/editorial-dashboard/types";
 import { traceAdminEmergency } from "@/lib/admin/emergency-mode";
-import { traceAdminBoot } from "@/lib/observability/admin-boot";
-import { traceStability } from "@/lib/observability/stability-trace";
-import { isTimeoutError, withTimeout } from "@/lib/utils/withTimeout";
-
-/** Hobby-safe admin dashboard polling (default 60s) */
-const POLL_MS = Number(process.env.NEXT_PUBLIC_ADMIN_POLL_MS) || 60_000;
+import { apiClient } from "@/lib/api/api-client";
+import { tracePerf } from "@/lib/observability/performance-monitor";
+import { useEditorialDashboardQuery } from "@/lib/query/hooks/use-editorial-dashboard";
+import { queryKeys } from "@/lib/query/query-keys";
+import { useAdminIdentity } from "@/providers/AdminSessionProvider";
 
 type Theme = "dark" | "light";
 
@@ -33,7 +32,11 @@ type AdminContextValue = {
   runAction: (
     action: string,
     payload: Record<string, string | number | boolean | undefined>,
-    options?: { optimistic?: (prev: EditorialDashboardSnapshot) => EditorialDashboardSnapshot }
+    options?: {
+      optimistic?: (
+        prev: EditorialDashboardSnapshot
+      ) => EditorialDashboardSnapshot;
+    }
   ) => Promise<boolean>;
   busyId: string | null;
   toast: string | null;
@@ -52,32 +55,32 @@ type AdminProviderProps = {
   email?: string;
   role?: string;
   tenantName?: string;
-  /** Skip dashboard preload — emergency recovery */
   emergencyMode?: boolean;
-  /** When false, shell renders but workspace fetch waits for client auth */
   authReady?: boolean;
 };
 
 export function AdminProvider({
   children,
-  email = "",
-  role = "",
-  tenantName = "",
+  email: emailProp,
+  role: roleProp,
+  tenantName: tenantNameProp,
   emergencyMode = false,
-  authReady = true,
+  authReady: authReadyProp,
 }: AdminProviderProps) {
-  const [data, setData] = useState<EditorialDashboardSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(
-    emergencyMode
-      ? "Recovery mode: workspace data loads on demand."
-      : null
-  );
-  const [loading, setLoading] = useState(false);
+  const identity = useAdminIdentity({
+    email: emailProp,
+    role: roleProp,
+    tenantName: tenantNameProp,
+    authReady: authReadyProp,
+  });
+  const { email, role, tenantName, authReady } = identity;
+
+  const queryClient = useQueryClient();
+  const dashboardQuery = useEditorialDashboardQuery(authReady && !emergencyMode);
+
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [theme, setThemeState] = useState<Theme>("dark");
-  const inFlightRef = useRef<AbortController | null>(null);
-  const lastFetchAtRef = useRef<number>(0);
 
   useEffect(() => {
     const stored = localStorage.getItem("anr-theme") as Theme | null;
@@ -90,70 +93,27 @@ export function AdminProvider({
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!authReady && !emergencyMode) return;
-    if (inFlightRef.current) {
-      traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_dedup_in_flight");
-      traceStability("RENDER_LOOP", "admin_provider_refresh_dedupe");
-      return;
-    }
+    tracePerf("QUERY", "dashboard_manual_refresh");
+    await dashboardQuery.refetch();
+  }, [dashboardQuery]);
 
-    const startedAt = Date.now();
-    lastFetchAtRef.current = startedAt;
-    const controller = new AbortController();
-    inFlightRef.current = controller;
-    traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_start");
-    traceStability("SESSION_REFRESH", "admin_dashboard_fetch_start");
-    setLoading(true);
-    try {
-      const res = await withTimeout(
-        fetch("/api/editorial/dashboard", {
-          cache: "no-store",
-          credentials: "include",
-          signal: controller.signal,
-        }),
-        { label: "WORKSPACE_LOAD", timeoutMs: 8_000 }
+  const actionMutation = useMutation({
+    mutationFn: async (input: {
+      action: string;
+      payload: Record<string, string | number | boolean | undefined>;
+    }) => {
+      const result = await apiClient.post<{ ok: boolean; message?: string; error?: string }>(
+        "/api/editorial/actions",
+        { action: input.action, ...input.payload },
+        { label: "editorial_action" }
       );
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        setError(json.error ?? "Failed to load dashboard");
-        return;
-      }
-      setData(json as EditorialDashboardSnapshot);
-      setError(null);
-    } catch (err) {
-      if (isTimeoutError(err)) {
-        setError(
-          "Dashboard load timed out. Editorial tools remain available in degraded mode."
-        );
-      } else if (err instanceof DOMException && err.name === "AbortError") {
-        traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_aborted");
-        traceStability("SESSION_REFRESH", "admin_dashboard_fetch_aborted");
-      } else {
-        setError("Network error");
-      }
-    } finally {
-      setLoading(false);
-      if (inFlightRef.current === controller) inFlightRef.current = null;
-      traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_done", {
-        ms: Date.now() - startedAt,
-      });
-      traceStability("SESSION_REFRESH", "admin_dashboard_fetch_done", {
-        ms: Date.now() - startedAt,
-      });
-    }
-  }, [authReady, emergencyMode]);
-
-  useEffect(() => {
-    if (emergencyMode) {
-      traceAdminEmergency("CLIENT_HYDRATION", "provider_emergency_skip_fetch");
-      setLoading(false);
-      return;
-    }
-    if (!authReady) return;
-    refresh();
-    const id = setInterval(refresh, POLL_MS);
-    return () => clearInterval(id);
-  }, [refresh, emergencyMode, authReady]);
+      if (!result.ok) throw new Error(result.error);
+      return result.data;
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.editorial.dashboard });
+    },
+  });
 
   const runAction = useCallback(
     async (
@@ -168,46 +128,61 @@ export function AdminProvider({
       const busyKey = `${action}-${payload.articleId ?? payload.sourceId ?? ""}`;
       setBusyId(busyKey);
 
-      if (options?.optimistic && data) {
-        setData(options.optimistic(data));
+      if (options?.optimistic && dashboardQuery.data) {
+        queryClient.setQueryData(
+          queryKeys.editorial.dashboard,
+          options.optimistic(dashboardQuery.data)
+        );
       }
 
       try {
-        const res = await fetch("/api/editorial/actions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ action, ...payload }),
-        });
-        const json = await res.json();
+        const json = await actionMutation.mutateAsync({ action, payload });
         if (!json.ok) {
-          setError(json.message ?? json.error ?? "Action failed");
           await refresh();
           return false;
         }
         setToast(json.message ?? "Saved");
-        setTimeout(() => setToast(null), 2400);
-        await refresh();
+        window.setTimeout(() => setToast(null), 2400);
         return true;
       } catch {
-        setError("Network error");
         await refresh();
         return false;
       } finally {
         setBusyId(null);
       }
     },
-    [data, refresh]
+    [actionMutation, dashboardQuery.data, queryClient, refresh]
   );
+
+  const error = useMemo(() => {
+    if (emergencyMode) return "Recovery mode: workspace data loads on demand.";
+    if (dashboardQuery.isError) {
+      const msg =
+        dashboardQuery.error instanceof Error
+          ? dashboardQuery.error.message
+          : "Failed to load dashboard";
+      if (msg === "timeout") {
+        return "Dashboard load timed out. Editorial tools remain available in degraded mode.";
+      }
+      return msg;
+    }
+    return null;
+  }, [emergencyMode, dashboardQuery.isError, dashboardQuery.error]);
+
+  useEffect(() => {
+    if (emergencyMode) {
+      traceAdminEmergency("CLIENT_HYDRATION", "provider_emergency_skip_fetch");
+    }
+  }, [emergencyMode]);
 
   const value = useMemo(
     () => ({
       email,
       role,
       tenantName,
-      data,
+      data: dashboardQuery.data ?? null,
       error,
-      loading,
+      loading: dashboardQuery.isFetching && !dashboardQuery.data,
       theme,
       setTheme,
       refresh,
@@ -219,9 +194,9 @@ export function AdminProvider({
       email,
       role,
       tenantName,
-      data,
+      dashboardQuery.data,
+      dashboardQuery.isFetching,
       error,
-      loading,
       theme,
       setTheme,
       refresh,
@@ -231,7 +206,5 @@ export function AdminProvider({
     ]
   );
 
-  return (
-    <AdminContext.Provider value={value}>{children}</AdminContext.Provider>
-  );
+  return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;
 }

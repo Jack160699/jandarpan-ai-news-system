@@ -3,7 +3,7 @@
 import { Loader2, Lock, MessageSquare, Send, Users } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCollaborationRoom } from "@/hooks/useCollaborationRoom";
-import { adminAuthController } from "@/lib/auth/auth-controller";
+import { useAdminSession } from "@/providers/AdminSessionProvider";
 import type { EditorLock, InlineComment } from "@/lib/collaboration/types";
 
 type CollaborationBarProps = {
@@ -31,20 +31,16 @@ export function CollaborationBar({
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lockTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const adminSession = useAdminSession();
+
   useEffect(() => {
-    let cancelled = false;
-    void adminAuthController.getSession().then((json) => {
-      if (cancelled || !json.ok || !json.user || !json.membership) return;
-      setSession({
-        userId: json.user.id,
-        email: json.user.email,
-        tenantId: json.membership.tenantId,
-      });
+    if (!adminSession.userId || !adminSession.tenantId) return;
+    setSession({
+      userId: adminSession.userId,
+      email: adminSession.email,
+      tenantId: adminSession.tenantId,
     });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [adminSession.userId, adminSession.email, adminSession.tenantId]);
 
   const { members, connected, broadcastDoc, setTyping } = useCollaborationRoom({
     tenantId: session?.tenantId ?? "",

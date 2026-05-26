@@ -35,6 +35,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
+import { useAdminSessionOptional } from "@/providers/AdminSessionProvider";
+import { resetAdminQueryClient } from "@/lib/query/query-client";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
 import { isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
@@ -77,11 +79,16 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
   const [now, setNow] = useState(() => new Date());
   const [search, setSearch] = useState("");
 
+  const adminSession = useAdminSessionOptional();
+
   async function signOut() {
     await fetch("/api/dashboard/auth/logout", {
       method: "POST",
       credentials: "include",
     });
+    adminSession?.invalidateSession();
+    adminSession?.clearStaleCookies();
+    resetAdminQueryClient();
     window.location.assign("/admin/login");
   }
   const visibleNav = useMemo(

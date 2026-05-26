@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { AdminProvider } from "@/components/admin-newsroom/AdminProvider";
 import { AdminRecoveryCard } from "@/components/admin-newsroom/AdminRecoveryCard";
-import { adminAuthController, type AdminSessionPayload } from "@/lib/auth/auth-controller";
-import {
-  ADMIN_EMERGENCY_MOCK,
-  isAdminEmergencyModeClient,
-} from "@/lib/admin/emergency-mode";
 import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { traceAdminBoot, traceAdminRecovery } from "@/lib/observability/admin-boot";
-import { traceStability } from "@/lib/observability/stability-trace";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
 import type { DashboardPermission } from "@/lib/saas-auth/types";
+import { useAdminSession } from "@/providers/AdminSessionProvider";
 
 type BootState =
   | "shell"
@@ -35,97 +30,51 @@ export function AdminAuthShell({
   superAdminOnly,
 }: AdminAuthShellProps) {
   const pathname = usePathname() ?? "/admin/editorial";
-  const [boot, setBoot] = useState<BootState>("shell");
-  const [session, setSession] = useState<AdminSessionPayload | null>(null);
+  const {
+    status,
+    authReady,
+    isDegraded,
+    email,
+    role,
+    tenantName,
+    session,
+    refreshSession,
+  } = useAdminSession();
 
-  useEffect(() => {
-    if (isAdminEmergencyModeClient()) {
-      setBoot("ready");
-      setSession({
-        ok: true,
-        user: { id: "emergency", email: ADMIN_EMERGENCY_MOCK.email },
-        membership: {
-          role: ADMIN_EMERGENCY_MOCK.role,
-          tenantName: ADMIN_EMERGENCY_MOCK.tenantName,
-          tenantSlug: "jan-darpan",
-          tenantId: "emergency",
-        },
-      });
-      return;
+  const boot = useMemo((): BootState => {
+    if (status === "loading") return "shell";
+    if (status === "error") return "error";
+    if (status === "degraded") return "degraded";
+    if (status === "guest") return "guest";
+
+    const membership = session?.membership;
+    if (!membership) return "guest";
+
+    if (!canAccessAdminRoute(membership.role, pathname)) {
+      traceAdminRecovery("forbidden_route", { pathname, role: membership.role });
+      return "forbidden";
+    }
+    if (permission && !roleHasPermission(membership.role, permission)) {
+      traceAdminRecovery("missing_permission", { permission });
+      return "forbidden";
+    }
+    if (superAdminOnly && !isSuperAdmin(membership.role)) {
+      traceAdminRecovery("super_admin_required");
+      return "forbidden";
     }
 
-    const controller = new AbortController();
-    traceAdminBoot("AUTH_INIT", "client_fetch_start", { pathname });
-    traceStability("SESSION_REFRESH", "admin_shell_boot", { pathname });
-
-    (async () => {
-      const json = await adminAuthController.getSession({ signal: controller.signal });
-
-      setSession(json);
-
-      if (!json.ok || !json.membership) {
-        traceAdminBoot("AUTH_INIT", "guest");
-        setBoot(json.error === "timeout" ? "degraded" : "guest");
-        return;
-      }
-
-      const role = json.membership.role;
-
-      if (!canAccessAdminRoute(role, pathname)) {
-        traceAdminRecovery("forbidden_route", { pathname, role });
-        setBoot("forbidden");
-        return;
-      }
-
-      if (permission && !roleHasPermission(role, permission)) {
-        traceAdminRecovery("missing_permission", { permission });
-        setBoot("forbidden");
-        return;
-      }
-
-      if (superAdminOnly && !isSuperAdmin(role)) {
-        traceAdminRecovery("super_admin_required");
-        setBoot("forbidden");
-        return;
-      }
-
-      traceAdminBoot("AUTH_INIT", "ready", {
-        role,
-        tenant: json.membership.tenantSlug,
-      });
-      setBoot("ready");
-    })().catch((err) => {
-      traceStability("AUTH_LOOP", "admin_shell_boot_error", {
-        message: err instanceof Error ? err.message : "unknown",
-      });
-      setBoot("error");
+    traceAdminBoot("AUTH_INIT", "ready", {
+      role: membership.role,
+      tenant: membership.tenantSlug,
     });
-
-    return () => controller.abort();
-  }, [pathname, permission, superAdminOnly]);
+    return "ready";
+  }, [status, session, pathname, permission, superAdminOnly]);
 
   useEffect(() => {
     if (boot !== "guest") return;
     const next = encodeURIComponent(pathname);
     window.location.replace(`/admin/login?next=${next}`);
   }, [boot, pathname]);
-
-  const identity = useMemo(() => {
-    if (session?.user && session.membership) {
-      return {
-        email: session.user.email,
-        role: session.membership.role,
-        tenantName: session.membership.tenantName,
-      };
-    }
-    return {
-      email: "…",
-      role: "editor",
-      tenantName: "Newsroom",
-    };
-  }, [session]);
-
-  const authReady = boot === "ready" || boot === "degraded";
 
   if (boot === "forbidden") {
     return (
@@ -151,16 +100,15 @@ export function AdminAuthShell({
   }
 
   return (
-    <AdminProvider
-      email={identity.email}
-      role={identity.role}
-      tenantName={identity.tenantName}
-      authReady={authReady}
-    >
-      {boot === "degraded" ? (
+    <AdminProvider email={email} role={role} tenantName={tenantName} authReady={authReady}>
+      {isDegraded ? (
         <div className="anr-emergency-banner" role="status">
-          <strong>Degraded mode.</strong> Auth verification timed out. Some data
-          may be stale — retry or sign in again.
+          <strong>Degraded mode.</strong> Auth verification timed out. Some data may be
+          stale —{" "}
+          <button type="button" className="anr-link-btn" onClick={() => void refreshSession()}>
+            retry session
+          </button>{" "}
+          or sign in again.
         </div>
       ) : null}
       {children}

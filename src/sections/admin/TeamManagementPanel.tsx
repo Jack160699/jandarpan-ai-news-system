@@ -27,6 +27,7 @@ import {
   type TeamMember,
 } from "@/lib/types/team";
 import { traceAdminBoot } from "@/lib/observability/admin-boot";
+import { useAdminTeamQuery } from "@/lib/query/hooks/use-admin-team";
 import { isTimeoutError, withTimeout } from "@/lib/utils/withTimeout";
 
 const PAGE_SIZE = 10;
@@ -75,6 +76,9 @@ type ConfirmState = {
 type ModalMode = "create" | "invite" | null;
 
 export function TeamManagementPanel() {
+  const teamQuery = useAdminTeamQuery(
+    process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE !== "1"
+  );
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [activity, setActivity] = useState<TeamActivity[]>([]);
   const [tenantName, setTenantName] = useState("Jan Darpan");
@@ -115,50 +119,48 @@ export function TeamManagementPanel() {
       return;
     }
     traceAdminBoot("TEAM_LOAD", "start");
-    try {
-      const res = await withTimeout(
-        fetch("/api/admin/team", {
-          cache: "no-store",
-          credentials: "include",
-        }),
-        { label: "TEAM_LOAD", timeoutMs: 8_000 }
-      );
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        const msg = String(json.error ?? "Failed to load team");
-        setError(msg);
-        setSchemaMismatch(isPostgrestSchemaError(msg));
-        return;
-      }
-      setTeam((json.team as TeamMember[]) ?? []);
-      setActivity((json.activity as TeamActivity[]) ?? []);
-      if (json.tenant?.name) setTenantName(json.tenant.name);
-      const recovering = Boolean(json.recovery);
-      setRecoveryMode(recovering);
-      if (recovering) {
-        setError(
-          String(json.error ?? "Team service is in recovery mode. Limited actions only.")
-        );
-        setSchemaMismatch(isPostgrestSchemaError(String(json.error ?? "")));
-      } else {
-        setError(null);
-        setSchemaMismatch(false);
-      }
-    } catch (err) {
-      if (isTimeoutError(err)) {
-        setRecoveryMode(true);
-        setError("Team load timed out. Recovery mode — retry or use other admin sections.");
-      } else {
-        setError("Network error");
-      }
-    } finally {
+    setLoading(true);
+    const result = await teamQuery.refetch();
+    const json = result.data;
+    if (!json?.ok) {
+      const msg = String(json?.error ?? "Failed to load team");
+      setError(msg);
+      setSchemaMismatch(isPostgrestSchemaError(msg));
       setLoading(false);
+      return;
     }
-  }, []);
+    setTeam((json.team as TeamMember[]) ?? []);
+    setActivity((json.activity as TeamActivity[]) ?? []);
+    const tenant = (json as { tenant?: { name?: string } }).tenant;
+    if (tenant?.name) setTenantName(tenant.name);
+    else if (json.tenantName) setTenantName(json.tenantName);
+    setRecoveryMode(Boolean((json as { recovery?: boolean }).recovery));
+    setError(null);
+    setSchemaMismatch(false);
+    setLoading(false);
+  }, [teamQuery]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    const json = teamQuery.data;
+    if (!json?.ok) return;
+    setTeam((json.team as TeamMember[]) ?? []);
+    setActivity((json.activity as TeamActivity[]) ?? []);
+    if (json.tenantName) setTenantName(json.tenantName);
+    setLoading(false);
+    setError(null);
+  }, [teamQuery.data]);
+
+  useEffect(() => {
+    if (teamQuery.isError) {
+      setRecoveryMode(true);
+      setError("Team load failed. Retry to refresh.");
+      setLoading(false);
+    }
+  }, [teamQuery.isError]);
+
+  useEffect(() => {
+    if (teamQuery.isLoading) setLoading(true);
+  }, [teamQuery.isLoading]);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {

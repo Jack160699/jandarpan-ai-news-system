@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createBrowserClient } from "@/lib/supabase/client";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { colorForUser } from "@/lib/collaboration/presence-colors";
 import { hashContent, mergeBroadcastHtml } from "@/lib/collaboration/ot-lite";
 import type {
@@ -10,10 +8,8 @@ import type {
   PresenceMember,
 } from "@/lib/collaboration/types";
 import { buildCollabChannelName } from "@/lib/security/realtime-guard";
-import { traceStability } from "@/lib/observability/stability-trace";
+import { realtimeManager } from "@/lib/realtime/realtime-manager";
 import type { RealtimeChannel } from "@supabase/supabase-js";
-
-const RECONNECT_LOG_INTERVAL_MS = 15_000;
 
 type UseCollaborationRoomOptions = {
   tenantId: string;
@@ -39,7 +35,6 @@ export function useCollaborationRoom({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const localVersionRef = useRef(0);
   const onRemoteDocRef = useRef(onRemoteDoc);
-  const lastReconnectLogRef = useRef(0);
 
   useEffect(() => {
     onRemoteDocRef.current = onRemoteDoc;
@@ -65,96 +60,90 @@ export function useCollaborationRoom({
   );
 
   useEffect(() => {
-    if (!enabled || !isSupabaseConfigured() || !roomId || !tenantId) return;
+    if (!enabled || !roomId || !tenantId) return;
 
-    const supabase = createBrowserClient();
     const channelName = buildCollabChannelName({ tenantId, roomType, roomId });
 
-    const channel = supabase.channel(channelName, {
-      config: { broadcast: { self: false }, presence: { key: userId } },
-    });
+    const teardown = realtimeManager.subscribe(
+      channelName,
+      (channel) => {
+        const ch = channel as RealtimeChannel;
+        channelRef.current = ch;
 
-    channel
-      .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState<{
-          email?: string;
-          status?: string;
-          typing?: boolean;
-        }>();
-        const list: PresenceMember[] = [];
-        for (const key of Object.keys(state)) {
-          const entries = state[key];
-          const row = entries?.[0];
-          if (!row) continue;
-          list.push({
-            userId: key,
-            email: row.email ?? key,
-            displayName: (row.email ?? key).split("@")[0],
-            status: (row.status as PresenceMember["status"]) ?? "viewing",
-            typing: Boolean(row.typing),
-            color: colorForUser(key),
-            lastSeen: Date.now(),
-          });
-        }
-        setMembers(list);
-      })
-      .on("broadcast", { event: "doc" }, ({ payload }) => {
-        const p = payload as DocBroadcastPayload;
-        if (!p || p.userId === userId) return;
-        const merged = mergeBroadcastHtml({
-          localHtml: "",
-          localVersion: localVersionRef.current,
-          remoteHtml: p.html,
-          remoteVersion: p.version,
-          remoteUserId: p.userId,
-          localUserId: userId,
-        });
-        localVersionRef.current = merged.version;
-        onRemoteDocRef.current?.(merged.html, merged.version);
-      })
-      .on("broadcast", { event: "typing" }, ({ payload }) => {
-        const p = payload as { userId: string; typing: boolean };
-        if (!p || p.userId === userId) return;
-        setMembers((prev) =>
-          prev.map((m) =>
-            m.userId === p.userId ? { ...m, typing: p.typing, lastSeen: Date.now() } : m
-          )
-        );
-      })
-      .subscribe(async (status) => {
-        setConnected(status === "SUBSCRIBED");
-        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-          const now = Date.now();
-          if (now - lastReconnectLogRef.current >= RECONNECT_LOG_INTERVAL_MS) {
-            lastReconnectLogRef.current = now;
-            traceStability("SUBSCRIPTION_RECONNECT", "collab_room_channel", {
-              status,
-              roomId,
+        return ch
+          .on("presence", { event: "sync" }, () => {
+            const state = ch.presenceState<{
+              email?: string;
+              status?: string;
+              typing?: boolean;
+            }>();
+            const list: PresenceMember[] = [];
+            for (const key of Object.keys(state)) {
+              const entries = state[key];
+              const row = entries?.[0];
+              if (!row) continue;
+              list.push({
+                userId: key,
+                email: row.email ?? key,
+                displayName: (row.email ?? key).split("@")[0],
+                status: (row.status as PresenceMember["status"]) ?? "viewing",
+                typing: Boolean(row.typing),
+                color: colorForUser(key),
+                lastSeen: Date.now(),
+              });
+            }
+            setMembers(list);
+          })
+          .on("broadcast", { event: "doc" }, ({ payload }) => {
+            const p = payload as DocBroadcastPayload;
+            if (!p || p.userId === userId) return;
+            const merged = mergeBroadcastHtml({
+              localHtml: "",
+              localVersion: localVersionRef.current,
+              remoteHtml: p.html,
+              remoteVersion: p.version,
+              remoteUserId: p.userId,
+              localUserId: userId,
             });
-          }
-        }
-        if (status === "SUBSCRIBED") {
-          await channel.track({
-            email,
-            status: "viewing",
-            typing: false,
-          });
-        }
-      });
+            localVersionRef.current = merged.version;
+            onRemoteDocRef.current?.(merged.html, merged.version);
+          })
+          .on("broadcast", { event: "typing" }, ({ payload }) => {
+            const p = payload as { userId: string; typing: boolean };
+            if (!p || p.userId === userId) return;
+            setMembers((prev) =>
+              prev.map((m) =>
+                m.userId === p.userId
+                  ? { ...m, typing: p.typing, lastSeen: Date.now() }
+                  : m
+              )
+            );
+          })
+          .subscribe(async (status) => {
+            setConnected(status === "SUBSCRIBED");
+            if (status === "SUBSCRIBED") {
+              await ch.track({
+                email,
+                status: "viewing",
+                typing: false,
+              });
+            }
+          }) as RealtimeChannel;
+      },
+      { namespace: "admin-collab" }
+    );
 
-    channelRef.current = channel;
-
-    const prune = setInterval(() => {
+    const prune = window.setInterval(() => {
       const cutoff = Date.now() - 45_000;
       setMembers((prev) => prev.filter((m) => m.lastSeen >= cutoff));
     }, 15_000);
 
     return () => {
-      clearInterval(prune);
-      void supabase.removeChannel(channel);
+      window.clearInterval(prune);
       channelRef.current = null;
+      teardown();
     };
-  }, [tenantId, roomId, roomType, userId, email, enabled, upsertSelf]);
+  }, [tenantId, roomId, roomType, userId, email, enabled]);
 
   const broadcastDoc = useCallback(
     (html: string, typing = false) => {
