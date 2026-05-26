@@ -34,22 +34,42 @@ export async function GET(request: Request) {
   if (!guard.ok) return guard.response;
 
   const tenantId = guard.session.membership.tenantId;
-  const [team, activity] = await Promise.all([
-    listTenantTeamMembers(tenantId),
-    listTeamActivity(tenantId),
-  ]);
 
-  return NextResponse.json({
-    ok: true,
-    team,
-    activity,
-    permissions: rolePermissionsMatrix(),
-    tenant: {
-      id: tenantId,
-      slug: guard.session.membership.tenantSlug,
-      name: guard.session.membership.tenantName,
-    },
-  });
+  try {
+    const [team, activity] = await Promise.all([
+      listTenantTeamMembers(tenantId),
+      listTeamActivity(tenantId),
+    ]);
+
+    return NextResponse.json({
+      ok: true,
+      team,
+      activity,
+      recovery: false,
+      permissions: rolePermissionsMatrix(),
+      tenant: {
+        id: tenantId,
+        slug: guard.session.membership.tenantSlug,
+        name: guard.session.membership.tenantName,
+      },
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "team_service_unavailable";
+    return NextResponse.json({
+      ok: true,
+      recovery: true,
+      team: [],
+      activity: [],
+      error: formatTeamApiError(message),
+      permissions: rolePermissionsMatrix(),
+      tenant: {
+        id: tenantId,
+        slug: guard.session.membership.tenantSlug,
+        name: guard.session.membership.tenantName,
+      },
+    });
+  }
 }
 
 export async function POST(request: Request) {

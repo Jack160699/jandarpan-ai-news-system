@@ -11,6 +11,26 @@ import {
   getGeneratedArticleSlugs,
 } from "@/lib/newsroom/generated/read";
 
+const SITEMAP_QUERY_TIMEOUT_MS = 8_000;
+
+async function withQueryTimeout<T>(
+  promise: Promise<T>,
+  fallback: T,
+  timeoutMs = SITEMAP_QUERY_TIMEOUT_MS
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
@@ -44,7 +64,10 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
 
   let storyRoutes: MetadataRoute.Sitemap = [];
   try {
-    const pool = await fetchGeneratedArticlePool(800);
+    const pool = await withQueryTimeout(
+      fetchGeneratedArticlePool(800),
+      [] as Awaited<ReturnType<typeof fetchGeneratedArticlePool>>
+    );
     storyRoutes = pool.map((row) => ({
       url: `${SITE_URL}/story/${encodeURIComponent(row.slug)}`,
       lastModified: row.published_at
@@ -55,7 +78,7 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
     }));
   } catch {
     try {
-      const slugs = await getGeneratedArticleSlugs(400);
+      const slugs = await withQueryTimeout(getGeneratedArticleSlugs(400), []);
       storyRoutes = slugs.map((slug) => ({
         url: `${SITE_URL}/story/${encodeURIComponent(slug)}`,
         lastModified: now,
@@ -69,7 +92,7 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
 
   let liveRoutes: MetadataRoute.Sitemap = [];
   try {
-    const liveSlugs = await getLiveCoverageSlugs(100);
+    const liveSlugs = await withQueryTimeout(getLiveCoverageSlugs(100), []);
     liveRoutes = liveSlugs.map((slug) => ({
       url: `${SITE_URL}/live/${encodeURIComponent(slug)}`,
       lastModified: now,

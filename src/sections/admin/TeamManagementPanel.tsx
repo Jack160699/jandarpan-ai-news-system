@@ -79,6 +79,7 @@ export function TeamManagementPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [schemaMismatch, setSchemaMismatch] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [tab, setTab] = useState<"members" | "activity">("members");
   const [search, setSearch] = useState("");
@@ -120,8 +121,17 @@ export function TeamManagementPanel() {
       setTeam((json.team as TeamMember[]) ?? []);
       setActivity((json.activity as TeamActivity[]) ?? []);
       if (json.tenant?.name) setTenantName(json.tenant.name);
-      setError(null);
-      setSchemaMismatch(false);
+      const recovering = Boolean(json.recovery);
+      setRecoveryMode(recovering);
+      if (recovering) {
+        setError(
+          String(json.error ?? "Team service is in recovery mode. Limited actions only.")
+        );
+        setSchemaMismatch(isPostgrestSchemaError(String(json.error ?? "")));
+      } else {
+        setError(null);
+        setSchemaMismatch(false);
+      }
     } catch {
       setError("Network error");
     } finally {
@@ -302,7 +312,7 @@ export function TeamManagementPanel() {
     );
   }
 
-  if (error && team.length === 0) {
+  if (error && team.length === 0 && !recoveryMode) {
     return (
       <EmptyState
         title="Team unavailable"
@@ -338,6 +348,24 @@ export function TeamManagementPanel() {
 
   return (
     <div className="anr-team anr-team--premium">
+      {recoveryMode ? (
+        <div className="anr-team__recovery" role="status">
+          <p>
+            <strong>Recovery mode.</strong> {error ?? "Team data is temporarily unavailable."}{" "}
+            You can still use other admin sections.
+          </p>
+          <button
+            type="button"
+            className="anr-btn anr-btn--ghost"
+            onClick={() => {
+              setLoading(true);
+              void refresh();
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
       <header className="anr-team__hero">
         <div>
           <p className="anr-team__eyebrow">{tenantName} · Tenant workspace</p>

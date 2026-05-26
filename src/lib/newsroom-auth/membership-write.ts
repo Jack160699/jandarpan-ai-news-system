@@ -4,6 +4,7 @@
 
 import type { PostgrestError } from "@supabase/supabase-js";
 import { createAdminServerClient } from "@/lib/supabase";
+import { safeQuery } from "@/lib/supabase/safe-query";
 import {
   TENANT_MEMBERSHIP_LIST_SELECT,
   TENANT_MEMBERSHIP_LIST_SELECT_LEGACY,
@@ -74,25 +75,46 @@ export async function queryTenantMembershipList(
 ): Promise<{ data: TenantMembershipDbRow[]; error: PostgrestError | null }> {
   const supabase = createAdminServerClient();
 
-  let result = await supabase
-    .from("tenant_memberships")
-    .select(TENANT_MEMBERSHIP_LIST_SELECT)
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false });
+  const result = await safeQuery<TenantMembershipDbRow[]>(
+    async () => {
+      const r = await supabase
+        .from("tenant_memberships")
+        .select(TENANT_MEMBERSHIP_LIST_SELECT)
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false });
+      return {
+        data: (r.data ?? []) as unknown as TenantMembershipDbRow[],
+        error: r.error,
+      };
+    },
+    {
+      label: "tenant_memberships.list",
+      onSchemaMismatch: async () => {
+        const legacy = await supabase
+          .from("tenant_memberships")
+          .select(TENANT_MEMBERSHIP_LIST_SELECT_LEGACY)
+          .eq("tenant_id", tenantId)
+          .order("created_at", { ascending: false });
+        return {
+          data: (legacy.data ?? []) as unknown as TenantMembershipDbRow[],
+          error: legacy.error,
+        };
+      },
+    }
+  );
 
-  if (
-    result.error &&
-    isPostgrestSchemaError(result.error.message)
-  ) {
-    result = await supabase
-      .from("tenant_memberships")
-      .select(TENANT_MEMBERSHIP_LIST_SELECT_LEGACY)
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
+  if (!result.ok) {
+    return {
+      data: [],
+      error: {
+        message: result.error.message,
+        code: result.error.code,
+        details: "",
+        hint: "",
+        name: "PostgrestError",
+      } as PostgrestError,
+    };
   }
 
-  return {
-    data: (result.data ?? []) as unknown as TenantMembershipDbRow[],
-    error: result.error,
-  };
+  return { data: result.data ?? [], error: null };
 }

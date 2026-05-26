@@ -8,6 +8,7 @@ import { createUserAuthClient } from "@/lib/supabase/auth";
 import { getDefaultTenant, getTenantBySlug } from "@/lib/tenant/registry";
 import { bootstrapNewsroomAuth } from "@/lib/newsroom-auth/bootstrap";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
+import { TENANT_MEMBERSHIP_SESSION_SELECT } from "@/lib/supabase/tenant-membership-columns";
 import type { DashboardSession, TenantMembership } from "@/lib/saas-auth/types";
 import {
   ROLE_COOKIE,
@@ -19,8 +20,9 @@ import {
   touchSecuritySession,
 } from "@/lib/security/session-store";
 
-export const ACCESS_COOKIE = "nr-dashboard-access";
-export const REFRESH_COOKIE = "nr-dashboard-refresh";
+import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/saas-auth/cookies";
+
+export { ACCESS_COOKIE, REFRESH_COOKIE };
 
 const DEV_USER_ID = "00000000-0000-4000-8000-00000000d001";
 
@@ -38,13 +40,31 @@ async function loadMembership(
 ): Promise<TenantMembership | null> {
   const supabase = createAdminServerClient();
 
-  const { data: memberships, error } = await supabase
-    .from("tenant_memberships")
-    .select("id, tenant_id, user_id, email, role, status")
-    .eq("user_id", userId)
-    .eq("status", "active");
+  let memberships:
+    | {
+        id: string;
+        tenant_id: string;
+        user_id: string;
+        email: string | null;
+        role: string;
+        status: string;
+      }[]
+    | null = null;
 
-  if (error || !memberships?.length) return null;
+  try {
+    const { data, error } = await supabase
+      .from("tenant_memberships")
+      .select(TENANT_MEMBERSHIP_SESSION_SELECT)
+      .eq("user_id", userId)
+      .eq("status", "active");
+
+    if (error) return null;
+    memberships = data as typeof memberships;
+  } catch {
+    return null;
+  }
+
+  if (!memberships?.length) return null;
 
   let fallback: TenantMembership | null = null;
 

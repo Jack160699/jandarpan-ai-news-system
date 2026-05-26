@@ -12,7 +12,7 @@ import {
   getTenantBySlug,
 } from "@/lib/tenant/registry";
 import { TENANT_COOKIE, TENANT_HEADER } from "@/lib/tenant/resolve";
-import { ACCESS_COOKIE } from "@/lib/saas-auth/session";
+import { ACCESS_COOKIE } from "@/lib/saas-auth/cookies";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import {
@@ -136,13 +136,19 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  const loginError = request.nextUrl.searchParams.get("error");
+  const recoveryMode =
+    request.nextUrl.searchParams.get("recovery") === "1" ||
+    loginError === "forbidden" ||
+    loginError === "session_timeout";
+
   if (
     pathname === "/admin/login" &&
     hasAuth &&
-    request.nextUrl.searchParams.get("error") !== "forbidden"
+    !recoveryMode
   ) {
     const dest = request.nextUrl.searchParams.get("next") ?? "/admin/editorial";
-    return NextResponse.redirect(new URL(dest, request.url));
+    return applySecurityHeaders(NextResponse.redirect(new URL(dest, request.url)));
   }
 
   if (isProtectedPrefix(pathname, DASHBOARD_PREFIX, DASHBOARD_PUBLIC) && !hasAuth) {
@@ -157,12 +163,21 @@ export async function middleware(request: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(login));
   }
 
-  if (hasAuth && role) {
+  if (hasAuth && role && !recoveryMode) {
     const rbac = checkPathRbac(pathname, role);
     if (!rbac.allowed && rbac.redirectTo) {
-      return applySecurityHeaders(
-        NextResponse.redirect(new URL(rbac.redirectTo, request.url))
-      );
+      const redirectUrl = new URL(rbac.redirectTo, request.url);
+      if (
+        redirectUrl.pathname === "/admin/login" &&
+        pathname.startsWith(ADMIN_PREFIX) &&
+        pathname !== "/admin/login"
+      ) {
+        redirectUrl.searchParams.set("next", pathname);
+      }
+      if (redirectUrl.pathname === pathname) {
+        return response;
+      }
+      return applySecurityHeaders(NextResponse.redirect(redirectUrl));
     }
   }
 

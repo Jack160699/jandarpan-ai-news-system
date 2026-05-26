@@ -8,9 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const guard = await requireSuperAdminSession(request);
-  if (!guard.ok) {
-    return NextResponse.json({ error: guard.error }, { status: guard.status });
-  }
+  if (!guard.ok) return guard.response;
 
   const report = await runSchemaHealthChecks();
   return NextResponse.json(report);
@@ -18,9 +16,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const guard = await requireSuperAdminSession(request);
-  if (!guard.ok) {
-    return NextResponse.json({ error: guard.error }, { status: guard.status });
-  }
+  if (!guard.ok) return guard.response;
 
   const reload = await reloadPostgrestSchema();
   const report = await runSchemaHealthChecks();

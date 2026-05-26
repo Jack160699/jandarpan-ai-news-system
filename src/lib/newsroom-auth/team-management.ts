@@ -78,7 +78,7 @@ export async function listTenantTeamMembers(
 
   if (error) {
     console.error("[team] list failed:", error.message);
-    return [];
+    throw new Error(error.message);
   }
 
   const members = data.map(mapRow);
