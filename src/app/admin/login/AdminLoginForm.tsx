@@ -38,7 +38,9 @@ export function AdminLoginForm() {
     errorParam ? friendlyError(errorParam) : null
   );
   const [busy, setBusy] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
+  const emergencyClient =
+    process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE !== "0";
+  const [checkingSession, setCheckingSession] = useState(!emergencyClient);
 
   useEffect(() => {
     try {
@@ -53,12 +55,14 @@ export function AdminLoginForm() {
   }, []);
 
   useEffect(() => {
+    if (emergencyClient) return;
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/dashboard/auth/session", {
           credentials: "include",
           cache: "no-store",
+          signal: AbortSignal.timeout(5_000),
         });
         if (!cancelled && res.ok) {
           const json = await res.json();

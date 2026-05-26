@@ -1,7 +1,13 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminProvider } from "@/components/admin-newsroom/AdminProvider";
+import { AdminEmergencyBanner } from "@/components/admin-newsroom/AdminEmergencyBanner";
 import { AdminRecoveryCard } from "@/components/admin-newsroom/AdminRecoveryCard";
+import {
+  ADMIN_EMERGENCY_MOCK,
+  isAdminEmergencyMode,
+  traceAdminEmergency,
+} from "@/lib/admin/emergency-mode";
 import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { traceAdminBoot, traceAdminRecovery } from "@/lib/observability/admin-boot";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
@@ -19,6 +25,21 @@ export async function AdminPageGate({
   permission,
   superAdminOnly,
 }: AdminPageGateProps) {
+  if (isAdminEmergencyMode()) {
+    traceAdminEmergency("ADMIN_ROUTE", "emergency_bypass");
+    return (
+      <AdminProvider
+        email={ADMIN_EMERGENCY_MOCK.email}
+        role={ADMIN_EMERGENCY_MOCK.role}
+        tenantName={ADMIN_EMERGENCY_MOCK.tenantName}
+        emergencyMode
+      >
+        <AdminEmergencyBanner />
+        {children}
+      </AdminProvider>
+    );
+  }
+
   traceAdminBoot("ADMIN_BOOT", "page_gate_start");
 
   const headersList = await headers();
@@ -53,7 +74,10 @@ export async function AdminPageGate({
   }
 
   if (!canAccessAdminRoute(session.membership.role, pathname)) {
-    traceAdminRecovery("forbidden_route", { pathname, role: session.membership.role });
+    traceAdminRecovery("forbidden_route", {
+      pathname,
+      role: session.membership.role,
+    });
     return (
       <AdminRecoveryCard
         title="Access restricted"

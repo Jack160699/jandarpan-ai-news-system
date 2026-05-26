@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import type { EditorialDashboardSnapshot } from "@/lib/editorial-dashboard/types";
+import { traceAdminEmergency } from "@/lib/admin/emergency-mode";
 import { traceAdminBoot } from "@/lib/observability/admin-boot";
 import { isTimeoutError, withTimeout } from "@/lib/utils/withTimeout";
 
@@ -49,6 +50,8 @@ type AdminProviderProps = {
   email?: string;
   role?: string;
   tenantName?: string;
+  /** Skip dashboard preload — emergency recovery */
+  emergencyMode?: boolean;
 };
 
 export function AdminProvider({
@@ -56,10 +59,15 @@ export function AdminProvider({
   email = "",
   role = "",
   tenantName = "",
+  emergencyMode = false,
 }: AdminProviderProps) {
   const [data, setData] = useState<EditorialDashboardSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(
+    emergencyMode
+      ? "Recovery mode: workspace data loads on demand."
+      : null
+  );
+  const [loading, setLoading] = useState(!emergencyMode);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [theme, setThemeState] = useState<Theme>("dark");
@@ -105,10 +113,15 @@ export function AdminProvider({
   }, []);
 
   useEffect(() => {
+    if (emergencyMode) {
+      traceAdminEmergency("CLIENT_HYDRATION", "provider_emergency_skip_fetch");
+      setLoading(false);
+      return;
+    }
     refresh();
     const id = setInterval(refresh, POLL_MS);
     return () => clearInterval(id);
-  }, [refresh]);
+  }, [refresh, emergencyMode]);
 
   const runAction = useCallback(
     async (

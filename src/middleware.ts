@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
+  isAdminEmergencyMode,
+  isAdminEmergencyPath,
+  traceAdminEmergency,
+} from "@/lib/admin/emergency-mode";
+import {
   isDebugPath,
   isProductionDeployment,
   isProductionExemptPath,
@@ -54,6 +59,21 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
 }
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // ─── EMERGENCY: admin routes pass through instantly (no auth / Supabase) ───
+  if (isAdminEmergencyMode() && isAdminEmergencyPath(pathname)) {
+    traceAdminEmergency("MIDDLEWARE_BYPASS", pathname);
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
+    requestHeaders.set("x-admin-emergency", "1");
+    const response = NextResponse.next({
+      request: { headers: requestHeaders },
+    });
+    response.headers.set("x-admin-emergency", "1");
+    return applySecurityHeaders(response);
+  }
+
   const host =
     request.headers.get("x-forwarded-host") ??
     request.headers.get("host") ??
@@ -70,7 +90,7 @@ export async function middleware(request: NextRequest) {
   if (tenant) {
     requestHeaders.set(TENANT_HEADER, tenant.slug);
   }
-  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  requestHeaders.set("x-pathname", pathname);
 
   let response = NextResponse.next({
     request: { headers: requestHeaders },
@@ -94,8 +114,6 @@ export async function middleware(request: NextRequest) {
     response = session.response;
     authUser = session.user;
   }
-
-  const { pathname } = request.nextUrl;
 
   if (isProductionDeployment() && !isProductionExemptPath(pathname)) {
     if (isDebugPath(pathname) || isSensitiveDevApiPath(pathname)) {
@@ -142,13 +160,11 @@ export async function middleware(request: NextRequest) {
     loginError === "forbidden" ||
     loginError === "session_timeout";
 
-  if (
-    pathname === "/admin/login" &&
-    hasAuth &&
-    !recoveryMode
-  ) {
+  if (pathname === "/admin/login" && hasAuth && !recoveryMode) {
     const dest = request.nextUrl.searchParams.get("next") ?? "/admin/editorial";
-    return applySecurityHeaders(NextResponse.redirect(new URL(dest, request.url)));
+    return applySecurityHeaders(
+      NextResponse.redirect(new URL(dest, request.url))
+    );
   }
 
   if (isProtectedPrefix(pathname, DASHBOARD_PREFIX, DASHBOARD_PUBLIC) && !hasAuth) {

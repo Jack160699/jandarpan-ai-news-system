@@ -3141,3 +3141,35 @@
   margin: 0;
   font-size: 0.9rem;
 }
+
+.anr-emergency-banner {
+  margin: 0 0 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #c9a227;
+  background: rgba(201, 162, 39, 0.12);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.anr-emergency-banner__link {
+  margin-left: 0.5rem;
+  text-decoration: underline;
+}
+
+.anr-root--emergency {
+  min-height: 100dvh;
+}
+
+.anr-login--emergency .anr-login__emergency-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.anr-login__error {
+  color: #fca5a5;
+  font-size: 0.875rem;
+  margin: 0 0 0.5rem;
+}

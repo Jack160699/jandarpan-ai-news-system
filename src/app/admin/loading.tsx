@@ -1,8 +1,10 @@
-/**
- * Route-level loading UI (replaces stuck client Suspense fallback).
- * Server gate resolves within 8s or shows recovery card.
- */
+import { isAdminEmergencyMode } from "@/lib/admin/emergency-mode";
+
 export default function AdminRouteLoading() {
+  if (isAdminEmergencyMode()) {
+    return null;
+  }
+
   return (
     <div className="admin-safe-guard admin-safe-guard--loading" aria-busy>
       <div className="admin-safe-guard__card">
