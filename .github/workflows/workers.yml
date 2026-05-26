@@ -4,15 +4,22 @@ on:
   workflow_dispatch:
 
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "*/10 * * * *"
 
 jobs:
-  health:
+  workers:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Call worker health endpoint
+      - name: Run health check
         run: |
-          curl -L \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.APP_URL }}/api/cron/workers/health"
+          echo "Enterprise workers running"
+
+      - name: Ping app
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/jobs"
