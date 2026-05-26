@@ -15,7 +15,8 @@ export type AutosaveResult =
 export async function persistArticleDraft(
   articleId: string,
   body: Record<string, unknown>,
-  reason: AutosaveReason
+  reason: AutosaveReason,
+  signal?: AbortSignal
 ): Promise<AutosaveResult> {
   const payload = {
     ...body,
@@ -33,10 +34,14 @@ export async function persistArticleDraft(
   const result = await apiClient.patch<{ ok?: boolean; versions?: unknown }>(
     `/api/editorial/article/${articleId}`,
     payload,
-    { label: "editor_autosave", timeoutMs: 10_000 }
+    { label: "editor_autosave", timeoutMs: 10_000, signal }
   );
 
   if (!result.ok) {
+    // When we cancel in-flight autosaves (unmount / overlap), apiClient can report as timeout.
+    if (signal?.aborted) {
+      return { ok: false, error: "aborted" };
+    }
     tracePerf("EDITOR", "autosave_failed", { status: result.status });
     writeLocalDraft({
       articleId,

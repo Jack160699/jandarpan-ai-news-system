@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
@@ -18,6 +18,7 @@ import {
   VideoEmbed,
   youtubeEmbedUrl,
 } from "@/lib/editorial-editor/extensions";
+import { traceEditorLifecycle } from "@/lib/observability/editor-lifecycle-trace";
 
 export type NewsroomTipTapEditorProps = {
   initialHtml: string;
@@ -28,10 +29,29 @@ export type NewsroomTipTapEditorProps = {
   editable?: boolean;
 };
 
-async function uploadImageFile(file: File): Promise<string | null> {
+async function uploadImageFile(
+  file: File,
+  signal?: AbortSignal
+): Promise<string | null> {
   if (!file.type.startsWith("image/")) return null;
   return new Promise((resolve) => {
     const reader = new FileReader();
+    const onAbort = () => {
+      try {
+        reader.abort();
+      } catch {
+        // ignore
+      }
+      resolve(null);
+    };
+
+    if (signal) {
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = () => resolve(null);
     reader.readAsDataURL(file);
@@ -46,8 +66,38 @@ export function NewsroomTipTapEditor({
   onMarkdownChange,
   editable = true,
 }: NewsroomTipTapEditorProps) {
-  const editor = useEditor({
-    extensions: [
+  const isMountedRef = useRef(true);
+  const onHtmlChangeRef = useRef(onHtmlChange);
+  useEffect(() => {
+    onHtmlChangeRef.current = onHtmlChange;
+  }, [onHtmlChange]);
+
+  // Throttle editor observer updates (large HTML strings) for mobile stability.
+  const pendingHtmlRef = useRef<string | null>(null);
+  const rafScheduledRef = useRef<number | null>(null);
+
+  const activeUploadControllersRef = useRef<Set<AbortController>>(
+    new Set()
+  );
+
+  const cancelAllUploads = useCallback(() => {
+    const controllers = activeUploadControllersRef.current;
+    if (controllers.size === 0) return;
+    traceEditorLifecycle("UPLOAD_ABORT", "abort_all_active_uploads", {
+      count: controllers.size,
+    });
+    for (const c of controllers) {
+      try {
+        c.abort();
+      } catch {
+        // ignore
+      }
+    }
+    controllers.clear();
+  }, []);
+
+  const extensions = useMemo(
+    () => [
       StarterKit.configure({ codeBlock: false }),
       CodeBlock.configure({ HTMLAttributes: { class: "jd-code-block" } }),
       Underline,
@@ -62,11 +112,23 @@ export function NewsroomTipTapEditor({
       TableCell,
       VideoEmbed,
     ],
+    []
+  );
+
+  const editor = useEditor({
+    extensions,
     content: initialHtml || "<p></p>",
     editable: editable && !markdownMode,
     immediatelyRender: false,
     onUpdate: ({ editor: ed }) => {
-      onHtmlChange(ed.getHTML());
+      pendingHtmlRef.current = ed.getHTML();
+      if (rafScheduledRef.current != null) return;
+      rafScheduledRef.current = window.requestAnimationFrame(() => {
+        rafScheduledRef.current = null;
+        const html = pendingHtmlRef.current;
+        if (!isMountedRef.current) return;
+        if (html != null) onHtmlChangeRef.current(html);
+      });
     },
     editorProps: {
       attributes: {
@@ -78,7 +140,10 @@ export function NewsroomTipTapEditor({
         const file = files[0];
         if (!file.type.startsWith("image/")) return false;
         event.preventDefault();
-        void uploadImageFile(file).then((src) => {
+        const controller = new AbortController();
+        activeUploadControllersRef.current.add(controller);
+        void uploadImageFile(file, controller.signal).then((src) => {
+          activeUploadControllersRef.current.delete(controller);
           if (src) {
             const { schema } = view.state;
             const node = schema.nodes.image?.create({ src, width: "100%" });
@@ -99,6 +164,29 @@ export function NewsroomTipTapEditor({
   });
 
   useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      traceEditorLifecycle("EDITOR_UNMOUNT", "tiptap_editor_unmounted");
+      cancelAllUploads();
+      if (rafScheduledRef.current != null) {
+        try {
+          window.cancelAnimationFrame(rafScheduledRef.current);
+        } catch {
+          // ignore
+        }
+      }
+      rafScheduledRef.current = null;
+      pendingHtmlRef.current = null;
+      traceEditorLifecycle("EDITOR_DESTROY", "tiptap_editor_destroy_call");
+      try {
+        editor?.destroy();
+      } catch {
+        // ignore
+      }
+    };
+  }, [editor, cancelAllUploads]);
+
+  useEffect(() => {
     if (!editor) return;
     editor.setEditable(editable && !markdownMode);
   }, [editor, editable, markdownMode]);
@@ -110,7 +198,10 @@ export function NewsroomTipTapEditor({
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
-      void uploadImageFile(file).then((src) => {
+      const controller = new AbortController();
+      activeUploadControllersRef.current.add(controller);
+      void uploadImageFile(file, controller.signal).then((src) => {
+        activeUploadControllersRef.current.delete(controller);
         if (src) editor?.chain().focus().setImage({ src, width: "100%" }).run();
       });
     };

@@ -32,6 +32,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
+import { traceEditorBoot } from "@/lib/observability/editor-boot-trace";
+import { traceEditorLifecycle } from "@/lib/observability/editor-lifecycle-trace";
 import { traceStability } from "@/lib/observability/stability-trace";
 
 type ArticleEditorWorkstationProps = {
@@ -89,6 +91,9 @@ function seoScore(input: {
 export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstationProps) {
   const [article, setArticle] = useState<EditorArticle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [timedOut, setTimedOut] = useState(false);
+  const [bootAttempt, setBootAttempt] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [activeTab, setActiveTab] = useState("compose");
   const [previewTab, setPreviewTab] = useState("og");
@@ -100,6 +105,14 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
   const saveDebounceRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const loadAbortRef = useRef<AbortController | null>(null);
   const editorHydratedRef = useRef(false);
+
+  // Throttle editor update observer (large HTML strings can overwhelm mobile).
+  const pendingEditorHtmlRef = useRef<string | null>(null);
+  const editorUpdateRafRef = useRef<number | null>(null);
+
+  // Cancel in-flight autosave PATCH requests.
+  const saveAbortRef = useRef<AbortController | null>(null);
+  const isMountedRef = useRef(true);
 
   const editor = useEditor({
     extensions: [
@@ -118,28 +131,95 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
     },
   });
 
+  // Unmount cleanup: cancel autosave/in-flight requests and destroy editor.
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      traceEditorLifecycle("EDITOR_UNMOUNT", "article_editor_workstation_unmounted", {
+        articleId,
+      });
+
+      // Abort autosave in-flight request.
+      if (saveAbortRef.current) {
+        traceEditorLifecycle(
+          "AUTOSAVE_CANCEL",
+          "editor_workstation_unmount_abort"
+        );
+        try {
+          saveAbortRef.current.abort();
+        } catch {
+          // ignore
+        }
+        saveAbortRef.current = null;
+      }
+
+      // Cancel throttled editor updates.
+      if (editorUpdateRafRef.current != null) {
+        try {
+          window.cancelAnimationFrame(editorUpdateRafRef.current);
+        } catch {
+          // ignore
+        }
+      }
+      editorUpdateRafRef.current = null;
+      pendingEditorHtmlRef.current = null;
+
+      // Destroy TipTap editor instance (best-effort).
+      try {
+        editor?.destroy();
+      } catch {
+        // ignore
+      }
+      traceEditorLifecycle("EDITOR_DESTROY", "tiptap_editor_destroy_call");
+
+      // Final memory hint (best-effort).
+      try {
+        const mem = (performance as any)?.memory?.usedJSHeapSize;
+        if (typeof mem === "number") {
+          traceEditorLifecycle("EDITOR_MEMORY", "usedJSHeapSize", { mem });
+        }
+      } catch {
+        // ignore
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     editorHydratedRef.current = false;
     loadAbortRef.current?.abort();
     const controller = new AbortController();
     loadAbortRef.current = controller;
     let cancelled = false;
+
+    traceEditorBoot("EDITOR_BOOT", "legacy_workstation_boot_start", { articleId, bootAttempt });
+
     (async () => {
       setLoading(true);
+      setLoadError(null);
+      setTimedOut(false);
       traceStability("EDITOR_BOOT", "editor_article_fetch_start", { articleId });
-      const timeout = window.setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS);
-      let res: Response;
       try {
-        res = await fetch(`/api/editorial/article/${articleId}`, {
+        const timeout = window.setTimeout(() => {
+          setTimedOut(true);
+          controller.abort();
+          traceEditorBoot("EDITOR_TIMEOUT", "legacy_workstation_boot_timeout", { articleId });
+        }, LOAD_TIMEOUT_MS);
+        const res = await fetch(`/api/editorial/article/${articleId}`, {
           cache: "no-store",
           credentials: "include",
           signal: controller.signal,
         });
-      } finally {
         window.clearTimeout(timeout);
-      }
-      const json = (await res.json()) as { ok: boolean; article?: EditorArticle };
-      if (!cancelled && json.ok && json.article) {
+        const json = (await res.json()) as {
+          ok: boolean;
+          article?: EditorArticle;
+          error?: string;
+        };
+        if (!json.ok || !json.article) {
+          throw new Error(json.error ?? "article_load_failed");
+        }
+        if (cancelled) return;
         setArticle(json.article);
         const initialMarkdown = json.article.article_body ?? "";
         setMarkdownDraft(initialMarkdown);
@@ -148,23 +228,46 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
         traceStability("EDITOR_BOOT", "editor_article_fetch_ok", {
           hasBody: Boolean(initialMarkdown?.length),
         });
+        traceEditorBoot("EDITOR_READY", "legacy_workstation_boot_ready", { articleId });
+      } catch (error) {
+        if (cancelled) return;
+        const message =
+          error instanceof Error ? error.message : "Failed to bootstrap editor";
+        setLoadError(message);
+        traceEditorBoot("EDITOR_ERROR", "legacy_workstation_boot_failed", { articleId, message });
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      if (!cancelled) setLoading(false);
     })();
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [articleId]);
+  }, [articleId, bootAttempt]);
 
   useEffect(() => {
     if (!editor) return;
     const onUpdate = () => {
-      setEditorHtml(editor.getHTML());
+      pendingEditorHtmlRef.current = editor.getHTML();
+      if (editorUpdateRafRef.current != null) return;
+      editorUpdateRafRef.current = window.requestAnimationFrame(() => {
+        editorUpdateRafRef.current = null;
+        if (!isMountedRef.current) return;
+        const html = pendingEditorHtmlRef.current;
+        if (html != null) setEditorHtml(html);
+      });
     };
     editor.on("update", onUpdate);
     return () => {
       editor.off("update", onUpdate);
+      if (editorUpdateRafRef.current != null) {
+        try {
+          window.cancelAnimationFrame(editorUpdateRafRef.current);
+        } catch {
+          // ignore
+        }
+        editorUpdateRafRef.current = null;
+      }
     };
   }, [editor]);
 
@@ -218,24 +321,69 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
       },
     });
     if (serialized === lastPayloadRef.current) return;
+
+    // Cancel any previous in-flight autosave PATCH request.
+    if (saveAbortRef.current) {
+      traceEditorLifecycle(
+        "AUTOSAVE_CANCEL",
+        "editor_workstation_autosave_overlap_cancel"
+      );
+      try {
+        saveAbortRef.current.abort();
+      } catch {
+        // ignore
+      }
+      saveAbortRef.current = null;
+    }
+    const controller = new AbortController();
+    saveAbortRef.current = controller;
+
     traceStability("SESSION_REFRESH", "editor_autosave_start", { reason });
     setSaveState("saving");
-    const res = await fetch(`/api/editorial/article/${articleId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: serialized,
-    });
-    if (!res.ok) {
+    try {
+      const res = await fetch(`/api/editorial/article/${articleId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: serialized,
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        if (!isMountedRef.current) return;
+        setSaveState("error");
+        traceStability("EDITOR_CRASH", "editor_autosave_failed", {
+          status: res.status,
+        });
+        return;
+      }
+      if (!isMountedRef.current) return;
+      setSaveState("saved");
+      setLastSavedAt(new Date().toISOString());
+      lastPayloadRef.current = serialized;
+      window.setTimeout(() => {
+        if (!isMountedRef.current) return;
+        setSaveState("idle");
+      }, 1200);
+      traceStability("SESSION_REFRESH", "editor_autosave_done", { reason });
+    } catch (err) {
+      const isAbort =
+        err instanceof DOMException && err.name === "AbortError";
+      if (isAbort) {
+        if (!isMountedRef.current) return;
+        setSaveState("idle");
+        traceEditorLifecycle(
+          "AUTOSAVE_CANCEL",
+          "editor_workstation_autosave_abort_caught"
+        );
+        return;
+      }
+      if (!isMountedRef.current) return;
       setSaveState("error");
-      traceStability("EDITOR_CRASH", "editor_autosave_failed", { status: res.status });
-      return;
+    } finally {
+      if (saveAbortRef.current === controller) {
+        saveAbortRef.current = null;
+      }
     }
-    setSaveState("saved");
-    setLastSavedAt(new Date().toISOString());
-    lastPayloadRef.current = serialized;
-    setTimeout(() => setSaveState("idle"), 1200);
-    traceStability("SESSION_REFRESH", "editor_autosave_done", { reason });
   }, [articleId, payload]);
 
   useEffect(() => {
@@ -255,6 +403,7 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
   }, [saveDraft]);
 
   useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
     const channel = new BroadcastChannel(`article-draft-${articleId}`);
     channel.onmessage = (event) => {
       if (event.data?.type === "draft_saved") {
@@ -275,6 +424,26 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
   const readability = readingEase(bodyText);
 
   if (loading || !article) {
+    if (!loading && !article) {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Editor bootstrap failed</CardTitle>
+            <CardDescription>
+              {timedOut
+                ? "Editor timed out while loading. You can retry safely."
+                : loadError ?? "Unable to initialize editor."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-2">
+            <Button onClick={() => setBootAttempt((n) => n + 1)}>Retry editor</Button>
+            <Button variant="outline" onClick={() => window.location.assign("/admin/stories")}>
+              Back to desk
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
     return (
       <Card>
         <CardHeader>

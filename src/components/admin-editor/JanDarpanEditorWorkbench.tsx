@@ -2,6 +2,7 @@
 
 import { marked } from "marked";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import TurndownService from "turndown";
 import {
@@ -17,7 +18,6 @@ import {
 } from "lucide-react";
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { CollaborationBar } from "@/components/collaboration/CollaborationBar";
-import { NewsroomTipTapEditor } from "@/components/admin-editor/NewsroomTipTapEditor";
 import type { EditorArticleRecord, EditorVersionSnapshot } from "@/lib/editorial-editor/types";
 import {
   computeSeoScore,
@@ -33,6 +33,22 @@ import {
   useEditorAutosave,
   useEditorDraftRecovery,
 } from "@/modules/editor";
+import { traceEditorBoot } from "@/lib/observability/editor-boot-trace";
+import { traceEditorLifecycle } from "@/lib/observability/editor-lifecycle-trace";
+
+const EDITOR_BOOT_TIMEOUT_MS = 10_000;
+
+const NewsroomTipTapEditor = dynamic(
+  () =>
+    import("@/components/admin-editor/NewsroomTipTapEditor").then((m) => {
+      traceEditorBoot("EDITOR_IMPORT", "tiptap_editor_import_ready");
+      return m.NewsroomTipTapEditor;
+    }),
+  {
+    ssr: false,
+    loading: () => <div className="jd-editor-skeleton" />,
+  }
+);
 
 const turndown = new TurndownService({ headingStyle: "atx", codeBlockStyle: "fenced" });
 
@@ -53,7 +69,13 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   const [aiBusy, setAiBusy] = useState<string | null>(null);
   const [headlineOptions, setHeadlineOptions] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  const [bootState, setBootState] = useState<"loading" | "ready" | "error" | "timeout">(
+    "loading"
+  );
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [bootAttempt, setBootAttempt] = useState(0);
   const hydratedIdRef = useRef<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
   const versions = useMemo(() => {
     const raw = article?.editorial_metadata?.editor_versions;
@@ -68,6 +90,47 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   const { conflict: draftConflict } = useEditorDraftRecovery(articleId, article);
 
   useEffect(() => {
+    setBootState("loading");
+    setBootError(null);
+    setArticle(null);
+    setEditorReady(false);
+    hydratedIdRef.current = null;
+    traceEditorBoot("EDITOR_BOOT", "editor_boot_start", { articleId, bootAttempt });
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+  }, [articleId, bootAttempt]);
+
+  useEffect(() => {
+    if (bootState !== "loading") return;
+    const id = window.setTimeout(() => {
+      setBootState("timeout");
+      setBootError("Editor initialization timed out. Please retry.");
+      traceEditorBoot("EDITOR_TIMEOUT", "editor_boot_timeout", { articleId });
+    }, EDITOR_BOOT_TIMEOUT_MS);
+    return () => window.clearTimeout(id);
+  }, [bootState, articleId]);
+
+  useEffect(() => {
+    if (bootState !== "loading") return;
+    traceEditorBoot("EDITOR_QUERY", "editor_query_state", {
+      isLoading: articleQuery.isLoading,
+      isError: articleQuery.isError,
+      hasData: Boolean(articleQuery.data),
+    });
+
+    if (articleQuery.isError) {
+      const message =
+        articleQuery.error instanceof Error
+          ? articleQuery.error.message
+          : "Failed to load article";
+      setBootState("error");
+      setBootError(message);
+      setEditorReady(false);
+      traceEditorBoot("EDITOR_ERROR", "editor_query_failed", { message });
+      return;
+    }
     if (!articleQuery.data) return;
     if (hydratedIdRef.current === articleId) return;
     hydratedIdRef.current = articleId;
@@ -75,11 +138,59 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
     setArticle(row);
     const md = row.article_body ?? "";
     setMarkdown(md);
-    void marked.parse(md).then((html) => {
-      setEditorHtml((html as string) || "<p></p>");
-      setEditorReady(true);
-    });
-  }, [articleQuery.data, articleId]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const html = await marked.parse(md);
+        if (cancelled) return;
+        setEditorHtml((html as string) || "<p></p>");
+      } catch (error) {
+        if (cancelled) return;
+        const message =
+          error instanceof Error ? error.message : "Failed to initialize editor body";
+        setEditorHtml("<p></p>");
+        setBootError(message);
+        traceEditorBoot("EDITOR_ERROR", "editor_markdown_parse_failed", { message });
+      } finally {
+        if (cancelled) return;
+        setEditorReady(true);
+        setBootState("ready");
+        traceEditorBoot("EDITOR_READY", "editor_boot_ready", { articleId });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    articleQuery.data,
+    articleQuery.error,
+    articleQuery.isError,
+    articleQuery.isLoading,
+    articleId,
+    bootState,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      traceEditorLifecycle("EDITOR_UNMOUNT", "jan_workbench_unmounted", {
+        articleId,
+      });
+      // Final memory hint (best-effort).
+      try {
+        const mem = (performance as any)?.memory?.usedJSHeapSize;
+        if (typeof mem === "number") {
+          traceEditorLifecycle("EDITOR_MEMORY", "usedJSHeapSize", { mem });
+        }
+      } catch {
+        // ignore
+      }
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    };
+  }, [articleId]);
 
   const bodyMarkdown = useMemo(() => {
     if (markdownMode) return markdown;
@@ -202,16 +313,49 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
       setToast("AI applied");
     } finally {
       setAiBusy(null);
-      window.setTimeout(() => setToast(null), 2800);
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = window.setTimeout(() => setToast(null), 2800);
     }
   }
 
   const compareVersion = versions.find((v) => v.id === compareId);
 
-  const loading = (articleQuery.isLoading && !article) || !editorReady;
+  const loading = bootState === "loading";
 
   if (loading) {
     return <div className="jd-editor-page__loading">Loading editor…</div>;
+  }
+
+  if (bootState === "error" || bootState === "timeout" || !article || !editorReady) {
+    return (
+      <div className="anr-card" role="status">
+        <div className="anr-card__head">
+          <strong>Editor unavailable</strong>
+          <span className="anr-meta">{bootState === "timeout" ? "Timed out" : "Failed"}</span>
+        </div>
+        <div className="anr-card__body">
+          <p className="anr-meta">
+            {bootError ?? "Editor could not initialize. Retry to recover."}
+          </p>
+          <div style={{ marginTop: "0.75rem", display: "flex", gap: "0.5rem" }}>
+            <button
+              type="button"
+              className="anr-btn anr-btn--primary"
+              onClick={() => {
+                traceEditorBoot("EDITOR_BOOT", "editor_boot_retry", { articleId });
+                void articleQuery.refetch();
+                setBootAttempt((n) => n + 1);
+              }}
+            >
+              Retry editor
+            </button>
+            <Link href="/admin/stories" className="anr-btn anr-btn--ghost">
+              Back to desk
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const siteBase =
@@ -314,6 +458,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
           />
 
           <NewsroomTipTapEditor
+            key={`${articleId}-${bootAttempt}`}
             initialHtml={editorHtml}
             onHtmlChange={setEditorHtml}
             markdownMode={markdownMode}

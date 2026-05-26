@@ -12,11 +12,14 @@ type ArticleResponse = {
   error?: string;
 };
 
-async function fetchArticle(id: string): Promise<EditorArticleRecord> {
+async function fetchArticle(
+  id: string,
+  signal?: AbortSignal
+): Promise<EditorArticleRecord> {
   tracePerf("EDITOR", "article_query_fetch", { id });
   const result = await apiClient.get<ArticleResponse>(
     `/api/editorial/article/${id}`,
-    { label: "editor_article", timeoutMs: 8_000 }
+    { label: "editor_article", timeoutMs: 8_000, signal }
   );
   if (!result.ok) {
     throw new Error(result.timedOut ? "timeout" : result.error);
@@ -30,7 +33,7 @@ async function fetchArticle(id: string): Promise<EditorArticleRecord> {
 export function useEditorArticleQuery(articleId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.editorial.article(articleId),
-    queryFn: () => fetchArticle(articleId),
+    queryFn: ({ signal }) => fetchArticle(articleId, signal),
     enabled: Boolean(articleId) && enabled,
     staleTime: 60_000,
   });
