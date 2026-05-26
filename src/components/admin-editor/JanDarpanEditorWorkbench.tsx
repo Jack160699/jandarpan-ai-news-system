@@ -39,6 +39,13 @@ import {
 } from "@/modules/editor";
 import { traceEditorBoot } from "@/lib/observability/editor-boot-trace";
 import { traceEditorLifecycle } from "@/lib/observability/editor-lifecycle-trace";
+const EditorAiAssistant = dynamic(
+  () =>
+    import("@/components/admin-editor/ai-assistant/EditorAiAssistant").then(
+      (m) => m.EditorAiAssistant
+    ),
+  { ssr: false }
+);
 
 const EDITOR_BOOT_TIMEOUT_MS = 10_000;
 
@@ -87,6 +94,8 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   );
   const [bootError, setBootError] = useState<string | null>(null);
   const [bootAttempt, setBootAttempt] = useState(0);
+  const [editorContentRevision, setEditorContentRevision] = useState(0);
+  const [deskTheme, setDeskTheme] = useState<"light" | "dark">("dark");
   const hydratedIdRef = useRef<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   const previewBodyRef = useRef<HTMLDivElement | null>(null);
@@ -102,6 +111,23 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   );
 
   const { conflict: draftConflict } = useEditorDraftRecovery(articleId, article);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = window.localStorage.getItem("anr-theme");
+      if (stored === "light" || stored === "dark") setDeskTheme(stored);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const applyAiBody = useCallback(async (markdown: string) => {
+    const html = (await marked.parse(markdown)) as string;
+    setEditorHtml(sanitizeEditorHtmlImages(html));
+    setMarkdown(markdown);
+    setEditorContentRevision((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -331,6 +357,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
         const html = (await marked.parse(r.body as string)) as string;
         setEditorHtml(sanitizeEditorHtmlImages(html));
         setMarkdown(r.body as string);
+        setEditorContentRevision((n) => n + 1);
       }
       if (typeof r.seo_title === "string") {
         setArticle((p) =>
@@ -412,7 +439,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
       : process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
   return (
-    <div className="jd-editor-page">
+    <div className="jd-editor-page" data-theme={deskTheme} suppressHydrationWarning>
       {draftConflict ? (
         <div className="anr-emergency-banner" role="status">
           <strong>Local draft detected.</strong> A newer offline snapshot may exist on this device.
@@ -507,7 +534,7 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
           />
 
           <NewsroomTipTapEditor
-            key={`${articleId}-${bootAttempt}`}
+            key={`${articleId}-${bootAttempt}-${editorContentRevision}`}
             initialHtml={editorHtml}
             onHtmlChange={(html) => setEditorHtml(sanitizeEditorHtmlImages(html))}
             markdownMode={markdownMode}
@@ -803,6 +830,43 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
             </section>
           ) : null}
         </aside>
+
+        <EditorAiAssistant
+          context={{
+            headline: article.headline,
+            summary: article.summary ?? "",
+            bodyMarkdown,
+            language: article.language ?? "hi",
+            tags: article.tags ?? [],
+          }}
+          callbacks={{
+            onInsertBody: (md) => void applyAiBody(md),
+            onUpdateHeadline: (headline) =>
+              setArticle((p) => (p ? { ...p, headline } : p)),
+            onUpdateSummary: (summary) =>
+              setArticle((p) => (p ? { ...p, summary } : p)),
+            onUpdateTags: (tags) =>
+              setArticle((p) => (p ? { ...p, tags } : p)),
+            onApplyStoryDraft: (draft) => {
+              setArticle((p) =>
+                p
+                  ? {
+                      ...p,
+                      headline: draft.headline,
+                      summary: draft.summary,
+                      tags: draft.tags,
+                      seo_title: draft.seoTitle || p.seo_title,
+                      seo_description:
+                        draft.metaDescription || draft.summary || p.seo_description,
+                      hero_image_url: draft.coverImageUrl ?? p.hero_image_url,
+                    }
+                  : p
+              );
+              void applyAiBody(draft.body);
+            },
+            onToast: setToast,
+          }}
+        />
       </div>
 
       {showPreview ? (

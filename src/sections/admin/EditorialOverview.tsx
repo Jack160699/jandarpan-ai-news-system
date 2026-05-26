@@ -101,6 +101,169 @@ export function EditorialOverview() {
   const { data, loading, error } = useAdminNewsroom();
   const mounted = useHasMounted();
 
+  const generated = useMemo(
+    () => (Array.isArray(data?.generatedArticles) ? data.generatedArticles : []),
+    [data]
+  );
+  const ingestionLogs = useMemo(
+    () =>
+      Array.isArray(data?.ingestion?.recentLogs) ? data.ingestion.recentLogs : [],
+    [data]
+  );
+  const ingestionFailures = useMemo(
+    () =>
+      Array.isArray(data?.ingestion?.recentFailures)
+        ? data.ingestion.recentFailures
+        : [],
+    [data]
+  );
+  const sourceReliability = useMemo(
+    () => (Array.isArray(data?.sourceReliability) ? data.sourceReliability : []),
+    [data]
+  );
+  const sourceHealth = useMemo(
+    () => (Array.isArray(data?.sourceHealth) ? data.sourceHealth : []),
+    [data]
+  );
+  const aiQueue = useMemo(
+    () => (Array.isArray(data?.aiQueue) ? data.aiQueue : []),
+    [data]
+  );
+
+  const pending = useMemo(
+    () => generated.filter((a) => a.editorial_status === "pending"),
+    [generated]
+  );
+  const approved = useMemo(
+    () => generated.filter((a) => a.editorial_status === "approved"),
+    [generated]
+  );
+  const rejected = useMemo(
+    () => generated.filter((a) => a.editorial_status === "rejected"),
+    [generated]
+  );
+  const breaking = useMemo(
+    () => generated.filter((a) => a.is_breaking),
+    [generated]
+  );
+  const aiConfRows = useMemo(
+    () => generated.filter((a) => a.ai_confidence != null),
+    [generated]
+  );
+  const avgConfidence = useMemo(
+    () =>
+      aiConfRows.reduce((sum, a) => sum + (a.ai_confidence ?? 0), 0) /
+      Math.max(1, aiConfRows.length),
+    [aiConfRows]
+  );
+
+  const ingestionOverTime = useMemo(() => {
+    if (!mounted) return [];
+    return ingestionLogs
+      .slice(0, 12)
+      .reverse()
+      .map((log) => ({
+        time: new Date(log.created_at).toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        inserted: Number.isFinite(log.inserted) ? log.inserted : 0,
+        failed: Number.isFinite(log.failed_validation) ? log.failed_validation : 0,
+      }));
+  }, [mounted, ingestionLogs]);
+
+  const approvalsVsRejects = useMemo(
+    () => [
+      { name: "Approved", value: approved.length, color: "#22c55e" },
+      { name: "Rejected", value: rejected.length, color: "#fb7185" },
+      { name: "Pending", value: pending.length, color: "#f59e0b" },
+    ],
+    [approved.length, rejected.length, pending.length]
+  );
+
+  const districtActivity = useMemo(
+    () =>
+      Object.entries(
+        generated.reduce<Record<string, number>>((acc, article) => {
+          const district = article.source_attribution[0]?.source ?? "General";
+          acc[district] = (acc[district] ?? 0) + 1;
+          return acc;
+        }, {})
+      )
+        .slice(0, 8)
+        .map(([district, count]) => ({ district, count })),
+    [generated]
+  );
+
+  const sourceReliabilityTrend = useMemo(
+    () =>
+      sourceReliability
+        .slice(0, 8)
+        .map((s) => ({
+          source: (s.source ?? "").slice(0, 12) || "Source",
+          confidence: Number.isFinite(s.avgConfidence)
+            ? Math.round(s.avgConfidence * 100)
+            : 0,
+        }))
+        .filter((row) => Number.isFinite(row.confidence)),
+    [sourceReliability]
+  );
+
+  const pulseFeed = useMemo(
+    () =>
+      [
+        ...approved.slice(0, 4).map((a) => ({
+          tone: "stable",
+          text: `Approved: ${a.headline}`,
+          at: a.published_at ?? a.created_at,
+        })),
+        ...breaking.slice(0, 3).map((a) => ({
+          tone: "breaking",
+          text: `Breaking alert: ${a.headline}`,
+          at: a.created_at,
+        })),
+        ...ingestionFailures.slice(0, 3).map((f) => ({
+          tone: "warning",
+          text: `Ingestion failure: ${f.title ?? "Untitled"} (${f.reason})`,
+          at: f.created_at,
+        })),
+        ...aiQueue
+          .filter((q) => q.error)
+          .slice(0, 3)
+          .map((q) => ({
+            tone: "warning",
+            text: `AI moderation warning: ${q.error}`,
+            at: q.created_at,
+          })),
+      ]
+        .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+        .slice(0, 12),
+    [approved, breaking, ingestionFailures, aiQueue]
+  );
+
+  const sourceStable = useMemo(
+    () => sourceHealth.filter((s) => s.healthy).length,
+    [sourceHealth]
+  );
+  const queuePressure = useMemo(
+    () =>
+      data
+        ? (data.counts.pending +
+            data.counts.aiQueuePending +
+            data.counts.imageQueuePending) /
+          Math.max(1, data.counts.generated)
+        : 0,
+    [data]
+  );
+  const queueTone = useMemo(
+    () => toneFromHealth(1 - Math.min(1, queuePressure)),
+    [queuePressure]
+  );
+  const confidenceTone = useMemo(
+    () => toneFromHealth(avgConfidence || 0),
+    [avgConfidence]
+  );
+
   traceDashboardRender("DASHBOARD_RENDER", "EditorialOverview_render", {
     loading,
     hasData: Boolean(data),
@@ -129,102 +292,6 @@ export function EditorialOverview() {
     }
     return null;
   }
-
-  const generated = Array.isArray(data.generatedArticles) ? data.generatedArticles : [];
-  const ingestionLogs = Array.isArray(data.ingestion?.recentLogs)
-    ? data.ingestion.recentLogs
-    : [];
-  const ingestionFailures = Array.isArray(data.ingestion?.recentFailures)
-    ? data.ingestion.recentFailures
-    : [];
-  const sourceReliability = Array.isArray(data.sourceReliability) ? data.sourceReliability : [];
-  const sourceHealth = Array.isArray(data.sourceHealth) ? data.sourceHealth : [];
-  const aiQueue = Array.isArray(data.aiQueue) ? data.aiQueue : [];
-
-  const pending = generated.filter((a) => a.editorial_status === "pending");
-  const approved = generated.filter((a) => a.editorial_status === "approved");
-  const rejected = generated.filter((a) => a.editorial_status === "rejected");
-  const breaking = generated.filter((a) => a.is_breaking);
-  const aiConfRows = generated.filter((a) => a.ai_confidence != null);
-  const avgConfidence =
-    aiConfRows.reduce((sum, a) => sum + (a.ai_confidence ?? 0), 0) /
-    Math.max(1, aiConfRows.length);
-
-  const ingestionOverTime = useMemo(() => {
-    if (!mounted) return [];
-    return ingestionLogs
-      .slice(0, 12)
-      .reverse()
-      .map((log) => ({
-        time: new Date(log.created_at).toLocaleTimeString("en-IN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        inserted: Number.isFinite(log.inserted) ? log.inserted : 0,
-        failed: Number.isFinite(log.failed_validation) ? log.failed_validation : 0,
-      }));
-  }, [mounted, ingestionLogs]);
-
-  const approvalsVsRejects = [
-    { name: "Approved", value: approved.length, color: "#22c55e" },
-    { name: "Rejected", value: rejected.length, color: "#fb7185" },
-    { name: "Pending", value: pending.length, color: "#f59e0b" },
-  ];
-
-  const districtActivity = Object.entries(
-    generated.reduce<Record<string, number>>((acc, article) => {
-      const district = article.source_attribution[0]?.source ?? "General";
-      acc[district] = (acc[district] ?? 0) + 1;
-      return acc;
-    }, {})
-  )
-    .slice(0, 8)
-    .map(([district, count]) => ({ district, count }));
-
-  const sourceReliabilityTrend = sourceReliability
-    .slice(0, 8)
-    .map((s) => ({
-      source: (s.source ?? "").slice(0, 12) || "Source",
-      confidence: Number.isFinite(s.avgConfidence)
-        ? Math.round(s.avgConfidence * 100)
-        : 0,
-    }))
-    .filter((row) => Number.isFinite(row.confidence));
-
-  const pulseFeed = [
-    ...approved.slice(0, 4).map((a) => ({
-      tone: "stable",
-      text: `Approved: ${a.headline}`,
-      at: a.published_at ?? a.created_at,
-    })),
-    ...breaking.slice(0, 3).map((a) => ({
-      tone: "breaking",
-      text: `Breaking alert: ${a.headline}`,
-      at: a.created_at,
-    })),
-    ...ingestionFailures.slice(0, 3).map((f) => ({
-      tone: "warning",
-      text: `Ingestion failure: ${f.title ?? "Untitled"} (${f.reason})`,
-      at: f.created_at,
-    })),
-    ...aiQueue
-      .filter((q) => q.error)
-      .slice(0, 3)
-      .map((q) => ({
-        tone: "warning",
-        text: `AI moderation warning: ${q.error}`,
-        at: q.created_at,
-      })),
-  ]
-    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-    .slice(0, 12);
-
-  const sourceStable = sourceHealth.filter((s) => s.healthy).length;
-  const queuePressure =
-    (data.counts.pending + data.counts.aiQueuePending + data.counts.imageQueuePending) /
-    Math.max(1, data.counts.generated);
-  const queueTone = toneFromHealth(1 - Math.min(1, queuePressure));
-  const confidenceTone = toneFromHealth(avgConfidence || 0);
 
   traceDashboardRender("CHART_DATA", "ingestion_over_time", {
     len: ingestionOverTime.length,
