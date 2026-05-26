@@ -953,3 +953,179 @@
 .anr-kpi--warn {
   color: #f97316;
 }
+
+/* ─── Admin login (isolated full-screen) ─── */
+.anr-login-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  min-height: 100dvh;
+  overflow: auto;
+  background: #09090b;
+  color: #f4f4f5;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.anr-login {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.anr-login__bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.anr-login__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  animation: anr-login-float 18s ease-in-out infinite;
+}
+
+.anr-login__orb--1 {
+  width: 420px;
+  height: 420px;
+  top: -12%;
+  right: -8%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.35), transparent 70%);
+}
+
+.anr-login__orb--2 {
+  width: 360px;
+  height: 360px;
+  bottom: -15%;
+  left: -10%;
+  background: radial-gradient(circle, rgba(234, 88, 12, 0.22), transparent 70%);
+  animation-delay: -6s;
+}
+
+.anr-login__orb--3 {
+  width: 280px;
+  height: 280px;
+  top: 40%;
+  left: 35%;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.12), transparent 70%);
+  animation-delay: -12s;
+}
+
+.anr-login__grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 20%, transparent 75%);
+}
+
+.anr-login__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(9, 9, 11, 0.85) 100%);
+}
+
+@keyframes anr-login-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(12px, -18px) scale(1.05);
+  }
+}
+
+.anr-login__inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.anr-login__brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.anr-login__logo {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: -0.04em;
+  color: #09090b;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b 45%, #ea580c);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 12px 32px rgba(245, 158, 11, 0.25);
+}
+
+.anr-login__eyebrow {
+  margin: 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #f59e0b;
+}
+
+.anr-login__title {
+  margin: 0.15rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fafafa;
+}
+
+.anr-login__card {
+  border-radius: 16px !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 24px 48px rgba(0, 0, 0, 0.45) !important;
+}
+
+.anr-login__footer {
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #a1a1aa;
+}
+
+.anr-login__footer-muted {
+  margin-top: 0.35rem;
+  color: #71717a;
+  font-size: 0.6875rem;
+}
+
+@media (max-width: 480px) {
+  .anr-login {
+    padding: 1rem;
+    align-items: flex-start;
+    padding-top: 2.5rem;
+  }
+
+  .anr-login__title {
+    font-size: 1.15rem;
+  }
+}
