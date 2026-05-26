@@ -19,7 +19,10 @@ import {
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { CollaborationBar } from "@/components/collaboration/CollaborationBar";
 import type { EditorArticleRecord, EditorVersionSnapshot } from "@/lib/editorial-editor/types";
-import { EDITOR_IMAGE_PLACEHOLDER } from "@/lib/editorial-editor/image-placeholder";
+import {
+  EDITOR_IMAGE_PLACEHOLDER,
+  wireEditorImageFallbacks,
+} from "@/lib/editorial-editor/image-placeholder";
 import {
   computeSeoScore,
   readingEaseScore,
@@ -85,7 +88,8 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   const [bootError, setBootError] = useState<string | null>(null);
   const [bootAttempt, setBootAttempt] = useState(0);
   const hydratedIdRef = useRef<string | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+  const previewBodyRef = useRef<HTMLDivElement | null>(null);
 
   const versions = useMemo(() => {
     const raw = article?.editorial_metadata?.editor_versions;
@@ -100,16 +104,19 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   const { conflict: draftConflict } = useEditorDraftRecovery(articleId, article);
 
   useEffect(() => {
-    setBootState("loading");
-    setBootError(null);
-    setArticle(null);
-    setEditorReady(false);
-    hydratedIdRef.current = null;
-    traceEditorBoot("EDITOR_BOOT", "editor_boot_start", { articleId, bootAttempt });
-    if (toastTimerRef.current) {
-      window.clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = null;
-    }
+    const id = window.setTimeout(() => {
+      setBootState("loading");
+      setBootError(null);
+      setArticle(null);
+      setEditorReady(false);
+      hydratedIdRef.current = null;
+      traceEditorBoot("EDITOR_BOOT", "editor_boot_start", { articleId, bootAttempt });
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [articleId, bootAttempt]);
 
   useEffect(() => {
@@ -135,50 +142,65 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
         articleQuery.error instanceof Error
           ? articleQuery.error.message
           : "Failed to load article";
-      // Non-fatal schema mismatch: continue editor boot in degraded mode.
-      if (message.toLowerCase().includes("does not exist") && message.toLowerCase().includes("translations")) {
-        setBootError("Schema mismatch: translations column missing. Editor running in degraded mode.");
-        setEditorReady(true);
-        setBootState("ready");
-        traceEditorBoot("EDITOR_ERROR", "editor_query_schema_mismatch", { message });
-        return;
-      }
-      setBootState("error");
-      setBootError(message);
-      setEditorReady(false);
-      traceEditorBoot("EDITOR_ERROR", "editor_query_failed", { message });
-      return;
+      const bootId = window.setTimeout(() => {
+        if (
+          message.toLowerCase().includes("does not exist") &&
+          message.toLowerCase().includes("translations")
+        ) {
+          setBootError(
+            "Schema mismatch: translations column missing. Editor running in degraded mode."
+          );
+          setEditorReady(true);
+          setBootState("ready");
+          traceEditorBoot("EDITOR_ERROR", "editor_query_schema_mismatch", { message });
+          return;
+        }
+        setBootState("error");
+        setBootError(message);
+        setEditorReady(false);
+        traceEditorBoot("EDITOR_ERROR", "editor_query_failed", { message });
+      }, 0);
+      return () => window.clearTimeout(bootId);
     }
     if (!articleQuery.data) return;
     if (hydratedIdRef.current === articleId) return;
     hydratedIdRef.current = articleId;
     const row = articleQuery.data;
-    setArticle(row);
-    const md = row.article_body ?? "";
-    setMarkdown(md);
     let cancelled = false;
+    const bootId = window.setTimeout(() => {
+      setArticle(row);
+      setMarkdown(row.article_body ?? "");
+    }, 0);
     void (async () => {
       try {
-        const html = await marked.parse(md);
+        const html = await marked.parse(row.article_body ?? "");
         if (cancelled) return;
-        setEditorHtml(sanitizeEditorHtmlImages((html as string) || "<p></p>"));
+        const safeHtml = sanitizeEditorHtmlImages((html as string) || "<p></p>");
+        window.setTimeout(() => {
+          if (cancelled) return;
+          setEditorHtml(safeHtml);
+          setEditorReady(true);
+          setBootState("ready");
+          traceEditorBoot("EDITOR_READY", "editor_boot_ready", { articleId });
+        }, 0);
       } catch (error) {
         if (cancelled) return;
         const message =
           error instanceof Error ? error.message : "Failed to initialize editor body";
-        setEditorHtml("<p></p>");
-        setBootError(message);
-        traceEditorBoot("EDITOR_ERROR", "editor_markdown_parse_failed", { message });
-      } finally {
-        if (cancelled) return;
-        setEditorReady(true);
-        setBootState("ready");
-        traceEditorBoot("EDITOR_READY", "editor_boot_ready", { articleId });
+        window.setTimeout(() => {
+          if (cancelled) return;
+          setEditorHtml("<p></p>");
+          setBootError(message);
+          setEditorReady(true);
+          setBootState("ready");
+          traceEditorBoot("EDITOR_ERROR", "editor_markdown_parse_failed", { message });
+        }, 0);
       }
     })();
 
     return () => {
       cancelled = true;
+      window.clearTimeout(bootId);
     };
   }, [
     articleQuery.data,
@@ -196,7 +218,10 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
       });
       // Final memory hint (best-effort).
       try {
-        const mem = (performance as any)?.memory?.usedJSHeapSize;
+        const perf = performance as Performance & {
+          memory?: { usedJSHeapSize?: number };
+        };
+        const mem = perf.memory?.usedJSHeapSize;
         if (typeof mem === "number") {
           traceEditorLifecycle("EDITOR_MEMORY", "usedJSHeapSize", { mem });
         }
@@ -337,6 +362,11 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
   }
 
   const compareVersion = versions.find((v) => v.id === compareId);
+
+  useEffect(() => {
+    if (!showPreview) return;
+    wireEditorImageFallbacks(previewBodyRef.current);
+  }, [showPreview, editorHtml]);
 
   const loading = bootState === "loading";
 
@@ -805,8 +835,11 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
               <h1>{article.headline}</h1>
               <p className="jd-editor-preview__dek">{article.summary}</p>
               <div
+                ref={previewBodyRef}
                 className="jd-editor-preview__body"
-                dangerouslySetInnerHTML={{ __html: editorHtml }}
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeEditorHtmlImages(editorHtml),
+                }}
               />
             </article>
           </div>

@@ -20,7 +20,7 @@ import {
 import { secureCookieOptions } from "@/lib/security/cookies";
 import { safeGetUser } from "@/lib/auth/auth-safe";
 import { traceAdminBoot } from "@/lib/observability/admin-boot";
-import { withTimeout, withTimeoutFallback } from "@/lib/utils/withTimeout";
+import { isTimeoutError, withTimeout, withTimeoutFallback } from "@/lib/utils/withTimeout";
 
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/saas-auth/cookies";
 
@@ -30,6 +30,15 @@ const MEMBERSHIP_TIMEOUT_MS = 4_000;
 export { ACCESS_COOKIE, REFRESH_COOKIE };
 
 const DEV_USER_ID = "00000000-0000-4000-8000-00000000d001";
+
+type ActiveMembershipRow = {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  email: string | null;
+  role: string;
+  status: string;
+};
 
 function isProdRuntime(): boolean {
   return (
@@ -45,16 +54,7 @@ async function loadMembershipInner(
 ): Promise<TenantMembership | null> {
   const supabase = createAdminServerClient();
 
-  let memberships:
-    | {
-        id: string;
-        tenant_id: string;
-        user_id: string;
-        email: string | null;
-        role: string;
-        status: string;
-      }[]
-    | null = null;
+  let memberships: ActiveMembershipRow[] | null = null;
 
   try {
     const { data, error } = await supabase
@@ -63,8 +63,8 @@ async function loadMembershipInner(
       .eq("user_id", userId)
       .eq("status", "active");
 
-    if (error) return null;
-    memberships = data as typeof memberships;
+    if (error || !data) return null;
+    memberships = data as unknown as ActiveMembershipRow[];
   } catch {
     return null;
   }
@@ -119,17 +119,16 @@ async function loadMembership(
 ): Promise<{ membership: TenantMembership | null; timedOut: boolean }> {
   traceAdminBoot("TENANT_LOAD", "membership_lookup");
   let timedOut = false;
-  const membership = await withTimeoutFallback(
-    loadMembershipInner(userId, email, tenantSlug),
-    null,
-    {
-      label: "WORKSPACE_LOAD",
-      timeoutMs: MEMBERSHIP_TIMEOUT_MS,
-      onTimeout: () => {
-        timedOut = true;
-      },
+  const membership = await withTimeout(loadMembershipInner(userId, email, tenantSlug), {
+    label: "WORKSPACE_LOAD",
+    timeoutMs: MEMBERSHIP_TIMEOUT_MS,
+  }).catch((err) => {
+    if (isTimeoutError(err)) {
+      timedOut = true;
+      return null;
     }
-  );
+    throw err;
+  });
   return { membership, timedOut };
 }
 
@@ -242,7 +241,7 @@ export async function getDashboardSession(
     return {
       userId: userData.user.id,
       email: userData.user.email ?? degradedMembership.email,
-      accessToken: resolvedAccessToken,
+      accessToken: "supabase_cookie",
       membership: degradedMembership,
       isDevBypass: false,
       degraded: true,

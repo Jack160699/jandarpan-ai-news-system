@@ -34,12 +34,18 @@ export function CollaborationBar({
   const adminSession = useAdminSession();
 
   useEffect(() => {
-    if (!adminSession.userId || !adminSession.tenantId) return;
-    setSession({
-      userId: adminSession.userId,
-      email: adminSession.email,
-      tenantId: adminSession.tenantId,
-    });
+    if (!adminSession.userId || !adminSession.tenantId) {
+      const id = window.setTimeout(() => setSession(null), 0);
+      return () => window.clearTimeout(id);
+    }
+    const id = window.setTimeout(() => {
+      setSession({
+        userId: adminSession.userId!,
+        email: adminSession.email,
+        tenantId: adminSession.tenantId!,
+      });
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [adminSession.userId, adminSession.email, adminSession.tenantId]);
 
   const { members, connected, broadcastDoc, setTyping } = useCollaborationRoom({
@@ -151,6 +157,16 @@ export function CollaborationBar({
 
   const others = members.filter((m) => m.userId !== session?.userId);
   const readOnly = lock && !lock.isOwner;
+
+  if (!session) {
+    return (
+      <div className="collab-bar">
+        <span className="collab-bar__meta">
+          Collaboration unavailable — workspace context not loaded
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="collab-bar">

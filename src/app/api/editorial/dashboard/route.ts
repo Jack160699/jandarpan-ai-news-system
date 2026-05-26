@@ -20,15 +20,7 @@ export async function GET(request: Request) {
   const supabase = await createCookieServerClient();
   const {
     data: { user },
-    error: authError,
   } = await supabase.auth.getUser();
-  const cookieHeader = request.headers.get("cookie");
-  console.log("[EDITORIAL_DASHBOARD_AUTH]", {
-    hasCookies: Boolean(cookieHeader && cookieHeader.length > 0),
-    userResolved: Boolean(user?.id),
-    authError: authError?.message ?? null,
-  });
-
   if (!user) {
     return NextResponse.json(
       { ok: false, error: "unauthorized" },

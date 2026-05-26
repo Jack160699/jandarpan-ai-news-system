@@ -33,14 +33,6 @@ export const PullQuote = Node.create({
       0,
     ];
   },
-  addCommands() {
-    return {
-      setPullQuote:
-        () =>
-        ({ commands }) =>
-          commands.wrapIn(this.name),
-    };
-  },
 });
 
 /** YouTube / video embed */

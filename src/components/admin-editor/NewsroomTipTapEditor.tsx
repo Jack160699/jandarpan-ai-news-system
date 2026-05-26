@@ -202,7 +202,14 @@ export function NewsroomTipTapEditor({
       activeUploadControllersRef.current.add(controller);
       void uploadImageFile(file, controller.signal).then((src) => {
         activeUploadControllersRef.current.delete(controller);
-        if (src) editor?.chain().focus().setImage({ src, width: "100%" }).run();
+        if (src) {
+          editor
+            ?.chain()
+            .focus()
+            .setImage({ src })
+            .updateAttributes("image", { width: "100%" })
+            .run();
+        }
       });
     };
     input.click();

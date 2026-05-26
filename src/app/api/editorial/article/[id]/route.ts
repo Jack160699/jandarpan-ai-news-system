@@ -52,10 +52,10 @@ export async function GET(request: Request, context: RouteContext) {
     data = retry.data as typeof data;
     error = retry.error;
     if (data && typeof data === "object") {
-      (data as any).translations = null;
-      (data as any).__schema = {
-        translations: "missing",
-      };
+      const row = data as Record<string, unknown>;
+      row.translations = null;
+      row.__schema = { translations: "missing" };
+      data = row as typeof data;
     }
   }
 
@@ -142,7 +142,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   };
 
   const supabase = createAdminServerClient();
-  let { error } = await supabase.from("generated_articles").update(patch).eq("id", id);
+  let { error } = await supabase
+    .from("generated_articles")
+    .update(patch as never)
+    .eq("id", id);
 
   // Degraded mode: if translations column missing, retry without it (and persist into metadata).
   if (error && isMissingColumnError(error.message, "translations")) {
@@ -164,7 +167,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       translations: undefined,
       editorial_metadata: metaFallback,
     };
-    const retry = await supabase.from("generated_articles").update(retryPatch).eq("id", id);
+    const retry = await supabase
+      .from("generated_articles")
+      .update(retryPatch as never)
+      .eq("id", id);
     error = retry.error;
   }
 

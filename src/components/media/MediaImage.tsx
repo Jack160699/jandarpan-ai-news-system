@@ -134,8 +134,11 @@ export function MediaImage({
     tier >= 2 && media?.placeholderUrl ? media.placeholderUrl : undefined;
 
   useEffect(() => {
-    setTier(0);
-    setLoaded(false);
+    const id = window.setTimeout(() => {
+      setTier(0);
+      setLoaded(false);
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [displaySrc]);
 
   const handleError = useCallback(() => {

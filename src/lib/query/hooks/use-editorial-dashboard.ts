@@ -23,7 +23,7 @@ type DashboardQueryMeta = {
 export function useEditorialDashboardQuery(enabled = true) {
   const pathname = usePathname() ?? "/admin";
 
-  return useQuery({
+  return useQuery<EditorialDashboardSnapshot>({
     queryKey: queryKeys.editorial.dashboard,
     queryFn: ({ meta, client, queryKey }) => {
       const m = (meta ?? {}) as DashboardQueryMeta;
