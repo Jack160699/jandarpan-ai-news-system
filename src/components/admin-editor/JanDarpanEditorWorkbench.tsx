@@ -15,6 +15,7 @@ import {
   Smartphone,
   Monitor,
 } from "lucide-react";
+import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { CollaborationBar } from "@/components/collaboration/CollaborationBar";
 import { NewsroomTipTapEditor } from "@/components/admin-editor/NewsroomTipTapEditor";
 import type { EditorArticleRecord, EditorVersionSnapshot } from "@/lib/editorial-editor/types";
@@ -249,9 +250,13 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
             ) : (
               <>
                 <Clock size={14} />
-                {lastSavedAt
-                  ? `Saved ${new Date(lastSavedAt).toLocaleTimeString("en-IN")}`
-                  : "Draft"}
+                {lastSavedAt ? (
+                  <>
+                    Saved <ClientTime iso={lastSavedAt} preset="time" />
+                  </>
+                ) : (
+                  "Draft"
+                )}
               </>
             )}
           </span>

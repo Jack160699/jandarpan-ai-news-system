@@ -33,9 +33,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
+import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { useAdminSessionOptional } from "@/providers/AdminSessionProvider";
+import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
 import { isSuperAdmin } from "@/lib/newsroom-auth/rbac";
@@ -76,8 +78,9 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
     useAdminNewsroom();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [now, setNow] = useState(() => new Date());
   const [search, setSearch] = useState("");
+
+  useHydrationSafe("admin_shell");
 
   const adminSession = useAdminSessionOptional();
 
@@ -109,11 +112,6 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
     () => visibleNav.find((item) => item.href === pathname)?.label ?? "Admin",
     [pathname, visibleNav]
   );
-
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
 
   return (
     <div className="anr" data-theme={theme}>
@@ -216,13 +214,7 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
             </div>
             <div className="anr-topbar__right">
               <LiveIndicator label="Ingestion live" />
-              <span className="anr-clock">
-                {now.toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                })}
-              </span>
+              <ClientTime preset="clock" className="anr-clock" />
               <button type="button" className="anr-btn anr-btn--ghost" aria-label="Notifications">
                 <Bell size={16} />
               </button>
@@ -254,11 +246,7 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
             <div>
               {data ? (
                 <p className="anr-meta">
-                  Updated{" "}
-                  {new Date(data.fetchedAt).toLocaleTimeString("en-IN", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
+                  Updated <ClientTime iso={data.fetchedAt} preset="time" />
                 </p>
               ) : null}
             </div>

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { useCollaborationRoom } from "@/hooks/useCollaborationRoom";
 import type { CollaborationSnapshot } from "@/lib/collaboration/types";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
@@ -142,7 +143,9 @@ export function CollaborationHubPanel() {
           <ul className="collab-hub__feed">
             {hub.activity.map((e) => (
               <li key={e.id}>
-                <time>{new Date(e.createdAt).toLocaleTimeString("en-IN")}</time>
+                <time>
+                  <ClientTime iso={e.createdAt} preset="time" />
+                </time>
                 <strong>{e.actorEmail.split("@")[0]}</strong>
                 <span>{e.summary}</span>
               </li>

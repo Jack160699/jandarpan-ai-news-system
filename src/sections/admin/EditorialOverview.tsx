@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -19,6 +19,8 @@ import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { StoriesTable } from "@/components/admin-newsroom/StoriesTable";
 import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
+import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
+import { useHasMounted } from "@/hooks/useHasMounted";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
 import { QueueTable } from "@/components/admin-newsroom/ui/QueueTable";
 
@@ -87,6 +89,7 @@ function MissionMetricCard({
 
 export function EditorialOverview() {
   const { data, loading, error } = useAdminNewsroom();
+  const mounted = useHasMounted();
 
   if (loading && !data) {
     return (
@@ -121,17 +124,20 @@ export function EditorialOverview() {
     aiConfRows.reduce((sum, a) => sum + (a.ai_confidence ?? 0), 0) /
     Math.max(1, aiConfRows.length);
 
-  const ingestionOverTime = data.ingestion.recentLogs
-    .slice(0, 12)
-    .reverse()
-    .map((log) => ({
-      time: new Date(log.created_at).toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      inserted: log.inserted,
-      failed: log.failed_validation,
-    }));
+  const ingestionOverTime = useMemo(() => {
+    if (!mounted) return [];
+    return data.ingestion.recentLogs
+      .slice(0, 12)
+      .reverse()
+      .map((log) => ({
+        time: new Date(log.created_at).toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        inserted: log.inserted,
+        failed: log.failed_validation,
+      }));
+  }, [mounted, data.ingestion.recentLogs]);
 
   const approvalsVsRejects = [
     { name: "Approved", value: approved.length, color: "#22c55e" },
@@ -293,7 +299,7 @@ export function EditorialOverview() {
               {breaking.slice(0, 6).map((story) => (
                 <li key={story.id} className="anr-pulse-item anr-pulse-item--breaking">
                   <strong>{story.headline}</strong>
-                  <span>{new Date(story.created_at).toLocaleTimeString("en-IN")}</span>
+                  <ClientTime iso={story.created_at} preset="time" />
                 </li>
               ))}
             </ul>
@@ -340,12 +346,7 @@ export function EditorialOverview() {
             {pulseFeed.map((item, i) => (
               <li key={`${item.at}-${i}`} className={`anr-pulse-item anr-pulse-item--${item.tone}`}>
                 <strong>{item.text}</strong>
-                <span>
-                  {new Date(item.at).toLocaleTimeString("en-IN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+                <ClientTime iso={item.at} preset="time" />
               </li>
             ))}
           </ul>
@@ -374,7 +375,9 @@ export function EditorialOverview() {
                     <td>{log.inserted}</td>
                     <td>{log.total_fetched}</td>
                     <td>{log.failed_validation}</td>
-                    <td>{new Date(log.created_at).toLocaleString("en-IN")}</td>
+                    <td>
+                      <ClientTime iso={log.created_at} preset="datetime" />
+                    </td>
                   </tr>
                 ))}
               </tbody>

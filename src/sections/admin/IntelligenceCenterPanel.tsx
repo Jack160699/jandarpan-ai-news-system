@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { NewsroomIntelligenceSnapshot } from "@/lib/intelligence/types";
 import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
+import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
 
 const RISK_COLORS: Record<string, string> = {
@@ -76,7 +77,7 @@ export function IntelligenceCenterPanel() {
         </div>
         <LiveIndicator label="Realtime ingestion" />
         <span className="anr-icenter__clock">
-          {new Date(data.fetchedAt).toLocaleString("en-IN")}
+          <ClientTime iso={data.fetchedAt} preset="datetime" />
         </span>
       </header>
 

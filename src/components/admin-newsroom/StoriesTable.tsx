@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
 import { FilterBar } from "@/components/admin-newsroom/ui/FilterBar";
 import { QueueTable } from "@/components/admin-newsroom/ui/QueueTable";
 import { StatusBadge } from "@/components/admin-newsroom/ui/StatusBadge";
+import { useClientNow } from "@/hooks/useClientNow";
 import { useStoriesDesk } from "@/hooks/useStoriesDesk";
 import type { DashboardGeneratedArticle } from "@/lib/editorial-dashboard/types";
 
@@ -140,15 +141,20 @@ export function StoriesTable({ articles: articlesProp }: StoriesTableProps) {
   const activeModerators = Math.max(2, Math.min(8, Math.round(filtered.length / 7)));
   const queueHealth =
     filtered.length > 20 ? "Warning" : filtered.length > 35 ? "Overloaded" : "Stable";
-  const avgReviewMinutes = Math.max(
-    2,
-    Math.round(
-      filtered.reduce(
-        (sum, a) => sum + (Date.now() - new Date(a.created_at).getTime()) / 60000,
-        0
-      ) / Math.max(1, filtered.length)
-    )
-  );
+  const clientNow = useClientNow(60_000);
+  const avgReviewMinutes = useMemo(() => {
+    if (clientNow == null) return null;
+    return Math.max(
+      2,
+      Math.round(
+        filtered.reduce(
+          (sum, a) =>
+            sum + (clientNow - new Date(a.created_at).getTime()) / 60000,
+          0
+        ) / Math.max(1, filtered.length)
+      )
+    );
+  }, [clientNow, filtered]);
 
   function workflowState(article: DashboardGeneratedArticle) {
     if (article.is_breaking) return "Breaking";
@@ -218,7 +224,7 @@ export function StoriesTable({ articles: articlesProp }: StoriesTableProps) {
         </div>
         <div className="anr-kpi">
           <span>Avg review time</span>
-          <strong>{avgReviewMinutes}m</strong>
+          <strong>{avgReviewMinutes != null ? `${avgReviewMinutes}m` : "—"}</strong>
         </div>
       </div>
 

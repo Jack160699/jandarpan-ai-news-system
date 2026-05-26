@@ -17,6 +17,7 @@ import {
 } from "recharts";
 import type { EnterpriseAnalyticsReport } from "@/lib/analytics/types";
 import { AnalyticsPanel } from "@/sections/admin/AnalyticsPanel";
+import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
 
 /** Hobby-safe analytics polling (default 120s) */
@@ -165,7 +166,7 @@ export function EnterpriseAnalyticsPanel() {
           {lr.activeReaders} live readers
         </span>
         <span className="anr-meta">
-          {new Date(report.fetchedAt).toLocaleTimeString("en-IN")} · {POLL_MS / 1000}s refresh
+          <ClientTime iso={report.fetchedAt} preset="time" /> · {POLL_MS / 1000}s refresh
         </span>
         <div className="ea__toolbar">
           <select

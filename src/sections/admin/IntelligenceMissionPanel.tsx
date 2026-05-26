@@ -14,6 +14,7 @@ import {
 import type { NewsroomIntelligenceSnapshot } from "@/lib/intelligence/types";
 import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
+import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
 
 const RISK_COLORS: Record<string, string> = {
@@ -80,7 +81,7 @@ export function IntelligenceMissionPanel() {
       <div className="anr-intel__header">
         <LiveIndicator label="Intelligence live" />
         <span className="anr-meta">
-          Updated {new Date(data.fetchedAt).toLocaleTimeString("en-IN")}
+          Updated <ClientTime iso={data.fetchedAt} preset="time" />
         </span>
       </div>
 

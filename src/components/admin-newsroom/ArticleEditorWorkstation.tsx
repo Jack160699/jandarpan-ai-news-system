@@ -31,6 +31,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { traceStability } from "@/lib/observability/stability-trace";
 
 type ArticleEditorWorkstationProps = {
@@ -573,9 +574,11 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
             </div>
             <p className="text-xs text-zinc-400">
               Last autosave:{" "}
-              {lastSavedAt
-                ? new Date(lastSavedAt).toLocaleTimeString("en-IN")
-                : "not saved yet"}
+              {lastSavedAt ? (
+                <ClientTime iso={lastSavedAt} preset="time" />
+              ) : (
+                "not saved yet"
+              )}
             </p>
           </CardContent>
         </Card>
