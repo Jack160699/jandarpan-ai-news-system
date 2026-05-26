@@ -39,8 +39,13 @@ export type TenantMembershipRow = {
   email: string;
   role: string;
   status: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  permissions: Record<string, unknown>;
+  metadata: Record<string, unknown>;
   invited_by: string | null;
   last_login_at: string | null;
+  joined_at: string;
   created_at: string;
   updated_at: string;
 };
@@ -51,8 +56,13 @@ export type TenantMembershipInsert = {
   email: string;
   role?: string;
   status?: string;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  permissions?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   invited_by?: string | null;
   last_login_at?: string | null;
+  joined_at?: string;
   updated_at?: string;
 };
 

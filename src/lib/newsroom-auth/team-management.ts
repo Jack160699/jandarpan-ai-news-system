@@ -4,12 +4,23 @@
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import {
+  queryTenantMembershipList,
+  upsertTenantMembership,
+} from "@/lib/newsroom-auth/membership-write";
+import { permissionLabelsForRole } from "@/lib/newsroom-auth/role-permissions";
+import { formatTeamApiError } from "@/lib/newsroom-auth/schema-errors";
+import {
   CANONICAL_ROLES,
   normalizeDashboardRole,
   type CanonicalRole,
 } from "@/lib/saas-auth/roles";
-import { permissionLabelsForRole } from "@/lib/newsroom-auth/role-permissions";
 import type { MembershipStatus } from "@/lib/saas-auth/types";
+import {
+  formatMemberDisplayName,
+  type TeamActivity,
+  type TeamMember,
+  type TenantMembershipDbRow,
+} from "@/lib/types/team";
 
 export function avatarHueFromEmail(email: string): number {
   let hash = 0;
@@ -19,45 +30,24 @@ export function avatarHueFromEmail(email: string): number {
   return Math.abs(hash) % 360;
 }
 
-export type TeamMemberRecord = {
-  id: string;
-  userId: string;
-  email: string;
-  displayName: string;
-  role: CanonicalRole;
-  status: MembershipStatus;
-  createdAt: string;
-  lastLoginAt: string | null;
-  avatarHue: number;
-  permissions: string[];
-};
-
-export type TeamActivityRecord = {
-  id: string;
-  action: string;
-  userEmail: string | null;
-  resourceId: string | null;
-  payload: Record<string, unknown>;
-  createdAt: string;
-};
+export type TeamMemberRecord = TeamMember;
+export type TeamActivityRecord = TeamActivity;
 
 export { CANONICAL_ROLES };
 
-function mapRow(row: {
-  id: string;
-  user_id: string;
-  email: string;
-  display_name?: string | null;
-  role: string;
-  status: string;
-  created_at: string;
-  last_login_at?: string | null;
-}): TeamMemberRecord {
+function mapRow(row: TenantMembershipDbRow): TeamMemberRecord {
   const email = row.email?.trim().toLowerCase() ?? "";
-  const displayName =
-    row.display_name?.trim() ||
-    email.split("@")[0] ||
-    "Staff";
+  const meta = (row.metadata ?? {}) as Record<string, unknown>;
+  const metaFullName =
+    typeof meta.full_name === "string" ? meta.full_name.trim() : null;
+
+  const displayName = formatMemberDisplayName({
+    display_name: row.display_name,
+    full_name: metaFullName,
+    displayName: row.display_name ?? "",
+    fullName: metaFullName,
+    email,
+  });
 
   const role = normalizeDashboardRole(row.role);
 
@@ -66,9 +56,12 @@ function mapRow(row: {
     userId: row.user_id,
     email,
     displayName,
+    fullName: metaFullName,
     role,
     status: row.status as MembershipStatus,
+    avatarUrl: row.avatar_url ?? null,
     createdAt: row.created_at,
+    joinedAt: row.joined_at ?? row.created_at,
     lastLoginAt: row.last_login_at ?? null,
     avatarHue: avatarHueFromEmail(email),
     permissions: permissionLabelsForRole(role),
@@ -80,16 +73,12 @@ export async function listTenantTeamMembers(
 ): Promise<TeamMemberRecord[]> {
   if (!isSupabaseConfigured()) return [];
 
-  const supabase = createAdminServerClient();
-  const { data, error } = await supabase
-    .from("tenant_memberships")
-    .select(
-      "id, user_id, email, display_name, role, status, created_at, last_login_at"
-    )
-    .eq("tenant_id", tenantId)
-    .order("created_at", { ascending: false });
+  const { data, error } = await queryTenantMembershipList(tenantId);
 
-  if (error || !data) return [];
+  if (error) {
+    console.error("[team] list failed:", error.message);
+    return [];
+  }
 
   const members = data.map(mapRow);
   return enrichMembersWithAuthSignIn(members);
@@ -123,9 +112,15 @@ async function enrichMembersWithAuthSignIn(
     const lastLoginAt =
       m.lastLoginAt ||
       (auth.lastSignIn ? new Date(auth.lastSignIn).toISOString() : null);
+    const displayName = formatMemberDisplayName({
+      displayName: m.displayName,
+      fullName: m.fullName ?? auth.metaName,
+      email: m.email,
+    });
     return {
       ...m,
-      displayName: m.displayName || auth.metaName || m.displayName,
+      displayName,
+      fullName: m.fullName || auth.metaName,
       lastLoginAt,
     };
   });
@@ -257,35 +252,34 @@ export async function createNewsroomStaff(input: {
     if (createError || !created.user) {
       return {
         ok: false,
-        error: createError?.message ?? "auth_user_create_failed",
+        error: formatTeamApiError(
+          createError?.message ?? "auth_user_create_failed"
+        ),
       };
     }
     userId = created.user.id;
   }
 
-  const { data: membership, error: memberError } = await supabase
-    .from("tenant_memberships")
-    .upsert(
-      {
-        tenant_id: input.tenantId,
-        user_id: userId,
-        email,
-        display_name: displayName,
-        role,
-        status: "active",
-        invited_by: input.invitedBy,
-        last_login_at: null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "tenant_id,user_id" }
-    )
-    .select(
-      "id, user_id, email, display_name, role, status, created_at, last_login_at"
-    )
-    .single();
+  const { data: membership, error: memberError } = await upsertTenantMembership(
+    {
+      tenantId: input.tenantId,
+      userId,
+      email,
+      displayName,
+      role,
+      status: "active",
+      invitedBy: input.invitedBy,
+      lastLoginAt: null,
+    }
+  );
 
   if (memberError || !membership) {
-    return { ok: false, error: memberError?.message ?? "membership_upsert_failed" };
+    return {
+      ok: false,
+      error: formatTeamApiError(
+        memberError?.message ?? "membership_upsert_failed"
+      ),
+    };
   }
 
   return { ok: true, member: mapRow(membership) };
@@ -323,6 +317,9 @@ export async function inviteNewsroomMember(input: {
 
   if (existing) {
     userId = existing.id;
+    await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: { full_name: displayName },
+    });
   } else {
     const redirectTo = `${siteUrl}/admin/login`;
     const { data: invited, error: inviteError } =
@@ -341,7 +338,9 @@ export async function inviteNewsroomMember(input: {
       if (createError || !created.user) {
         return {
           ok: false,
-          error: inviteError.message ?? createError?.message ?? "invite_failed",
+          error: formatTeamApiError(
+            inviteError.message ?? createError?.message ?? "invite_failed"
+          ),
         };
       }
       userId = created.user.id;
@@ -350,28 +349,25 @@ export async function inviteNewsroomMember(input: {
     }
   }
 
-  const { data: membership, error: memberError } = await supabase
-    .from("tenant_memberships")
-    .upsert(
-      {
-        tenant_id: input.tenantId,
-        user_id: userId,
-        email,
-        display_name: displayName,
-        role,
-        status: "invited",
-        invited_by: input.invitedBy,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "tenant_id,user_id" }
-    )
-    .select(
-      "id, user_id, email, display_name, role, status, created_at, last_login_at"
-    )
-    .single();
+  const { data: membership, error: memberError } = await upsertTenantMembership(
+    {
+      tenantId: input.tenantId,
+      userId,
+      email,
+      displayName,
+      role,
+      status: "invited",
+      invitedBy: input.invitedBy,
+    }
+  );
 
   if (memberError || !membership) {
-    return { ok: false, error: memberError?.message ?? "membership_upsert_failed" };
+    return {
+      ok: false,
+      error: formatTeamApiError(
+        memberError?.message ?? "membership_upsert_failed"
+      ),
+    };
   }
 
   return { ok: true, member: mapRow(membership) };
@@ -455,7 +451,7 @@ export async function updateTeamMemberRole(input: {
     .eq("id", input.membershipId)
     .eq("tenant_id", input.tenantId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: formatTeamApiError(error.message) };
   return { ok: true };
 }
 
@@ -498,7 +494,7 @@ export async function setTeamMemberStatus(input: {
     .eq("id", input.membershipId)
     .eq("tenant_id", input.tenantId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: formatTeamApiError(error.message) };
   return { ok: true };
 }
 
@@ -533,6 +529,6 @@ export async function removeTeamMember(input: {
     .eq("id", input.membershipId)
     .eq("tenant_id", input.tenantId);
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: formatTeamApiError(error.message) };
   return { ok: true };
 }

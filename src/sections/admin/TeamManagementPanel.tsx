@@ -17,31 +17,15 @@ import { AdminModal } from "@/components/admin-newsroom/ui/AdminModal";
 import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
 import { StatusBadge } from "@/components/admin-newsroom/ui/StatusBadge";
+import { isPostgrestSchemaError } from "@/lib/newsroom-auth/schema-errors";
 import { CANONICAL_ROLES } from "@/lib/saas-auth/roles";
 import type { CanonicalRole } from "@/lib/saas-auth/roles";
 import type { MembershipStatus } from "@/lib/saas-auth/types";
-
-type TeamMember = {
-  id: string;
-  userId: string;
-  email: string;
-  displayName: string;
-  role: CanonicalRole;
-  status: MembershipStatus;
-  createdAt: string;
-  lastLoginAt: string | null;
-  avatarHue: number;
-  permissions: string[];
-};
-
-type TeamActivity = {
-  id: string;
-  action: string;
-  userEmail: string | null;
-  resourceId: string | null;
-  payload: Record<string, unknown>;
-  createdAt: string;
-};
+import {
+  formatMemberDisplayName,
+  type TeamActivity,
+  type TeamMember,
+} from "@/lib/types/team";
 
 const PAGE_SIZE = 10;
 
@@ -94,6 +78,7 @@ export function TeamManagementPanel() {
   const [tenantName, setTenantName] = useState("Jan Darpan");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [schemaMismatch, setSchemaMismatch] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [tab, setTab] = useState<"members" | "activity">("members");
   const [search, setSearch] = useState("");
@@ -127,13 +112,16 @@ export function TeamManagementPanel() {
       });
       const json = await res.json();
       if (!res.ok || !json.ok) {
-        setError(json.error ?? "Failed to load team");
+        const msg = String(json.error ?? "Failed to load team");
+        setError(msg);
+        setSchemaMismatch(isPostgrestSchemaError(msg));
         return;
       }
-      setTeam(json.team as TeamMember[]);
-      setActivity(json.activity as TeamActivity[]);
+      setTeam((json.team as TeamMember[]) ?? []);
+      setActivity((json.activity as TeamActivity[]) ?? []);
       if (json.tenant?.name) setTenantName(json.tenant.name);
       setError(null);
+      setSchemaMismatch(false);
     } catch {
       setError("Network error");
     } finally {
@@ -163,7 +151,7 @@ export function TeamManagementPanel() {
       if (!q) return true;
       return (
         m.email.includes(q) ||
-        m.displayName.toLowerCase().includes(q) ||
+        formatMemberDisplayName(m).toLowerCase().includes(q) ||
         m.role.includes(q)
       );
     });
@@ -192,7 +180,9 @@ export function TeamManagementPanel() {
       });
       const json = await res.json();
       if (!json.ok) {
-        showToast(String(json.error ?? "Update failed"));
+        const msg = String(json.error ?? "Update failed");
+        setSchemaMismatch(isPostgrestSchemaError(msg));
+        showToast(msg);
         return false;
       }
       await refresh();
@@ -225,7 +215,9 @@ export function TeamManagementPanel() {
       });
       const json = await res.json();
       if (!json.ok) {
-        showToast(String(json.error ?? "Request failed"));
+        const msg = String(json.error ?? "Request failed");
+        setSchemaMismatch(isPostgrestSchemaError(msg));
+        showToast(msg);
         return;
       }
       setModalMode(null);
@@ -311,7 +303,37 @@ export function TeamManagementPanel() {
   }
 
   if (error && team.length === 0) {
-    return <EmptyState title="Team unavailable" hint={error} />;
+    return (
+      <EmptyState
+        title="Team unavailable"
+        hint={error}
+        action={
+          schemaMismatch ? (
+            <button
+              type="button"
+              className="anr-btn anr-btn--primary"
+              onClick={() => {
+                setLoading(true);
+                void refresh();
+              }}
+            >
+              Retry after migration
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="anr-btn anr-btn--ghost"
+              onClick={() => {
+                setLoading(true);
+                void refresh();
+              }}
+            >
+              Retry
+            </button>
+          )
+        }
+      />
+    );
   }
 
   return (
@@ -495,13 +517,13 @@ export function TeamManagementPanel() {
                     >
                       <div className="anr-team-table__member">
                         <TeamAvatar
-                          name={member.displayName}
+                          name={formatMemberDisplayName(member)}
                           email={member.email}
                           hue={member.avatarHue}
                           size="md"
                         />
                         <div>
-                          <strong>{member.displayName}</strong>
+                          <strong>{formatMemberDisplayName(member)}</strong>
                           <span>{member.email}</span>
                         </div>
                       </div>
@@ -633,13 +655,13 @@ export function TeamManagementPanel() {
               <>
                 <div className="anr-team-drawer__profile">
                   <TeamAvatar
-                    name={selected.displayName}
+                    name={formatMemberDisplayName(selected)}
                     email={selected.email}
                     hue={selected.avatarHue}
                     size="lg"
                   />
                   <div>
-                    <h3>{selected.displayName}</h3>
+                    <h3>{formatMemberDisplayName(selected)}</h3>
                     <p className="anr-meta">{selected.email}</p>
                     <StatusBadge
                       label={ROLE_LABELS[selected.role]}
@@ -858,10 +880,10 @@ export function TeamManagementPanel() {
         message={
           confirm
             ? confirm.type === "remove"
-              ? `${confirm.member.displayName} loses tenant access. Auth account is kept.`
+              ? `${formatMemberDisplayName(confirm.member)} loses tenant access. Auth account is kept.`
               : confirm.type === "suspend"
-                ? `${confirm.member.displayName} cannot sign in until reactivated.`
-                : `${confirm.member.displayName} will regain active access.`
+                ? `${formatMemberDisplayName(confirm.member)} cannot sign in until reactivated.`
+                : `${formatMemberDisplayName(confirm.member)} will regain active access.`
             : ""
         }
         confirmLabel={

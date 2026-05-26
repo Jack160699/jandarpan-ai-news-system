@@ -1,6 +1,6 @@
 -- AI Intelligence Engine: vector embeddings + source reputation memory
 
-create extension if not exists vector with schema extensions;
+create extension if not exists vector;
 
 create table if not exists public.intelligence_embeddings (
   id uuid primary key default gen_random_uuid(),
@@ -9,7 +9,7 @@ create table if not exists public.intelligence_embeddings (
   entity_id uuid not null,
   content_hash text not null,
   model text not null default 'text-embedding-3-small',
-  embedding extensions.vector(1536),
+  embedding vector(1536),
   embedding_json jsonb,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
@@ -51,16 +51,27 @@ alter table public.intelligence_embeddings enable row level security;
 alter table public.source_reputation_memory enable row level security;
 
 drop policy if exists "Service role intelligence_embeddings" on public.intelligence_embeddings;
+
 create policy "Service role intelligence_embeddings"
-  on public.intelligence_embeddings for all to service_role using (true) with check (true);
+  on public.intelligence_embeddings
+  for all
+  to service_role
+  using (true)
+  with check (true);
 
 drop policy if exists "Service role source_reputation_memory" on public.source_reputation_memory;
+
 create policy "Service role source_reputation_memory"
-  on public.source_reputation_memory for all to service_role using (true) with check (true);
+  on public.source_reputation_memory
+  for all
+  to service_role
+  using (true)
+  with check (true);
 
 -- Semantic nearest-neighbor search (pgvector)
+
 create or replace function public.match_intelligence_embeddings(
-  query_embedding extensions.vector(1536),
+  query_embedding vector(1536),
   match_count int default 10,
   filter_entity_type text default null,
   filter_tenant_id uuid default null
@@ -71,7 +82,8 @@ returns table (
   similarity float,
   metadata jsonb
 )
-language sql stable
+language sql
+stable
 as $$
   select
     e.entity_type,

@@ -7,8 +7,8 @@ import { NextResponse } from "next/server";
 import { logEditorialAudit } from "@/lib/dashboard/audit";
 import { rolePermissionsMatrix } from "@/lib/newsroom-auth/role-permissions";
 import { requireSuperAdminSession } from "@/lib/newsroom-auth/require-super-admin";
+import { formatTeamApiError } from "@/lib/newsroom-auth/schema-errors";
 import {
-  CANONICAL_ROLES,
   createNewsroomStaff,
   inviteNewsroomMember,
   listTeamActivity,
@@ -18,8 +18,11 @@ import {
   setTeamMemberStatus,
   updateTeamMemberRole,
 } from "@/lib/newsroom-auth/team-management";
-import type { CanonicalRole } from "@/lib/saas-auth/roles";
-import type { MembershipStatus } from "@/lib/saas-auth/types";
+import {
+  teamDeleteBodySchema,
+  teamPatchBodySchema,
+  teamPostBodySchema,
+} from "@/lib/newsroom-auth/team-schemas";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,34 +54,34 @@ export async function POST(request: Request) {
   const guard = await requireSuperAdminSession(request);
   if (!guard.ok) return guard.response;
 
-  const body = (await request.json()) as {
-    mode?: "create" | "invite";
-    email?: string;
-    password?: string;
-    fullName?: string;
-    role?: CanonicalRole;
-  };
-
-  const mode = body.mode ?? "create";
-  const tenantId = guard.session.membership.tenantId;
-
-  if (!body.email || !body.fullName || !body.role) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json(
-      { ok: false, error: "email_name_role_required" },
+      { ok: false, error: "invalid_json" },
       { status: 400 }
     );
   }
 
-  if (!CANONICAL_ROLES.includes(body.role)) {
-    return NextResponse.json({ ok: false, error: "invalid_role" }, { status: 400 });
+  const parsed = teamPostBodySchema.safeParse(body);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return NextResponse.json(
+      { ok: false, error: issue?.message ?? "validation_failed" },
+      { status: 400 }
+    );
   }
 
-  if (mode === "invite") {
+  const tenantId = guard.session.membership.tenantId;
+  const payload = parsed.data;
+
+  if (payload.mode === "invite") {
     const result = await inviteNewsroomMember({
       tenantId,
-      email: body.email,
-      fullName: body.fullName,
-      role: body.role,
+      email: payload.email,
+      fullName: payload.fullName,
+      role: payload.role,
       invitedBy: guard.session.userId,
     });
 
@@ -88,26 +91,25 @@ export async function POST(request: Request) {
         action: "team_invite",
         resourceType: "membership",
         resourceId: result.member?.id,
-        payload: { email: body.email, role: body.role },
+        payload: { email: payload.email, role: payload.role },
       });
     }
 
-    return NextResponse.json(result, { status: result.ok ? 200 : 400 });
-  }
-
-  if (!body.password) {
     return NextResponse.json(
-      { ok: false, error: "password_required_for_create" },
-      { status: 400 }
+      {
+        ...result,
+        error: result.error ? formatTeamApiError(result.error) : undefined,
+      },
+      { status: result.ok ? 200 : 400 }
     );
   }
 
   const result = await createNewsroomStaff({
     tenantId,
-    email: body.email,
-    password: body.password,
-    fullName: body.fullName,
-    role: body.role,
+    email: payload.email,
+    password: payload.password,
+    fullName: payload.fullName,
+    role: payload.role,
     invitedBy: guard.session.userId,
   });
 
@@ -118,42 +120,54 @@ export async function POST(request: Request) {
       resourceType: "membership",
       resourceId: result.member?.id,
       payload: {
-        email: body.email,
-        role: body.role,
-        fullName: body.fullName,
+        email: payload.email,
+        role: payload.role,
+        fullName: payload.fullName,
       },
     });
   }
 
-  return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+  return NextResponse.json(
+    {
+      ...result,
+      error: result.error ? formatTeamApiError(result.error) : undefined,
+    },
+    { status: result.ok ? 200 : 400 }
+  );
 }
 
 export async function PATCH(request: Request) {
   const guard = await requireSuperAdminSession(request);
   if (!guard.ok) return guard.response;
 
-  const body = (await request.json()) as {
-    membershipId?: string;
-    role?: CanonicalRole;
-    status?: MembershipStatus;
-    password?: string;
-  };
-
-  if (!body.membershipId) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json(
-      { ok: false, error: "membershipId_required" },
+      { ok: false, error: "invalid_json" },
       { status: 400 }
     );
   }
 
+  const parsed = teamPatchBodySchema.safeParse(body);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return NextResponse.json(
+      { ok: false, error: issue?.message ?? "validation_failed" },
+      { status: 400 }
+    );
+  }
+
+  const { membershipId, role, status, password } = parsed.data;
   const tenantId = guard.session.membership.tenantId;
   const actorUserId = guard.session.userId;
 
-  if (body.password) {
+  if (password) {
     const result = await resetTeamMemberPassword({
       tenantId,
-      membershipId: body.membershipId,
-      password: body.password,
+      membershipId,
+      password,
     });
 
     if (result.ok) {
@@ -161,23 +175,25 @@ export async function PATCH(request: Request) {
         session: guard.session,
         action: "team_password_reset",
         resourceType: "membership",
-        resourceId: body.membershipId,
+        resourceId: membershipId,
         payload: {},
       });
     }
 
-    return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+    return NextResponse.json(
+      {
+        ...result,
+        error: result.error ? formatTeamApiError(result.error) : undefined,
+      },
+      { status: result.ok ? 200 : 400 }
+    );
   }
 
-  if (body.role) {
-    if (!CANONICAL_ROLES.includes(body.role)) {
-      return NextResponse.json({ ok: false, error: "invalid_role" }, { status: 400 });
-    }
-
+  if (role) {
     const result = await updateTeamMemberRole({
       tenantId,
-      membershipId: body.membershipId,
-      role: body.role,
+      membershipId,
+      role,
       actorUserId,
     });
 
@@ -186,38 +202,45 @@ export async function PATCH(request: Request) {
         session: guard.session,
         action: "team_role_change",
         resourceType: "membership",
-        resourceId: body.membershipId,
-        payload: { role: body.role },
+        resourceId: membershipId,
+        payload: { role },
       });
     }
 
-    return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+    return NextResponse.json(
+      {
+        ...result,
+        error: result.error ? formatTeamApiError(result.error) : undefined,
+      },
+      { status: result.ok ? 200 : 400 }
+    );
   }
 
-  if (body.status) {
-    if (!["active", "invited", "suspended"].includes(body.status)) {
-      return NextResponse.json({ ok: false, error: "invalid_status" }, { status: 400 });
-    }
-
+  if (status) {
     const result = await setTeamMemberStatus({
       tenantId,
-      membershipId: body.membershipId,
-      status: body.status,
+      membershipId,
+      status,
       actorUserId,
     });
 
     if (result.ok) {
       await logEditorialAudit({
         session: guard.session,
-        action:
-          body.status === "active" ? "team_reactivate" : "team_suspend",
+        action: status === "active" ? "team_reactivate" : "team_suspend",
         resourceType: "membership",
-        resourceId: body.membershipId,
-        payload: { status: body.status },
+        resourceId: membershipId,
+        payload: { status },
       });
     }
 
-    return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+    return NextResponse.json(
+      {
+        ...result,
+        error: result.error ? formatTeamApiError(result.error) : undefined,
+      },
+      { status: result.ok ? 200 : 400 }
+    );
   }
 
   return NextResponse.json(
@@ -230,18 +253,28 @@ export async function DELETE(request: Request) {
   const guard = await requireSuperAdminSession(request);
   if (!guard.ok) return guard.response;
 
-  const body = (await request.json()) as { membershipId?: string };
-
-  if (!body.membershipId) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json(
-      { ok: false, error: "membershipId_required" },
+      { ok: false, error: "invalid_json" },
+      { status: 400 }
+    );
+  }
+
+  const parsed = teamDeleteBodySchema.safeParse(body);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return NextResponse.json(
+      { ok: false, error: issue?.message ?? "validation_failed" },
       { status: 400 }
     );
   }
 
   const result = await removeTeamMember({
     tenantId: guard.session.membership.tenantId,
-    membershipId: body.membershipId,
+    membershipId: parsed.data.membershipId,
     actorUserId: guard.session.userId,
   });
 
@@ -250,10 +283,16 @@ export async function DELETE(request: Request) {
       session: guard.session,
       action: "team_remove",
       resourceType: "membership",
-      resourceId: body.membershipId,
+      resourceId: parsed.data.membershipId,
       payload: {},
     });
   }
 
-  return NextResponse.json(result, { status: result.ok ? 200 : 400 });
+  return NextResponse.json(
+    {
+      ...result,
+      error: result.error ? formatTeamApiError(result.error) : undefined,
+    },
+    { status: result.ok ? 200 : 400 }
+  );
 }

@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "supabase:types": "npx supabase gen types typescript --linked > src/lib/supabase/database.generated.ts"
   },
   "dependencies": {
@@ -38,7 +39,8 @@
     "sharp": "^0.34.5",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "turndown": "^7.2.4"
+    "turndown": "^7.2.4",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
