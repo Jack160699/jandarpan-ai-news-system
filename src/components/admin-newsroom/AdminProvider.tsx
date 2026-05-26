@@ -9,6 +9,8 @@ import {
   useState,
 } from "react";
 import type { EditorialDashboardSnapshot } from "@/lib/editorial-dashboard/types";
+import { traceAdminBoot } from "@/lib/observability/admin-boot";
+import { isTimeoutError, withTimeout } from "@/lib/utils/withTimeout";
 
 /** Hobby-safe admin dashboard polling (default 60s) */
 const POLL_MS = Number(process.env.NEXT_PUBLIC_ADMIN_POLL_MS) || 60_000;
@@ -73,11 +75,15 @@ export function AdminProvider({
   }, []);
 
   const refresh = useCallback(async () => {
+    traceAdminBoot("WORKSPACE_LOAD", "dashboard_fetch_start");
     try {
-      const res = await fetch("/api/editorial/dashboard", {
-        cache: "no-store",
-        credentials: "include",
-      });
+      const res = await withTimeout(
+        fetch("/api/editorial/dashboard", {
+          cache: "no-store",
+          credentials: "include",
+        }),
+        { label: "WORKSPACE_LOAD", timeoutMs: 8_000 }
+      );
       const json = await res.json();
       if (!res.ok || !json.ok) {
         setError(json.error ?? "Failed to load dashboard");
@@ -85,8 +91,14 @@ export function AdminProvider({
       }
       setData(json as EditorialDashboardSnapshot);
       setError(null);
-    } catch {
-      setError("Network error");
+    } catch (err) {
+      if (isTimeoutError(err)) {
+        setError(
+          "Dashboard load timed out. Editorial tools remain available in degraded mode."
+        );
+      } else {
+        setError("Network error");
+      }
     } finally {
       setLoading(false);
     }

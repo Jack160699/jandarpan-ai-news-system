@@ -100,7 +100,17 @@ export function EditorialOverview() {
     );
   }
 
-  if (!data) return null;
+  if (!data) {
+    if (error) {
+      return (
+        <EmptyState
+          title="Editorial data unavailable"
+          hint={error}
+        />
+      );
+    }
+    return null;
+  }
 
   const pending = data.generatedArticles.filter((a) => a.editorial_status === "pending");
   const approved = data.generatedArticles.filter((a) => a.editorial_status === "approved");

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AdminLoginForm } from "./AdminLoginForm";
 import { AdminRecoveryCard } from "@/components/admin-newsroom/AdminRecoveryCard";
-import { getDashboardSession } from "@/lib/saas-auth/session";
+import { getDashboardSessionSafe } from "@/lib/saas-auth/session-safe";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,19 @@ export default async function AdminLoginPage({
     params.error === "forbidden" ||
     params.error === "session_timeout";
 
-  const session = await getDashboardSession();
+  const sessionResult = await getDashboardSessionSafe();
+  const session = sessionResult.ok ? sessionResult.session : null;
+
+  if (!sessionResult.ok && sessionResult.reason === "timeout") {
+    return (
+      <AdminRecoveryCard
+        title="Sign-in service timed out"
+        message={sessionResult.message}
+        showLogin
+        retryHref="/admin/login"
+      />
+    );
+  }
 
   if (session && !recoveryMode) {
     const dest = params.next ?? "/admin/editorial";

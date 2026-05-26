@@ -5,6 +5,9 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { SESSION_MAX_AGE_SEC } from "@/lib/security/constants";
 import { hashSessionToken } from "@/lib/security/request-context";
+import { withTimeoutFallback } from "@/lib/utils/withTimeout";
+
+const SESSION_DB_TIMEOUT_MS = 3_000;
 
 export async function registerSecuritySession(input: {
   userId: string;
@@ -44,11 +47,16 @@ export async function touchSecuritySession(accessToken: string): Promise<void> {
   const supabase = createAdminServerClient();
   const tokenHash = hashSessionToken(accessToken);
 
-  await supabase
-    .from("security_sessions")
-    .update({ last_seen_at: new Date().toISOString() })
-    .eq("session_token_hash", tokenHash)
-    .is("revoked_at", null);
+  await withTimeoutFallback(
+    supabase
+      .from("security_sessions")
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq("session_token_hash", tokenHash)
+      .is("revoked_at", null)
+      .then(() => undefined),
+    undefined,
+    { label: "touch_security_session", timeoutMs: SESSION_DB_TIMEOUT_MS }
+  );
 }
 
 export async function isSessionRevoked(accessToken: string): Promise<boolean> {
@@ -57,15 +65,20 @@ export async function isSessionRevoked(accessToken: string): Promise<boolean> {
   const supabase = createAdminServerClient();
   const tokenHash = hashSessionToken(accessToken);
 
-  const { data } = await supabase
-    .from("security_sessions")
-    .select("id, revoked_at, expires_at")
-    .eq("session_token_hash", tokenHash)
-    .maybeSingle();
+  const row = await withTimeoutFallback(
+    supabase
+      .from("security_sessions")
+      .select("id, revoked_at, expires_at")
+      .eq("session_token_hash", tokenHash)
+      .maybeSingle()
+      .then((r) => r.data),
+    null,
+    { label: "session_revoked_check", timeoutMs: SESSION_DB_TIMEOUT_MS }
+  );
 
-  if (!data) return false;
-  if (data.revoked_at) return true;
-  if (data.expires_at && new Date(data.expires_at) < new Date()) return true;
+  if (!row) return false;
+  if (row.revoked_at) return true;
+  if (row.expires_at && new Date(row.expires_at) < new Date()) return true;
   return false;
 }
 

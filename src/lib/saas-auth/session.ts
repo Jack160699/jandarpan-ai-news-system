@@ -15,12 +15,17 @@ import {
   TENANT_COOKIE_AUTH,
 } from "@/lib/security/constants";
 import { secureCookieOptions } from "@/lib/security/cookies";
+import { traceAdminBoot } from "@/lib/observability/admin-boot";
 import {
   isSessionRevoked,
   touchSecuritySession,
 } from "@/lib/security/session-store";
+import { withTimeout, withTimeoutFallback } from "@/lib/utils/withTimeout";
 
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/saas-auth/cookies";
+
+const AUTH_CALL_TIMEOUT_MS = 5_000;
+const MEMBERSHIP_TIMEOUT_MS = 5_000;
 
 export { ACCESS_COOKIE, REFRESH_COOKIE };
 
@@ -33,7 +38,7 @@ function isProdRuntime(): boolean {
   );
 }
 
-async function loadMembership(
+async function loadMembershipInner(
   userId: string,
   email: string,
   tenantSlug?: string | null
@@ -107,6 +112,19 @@ async function loadMembership(
   return fallback;
 }
 
+async function loadMembership(
+  userId: string,
+  email: string,
+  tenantSlug?: string | null
+): Promise<TenantMembership | null> {
+  traceAdminBoot("WORKSPACE_LOAD", "membership_lookup");
+  return withTimeoutFallback(
+    loadMembershipInner(userId, email, tenantSlug),
+    null,
+    { label: "WORKSPACE_LOAD", timeoutMs: MEMBERSHIP_TIMEOUT_MS }
+  );
+}
+
 function devBypassMembership(tenantSlug?: string | null): TenantMembership {
   const tenant = tenantSlug
     ? getTenantBySlug(tenantSlug) ?? getDefaultTenant()
@@ -151,9 +169,12 @@ export async function getDashboardSession(
     return null;
   }
 
-  if (await isSessionRevoked(accessToken)) {
-    return null;
-  }
+  const revoked = await withTimeoutFallback(
+    isSessionRevoked(accessToken),
+    false,
+    { label: "session_revoked_check", timeoutMs: 3_000 }
+  );
+  if (revoked) return null;
 
   if (accessToken === "dev" || accessToken === "dev-admin") {
     if (isProdRuntime()) return null;
@@ -167,7 +188,12 @@ export async function getDashboardSession(
   }
 
   const client = createUserAuthClient(accessToken);
-  const { data: userData, error } = await client.auth.getUser();
+  traceAdminBoot("AUTH_INIT", "getUser");
+
+  const { data: userData, error } = await withTimeout(
+    client.auth.getUser(),
+    { label: "AUTH_INIT_getUser", timeoutMs: AUTH_CALL_TIMEOUT_MS }
+  );
 
   if (error || !userData.user) return null;
 
@@ -178,11 +204,19 @@ export async function getDashboardSession(
   );
 
   if (!membership && userData.user.email) {
-    await bootstrapNewsroomAuth({
-      userId: userData.user.id,
-      email: userData.user.email,
-      tenantSlug: tenantHint ?? undefined,
-    });
+    traceAdminBoot("AUTH_INIT", "bootstrap");
+    try {
+      await withTimeout(
+        bootstrapNewsroomAuth({
+          userId: userData.user.id,
+          email: userData.user.email,
+          tenantSlug: tenantHint ?? undefined,
+        }),
+        { label: "AUTH_INIT_bootstrap", timeoutMs: AUTH_CALL_TIMEOUT_MS }
+      );
+    } catch {
+      /* bootstrap optional — membership may still exist */
+    }
     membership = await loadMembership(
       userData.user.id,
       userData.user.email,
@@ -192,7 +226,10 @@ export async function getDashboardSession(
 
   if (!membership) return null;
 
-  await touchSecuritySession(accessToken);
+  void withTimeout(touchSecuritySession(accessToken), {
+    label: "touch_security_session",
+    timeoutMs: 2_000,
+  }).catch(() => null);
 
   return {
     userId: userData.user.id,

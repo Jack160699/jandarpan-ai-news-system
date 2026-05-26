@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  Component,
-  Suspense,
-  type ErrorInfo,
-  type ReactNode,
-} from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 
 type AdminSafeGuardProps = {
   children: ReactNode;
@@ -17,6 +12,10 @@ type BoundaryState = {
   retryKey: number;
 };
 
+/**
+ * Client error boundary only — no Suspense.
+ * Server pages must resolve via AdminPageGate timeouts (not infinite Suspense fallbacks).
+ */
 class AdminSafeBoundary extends Component<AdminSafeGuardProps, BoundaryState> {
   state: BoundaryState = { error: null, retryKey: 0 };
 
@@ -96,24 +95,9 @@ class AdminSafeBoundary extends Component<AdminSafeGuardProps, BoundaryState> {
   }
 }
 
-function AdminLoadingFallback() {
-  return (
-    <div className="admin-safe-guard admin-safe-guard--loading" aria-busy>
-      <div className="admin-safe-guard__card">
-        <p className="admin-safe-guard__eyebrow">Newsroom</p>
-        <p className="admin-safe-guard__message">Loading admin workspace…</p>
-      </div>
-    </div>
-  );
-}
-
 export function AdminSafeGuard({
   children,
   title = "Admin panel interrupted",
 }: AdminSafeGuardProps) {
-  return (
-    <Suspense fallback={<AdminLoadingFallback />}>
-      <AdminSafeBoundary title={title}>{children}</AdminSafeBoundary>
-    </Suspense>
-  );
+  return <AdminSafeBoundary title={title}>{children}</AdminSafeBoundary>;
 }

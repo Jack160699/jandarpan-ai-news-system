@@ -3,17 +3,14 @@ import { redirect } from "next/navigation";
 import { AdminProvider } from "@/components/admin-newsroom/AdminProvider";
 import { AdminRecoveryCard } from "@/components/admin-newsroom/AdminRecoveryCard";
 import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
-import { createLogger } from "@/lib/observability/logger";
+import { traceAdminBoot, traceAdminRecovery } from "@/lib/observability/admin-boot";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
-import { getDashboardSession } from "@/lib/saas-auth/session";
+import { getDashboardSessionSafe } from "@/lib/saas-auth/session-safe";
 import type { DashboardPermission } from "@/lib/saas-auth/types";
-
-const log = createLogger("admin-page-gate");
 
 type AdminPageGateProps = {
   children: React.ReactNode;
   permission?: DashboardPermission;
-  /** Restrict route to super_admin (e.g. /admin/team) */
   superAdminOnly?: boolean;
 };
 
@@ -22,35 +19,41 @@ export async function AdminPageGate({
   permission,
   superAdminOnly,
 }: AdminPageGateProps) {
+  traceAdminBoot("ADMIN_BOOT", "page_gate_start");
+
   const headersList = await headers();
   const pathname =
     headersList.get("x-pathname") ??
     headersList.get("x-invoke-path") ??
     "/admin/editorial";
 
-  let session: Awaited<ReturnType<typeof getDashboardSession>> = null;
+  const result = await getDashboardSessionSafe();
 
-  try {
-    session = await getDashboardSession();
-  } catch (err) {
-    log.error("session_load_failed", {
-      err,
-      pathname,
-    });
+  if (!result.ok) {
+    traceAdminRecovery(result.reason, { pathname, message: result.message });
     return (
       <AdminRecoveryCard
-        title="Session unavailable"
-        message="We could not verify your newsroom session. Sign in again or retry in a moment."
+        title={
+          result.reason === "timeout"
+            ? "Session timed out"
+            : "Session unavailable"
+        }
+        message={result.message}
         showLogin
+        retryHref={pathname}
       />
     );
   }
 
+  const session = result.session;
+
   if (!session) {
+    traceAdminBoot("ADMIN_BOOT", "redirect_login", { pathname });
     redirect(`/admin/login?next=${encodeURIComponent(pathname)}`);
   }
 
   if (!canAccessAdminRoute(session.membership.role, pathname)) {
+    traceAdminRecovery("forbidden_route", { pathname, role: session.membership.role });
     return (
       <AdminRecoveryCard
         title="Access restricted"
@@ -65,6 +68,7 @@ export async function AdminPageGate({
     permission &&
     !roleHasPermission(session.membership.role, permission)
   ) {
+    traceAdminRecovery("missing_permission", { permission });
     return (
       <AdminRecoveryCard
         title="Permission required"
@@ -75,6 +79,7 @@ export async function AdminPageGate({
   }
 
   if (superAdminOnly && !isSuperAdmin(session.membership.role)) {
+    traceAdminRecovery("super_admin_required");
     return (
       <AdminRecoveryCard
         title="Super admin only"
@@ -83,6 +88,11 @@ export async function AdminPageGate({
       />
     );
   }
+
+  traceAdminBoot("ADMIN_BOOT", "ready", {
+    role: session.membership.role,
+    tenant: session.membership.tenantSlug,
+  });
 
   return (
     <AdminProvider

@@ -26,6 +26,8 @@ import {
   type TeamActivity,
   type TeamMember,
 } from "@/lib/types/team";
+import { traceAdminBoot } from "@/lib/observability/admin-boot";
+import { isTimeoutError, withTimeout } from "@/lib/utils/withTimeout";
 
 const PAGE_SIZE = 10;
 
@@ -106,11 +108,15 @@ export function TeamManagementPanel() {
   }, []);
 
   const refresh = useCallback(async () => {
+    traceAdminBoot("TEAM_LOAD", "start");
     try {
-      const res = await fetch("/api/admin/team", {
-        cache: "no-store",
-        credentials: "include",
-      });
+      const res = await withTimeout(
+        fetch("/api/admin/team", {
+          cache: "no-store",
+          credentials: "include",
+        }),
+        { label: "TEAM_LOAD", timeoutMs: 8_000 }
+      );
       const json = await res.json();
       if (!res.ok || !json.ok) {
         const msg = String(json.error ?? "Failed to load team");
@@ -132,8 +138,13 @@ export function TeamManagementPanel() {
         setError(null);
         setSchemaMismatch(false);
       }
-    } catch {
-      setError("Network error");
+    } catch (err) {
+      if (isTimeoutError(err)) {
+        setRecoveryMode(true);
+        setError("Team load timed out. Recovery mode — retry or use other admin sections.");
+      } else {
+        setError("Network error");
+      }
     } finally {
       setLoading(false);
     }
