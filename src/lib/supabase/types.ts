@@ -15,6 +15,7 @@ import type {
 export type NewsroomTenantRow = {
   id: string;
   slug: string;
+  name: string | null;
   status: string;
   domains: string[];
   config: Record<string, unknown>;
@@ -24,6 +25,7 @@ export type NewsroomTenantRow = {
 
 export type NewsroomTenantInsert = {
   slug: string;
+  name?: string | null;
   status?: string;
   domains?: string[];
   config?: Record<string, unknown>;

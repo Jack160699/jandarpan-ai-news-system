@@ -29,7 +29,7 @@ export function DashboardShell({ title, subtitle, children }: DashboardShellProp
   const { data, theme, setTheme, toast, logout, membership, role } =
     useEditorialDesk();
 
-  const userRole = (role ?? "viewer") as DashboardRole;
+  const userRole = (role ?? "journalist") as DashboardRole;
 
   return (
     <div className="anr saas-dash" data-theme={theme}>

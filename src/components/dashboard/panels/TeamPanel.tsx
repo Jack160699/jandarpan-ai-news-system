@@ -2,14 +2,17 @@
 
 import { useState } from "react";
 import { useEditorialDesk } from "@/providers/EditorialDeskContext";
-import type { DashboardRole } from "@/lib/saas-auth/types";
+import { CANONICAL_ROLES } from "@/lib/saas-auth/roles";
+import type { CanonicalRole } from "@/lib/saas-auth/roles";
 
-const ROLES: DashboardRole[] = ["viewer", "editor", "admin", "billing", "owner"];
+const INVITE_ROLES: CanonicalRole[] = CANONICAL_ROLES.filter(
+  (r) => r !== "super_admin"
+);
 
 export function TeamPanel() {
   const { data, refresh } = useEditorialDesk();
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<DashboardRole>("editor");
+  const [role, setRole] = useState<CanonicalRole>("editor");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -58,9 +61,9 @@ export function TeamPanel() {
           <select
             className="anr-input"
             value={role}
-            onChange={(e) => setRole(e.target.value as DashboardRole)}
+            onChange={(e) => setRole(e.target.value as CanonicalRole)}
           >
-            {ROLES.filter((r) => r !== "owner").map((r) => (
+            {INVITE_ROLES.map((r) => (
               <option key={r} value={r}>
                 {r}
               </option>

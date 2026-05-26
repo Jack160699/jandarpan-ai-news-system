@@ -1,3 +1,5 @@
+import type { CanonicalRole } from "@/lib/saas-auth/roles";
+import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 import type { DashboardPermission, DashboardRole } from "@/lib/saas-auth/types";
 
 const SUPER_ADMIN_PERMISSIONS: DashboardPermission[] = [
@@ -14,21 +16,9 @@ const SUPER_ADMIN_PERMISSIONS: DashboardPermission[] = [
   "providers:read",
 ];
 
-const ROLE_PERMISSIONS: Record<DashboardRole, DashboardPermission[]> = {
-  owner: SUPER_ADMIN_PERMISSIONS,
+const ROLE_PERMISSIONS: Record<CanonicalRole, DashboardPermission[]> = {
   super_admin: SUPER_ADMIN_PERMISSIONS,
-  admin: [
-    "analytics:read",
-    "content:read",
-    "content:write",
-    "editorial:write",
-    "publish:write",
-    "team:read",
-    "team:write",
-    "monitoring:read",
-    "providers:read",
-  ],
-  publisher: [
+  moderator: [
     "analytics:read",
     "content:read",
     "content:write",
@@ -44,19 +34,19 @@ const ROLE_PERMISSIONS: Record<DashboardRole, DashboardPermission[]> = {
     "editorial:write",
     "providers:read",
   ],
-  viewer: ["analytics:read", "content:read", "monitoring:read"],
-  billing: ["analytics:read", "billing:read", "billing:write", "monitoring:read"],
+  journalist: ["analytics:read", "content:read", "monitoring:read"],
 };
 
 export function roleHasPermission(
-  role: DashboardRole,
+  role: DashboardRole | string,
   permission: DashboardPermission
 ): boolean {
-  return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+  const canonical = normalizeDashboardRole(String(role));
+  return ROLE_PERMISSIONS[canonical]?.includes(permission) ?? false;
 }
 
 export function canAccessDashboardRoute(
-  role: DashboardRole,
+  role: DashboardRole | string,
   route: string
 ): boolean {
   const map: Record<string, DashboardPermission> = {
@@ -75,3 +65,5 @@ export function canAccessDashboardRoute(
   if (!perm) return true;
   return roleHasPermission(role, perm);
 }
+
+export { normalizeDashboardRole };

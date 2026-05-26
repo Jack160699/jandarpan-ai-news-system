@@ -2,6 +2,7 @@ import {
   canAccessDashboardRoute,
   roleHasPermission,
 } from "@/lib/saas-auth/rbac";
+import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 import type { DashboardPermission, DashboardRole } from "@/lib/saas-auth/types";
 
 const ADMIN_ROUTE_PERMISSIONS: Record<string, DashboardPermission> = {
@@ -18,7 +19,7 @@ const ADMIN_ROUTE_PERMISSIONS: Record<string, DashboardPermission> = {
   "/admin/ingestion": "monitoring:read",
 };
 
-export function canAccessAdminRoute(role: DashboardRole, pathname: string): boolean {
+export function canAccessAdminRoute(role: DashboardRole | string, pathname: string): boolean {
   const base = pathname.split("?")[0];
   if (base.startsWith("/admin/stories/")) {
     return roleHasPermission(role, "editorial:write");
@@ -29,20 +30,18 @@ export function canAccessAdminRoute(role: DashboardRole, pathname: string): bool
   return roleHasPermission(role, perm);
 }
 
-export function isSuperAdmin(role: DashboardRole): boolean {
-  return role === "owner" || role === "super_admin";
+export function isSuperAdmin(role: DashboardRole | string): boolean {
+  return normalizeDashboardRole(String(role)) === "super_admin";
 }
 
-export function isPublisher(role: DashboardRole): boolean {
-  return role === "publisher" || isSuperAdmin(role) || role === "admin";
+export function isModerator(role: DashboardRole | string): boolean {
+  const r = normalizeDashboardRole(String(role));
+  return r === "moderator" || r === "super_admin";
 }
 
-export function isEditor(role: DashboardRole): boolean {
-  return (
-    role === "editor" ||
-    isPublisher(role) ||
-    role === "viewer"
-  );
+export function isEditor(role: DashboardRole | string): boolean {
+  const r = normalizeDashboardRole(String(role));
+  return r === "editor" || r === "moderator" || r === "super_admin";
 }
 
 export { canAccessDashboardRoute, roleHasPermission };

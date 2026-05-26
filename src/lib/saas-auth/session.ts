@@ -6,7 +6,9 @@ import { cookies } from "next/headers";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { createUserAuthClient } from "@/lib/supabase/auth";
 import { getDefaultTenant, getTenantBySlug } from "@/lib/tenant/registry";
-import type { DashboardRole, DashboardSession, TenantMembership } from "@/lib/saas-auth/types";
+import { bootstrapNewsroomAuth } from "@/lib/newsroom-auth/bootstrap";
+import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
+import type { DashboardSession, TenantMembership } from "@/lib/saas-auth/types";
 
 export const ACCESS_COOKIE = "nr-dashboard-access";
 export const REFRESH_COOKIE = "nr-dashboard-refresh";
@@ -40,7 +42,7 @@ async function loadMembership(
   for (const row of memberships) {
     const { data: tenant } = await supabase
       .from("newsroom_tenants")
-      .select("slug, config")
+      .select("slug, name, config")
       .eq("id", row.tenant_id)
       .maybeSingle();
 
@@ -49,15 +51,19 @@ async function loadMembership(
     const config = (tenant.config ?? {}) as {
       branding?: { nameEn?: string };
     };
+    const tenantRow = tenant as { slug: string; name?: string | null };
 
     const membership: TenantMembership = {
       id: row.id,
       tenantId: row.tenant_id,
-      tenantSlug: tenant.slug,
-      tenantName: config.branding?.nameEn ?? tenant.slug,
+      tenantSlug: tenantRow.slug,
+      tenantName:
+        tenantRow.name?.trim() ||
+        config.branding?.nameEn ||
+        tenantRow.slug,
       userId: row.user_id,
       email: row.email ?? email,
-      role: row.role as DashboardRole,
+      role: normalizeDashboardRole(row.role),
       status: row.status as TenantMembership["status"],
     };
 
@@ -83,7 +89,7 @@ function devBypassMembership(tenantSlug?: string | null): TenantMembership {
     tenantName: tenant.branding.nameEn,
     userId: DEV_USER_ID,
     email: process.env.DASHBOARD_DEV_EMAIL ?? "dev@newsroom.local",
-    role: "owner",
+    role: "super_admin",
     status: "active",
   };
 }
@@ -131,11 +137,24 @@ export async function getDashboardSession(
 
   if (error || !userData.user) return null;
 
-  const membership = await loadMembership(
+  let membership = await loadMembership(
     userData.user.id,
     userData.user.email ?? "",
     tenantHint
   );
+
+  if (!membership && userData.user.email) {
+    await bootstrapNewsroomAuth({
+      userId: userData.user.id,
+      email: userData.user.email,
+      tenantSlug: tenantHint ?? undefined,
+    });
+    membership = await loadMembership(
+      userData.user.id,
+      userData.user.email,
+      tenantHint
+    );
+  }
 
   if (!membership) return null;
 

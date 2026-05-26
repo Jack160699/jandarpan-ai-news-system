@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       tenant_id: tenant.id,
       user_id: body.userId,
       email: body.email.trim().toLowerCase(),
-      role: body.role ?? "owner",
+      role: body.role ?? "super_admin",
       status: "active",
     },
     { onConflict: "tenant_id,user_id" }

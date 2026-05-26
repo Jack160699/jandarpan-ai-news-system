@@ -1,4 +1,5 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 import type { DashboardRole, DashboardSession } from "@/lib/saas-auth/types";
 
 export async function listTeamMembers(tenantId: string) {
@@ -30,7 +31,7 @@ export async function inviteTeamMember(input: {
     tenant_id: input.session.membership.tenantId,
     user_id: placeholderUserId,
     email: input.email.trim().toLowerCase(),
-    role: input.role,
+    role: normalizeDashboardRole(String(input.role)),
     status: "invited",
     invited_by: input.session.userId,
   });
@@ -49,7 +50,10 @@ export async function updateMemberRole(
   const supabase = createAdminServerClient();
   const { error } = await supabase
     .from("tenant_memberships")
-    .update({ role, updated_at: new Date().toISOString() })
+    .update({
+      role: normalizeDashboardRole(String(role)),
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", membershipId)
     .eq("tenant_id", tenantId);
 

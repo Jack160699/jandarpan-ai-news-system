@@ -1,11 +1,7 @@
-export type DashboardRole =
-  | "owner"
-  | "super_admin"
-  | "admin"
-  | "publisher"
-  | "editor"
-  | "viewer"
-  | "billing";
+import type { CanonicalRole } from "@/lib/saas-auth/roles";
+
+/** Canonical + legacy aliases accepted at runtime (normalized in session) */
+export type DashboardRole = CanonicalRole | "owner" | "admin" | "publisher" | "viewer" | "billing";
 
 export type MembershipStatus = "active" | "invited" | "suspended";
 
@@ -29,7 +25,7 @@ export type TenantMembership = {
   tenantName: string;
   userId: string;
   email: string;
-  role: DashboardRole;
+  role: CanonicalRole;
   status: MembershipStatus;
 };
 

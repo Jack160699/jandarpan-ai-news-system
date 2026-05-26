@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import type { Database } from "@/lib/supabase/types";
 import { getPublicSupabaseEnv, isSupabaseConfigured } from "@/lib/supabase/env";
+import { bootstrapNewsroomAuth } from "@/lib/newsroom-auth/bootstrap";
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
@@ -89,10 +90,23 @@ export async function POST(request: Request) {
     );
   }
 
+  const bootstrap = await bootstrapNewsroomAuth({
+    userId: data.user.id,
+    email: data.user.email ?? email,
+  });
+
   const response = NextResponse.json({
     ok: true,
     email: data.user.email,
     userId: data.user.id,
+    membership: bootstrap.ok
+      ? {
+          tenantId: bootstrap.tenantId,
+          tenantSlug: bootstrap.tenantSlug,
+          role: bootstrap.role,
+        }
+      : null,
+    bootstrapError: bootstrap.ok ? undefined : bootstrap.error,
   });
 
   applyCookies(response, pendingCookies);
