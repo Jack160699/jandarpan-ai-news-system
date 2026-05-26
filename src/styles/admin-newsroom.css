@@ -7,13 +7,16 @@
   --anr-border: rgba(255, 255, 255, 0.1);
   --anr-text: #f5f7fa;
   --anr-muted: #99a1b0;
-  --anr-accent: #f59e0b;
-  --anr-accent-soft: rgba(245, 158, 11, 0.16);
+  --anr-accent: #ff6b35;
+  --anr-accent-soft: rgba(255, 107, 53, 0.18);
   --anr-live: #f43f5e;
   --anr-success: #22c55e;
   --anr-danger: #fb7185;
   min-height: 100vh;
-  background: radial-gradient(circle at top right, rgba(245, 158, 11, 0.08), transparent 50%), var(--anr-bg);
+  background:
+    radial-gradient(circle at top right, rgba(255, 92, 56, 0.1), transparent 48%),
+    radial-gradient(circle at 12% 88%, rgba(245, 158, 11, 0.05), transparent 42%),
+    var(--anr-bg);
   color: var(--anr-text);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }

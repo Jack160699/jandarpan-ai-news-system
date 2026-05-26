@@ -69,15 +69,27 @@ type AdminShellProps = {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  searchPlaceholder?: string;
 };
 
-export function AdminShell({ title, subtitle, children }: AdminShellProps) {
+export function AdminShell({
+  title,
+  subtitle,
+  children,
+  searchValue,
+  onSearchChange,
+  searchPlaceholder,
+}: AdminShellProps) {
   const pathname = usePathname();
   const { email, role, tenantName, data, theme, setTheme, toast } =
     useAdminNewsroom();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [localSearch, setLocalSearch] = useState("");
+  const search = searchValue ?? localSearch;
+  const setSearch = onSearchChange ?? setLocalSearch;
 
   useHydrationSafe("admin_shell");
 
@@ -202,7 +214,9 @@ export function AdminShell({ title, subtitle, children }: AdminShellProps) {
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder={`Search ${activeLabel.toLowerCase()}...`}
+                  placeholder={
+                    searchPlaceholder ?? `Search ${activeLabel.toLowerCase()}...`
+                  }
                   aria-label="Quick search"
                 />
               </div>

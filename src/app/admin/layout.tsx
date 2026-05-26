@@ -7,6 +7,7 @@ import { AdminRuntimeRoot } from "@/providers/AdminRuntimeRoot";
 import { NOINDEX_ROBOTS } from "@/lib/seo";
 import { createCookieServerClient } from "@/lib/supabase/server";
 import "@/styles/admin-newsroom.css";
+import "@/styles/platform-settings.css";
 
 export const metadata: Metadata = {
   title: "Newsroom Admin",
