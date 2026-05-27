@@ -110,7 +110,8 @@ export async function processRecentArticlesWithAi(
   let processed = 0;
   const errors: string[] = [];
 
-  for (const article of rows) {
+  for (const row of rows) {
+    const article = row as NewsArticleRow;
     try {
       const enriched = await enrichArticle(article);
       if (!enriched) continue;
@@ -175,7 +176,8 @@ export async function processAiQueueBatch(
   const errors: string[] = [];
 
   await Promise.allSettled(
-    rows.map(async (article) => {
+    rows.map(async (row) => {
+      const article = row as NewsArticleRow;
       try {
         const enriched = await enrichArticle(article);
         if (!enriched) {

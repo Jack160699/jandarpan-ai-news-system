@@ -26,6 +26,7 @@ import {
 import { mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { logNewsroom } from "@/lib/newsroom/logger";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
+import { asJson, asJsonObject } from "@/types/json";
 import type { NewsEventInsert } from "@/lib/types/newsroom";
 import type { NewsSignalRow } from "@/lib/types/newsroom";
 
@@ -610,14 +611,13 @@ export async function clusterSignalsIntoEvents(options?: {
         ? "chhattisgarh"
         : inferCanonicalRegion(cluster.signals),
       category: inferCanonicalCategory(cluster.signals),
-      geo_metadata: eventGeo,
       urgency_score: urgency,
       source_count: size,
       signal_ids: cluster.signals.map((s) => s.id),
-      clustering_metadata: {
+      clustering_metadata: asJsonObject({
         ...buildClusteringMetadata(cluster, method),
         cluster_confidence_report: confidence,
-      },
+      } as Record<string, unknown>),
       cluster_confidence: confidence.score,
       is_live: isLive,
       coverage_status: "active",

@@ -2,6 +2,8 @@
  * Newsroom analytics engine types
  */
 
+import type { JsonObject } from "@/types/json";
+
 export type ReaderEventType =
   | "page_view"
   | "article_view"
@@ -29,7 +31,7 @@ export type ReaderEventInput = {
   region?: string;
   surface?: AnalyticsSurface;
   valueNum?: number;
-  metadata?: Record<string, unknown>;
+  metadata?: JsonObject;
 };
 
 export type ArticlePerformanceRow = {

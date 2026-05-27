@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { persistMonetizationEvent } from "@/lib/monetization/analytics";
 import type { MonetizationEventType } from "@/lib/monetization/types";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { asJsonObject } from "@/types/json";
 
 export async function POST(request: Request) {
   let body: {
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
     slotId: body.slotId,
     placementType: body.placementType,
     articleSlug: body.articleSlug,
-    metadata: body as Record<string, unknown>,
+    metadata: asJsonObject(body as Record<string, unknown>),
   });
 
   return NextResponse.json({ ok: true });

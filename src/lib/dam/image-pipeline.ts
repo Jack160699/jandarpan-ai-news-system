@@ -3,6 +3,7 @@
  */
 
 import sharp from "sharp";
+import { asJsonObject } from "@/types/json";
 import { optimizeCdnUrl } from "@/lib/news/images/cdn";
 
 export type ProcessedImage = {
@@ -17,7 +18,7 @@ export type ProcessedImage = {
     height: number;
     mimeType: string;
   }>;
-  metadata: Record<string, unknown>;
+  metadata: import("@/types/json").JsonObject;
 };
 
 const VARIANTS: Array<{ key: string; width: number }> = [
@@ -74,13 +75,13 @@ export async function processImageBuffer(
     width,
     height,
     variants,
-    metadata: {
+    metadata: asJsonObject({
       format: meta.format,
       space: meta.space,
       hasAlpha: meta.hasAlpha,
-      density: meta.density,
+      ...(meta.density != null ? { density: meta.density } : {}),
       exifPresent: Boolean(meta.exif),
-    },
+    } as Record<string, unknown>),
   };
 }
 

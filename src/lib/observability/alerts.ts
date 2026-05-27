@@ -3,6 +3,7 @@
  */
 
 import { cacheGetJson, cacheSetJson } from "@/lib/infrastructure/cache";
+import { asJsonObject } from "@/types/json";
 import { trackOpsError } from "@/lib/observability/errors";
 import { opsLogger } from "@/lib/observability/logger";
 
@@ -63,11 +64,13 @@ export async function evaluateIngestionAlert(
         message: `Ingestion pipeline degraded: ${input.status} (${state.consecutiveFailures} consecutive)`,
         severity: state.consecutiveFailures >= 4 ? "critical" : "high",
         requestId: input.requestId,
-        metadata: {
+        metadata: asJsonObject({
           inserted: input.inserted,
           totalFetched: input.totalFetched,
-          errors: input.errors?.slice(0, 5),
-        },
+          ...(input.errors?.length
+            ? { errors: input.errors.slice(0, 5) }
+            : {}),
+        } as Record<string, unknown>),
       });
 
       opsLogger.warn("ingestion_failure_alert", {

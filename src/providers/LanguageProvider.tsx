@@ -150,7 +150,7 @@ export function LanguageProvider({
       return;
     }
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    refreshTimerRef.current = window.setTimeout(() => {
+    refreshTimerRef.current = setTimeout(() => {
       traceStability("ROUTER_REFRESH", "language_change_refresh", { pathname });
       router.refresh();
     }, 1200);

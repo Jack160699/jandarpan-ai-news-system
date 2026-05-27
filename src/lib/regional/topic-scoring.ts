@@ -109,8 +109,8 @@ export function scoreRegionalTopicFromArticle(
     summary?: string | null;
     article_body?: string | null;
     tags?: string[];
-    geo_metadata?: RegionalGeoMetadata | Record<string, unknown> | null;
-    editorial_metadata?: Record<string, unknown> | null;
+    geo_metadata?: RegionalGeoMetadata | import("@/types/supabase").Json | null;
+    editorial_metadata?: import("@/types/json").JsonObject | import("@/types/supabase").Json | null;
   },
   homeDistrict?: string | null
 ): RegionalTopicScore {

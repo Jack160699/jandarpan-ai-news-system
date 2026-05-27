@@ -33,7 +33,7 @@ export async function fetchPlatformConfig(): Promise<PlatformConfigBundle | null
   const settingsRaw = map.get("newsroom_settings");
   const newsroomSettings =
     settingsRaw && typeof settingsRaw === "object" && !Array.isArray(settingsRaw)
-      ? (settingsRaw as Record<string, unknown>)
+      ? (settingsRaw as import("@/types/json").JsonObject)
       : {};
 
   return { homepageSections, newsroomSettings };

@@ -197,7 +197,7 @@ export async function transitionWorkflow(input: {
 
   const { error: updateError } = await supabase
     .from("generated_articles")
-    .update(patch)
+    .update(patch as never)
     .eq("id", input.articleId);
 
   if (updateError) return { ok: false, error: updateError.message };

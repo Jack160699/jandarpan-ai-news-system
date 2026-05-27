@@ -9,6 +9,7 @@ import {
 } from "@/lib/newsroom-auth/membership-write";
 import { permissionLabelsForRole } from "@/lib/newsroom-auth/role-permissions";
 import { formatTeamApiError } from "@/lib/newsroom-auth/schema-errors";
+import { jsonObjectFrom } from "@/types/json";
 import {
   CANONICAL_ROLES,
   normalizeDashboardRole,
@@ -38,7 +39,7 @@ export { CANONICAL_ROLES };
 
 function mapRow(row: TenantMembershipDbRow): TeamMemberRecord {
   const email = row.email?.trim().toLowerCase() ?? "";
-  const meta = (row.metadata ?? {}) as Record<string, unknown>;
+  const meta = jsonObjectFrom(row.metadata);
   const metaFullName =
     typeof meta.full_name === "string" ? meta.full_name.trim() : null;
 
@@ -147,7 +148,7 @@ export async function listTeamActivity(
     action: row.action,
     userEmail: row.user_email,
     resourceId: row.resource_id,
-    payload: (row.payload ?? {}) as Record<string, unknown>,
+    payload: jsonObjectFrom(row.payload),
     createdAt: row.created_at,
   }));
 }

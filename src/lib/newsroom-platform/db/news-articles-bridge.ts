@@ -3,7 +3,7 @@ import type { PlatformArticle } from "../content/types";
 import { platformCategoryFromIngest } from "./category-bridge";
 
 type NewsArticleRow = {
-  id: string;
+  id: number;
   slug: string | null;
   title: string;
   description: string | null;
@@ -48,8 +48,8 @@ export async function queryNewsArticlesAsPlatform(filters: {
     const platformCategory = platformCategoryFromIngest(ingestCategory);
 
     return {
-      id: row.id,
-      slug: row.slug ?? row.id,
+      id: String(row.id),
+      slug: row.slug ?? String(row.id),
       title: row.title,
       excerpt: row.description ?? "",
       content: row.content ?? row.description ?? "",

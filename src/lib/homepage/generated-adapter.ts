@@ -8,6 +8,15 @@ import { resolveEditorialDesk } from "@/lib/newsroom/desk-branding";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
 
+/** In-memory-only id for generated rows mapped into NewsArticleRow (never a DB news_articles key). */
+function syntheticNewsArticleId(generatedId: string): number {
+  let hash = 0;
+  for (let i = 0; i < generatedId.length; i++) {
+    hash = (Math.imul(31, hash) + generatedId.charCodeAt(i)) | 0;
+  }
+  return -Math.max(1, Math.abs(hash));
+}
+
 const SECTION_TO_CATEGORY: Record<string, NewsCategory> = {
   chhattisgarh: "local",
   raipur: "local",
@@ -29,7 +38,7 @@ export function generatedToNewsArticle(
   );
 
   return {
-    id: row.id,
+    id: syntheticNewsArticleId(row.id),
     title: row.headline,
     description: row.summary,
     content: row.article_body,

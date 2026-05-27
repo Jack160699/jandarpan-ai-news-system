@@ -3,6 +3,7 @@
  */
 
 import { createAdminServerClient } from "@/lib/supabase";
+import { asJson } from "@/types/json";
 import {
   normalizeArticleLanguage,
   readingTimeLabel,
@@ -214,11 +215,11 @@ async function persistArticleTranslations(
   await supabase
     .from("generated_articles")
     .update({
-      editorial_metadata: {
+      editorial_metadata: asJson({
         ...editorial_metadata,
         translations,
         translations_updated_at: new Date().toISOString(),
-      },
+      }),
     })
     .eq("id", articleId);
 }

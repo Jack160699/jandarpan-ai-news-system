@@ -16,7 +16,7 @@ export function enqueueAiJob(payload: AiJobPayload): AiJobResult {
 export function updateAiJobStatus(
   jobId: string,
   status: AiJobStatus,
-  output?: Record<string, unknown>,
+  output?: import("@/types/json").JsonObject,
   error?: string
 ): AiJobResult | null {
   const existing = queue.get(jobId);

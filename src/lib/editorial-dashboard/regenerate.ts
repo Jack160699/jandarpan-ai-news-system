@@ -29,7 +29,7 @@ async function loadArticle(
     .select("*")
     .eq("id", articleId)
     .maybeSingle();
-  return data ?? null;
+  return (data ?? null) as unknown as GeneratedArticleRow | null;
 }
 
 async function loadEvent(eventId: string): Promise<NewsEventRow | null> {
@@ -39,7 +39,7 @@ async function loadEvent(eventId: string): Promise<NewsEventRow | null> {
     .select("*")
     .eq("id", eventId)
     .maybeSingle();
-  return data ?? null;
+  return (data ?? null) as unknown as NewsEventRow | null;
 }
 
 async function loadSignals(event: NewsEventRow): Promise<NewsSignalRow[]> {
@@ -49,7 +49,7 @@ async function loadSignals(event: NewsEventRow): Promise<NewsSignalRow[]> {
     .from("news_signals")
     .select("*")
     .in("id", event.signal_ids);
-  return data ?? [];
+  return (data ?? []) as unknown as NewsSignalRow[];
 }
 
 function buildFactPack(event: NewsEventRow, signals: NewsSignalRow[]): string {

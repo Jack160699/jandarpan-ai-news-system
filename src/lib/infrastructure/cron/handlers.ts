@@ -9,6 +9,7 @@ import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import { listWorkers } from "@/lib/infrastructure/cron/orchestrator";
 import {
   CRON_WORKER_IDS,
+  CRON_WORKER_ALIASES,
   resolveCronWorkerId,
 } from "@/lib/infrastructure/cron/worker-aliases";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";

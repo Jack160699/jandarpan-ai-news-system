@@ -5,7 +5,6 @@ import { platformArticlesToHomeArticles } from "@/lib/newsroom-platform/content/
 import { fetchTopicFeed } from "@/lib/newsroom-platform/feeds/topics";
 import { getPlatformTopic } from "@/lib/newsroom-platform/config/topics";
 import { QuickUpdateFeed } from "@/components/quick-update/QuickUpdateFeed";
-import { homeArticleToQuickUpdate } from "@/lib/homepage/quick-update";
 import { notFound } from "next/navigation";
 
 type TopicHubViewProps = {
@@ -48,7 +47,7 @@ export async function TopicHubView({ slug, language = "en" }: TopicHubViewProps)
             <p className="text-sm text-stone-500">No stories in this topic yet.</p>
           ) : (
             <QuickUpdateFeed
-              items={homeArticles.map((a) => homeArticleToQuickUpdate(a, language))}
+              items={homeArticles}
               variant="feed"
             />
           )}

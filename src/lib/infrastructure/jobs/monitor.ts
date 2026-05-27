@@ -3,6 +3,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase";
+import { asJsonObject, type JsonObject } from "@/types/json";
 
 export type JobRunRecord = {
   workerId: string;
@@ -13,7 +14,7 @@ export type JobRunRecord = {
   durationMs: number;
   skipped?: boolean;
   error?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: JsonObject;
 };
 
 export async function recordJobRun(input: JobRunRecord): Promise<void> {
@@ -27,7 +28,7 @@ export async function recordJobRun(input: JobRunRecord): Promise<void> {
     duration_ms: input.durationMs,
     skipped: input.skipped ?? false,
     error: input.error ?? null,
-    metadata: input.metadata ?? {},
+    metadata: asJsonObject(input.metadata ?? {}),
   });
 }
 

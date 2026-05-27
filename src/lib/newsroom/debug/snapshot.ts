@@ -219,7 +219,10 @@ export async function captureNewsroomSnapshot(): Promise<NewsroomSnapshot> {
     latest: {
       signals: signalsRes.data ?? [],
       events: eventsRes.data ?? [],
-      generated: generatedRes.data ?? [],
+      generated: (generatedRes.data ?? []).map((r) => ({
+        ...r,
+        editorial_status: r.editorial_status as GeneratedArticleRow["editorial_status"],
+      })),
     },
     providerHealth: {
       api: (apiHealthRes.data ?? []).map((r) => ({

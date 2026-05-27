@@ -2,6 +2,8 @@
  * Digital Asset Management — shared types
  */
 
+import type { JsonObject } from "@/types/json";
+
 export type DamMediaType = "image" | "video" | "audio";
 
 export type DamFolder = {
@@ -48,7 +50,7 @@ export type DamAsset = {
   width: number | null;
   height: number | null;
   durationSec: number | null;
-  metadata: Record<string, unknown>;
+  metadata: JsonObject;
   copyright: DamCopyright;
   aiTags: string[];
   aiObjects: string[];

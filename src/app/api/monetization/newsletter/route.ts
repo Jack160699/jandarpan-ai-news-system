@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { persistMonetizationEvent } from "@/lib/monetization/analytics";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { asJsonObject } from "@/types/json";
 
 export async function POST(request: Request) {
   let body: { email?: string; newsletterSlug?: string };
@@ -22,7 +23,10 @@ export async function POST(request: Request) {
     await persistMonetizationEvent({
       tenantId: tenant.id,
       eventType: "newsletter_signup",
-      metadata: { email, newsletterSlug: body.newsletterSlug },
+      metadata: asJsonObject({
+        email,
+        ...(body.newsletterSlug != null ? { newsletterSlug: body.newsletterSlug } : {}),
+      } as Record<string, unknown>),
     });
     return NextResponse.json({ ok: true, mode: "logged_only" });
   }

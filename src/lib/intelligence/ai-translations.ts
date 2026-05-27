@@ -3,6 +3,7 @@
  */
 
 import type { MultilingualPipelineStatus } from "@/lib/intelligence/types";
+import type { Json } from "@/types/supabase";
 
 export type TranslationSuggestion = {
   articleId: string;
@@ -19,7 +20,7 @@ export function suggestTranslations(input: {
     id: string;
     headline: string;
     language: string | null;
-    translations: Record<string, unknown> | null;
+    translations: Json | null;
     region: string | null;
   }>;
 }): TranslationSuggestion[] {

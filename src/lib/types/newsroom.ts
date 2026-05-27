@@ -2,6 +2,8 @@
  * AI-native newsroom layer types
  */
 
+import type { Json } from "@/types/supabase";
+import type { JsonObject } from "@/types/json";
 import type { RegionalGeoMetadata } from "@/lib/regional/geo-tagging";
 
 export type NewsSignalRow = {
@@ -17,8 +19,8 @@ export type NewsSignalRow = {
   category: string;
   region: string | null;
   language: string | null;
-  ingestion_metadata: Record<string, unknown>;
-  geo_metadata?: RegionalGeoMetadata;
+  ingestion_metadata: Json;
+  geo_metadata?: Json | RegionalGeoMetadata;
   created_at: string;
 };
 
@@ -34,8 +36,7 @@ export type NewsSignalInsert = {
   category: string;
   region?: string | null;
   language?: string | null;
-  ingestion_metadata?: Record<string, unknown>;
-  geo_metadata?: RegionalGeoMetadata;
+  ingestion_metadata?: JsonObject;
 };
 
 export type NewsEventRow = {
@@ -48,13 +49,14 @@ export type NewsEventRow = {
   urgency_score: number;
   source_count: number;
   signal_ids: string[];
-  clustering_metadata: Record<string, unknown>;
+  clustering_metadata: Json;
+  /** Present on in-memory rows; persisted inside clustering_metadata in DB */
+  geo_metadata?: RegionalGeoMetadata | Json;
   coverage_slug: string | null;
   coverage_headline: string | null;
   cluster_confidence: number | null;
   is_live: boolean;
   coverage_status: string;
-  geo_metadata?: RegionalGeoMetadata;
   created_at: string;
   updated_at: string;
 };
@@ -68,13 +70,12 @@ export type NewsEventInsert = {
   urgency_score?: number;
   source_count?: number;
   signal_ids?: string[];
-  clustering_metadata?: Record<string, unknown>;
+  clustering_metadata?: JsonObject;
   coverage_slug?: string | null;
   coverage_headline?: string | null;
   cluster_confidence?: number | null;
   is_live?: boolean;
   coverage_status?: string;
-  geo_metadata?: RegionalGeoMetadata;
   updated_at?: string;
 };
 
@@ -85,7 +86,7 @@ export type CoverageUpdateRow = {
   headline: string;
   summary: string | null;
   signal_ids: string[];
-  source_attribution: unknown[];
+  source_attribution: Json;
   cluster_confidence: number | null;
   is_breaking: boolean;
   published_at: string;
@@ -98,7 +99,7 @@ export type CoverageUpdateInsert = {
   headline: string;
   summary?: string | null;
   signal_ids?: string[];
-  source_attribution?: unknown[];
+  source_attribution?: Json;
   cluster_confidence?: number | null;
   is_breaking?: boolean;
   published_at?: string;
@@ -163,7 +164,7 @@ export type EditorialMetadata = {
     published_at: string | null;
     confidence: number;
   }>;
-  quality_report?: Record<string, unknown>;
+  quality_report?: JsonObject;
   generated_at?: string;
   model?: string;
   event_id?: string;
@@ -197,8 +198,9 @@ export type GeneratedArticleRow = {
   homepage_pin?: boolean;
   pinned_at?: string | null;
   editorial_metadata: EditorialMetadata;
-  geo_metadata?: RegionalGeoMetadata;
+  geo_metadata?: RegionalGeoMetadata | Json;
   shorts_metadata?: import("@/lib/news/shorts/types").NewsShortBundle;
+  translations?: Json | null;
   created_at: string;
 };
 
@@ -220,7 +222,8 @@ export type GeneratedArticleInsert = {
   homepage_pin?: boolean;
   pinned_at?: string | null;
   reviewed_at?: string | null;
-  editorial_metadata?: EditorialMetadata;
-  geo_metadata?: RegionalGeoMetadata;
+  editorial_metadata?: EditorialMetadata | Json;
+  geo_metadata?: RegionalGeoMetadata | Json;
   shorts_metadata?: import("@/lib/news/shorts/types").NewsShortBundle;
+  translations?: Json;
 };

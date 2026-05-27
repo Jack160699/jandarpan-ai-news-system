@@ -4,9 +4,11 @@
 
 import { DEFAULT_TRANSLATION_TARGETS } from "@/lib/i18n/multilingual/translate";
 import type { MultilingualPipelineStatus } from "@/lib/intelligence/types";
+import type { Json } from "@/types/supabase";
+import { jsonObjectFrom } from "@/types/json";
 
 type ArticleTranslationRow = {
-  translations: Record<string, unknown> | null;
+  translations?: Json | null;
   language: string | null;
   updated_at?: string | null;
 };
@@ -24,7 +26,7 @@ export function getMultilingualPipelineStatus(
   let lastTranslatedAt: string | null = null;
 
   for (const a of articles) {
-    const trans = a.translations ?? {};
+    const trans = jsonObjectFrom(a.translations);
     const locales = Object.keys(trans).filter((k) => k !== "meta");
     const missing = targets.filter((t) => t !== a.language && !locales.includes(t));
     if (missing.length > 0) pendingCount += 1;

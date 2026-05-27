@@ -97,12 +97,12 @@ export function slugifyTitle(title: string): string {
  */
 export function buildArticleSlug(
   title: string,
-  articleId?: string,
+  articleId?: string | number,
   articleUrl?: string
 ): string {
   const base = slugifyTitle(title);
-  const suffix = articleId
-    ? articleId.replace(/-/g, "").slice(0, 8)
+  const suffix = articleId != null
+    ? String(articleId).replace(/-/g, "").slice(0, 8)
     : shortHash(`${title}|${articleUrl ?? ""}`);
 
   const slug = `${base}-${suffix}`.replace(/-+/g, "-").slice(0, MAX_SLUG_LEN);
@@ -127,7 +127,7 @@ export function ensureUniqueSlug(
 }
 
 export function assignSlugsToRows<
-  T extends { title: string; article_url: string; id?: string },
+  T extends { title: string; article_url: string; id?: string | number },
 >(rows: T[], existingSlugs: Set<string> = new Set()): Array<T & { slug: string }> {
   const used = new Set(existingSlugs);
 

@@ -3,6 +3,7 @@
  */
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
 import {
   cosineSimilarity,
   contentHash,
@@ -16,7 +17,7 @@ export type SimilarMatch = {
   entityType: EntityType;
   entityId: string;
   similarity: number;
-  metadata: Record<string, unknown>;
+  metadata: JsonObject;
 };
 
 export async function upsertEmbedding(input: {
@@ -24,7 +25,7 @@ export async function upsertEmbedding(input: {
   entityType: EntityType;
   entityId: string;
   text: string;
-  metadata?: Record<string, unknown>;
+  metadata?: JsonObject;
 }): Promise<boolean> {
   if (!isSupabaseConfigured()) return false;
 
@@ -43,7 +44,7 @@ export async function upsertEmbedding(input: {
       model: embeddingModel(),
       embedding: embedding as unknown as string,
       embedding_json: embedding,
-      metadata: input.metadata ?? {},
+      metadata: asJsonObject(input.metadata ?? {}),
       updated_at: new Date().toISOString(),
     },
     { onConflict: "entity_type,entity_id" }
@@ -66,10 +67,11 @@ export async function findSimilarByText(input: {
   const supabase = createAdminServerClient();
 
   const { data, error } = await supabase.rpc("match_intelligence_embeddings", {
-    query_embedding: queryEmb,
+    // Supabase RPC typings model pgvector inputs as `string`, but runtime accepts numeric arrays.
+    query_embedding: queryEmb as unknown as string,
     match_count: input.limit ?? 12,
-    filter_entity_type: input.entityType ?? null,
-    filter_tenant_id: input.tenantId ?? null,
+    filter_entity_type: (input.entityType ?? null) as unknown as string | undefined,
+    filter_tenant_id: (input.tenantId ?? null) as unknown as string | undefined,
   });
 
   if (error || !data) {
@@ -80,12 +82,12 @@ export async function findSimilarByText(input: {
     entity_type: EntityType;
     entity_id: string;
     similarity: number;
-    metadata: Record<string, unknown>;
+    metadata: JsonObject;
   }>).map((row) => ({
     entityType: row.entity_type,
     entityId: row.entity_id,
     similarity: row.similarity,
-    metadata: row.metadata ?? {},
+    metadata: jsonObjectFrom(row.metadata),
   }));
 }
 
@@ -120,7 +122,7 @@ async function inMemoryFallbackSearch(
         entityType: row.entity_type as EntityType,
         entityId: row.entity_id as string,
         similarity: cosineSimilarity(queryEmb, emb),
-        metadata: (row.metadata ?? {}) as Record<string, unknown>,
+        metadata: jsonObjectFrom(row.metadata),
       };
     })
     .sort((a, b) => b.similarity - a.similarity);

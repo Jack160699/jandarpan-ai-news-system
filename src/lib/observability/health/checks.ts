@@ -189,8 +189,8 @@ export async function checkAnalytics(): Promise<HealthCheckResult> {
 
     const supabase = createAdminServerClient();
     const { error } = await supabase
-      .from("newsroom_analytics_events")
-      .select("id", { count: "exact", head: true })
+      .from("analytics_snapshots")
+      .select("id")
       .limit(1);
 
     if (error) {

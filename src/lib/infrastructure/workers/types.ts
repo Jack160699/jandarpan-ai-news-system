@@ -18,7 +18,7 @@ export type WorkerResult = {
   durationMs: number;
   skipped?: boolean;
   error?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: import("@/types/json").JsonObject;
 };
 
 export type WorkerContext = {

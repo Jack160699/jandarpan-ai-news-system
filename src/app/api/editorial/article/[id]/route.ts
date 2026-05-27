@@ -8,6 +8,7 @@ import {
   traceSchemaMismatch,
 } from "@/lib/observability/schema-mismatch-trace";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJson, asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -88,10 +89,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   const saveVersion = body.save_version === true;
   const incomingMeta =
     body.editorial_metadata && typeof body.editorial_metadata === "object"
-      ? (body.editorial_metadata as Record<string, unknown>)
-      : {};
+      ? asJsonObject(body.editorial_metadata as Record<string, unknown>)
+      : ({} as JsonObject);
 
-  let editorial_metadata: Record<string, unknown> | undefined = incomingMeta;
+  let editorial_metadata: JsonObject | undefined = incomingMeta;
 
   if (saveVersion && typeof body.headline === "string" && typeof body.article_body === "string") {
     const { data: current } = await createAdminServerClient()
@@ -100,7 +101,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       .eq("id", id)
       .maybeSingle();
 
-    const versions = appendEditorVersion(current?.editorial_metadata ?? null, {
+    const versions = appendEditorVersion(jsonObjectFrom(current?.editorial_metadata), {
       savedAt: new Date().toISOString(),
       headline: body.headline as string,
       summary: (body.summary as string) ?? "",
@@ -109,9 +110,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
 
     editorial_metadata = {
-      ...(current?.editorial_metadata as Record<string, unknown> | undefined),
+      ...jsonObjectFrom(current?.editorial_metadata),
       ...incomingMeta,
-      editor_versions: versions,
+      editor_versions: asJson(versions),
     };
   }
 
@@ -135,9 +136,9 @@ export async function PATCH(request: Request, context: RouteContext) {
           : undefined,
     translations:
       body.translations && typeof body.translations === "object"
-        ? body.translations
+        ? asJson(body.translations)
         : undefined,
-    editorial_metadata,
+    editorial_metadata: editorial_metadata ? asJson(editorial_metadata) : undefined,
     reviewed_at: new Date().toISOString(),
   };
 
@@ -165,7 +166,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const retryPatch = {
       ...patch,
       translations: undefined,
-      editorial_metadata: metaFallback,
+          editorial_metadata: metaFallback ? asJson(metaFallback) : undefined,
     };
     const retry = await supabase
       .from("generated_articles")

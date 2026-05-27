@@ -13,13 +13,13 @@ export type AiJobPayload = {
   articleId: string;
   type: AiJobType;
   language?: string;
-  input?: Record<string, unknown>;
+  input?: import("@/types/json").JsonObject;
 };
 
 export type AiJobResult = {
   jobId: string;
   status: AiJobStatus;
-  output?: Record<string, unknown>;
+  output?: import("@/types/json").JsonObject;
   error?: string;
   completedAt?: string;
 };

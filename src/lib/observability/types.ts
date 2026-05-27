@@ -22,7 +22,7 @@ export type OpsErrorEvent = {
   requestId?: string;
   route?: string;
   worker?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: import("@/types/json").JsonObject;
   resolved?: boolean;
 };
 

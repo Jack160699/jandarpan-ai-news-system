@@ -2,6 +2,8 @@
  * Supabase-ready row shapes for migration 022 — mirrors platform content model.
  */
 
+import type { JsonObject } from "@/types/json";
+
 export type ArticleRow = {
   id: string;
   slug: string;
@@ -33,9 +35,9 @@ export type DistrictRow = {
   name_hi: string;
   priority_tier: number;
   enabled: boolean;
-  metadata: Record<string, unknown>;
+  metadata: JsonObject;
   sections?: string[];
-  homepage_config?: Record<string, unknown>;
+  homepage_config?: JsonObject;
   editor_user_ids?: string[];
   trend_score?: number;
   article_count_cache?: number;
@@ -98,7 +100,7 @@ export type AiLogRow = {
   article_id: string | null;
   job_type: string;
   status: string;
-  payload: Record<string, unknown>;
-  result: Record<string, unknown> | null;
+  payload: JsonObject;
+  result: JsonObject | null;
   created_at: string;
 };

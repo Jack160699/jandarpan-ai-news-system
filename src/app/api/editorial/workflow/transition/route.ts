@@ -4,6 +4,7 @@ import type { WorkflowStatus } from "@/lib/editorial-workflow/types";
 import { WORKFLOW_STATUSES } from "@/lib/editorial-workflow/types";
 import { transitionWorkflow } from "@/lib/editorial-workflow/store";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
+import { asJsonObject } from "@/types/json";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,10 +53,12 @@ export async function POST(request: Request) {
       action: "workflow_transition",
       resourceType: "article",
       resourceId: body.articleId,
-      payload: {
+      payload: asJsonObject({
         toStatus: body.toStatus,
-        rejectionReason: body.rejectionReason,
-      },
+        ...(body.rejectionReason != null
+          ? { rejectionReason: body.rejectionReason }
+          : {}),
+      } as Record<string, unknown>),
     });
   }
 

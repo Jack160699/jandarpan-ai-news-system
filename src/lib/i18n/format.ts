@@ -71,6 +71,7 @@ const RELATIVE_UNITS: Record<
   mr: { now: "आत्ता", min: "मिनिटांपूर्वी", hr: "तासापूर्वी", day: "दिवसापूर्वी" },
   bn: { now: "এইমাত্র", min: "মিনিট আগে", hr: "ঘণ্টা আগে", day: "দিন আগে" },
   ta: { now: "இப்போது", min: "நிமிடம் முன்", hr: "மணி நேரம் முன்", day: "நாள் முன்" },
+  ur: { now: "ابھی", min: "منٹ پہلے", hr: "گھنٹے پہلے", day: "دن پہلے" },
 };
 
 export function formatRelativeTime(

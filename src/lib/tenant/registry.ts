@@ -8,6 +8,7 @@ import { JAN_DARPAN_CHHATTISGARH_TENANT } from "@/lib/tenant/presets/jan-darpan-
 import { PIONEER_POST_TENANT } from "@/lib/tenant/presets/pioneer-post";
 import type { TenantConfig } from "@/lib/tenant/types";
 import { normalizeTenantConfig } from "@/lib/tenant/validate";
+import { asJson } from "@/types/json";
 
 const STATIC_TENANTS: TenantConfig[] = [
   JAN_DARPAN_CHHATTISGARH_TENANT,
@@ -74,7 +75,7 @@ export async function loadTenantFromDatabase(
       slug: string;
       status: string;
       domains: string[] | null;
-      config: Record<string, unknown>;
+      config: import("@/types/json").JsonObject;
       updated_at: string;
     };
 
@@ -112,7 +113,7 @@ export async function upsertTenantToDatabase(
       slug,
       status,
       domains,
-      config: tenantConfig,
+      config: asJson(tenantConfig),
       updated_at: updatedAt,
     };
 

@@ -11,6 +11,7 @@ import {
 } from "@/lib/supabase/tenant-membership-columns";
 import { isPostgrestSchemaError } from "@/lib/newsroom-auth/schema-errors";
 import type { TenantMembershipDbRow } from "@/lib/types/team";
+import { asJsonObject } from "@/types/json";
 
 type UpsertInput = {
   tenantId: string;
@@ -41,7 +42,7 @@ export async function upsertTenantMembership(
     role: input.role,
     status: input.status,
     invited_by: input.invitedBy,
-    metadata: pickLegacyMetadata(input.displayName),
+    metadata: asJsonObject(pickLegacyMetadata(input.displayName)),
     last_login_at: input.lastLoginAt ?? null,
     updated_at: now,
   };

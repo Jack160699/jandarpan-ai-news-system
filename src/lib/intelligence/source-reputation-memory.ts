@@ -3,6 +3,7 @@
  */
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJson } from "@/types/json";
 import type { SourceReputationMemory } from "@/lib/intelligence/types";
 
 export async function loadSourceReputationMemory(
@@ -48,7 +49,7 @@ export async function updateSourceReputationMemory(input: {
     .from("source_reputation_memory")
     .select("*")
     .eq("source_key", input.sourceKey)
-    .eq("tenant_id", input.tenantId ?? null)
+    .eq("tenant_id", (input.tenantId ?? null) as unknown as string)
     .maybeSingle();
 
   const prevScore = existing ? Number(existing.reputation_score) : 0.5;
@@ -67,7 +68,7 @@ export async function updateSourceReputationMemory(input: {
 
   await supabase.from("source_reputation_memory").upsert(
     {
-      tenant_id: input.tenantId ?? null,
+      tenant_id: (input.tenantId ?? null) as unknown as string,
       source_key: input.sourceKey,
       source_name: input.sourceName,
       reputation_score: nextScore,
@@ -76,7 +77,7 @@ export async function updateSourceReputationMemory(input: {
         (existing?.misinfo_incidents ?? 0) + (input.misinfo ? 1 : 0),
       verified_hits: (existing?.verified_hits ?? 0) + (input.verified ? 1 : 0),
       total_signals: (existing?.total_signals ?? 0) + 1,
-      history: history.slice(0, 24),
+      history: asJson(history.slice(0, 24)),
       last_seen_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },

@@ -42,11 +42,11 @@ export async function listAdminSources(): Promise<AdminSourceRecord[] | null> {
       id: row.id,
       sourceId: sid,
       name: row.name,
-      url: row.url,
-      category: row.category,
-      language: row.language,
-      region: row.region,
-      tier: row.tier,
+      url: row.url ?? null,
+      category: row.category ?? null,
+      language: row.language ?? null,
+      region: row.region ?? null,
+      tier: row.tier ?? null,
       enabled: row.enabled && !disabled,
       trustScore: Number(row.trust_score ?? 0.8),
       reliabilityScore: Number(row.reliability_score ?? 0.8),
@@ -56,8 +56,8 @@ export async function listAdminSources(): Promise<AdminSourceRecord[] | null> {
         (h?.consecutive_failures as number) ?? row.consecutive_failures ?? 0,
       lastSuccessAt: (h?.last_success as string) ?? row.last_success_at ?? null,
       articlesFetched24h: row.articles_fetched_24h ?? 0,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
+      createdAt: row.created_at as string,
+      updatedAt: (row.updated_at ?? row.created_at) as string,
     };
   });
 }

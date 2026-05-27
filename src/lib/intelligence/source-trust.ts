@@ -57,8 +57,9 @@ export function buildSourceTrustEngine(input: {
       new Date(health.disabled_until).getTime() > Date.now();
 
     let trust = 0.72;
-    if (rss.tier === "tier1") trust += 0.12;
-    if (rss.tier === "tier2") trust += 0.04;
+    // RSS catalog uses `publisher | aggregator | scraped` tiers.
+    if (rss.tier === "publisher") trust += 0.12;
+    if (rss.tier === "aggregator") trust += 0.04;
     if (failures >= 5) trust -= 0.25;
     else if (failures >= 2) trust -= 0.1;
     if (disabled) trust -= 0.35;

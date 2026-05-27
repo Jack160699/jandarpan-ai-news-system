@@ -6,6 +6,10 @@ import { headers } from "next/headers";
 
 const HEADER = "x-request-id";
 
+type HeaderLike = {
+  get(name: string): string | null;
+};
+
 export function generateRequestId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -14,7 +18,7 @@ export function generateRequestId(): string {
 }
 
 export function getRequestIdFromHeaders(
-  headerList: Headers | ReadonlyHeaders
+  headerList: Headers | HeaderLike
 ): string | null {
   return headerList.get(HEADER) ?? headerList.get("x-correlation-id");
 }

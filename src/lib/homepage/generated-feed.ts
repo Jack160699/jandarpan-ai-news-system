@@ -19,6 +19,7 @@ import {
   resolveLocalizedFields,
   resolveLocalizedFieldsStrict,
 } from "@/lib/i18n/resolve-article";
+import type { LocalizedArticleFields } from "@/lib/i18n/resolve-article";
 import { homeDebug } from "@/lib/homepage/feed-safety";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
 import { localizeGeneratedFeed } from "@/lib/i18n/strict-locale";

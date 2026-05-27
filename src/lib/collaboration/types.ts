@@ -2,6 +2,8 @@
  * Newsroom collaboration — shared types
  */
 
+import type { JsonObject } from "@/types/json";
+
 export type PresenceStatus = "viewing" | "editing" | "idle";
 
 export type PresenceMember = {
@@ -42,7 +44,7 @@ export type TeamNotification = {
   title: string;
   body: string;
   readAt: string | null;
-  payload: Record<string, unknown>;
+  payload: JsonObject;
   createdAt: string;
 };
 
@@ -51,7 +53,7 @@ export type ActivityEvent = {
   actorEmail: string;
   eventType: string;
   summary: string;
-  payload: Record<string, unknown>;
+  payload: JsonObject;
   createdAt: string;
 };
 

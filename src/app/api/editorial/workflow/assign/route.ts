@@ -5,6 +5,7 @@ import { assignWorkflowArticle } from "@/lib/editorial-workflow/store";
 import { createAdminServerClient } from "@/lib/supabase";
 import { canApproveWorkflow } from "@/lib/editorial-workflow/engine";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
+import { asJsonObject } from "@/types/json";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,7 +41,11 @@ export async function POST(request: Request) {
       action: "workflow_assign",
       resourceType: "article",
       resourceId: body.articleId,
-      payload: { assignToUserId: body.assignToUserId },
+      payload: asJsonObject(
+        body.assignToUserId != null
+          ? { assignToUserId: body.assignToUserId }
+          : {}
+      ),
     });
 
     if (body.assignToUserId) {

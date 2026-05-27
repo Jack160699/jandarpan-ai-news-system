@@ -1,5 +1,6 @@
 import { geoFromRecord } from "@/lib/regional/geo-tagging";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJson, jsonObjectFrom, type JsonObject } from "@/types/json";
 import type { EditorialMetadata } from "@/lib/types/newsroom";
 import type {
   AdminArticleListItem,
@@ -13,12 +14,12 @@ const GENERATED_SELECT =
 const PLATFORM_SELECT =
   "id, slug, title, excerpt, category, district_slug, language, published_at, is_breaking, seo_title, seo_description, views, trending_score, created_at, updated_at";
 
-function metaBreaking(meta: EditorialMetadata | null | undefined): boolean {
-  return Boolean(meta?.is_breaking);
+function metaBreaking(meta: JsonObject): boolean {
+  return Boolean(meta.is_breaking);
 }
 
-function metaConfidence(meta: EditorialMetadata | null | undefined): number | null {
-  const c = meta?.ai_confidence;
+function metaConfidence(meta: JsonObject): number | null {
+  const c = meta.ai_confidence;
   return typeof c === "number" ? c : null;
 }
 
@@ -99,7 +100,7 @@ export async function listAdminArticles(
     }
 
     for (const row of data ?? []) {
-      const meta = (row.editorial_metadata ?? {}) as EditorialMetadata;
+      const meta = jsonObjectFrom(row.editorial_metadata);
       const geo = geoFromRecord(row);
       const districtSlug = districtFromGeo(geo);
       const isBreaking = metaBreaking(meta);
@@ -109,7 +110,7 @@ export async function listAdminArticles(
       }
       if (filters.breaking === true && !isBreaking) continue;
       if (filters.category && filters.category !== "all") {
-        const cat = (meta as Record<string, unknown>).category as string | undefined;
+        const cat = meta.category as string | undefined;
         if (cat && cat !== filters.category) continue;
       }
 
@@ -119,7 +120,7 @@ export async function listAdminArticles(
         slug: row.slug,
         title: row.headline,
         excerpt: row.summary,
-        category: (meta as Record<string, unknown>).category as string | null ?? null,
+        category: (meta.category as string | null) ?? null,
         districtSlug,
         language: row.language,
         editorialStatus: row.editorial_status ?? null,
@@ -132,7 +133,7 @@ export async function listAdminArticles(
         views: 0,
         clicks: 0,
         engagements: 0,
-        trendingScore: meta.trend_score ?? 0,
+        trendingScore: (meta.trend_score as number | undefined) ?? 0,
         aiConfidence: metaConfidence(meta),
         createdAt: row.created_at,
         updatedAt: null,
@@ -258,11 +259,11 @@ export async function patchAdminArticle(
         .select("editorial_metadata")
         .eq("id", id)
         .maybeSingle();
-      const meta = (existing?.editorial_metadata ?? {}) as EditorialMetadata;
-      update.editorial_metadata = { ...meta, is_breaking: patch.isBreaking };
+      const meta = jsonObjectFrom(existing?.editorial_metadata);
+      update.editorial_metadata = asJson({ ...meta, is_breaking: patch.isBreaking });
     }
 
-    const { error } = await supabase.from("generated_articles").update(update).eq("id", id);
+    const { error } = await supabase.from("generated_articles").update(update as never).eq("id", id);
     if (error) {
       console.error("[platform-admin] patch generated:", error.message);
       return false;
@@ -276,7 +277,7 @@ export async function patchAdminArticle(
   if (patch.isBreaking !== undefined) pUpdate.is_breaking = patch.isBreaking;
   if (patch.publishedAt !== undefined) pUpdate.published_at = patch.publishedAt;
 
-  const { error } = await supabase.from("platform_articles").update(pUpdate).eq("id", id);
+  const { error } = await supabase.from("platform_articles").update(pUpdate as never).eq("id", id);
   if (error) {
     console.error("[platform-admin] patch platform:", error.message);
     return false;

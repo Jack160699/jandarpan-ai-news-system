@@ -338,7 +338,10 @@ export function EditorialOverview() {
       <div className="anr-grid anr-grid--2">
         <AdminWidgetBoundary name="Ingestion over time">
           <AdminCard title="Ingestion over time" description="Inserted vs failed articles">
-            {traceDashboardRender("WIDGET_RENDER", "ingestion_over_time")}
+            {(() => {
+              traceDashboardRender("WIDGET_RENDER", "ingestion_over_time");
+              return null;
+            })()}
             <ClientOnly fallback={<div className="anr-skeleton" style={{ height: "220px" }} />}>
               <div className="anr-chart">
                 <ResponsiveContainer width="100%" height={220}>
@@ -363,7 +366,10 @@ export function EditorialOverview() {
         </AdminWidgetBoundary>
         <AdminWidgetBoundary name="Approvals vs rejects">
           <AdminCard title="Approvals vs rejects" description="Publishing moderation split">
-            {traceDashboardRender("WIDGET_RENDER", "approvals_vs_rejects")}
+            {(() => {
+              traceDashboardRender("WIDGET_RENDER", "approvals_vs_rejects");
+              return null;
+            })()}
             <ClientOnly fallback={<div className="anr-skeleton" style={{ height: "220px" }} />}>
               <div className="anr-chart">
                 <ResponsiveContainer width="100%" height={220}>
@@ -391,7 +397,10 @@ export function EditorialOverview() {
       <div className="anr-grid anr-grid--2">
         <AdminWidgetBoundary name="District activity heatmap">
           <AdminCard title="District activity heatmap" description="District publishing activity">
-            {traceDashboardRender("WIDGET_RENDER", "district_activity")}
+            {(() => {
+              traceDashboardRender("WIDGET_RENDER", "district_activity");
+              return null;
+            })()}
             <ClientOnly fallback={<div className="anr-skeleton" style={{ height: "220px" }} />}>
               <div className="anr-chart">
                 <ResponsiveContainer width="100%" height={220}>
@@ -409,7 +418,10 @@ export function EditorialOverview() {
         </AdminWidgetBoundary>
         <AdminWidgetBoundary name="Source reliability trend">
           <AdminCard title="Source reliability trend" description="Source confidence monitor">
-            {traceDashboardRender("WIDGET_RENDER", "source_reliability")}
+            {(() => {
+              traceDashboardRender("WIDGET_RENDER", "source_reliability");
+              return null;
+            })()}
             <ClientOnly fallback={<div className="anr-skeleton" style={{ height: "220px" }} />}>
               <div className="anr-chart">
                 <ResponsiveContainer width="100%" height={220}>
@@ -541,7 +553,7 @@ export function EditorialOverview() {
         </AdminCard>
       </div>
 
-      <AdminCard title={`Pending review (${pending.length})`} />
+      <AdminCard title={`Pending review (${pending.length})`}>{null}</AdminCard>
       <StoriesTable articles={pending.length ? pending : generated.slice(0, 8)} />
     </>
   );

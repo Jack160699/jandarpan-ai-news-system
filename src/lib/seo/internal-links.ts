@@ -33,7 +33,7 @@ export function getStoryInternalLinks(input: {
   };
 
   const relatedLinks: InternalLink[] = input.related.slice(0, 5).map((a) => ({
-    href: storyPath(a.slug ?? a.id),
+    href: storyPath(a.slug ?? String(a.id)),
     label: (a.ai_headline ?? a.title).slice(0, 72),
   }));
 

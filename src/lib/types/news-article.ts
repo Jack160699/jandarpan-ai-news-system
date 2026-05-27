@@ -1,6 +1,9 @@
+/** Primary key for `news_articles` and `news_ai_queue.article_id` */
+export type NewsArticleId = number;
+
 /** Row shape for `news_articles` Supabase table */
 export type NewsArticleRow = {
-  id: string;
+  id: NewsArticleId;
   title: string;
   description: string | null;
   content: string | null;
@@ -75,8 +78,17 @@ export type HomepageAnalytics = {
 export type TopicTrend = {
   topic: string;
   count: number;
-  articleId: string;
+  articleId: NewsArticleId;
   title: string;
+};
+
+export type NewsAiQueueRow = {
+  id: string;
+  article_id: NewsArticleId;
+  status: string;
+  error: string | null;
+  created_at: string;
+  processed_at?: string | null;
 };
 
 /** Homepage feed bundle — ranked for live regional priority */

@@ -18,6 +18,7 @@ import {
   regenerateGeneratedArticle,
 } from "@/lib/editorial-dashboard/regenerate";
 import { logEditorialAudit } from "@/lib/dashboard/audit";
+import { asJsonObject } from "@/types/json";
 import type { DashboardSession } from "@/lib/saas-auth/types";
 
 async function assertArticleInTenant(
@@ -113,7 +114,7 @@ export async function runDashboardAction(
       session,
       action,
       resourceId: articleId ?? (body.sourceId as string),
-      payload: body as Record<string, unknown>,
+      payload: asJsonObject(body as Record<string, unknown>),
     });
   }
 

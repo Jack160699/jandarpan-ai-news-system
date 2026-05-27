@@ -3,6 +3,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase";
+import { asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
 import { enqueueJob } from "@/lib/infrastructure/jobs/queue";
 import type { JobType } from "@/lib/infrastructure/jobs/types";
 
@@ -18,7 +19,7 @@ export type PublishEventInput = {
   topic: EventTopic;
   eventType: string;
   tenantId?: string | null;
-  payload?: Record<string, unknown>;
+  payload?: JsonObject;
   dedupeKey?: string;
 };
 
@@ -92,7 +93,7 @@ export async function deliverPendingEvents(
     try {
       const jobs = TOPIC_JOB_MAP[event.topic as EventTopic] ?? [];
       const tenantId = event.tenant_id as string | null;
-      const payload = (event.payload ?? {}) as Record<string, unknown>;
+      const payload = jsonObjectFrom(event.payload);
 
       for (const jobType of jobs) {
         const dedupeKey = `${jobType}:${tenantId ?? "global"}:${event.dedupe_key ?? event.id}`;
@@ -155,9 +156,9 @@ export async function publishIngestCompleted(input: {
     eventType: "ingest.completed",
     tenantId: input.tenantId,
     dedupeKey,
-    payload: {
+    payload: asJsonObject({
       signalsInserted: input.signalsInserted,
-      logId: input.logId,
-    },
+      ...(input.logId != null ? { logId: input.logId } : {}),
+    } as Record<string, unknown>),
   });
 }

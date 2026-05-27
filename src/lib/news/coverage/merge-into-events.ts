@@ -17,6 +17,7 @@ import type {
   NewsEventRow,
   NewsSignalRow,
 } from "@/lib/types/newsroom";
+import { asJsonObject, jsonObjectFrom } from "@/types/json";
 
 const MERGE_INTO_EVENT_THRESHOLD = 0.68;
 const ACTIVE_EVENT_HOURS = 96;
@@ -167,7 +168,7 @@ export async function mergeSignalsIntoEvent(
     event.coverage_slug ??
     buildCoverageSlug(event.canonical_title, event.id);
 
-  const meta = (event.clustering_metadata ?? {}) as Record<string, unknown>;
+  const meta = jsonObjectFrom(event.clustering_metadata);
   const history = Array.isArray(meta.merge_history)
     ? [...(meta.merge_history as unknown[])]
     : [];
@@ -188,13 +189,13 @@ export async function mergeSignalsIntoEvent(
       coverage_slug: coverageSlug,
       coverage_headline: coverageHeadline,
       updated_at: new Date().toISOString(),
-      clustering_metadata: {
+      clustering_metadata: asJsonObject({
         ...meta,
         merge_history: history.slice(-20),
         last_merge_at: new Date().toISOString(),
         cluster_confidence_report: confidence,
         source_attribution: buildSourceAttribution(allSignals),
-      },
+      } as Record<string, unknown>),
     } satisfies Partial<import("@/lib/types/newsroom").NewsEventInsert>)
     .eq("id", event.id)
     .select("*")

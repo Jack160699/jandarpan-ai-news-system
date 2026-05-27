@@ -44,6 +44,12 @@ const NARRATORS: Record<NewsroomLanguage, NarratorProfile> = {
     desk: "Regional Bureau",
     deskHi: "क्षेत्रीय ब्यूरो",
   },
+  ur: {
+    name: "Ayesha Khan",
+    nameHi: "عائشہ خان",
+    desk: "Regional Bureau",
+    deskHi: "علاقائی بیورو",
+  },
 };
 
 export function getNarrator(language: NewsroomLanguage): NarratorProfile {

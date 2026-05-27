@@ -3,6 +3,7 @@
  */
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJson, jsonObjectFrom } from "@/types/json";
 import { RSS_SOURCES } from "@/lib/news/providers/rss-sources";
 import type { EditorialArticleStatus } from "@/lib/editorial-dashboard/types";
 import type { GeneratedArticleInsert } from "@/lib/types/newsroom";
@@ -138,15 +139,15 @@ export async function setArticleBreaking(
     .eq("id", articleId)
     .maybeSingle();
 
-  const meta = (row?.editorial_metadata ?? {}) as Record<string, unknown>;
+  const meta = jsonObjectFrom(row?.editorial_metadata);
   const { error } = await supabase
     .from("generated_articles")
     .update({
-      editorial_metadata: {
+      editorial_metadata: asJson({
         ...meta,
         is_breaking: isBreaking,
         breaking_marked_at: isBreaking ? new Date().toISOString() : null,
-      },
+      }),
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", articleId);
@@ -168,13 +169,13 @@ export async function setArticleFeatured(
     .eq("id", articleId)
     .maybeSingle();
 
-  const meta = (row?.editorial_metadata ?? {}) as Record<string, unknown>;
+  const meta = jsonObjectFrom(row?.editorial_metadata);
   const pinResult = await setHomepagePin(articleId, featured);
 
   await supabase
     .from("generated_articles")
     .update({
-      editorial_metadata: { ...meta, is_featured: featured },
+      editorial_metadata: asJson({ ...meta, is_featured: featured }),
     })
     .eq("id", articleId);
 

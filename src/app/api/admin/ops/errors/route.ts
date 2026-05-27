@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
 import { getRecentOpsErrors, getOpsErrorSummary } from "@/lib/observability";
+import { asJsonObject } from "@/types/json";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +38,9 @@ export async function POST(request: Request) {
     source: body.source,
     message: body.message,
     severity: body.severity ?? "medium",
-    metadata: body.metadata,
+    metadata: body.metadata
+      ? asJsonObject(body.metadata as Record<string, unknown>)
+      : undefined,
   });
 
   return NextResponse.json({ ok: true, event });

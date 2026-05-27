@@ -102,7 +102,7 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
   const [editorHtml, setEditorHtml] = useState("<p></p>");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const lastPayloadRef = useRef("");
-  const saveDebounceRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const saveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadAbortRef = useRef<AbortController | null>(null);
   const editorHydratedRef = useRef(false);
 
@@ -200,7 +200,7 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
       setTimedOut(false);
       traceStability("EDITOR_BOOT", "editor_article_fetch_start", { articleId });
       try {
-        const timeout = window.setTimeout(() => {
+        const timeout = setTimeout(() => {
           setTimedOut(true);
           controller.abort();
           traceEditorBoot("EDITOR_TIMEOUT", "legacy_workstation_boot_timeout", { articleId });
@@ -210,7 +210,7 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
           credentials: "include",
           signal: controller.signal,
         });
-        window.clearTimeout(timeout);
+        clearTimeout(timeout);
         const json = (await res.json()) as {
           ok: boolean;
           article?: EditorArticle;
@@ -360,7 +360,7 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
       setSaveState("saved");
       setLastSavedAt(new Date().toISOString());
       lastPayloadRef.current = serialized;
-      window.setTimeout(() => {
+      setTimeout(() => {
         if (!isMountedRef.current) return;
         setSaveState("idle");
       }, 1200);
@@ -388,12 +388,12 @@ export function ArticleEditorWorkstation({ articleId }: ArticleEditorWorkstation
 
   useEffect(() => {
     if (!payload) return;
-    if (saveDebounceRef.current) window.clearTimeout(saveDebounceRef.current);
-    saveDebounceRef.current = window.setTimeout(() => {
+    if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
+    saveDebounceRef.current = setTimeout(() => {
       void saveDraft("debounced");
     }, AUTOSAVE_DEBOUNCE_MS);
     return () => {
-      if (saveDebounceRef.current) window.clearTimeout(saveDebounceRef.current);
+      if (saveDebounceRef.current) clearTimeout(saveDebounceRef.current);
     };
   }, [payload, saveDraft]);
 

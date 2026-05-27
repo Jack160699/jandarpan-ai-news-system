@@ -3,6 +3,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase";
+import type { NewsArticleId } from "@/lib/types/news-article";
 
 const QUEUE_BATCH = 10;
 
@@ -11,7 +12,7 @@ export function isAiQueueEnabled(): boolean {
 }
 
 export async function enqueueArticlesForAi(
-  articleIds: string[]
+  articleIds: readonly NewsArticleId[]
 ): Promise<number> {
   if (!isAiQueueEnabled() || !articleIds.length) return 0;
 
@@ -47,7 +48,7 @@ export async function countPendingAiQueue(): Promise<number> {
 
 export async function claimAiQueueBatch(
   limit = QUEUE_BATCH
-): Promise<string[]> {
+): Promise<NewsArticleId[]> {
   const supabase = createAdminClient();
 
   const { data: pending, error } = await supabase
@@ -71,7 +72,7 @@ export async function claimAiQueueBatch(
 }
 
 export async function markAiQueueCompleted(
-  articleId: string,
+  articleId: NewsArticleId,
   ok: boolean,
   errorMessage?: string
 ): Promise<void> {

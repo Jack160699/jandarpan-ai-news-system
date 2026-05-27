@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { persistReaderEvents } from "@/lib/analytics/persist";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { asJsonObject } from "@/types/json";
 
 export const runtime = "nodejs";
 
@@ -42,7 +43,10 @@ export async function POST(request: Request) {
       category: body.category,
       surface: body.event === "trending_click" ? "homepage" : "story",
       valueNum: body.dwellMs,
-      metadata: { source: body.source, provider: body.provider },
+      metadata: asJsonObject({
+        ...(body.source != null ? { source: body.source } : {}),
+        ...(body.provider != null ? { provider: body.provider } : {}),
+      } as Record<string, unknown>),
     },
   ]);
 

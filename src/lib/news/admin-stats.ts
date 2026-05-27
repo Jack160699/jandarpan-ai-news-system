@@ -7,7 +7,7 @@ import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase";
 export type AdminIngestionDashboard = {
   articleCount: number;
   latestArticles: Array<{
-    id: string;
+    id: number;
     title: string;
     category: string;
     provider: string | null;
@@ -89,10 +89,10 @@ export async function getAdminIngestionStats(): Promise<AdminIngestionDashboard 
     articleCount: countRes.count ?? 0,
     latestArticles: (latestRes.data ?? []).map((row) => ({
       id: row.id,
-      title: row.title,
-      category: row.category,
+      title: row.title ?? "",
+      category: row.category ?? "",
       provider: row.source,
-      created_at: row.created_at,
+      created_at: row.created_at ?? new Date().toISOString(),
     })),
     categoryCounts,
     providerCounts,

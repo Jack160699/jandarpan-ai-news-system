@@ -1,4 +1,5 @@
 import type { PlatformSectionConfig } from "@/lib/newsroom-platform/content/types";
+import type { JsonObject } from "@/types/json";
 
 export type PlatformArticleSource = "generated" | "platform";
 
@@ -47,13 +48,13 @@ export type AdminDistrictRecord = {
   priorityTier: number;
   enabled: boolean;
   sections: string[];
-  homepageConfig: Record<string, unknown>;
+  homepageConfig: JsonObject;
   editorUserIds: string[];
   trendScore: number;
   articleCount: number;
   liveCount: number;
   views7d: number;
-  metadata: Record<string, unknown>;
+  metadata: JsonObject;
   createdAt: string;
   updatedAt: string;
 };
@@ -100,7 +101,7 @@ export type AdminSourceRecord = {
 
 export type PlatformConfigBundle = {
   homepageSections: PlatformSectionConfig[];
-  newsroomSettings: Record<string, unknown>;
+  newsroomSettings: JsonObject;
 };
 
 export type ArticleListFilters = {

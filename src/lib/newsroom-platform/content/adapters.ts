@@ -1,5 +1,6 @@
 import type { HomeArticle, HomeSectionId } from "@/lib/homepage/types";
 import type { PlatformArticle } from "./types";
+import { NEWS_DESKS } from "@/lib/newsroom/desk-branding";
 
 const CATEGORY_TO_SECTION: Partial<Record<string, HomeSectionId>> = {
   district_news: "chhattisgarh",
@@ -52,7 +53,7 @@ export function platformArticleToHomeArticle(article: PlatformArticle): HomeArti
     aiConfidence: 0.85,
     sourceCount: 1,
     categoryLabel: article.category.replace(/_/g, " "),
-    desk: "State Desk",
+    desk: NEWS_DESKS["cg-ai-desk"],
     localeMatch: true,
   };
 }

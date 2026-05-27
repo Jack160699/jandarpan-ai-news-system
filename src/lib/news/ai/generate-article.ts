@@ -7,7 +7,7 @@ import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
 import { buildNewsShortForArticle } from "@/lib/news/shorts/build-short";
 import { translateGeneratedArticle } from "@/lib/i18n/multilingual/translate";
-import { mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
+import { geoFromRecord, mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
 import { optimizeSeoSlug } from "@/lib/seo/slug-optimize";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
@@ -34,6 +34,7 @@ import type {
   SupportedEditorialLanguage,
 } from "@/lib/news/ai/editorial-types";
 import { logNewsroom } from "@/lib/newsroom/logger";
+import { asJson } from "@/types/json";
 import type {
   GeneratedArticleInsert,
   GeneratedArticleRow,
@@ -405,7 +406,7 @@ async function persistGeneratedArticle(input: {
     category,
   });
   const geo = mergeGeoMetadata(
-    ...(input.event.geo_metadata ? [input.event.geo_metadata] : []),
+    geoFromRecord(input.event),
     ...signalGeos,
     draftGeo
   );
@@ -481,7 +482,11 @@ async function persistGeneratedArticle(input: {
 
   const { data: inserted, error } = await supabase
     .from("generated_articles")
-    .insert(row)
+    .insert({
+      ...row,
+      geo_metadata: asJson(row.geo_metadata),
+      editorial_metadata: asJson(row.editorial_metadata),
+    })
     .select("*")
     .single();
 
@@ -532,7 +537,7 @@ async function persistGeneratedArticle(input: {
     process.env.NEWSROOM_AUTO_TRANSLATE === "true" &&
     process.env.OPENAI_API_KEY?.trim()
   ) {
-    void translateGeneratedArticle(inserted as GeneratedArticleRow).catch(
+    void translateGeneratedArticle(inserted as unknown as GeneratedArticleRow).catch(
       () => undefined
     );
   }
@@ -541,14 +546,14 @@ async function persistGeneratedArticle(input: {
     process.env.NEWSROOM_AUTO_SHORTS === "true" &&
     process.env.OPENAI_API_KEY?.trim()
   ) {
-    void buildNewsShortForArticle(inserted as GeneratedArticleRow).catch(
+    void buildNewsShortForArticle(inserted as unknown as GeneratedArticleRow).catch(
       () => undefined
     );
   }
 
   return {
     ok: true,
-    article: inserted,
+    article: inserted as unknown as GeneratedArticleRow,
     draft: input.draft,
     quality: input.quality,
     skipped: false,

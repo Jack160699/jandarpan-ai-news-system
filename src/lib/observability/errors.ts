@@ -6,6 +6,7 @@ import { cacheGetJson, cacheSetJson } from "@/lib/infrastructure/cache";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { captureOpsException } from "@/lib/observability/sentry";
 import { opsLogger } from "@/lib/observability/logger";
+import { asJsonObject } from "@/types/json";
 import type { OpsErrorEvent, OpsErrorSeverity } from "@/lib/observability/types";
 
 const ERRORS_KEY = "ops:errors:recent:v1";
@@ -21,7 +22,7 @@ export type TrackErrorInput = {
   requestId?: string;
   route?: string;
   worker?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: import("@/types/json").JsonObject;
   err?: unknown;
 };
 
@@ -86,11 +87,11 @@ async function persistErrorEvent(
       request_id: event.requestId ?? null,
       route: event.route ?? null,
       worker: event.worker ?? null,
-      metadata: {
-        ...event.metadata,
+      metadata: asJsonObject({
+        ...(event.metadata ?? {}),
         stack:
           err instanceof Error ? err.stack?.split("\n").slice(0, 6) : undefined,
-      },
+      } as Record<string, unknown>),
       created_at: event.ts,
     });
   } catch {

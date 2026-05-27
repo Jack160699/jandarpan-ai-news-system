@@ -3,6 +3,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase";
+import { asJsonObject, type JsonObject } from "@/types/json";
 import { nextRetryAt, shouldMoveToDeadLetter } from "@/lib/infrastructure/jobs/retry";
 import type {
   EnqueueJobInput,
@@ -33,7 +34,7 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<string | null>
       .update({
         priority: Math.max(input.priority ?? 0, 0),
         scheduled_at: (input.scheduledAt ?? new Date()).toISOString(),
-        payload: input.payload ?? {},
+        payload: asJsonObject(input.payload ?? {}),
         updated_at: now,
       })
       .eq("id", existing.id);
@@ -46,7 +47,7 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<string | null>
       tenant_id: input.tenantId ?? null,
       job_type: input.jobType,
       dedupe_key: input.dedupeKey,
-      payload: input.payload ?? {},
+      payload: asJsonObject(input.payload ?? {}),
       status: "pending",
       priority: input.priority ?? 0,
       max_attempts: input.maxAttempts ?? 5,
@@ -127,7 +128,7 @@ export async function completeJob(
     .update({
       status: "completed",
       completed_at: now,
-      result: result ?? {},
+      result: asJsonObject(result ?? {}),
       updated_at: now,
     })
     .eq("id", jobId);
@@ -241,7 +242,9 @@ export async function processJobBatch(
           tenantId: job.tenant_id,
           ok: true,
           durationMs,
-          metadata: result.result,
+          metadata: result.result
+            ? asJsonObject(result.result)
+            : undefined,
         });
       } else {
         await failJob(job, result.error ?? "job_failed", result.retryable !== false);

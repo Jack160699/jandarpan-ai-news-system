@@ -172,7 +172,7 @@ export async function fetchShortsPool(limit = 40): Promise<NewsShortCard[]> {
     if (status === "rejected" || status === "pending") continue;
     if (!row.published_at && !row.summary) continue;
 
-    const full = row as GeneratedArticleRow;
+    const full = row as unknown as GeneratedArticleRow;
     const card = ensureShortCard(full);
     if (card) cards.push(card);
     if (cards.length >= limit) break;

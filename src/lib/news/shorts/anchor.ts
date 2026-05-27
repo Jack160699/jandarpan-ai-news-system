@@ -69,6 +69,16 @@ const ANCHOR_TEMPLATES: Record<
     sports: ["விளையாட்டு செய்தி."],
     education: ["கல்வி செய்தி."],
   },
+  ur: {
+    default: ["ایک منٹ میں اہم خبریں۔"],
+    chhattisgarh: ["چھتیس گڑھ کی بڑی خبر — ایک منٹ میں۔"],
+    raipur: ["رائےپور ڈیسک — فوری اپڈیٹ۔"],
+    india: ["ملک کی اہم خبر۔"],
+    world: ["دنیا کی تازہ خبر۔"],
+    business: ["معیشت اور بازار — مختصر۔"],
+    sports: ["کھیل کی تازہ خبریں۔"],
+    education: ["تعلیم سے متعلق اپڈیٹ۔"],
+  },
 };
 
 export function buildAnchorLine(

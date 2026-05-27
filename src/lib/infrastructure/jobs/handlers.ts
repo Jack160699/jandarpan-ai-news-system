@@ -13,6 +13,7 @@ import { clusterByEmbeddings } from "@/lib/intelligence/vector/semantic-cluster"
 import { batchEmbedSignals } from "@/lib/intelligence/vector/vector-store";
 import type { JobHandler, JobType } from "@/lib/infrastructure/jobs/types";
 import { createAdminServerClient } from "@/lib/supabase";
+import { asJson } from "@/types/json";
 import { clusterRecentSignals } from "@/lib/newsroom";
 
 async function loadSignalsForEmbed(
@@ -226,7 +227,7 @@ const analyticsAggregate: JobHandler = async (job) => {
     {
       tenant_id: job.tenant_id,
       window_hours: windowHours,
-      snapshot: report as unknown as Record<string, unknown>,
+      snapshot: asJson(report),
       built_at: new Date().toISOString(),
     },
     { onConflict: "tenant_id,window_hours" }

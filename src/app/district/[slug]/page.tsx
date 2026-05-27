@@ -47,16 +47,18 @@ export default async function DistrictPage({ params }: PageProps) {
   });
   const ranked = rankArticlesForHomepage(filtered, { personalization });
 
-  const articles = ranked.map((r) =>
-    toHomeArticle(r.row, {
-      priorityScore: r.ranking.priorityScore,
-      reasons: r.ranking.reasons,
-      isTrending: r.ranking.isTrending,
-      isBreaking: r.ranking.isBreaking,
-      duplicateClusterId: r.ranking.duplicateClusterId,
-      section: r.section,
-    })
-  );
+  const articles = ranked
+    .map((r) =>
+      toHomeArticle(r.row, {
+        priorityScore: r.ranking.priorityScore,
+        reasons: r.ranking.reasons,
+        isTrending: r.ranking.isTrending,
+        isBreaking: r.ranking.isBreaking,
+        duplicateClusterId: r.ranking.duplicateClusterId,
+        section: r.section,
+      })
+    )
+    .filter((a): a is NonNullable<typeof a> => a !== null);
 
   return (
     <PageShell>

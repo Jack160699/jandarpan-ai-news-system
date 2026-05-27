@@ -75,7 +75,7 @@ export async function fetchGeneratedArticlePool(
     count: publicRows.length,
     total: rows.length,
   });
-  return publicRows;
+  return publicRows as unknown as GeneratedArticleRow[];
 }
 
 export async function getGeneratedArticleBySlug(
@@ -97,7 +97,7 @@ export async function getGeneratedArticleBySlug(
   return {
     ...data,
     editorial_metadata: data.editorial_metadata ?? {},
-  };
+  } as unknown as GeneratedArticleRow;
 }
 
 export async function getGeneratedArticleSlugs(

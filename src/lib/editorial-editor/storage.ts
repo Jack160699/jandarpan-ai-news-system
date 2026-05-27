@@ -3,7 +3,7 @@ import type { EditorDraftPayload, EditorVersionSnapshot } from "@/lib/editorial-
 const MAX_VERSIONS = 12;
 
 export function appendEditorVersion(
-  metadata: Record<string, unknown> | null,
+  metadata: import("@/types/json").JsonObject | null,
   snapshot: Omit<EditorVersionSnapshot, "id">
 ): EditorVersionSnapshot[] {
   const existing = Array.isArray(metadata?.editor_versions)
@@ -29,8 +29,8 @@ export function buildDraftPayload(input: {
     language: string | null;
     tags: string[] | null;
     published_at: string | null;
-    translations: Record<string, unknown> | null;
-    editorial_metadata: Record<string, unknown> | null;
+    translations: import("@/types/json").JsonObject | null;
+    editorial_metadata: import("@/types/json").JsonObject | null;
   };
   bodyMarkdown: string;
   seoExtras?: Record<string, unknown>;

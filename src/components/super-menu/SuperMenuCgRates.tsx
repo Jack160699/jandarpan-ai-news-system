@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import type { CgDailyRate, CgRatesSnapshot } from "@/lib/super-menu/cg-rates";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { SuperMenuBlock } from "./SuperMenuBlock";
@@ -15,7 +16,7 @@ import {
 type RateVisual = {
   tone: "gold" | "silver" | "fx" | "fuel";
   renderIcon: () => ReactNode;
-  renderLabel: (language: string) => ReactNode;
+  renderLabel: (language: NewsroomLanguage) => ReactNode;
 };
 
 const RATE_VISUALS: Record<CgDailyRate["id"], RateVisual> = {
@@ -52,7 +53,7 @@ const RATE_VISUALS: Record<CgDailyRate["id"], RateVisual> = {
   },
 };
 
-function formatHeading(iso: string, language: string): string {
+function formatHeading(iso: string, language: NewsroomLanguage): string {
   try {
     const t = new Date(iso).toLocaleTimeString(
       language === "en" ? "en-IN" : "hi-IN",
@@ -118,7 +119,7 @@ function RateCard({
   language,
 }: {
   rate: CgDailyRate;
-  language: string;
+  language: NewsroomLanguage;
 }) {
   const visual = RATE_VISUALS[rate.id];
   const label = visual.renderLabel(language);

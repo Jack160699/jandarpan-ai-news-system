@@ -82,7 +82,7 @@ export function useAiAssistant(
               {
                 id: response.id,
                 label: response.title,
-                type: response.kind === "headlines" ? "headline" : "social",
+                type: (response.kind === "headlines" ? "headline" : "social") as AiAsset["type"],
                 preview: response.items?.[0] ?? response.content,
                 createdAt: response.createdAt,
               },
@@ -123,7 +123,7 @@ export function useAiAssistant(
             {
               id: createAiId(),
               label: "Social post",
-              type: "social",
+              type: "social" as AiAsset["type"],
               preview: response.content,
               createdAt: new Date().toISOString(),
             },

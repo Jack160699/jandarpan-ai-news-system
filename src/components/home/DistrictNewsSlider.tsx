@@ -7,6 +7,7 @@ import { MediaImage } from "@/components/media/MediaImage";
 import { formatHomeTime } from "@/lib/homepage/format";
 import { districtLabelFor } from "@/lib/homepage/district-labels";
 import type { HomeArticle } from "@/lib/homepage/types";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { useLanguage } from "@/providers/LanguageProvider";
 
 const IMG_DISTRICT_CARD =
@@ -28,7 +29,7 @@ type SlideItem = {
 
 function buildSlides(
   articles: HomeArticle[],
-  language: string
+  language: NewsroomLanguage
 ): SlideItem[] {
   const base = articles.slice(0, 8).map((article, index) => ({
     article,

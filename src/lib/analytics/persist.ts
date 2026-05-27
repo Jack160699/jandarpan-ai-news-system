@@ -3,6 +3,7 @@
  */
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJsonObject } from "@/types/json";
 import { logNewsroomAnalytics } from "@/lib/analytics/logger";
 import { sanitizeEventMetadata } from "@/lib/analytics/privacy";
 import type { ReaderEventInput } from "@/lib/analytics/types";
@@ -33,7 +34,7 @@ export async function persistReaderEvents(
     region: e.region ?? null,
     surface: e.surface ?? null,
     value_num: e.valueNum ?? null,
-    metadata: sanitizeEventMetadata(e.metadata),
+    metadata: asJsonObject(sanitizeEventMetadata(e.metadata)),
   }));
 
   const supabase = createAdminServerClient();

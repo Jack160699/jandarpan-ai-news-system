@@ -1,4 +1,5 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJsonObject, type JsonObject } from "@/types/json";
 import type { DashboardSession } from "@/lib/saas-auth/types";
 
 export async function logEditorialAudit(input: {
@@ -6,7 +7,7 @@ export async function logEditorialAudit(input: {
   action: string;
   resourceType?: string;
   resourceId?: string | null;
-  payload?: Record<string, unknown>;
+  payload?: JsonObject;
 }): Promise<void> {
   if (!isSupabaseConfigured() || input.session.isDevBypass) {
     console.log("[DASHBOARD_AUDIT]", {
@@ -26,6 +27,6 @@ export async function logEditorialAudit(input: {
     action: input.action,
     resource_type: input.resourceType ?? "article",
     resource_id: input.resourceId ?? null,
-    payload: input.payload ?? {},
+    payload: asJsonObject(input.payload ?? {}),
   });
 }

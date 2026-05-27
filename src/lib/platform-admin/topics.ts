@@ -2,6 +2,7 @@ import type { TopicHubMeta } from "@/lib/newsroom-platform/content/types";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { TopicRow } from "@/lib/newsroom-platform/db/types";
 import type { AdminTopicRecord } from "./types";
+import { jsonObjectFrom } from "@/types/json";
 
 async function countByContentTypes(): Promise<Map<string, number>> {
   const map = new Map<string, number>();
@@ -28,7 +29,7 @@ async function countByContentTypes(): Promise<Map<string, number>> {
       if (types.includes(row.category as string)) count += 1;
     }
     for (const row of generated ?? []) {
-      const meta = (row.editorial_metadata ?? {}) as Record<string, unknown>;
+      const meta = jsonObjectFrom(row.editorial_metadata);
       const cat = meta.category as string | undefined;
       if (cat && types.includes(cat)) count += 1;
       else if (

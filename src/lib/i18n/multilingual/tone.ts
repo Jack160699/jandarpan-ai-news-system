@@ -40,6 +40,11 @@ const TONE_BY_LANGUAGE: Record<NewsroomLanguage, ToneProfile> = {
     instruction:
       "Standard Tamil script. Formal news register. Avoid overly literary words; mobile-friendly sentence length.",
   },
+  ur: {
+    id: "urdu_regional",
+    instruction:
+      "Standard Urdu script. Clear, neutral newsroom style. Keep sentences short and preserve names and numbers exactly.",
+  },
 };
 
 export function getRegionalToneProfile(language: NewsroomLanguage): ToneProfile {

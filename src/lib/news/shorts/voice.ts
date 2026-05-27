@@ -19,6 +19,7 @@ const VOICE_BY_LANG: Record<NewsroomLanguage, string> = {
   mr: "nova",
   bn: "shimmer",
   ta: "coral",
+  ur: "echo",
 };
 
 export function resolveVoiceId(language: NewsroomLanguage): string {

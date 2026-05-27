@@ -6,6 +6,7 @@ import { geoFromRecord } from "@/lib/regional/geo-tagging";
 import { loadPlatformDistricts } from "@/lib/newsroom-platform/config/districts";
 import type { DistrictHeatCell } from "@/lib/intelligence/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+import { jsonObjectFrom } from "@/types/json";
 
 export async function buildDistrictHeatmap(
   articles: GeneratedArticleRow[],
@@ -25,7 +26,7 @@ export async function buildDistrictHeatmap(
     const districts =
       geo.districts.length > 0 ? geo.districts : geo.is_chhattisgarh ? ["statewide"] : [];
 
-    const meta = (row.editorial_metadata ?? {}) as Record<string, unknown>;
+    const meta = jsonObjectFrom(row.editorial_metadata as import("@/types/supabase").Json);
     const conf = (meta.ai_confidence as number) ?? 0.5;
     const breaking = Boolean(meta.is_breaking);
 

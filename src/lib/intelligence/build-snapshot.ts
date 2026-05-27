@@ -3,6 +3,7 @@
  */
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJson, asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
 import { suggestTranslations } from "@/lib/intelligence/ai-translations";
 import { detectBreakingCandidates } from "@/lib/intelligence/breaking-detector";
 import { buildDistrictHeatmap } from "@/lib/intelligence/district-heatmap";
@@ -76,7 +77,7 @@ export async function saveIntelligenceSnapshot(
   await supabase.from("intelligence_snapshots").upsert(
     {
       tenant_id: tenantId ?? null,
-      snapshot: snapshot as unknown as Record<string, unknown>,
+      snapshot: asJson(snapshot),
       build_duration_ms: buildDurationMs,
       built_at: new Date().toISOString(),
     },
@@ -165,7 +166,7 @@ export async function buildNewsroomIntelligenceSnapshot(
     (articlesRes as any).error = retry.error;
   }
 
-  const articles = (articlesRes.data ?? []) as GeneratedArticleRow[];
+  const articles = (articlesRes.data ?? []) as unknown as GeneratedArticleRow[];
   const events = eventsRes.data ?? [];
   const signals = (signalsRes.data ?? []) as RawSignal[];
 
@@ -207,7 +208,7 @@ export async function buildNewsroomIntelligenceSnapshot(
           signals.slice(0, 25).map((s) => ({
             id: s.id,
             title: s.title,
-            raw_content: s.raw_content,
+            raw_content: s.title,
             provider: s.provider,
           })),
           tenantId
@@ -321,7 +322,7 @@ export async function buildNewsroomIntelligenceSnapshot(
       id: a.id,
       headline: a.headline,
       language: a.language,
-      translations: a.translations as Record<string, unknown> | null,
+      translations: a.translations ?? null,
       region: (a.geo_metadata as { district?: string })?.district ?? null,
     })),
   });
@@ -620,6 +621,6 @@ function buildConfidenceHeatmap(
     .slice(0, 16);
 }
 
-function rowMeta(row: GeneratedArticleRow): Record<string, unknown> {
-  return (row.editorial_metadata ?? {}) as Record<string, unknown>;
+function rowMeta(row: GeneratedArticleRow): JsonObject {
+  return asJsonObject((row.editorial_metadata ?? {}) as Record<string, unknown>);
 }

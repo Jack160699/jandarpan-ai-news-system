@@ -29,7 +29,7 @@ export type DashboardSourceHealth = {
 
 export type DashboardAiQueueItem = {
   id: string;
-  article_id: string;
+  article_id: number;
   status: string;
   error: string | null;
   created_at: string;

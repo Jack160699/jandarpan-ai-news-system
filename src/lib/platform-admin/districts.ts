@@ -28,7 +28,7 @@ async function countArticlesByDistrict(): Promise<
       .limit(500),
   ]);
 
-  for (const row of (generated ?? []) as GeneratedArticleRow[]) {
+  for (const row of (generated ?? []) as unknown as GeneratedArticleRow[]) {
     const geo = geoFromRecord(row);
     const districts =
       geo.districts.length > 0 ? geo.districts : geo.is_chhattisgarh ? ["statewide"] : [];

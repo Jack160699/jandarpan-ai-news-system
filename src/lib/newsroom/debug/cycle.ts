@@ -30,6 +30,12 @@ const DEV_STAGE_BUDGET_MS: Record<WorkerId, number> = {
   ai_enrich: 30_000,
   editorial_generate: 120_000,
   editorial_images: 60_000,
+  job_processor: 90_000,
+  intelligence_embed: 60_000,
+  intelligence_snapshot: 45_000,
+  analytics_aggregate: 45_000,
+  dam_analyze: 45_000,
+  event_cluster: 45_000,
 };
 
 export type NewsroomCycleOptions = {
@@ -226,6 +232,12 @@ export async function runFullNewsroomCycle(
         ai_enrich: "ai_enrich",
         editorial_generate: "editorial_generate",
         editorial_images: "editorial_images",
+        job_processor: "clustering",
+        intelligence_embed: "clustering",
+        intelligence_snapshot: "clustering",
+        analytics_aggregate: "homepage_refresh",
+        dam_analyze: "clustering",
+        event_cluster: "clustering",
       };
     logNewsroomCycle({
       stage: stageMap[worker.worker],

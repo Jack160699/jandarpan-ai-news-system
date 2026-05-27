@@ -3,6 +3,7 @@
  */
 
 import type { CanonicalRole } from "@/lib/saas-auth/roles";
+import type { JsonObject } from "@/types/json";
 import type { MembershipStatus } from "@/lib/saas-auth/types";
 
 export type TeamRole = CanonicalRole;
@@ -32,7 +33,7 @@ export type TeamActivity = {
   action: string;
   userEmail: string | null;
   resourceId: string | null;
-  payload: Record<string, unknown>;
+  payload: JsonObject;
   createdAt: string;
 };
 
@@ -69,7 +70,7 @@ export type TenantMembershipDbRow = {
   role: string;
   status: string;
   permissions?: PermissionSet | null;
-  metadata?: Record<string, unknown> | null;
+  metadata?: JsonObject | null;
   created_at: string;
   joined_at?: string | null;
   last_login_at?: string | null;

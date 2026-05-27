@@ -135,7 +135,7 @@ export function LiveNewsHome({ feed }: LiveNewsHomeProps) {
   );
 }
 
-function buildSlugMap(feed: LiveNewsFeed): Map<string, string> {
+function buildSlugMap(feed: LiveNewsFeed): Map<number, string> {
   const articles: NewsArticleRow[] = [];
   if (feed.hero) articles.push(feed.hero);
   articles.push(

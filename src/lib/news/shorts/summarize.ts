@@ -21,6 +21,7 @@ const LANG_INSTRUCTION: Record<NewsroomLanguage, string> = {
   mr: "Write in standard Marathi (Devanagari).",
   bn: "Write in standard Bengali script.",
   ta: "Write in standard Tamil script.",
+  ur: "Write in clear Urdu script with short, neutral newsroom sentences.",
 };
 
 export async function generate60SecondSummary(input: {

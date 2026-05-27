@@ -66,7 +66,9 @@ export default async function CategoryPage({ params }: PageProps) {
 
   const pool = await fetchGeneratedArticlePool(120);
   const matched = filterArticlesForCategory(pool, slug).slice(0, 24);
-  const homeArticles = matched.map((row) => toHomeArticle(row));
+  const homeArticles = matched
+    .map((row) => toHomeArticle(row))
+    .filter((a): a is NonNullable<typeof a> => a !== null);
   const trending = buildTrendingKeywords({
     generatedRows: matched,
     limit: 10,

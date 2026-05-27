@@ -13,6 +13,7 @@ import {
   IPL_CLIENT_POLL_MS,
   teamMeta,
 } from "@/lib/super-menu/ipl-scores";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { SuperMenuBlock } from "./SuperMenuBlock";
@@ -67,7 +68,13 @@ function TeamRow({
   );
 }
 
-function IplCard({ card, language }: { card: IplWidgetCard; language: string }) {
+function IplCard({
+  card,
+  language,
+}: {
+  card: IplWidgetCard;
+  language: NewsroomLanguage;
+}) {
   const { match } = card;
   const badge = pickBilingualLabel(language, card.badgeEn, card.badgeHi);
   const isLive = card.kind === "live";

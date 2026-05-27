@@ -1,4 +1,5 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJsonObject, type JsonObject } from "@/types/json";
 import type { MonetizationEventType } from "@/lib/monetization/types";
 
 export function logMonetizationAnalytics(payload: Record<string, unknown>): void {
@@ -14,7 +15,7 @@ export async function persistMonetizationEvent(input: {
   slotId?: string;
   placementType?: string;
   articleSlug?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: JsonObject;
 }): Promise<void> {
   logMonetizationAnalytics(input);
 
@@ -28,7 +29,7 @@ export async function persistMonetizationEvent(input: {
       slot_id: input.slotId ?? null,
       placement_type: input.placementType ?? null,
       article_slug: input.articleSlug ?? null,
-      metadata: input.metadata ?? {},
+      metadata: asJsonObject(input.metadata ?? {}),
     });
   } catch {
     /* non-blocking */

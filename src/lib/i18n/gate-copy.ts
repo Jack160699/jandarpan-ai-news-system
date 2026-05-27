@@ -2,7 +2,7 @@
  * Monolingual language-gate copy — never mixed inside the modal.
  */
 
-export type GateCopyLocale = "en" | "hi" | "cg" | "bn" | "mr" | "ta";
+export type GateCopyLocale = "en" | "hi" | "cg" | "bn" | "mr" | "ta" | "ur";
 
 export type GateLegalCopy = {
   agreeIntro: string;
@@ -119,6 +119,22 @@ const GATE_COPY: Record<GateCopyLocale, GateCopy> = {
         "தொடர்வதன் மூலம் உள்ளடக்கம், குக்கீகள் மற்றும் விளம்பர அனுபவத்திற்கு ஒப்புதல் அளிக்கிறீர்கள்.",
     },
   },
+  ur: {
+    welcome: "جن درپن میں خوش آمدید",
+    title: "اپنی زبان منتخب کریں",
+    subtitle: "چھتیس گڑھ کی خبریں — آپ کے انداز میں",
+    confirm: "جاری رکھیں",
+    hint: "زبان کبھی بھی مینو سے تبدیل کی جا سکتی ہے",
+    legal: {
+      agreeIntro: "میں متفق ہوں",
+      terms: "شرائط و ضوابط",
+      privacy: "رازداری پالیسی",
+      cookies: "کوکی پالیسی",
+      ads: "ذاتی اشتہار پالیسی",
+      disclaimer:
+        "جاری رکھنے سے آپ مواد، کوکیز اور اشتہاری تجربے کے لیے رضامندی دیتے ہیں۔",
+    },
+  },
 };
 
 export function gateCopyLocaleFromLanguage(lang: string): GateCopyLocale {
@@ -127,6 +143,7 @@ export function gateCopyLocaleFromLanguage(lang: string): GateCopyLocale {
   if (lang === "bn") return "bn";
   if (lang === "mr") return "mr";
   if (lang === "ta") return "ta";
+  if (lang === "ur") return "ur";
   return "en";
 }
 

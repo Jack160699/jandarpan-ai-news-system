@@ -233,7 +233,7 @@ export function extractTopicTrends(
 function pickUnique(
   ranked: RankedArticle[],
   limit: number,
-  used: Set<string>
+  used: Set<number>
 ): RankedArticle[] {
   const out: RankedArticle[] = [];
   for (const a of ranked) {
@@ -250,7 +250,7 @@ export function buildHomepageFeed(articles: NewsArticleRow[]): LiveNewsFeed | nu
   if (!pool.length) return null;
 
   const ranked = rankArticles(pool);
-  const used = new Set<string>();
+  const used = new Set<number>();
 
   const hero = pickUnique(ranked, 1, used)[0] ?? ranked[0] ?? null;
 

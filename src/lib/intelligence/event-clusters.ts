@@ -3,6 +3,8 @@
  */
 
 import type { EventClusterInsight } from "@/lib/intelligence/types";
+import type { Json } from "@/types/supabase";
+import { jsonObjectFrom } from "@/types/json";
 
 type EventRow = {
   id: string;
@@ -12,13 +14,13 @@ type EventRow = {
   urgency_score: number;
   source_count: number;
   signal_ids: string[] | null;
-  clustering_metadata: Record<string, unknown> | null;
+  clustering_metadata: Json | null;
   created_at: string;
 };
 
 export function buildEventClusterInsights(events: EventRow[]): EventClusterInsight[] {
   return events.map((e) => {
-    const meta = e.clustering_metadata ?? {};
+    const meta = jsonObjectFrom(e.clustering_metadata);
     const mergeConfidence =
       typeof meta.merge_confidence === "number"
         ? meta.merge_confidence

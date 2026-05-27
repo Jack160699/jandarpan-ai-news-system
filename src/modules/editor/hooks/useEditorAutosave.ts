@@ -21,12 +21,12 @@ export function useEditorAutosave(
   const [saveState, setSaveState] = useState<EditorSaveState>("idle");
   const isMountedRef = useRef(true);
   const activeAbortRef = useRef<AbortController | null>(null);
-  const idleTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(
+  const idleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const lastSerializedRef = useRef("");
-  const debounceRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const payloadRef = useRef(payload);
   payloadRef.current = payload;
 
@@ -37,7 +37,7 @@ export function useEditorAutosave(
       activeAbortRef.current?.abort();
       activeAbortRef.current = null;
       if (idleTimeoutRef.current) {
-        window.clearTimeout(idleTimeoutRef.current);
+        clearTimeout(idleTimeoutRef.current);
         idleTimeoutRef.current = null;
       }
       traceEditorLifecycle("AUTOSAVE_CANCEL", "editor_autosave_unmount_cancel");
@@ -61,8 +61,8 @@ export function useEditorAutosave(
         setSaveState("saved");
         setLastSavedAt(result.savedAt);
         // Do NOT invalidate article query — that refetches and can remount/hydrate the editor.
-        if (idleTimeoutRef.current) window.clearTimeout(idleTimeoutRef.current);
-        idleTimeoutRef.current = window.setTimeout(() => {
+        if (idleTimeoutRef.current) clearTimeout(idleTimeoutRef.current);
+        idleTimeoutRef.current = setTimeout(() => {
           if (!isMountedRef.current) return;
           setSaveState("idle");
         }, 1_400);
@@ -111,10 +111,10 @@ export function useEditorAutosave(
 
   useEffect(() => {
     if (!payloadSerialized) return;
-    if (debounceRef.current) window.clearTimeout(debounceRef.current);
-    debounceRef.current = window.setTimeout(() => save("debounced"), DEBOUNCE_MS);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => save("debounced"), DEBOUNCE_MS);
     return () => {
-      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [payloadSerialized, save]);
 

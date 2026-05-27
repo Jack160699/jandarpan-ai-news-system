@@ -3,6 +3,7 @@
  */
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJsonObject, type JsonObject } from "@/types/json";
 
 export type SecurityAuditAction =
   | "auth.login"
@@ -41,7 +42,7 @@ type AuditInput = {
   resourceId?: string;
   ipAddress?: string | null;
   userAgent?: string | null;
-  metadata?: Record<string, unknown>;
+  metadata?: JsonObject;
 };
 
 type LoginEventInput = {
@@ -52,7 +53,7 @@ type LoginEventInput = {
   ipAddress?: string | null;
   userAgent?: string | null;
   deviceFingerprint?: string | null;
-  metadata?: Record<string, unknown>;
+  metadata?: JsonObject;
 };
 
 export async function logSecurityAudit(input: AuditInput): Promise<void> {
@@ -73,7 +74,7 @@ export async function logSecurityAudit(input: AuditInput): Promise<void> {
     resource_id: input.resourceId ?? null,
     ip_address: input.ipAddress ?? null,
     user_agent: input.userAgent ?? null,
-    metadata: input.metadata ?? {},
+    metadata: asJsonObject(input.metadata ?? {}),
   });
 }
 
@@ -94,7 +95,7 @@ export async function logLoginEvent(input: LoginEventInput): Promise<void> {
     ip_address: input.ipAddress ?? null,
     user_agent: input.userAgent ?? null,
     device_fingerprint: input.deviceFingerprint ?? null,
-    metadata: input.metadata ?? {},
+    metadata: asJsonObject(input.metadata ?? {}),
   });
 }
 
@@ -134,11 +135,11 @@ export async function logPermissionChange(input: {
     resourceType: "tenant_membership",
     resourceId: input.targetUserId ?? input.targetEmail ?? undefined,
     ipAddress: input.ipAddress,
-    metadata: {
-      previousRole: input.previousRole,
-      newRole: input.newRole,
-      previousStatus: input.previousStatus,
-      newStatus: input.newStatus,
-    },
+    metadata: asJsonObject({
+      ...(input.previousRole != null ? { previousRole: input.previousRole } : {}),
+      ...(input.newRole != null ? { newRole: input.newRole } : {}),
+      ...(input.previousStatus != null ? { previousStatus: input.previousStatus } : {}),
+      ...(input.newStatus != null ? { newStatus: input.newStatus } : {}),
+    } as Record<string, unknown>),
   });
 }

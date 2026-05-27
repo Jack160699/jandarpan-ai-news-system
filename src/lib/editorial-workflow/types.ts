@@ -54,7 +54,7 @@ export type WorkflowEventRecord = {
   rejection_reason: string | null;
   actor_email: string | null;
   created_at: string;
-  payload: Record<string, unknown>;
+  payload: import("@/types/json").JsonObject;
 };
 
 export type WorkflowCommentRecord = {

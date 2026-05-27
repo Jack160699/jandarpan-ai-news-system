@@ -1,4 +1,5 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { jsonObjectFrom } from "@/types/json";
 import type { BreakingTickerItem, FeedPage } from "../content/types";
 import {
   buildMockBreakingTicker,
@@ -58,7 +59,7 @@ export async function fetchBreakingFeed(
 
     const breakingItems = (articles ?? [])
       .filter((a) => {
-        const meta = (a.editorial_metadata ?? {}) as Record<string, unknown>;
+        const meta = jsonObjectFrom(a.editorial_metadata as import("@/types/supabase").Json);
         return Boolean(meta.is_breaking);
       })
       .slice(0, limit)

@@ -36,7 +36,7 @@ export function liveArticleToCard(article: NewsArticleRow): LiveCardModel {
   const desk = mapProviderToDesk(resolveArticleProvider(article));
 
   return {
-    id: article.id,
+    id: String(article.id),
     title: article.title,
     excerpt:
       article.description?.trim() ||

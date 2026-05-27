@@ -3,6 +3,8 @@
  */
 
 import { CG_DISTRICTS, CG_STATE_SLUG } from "@/lib/regional/districts";
+import type { Json } from "@/types/supabase";
+import type { JsonObject } from "@/types/json";
 
 export type RegionalGeoMetadata = {
   state: typeof CG_STATE_SLUG | "india" | "unknown";
@@ -121,9 +123,9 @@ export function mergeGeoMetadata(
 
 export function geoFromRecord(
   row: {
-    geo_metadata?: RegionalGeoMetadata | Record<string, unknown> | null;
-    editorial_metadata?: { regional?: RegionalGeoMetadata } | Record<string, unknown> | null;
-    ingestion_metadata?: { geo?: RegionalGeoMetadata } | Record<string, unknown> | null;
+    geo_metadata?: RegionalGeoMetadata | Json | null;
+    editorial_metadata?: { regional?: RegionalGeoMetadata } | JsonObject | Json | null;
+    ingestion_metadata?: { geo?: RegionalGeoMetadata } | JsonObject | Json | null;
     headline?: string;
     title?: string;
     summary?: string | null;

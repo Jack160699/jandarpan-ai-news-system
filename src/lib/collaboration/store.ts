@@ -3,6 +3,7 @@
  */
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
 import { hashContent } from "@/lib/collaboration/ot-lite";
 import type {
   ActivityEvent,
@@ -432,7 +433,7 @@ export async function createNotification(input: {
   type: string;
   title: string;
   body: string;
-  payload?: Record<string, unknown>;
+  payload?: JsonObject;
 }): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
@@ -443,7 +444,7 @@ export async function createNotification(input: {
     type: input.type,
     title: input.title,
     body: input.body,
-    payload: input.payload ?? {},
+    payload: asJsonObject(input.payload ?? {}),
   });
 }
 
@@ -492,7 +493,7 @@ export async function logActivity(input: {
   actorEmail: string;
   eventType: string;
   summary: string;
-  payload?: Record<string, unknown>;
+  payload?: JsonObject;
 }): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
@@ -503,7 +504,7 @@ export async function logActivity(input: {
     actor_email: input.actorEmail,
     event_type: input.eventType,
     summary: input.summary,
-    payload: input.payload ?? {},
+    payload: asJsonObject(input.payload ?? {}),
   });
 }
 
@@ -555,7 +556,7 @@ function mapNotification(row: Record<string, unknown>): TeamNotification {
     title: row.title as string,
     body: row.body as string,
     readAt: (row.read_at as string) ?? null,
-    payload: (row.payload ?? {}) as Record<string, unknown>,
+    payload: jsonObjectFrom(row.payload as import("@/types/supabase").Json),
     createdAt: row.created_at as string,
   };
 }
@@ -566,7 +567,7 @@ function mapActivity(row: Record<string, unknown>): ActivityEvent {
     actorEmail: row.actor_email as string,
     eventType: row.event_type as string,
     summary: row.summary as string,
-    payload: (row.payload ?? {}) as Record<string, unknown>,
+    payload: jsonObjectFrom(row.payload as import("@/types/supabase").Json),
     createdAt: row.created_at as string,
   };
 }

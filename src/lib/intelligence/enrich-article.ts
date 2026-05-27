@@ -7,6 +7,7 @@ import { scoreFakeNewsRisk } from "@/lib/intelligence/fake-news-risk";
 import { buildAutomatedSummary } from "@/lib/intelligence/summaries";
 import { analyzeEditorialIntelligence } from "@/lib/news/ai/editorial-intelligence";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+import { asJson, jsonObjectFrom } from "@/types/json";
 
 export async function enrichArticleIntelligence(
   articleId: string,
@@ -25,8 +26,8 @@ export async function enrichArticleIntelligence(
 
   if (error || !row) return { ok: false, error: error?.message ?? "not_found" };
 
-  const article = row as GeneratedArticleRow;
-  const meta = (article.editorial_metadata ?? {}) as Record<string, unknown>;
+  const article = row as unknown as GeneratedArticleRow;
+  const meta = jsonObjectFrom(asJson(article.editorial_metadata ?? {}));
   const attr =
     (meta.source_attribution as Array<{
       source: string | null;
@@ -85,7 +86,7 @@ export async function enrichArticleIntelligence(
 
   const { error: updateError } = await supabase
     .from("generated_articles")
-    .update({ editorial_metadata: patch })
+    .update({ editorial_metadata: asJson(patch) })
     .eq("id", articleId);
 
   if (updateError) return { ok: false, error: updateError.message };

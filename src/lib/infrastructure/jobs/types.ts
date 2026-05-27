@@ -2,6 +2,9 @@
  * Unified worker job types — Jan Darpan OS async processing
  */
 
+import type { Json } from "@/types/supabase";
+import type { JsonObject } from "@/types/json";
+
 export type JobStatus =
   | "pending"
   | "claimed"
@@ -26,7 +29,7 @@ export type WorkerJobRow = {
   tenant_id: string | null;
   job_type: JobType;
   dedupe_key: string;
-  payload: Record<string, unknown>;
+  payload: JsonObject;
   status: JobStatus;
   priority: number;
   attempts: number;
@@ -35,7 +38,7 @@ export type WorkerJobRow = {
   claimed_at: string | null;
   completed_at: string | null;
   last_error: string | null;
-  result: Record<string, unknown> | null;
+  result: Json | null;
   timeout_ms: number;
   created_at: string;
   updated_at: string;
@@ -45,7 +48,7 @@ export type EnqueueJobInput = {
   jobType: JobType;
   dedupeKey: string;
   tenantId?: string | null;
-  payload?: Record<string, unknown>;
+  payload?: JsonObject;
   priority?: number;
   maxAttempts?: number;
   scheduledAt?: Date;

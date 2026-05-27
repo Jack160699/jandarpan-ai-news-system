@@ -1,4 +1,5 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { jsonObjectFrom } from "@/types/json";
 import type { PlatformArticle } from "../content/types";
 import { articleRowToPlatform } from "./types-map";
 import type { ArticleRow } from "./types";
@@ -63,39 +64,39 @@ export async function queryGeneratedAsPlatform(filters: {
 
   const { geoFromRecord } = await import("@/lib/regional/geo-tagging");
 
-  return (data ?? [])
-    .map((row) => {
-      const geo = geoFromRecord(row);
-      const districtSlug = geo.districts[0] ?? null;
-      if (filters.district && districtSlug !== filters.district) return null;
+  return (data ?? []).flatMap((row) => {
+    const geo = geoFromRecord(row);
+    const districtSlug = geo.districts[0] ?? null;
+    if (filters.district && districtSlug !== filters.district) return [];
 
-      const meta = (row.editorial_metadata ?? {}) as Record<string, unknown>;
-      return {
-        id: row.id,
-        slug: row.slug,
-        title: row.headline,
-        excerpt: row.summary ?? "",
-        content: row.article_body ?? "",
-        image: row.hero_image_url ?? "",
-        category: (meta.category as PlatformArticle["category"]) ?? "district_news",
-        tags: row.tags ?? [],
-        district: districtSlug,
-        language: (row.language as PlatformArticle["language"]) ?? "hi",
-        source: "Jan Darpan Desk",
-        publishedAt: row.published_at ?? row.created_at,
-        priority: 50,
-        breaking: Boolean(meta.is_breaking),
-        seo: {
-          title: row.seo_title ?? row.headline,
-          description: row.seo_description ?? "",
-          keywords: [],
-        },
-        aiSummary: (meta.ai_summary as string) ?? null,
-        views: 0,
-        trendingScore: (meta.trend_score as number) ?? 0,
-      } satisfies PlatformArticle;
-    })
-    .filter((a): a is PlatformArticle => a !== null);
+    const meta = jsonObjectFrom(row.editorial_metadata);
+    const article = {
+      id: row.id,
+      slug: row.slug,
+      title: row.headline,
+      excerpt: row.summary ?? "",
+      content: row.article_body ?? "",
+      image: row.hero_image_url ?? "",
+      category: (meta.category as PlatformArticle["category"]) ?? "district_news",
+      tags: row.tags ?? [],
+      district: districtSlug,
+      language: (row.language as PlatformArticle["language"]) ?? "hi",
+      source: "Jan Darpan Desk",
+      publishedAt: row.published_at ?? row.created_at,
+      priority: 50,
+      breaking: Boolean(meta.is_breaking),
+      seo: {
+        title: row.seo_title ?? row.headline,
+        description: row.seo_description ?? "",
+        keywords: [],
+      },
+      aiSummary: (meta.ai_summary as string) ?? null,
+      views: 0,
+      trendingScore: (meta.trend_score as number) ?? 0,
+    } satisfies PlatformArticle;
+
+    return [article];
+  });
 }
 
 export { articleRowToPlatform } from "./types-map";

@@ -1,0 +1,36 @@
+﻿.next/types/validator.ts(53,39): error TS2307: Cannot find module '../../src/app/admin/ai-observability/page.js' or its corresponding type declarations.
+.next/types/validator.ts(62,39): error TS2307: Cannot find module '../../src/app/admin/ai-trust/page.js' or its corresponding type declarations.
+.next/types/validator.ts(71,39): error TS2307: Cannot find module '../../src/app/admin/ai-usage/page.js' or its corresponding type declarations.
+.next/types/validator.ts(98,39): error TS2307: Cannot find module '../../src/app/admin/audit/page.js' or its corresponding type declarations.
+.next/types/validator.ts(170,39): error TS2307: Cannot find module '../../src/app/admin/enterprise/page.js' or its corresponding type declarations.
+.next/types/validator.ts(242,39): error TS2307: Cannot find module '../../src/app/admin/moderation/page.js' or its corresponding type declarations.
+.next/types/validator.ts(314,39): error TS2307: Cannot find module '../../src/app/admin/tenants/page.js' or its corresponding type declarations.
+.next/types/validator.ts(593,39): error TS2307: Cannot find module '../../src/app/api/admin/audit/unified/route.js' or its corresponding type declarations.
+.next/types/validator.ts(620,39): error TS2307: Cannot find module '../../src/app/api/admin/enterprise/summary/route.js' or its corresponding type declarations.
+.next/types/validator.ts(629,39): error TS2307: Cannot find module '../../src/app/api/admin/ops/ai-governance/route.js' or its corresponding type declarations.
+.next/types/validator.ts(638,39): error TS2307: Cannot find module '../../src/app/api/admin/ops/ai-telemetry/route.js' or its corresponding type declarations.
+.next/types/validator.ts(647,39): error TS2307: Cannot find module '../../src/app/api/admin/ops/ai-usage/route.js' or its corresponding type declarations.
+.next/types/validator.ts(782,39): error TS2307: Cannot find module '../../src/app/api/admin/tenants/route.js' or its corresponding type declarations.
+.next/types/validator.ts(917,39): error TS2307: Cannot find module '../../src/app/api/cron/ai-jobs/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1160,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/assistant/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1169,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/dead-letters/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1178,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/dedup/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1214,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/grounding/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1223,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/jobs/[id]/cancel/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1232,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/jobs/[id]/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1241,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/jobs/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1250,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/limits/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1259,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/runs/[id]/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1268,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/runs/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1277,39): error TS2307: Cannot find module '../../src/app/api/editorial/ai/usage/route.js' or its corresponding type declarations.
+.next/types/validator.ts(1331,39): error TS2307: Cannot find module '../../src/app/api/editorial/moderation/route.js' or its corresponding type declarations.
+src/lib/observability/health/checks.ts(192,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "affiliate_placements" | "newsroom_tenants" | "analytics_report_schedules" | "analytics_snapshots" | "api_provider_health" | "article_metrics_daily" | "breaking_velocity_snapshots" | ... 60 more ... | "worker_job_runs"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"newsroom_analytics_events"' is not assignable to parameter of type '"affiliate_placements" | "newsroom_tenants" | "analytics_report_schedules" | "analytics_snapshots" | "api_provider_health" | "article_metrics_daily" | "breaking_velocity_snapshots" | ... 60 more ... | "worker_job_runs"'.
+  Overload 2 of 2, '(relation: never): PostgrestQueryBuilder<{ PostgrestVersion: "14.5"; }, { Tables: { affiliate_placements: { Row: { created_at: string; description: string | null; disclosure_en: string | null; disclosure_hi: string | null; ... 8 more ...; title: string; }; Insert: { ...; }; Update: { ...; }; Relationships: [...]; }; ... 66 more ...; worker_jobs: { ...; }; }; Views: {}; Functions: { ...; }; Enums: {}; CompositeTypes: {}; }, never, never, never>', gave the following error.
+    Argument of type '"newsroom_analytics_events"' is not assignable to parameter of type 'never'.
+src/lib/platform-admin/sources.ts(29,3): error TS2322: Type '{ id: string; sourceId: string | null; name: string; url: string | null; category: string | null | undefined; language: string | null | undefined; region: string | null | undefined; ... 10 more ...; updatedAt: string | undefined; }[]' is not assignable to type 'AdminSourceRecord[]'.
+  Type '{ id: string; sourceId: string | null; name: string; url: string | null; category: string | null | undefined; language: string | null | undefined; region: string | null | undefined; ... 10 more ...; updatedAt: string | undefined; }' is not assignable to type 'AdminSourceRecord'.
+    Types of property 'category' are incompatible.
+      Type 'string | null | undefined' is not assignable to type 'string | null'.
+        Type 'undefined' is not assignable to type 'string | null'.

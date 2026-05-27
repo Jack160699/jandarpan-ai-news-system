@@ -360,7 +360,7 @@ function buildScrollDepthBuckets(
 function buildSourcePerformance(
   articles: Array<{
     slug: string;
-    editorial_metadata: Record<string, unknown> | null;
+    editorial_metadata: import("@/types/supabase").Json | null;
   }>,
   perf: EnterpriseAnalyticsReport["topArticles"]
 ): SourcePerformanceRow[] {
@@ -488,7 +488,7 @@ function buildPublishingVelocity(
 function buildAiConfidenceTrend(
   articles: Array<{
     created_at: string;
-    editorial_metadata: Record<string, unknown> | null;
+    editorial_metadata: import("@/types/supabase").Json | null;
   }>,
   windowHours: number
 ): AiConfidenceTrendPoint[] {

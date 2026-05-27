@@ -3,6 +3,7 @@
  */
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { asJson, asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
 import type {
   DamAsset,
   DamCopyright,
@@ -28,7 +29,7 @@ function mapAsset(row: Record<string, unknown>, variants: DamVariant[] = []): Da
     width: row.width != null ? Number(row.width) : null,
     height: row.height != null ? Number(row.height) : null,
     durationSec: row.duration_sec != null ? Number(row.duration_sec) : null,
-    metadata: (row.metadata ?? {}) as Record<string, unknown>,
+    metadata: jsonObjectFrom(row.metadata as import("@/types/supabase").Json),
     copyright: (row.copyright ?? {}) as DamCopyright,
     aiTags: (row.ai_tags as string[]) ?? [],
     aiObjects: (row.ai_objects as string[]) ?? [],
@@ -152,7 +153,7 @@ export async function insertDamAsset(input: {
   width?: number | null;
   height?: number | null;
   durationSec?: number | null;
-  metadata?: Record<string, unknown>;
+  metadata?: JsonObject;
   copyright?: DamCopyright;
   aiTags?: string[];
   aiObjects?: string[];
@@ -191,8 +192,8 @@ export async function insertDamAsset(input: {
       width: input.width ?? null,
       height: input.height ?? null,
       duration_sec: input.durationSec ?? null,
-      metadata: input.metadata ?? {},
-      copyright: input.copyright ?? {},
+      metadata: asJsonObject(input.metadata ?? {}),
+      copyright: asJson(input.copyright ?? {}),
       ai_tags: input.aiTags ?? [],
       ai_objects: input.aiObjects ?? [],
       ai_ocr: input.aiOcr ?? null,
@@ -254,12 +255,12 @@ export async function updateDamAsset(
   const body: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (patch.name) body.name = patch.name;
   if (patch.folderId !== undefined) body.folder_id = patch.folderId;
-  if (patch.copyright) body.copyright = patch.copyright;
+  if (patch.copyright) body.copyright = asJson(patch.copyright);
   if (patch.aiTags) body.ai_tags = patch.aiTags;
 
   const { error } = await supabase
     .from("dam_assets")
-    .update(body)
+    .update(body as never)
     .eq("id", assetId)
     .eq("tenant_id", tenantId);
 

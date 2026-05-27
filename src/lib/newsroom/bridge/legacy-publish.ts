@@ -9,14 +9,14 @@ import { titleHash, urlHash } from "@/lib/news/normalize";
 import { assignSlugsToRows } from "@/lib/news/slug";
 import { logNewsroom, logNewsroomError } from "@/lib/newsroom/logger";
 import type { NormalizedArticle } from "@/lib/news/types";
-import type { NewsArticleInsert } from "@/lib/types/news-article";
+import type { NewsArticleId, NewsArticleInsert } from "@/lib/types/news-article";
 
 const BATCH_SIZE = 40;
 
 export type LegacyPublishResult = {
   inserted: number;
   skippedDuplicates: number;
-  articleIds: string[];
+  articleIds: NewsArticleId[];
   queuedForAI: number;
 };
 
@@ -98,7 +98,7 @@ export async function publishToLegacyArticles(
     // Rows returned from upsert — treat remainder as unchanged conflicts (rare)
     result.skippedDuplicates += Math.max(0, batch.length - batchUpserted);
     for (const row of data ?? []) {
-      if (row.id != null) result.articleIds.push(String(row.id));
+      if (row.id != null) result.articleIds.push(row.id);
     }
   }
 

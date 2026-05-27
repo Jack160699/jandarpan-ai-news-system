@@ -655,7 +655,11 @@ async function loadArticleContext(articleId: string): Promise<{
     }
   }
 
-  return { article, event, signals };
+  return {
+    article: article as unknown as GeneratedArticleRow,
+    event: event as unknown as NewsEventRow | null,
+    signals: signals as unknown as NewsSignalRow[],
+  };
 }
 
 async function processQueueItem(

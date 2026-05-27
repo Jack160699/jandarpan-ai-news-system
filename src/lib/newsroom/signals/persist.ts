@@ -8,6 +8,7 @@ import { logNewsroom, logNewsroomError } from "@/lib/newsroom/logger";
 import type { NormalizedArticle } from "@/lib/news/types";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import type { NewsSignalInsert } from "@/lib/types/newsroom";
+import { asJson, asJsonObject, type JsonObject } from "@/types/json";
 
 const BATCH_SIZE = 40;
 
@@ -19,7 +20,7 @@ export type SignalPersistResult = {
 
 export function normalizedToSignal(
   article: NormalizedArticle,
-  meta?: Record<string, unknown>
+  meta?: JsonObject
 ): NewsSignalInsert {
   const rawContent = [article.description, article.content]
     .filter(Boolean)
@@ -45,15 +46,14 @@ export function normalizedToSignal(
     category: article.category,
     region: geo.is_chhattisgarh ? "chhattisgarh" : article.region,
     language: article.language,
-    geo_metadata: geo,
-    ingestion_metadata: {
+    ingestion_metadata: asJsonObject({
       author: article.author,
       title_hash: meta?.title_hash,
       url_hash: meta?.url_hash,
       slug: meta?.slug,
       geo,
-      ...meta,
-    },
+      ...(meta ?? {}),
+    }),
   };
 }
 

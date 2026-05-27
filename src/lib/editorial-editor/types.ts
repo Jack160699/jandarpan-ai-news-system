@@ -1,4 +1,5 @@
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import type { JsonObject } from "@/types/json";
 
 export type EditorArticleRecord = {
   id: string;
@@ -13,8 +14,8 @@ export type EditorArticleRecord = {
   tags: string[] | null;
   published_at: string | null;
   editorial_status: string | null;
-  translations: Record<string, unknown> | null;
-  editorial_metadata: Record<string, unknown> | null;
+  translations: JsonObject | null;
+  editorial_metadata: JsonObject | null;
   created_at: string;
 };
 
@@ -45,8 +46,8 @@ export type EditorDraftPayload = {
   language: NewsroomLanguage | string;
   tags: string[];
   published_at: string | null;
-  translations: Record<string, unknown>;
-  editorial_metadata: Record<string, unknown>;
+  translations: JsonObject;
+  editorial_metadata: JsonObject;
 };
 
 export type EditorAiAction =

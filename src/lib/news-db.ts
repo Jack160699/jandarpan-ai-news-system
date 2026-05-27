@@ -125,7 +125,7 @@ export async function getArticleBySlug(
     .eq("slug", decoded)
     .maybeSingle();
 
-  if (data) return data;
+  if (data) return data as NewsArticleRow;
 
   if (error) {
     console.error("[news-db] getArticleBySlug:", error.message);
@@ -137,14 +137,14 @@ export async function getArticleBySlug(
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(400);
 
-  return (
-    recent?.find(
-      (row) =>
-        row.slug === decoded ||
-        resolveStorySlug(row) === decoded ||
-        buildArticleSlug(row.title, row.id, row.article_url) === decoded
-    ) ?? null
+  const match = recent?.find(
+    (row) =>
+      row.slug === decoded ||
+      resolveStorySlug(row as unknown as NewsArticleRow) === decoded ||
+      buildArticleSlug(row.title ?? "", row.id, row.article_url ?? "") === decoded
   );
+
+  return (match ?? null) as NewsArticleRow | null;
 }
 
 export async function getLiveStorySlugs(limit = 500): Promise<string[]> {
@@ -157,7 +157,9 @@ export async function getLiveStorySlugs(limit = 500): Promise<string[]> {
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  return (data ?? []).map((row) => resolveStorySlug(row as NewsArticleRow));
+  return (data ?? []).map((row) =>
+    resolveStorySlug(row as unknown as NewsArticleRow)
+  );
 }
 
 export async function getRelatedStoriesForArticle(
@@ -169,15 +171,18 @@ export async function getRelatedStoriesForArticle(
 }
 
 export async function getArticleById(
-  id: string
+  id: number | string
 ): Promise<NewsArticleRow | null> {
   if (!isSupabaseConfigured()) return null;
+
+  const numericId = typeof id === "number" ? id : Number(id);
+  if (!Number.isFinite(numericId)) return null;
 
   const supabase = createAnonServerClient();
   const { data, error } = await supabase
     .from("news_articles")
     .select(EXTENDED_ARTICLE_SELECT)
-    .eq("id", id)
+    .eq("id", numericId)
     .maybeSingle();
 
   if (error) {
@@ -185,7 +190,7 @@ export async function getArticleById(
     return null;
   }
 
-  return data;
+  return (data ?? null) as NewsArticleRow | null;
 }
 
 export function formatPublishedAt(iso: string | null): string {
