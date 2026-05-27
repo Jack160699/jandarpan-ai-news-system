@@ -26,6 +26,14 @@ export async function recordCronRun(record: CronRunRecord): Promise<void> {
   state[record.job] = record;
   await cacheSetJson(CRON_STATE_KEY, state, CRON_TTL_SEC);
 
+  opsLogger.info("worker_heartbeat_updated", {
+    job: record.job,
+    ok: record.ok,
+    startedAt: record.startedAt,
+    durationMs: record.durationMs,
+    degraded: record.degraded ?? false,
+  });
+
   opsLogger.info("cron_run_recorded", {
     job: record.job,
     ok: record.ok,
@@ -52,10 +60,20 @@ export async function getCronMonitorState(): Promise<{
     const rec = state[job];
     if (!rec) {
       staleJobs.push(job);
+      opsLogger.warn("worker_marked_stale", {
+        job,
+        reason: "missing_heartbeat",
+      });
       continue;
     }
     if (now - new Date(rec.startedAt).getTime() > maxAgeMs) {
       staleJobs.push(job);
+      opsLogger.warn("worker_marked_stale", {
+        job,
+        reason: "heartbeat_expired",
+        startedAt: rec.startedAt,
+        maxAgeMs,
+      });
     }
   }
 

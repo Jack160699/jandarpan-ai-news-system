@@ -14,7 +14,6 @@ import { getProviderRegistryDashboard } from "@/lib/news/providers/circuit-break
 import { getAggregationMetrics } from "@/lib/news/live-feed/observability";
 import { recordQueueSnapshot } from "@/lib/observability/metrics";
 import {
-  CORE_ARTICLE_SELECT,
   createAdminServerClient,
   createAnonServerClient,
   getSupabaseEnvDiagnostics,
@@ -279,10 +278,12 @@ export async function checkHomepageReadable(): Promise<HealthCheckResult> {
   return timed("homepage", "Homepage content pool", async () => {
     if (!isSupabaseConfigured()) return { ok: false, message: "supabase_missing" };
 
+    const HOMEPAGE_POOL_SELECT =
+      "id,slug,headline,summary,published_at,editorial_status,workflow_status,created_at";
     const supabase = createAnonServerClient();
     const { data, error } = await supabase
       .from("generated_articles")
-      .select(CORE_ARTICLE_SELECT)
+      .select(HOMEPAGE_POOL_SELECT)
       .neq("editorial_status", "rejected")
       .neq("editorial_status", "pending")
       .order("published_at", { ascending: false, nullsFirst: false })

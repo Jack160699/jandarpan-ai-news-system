@@ -64,6 +64,14 @@ async function handleFetchNews(request: Request) {
       { status: 401, headers: noStoreHeaders() }
     );
   }
+  console.log(
+    JSON.stringify({
+      tag: "[cron_triggered]",
+      job: "fetch-news",
+      path: new URL(request.url).pathname,
+      ts: new Date().toISOString(),
+    })
+  );
 
   if (!isSupabaseConfigured()) {
     logIngestFailure({ reason: "supabase_not_configured", durationMs: 0 });

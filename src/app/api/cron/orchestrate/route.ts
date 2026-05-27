@@ -36,6 +36,14 @@ async function handleOrchestrate(request: Request) {
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
+  console.log(
+    JSON.stringify({
+      tag: "[cron_triggered]",
+      job: "orchestrate",
+      path: new URL(request.url).pathname,
+      ts: new Date().toISOString(),
+    })
+  );
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
