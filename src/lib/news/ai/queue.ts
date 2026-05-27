@@ -7,8 +7,10 @@ import type { NewsArticleId } from "@/lib/types/news-article";
 
 const QUEUE_BATCH = 10;
 
+import { isAnyChatProviderConfigured, isLocalEnrichEnabled } from "@/lib/ai/providers";
+
 export function isAiQueueEnabled(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
+  return isAnyChatProviderConfigured() || isLocalEnrichEnabled();
 }
 
 export async function enqueueArticlesForAi(
@@ -22,17 +24,54 @@ export async function enqueueArticlesForAi(
     status: "pending" as const,
   }));
 
+  console.log(
+    JSON.stringify({
+      tag: "[ai-queue]",
+      phase: "enqueue_attempt",
+      onConflict: "article_id",
+      total: rows.length,
+      sampleArticleIds: rows.slice(0, 5).map((r) => r.article_id),
+      ts: new Date().toISOString(),
+    })
+  );
+
   const { data, error } = await supabase
     .from("news_ai_queue")
     .upsert(rows, { onConflict: "article_id" })
     .select("id");
 
   if (error) {
-    console.warn("[ai-queue] enqueue:", error.message);
+    console.warn(
+      JSON.stringify({
+        tag: "[ai-queue]",
+        phase: "enqueue_error",
+        onConflict: "article_id",
+        total: rows.length,
+        sampleArticleIds: rows.slice(0, 5).map((r) => r.article_id),
+        error: {
+          code: error.code ?? null,
+          message: error.message,
+          details: error.details ?? null,
+          hint: error.hint ?? null,
+        },
+        ts: new Date().toISOString(),
+      })
+    );
     return 0;
   }
 
-  return data?.length ?? 0;
+  const queued = data?.length ?? 0;
+  console.log(
+    JSON.stringify({
+      tag: "[ai-queue]",
+      phase: "enqueue_ok",
+      requested: rows.length,
+      returnedRows: queued,
+      ts: new Date().toISOString(),
+    })
+  );
+
+  return queued;
 }
 
 export async function countPendingAiQueue(): Promise<number> {

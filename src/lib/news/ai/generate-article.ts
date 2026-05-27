@@ -2,6 +2,7 @@
  * AI editorial generation — production-tolerant publishing from news_events
  */
 
+import { requestChatCompletion } from "@/lib/ai/providers";
 import { createAdminServerClient } from "@/lib/supabase";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
@@ -49,7 +50,6 @@ export type {
   SupportedEditorialLanguage,
 } from "@/lib/news/ai/editorial-types";
 
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const EDITORIAL_TIMEOUT_MS = 28_000;
 const EXCERPT_MAX = 420;
 const BATCH_RESCUE_COUNT = 2;
@@ -102,6 +102,23 @@ type PendingCandidate = {
 function logEditorial(message: string, context?: Record<string, unknown>): void {
   console.log(`[generate-article] ${message}`, context ? JSON.stringify(context) : "");
   logNewsroom("generated", message, context);
+}
+
+function logArticleGenerationPhase(
+  phase:
+    | "article_generation_started"
+    | "article_generation_completed"
+    | "article_generation_failed",
+  context: Record<string, unknown>
+): void {
+  console.log(
+    JSON.stringify({
+      tag: "[ai-pipeline]",
+      phase,
+      ts: new Date().toISOString(),
+      ...context,
+    })
+  );
 }
 
 function qualityResultFields(quality: EditorialQualityReport) {
@@ -240,25 +257,12 @@ async function callEditorialLlm(
   factPackText: string,
   language: SupportedEditorialLanguage
 ): Promise<LlmEditorialResponse | null> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return null;
-
   const langInstruction =
     language === "hi"
       ? "Write in clear, simple Hindi (Devanagari). Short sentences OK for breaking wire."
       : "Write in clear, simple English. Short wire-style OK for breaking news.";
 
-  const body = {
-    model:
-      process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
-      process.env.OPENAI_MODEL?.trim() ||
-      "gpt-4o-mini",
-    temperature: 0.35,
-    max_tokens: 2800,
-    messages: [
-      {
-        role: "system",
-        content: `You are a senior editor for a trustworthy regional digital newspaper (Chhattisgarh-first).
+  const system = `You are a senior editor for a trustworthy regional digital newspaper (Chhattisgarh-first).
 ${langInstruction}
 
 Rules:
@@ -281,34 +285,31 @@ Return JSON only:
   "seo_title": "max 60 chars",
   "seo_description": "max 155 chars",
   "tags": ["tag1","tag2"]
-}`,
-      },
-      { role: "user", content: factPackText },
-    ],
-    response_format: { type: "json_object" as const },
-  };
+}`;
 
-  const res = await fetch(OPENAI_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(EDITORIAL_TIMEOUT_MS),
+  const model =
+    process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
+    process.env.OPENAI_MODEL?.trim() ||
+    "gpt-4o-mini";
+
+  const result = await requestChatCompletion({
+    operation: "editorial_generate",
+    system,
+    user: factPackText,
+    model,
+    temperature: 0.35,
+    maxTokens: 2800,
+    jsonMode: true,
+    timeoutMs: EDITORIAL_TIMEOUT_MS,
   });
 
-  if (!res.ok) {
-    throw new Error(`OpenAI HTTP ${res.status}`);
+  if (!result.ok) return null;
+
+  try {
+    return JSON.parse(result.content) as LlmEditorialResponse;
+  } catch {
+    return null;
   }
-
-  const json = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  const content = json.choices?.[0]?.message?.content;
-  if (!content) return null;
-
-  return JSON.parse(content) as LlmEditorialResponse;
 }
 
 async function loadSignalsForEvent(event: NewsEventRow): Promise<NewsSignalRow[]> {
@@ -656,6 +657,12 @@ export async function generateEditorialFromEvent(
   event: NewsEventRow,
   options?: { existingHeadlines?: string[]; forcePublish?: boolean }
 ): Promise<EditorialGenerationResult> {
+  logArticleGenerationPhase("article_generation_started", {
+    eventId: event.id,
+    region: event.region,
+    category: event.category,
+    sourceCount: event.source_count,
+  });
   if (!isEditorialEnabled()) {
     return {
       ok: false,
@@ -672,6 +679,11 @@ export async function generateEditorialFromEvent(
 
   const prepared = await prepareCandidate(event, existingHeadlines);
   if (!prepared.candidate) {
+    logArticleGenerationPhase("article_generation_failed", {
+      eventId: event.id,
+      reason: prepared.reason ?? "prepare_candidate_failed",
+      skipped: prepared.skipped,
+    });
     return {
       ok: false,
       article: null,
@@ -729,6 +741,14 @@ export async function generateEditorialFromEvent(
       quality_breakdown: quality.quality_breakdown,
     });
 
+    logArticleGenerationPhase("article_generation_failed", {
+      eventId: event.id,
+      reason: quality.hard_reject
+        ? quality.hard_reject_reasons.join(",")
+        : "quality_checks_failed",
+      hardReject: quality.hard_reject,
+      confidence: quality.ai_confidence,
+    });
     return {
       ok: false,
       article: null,
@@ -743,7 +763,7 @@ export async function generateEditorialFromEvent(
     };
   }
 
-  return persistGeneratedArticle({
+  const persisted = await persistGeneratedArticle({
     event: candidate.event,
     draft: candidate.draft,
     quality,
@@ -752,6 +772,21 @@ export async function generateEditorialFromEvent(
     repaired: candidate.repaired,
     usedFallback: candidate.usedFallback,
   });
+  if (persisted.ok && persisted.article) {
+    logArticleGenerationPhase("article_generation_completed", {
+      eventId: event.id,
+      articleId: persisted.article.id,
+      headline: persisted.article.headline,
+      confidence: quality.ai_confidence,
+    });
+  } else {
+    logArticleGenerationPhase("article_generation_failed", {
+      eventId: event.id,
+      reason: persisted.reason ?? "persist_failed",
+      skipped: persisted.skipped,
+    });
+  }
+  return persisted;
 }
 
 /**
@@ -833,8 +868,21 @@ export async function generateEditorialsFromEvents(options?: {
   for (let i = 0; i < pending.length; i++) {
     const event = pending[i];
     const prepared = preparedList[i];
+    logArticleGenerationPhase("article_generation_started", {
+      eventId: event.id,
+      region: event.region,
+      category: event.category,
+      sourceCount: event.source_count,
+      mode: "batch",
+    });
 
     if (!prepared.candidate) {
+      logArticleGenerationPhase("article_generation_failed", {
+        eventId: event.id,
+        reason: prepared.reason ?? "prepare_candidate_failed",
+        skipped: true,
+        mode: "batch",
+      });
       skipped++;
       results.push({
         eventId: event.id,
@@ -870,6 +918,13 @@ export async function generateEditorialsFromEvents(options?: {
       });
 
       if (saved.ok && saved.article) {
+        logArticleGenerationPhase("article_generation_completed", {
+          eventId: event.id,
+          articleId: saved.article.id,
+          headline: saved.article.headline,
+          confidence: candidate.quality.ai_confidence,
+          mode: "batch",
+        });
         published++;
         existingHeadlines.push(candidate.draft.headline);
         if (
@@ -884,10 +939,25 @@ export async function generateEditorialsFromEvents(options?: {
         }
       } else if (saved.skipped) skipped++;
       else {
+        logArticleGenerationPhase("article_generation_failed", {
+          eventId: event.id,
+          reason: saved.reason ?? "persist_failed",
+          skipped: false,
+          mode: "batch",
+        });
         rejected++;
         if (saved.reason) errors.push(`${event.id}: ${saved.reason}`);
       }
     } else {
+      logArticleGenerationPhase("article_generation_failed", {
+        eventId: event.id,
+        reason: candidate.quality.hard_reject
+          ? candidate.quality.hard_reject_reasons.join(",")
+          : "quality_checks_failed",
+        hardReject: candidate.quality.hard_reject,
+        confidence: candidate.quality.ai_confidence,
+        mode: "batch",
+      });
       failedCandidates.push(candidate);
       rejected++;
       results.push({
@@ -949,6 +1019,13 @@ export async function generateEditorialsFromEvents(options?: {
       });
 
       if (saved.ok && saved.article) {
+        logArticleGenerationPhase("article_generation_completed", {
+          eventId: candidate.event.id,
+          articleId: saved.article.id,
+          headline: saved.article.headline,
+          confidence: quality.ai_confidence,
+          mode: "batch_rescue",
+        });
         published++;
         rejected = Math.max(0, rejected - 1);
         const idx = results.findIndex((r) => r.eventId === candidate.event.id);
@@ -974,6 +1051,14 @@ export async function generateEditorialsFromEvents(options?: {
             confidence: quality.ai_confidence,
           };
         }
+      }
+      if (!saved.ok) {
+        logArticleGenerationPhase("article_generation_failed", {
+          eventId: candidate.event.id,
+          reason: saved.reason ?? "batch_rescue_persist_failed",
+          skipped: saved.skipped,
+          mode: "batch_rescue",
+        });
       }
     }
 

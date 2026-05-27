@@ -2,6 +2,10 @@
  * Queue workers — ingest, AI, editorial, images
  */
 
+import {
+  isAnyChatProviderConfigured,
+  isLocalEnrichEnabled,
+} from "@/lib/ai/providers";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
 import { monitorWorkerResult } from "@/lib/observability/worker-monitor";
@@ -49,13 +53,13 @@ async function runIngestWorker(ctx: WorkerContext): Promise<WorkerResult> {
 
 async function runAiWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
-  if (!process.env.OPENAI_API_KEY?.trim()) {
+  if (!isAnyChatProviderConfigured() && !isLocalEnrichEnabled()) {
     return {
       worker: "ai_enrich",
       ok: true,
       durationMs: 0,
       skipped: true,
-      metadata: { message: "OPENAI_API_KEY not set" },
+      metadata: { message: "No AI providers and local enrich disabled" },
     };
   }
 
@@ -81,6 +85,8 @@ async function runAiWorker(ctx: WorkerContext): Promise<WorkerResult> {
       processed: result.processed,
       skipped: result.skipped,
       pending,
+      localFallback: result.localFallback,
+      cloudSuccess: result.cloudSuccess,
       errors: result.errors.slice(0, 5),
     },
   };

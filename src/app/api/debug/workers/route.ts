@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
+import { getAiProviderHealthSummary } from "@/lib/ai/providers";
 import { getQueueStats, getWorkerHealth } from "@/lib/infrastructure/jobs/monitor";
 import { listWorkers } from "@/lib/infrastructure/cron/orchestrator";
 import { resolveCronWorkerId } from "@/lib/infrastructure/cron/worker-aliases";
@@ -22,7 +23,11 @@ export async function GET(request: Request) {
   const run = url.searchParams.get("run");
 
   const started = Date.now();
-  const [queue, health] = await Promise.all([getQueueStats(), getWorkerHealth(24)]);
+  const [queue, health, aiProviders] = await Promise.all([
+    getQueueStats(),
+    getWorkerHealth(24),
+    Promise.resolve(getAiProviderHealthSummary()),
+  ]);
 
   let invoked: unknown = null;
   if (run) {
@@ -47,6 +52,7 @@ export async function GET(request: Request) {
       workers: listWorkers(),
       queue,
       health,
+      aiProviders,
       invoked,
       checkedAt: new Date().toISOString(),
       hint: "Optionally run a worker: /api/debug/workers?run=ingest (cron-secret protected)",

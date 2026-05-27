@@ -2,6 +2,7 @@
  * Newsroom pipeline snapshot — counts + latest rows for debug dashboards
  */
 
+import { getAiProviderHealthSummary } from "@/lib/ai/providers";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
 import { countPendingEditorialImages } from "@/lib/news/ai/generate-editorial-image";
 import { buildGeneratedHomepageFeed } from "@/lib/homepage/generated-feed";
@@ -54,6 +55,7 @@ export type NewsroomSnapshot = {
   providerHealth: {
     api: Array<{ provider_id: string; health_score: number; disabled_until: string | null }>;
     rss: Array<{ source_id: string; name: string; consecutive_failures: number; disabled_until: string | null }>;
+    ai: ReturnType<typeof getAiProviderHealthSummary>;
   };
   homepage: {
     ready: boolean;
@@ -107,7 +109,7 @@ export async function captureNewsroomSnapshot(): Promise<NewsroomSnapshot> {
         pending_editorial_images: null,
       },
       latest: { signals: [], events: [], generated: [] },
-      providerHealth: { api: [], rss: [] },
+      providerHealth: { api: [], rss: [], ai: getAiProviderHealthSummary() },
       homepage: {
         ready: false,
         heroTitle: null,
@@ -236,6 +238,7 @@ export async function captureNewsroomSnapshot(): Promise<NewsroomSnapshot> {
         consecutive_failures: r.consecutive_failures,
         disabled_until: r.disabled_until,
       })),
+      ai: getAiProviderHealthSummary(),
     },
     homepage: {
       ready: homepageReady,

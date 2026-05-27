@@ -22,6 +22,7 @@ import {
   logNewsroom,
 } from "@/lib/newsroom";
 import type { NormalizedArticle, NewsProviderId } from "@/lib/news/types";
+import { logIngestTrace } from "@/lib/news/pipeline/ingest-trace";
 
 export type ProviderIngestResult = {
   provider: NewsProviderId;
@@ -83,6 +84,13 @@ export async function ingestProviderArticles(
   result.failures = failures;
 
   if (!valid.length) {
+    logIngestTrace("validation_all_rejected", {
+      provider,
+      totalFetched: rawArticles.length,
+      validationStats: stats,
+      sampleFailures: failures.slice(0, 5),
+      firstFailure: failures[0] ?? null,
+    });
     logNewsroom("pipeline", "provider_all_rejected", {
       provider,
       total: rawArticles.length,
@@ -90,6 +98,15 @@ export async function ingestProviderArticles(
     });
     return result;
   }
+
+  logIngestTrace("validation_passed", {
+    provider,
+    totalFetched: rawArticles.length,
+    validCount: valid.length,
+    rejectedCount: failures.length,
+    validationStats: stats,
+    sampleFailures: failures.slice(0, 3),
+  });
 
   const { articles: enriched, analytics } = await enrichArticleImages(valid, {
     maxPageFetches: options?.maxImagePageFetches ?? 12,

@@ -2,6 +2,7 @@
  * Enterprise health checks — Supabase, OpenAI, workers, realtime, storage, vectors, queues, analytics, ingestion
  */
 
+import { getAiProviderHealthSummary } from "@/lib/ai/providers";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { getCronMonitorState } from "@/lib/observability/cron-monitor";
@@ -80,12 +81,29 @@ export async function checkSupabase(): Promise<HealthCheckResult> {
 }
 
 export async function checkOpenAI(): Promise<HealthCheckResult> {
-  return timed("openai", "OpenAI", async () => {
-    const configured = Boolean(process.env.OPENAI_API_KEY?.trim());
-    if (!configured) {
-      return { ok: false, degraded: true, message: "OPENAI_API_KEY not set" };
+  return timed("openai", "AI providers", async () => {
+    const summary = getAiProviderHealthSummary();
+    const openai = summary.providers.find((p) => p.provider === "openai");
+    const unhealthy = openai && !openai.healthy;
+    if (!summary.openaiConfigured && !summary.openrouterConfigured) {
+      return {
+        ok: summary.localEnrichEnabled,
+        degraded: true,
+        message: summary.localEnrichEnabled
+          ? "No cloud AI keys — local enrich only"
+          : "No AI providers configured",
+        details: summary,
+      };
     }
-    return { ok: true, details: { configured: true } };
+    if (unhealthy) {
+      return {
+        ok: false,
+        degraded: true,
+        message: openai?.lastError ?? "openai_unhealthy",
+        details: summary,
+      };
+    }
+    return { ok: true, details: summary };
   });
 }
 

@@ -10,6 +10,7 @@
  * 6. Branded CG Bhaskar placeholder
  */
 
+import { requestImageGeneration } from "@/lib/ai/providers";
 import { createAdminServerClient } from "@/lib/supabase";
 import { getPublicSupabaseEnv } from "@/lib/supabase/env";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
@@ -50,7 +51,6 @@ import type {
   NewsSignalRow,
 } from "@/lib/types/newsroom";
 
-const OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations";
 const IMAGE_TIMEOUT_MS = 45_000;
 const MAX_AI_REPAIR_ATTEMPTS = 2;
 
@@ -103,6 +103,23 @@ export type ProcessEditorialImageQueueResult = {
 
 function logImage(message: string, context?: Record<string, unknown>): void {
   logNewsroom("editorial-image", message, context);
+}
+
+function logImageGenerationPhase(
+  phase:
+    | "image_generation_started"
+    | "image_generation_completed"
+    | "image_generation_failed",
+  context: Record<string, unknown>
+): void {
+  console.log(
+    JSON.stringify({
+      tag: "[ai-pipeline]",
+      phase,
+      ts: new Date().toISOString(),
+      ...context,
+    })
+  );
 }
 
 export function isEditorialImageGenerationEnabled(): boolean {
@@ -216,9 +233,6 @@ async function uploadEditorialVariants(input: {
 async function generateOpenAiIllustration(
   prompt: string
 ): Promise<Buffer | null> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return null;
-
   const promptCheck = moderateGeneratedPrompt(prompt);
   if (!promptCheck.safe) {
     logEditorialImageAnalytics({
@@ -234,42 +248,30 @@ async function generateOpenAiIllustration(
     process.env.OPENAI_IMAGE_MODEL?.trim() ||
     "dall-e-3";
 
-  const body: Record<string, unknown> = {
-    model,
-    prompt: prompt.slice(0, 4000),
-    n: 1,
-    size: model.includes("dall-e-3") ? "1792x1024" : "1024x1024",
-    response_format: "url",
-  };
-
+  const extraBody: Record<string, unknown> = {};
   if (model.includes("dall-e-3")) {
-    body.quality = "standard";
-    body.style = "vivid";
+    extraBody.quality = "standard";
+    extraBody.style = "vivid";
   }
 
-  const res = await fetch(OPENAI_IMAGES_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
+  const result = await requestImageGeneration({
+    operation: "editorial_image",
+    prompt,
+    model,
+    timeoutMs: IMAGE_TIMEOUT_MS,
+    extraBody,
   });
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`OpenAI images HTTP ${res.status}: ${errText.slice(0, 200)}`);
+  if ("error" in result) {
+    logEditorialImageAnalytics({
+      event: "ai_generate_fail",
+      error: result.error.message,
+      metadata: { code: result.error.code },
+    });
+    return null;
   }
 
-  const json = (await res.json()) as {
-    data?: Array<{ url?: string }>;
-  };
-
-  const imageUrl = json.data?.[0]?.url;
-  if (!imageUrl) return null;
-
-  return downloadImageBuffer(imageUrl);
+  return downloadImageBuffer(result.url);
 }
 
 function buildFallbackResult(input: {
@@ -665,8 +667,19 @@ async function loadArticleContext(articleId: string): Promise<{
 async function processQueueItem(
   row: EditorialImageQueueRow
 ): Promise<{ ok: boolean; error?: string }> {
+  logImageGenerationPhase("image_generation_started", {
+    queueId: row.id,
+    generatedArticleId: row.generated_article_id,
+    attempts: row.attempts,
+    maxAttempts: row.max_attempts,
+  });
   const ctx = await loadArticleContext(row.generated_article_id);
   if (!ctx) {
+    logImageGenerationPhase("image_generation_failed", {
+      queueId: row.id,
+      generatedArticleId: row.generated_article_id,
+      reason: "article_not_found",
+    });
     return { ok: false, error: "article_not_found" };
   }
 
@@ -703,6 +716,13 @@ async function processQueueItem(
       qualityScore: resolved.metadata.quality_score,
     });
 
+    logImageGenerationPhase("image_generation_completed", {
+      queueId: row.id,
+      generatedArticleId: article.id,
+      source: resolved.source,
+      qualityScore: resolved.metadata.quality_score ?? null,
+    });
+
     return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "process_failed";
@@ -728,6 +748,14 @@ async function processQueueItem(
         : sourceImage
           ? "source_extracted"
           : "category_curated",
+    });
+
+    logImageGenerationPhase("image_generation_failed", {
+      queueId: row.id,
+      generatedArticleId: article.id,
+      reason: msg,
+      retry,
+      nextAttempt: row.attempts + 1,
     });
 
     return { ok: false, error: msg };

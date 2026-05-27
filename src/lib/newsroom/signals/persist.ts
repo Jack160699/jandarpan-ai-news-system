@@ -9,6 +9,11 @@ import type { NormalizedArticle } from "@/lib/news/types";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import type { NewsSignalInsert } from "@/lib/types/newsroom";
 import { asJson, asJsonObject, type JsonObject } from "@/types/json";
+import {
+  formatSupabaseError,
+  logIngestTrace,
+  summarizeInsertRows,
+} from "@/lib/news/pipeline/ingest-trace";
 
 const BATCH_SIZE = 40;
 
@@ -73,8 +78,25 @@ export async function persistNewsSignals(
   const supabase = createAdminServerClient();
   const rows = articles.map((a) => normalizedToSignal(a, { ...meta, provider }));
 
+  logIngestTrace("signals_persist_start", {
+    provider,
+    rowCount: rows.length,
+    tenantId: rows[0]?.tenant_id ?? null,
+    samplePayload: summarizeInsertRows(rows as Record<string, unknown>[]),
+  });
+
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
+    const batchIndex = Math.floor(i / BATCH_SIZE);
+
+    logIngestTrace("signals_upsert_attempt", {
+      provider,
+      batchIndex,
+      batchSize: batch.length,
+      onConflict: "article_url",
+      ignoreDuplicates: true,
+      samplePayload: summarizeInsertRows(batch as Record<string, unknown>[]),
+    });
 
     const { data, error } = await supabase
       .from("news_signals")
@@ -85,6 +107,14 @@ export async function persistNewsSignals(
       .select("id");
 
     if (error) {
+      logIngestTrace("signals_upsert_error", {
+        provider,
+        batchIndex,
+        batchSize: batch.length,
+        error: formatSupabaseError(error),
+        samplePayload: summarizeInsertRows(batch as Record<string, unknown>[]),
+        firstFailure: true,
+      });
       logNewsroomError("signals", "upsert_batch_failed", error, {
         provider,
         batchSize: batch.length,
@@ -93,6 +123,23 @@ export async function persistNewsSignals(
     }
 
     const batchInserted = data?.length ?? 0;
+    if (batchInserted === 0 && batch.length > 0) {
+      logIngestTrace("signals_upsert_zero_rows", {
+        provider,
+        batchIndex,
+        batchSize: batch.length,
+        reason: "all_duplicates_or_ignored",
+        sampleUrls: batch.slice(0, 3).map((r) => r.article_url),
+      });
+    } else {
+      logIngestTrace("signals_upsert_ok", {
+        provider,
+        batchIndex,
+        batchSize: batch.length,
+        returnedRows: batchInserted,
+        skippedDuplicates: batch.length - batchInserted,
+      });
+    }
     result.inserted += batchInserted;
     result.skippedDuplicates += batch.length - batchInserted;
     for (const row of data ?? []) {

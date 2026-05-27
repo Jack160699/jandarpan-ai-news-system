@@ -1,0 +1,229 @@
+﻿[SUPABASE_ENV_CHECK] {
+  hasUrl: true,
+  hasAnon: true,
+  hasServiceRole: true,
+  urlHostname: 'giiuqshoconjbpiueasp.supabase.co',
+  urlValid: true,
+  anonKeyPrefix: 'sb_publishable_1',
+  warnings: []
+}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:05:55.993Z","event":"worker_start","worker":"ai_enrich"}
+{"tag":"[ai-pipeline]","phase":"queue_claimed","requestedLimit":10,"claimed":10,"articleIds":[141,142,143,144,145,146,147,148,149,140],"ts":"2026-05-27T10:05:56.510Z"}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:05:58.554Z","event":"worker_complete","worker":"ai_enrich","durationMs":2561,"metadata":{"processed":0,"skipped":10,"pending":292,"errors":["145: OpenAI HTTP 401","147: OpenAI HTTP 401","146: OpenAI HTTP 401","148: OpenAI HTTP 401","141: OpenAI HTTP 401"]}}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:05:58.555Z","event":"cache_miss","metadata":{"key":"ops:metrics:workers:v1"}}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:05:58.555Z","event":"worker_start","worker":"editorial_generate"}
+[generate-article] llm_error {"eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","message":"OpenAI HTTP 401"}
+[newsroom:generated] {"stage":"generated","message":"OpenAI HTTP 401","eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","ts":"2026-05-27T10:06:00.388Z"}
+[generate-article] fallback_draft_used {"eventId":"07738066-3b00-4b54-a572-5d482b60c2aa"}
+[newsroom:generated] {"stage":"generated","message":"fallback_draft_used","eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","ts":"2026-05-27T10:06:00.389Z"}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:00.396Z","eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","title":"CSMCL αñ¡αÑìαñ░αñ╖αÑìαñƒαñ╛αñÜαñ╛αñ░ αñ«αñ╛αñ«αñ▓αñ╛: αñàαñ¿αñ╡αñ░ αñóαÑçαñ¼αñ░ αñòαÑÇ αñ£αñ«αñ╛αñ¿αññ αñ»αñ╛αñÜαñ┐αñòαñ╛ αñ╕αÑìαñ╡αÑÇαñòαñ╛αñ░, αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñ╕αñ░αñòαñ╛αñ░ αñ╕αÑç αñ«αñ╛αñéαñùαñ╛ αñ£αñ╡αñ╛αñ¼ΓÇª","publishDecision":"repair","confidence":0.384,"readability":0.93,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"breakingScore":0.33,"trendScore":0.7,"headlineQuality":0.62,"structure":0.92,"spamScore":0.45,"duplicateClusterId":null,"rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"breakdown":{"structure":0.92,"readability":0.93,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"headlineQuality":0.62,"breakingScore":0.33,"trendScore":0.7,"confidence":0.674,"spamScore":0.45,"sourceOverlap":0.968,"duplicatePhraseCount":8}}
+[generate-article] llm_error {"eventId":"1609c4f1-94c0-41c6-97c0-13312b707ede","message":"OpenAI HTTP 401"}
+[newsroom:generated] {"stage":"generated","message":"OpenAI HTTP 401","eventId":"1609c4f1-94c0-41c6-97c0-13312b707ede","ts":"2026-05-27T10:06:00.469Z"}
+[generate-article] fallback_draft_used {"eventId":"1609c4f1-94c0-41c6-97c0-13312b707ede"}
+[newsroom:generated] {"stage":"generated","message":"fallback_draft_used","eventId":"1609c4f1-94c0-41c6-97c0-13312b707ede","ts":"2026-05-27T10:06:00.469Z"}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:00.471Z","eventId":"1609c4f1-94c0-41c6-97c0-13312b707ede","title":"αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñ«αÑçαñé αñöαñ╖αñºαÑÇαñ» αñ¬αÑîαñºαÑïαñé αñòαÑÇ αñûαÑçαññαÑÇ αñòαÑï αñ¼αñóαñ╝αñ╛αñ╡αñ╛, αñòαñ┐αñ╕αñ╛αñ¿αÑïαñé αñòαÑï αñªαñ┐αñÅ αñ£αñ╛ αñ░αñ╣αÑç αñ«αÑüαñ½αÑìαññ αñ¬αÑîαñºαÑç αñöαñ░ αñ¬αÑìαñ░αñ╢αñ┐αñòαÑìαñ╖ΓÇª","publishDecision":"reject","confidence":0.332,"readability":0.83,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"breakingScore":0.33,"trendScore":0.4,"headlineQuality":0.52,"structure":0.92,"spamScore":0.45,"duplicateClusterId":null,"rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"breakdown":{"structure":0.92,"readability":0.83,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"headlineQuality":0.52,"breakingScore":0.33,"trendScore":0.4,"confidence":0.622,"spamScore":0.45,"sourceOverlap":0.969,"duplicatePhraseCount":8}}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:00.737Z","eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","title":"CSMCL αñ¡αÑìαñ░αñ╖αÑìαñƒαñ╛αñÜαñ╛αñ░ αñ«αñ╛αñ«αñ▓αñ╛: αñàαñ¿αñ╡αñ░ αñóαÑçαñ¼αñ░ αñòαÑÇ αñ£αñ«αñ╛αñ¿αññ αñ»αñ╛αñÜαñ┐αñòαñ╛ αñ╕αÑìαñ╡αÑÇαñòαñ╛αñ░, αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñ╕αñ░αñòαñ╛αñ░ αñ╕αÑç αñ«αñ╛αñéαñùαñ╛ αñ£αñ╡αñ╛αñ¼ΓÇª","publishDecision":"repair","confidence":0.384,"readability":0.93,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"breakingScore":0.33,"trendScore":0.7,"headlineQuality":0.62,"structure":0.92,"spamScore":0.45,"duplicateClusterId":null,"rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"breakdown":{"structure":0.92,"readability":0.93,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"headlineQuality":0.62,"breakingScore":0.33,"trendScore":0.7,"confidence":0.674,"spamScore":0.45,"sourceOverlap":0.968,"duplicatePhraseCount":8}}
+[generate-article] borderline_repaired {"eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","confidence":0.384,"passed":false}
+[newsroom:generated] {"stage":"generated","message":"borderline_repaired","eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","confidence":0.384,"passed":false,"ts":"2026-05-27T10:06:00.737Z"}
+[generate-article] llm_error {"eventId":"358a0833-ab38-473f-a866-9364a3504b37","message":"OpenAI HTTP 401"}
+[newsroom:generated] {"stage":"generated","message":"OpenAI HTTP 401","eventId":"358a0833-ab38-473f-a866-9364a3504b37","ts":"2026-05-27T10:06:01.065Z"}
+[generate-article] fallback_draft_used {"eventId":"358a0833-ab38-473f-a866-9364a3504b37"}
+[newsroom:generated] {"stage":"generated","message":"fallback_draft_used","eventId":"358a0833-ab38-473f-a866-9364a3504b37","ts":"2026-05-27T10:06:01.065Z"}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:01.068Z","eventId":"358a0833-ab38-473f-a866-9364a3504b37","title":"CG News: αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñòαÑï αñ«αñ┐αñ▓αñ╛ αñ¿αñ»αñ╛ αñ╡αñ¿ αñ¼αñ▓ αñ¬αÑìαñ░αñ«αÑüαñû, αñàαñ░αÑüαñú αñòαÑüαñ«αñ╛αñ░ αñ¬αñ╛αñéαñíαÑçαñ» αñ╕αñéαñ¡αñ╛αñ▓αÑçαñéαñùαÑç PCCF αñòαÑÇ αñ£αñ┐αñ«αÑìαñ«αÑçαñªαñ╛ΓÇª","publishDecision":"repair","confidence":0.402,"readability":0.83,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"breakingScore":0.33,"trendScore":0.4,"headlineQuality":0.77,"structure":0.92,"spamScore":0.25,"duplicateClusterId":null,"rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"breakdown":{"structure":0.92,"readability":0.83,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"headlineQuality":0.77,"breakingScore":0.33,"trendScore":0.4,"confidence":0.652,"spamScore":0.25,"sourceOverlap":0.972,"duplicatePhraseCount":8}}
+[generate-article] llm_error {"eventId":"dba30f71-abf2-494a-b800-c24ec203e0d4","message":"OpenAI HTTP 401"}
+[newsroom:generated] {"stage":"generated","message":"OpenAI HTTP 401","eventId":"dba30f71-abf2-494a-b800-c24ec203e0d4","ts":"2026-05-27T10:06:01.225Z"}
+[generate-article] fallback_draft_used {"eventId":"dba30f71-abf2-494a-b800-c24ec203e0d4"}
+[newsroom:generated] {"stage":"generated","message":"fallback_draft_used","eventId":"dba30f71-abf2-494a-b800-c24ec203e0d4","ts":"2026-05-27T10:06:01.225Z"}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:01.227Z","eventId":"dba30f71-abf2-494a-b800-c24ec203e0d4","title":"αñòαñ╛αñéαñùαÑìαñ░αÑçαñ╕ αñòαÑç αñ╕αñéαññαÑïαñé αñ╕αÑç αñ«αÑüαñ▓αñ╛αñòαñ╛αññ αñöαñ░ αñ¼αñ»αñ╛αñ¿αñ¼αñ╛αñ£αÑÇ αñòαÑç αñòαñ┐αñ╕αÑìαñ╕αÑç: αñ«αñ╣αñéαññ αñ¼αÑïαñ▓αÑç- αñ░αñ╛αñ«αñ¡αñªαÑìαñ░αñ╛αñÜαñ╛αñ░αÑìαñ» αñòαÑï αñ£αñùαñªαÑìαñùαÑüαñ░αÑüΓÇª","publishDecision":"reject","confidence":0.375,"readability":0.9,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"breakingScore":0.33,"trendScore":0.18,"headlineQuality":0.62,"structure":0.65,"spamScore":0.45,"duplicateClusterId":null,"rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"breakdown":{"structure":0.65,"readability":0.9,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"headlineQuality":0.62,"breakingScore":0.33,"trendScore":0.18,"confidence":0.59,"spamScore":0.45,"sourceOverlap":0.984,"duplicatePhraseCount":5}}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:01.389Z","eventId":"358a0833-ab38-473f-a866-9364a3504b37","title":"CG News: αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñòαÑï αñ«αñ┐αñ▓αñ╛ αñ¿αñ»αñ╛ αñ╡αñ¿ αñ¼αñ▓ αñ¬αÑìαñ░αñ«αÑüαñû, αñàαñ░αÑüαñú αñòαÑüαñ«αñ╛αñ░ αñ¬αñ╛αñéαñíαÑçαñ» αñ╕αñéαñ¡αñ╛αñ▓αÑçαñéαñùαÑç PCCF αñòαÑÇ αñ£αñ┐αñ«αÑìαñ«αÑçαñªαñ╛ΓÇª","publishDecision":"repair","confidence":0.402,"readability":0.83,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"breakingScore":0.33,"trendScore":0.4,"headlineQuality":0.77,"structure":0.92,"spamScore":0.25,"duplicateClusterId":null,"rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"breakdown":{"structure":0.92,"readability":0.83,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"headlineQuality":0.77,"breakingScore":0.33,"trendScore":0.4,"confidence":0.652,"spamScore":0.25,"sourceOverlap":0.972,"duplicatePhraseCount":8}}
+[generate-article] borderline_repaired {"eventId":"358a0833-ab38-473f-a866-9364a3504b37","confidence":0.402,"passed":false}
+[newsroom:generated] {"stage":"generated","message":"borderline_repaired","eventId":"358a0833-ab38-473f-a866-9364a3504b37","confidence":0.402,"passed":false,"ts":"2026-05-27T10:06:01.389Z"}
+[generate-article] llm_error {"eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","message":"OpenAI HTTP 401"}
+[newsroom:generated] {"stage":"generated","message":"OpenAI HTTP 401","eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","ts":"2026-05-27T10:06:01.824Z"}
+[generate-article] fallback_draft_used {"eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0"}
+[newsroom:generated] {"stage":"generated","message":"fallback_draft_used","eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","ts":"2026-05-27T10:06:01.824Z"}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:01.826Z","eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","title":"CG: αñ¡αñ╛αñ£αñ¬αñ╛ αñ╡αñ┐αñºαñ╛αñ»αñò αñ╕αÑç αñáαñùαÑÇ αñòαñ░αñ¿αÑç αñ╡αñ╛αñ▓αñ╛ αñåαñ░αÑïαñ¬αÑÇ αñôαñíαñ┐αñ╢αñ╛ αñ╕αÑç αñùαñ┐αñ░αñ½αÑìαññαñ╛αñ░, αñûαÑüαñª αñòαÑï αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αÑÇαñ» αñ¿αÑçαññαñ╛ αñòαñ╛ αñ¬αÑÇαñÅ αñ¼ΓÇª","publishDecision":"reject","confidence":0.522,"readability":1,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"breakingScore":0.33,"trendScore":0.18,"headlineQuality":0.52,"structure":0.78,"spamScore":0.45,"duplicateClusterId":null,"rejectionReasons":["high_source_overlap"],"breakdown":{"structure":0.78,"readability":1,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"headlineQuality":0.52,"breakingScore":0.33,"trendScore":0.18,"confidence":0.612,"spamScore":0.45,"sourceOverlap":0.976,"duplicatePhraseCount":0}}
+[generate-article] llm_error {"eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","message":"OpenAI HTTP 401"}
+[newsroom:generated] {"stage":"generated","message":"OpenAI HTTP 401","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","ts":"2026-05-27T10:06:01.956Z"}
+[generate-article] fallback_draft_used {"eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f"}
+[newsroom:generated] {"stage":"generated","message":"fallback_draft_used","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","ts":"2026-05-27T10:06:01.956Z"}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:01.958Z","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","title":"Raipur: αñÿαñ░ αñòαÑç αñ╕αñ╛αñ«αñ¿αÑç αñ¿αñ╢αñ╛ αñòαñ░αñ¿αÑç αñ╕αÑç αñ░αÑïαñòαñ╛ αññαÑï αñ¡αñíαñ╝αñòαÑç αñ¬αñ┐αññαñ╛-αñ¬αÑüαññαÑìαñ░, αñ░αñ╛αñ»αñ¬αÑüαñ░ αñ«αÑçαñé αñÜαñ╛αñòαÑé αñ╕αÑç αñ╣αñ«αñ▓αñ╛ αñòαñ░ αññαÑÇαñ¿ΓÇª","publishDecision":"repair","confidence":0.512,"readability":0.95,"seoQuality":0.91,"localRelevance":1,"originality":0,"breakingScore":0.33,"trendScore":0.18,"headlineQuality":0.77,"structure":0.78,"spamScore":0.25,"duplicateClusterId":null,"rejectionReasons":["high_source_overlap"],"breakdown":{"structure":0.78,"readability":0.95,"seoQuality":0.91,"localRelevance":1,"originality":0,"headlineQuality":0.77,"breakingScore":0.33,"trendScore":0.18,"confidence":0.637,"spamScore":0.25,"sourceOverlap":0.983,"duplicatePhraseCount":3}}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:02.274Z","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","title":"Raipur: αñÿαñ░ αñòαÑç αñ╕αñ╛αñ«αñ¿αÑç αñ¿αñ╢αñ╛ αñòαñ░αñ¿αÑç αñ╕αÑç αñ░αÑïαñòαñ╛ αññαÑï αñ¡αñíαñ╝αñòαÑç αñ¬αñ┐αññαñ╛-αñ¬αÑüαññαÑìαñ░, αñ░αñ╛αñ»αñ¬αÑüαñ░ αñ«αÑçαñé αñÜαñ╛αñòαÑé αñ╕αÑç αñ╣αñ«αñ▓αñ╛ αñòαñ░ αññαÑÇαñ¿ΓÇª","publishDecision":"repair","confidence":0.512,"readability":0.95,"seoQuality":0.91,"localRelevance":1,"originality":0,"breakingScore":0.33,"trendScore":0.18,"headlineQuality":0.77,"structure":0.78,"spamScore":0.25,"duplicateClusterId":null,"rejectionReasons":["high_source_overlap"],"breakdown":{"structure":0.78,"readability":0.95,"seoQuality":0.91,"localRelevance":1,"originality":0,"headlineQuality":0.77,"breakingScore":0.33,"trendScore":0.18,"confidence":0.637,"spamScore":0.25,"sourceOverlap":0.983,"duplicatePhraseCount":3}}
+[generate-article] borderline_repaired {"eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","confidence":0.512,"passed":false}
+[newsroom:generated] {"stage":"generated","message":"borderline_repaired","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","confidence":0.512,"passed":false,"ts":"2026-05-27T10:06:02.274Z"}
+{"tag":"[ai-pipeline]","phase":"article_generation_started","ts":"2026-05-27T10:06:02.274Z","eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","region":"chhattisgarh","category":"local","sourceCount":4,"mode":"batch"}
+{"tag":"[ai-pipeline]","phase":"article_generation_failed","ts":"2026-05-27T10:06:02.275Z","eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","reason":"quality_checks_failed","hardReject":false,"confidence":0.384,"mode":"batch"}
+[EDITORIAL_DECISION] {"type":"EDITORIAL_DECISION","confidence":0.384,"readability":0.93,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"publishDecision":"repair","rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"accepted":false,"storyId":null,"title":"CSMCL αñ¡αÑìαñ░αñ╖αÑìαñƒαñ╛αñÜαñ╛αñ░ αñ«αñ╛αñ«αñ▓αñ╛: αñàαñ¿αñ╡αñ░ αñóαÑçαñ¼αñ░ αñòαÑÇ αñ£αñ«αñ╛αñ¿αññ αñ»αñ╛αñÜαñ┐αñòαñ╛ αñ╕αÑìαñ╡αÑÇαñòαñ╛αñ░, αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñ╕αñ░αñòαñ╛αñ░ αñ╕αÑç αñ«αñ╛αñéαñùαñ╛ αñ£αñ╡αñ╛αñ¼ΓÇª","eventId":"07738066-3b00-4b54-a572-5d482b60c2aa","repaired":true,"breakingScore":0.33,"trendScore":0.7,"duplicateClusterId":null,"quality_breakdown":{"structure":0.92,"originality":0,"readability":0.93,"local_relevance":0.98,"seo_quality":0.91,"breaking_score":0.33,"trend_score":0.7,"headline_quality":0.62,"spam_score":0.45,"source_overlap":0.968},"ts":"2026-05-27T10:06:02.275Z"}
+{"tag":"[ai-pipeline]","phase":"article_generation_started","ts":"2026-05-27T10:06:02.275Z","eventId":"1609c4f1-94c0-41c6-97c0-13312b707ede","region":"chhattisgarh","category":"local","sourceCount":2,"mode":"batch"}
+{"tag":"[ai-pipeline]","phase":"article_generation_failed","ts":"2026-05-27T10:06:02.275Z","eventId":"1609c4f1-94c0-41c6-97c0-13312b707ede","reason":"quality_checks_failed","hardReject":false,"confidence":0.332,"mode":"batch"}
+[EDITORIAL_DECISION] {"type":"EDITORIAL_DECISION","confidence":0.332,"readability":0.83,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"publishDecision":"reject","rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"accepted":false,"storyId":null,"title":"αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñ«αÑçαñé αñöαñ╖αñºαÑÇαñ» αñ¬αÑîαñºαÑïαñé αñòαÑÇ αñûαÑçαññαÑÇ αñòαÑï αñ¼αñóαñ╝αñ╛αñ╡αñ╛, αñòαñ┐αñ╕αñ╛αñ¿αÑïαñé αñòαÑï αñªαñ┐αñÅ αñ£αñ╛ αñ░αñ╣αÑç αñ«αÑüαñ½αÑìαññ αñ¬αÑîαñºαÑç αñöαñ░ αñ¬αÑìαñ░αñ╢αñ┐αñòαÑìαñ╖ΓÇª","eventId":"1609c4f1-94c0-41c6-97c0-13312b707ede","repaired":false,"breakingScore":0.33,"trendScore":0.4,"duplicateClusterId":null,"quality_breakdown":{"structure":0.92,"originality":0,"readability":0.83,"local_relevance":0.98,"seo_quality":0.91,"breaking_score":0.33,"trend_score":0.4,"headline_quality":0.52,"spam_score":0.45,"source_overlap":0.969},"ts":"2026-05-27T10:06:02.275Z"}
+{"tag":"[ai-pipeline]","phase":"article_generation_started","ts":"2026-05-27T10:06:02.275Z","eventId":"358a0833-ab38-473f-a866-9364a3504b37","region":"chhattisgarh","category":"local","sourceCount":2,"mode":"batch"}
+{"tag":"[ai-pipeline]","phase":"article_generation_failed","ts":"2026-05-27T10:06:02.275Z","eventId":"358a0833-ab38-473f-a866-9364a3504b37","reason":"quality_checks_failed","hardReject":false,"confidence":0.402,"mode":"batch"}
+[EDITORIAL_DECISION] {"type":"EDITORIAL_DECISION","confidence":0.402,"readability":0.83,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"publishDecision":"repair","rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"accepted":false,"storyId":null,"title":"CG News: αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñòαÑï αñ«αñ┐αñ▓αñ╛ αñ¿αñ»αñ╛ αñ╡αñ¿ αñ¼αñ▓ αñ¬αÑìαñ░αñ«αÑüαñû, αñàαñ░αÑüαñú αñòαÑüαñ«αñ╛αñ░ αñ¬αñ╛αñéαñíαÑçαñ» αñ╕αñéαñ¡αñ╛αñ▓αÑçαñéαñùαÑç PCCF αñòαÑÇ αñ£αñ┐αñ«αÑìαñ«αÑçαñªαñ╛ΓÇª","eventId":"358a0833-ab38-473f-a866-9364a3504b37","repaired":true,"breakingScore":0.33,"trendScore":0.4,"duplicateClusterId":null,"quality_breakdown":{"structure":0.92,"originality":0,"readability":0.83,"local_relevance":0.98,"seo_quality":0.91,"breaking_score":0.33,"trend_score":0.4,"headline_quality":0.77,"spam_score":0.25,"source_overlap":0.972},"ts":"2026-05-27T10:06:02.275Z"}
+{"tag":"[ai-pipeline]","phase":"article_generation_started","ts":"2026-05-27T10:06:02.275Z","eventId":"dba30f71-abf2-494a-b800-c24ec203e0d4","region":"chhattisgarh","category":"local","sourceCount":1,"mode":"batch"}
+{"tag":"[ai-pipeline]","phase":"article_generation_failed","ts":"2026-05-27T10:06:02.275Z","eventId":"dba30f71-abf2-494a-b800-c24ec203e0d4","reason":"quality_checks_failed","hardReject":false,"confidence":0.375,"mode":"batch"}
+[EDITORIAL_DECISION] {"type":"EDITORIAL_DECISION","confidence":0.375,"readability":0.9,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"publishDecision":"reject","rejectionReasons":["confidence_below_threshold","excessive_source_phrasing","high_source_overlap"],"accepted":false,"storyId":null,"title":"αñòαñ╛αñéαñùαÑìαñ░αÑçαñ╕ αñòαÑç αñ╕αñéαññαÑïαñé αñ╕αÑç αñ«αÑüαñ▓αñ╛αñòαñ╛αññ αñöαñ░ αñ¼αñ»αñ╛αñ¿αñ¼αñ╛αñ£αÑÇ αñòαÑç αñòαñ┐αñ╕αÑìαñ╕αÑç: αñ«αñ╣αñéαññ αñ¼αÑïαñ▓αÑç- αñ░αñ╛αñ«αñ¡αñªαÑìαñ░αñ╛αñÜαñ╛αñ░αÑìαñ» αñòαÑï αñ£αñùαñªαÑìαñùαÑüαñ░αÑüΓÇª","eventId":"dba30f71-abf2-494a-b800-c24ec203e0d4","repaired":false,"breakingScore":0.33,"trendScore":0.18,"duplicateClusterId":null,"quality_breakdown":{"structure":0.65,"originality":0,"readability":0.9,"local_relevance":0.98,"seo_quality":0.91,"breaking_score":0.33,"trend_score":0.18,"headline_quality":0.62,"spam_score":0.45,"source_overlap":0.984},"ts":"2026-05-27T10:06:02.275Z"}
+{"tag":"[ai-pipeline]","phase":"article_generation_started","ts":"2026-05-27T10:06:02.275Z","eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","region":"chhattisgarh","category":"local","sourceCount":1,"mode":"batch"}
+{"tag":"[ai-pipeline]","phase":"article_generation_failed","ts":"2026-05-27T10:06:02.275Z","eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","reason":"quality_checks_failed","hardReject":false,"confidence":0.522,"mode":"batch"}
+[EDITORIAL_DECISION] {"type":"EDITORIAL_DECISION","confidence":0.522,"readability":1,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"publishDecision":"reject","rejectionReasons":["high_source_overlap"],"accepted":false,"storyId":null,"title":"CG: αñ¡αñ╛αñ£αñ¬αñ╛ αñ╡αñ┐αñºαñ╛αñ»αñò αñ╕αÑç αñáαñùαÑÇ αñòαñ░αñ¿αÑç αñ╡αñ╛αñ▓αñ╛ αñåαñ░αÑïαñ¬αÑÇ αñôαñíαñ┐αñ╢αñ╛ αñ╕αÑç αñùαñ┐αñ░αñ½αÑìαññαñ╛αñ░, αñûαÑüαñª αñòαÑï αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αÑÇαñ» αñ¿αÑçαññαñ╛ αñòαñ╛ αñ¬αÑÇαñÅ αñ¼ΓÇª","eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","repaired":false,"breakingScore":0.33,"trendScore":0.18,"duplicateClusterId":null,"quality_breakdown":{"structure":0.78,"originality":0,"readability":1,"local_relevance":0.98,"seo_quality":0.91,"breaking_score":0.33,"trend_score":0.18,"headline_quality":0.52,"spam_score":0.45,"source_overlap":0.976},"ts":"2026-05-27T10:06:02.275Z"}
+{"tag":"[ai-pipeline]","phase":"article_generation_started","ts":"2026-05-27T10:06:02.275Z","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","region":"chhattisgarh","category":"local","sourceCount":1,"mode":"batch"}
+{"tag":"[ai-pipeline]","phase":"article_generation_failed","ts":"2026-05-27T10:06:02.275Z","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","reason":"quality_checks_failed","hardReject":false,"confidence":0.512,"mode":"batch"}
+[EDITORIAL_DECISION] {"type":"EDITORIAL_DECISION","confidence":0.512,"readability":0.95,"seoQuality":0.91,"localRelevance":1,"originality":0,"publishDecision":"repair","rejectionReasons":["high_source_overlap"],"accepted":false,"storyId":null,"title":"Raipur: αñÿαñ░ αñòαÑç αñ╕αñ╛αñ«αñ¿αÑç αñ¿αñ╢αñ╛ αñòαñ░αñ¿αÑç αñ╕αÑç αñ░αÑïαñòαñ╛ αññαÑï αñ¡αñíαñ╝αñòαÑç αñ¬αñ┐αññαñ╛-αñ¬αÑüαññαÑìαñ░, αñ░αñ╛αñ»αñ¬αÑüαñ░ αñ«αÑçαñé αñÜαñ╛αñòαÑé αñ╕αÑç αñ╣αñ«αñ▓αñ╛ αñòαñ░ αññαÑÇαñ¿ΓÇª","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","repaired":true,"breakingScore":0.33,"trendScore":0.18,"duplicateClusterId":null,"quality_breakdown":{"structure":0.78,"originality":0,"readability":0.95,"local_relevance":1,"seo_quality":0.91,"breaking_score":0.33,"trend_score":0.18,"headline_quality":0.77,"spam_score":0.25,"source_overlap":0.983},"ts":"2026-05-27T10:06:02.275Z"}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:02.277Z","eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","title":"CG: αñ¡αñ╛αñ£αñ¬αñ╛ αñ╡αñ┐αñºαñ╛αñ»αñò αñ╕αÑç αñáαñùαÑÇ αñòαñ░αñ¿αÑç αñ╡αñ╛αñ▓αñ╛ αñåαñ░αÑïαñ¬αÑÇ αñôαñíαñ┐αñ╢αñ╛ αñ╕αÑç αñùαñ┐αñ░αñ½αÑìαññαñ╛αñ░, αñûαÑüαñª αñòαÑï αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αÑÇαñ» αñ¿αÑçαññαñ╛ αñòαñ╛ αñ¬αÑÇαñÅ αñ¼ΓÇª","publishDecision":"publish","confidence":0.522,"readability":1,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"breakingScore":0.33,"trendScore":0.18,"headlineQuality":0.52,"structure":0.78,"spamScore":0.45,"duplicateClusterId":null,"rejectionReasons":[],"breakdown":{"structure":0.78,"readability":1,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"headlineQuality":0.52,"breakingScore":0.33,"trendScore":0.18,"confidence":0.612,"spamScore":0.45,"sourceOverlap":0.976,"duplicatePhraseCount":0}}
+[EDITORIAL_DECISION] {"type":"EDITORIAL_DECISION","confidence":0.522,"readability":1,"seoQuality":0.91,"localRelevance":0.98,"originality":0,"publishDecision":"publish","accepted":true,"rejectionReasons":[],"storyId":"bf83ed0c-bf3e-4277-b789-fc13fae94d76","title":"CG: αñ¡αñ╛αñ£αñ¬αñ╛ αñ╡αñ┐αñºαñ╛αñ»αñò αñ╕αÑç αñáαñùαÑÇ αñòαñ░αñ¿αÑç αñ╡αñ╛αñ▓αñ╛ αñåαñ░αÑïαñ¬αÑÇ αñôαñíαñ┐αñ╢αñ╛ αñ╕αÑç αñùαñ┐αñ░αñ½αÑìαññαñ╛αñ░, αñûαÑüαñª αñòαÑï αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αÑÇαñ» αñ¿αÑçαññαñ╛ αñòαñ╛ αñ¬αÑÇαñÅ αñ¼ΓÇª","eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","repaired":false,"batchRescue":true,"breakingScore":0.33,"trendScore":0.18,"duplicateClusterId":null,"quality_breakdown":{"structure":0.78,"originality":0,"readability":1,"local_relevance":0.98,"seo_quality":0.91,"breaking_score":0.33,"trend_score":0.18,"headline_quality":0.52,"spam_score":0.45,"source_overlap":0.976},"ts":"2026-05-27T10:06:02.548Z"}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:02.788Z","event":"resolve_start","articleId":"bf83ed0c-bf3e-4277-b789-fc13fae94d76","metadata":{"enqueued":true,"aiEnabled":false}}
+{"tag":"[ai-pipeline]","phase":"article_generation_completed","ts":"2026-05-27T10:06:02.788Z","eventId":"d664c716-12a7-457a-ad3e-7b69a266a0e0","articleId":"bf83ed0c-bf3e-4277-b789-fc13fae94d76","headline":"CG: αñ¡αñ╛αñ£αñ¬αñ╛ αñ╡αñ┐αñºαñ╛αñ»αñò αñ╕αÑç αñáαñùαÑÇ αñòαñ░αñ¿αÑç αñ╡αñ╛αñ▓αñ╛ αñåαñ░αÑïαñ¬αÑÇ αñôαñíαñ┐αñ╢αñ╛ αñ╕αÑç αñùαñ┐αñ░αñ½αÑìαññαñ╛αñ░, αñûαÑüαñª αñòαÑï αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αÑÇαñ» αñ¿αÑçαññαñ╛ αñòαñ╛ αñ¬αÑÇαñÅ αñ¼ΓÇª","confidence":0.522,"mode":"batch_rescue"}
+[QUALITY_BREAKDOWN] {"type":"QUALITY_BREAKDOWN","ts":"2026-05-27T10:06:02.790Z","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","title":"Raipur: αñÿαñ░ αñòαÑç αñ╕αñ╛αñ«αñ¿αÑç αñ¿αñ╢αñ╛ αñòαñ░αñ¿αÑç αñ╕αÑç αñ░αÑïαñòαñ╛ αññαÑï αñ¡αñíαñ╝αñòαÑç αñ¬αñ┐αññαñ╛-αñ¬αÑüαññαÑìαñ░, αñ░αñ╛αñ»αñ¬αÑüαñ░ αñ«αÑçαñé αñÜαñ╛αñòαÑé αñ╕αÑç αñ╣αñ«αñ▓αñ╛ αñòαñ░ αññαÑÇαñ¿ΓÇª","publishDecision":"publish","confidence":0.512,"readability":0.95,"seoQuality":0.91,"localRelevance":1,"originality":0,"breakingScore":0.33,"trendScore":0.18,"headlineQuality":0.77,"structure":0.78,"spamScore":0.25,"duplicateClusterId":null,"rejectionReasons":[],"breakdown":{"structure":0.78,"readability":0.95,"seoQuality":0.91,"localRelevance":1,"originality":0,"headlineQuality":0.77,"breakingScore":0.33,"trendScore":0.18,"confidence":0.637,"spamScore":0.25,"sourceOverlap":0.983,"duplicatePhraseCount":3}}
+[EDITORIAL_DECISION] {"type":"EDITORIAL_DECISION","confidence":0.512,"readability":0.95,"seoQuality":0.91,"localRelevance":1,"originality":0,"publishDecision":"publish","accepted":true,"rejectionReasons":[],"storyId":"861547ae-71c5-43e5-a899-773140d6cb48","title":"Raipur: αñÿαñ░ αñòαÑç αñ╕αñ╛αñ«αñ¿αÑç αñ¿αñ╢αñ╛ αñòαñ░αñ¿αÑç αñ╕αÑç αñ░αÑïαñòαñ╛ αññαÑï αñ¡αñíαñ╝αñòαÑç αñ¬αñ┐αññαñ╛-αñ¬αÑüαññαÑìαñ░, αñ░αñ╛αñ»αñ¬αÑüαñ░ αñ«αÑçαñé αñÜαñ╛αñòαÑé αñ╕αÑç αñ╣αñ«αñ▓αñ╛ αñòαñ░ αññαÑÇαñ¿ΓÇª","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","repaired":true,"batchRescue":true,"breakingScore":0.33,"trendScore":0.18,"duplicateClusterId":null,"quality_breakdown":{"structure":0.78,"originality":0,"readability":0.95,"local_relevance":1,"seo_quality":0.91,"breaking_score":0.33,"trend_score":0.18,"headline_quality":0.77,"spam_score":0.25,"source_overlap":0.983},"ts":"2026-05-27T10:06:03.013Z"}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:03.322Z","event":"resolve_start","articleId":"861547ae-71c5-43e5-a899-773140d6cb48","metadata":{"enqueued":true,"aiEnabled":false}}
+{"tag":"[ai-pipeline]","phase":"article_generation_completed","ts":"2026-05-27T10:06:03.322Z","eventId":"d90aecc2-447c-4691-a039-b89d1c869a4f","articleId":"861547ae-71c5-43e5-a899-773140d6cb48","headline":"Raipur: αñÿαñ░ αñòαÑç αñ╕αñ╛αñ«αñ¿αÑç αñ¿αñ╢αñ╛ αñòαñ░αñ¿αÑç αñ╕αÑç αñ░αÑïαñòαñ╛ αññαÑï αñ¡αñíαñ╝αñòαÑç αñ¬αñ┐αññαñ╛-αñ¬αÑüαññαÑìαñ░, αñ░αñ╛αñ»αñ¬αÑüαñ░ αñ«αÑçαñé αñÜαñ╛αñòαÑé αñ╕αÑç αñ╣αñ«αñ▓αñ╛ αñòαñ░ αññαÑÇαñ¿ΓÇª","confidence":0.512,"mode":"batch_rescue"}
+[generate-article] batch_rescue {"rescued":2,"candidates":2}
+[newsroom:generated] {"stage":"generated","message":"batch_rescue","rescued":2,"candidates":2,"ts":"2026-05-27T10:06:03.322Z"}
+[generate-article] batch_complete {"published":2,"rejected":4,"repaired":3,"skipped":0,"avgConfidence":0.421,"topStory":{"storyId":"bf83ed0c-bf3e-4277-b789-fc13fae94d76","title":"CG: αñ¡αñ╛αñ£αñ¬αñ╛ αñ╡αñ┐αñºαñ╛αñ»αñò αñ╕αÑç αñáαñùαÑÇ αñòαñ░αñ¿αÑç αñ╡αñ╛αñ▓αñ╛ αñåαñ░αÑïαñ¬αÑÇ αñôαñíαñ┐αñ╢αñ╛ αñ╕αÑç αñùαñ┐αñ░αñ½αÑìαññαñ╛αñ░, αñûαÑüαñª αñòαÑï αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αÑÇαñ» αñ¿αÑçαññαñ╛ αñòαñ╛ αñ¬αÑÇαñÅ αñ¼ΓÇª","confidence":0.522}}
+[newsroom:generated] {"stage":"generated","message":"batch_complete","published":2,"rejected":4,"repaired":3,"skipped":0,"avgConfidence":0.421,"topStory":{"storyId":"bf83ed0c-bf3e-4277-b789-fc13fae94d76","title":"CG: αñ¡αñ╛αñ£αñ¬αñ╛ αñ╡αñ┐αñºαñ╛αñ»αñò αñ╕αÑç αñáαñùαÑÇ αñòαñ░αñ¿αÑç αñ╡αñ╛αñ▓αñ╛ αñåαñ░αÑïαñ¬αÑÇ αñôαñíαñ┐αñ╢αñ╛ αñ╕αÑç αñùαñ┐αñ░αñ½αÑìαññαñ╛αñ░, αñûαÑüαñª αñòαÑï αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αÑÇαñ» αñ¿αÑçαññαñ╛ αñòαñ╛ αñ¬αÑÇαñÅ αñ¼ΓÇª","confidence":0.522},"ts":"2026-05-27T10:06:03.322Z"}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:06:03.322Z","event":"degraded","error":"Invariant: static generation store missing in revalidateTag live-news"}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:06:03.323Z","event":"worker_complete","worker":"editorial_generate","durationMs":4768,"metadata":{"published":2,"rejected":4,"generated":2,"avgConfidence":0.421,"concurrency":2}}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:06:03.323Z","event":"cache_hit","metadata":{"key":"ops:metrics:workers:v1","layer":"memory"}}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:06:03.323Z","event":"worker_start","worker":"editorial_images"}
+{"tag":"[ai-pipeline]","phase":"image_generation_started","ts":"2026-05-27T10:06:04.006Z","queueId":"36fd80ea-f5f5-4412-9222-beb8f088334a","generatedArticleId":"bf83ed0c-bf3e-4277-b789-fc13fae94d76","attempts":0,"maxAttempts":3}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:04.825Z","event":"resolve_start","articleId":"bf83ed0c-bf3e-4277-b789-fc13fae94d76","slug":"cg-bhjp-vdhyk-s-thg-krn-vl-aarp-odsh-s-grphtr-khd-k-rsht-d664c716","category":"local","region":"chhattisgarh"}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:05.255Z","event":"quality_pass","source":"source_extracted","qualityScore":1,"visualHash":"96949cccccd4eccc","width":750,"height":450,"bytes":24773}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:05.255Z","event":"fallback_applied","source":"source_extracted","fallbackTier":5,"qualityScore":1,"metadata":{"tier":"source_quality_pass"}}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:05.255Z","event":"resolve_complete","source":"source_extracted","latencyMs":430}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:06.044Z","event":"queue_item_complete","articleId":"bf83ed0c-bf3e-4277-b789-fc13fae94d76","source":"source_extracted","qualityScore":1}
+{"tag":"[ai-pipeline]","phase":"image_generation_completed","ts":"2026-05-27T10:06:06.044Z","queueId":"36fd80ea-f5f5-4412-9222-beb8f088334a","generatedArticleId":"bf83ed0c-bf3e-4277-b789-fc13fae94d76","source":"source_extracted","qualityScore":1}
+{"tag":"[ai-pipeline]","phase":"image_generation_started","ts":"2026-05-27T10:06:06.044Z","queueId":"4d411efe-a82a-4d10-8b38-d5d19344aa5c","generatedArticleId":"861547ae-71c5-43e5-a899-773140d6cb48","attempts":0,"maxAttempts":3}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:06.728Z","event":"resolve_start","articleId":"861547ae-71c5-43e5-a899-773140d6cb48","slug":"raipur-ghr-k-smn-nsh-krn-s-rk-t-bhdk-ptptr-rypr-m-chk-s-d90aecc2","category":"local","region":"chhattisgarh"}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:06.900Z","event":"quality_pass","source":"source_extracted","qualityScore":1,"visualHash":"38b839737268d8dc","width":750,"height":422,"bytes":37456}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:06.900Z","event":"fallback_applied","source":"source_extracted","fallbackTier":5,"qualityScore":1,"metadata":{"tier":"source_quality_pass"}}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:06.900Z","event":"resolve_complete","source":"source_extracted","latencyMs":172}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:07.580Z","event":"queue_item_complete","articleId":"861547ae-71c5-43e5-a899-773140d6cb48","source":"source_extracted","qualityScore":1}
+{"tag":"[ai-pipeline]","phase":"image_generation_completed","ts":"2026-05-27T10:06:07.580Z","queueId":"4d411efe-a82a-4d10-8b38-d5d19344aa5c","generatedArticleId":"861547ae-71c5-43e5-a899-773140d6cb48","source":"source_extracted","qualityScore":1}
+[EDITORIAL_IMAGE_ANALYTICS] {"type":"EDITORIAL_IMAGE_ANALYTICS","ts":"2026-05-27T10:06:07.580Z","event":"queue_batch_complete","metadata":{"completed":2,"failed":0,"processed":2}}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:06:07.765Z","event":"worker_complete","worker":"editorial_images","durationMs":4257,"metadata":{"processed":2,"completed":2,"failed":0,"pending":0}}
+[INGESTION_ANALYTICS] {"type":"INGESTION_ANALYTICS","ts":"2026-05-27T10:06:07.765Z","event":"cache_hit","metadata":{"key":"ops:metrics:workers:v1","layer":"memory"}}
+{
+  "tag": "[AI_PIPELINE_VALIDATE]",
+  "before": {
+    "queue": {
+      "pending": 302,
+      "processing": 0,
+      "completed": 0,
+      "failed": 10
+    },
+    "generatedArticles": 28,
+    "sampleGenerated": [
+      {
+        "id": "dc81652f-b91f-43b7-b767-5c999e7410da",
+        "headline": "αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñ«αÑçαñé αñ╣αÑÇαñƒαñ╡αÑçαñ╡, αñ«αÑïαñ░ αñ╕αñ«αÑçαññ αñòαñê αñ£αÑÇαñ╡αÑïαñé αñòαÑÇ αñ«αÑîαññ: 2 αñªαñ┐αñ¿ αñ¼αñ╛αñª αñåαñéαñºαÑÇ-αñ¼αñ╛αñ░αñ┐αñ╢ αñòαÑÇ αñ╕αñéαñ¡αñ╛αñ╡αñ¿αñ╛; αñ░αñ╛αñ»αñ¬αÑüαñ░ αñ«ΓÇª",
+        "created_at": "2026-05-27T10:04:54.926679+00:00"
+      },
+      {
+        "id": "da2a1f4f-12b2-4558-9668-4523dfd752b1",
+        "headline": "αññαñ╣αñ╕αÑÇαñ▓ αñ╕αñ╛αñ╣αÑé αñ╕αñéαñÿ αñ»αÑüαñ╡αñ╛ αñ¬αÑìαñ░αñòαÑïαñ╖αÑìαñá αñòαÑÇ αñòαñ╛αñ░αÑìαñ»αñòαñ╛αñ░αñ┐αñúαÑÇ αñòαñ╛ αñ╡αñ┐αñ╕αÑìαññαñ╛αñ░ - Dainik Bhaskar",
+        "created_at": "2026-05-27T10:04:54.476699+00:00"
+      },
+      {
+        "id": "687b0f64-3c05-4006-9e6a-f6189515ac16",
+        "headline": "Untitled story",
+        "created_at": "2026-05-27T08:58:07.797223+00:00"
+      },
+      {
+        "id": "315262d9-eb6a-44ba-bac1-091b5c4df302",
+        "headline": "Untitled story",
+        "created_at": "2026-05-27T06:25:28.581588+00:00"
+      },
+      {
+        "id": "c84f53c7-d7d6-432e-a584-5372fc294778",
+        "headline": "αñåαñ░αñ╕αÑÇαñ¼αÑÇ αñ¿αÑç αñ▓αñùαñ╛αññαñ╛αñ░ αñªαÑéαñ╕αñ░αÑÇ αñ¼αñ╛αñ░ αñ½αñ╛αñçαñ¿αñ▓ αñ«αÑçαñé αñ£αñùαñ╣ αñ¼αñ¿αñ╛αñê",
+        "created_at": "2026-05-27T05:22:29.495112+00:00"
+      }
+    ]
+  },
+  "workers": {
+    "ai_enrich": {
+      "worker": "ai_enrich",
+      "ok": true,
+      "durationMs": 2561,
+      "metadata": {
+        "processed": 0,
+        "skipped": 10,
+        "pending": 292,
+        "errors": [
+          "145: OpenAI HTTP 401",
+          "147: OpenAI HTTP 401",
+          "146: OpenAI HTTP 401",
+          "148: OpenAI HTTP 401",
+          "141: OpenAI HTTP 401"
+        ]
+      }
+    },
+    "editorial_generate": {
+      "worker": "editorial_generate",
+      "ok": true,
+      "durationMs": 4768,
+      "metadata": {
+        "published": 2,
+        "rejected": 4,
+        "generated": 2,
+        "avgConfidence": 0.421,
+        "concurrency": 2
+      }
+    },
+    "editorial_images": {
+      "worker": "editorial_images",
+      "ok": true,
+      "durationMs": 4257,
+      "metadata": {
+        "processed": 2,
+        "completed": 2,
+        "failed": 0,
+        "pending": 0
+      }
+    }
+  },
+  "after": {
+    "queue": {
+      "pending": 292,
+      "processing": 0,
+      "completed": 0,
+      "failed": 20
+    },
+    "generatedArticles": 30,
+    "sampleGenerated": [
+      {
+        "id": "861547ae-71c5-43e5-a899-773140d6cb48",
+        "headline": "Raipur: αñÿαñ░ αñòαÑç αñ╕αñ╛αñ«αñ¿αÑç αñ¿αñ╢αñ╛ αñòαñ░αñ¿αÑç αñ╕αÑç αñ░αÑïαñòαñ╛ αññαÑï αñ¡αñíαñ╝αñòαÑç αñ¬αñ┐αññαñ╛-αñ¬αÑüαññαÑìαñ░, αñ░αñ╛αñ»αñ¬αÑüαñ░ αñ«αÑçαñé αñÜαñ╛αñòαÑé αñ╕αÑç αñ╣αñ«αñ▓αñ╛ αñòαñ░ αññαÑÇαñ¿ΓÇª",
+        "created_at": "2026-05-27T10:06:02.730026+00:00"
+      },
+      {
+        "id": "bf83ed0c-bf3e-4277-b789-fc13fae94d76",
+        "headline": "CG: αñ¡αñ╛αñ£αñ¬αñ╛ αñ╡αñ┐αñºαñ╛αñ»αñò αñ╕αÑç αñáαñùαÑÇ αñòαñ░αñ¿αÑç αñ╡αñ╛αñ▓αñ╛ αñåαñ░αÑïαñ¬αÑÇ αñôαñíαñ┐αñ╢αñ╛ αñ╕αÑç αñùαñ┐αñ░αñ½αÑìαññαñ╛αñ░, αñûαÑüαñª αñòαÑï αñ░αñ╛αñ╖αÑìαñƒαÑìαñ░αÑÇαñ» αñ¿αÑçαññαñ╛ αñòαñ╛ αñ¬αÑÇαñÅ αñ¼ΓÇª",
+        "created_at": "2026-05-27T10:06:02.229675+00:00"
+      },
+      {
+        "id": "dc81652f-b91f-43b7-b767-5c999e7410da",
+        "headline": "αñ¢αññαÑìαññαÑÇαñ╕αñùαñóαñ╝ αñ«αÑçαñé αñ╣αÑÇαñƒαñ╡αÑçαñ╡, αñ«αÑïαñ░ αñ╕αñ«αÑçαññ αñòαñê αñ£αÑÇαñ╡αÑïαñé αñòαÑÇ αñ«αÑîαññ: 2 αñªαñ┐αñ¿ αñ¼αñ╛αñª αñåαñéαñºαÑÇ-αñ¼αñ╛αñ░αñ┐αñ╢ αñòαÑÇ αñ╕αñéαñ¡αñ╛αñ╡αñ¿αñ╛; αñ░αñ╛αñ»αñ¬αÑüαñ░ αñ«ΓÇª",
+        "created_at": "2026-05-27T10:04:54.926679+00:00"
+      },
+      {
+        "id": "da2a1f4f-12b2-4558-9668-4523dfd752b1",
+        "headline": "αññαñ╣αñ╕αÑÇαñ▓ αñ╕αñ╛αñ╣αÑé αñ╕αñéαñÿ αñ»αÑüαñ╡αñ╛ αñ¬αÑìαñ░αñòαÑïαñ╖αÑìαñá αñòαÑÇ αñòαñ╛αñ░αÑìαñ»αñòαñ╛αñ░αñ┐αñúαÑÇ αñòαñ╛ αñ╡αñ┐αñ╕αÑìαññαñ╛αñ░ - Dainik Bhaskar",
+        "created_at": "2026-05-27T10:04:54.476699+00:00"
+      },
+      {
+        "id": "687b0f64-3c05-4006-9e6a-f6189515ac16",
+        "headline": "Untitled story",
+        "created_at": "2026-05-27T08:58:07.797223+00:00"
+      }
+    ]
+  },
+  "deltas": {
+    "generatedArticles": 2,
+    "queuePending": -10,
+    "queueProcessing": 0,
+    "queueCompleted": 0,
+    "queueFailed": 10
+  },
+  "ts": "2026-05-27T10:06:08.824Z"
+}

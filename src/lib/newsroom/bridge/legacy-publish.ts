@@ -10,6 +10,11 @@ import { assignSlugsToRows } from "@/lib/news/slug";
 import { logNewsroom, logNewsroomError } from "@/lib/newsroom/logger";
 import type { NormalizedArticle } from "@/lib/news/types";
 import type { NewsArticleId, NewsArticleInsert } from "@/lib/types/news-article";
+import {
+  formatSupabaseError,
+  logIngestTrace,
+  summarizeInsertRows,
+} from "@/lib/news/pipeline/ingest-trace";
 
 const BATCH_SIZE = 40;
 
@@ -75,8 +80,24 @@ export async function publishToLegacyArticles(
 
   const supabase = createAdminServerClient();
 
+  logIngestTrace("legacy_publish_start", {
+    rowCount: rows.length,
+    legacyBridgeEnabled: true,
+    samplePayload: summarizeInsertRows(rows as Record<string, unknown>[]),
+  });
+
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
+    const batchIndex = Math.floor(i / BATCH_SIZE);
+
+    logIngestTrace("legacy_upsert_attempt", {
+      batchIndex,
+      batchSize: batch.length,
+      onConflict: "article_url",
+      ignoreDuplicates: false,
+      samplePayload: summarizeInsertRows(batch as Record<string, unknown>[]),
+    });
+
     const { data, error } = await supabase
       .from("news_articles")
       .upsert(batch, {
@@ -87,6 +108,13 @@ export async function publishToLegacyArticles(
       .select("id");
 
     if (error) {
+      logIngestTrace("legacy_upsert_error", {
+        batchIndex,
+        batchSize: batch.length,
+        error: formatSupabaseError(error),
+        samplePayload: summarizeInsertRows(batch as Record<string, unknown>[]),
+        firstFailure: true,
+      });
       logNewsroomError("bridge", "legacy_upsert_failed", error, {
         batchSize: batch.length,
       });
@@ -94,6 +122,12 @@ export async function publishToLegacyArticles(
     }
 
     const batchUpserted = data?.length ?? 0;
+    logIngestTrace("legacy_upsert_ok", {
+      batchIndex,
+      batchSize: batch.length,
+      returnedRows: batchUpserted,
+      skippedDuplicates: Math.max(0, batch.length - batchUpserted),
+    });
     result.inserted += batchUpserted;
     // Rows returned from upsert — treat remainder as unchanged conflicts (rare)
     result.skippedDuplicates += Math.max(0, batch.length - batchUpserted);

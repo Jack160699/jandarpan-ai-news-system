@@ -69,6 +69,11 @@ export default async function NewsroomDebugPage() {
           </Card>
 
           <Card title="Provider health">
+            <Row
+              label="OPENAI_PROVIDER_STATUS"
+              value={snapshot.providerHealth.ai.OPENAI_PROVIDER_STATUS}
+              ok={snapshot.providerHealth.ai.OPENAI_PROVIDER_STATUS === "healthy"}
+            />
             <h3 className="text-xs font-medium uppercase text-zinc-500">API</h3>
             <ul className="mt-2 space-y-1 text-sm text-zinc-300">
               {snapshot.providerHealth.api.length ? (
