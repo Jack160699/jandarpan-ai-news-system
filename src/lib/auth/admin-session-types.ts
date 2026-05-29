@@ -18,5 +18,5 @@ export type AdminSessionStatus =
   | "loading"
   | "ready"
   | "guest"
-  | "degraded"
+  | "session_error"
   | "error";

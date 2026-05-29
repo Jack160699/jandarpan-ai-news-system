@@ -4346,3 +4346,54 @@
     font-size: clamp(1.08rem, 6vw, 1.3rem);
   }
 }
+
+/* Auth hydration loading / errors */
+.anr-auth-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 12rem;
+  padding: 2rem 1rem;
+}
+
+.anr-auth-loading__spinner {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid color-mix(in srgb, var(--anr-muted) 40%, transparent);
+  border-top-color: var(--anr-accent, #c9a227);
+  border-radius: 50%;
+  animation: anr-spin 0.8s linear infinite;
+}
+
+@keyframes anr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.anr-nav-loading {
+  padding: 0.5rem 0.75rem;
+}
+
+.anr-auth-error {
+  max-width: 28rem;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--anr-border) 80%, #ef4444);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--anr-surface) 92%, #ef4444 8%);
+}
+
+.anr-auth-error h2 {
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+}
+
+.anr-auth-error__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}

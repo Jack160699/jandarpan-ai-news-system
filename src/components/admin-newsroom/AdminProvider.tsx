@@ -16,7 +16,11 @@ import { tracePerf } from "@/lib/observability/performance-monitor";
 import { fetchEditorialDashboard } from "@/lib/query/dashboard-fetch";
 import { useEditorialDashboardQuery } from "@/lib/query/hooks/use-editorial-dashboard";
 import { queryKeys } from "@/lib/query/query-keys";
-import { useAdminIdentity } from "@/providers/AdminSessionProvider";
+import {
+  useAdminIdentity,
+  useAdminSessionOptional,
+} from "@/providers/AdminSessionProvider";
+import type { DashboardPermission } from "@/lib/saas-auth/types";
 
 type Theme = "dark" | "light";
 
@@ -24,6 +28,9 @@ type AdminContextValue = {
   email: string;
   role: string;
   tenantName: string;
+  authReady: boolean;
+  roleResolved: boolean;
+  permissions: DashboardPermission[];
   data: EditorialDashboardSnapshot | null;
   error: string | null;
   loading: boolean;
@@ -68,16 +75,21 @@ export function AdminProvider({
   emergencyMode = false,
   authReady: authReadyProp,
 }: AdminProviderProps) {
+  const adminSession = useAdminSessionOptional();
   const identity = useAdminIdentity({
     email: emailProp,
     role: roleProp,
     tenantName: tenantNameProp,
     authReady: authReadyProp,
+    roleResolved: emergencyMode ? true : undefined,
   });
-  const { email, role, tenantName, authReady } = identity;
+  const { email, role, tenantName, authReady, roleResolved } = identity;
+  const permissions = adminSession?.permissions ?? [];
 
   const queryClient = useQueryClient();
-  const dashboardQuery = useEditorialDashboardQuery(authReady && !emergencyMode);
+  const dashboardQuery = useEditorialDashboardQuery(
+    roleResolved && authReady && !emergencyMode
+  );
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -193,6 +205,9 @@ export function AdminProvider({
       email,
       role,
       tenantName,
+      authReady,
+      roleResolved,
+      permissions,
       data: dashboardData,
       error,
       loading: dashboardLoading,
@@ -207,6 +222,9 @@ export function AdminProvider({
       email,
       role,
       tenantName,
+      authReady,
+      roleResolved,
+      permissions,
       dashboardData,
       dashboardLoading,
       error,

@@ -42,6 +42,7 @@ export function isSensitiveDevApiPath(pathname: string): boolean {
   if (!pathname.startsWith("/api/")) return false;
   const blocked = [
     "/api/debug",
+    "/api/e2e",
     "/api/monetization/seed",
     "/api/dashboard/seed-membership",
     "/api/admin/tenants/seed",

@@ -35,6 +35,4 @@ export type DashboardSession = {
   accessToken: string;
   membership: TenantMembership;
   isDevBypass: boolean;
-  /** Session is authenticated but tenant membership resolution degraded/fallback */
-  degraded?: boolean;
 };

@@ -29,6 +29,7 @@ export function AdminWorkspaceProvider({
         email={ADMIN_EMERGENCY_MOCK.email}
         role={ADMIN_EMERGENCY_MOCK.role}
         tenantName={ADMIN_EMERGENCY_MOCK.tenantName}
+        authReady
         emergencyMode
       >
         {children}
@@ -37,7 +38,12 @@ export function AdminWorkspaceProvider({
   }
 
   return (
-    <AdminProvider authReady={session.authReady}>
+    <AdminProvider
+      authReady={session.authReady}
+      role={session.role}
+      email={session.email}
+      tenantName={session.tenantName}
+    >
       {children}
     </AdminProvider>
   );

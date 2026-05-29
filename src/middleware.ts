@@ -21,7 +21,12 @@ import { TENANT_COOKIE, TENANT_HEADER } from "@/lib/tenant/resolve";
 import { traceMiddleware } from "@/lib/observability/admin-boot";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { ROLE_COOKIE } from "@/lib/security/constants";
+import { evaluateSessionGuard } from "@/lib/auth/middleware-session-guard";
+import {
+  E2E_AUTH_COOKIE,
+  isE2eAuthEnabled,
+} from "@/lib/auth/session-refresh";
+import { ROLE_COOKIE, TENANT_COOKIE_AUTH } from "@/lib/security/constants";
 import { checkPathRbac } from "@/lib/security/middleware-rbac";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 import { securityHeaders } from "@/lib/security/headers";
@@ -156,10 +161,36 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const hasAuth = Boolean(authUser?.id);
+  let hasAuth = Boolean(authUser?.id);
+
+  if (!hasAuth && isE2eAuthEnabled(request)) {
+    const e2eUser = request.cookies.get(E2E_AUTH_COOKIE)?.value;
+    if (e2eUser) {
+      hasAuth = true;
+      authUser = { id: e2eUser, email: "e2e@newsroom.test" };
+    }
+  }
 
   const roleCookie = request.cookies.get(ROLE_COOKIE)?.value;
+  const tenantCookie = request.cookies.get(TENANT_COOKIE_AUTH)?.value;
   const role = roleCookie ? normalizeDashboardRole(roleCookie) : null;
+
+  const sessionGuard = evaluateSessionGuard({
+    request,
+    pathname,
+    hasAuth,
+    userId: authUser?.id,
+    roleCookie,
+    tenantCookie,
+  });
+
+  if (sessionGuard.action === "login") {
+    return redirectWithCookies(request, sessionGuard.redirectTo, response);
+  }
+
+  if (sessionGuard.action === "refresh") {
+    return redirectWithCookies(request, sessionGuard.redirectTo, response);
+  }
 
   if (pathname === "/admin/login" && hasAuth) {
     const dest = request.nextUrl.searchParams.get("next") ?? "/admin/editorial";

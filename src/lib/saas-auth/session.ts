@@ -19,6 +19,7 @@ import {
 } from "@/lib/security/constants";
 import { secureCookieOptions } from "@/lib/security/cookies";
 import { safeGetUser } from "@/lib/auth/auth-safe";
+import { logAdminSession } from "@/lib/auth/admin-session-log";
 import { traceAdminBoot } from "@/lib/observability/admin-boot";
 import { isTimeoutError, withTimeout, withTimeoutFallback } from "@/lib/utils/withTimeout";
 
@@ -213,39 +214,25 @@ export async function getDashboardSession(
   }
 
   if (!membership) {
-    const tenant = tenantHint
-      ? getTenantBySlug(tenantHint) ?? getDefaultTenant()
-      : getDefaultTenant();
-
-    const degradedMembership: TenantMembership = {
-      id: "degraded-membership",
-      tenantId: tenant.id,
-      tenantSlug: tenant.slug,
-      tenantName: tenant.branding.nameEn,
-      userId: userData.user.id,
-      email: userData.user.email ?? "unknown@newsroom.local",
-      role: "super_admin",
-      status: "active",
-    };
-
     if (membershipTimedOut) {
       console.warn("[MEMBERSHIP_TIMEOUT]", "membership_lookup_timed_out", {
         userId: userData.user.id,
       });
     }
-    console.warn("[SESSION_DEGRADED]", "membership_unavailable_fallback", {
+    console.warn("[SESSION_ERROR]", "membership_unresolved", {
       userId: userData.user.id,
       timedOut: membershipTimedOut,
     });
+    return null;
+  }
 
-    return {
+  if (tenantHint && membership.tenantSlug !== tenantHint) {
+    logAdminSession("tenant_mismatch", {
       userId: userData.user.id,
-      email: userData.user.email ?? degradedMembership.email,
-      accessToken: "supabase_cookie",
-      membership: degradedMembership,
-      isDevBypass: false,
-      degraded: true,
-    };
+      expectedTenant: tenantHint,
+      resolvedTenant: membership.tenantSlug,
+    });
+    return null;
   }
 
   console.log("[SESSION_OK]", "resolved_authenticated_session", {

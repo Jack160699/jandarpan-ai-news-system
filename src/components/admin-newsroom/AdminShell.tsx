@@ -39,8 +39,8 @@ import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
-import { isSuperAdmin } from "@/lib/newsroom-auth/rbac";
-import { roleHasPermission } from "@/lib/saas-auth/rbac";
+import { filterAdminNavItems } from "@/lib/auth/admin-nav-policy";
+import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
 
 const NAV = [
   { href: "/admin/editorial", label: "Overview", icon: LayoutDashboard },
@@ -83,8 +83,18 @@ export function AdminShell({
   searchPlaceholder,
 }: AdminShellProps) {
   const pathname = usePathname();
-  const { email, role, tenantName, data, theme, setTheme, toast } =
-    useAdminNewsroom();
+  const {
+    email,
+    role,
+    tenantName,
+    data,
+    theme,
+    setTheme,
+    toast,
+    authReady,
+    roleResolved,
+    permissions,
+  } = useAdminNewsroom();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
@@ -101,18 +111,14 @@ export function AdminShell({
     resetAdminQueryClient();
     window.location.assign("/admin/login");
   }
+  const navPermissionCtx = useMemo(
+    () => ({ role, authReady: roleResolved, permissions }),
+    [role, roleResolved, permissions]
+  );
+
   const visibleNav = useMemo(
-    () =>
-      NAV.filter((item) => {
-        if (item.href === "/admin/team" || item.href === "/admin/schema") {
-          return isSuperAdmin(role);
-        }
-        if (item.href === "/admin/billing") {
-          return roleHasPermission(role, "billing:read");
-        }
-        return true;
-      }),
-    [role]
+    () => filterAdminNavItems(NAV, navPermissionCtx),
+    [navPermissionCtx]
   );
 
   const activeLabel = useMemo(
@@ -146,7 +152,12 @@ export function AdminShell({
               <p className="anr-meta">Premium AI Newsroom Console</p>
             ) : null}
           </div>
-          <nav className="anr-nav">
+          <nav className="anr-nav" aria-busy={!roleResolved}>
+            {!roleResolved ? (
+              <div className="anr-nav-loading">
+                <AdminAuthLoading label="Loading navigation…" />
+              </div>
+            ) : null}
             {visibleNav.map((item) => {
               const href = item.href;
               const active = pathname === item.href;
@@ -180,7 +191,7 @@ export function AdminShell({
                 <div>
                   <p>{email || "Newsroom"}</p>
                   <span>
-                    {role || "member"} · {tenantName || "desk"}
+                    {roleResolved ? role : "…"} · {tenantName || "desk"}
                   </span>
                 </div>
               ) : null}

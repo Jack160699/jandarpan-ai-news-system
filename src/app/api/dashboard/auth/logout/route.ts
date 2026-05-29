@@ -15,7 +15,11 @@ import {
   getClientIp,
   getUserAgent,
 } from "@/lib/security/request-context";
-import { LAST_ACTIVITY_COOKIE } from "@/lib/security/constants";
+import {
+  LAST_ACTIVITY_COOKIE,
+  ROLE_COOKIE,
+  TENANT_COOKIE_AUTH,
+} from "@/lib/security/constants";
 import { createUserAuthClient } from "@/lib/supabase/auth";
 
 export const runtime = "nodejs";
@@ -43,8 +47,8 @@ export async function POST(request: NextRequest) {
   response.cookies.set(ACCESS_COOKIE, "", clearOpts);
   response.cookies.set(REFRESH_COOKIE, "", clearOpts);
   response.cookies.set(LAST_ACTIVITY_COOKIE, "", clearOpts);
-  response.cookies.set("nr-dashboard-role", "", clearOpts);
-  response.cookies.set("nr-dashboard-tenant", "", clearOpts);
+  response.cookies.set(ROLE_COOKIE, "", clearOpts);
+  response.cookies.set(TENANT_COOKIE_AUTH, "", clearOpts);
 
   await clearMembershipContextCookies();
 

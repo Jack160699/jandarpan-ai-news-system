@@ -25,6 +25,7 @@ import {
 } from "@/lib/security/session-store";
 import { mustUse2fa, verify2faForUser } from "@/lib/security/two-factor";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
+import { ROLE_COOKIE, TENANT_COOKIE_AUTH } from "@/lib/security/constants";
 import { rateLimitResponse } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
@@ -245,8 +246,8 @@ export async function POST(request: NextRequest) {
 
   if (bootstrap.ok && bootstrap.role && bootstrap.tenantSlug) {
     const roleOpts = secureCookieOptions(60 * 60 * 24 * 7);
-    response.cookies.set("nr-dashboard-role", bootstrap.role, roleOpts);
-    response.cookies.set("nr-dashboard-tenant", bootstrap.tenantSlug, roleOpts);
+    response.cookies.set(ROLE_COOKIE, bootstrap.role, roleOpts);
+    response.cookies.set(TENANT_COOKIE_AUTH, bootstrap.tenantSlug, roleOpts);
   }
 
   return response;
