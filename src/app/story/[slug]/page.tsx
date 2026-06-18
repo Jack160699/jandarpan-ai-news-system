@@ -6,8 +6,10 @@ import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
 import {
   applyLocalizedFieldsToNewsArticle,
-  resolveLocalizedFields,
+  resolveLocalizedFieldsStrict,
+  resolveStoryArticleFields,
 } from "@/lib/i18n/resolve-article";
+import { filterPoolByLanguage } from "@/lib/i18n/article-language";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { buildLocalizedStoryMetadata } from "@/lib/i18n/multilingual/seo";
 import { isNewsroomLanguage } from "@/lib/i18n/languages";
@@ -91,8 +93,11 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
       permanentRedirect(`/story/${generatedRow.slug}`);
     }
 
-    const poolRows = await fetchGeneratedArticlePool(80);
-    const localized = resolveLocalizedFields(generatedRow, readerLang);
+    const poolRows = filterPoolByLanguage(
+      await fetchGeneratedArticlePool(80),
+      readerLang
+    );
+    const localized = await resolveStoryArticleFields(generatedRow, readerLang);
     if (!localized?.headline?.trim()) notFound();
 
     const liveArticle = applyLocalizedFieldsToNewsArticle(
@@ -101,7 +106,7 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     );
     const poolArticles = poolRows
       .map((r) => {
-        const fields = resolveLocalizedFields(r, readerLang);
+        const fields = resolveLocalizedFieldsStrict(r, readerLang);
         if (!fields?.headline?.trim()) return null;
         return applyLocalizedFieldsToNewsArticle(
           generatedToNewsArticle(r),
@@ -152,7 +157,9 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
             readingTime={localized.readingTime}
             liveCoverage={liveCoverage}
             displayLanguage={readerLang}
-            translationActive={localized.usedTranslation}
+            translationActive={
+              localized.usedTranslation && !localized.usedSourceFallback
+            }
             tags={generatedRow.tags ?? []}
           />
         </main>

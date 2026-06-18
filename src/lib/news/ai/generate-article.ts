@@ -546,13 +546,12 @@ async function persistGeneratedArticle(input: {
 
   await queueEditorialImageForArticle(inserted.id);
 
-  if (
-    process.env.NEWSROOM_AUTO_TRANSLATE === "true" &&
-    process.env.OPENAI_API_KEY?.trim()
-  ) {
-    void translateGeneratedArticle(inserted as unknown as GeneratedArticleRow).catch(
-      () => undefined
-    );
+  if (process.env.OPENAI_API_KEY?.trim()) {
+    const autoAll = process.env.NEWSROOM_AUTO_TRANSLATE === "true";
+    void translateGeneratedArticle(
+      inserted as unknown as GeneratedArticleRow,
+      autoAll ? undefined : ["en"]
+    ).catch(() => undefined);
   }
 
   if (

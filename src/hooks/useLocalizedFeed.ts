@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { localizeGeneratedFeed } from "@/lib/i18n/strict-locale";
 import { normalizeAppLanguage } from "@/lib/i18n/safe-language";
 import {
-  ensureHomepageFeed,
   hasValidHomeLead,
   homeDebug,
   normalizeHomepageFeed,
@@ -13,14 +11,14 @@ import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { useLanguage } from "@/providers/LanguageProvider";
 
 /**
- * Client-side locale pass — never blocks homepage render.
- * Shows server feed first; applies strict filter only after hydration + gate dismissed.
+ * Homepage feed — server builds language-specific snapshots; client normalizes only.
+ * Language changes trigger router.refresh() for a new server feed.
  */
 export function useLocalizedFeed(
   feed: GeneratedHomepageFeed | null | undefined
 ): GeneratedHomepageFeed | null {
   const { language, ready, contentLocked, mounted: langMounted } = useLanguage();
-  const safeLang = normalizeAppLanguage(language) || "en";
+  const safeLang = normalizeAppLanguage(language) || "hi";
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -42,18 +40,11 @@ export function useLocalizedFeed(
       return base;
     }
 
-    try {
-      const localized = localizeGeneratedFeed(base, safeLang);
-      const result = ensureHomepageFeed(base, localized);
-      homeDebug("useLocalizedFeed applied", {
-        language: safeLang,
-        articles: result.trending.length + result.liveWire.length,
-        hasLead: hasValidHomeLead(result),
-      });
-      return result;
-    } catch (err) {
-      console.error("[useLocalizedFeed]", err);
-      return base;
-    }
+    homeDebug("useLocalizedFeed server snapshot", {
+      language: safeLang,
+      articles: base.trending.length + base.liveWire.length,
+      hasLead: hasValidHomeLead(base),
+    });
+    return base;
   }, [feed, safeLang, ready, mounted, langMounted, contentLocked]);
 }
