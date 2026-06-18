@@ -143,6 +143,22 @@ export async function PATCH(request: Request, context: RouteContext) {
   };
 
   const supabase = createAdminServerClient();
+
+  if (patch.published_at === null) {
+    const { data: current } = await supabase
+      .from("generated_articles")
+      .select("editorial_status, workflow_status")
+      .eq("id", id)
+      .maybeSingle();
+    const isPublic =
+      current &&
+      (["approved", "published", "live"].includes(current.editorial_status ?? "") ||
+        current.workflow_status === "published");
+    if (isPublic) {
+      patch.published_at = undefined;
+    }
+  }
+
   let { error } = await supabase
     .from("generated_articles")
     .update(patch as never)

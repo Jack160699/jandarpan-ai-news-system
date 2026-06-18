@@ -16,6 +16,73 @@ const GENERATED_SELECT =
 
 const MIN_POOL_LOG = 3;
 
+/** Event id suffix embedded in SEO slugs (`optimizeSeoSlug`). */
+export function extractGeneratedSlugSuffix(slug: string): string | null {
+  const decoded = decodeURIComponent(slug).trim().toLowerCase();
+  const match = decoded.match(/-([a-f0-9]{8})$/i);
+  return match?.[1] ?? null;
+}
+
+function mapGeneratedRow(
+  row: Record<string, unknown>
+): GeneratedArticleRow {
+  return {
+    ...row,
+    editorial_metadata:
+      (row.editorial_metadata as GeneratedArticleRow["editorial_metadata"]) ?? {},
+  } as unknown as GeneratedArticleRow;
+}
+
+function publicGeneratedQuery(supabase: ReturnType<typeof createAnonServerClient>) {
+  return supabase
+    .from("generated_articles")
+    .select(GENERATED_SELECT)
+    .not("published_at", "is", null)
+    .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES]);
+}
+
+async function fetchPublicGeneratedRow(
+  supabase: ReturnType<typeof createAnonServerClient>,
+  slug: string
+): Promise<GeneratedArticleRow | null> {
+  const decoded = decodeURIComponent(slug).trim();
+
+  const { data: exact, error: exactError } = await publicGeneratedQuery(supabase)
+    .eq("slug", decoded)
+    .maybeSingle();
+
+  if (exactError) {
+    errorLiveFeed("generated_slug_exact_error", { slug: decoded, message: exactError.message });
+  }
+  if (exact) return mapGeneratedRow(exact);
+
+  const { data: ciMatch } = await publicGeneratedQuery(supabase)
+    .ilike("slug", decoded)
+    .limit(1)
+    .maybeSingle();
+
+  if (ciMatch) return mapGeneratedRow(ciMatch);
+
+  const suffix = extractGeneratedSlugSuffix(decoded);
+  if (!suffix) return null;
+
+  const { data: suffixMatch } = await publicGeneratedQuery(supabase)
+    .ilike("slug", `%-${suffix}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (suffixMatch) {
+    logLiveFeed("generated_slug_suffix_resolved", {
+      requested: decoded,
+      resolved: suffixMatch.slug,
+      suffix,
+    });
+    return mapGeneratedRow(suffixMatch);
+  }
+
+  return null;
+}
+
 export async function fetchGeneratedArticlePool(
   limit = 280
 ): Promise<GeneratedArticleRow[]> {
@@ -81,21 +148,8 @@ export async function getGeneratedArticleBySlug(
 ): Promise<GeneratedArticleRow | null> {
   if (!isSupabaseConfigured()) return null;
 
-  const decoded = decodeURIComponent(slug);
   const supabase = createAnonServerClient();
-
-  const { data, error } = await supabase
-    .from("generated_articles")
-    .select(GENERATED_SELECT)
-    .eq("slug", decoded)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  return {
-    ...data,
-    editorial_metadata: data.editorial_metadata ?? {},
-  } as unknown as GeneratedArticleRow;
+  return fetchPublicGeneratedRow(supabase, slug);
 }
 
 export async function getGeneratedArticleSlugs(

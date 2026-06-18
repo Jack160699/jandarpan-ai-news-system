@@ -6,7 +6,7 @@ import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
 import {
   applyLocalizedFieldsToNewsArticle,
-  resolveLocalizedFieldsStrict,
+  resolveLocalizedFields,
 } from "@/lib/i18n/resolve-article";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { buildLocalizedStoryMetadata } from "@/lib/i18n/multilingual/seo";
@@ -92,8 +92,8 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     }
 
     const poolRows = await fetchGeneratedArticlePool(80);
-    const localized = resolveLocalizedFieldsStrict(generatedRow, readerLang);
-    if (!localized) notFound();
+    const localized = resolveLocalizedFields(generatedRow, readerLang);
+    if (!localized?.headline?.trim()) notFound();
 
     const liveArticle = applyLocalizedFieldsToNewsArticle(
       generatedToNewsArticle(generatedRow),
@@ -101,8 +101,8 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     );
     const poolArticles = poolRows
       .map((r) => {
-        const fields = resolveLocalizedFieldsStrict(r, readerLang);
-        if (!fields) return null;
+        const fields = resolveLocalizedFields(r, readerLang);
+        if (!fields?.headline?.trim()) return null;
         return applyLocalizedFieldsToNewsArticle(
           generatedToNewsArticle(r),
           fields

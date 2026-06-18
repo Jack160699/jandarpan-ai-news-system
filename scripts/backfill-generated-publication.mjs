@@ -73,13 +73,21 @@ async function main() {
     .in("editorial_status", ["approved", "published", "live"])
     .neq("workflow_status", "published");
 
-  if (stuckErr) {
-    console.error("Workflow query failed:", stuckErr.message);
+  const { data: missingTimestamp, error: missingErr } = await supabase
+    .from("generated_articles")
+    .select("id, slug, headline, editorial_status, workflow_status, published_at, created_at")
+    .is("published_at", null)
+    .or(
+      "editorial_status.in.(approved,published,live),workflow_status.eq.published"
+    );
+
+  if (stuckErr || missingErr) {
+    console.error("Query failed:", stuckErr?.message ?? missingErr?.message);
     process.exit(1);
   }
 
   const byId = new Map();
-  for (const row of [...(recentPending ?? []), ...(workflowStuck ?? [])]) {
+  for (const row of [...(recentPending ?? []), ...(workflowStuck ?? []), ...(missingTimestamp ?? [])]) {
     byId.set(row.id, row);
   }
   const targets = [...byId.values()];
@@ -92,6 +100,7 @@ async function main() {
         targets: targets.length,
         recentUnpublished: recentPending?.length ?? 0,
         workflowStuck: workflowStuck?.length ?? 0,
+        missingTimestamp: missingTimestamp?.length ?? 0,
       },
       null,
       2
