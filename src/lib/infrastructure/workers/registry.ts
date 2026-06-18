@@ -94,6 +94,16 @@ async function runAiWorker(ctx: WorkerContext): Promise<WorkerResult> {
 
 async function runEditorialWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
+  if (process.env.NEWSROOM_GENERATE_ARTICLES !== "true") {
+    return {
+      worker: "editorial_generate",
+      ok: true,
+      durationMs: 0,
+      skipped: true,
+      metadata: { message: "NEWSROOM_GENERATE_ARTICLES not enabled" },
+    };
+  }
+
   if (!process.env.OPENAI_API_KEY?.trim()) {
     return {
       worker: "editorial_generate",

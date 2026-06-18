@@ -15,6 +15,8 @@ import type { JobHandler, JobType } from "@/lib/infrastructure/jobs/types";
 import { createAdminServerClient } from "@/lib/supabase";
 import { asJson } from "@/types/json";
 import { clusterRecentSignals } from "@/lib/newsroom";
+import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 
 async function loadSignalsForEmbed(
@@ -70,6 +72,10 @@ async function loadSignalsForEmbed(
 }
 
 const embedSignals: JobHandler = async (job) => {
+  if (process.env.NEWSROOM_USE_EMBEDDINGS === "false") {
+    return { ok: true, result: { skipped: true, reason: "embeddings_disabled" } };
+  }
+
   if (!process.env.OPENAI_API_KEY?.trim()) {
     return { ok: true, result: { skipped: true, reason: "no_openai" } };
   }
@@ -91,10 +97,12 @@ const embedSignals: JobHandler = async (job) => {
 
   if (signals.length > 0 && embedded === 0) {
     return {
-      ok: false,
-      error: "embed_batch_empty",
-      retryable: true,
-      result: { embedded, signalCount: signals.length },
+      ok: true,
+      result: {
+        embedded,
+        signalCount: signals.length,
+        warning: "embed_batch_empty",
+      },
     };
   }
 
@@ -295,6 +303,38 @@ const eventCluster: JobHandler = async (job) => {
   };
 };
 
+const editorialGenerate: JobHandler = async (job) => {
+  if (process.env.NEWSROOM_GENERATE_ARTICLES !== "true") {
+    return { ok: true, result: { skipped: true, reason: "generation_disabled" } };
+  }
+
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    return { ok: true, result: { skipped: true, reason: "no_openai" } };
+  }
+
+  const limit = Number(job.payload.limit ?? INFRA_CONFIG.editorialBatchLimit);
+  const result = await generateEditorialsFromEvents({ limit });
+
+  if (result.published > 0) {
+    const { revalidateNewsroomCaches } = await import(
+      "@/lib/infrastructure/cache/isr"
+    );
+    await revalidateNewsroomCaches({ publishedStories: result.published });
+  }
+
+  return {
+    ok: true,
+    result: {
+      published: result.published,
+      generated: result.generated,
+      rejected: result.rejected,
+      repaired: result.repaired,
+      skipped: result.skipped,
+      errors: result.errors.slice(0, 5),
+    },
+  };
+};
+
 async function enqueueSnapshotRefresh(tenantId: string | null) {
   const { enqueueJob } = await import("@/lib/infrastructure/jobs/queue");
   await enqueueJob({
@@ -308,6 +348,7 @@ async function enqueueSnapshotRefresh(tenantId: string | null) {
 export const JOB_HANDLERS = new Map<JobType, JobHandler>([
   ["embed_signals", embedSignals],
   ["embed_articles", embedArticles],
+  ["editorial_generate", editorialGenerate],
   ["intelligence_snapshot", intelligenceSnapshot],
   ["intelligence_cluster", intelligenceCluster],
   ["intelligence_summary", intelligenceSummary],

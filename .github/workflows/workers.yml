@@ -33,6 +33,15 @@ jobs:
           curl -fsS -X POST "$APP_URL/api/cron/jobs" \
             -H "Authorization: Bearer $CRON_SECRET"
 
+      - name: Generate editorials from events
+        env:
+          APP_URL: ${{ secrets.PRODUCTION_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -X POST "$APP_URL/api/cron/worker/editorial_generate" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            --max-time 120
+
       - name: Run full orchestration
         env:
           APP_URL: ${{ secrets.PRODUCTION_URL }}

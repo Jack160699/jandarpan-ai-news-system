@@ -15,6 +15,7 @@ export type JobStatus =
 export type JobType =
   | "embed_signals"
   | "embed_articles"
+  | "editorial_generate"
   | "intelligence_snapshot"
   | "intelligence_cluster"
   | "intelligence_summary"
@@ -70,6 +71,7 @@ export type JobHandler = (
 export const JOB_TYPE_LABELS: Record<JobType, string> = {
   embed_signals: "Embed news signals",
   embed_articles: "Embed generated articles",
+  editorial_generate: "AI editorial generation",
   intelligence_snapshot: "Build intelligence snapshot",
   intelligence_cluster: "Semantic signal clustering",
   intelligence_summary: "Batch article summaries",

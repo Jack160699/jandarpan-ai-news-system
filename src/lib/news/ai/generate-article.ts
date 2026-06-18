@@ -134,7 +134,10 @@ function qualityResultFields(quality: EditorialQualityReport) {
 }
 
 function isEditorialEnabled(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
+  return (
+    process.env.NEWSROOM_GENERATE_ARTICLES === "true" &&
+    Boolean(process.env.OPENAI_API_KEY?.trim())
+  );
 }
 
 function resolveLanguage(

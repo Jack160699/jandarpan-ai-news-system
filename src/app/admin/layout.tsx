@@ -9,7 +9,6 @@ import { logAdminSession } from "@/lib/auth/admin-session-log";
 import { mapDashboardToAdminSession } from "@/lib/auth/map-admin-session";
 import { E2E_AUTH_COOKIE } from "@/lib/auth/session-refresh";
 import { isProductionDeployment } from "@/lib/infrastructure/production";
-import { syncMembershipCookiesFromSession } from "@/lib/auth/sync-membership-cookies";
 import { permissionsForRole } from "@/lib/newsroom-auth/role-permissions";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 import { getDashboardSession } from "@/lib/saas-auth/session";
@@ -95,14 +94,22 @@ export default async function AdminLayout({
     user = authUser;
   }
 
-  const dashboardSession = user ? await getDashboardSession() : null;
+  let dashboardSession = null;
+  if (user) {
+    try {
+      dashboardSession = await getDashboardSession();
+    } catch (err) {
+      logAdminSession("layout_session_error", {
+        userId: user.id,
+        email: user.email,
+        error: err instanceof Error ? err.message : "session_load_failed",
+      });
+    }
+  }
+
   const initialSession = dashboardSession
     ? mapDashboardToAdminSession(dashboardSession)
     : null;
-
-  if (dashboardSession?.membership?.role) {
-    await syncMembershipCookiesFromSession(dashboardSession);
-  }
 
   if (user && !initialSession?.membership?.role) {
     logAdminSession("layout_membership_unresolved", {
