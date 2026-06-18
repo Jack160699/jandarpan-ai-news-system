@@ -5,6 +5,7 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { asJson, jsonObjectFrom } from "@/types/json";
 import { RSS_SOURCES } from "@/lib/news/providers/rss-sources";
+import { buildPublicPublishPatch } from "@/lib/newsroom/publish-state";
 import type { EditorialArticleStatus } from "@/lib/editorial-dashboard/types";
 import type { GeneratedArticleInsert } from "@/lib/types/newsroom";
 
@@ -28,16 +29,23 @@ export async function setArticleEditorialStatus(
   };
 
   if (status === "approved") {
-    patch.published_at = now;
+    Object.assign(patch, buildPublicPublishPatch(new Date(now)));
   }
   if (status === "rejected") {
     patch.published_at = null;
+    patch.workflow_status = "draft";
     patch.homepage_pin = false;
   }
 
   const { error } = await supabase
     .from("generated_articles")
-    .update(patch)
+    .update({
+      editorial_status: patch.editorial_status,
+      reviewed_at: patch.reviewed_at,
+      published_at: patch.published_at,
+      workflow_status: patch.workflow_status,
+      homepage_pin: patch.homepage_pin,
+    })
     .eq("id", articleId);
 
   if (error) return { ok: false, message: error.message };

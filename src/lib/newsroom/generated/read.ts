@@ -5,12 +5,83 @@
 import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { createAnonServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { logNewsroom } from "@/lib/newsroom/logger";
+import {
+  isPublicGeneratedArticle,
+  PUBLIC_EDITORIAL_STATUSES,
+} from "@/lib/newsroom/publish-state";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 const GENERATED_SELECT =
   "id,event_id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,created_at";
 
 const MIN_POOL_LOG = 3;
+
+/** Event id suffix embedded in SEO slugs (`optimizeSeoSlug`). */
+export function extractGeneratedSlugSuffix(slug: string): string | null {
+  const decoded = decodeURIComponent(slug).trim().toLowerCase();
+  const match = decoded.match(/-([a-f0-9]{8})$/i);
+  return match?.[1] ?? null;
+}
+
+function mapGeneratedRow(
+  row: Record<string, unknown>
+): GeneratedArticleRow {
+  return {
+    ...row,
+    editorial_metadata:
+      (row.editorial_metadata as GeneratedArticleRow["editorial_metadata"]) ?? {},
+  } as unknown as GeneratedArticleRow;
+}
+
+function publicGeneratedQuery(supabase: ReturnType<typeof createAnonServerClient>) {
+  return supabase
+    .from("generated_articles")
+    .select(GENERATED_SELECT)
+    .not("published_at", "is", null)
+    .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES]);
+}
+
+async function fetchPublicGeneratedRow(
+  supabase: ReturnType<typeof createAnonServerClient>,
+  slug: string
+): Promise<GeneratedArticleRow | null> {
+  const decoded = decodeURIComponent(slug).trim();
+
+  const { data: exact, error: exactError } = await publicGeneratedQuery(supabase)
+    .eq("slug", decoded)
+    .maybeSingle();
+
+  if (exactError) {
+    errorLiveFeed("generated_slug_exact_error", { slug: decoded, message: exactError.message });
+  }
+  if (exact) return mapGeneratedRow(exact);
+
+  const { data: ciMatch } = await publicGeneratedQuery(supabase)
+    .ilike("slug", decoded)
+    .limit(1)
+    .maybeSingle();
+
+  if (ciMatch) return mapGeneratedRow(ciMatch);
+
+  const suffix = extractGeneratedSlugSuffix(decoded);
+  if (!suffix) return null;
+
+  const { data: suffixMatch } = await publicGeneratedQuery(supabase)
+    .ilike("slug", `%-${suffix}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (suffixMatch) {
+    logLiveFeed("generated_slug_suffix_resolved", {
+      requested: decoded,
+      resolved: suffixMatch.slug,
+      suffix,
+    });
+    return mapGeneratedRow(suffixMatch);
+  }
+
+  return null;
+}
 
 export async function fetchGeneratedArticlePool(
   limit = 280
@@ -30,7 +101,7 @@ export async function fetchGeneratedArticlePool(
     .from("generated_articles")
     .select(GENERATED_SELECT)
     .not("published_at", "is", null)
-    .in("editorial_status", ["approved", "published", "live"])
+    .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -50,13 +121,7 @@ export async function fetchGeneratedArticlePool(
     editorial_metadata: row.editorial_metadata ?? {},
   }));
 
-  const publicRows = rows.filter((row) => {
-    const status = row.editorial_status ?? "approved";
-    const workflow = (row as { workflow_status?: string }).workflow_status;
-    if (workflow && workflow !== "published") return false;
-    if (status === "rejected" || status === "pending") return false;
-    return Boolean(row.published_at);
-  });
+  const publicRows = rows.filter((row) => isPublicGeneratedArticle(row));
 
   logLiveFeed("generated_pool", {
     publicCount: publicRows.length,
@@ -83,21 +148,8 @@ export async function getGeneratedArticleBySlug(
 ): Promise<GeneratedArticleRow | null> {
   if (!isSupabaseConfigured()) return null;
 
-  const decoded = decodeURIComponent(slug);
   const supabase = createAnonServerClient();
-
-  const { data, error } = await supabase
-    .from("generated_articles")
-    .select(GENERATED_SELECT)
-    .eq("slug", decoded)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  return {
-    ...data,
-    editorial_metadata: data.editorial_metadata ?? {},
-  } as unknown as GeneratedArticleRow;
+  return fetchPublicGeneratedRow(supabase, slug);
 }
 
 export async function getGeneratedArticleSlugs(

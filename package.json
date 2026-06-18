@@ -16,7 +16,8 @@
     "supabase:types": "npx supabase gen types typescript --linked > src/lib/supabase/database.generated.ts",
     "supabase:push": "npx supabase db push --linked",
     "schema:verify": "node scripts/verify-schema.mjs",
-    "schema:checksum": "npx supabase db query --linked \"select public.get_schema_health()->>'schema_checksum' as checksum\" -o json"
+    "schema:checksum": "npx supabase db query --linked \"select public.get_schema_health()->>'schema_checksum' as checksum\" -o json",
+    "backfill:publish": "node scripts/backfill-generated-publication.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.53.1",

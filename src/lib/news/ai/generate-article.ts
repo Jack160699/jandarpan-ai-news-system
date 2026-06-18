@@ -428,6 +428,7 @@ async function persistGeneratedArticle(input: {
   // waiting in the human-approval workflow. Reaching persist already means
   // quality.publish_allowed === true, so these are quality-passed stories.
   const autoPublish = process.env.NEWSROOM_AUTO_PUBLISH === "true";
+  const publishNow = autoPublish ? new Date().toISOString() : null;
 
   const row: GeneratedArticleInsert = {
     tenant_id: getPipelineTenantId(),
@@ -447,7 +448,9 @@ async function persistGeneratedArticle(input: {
         ? [input.event.category]
         : [],
     editorial_status: autoPublish ? "approved" : "pending",
-    published_at: autoPublish ? new Date().toISOString() : null,
+    published_at: publishNow,
+    workflow_status: autoPublish ? "published" : "draft",
+    reviewed_at: publishNow,
     geo_metadata: geo,
     editorial_metadata: {
       ai_confidence: input.quality.ai_confidence,

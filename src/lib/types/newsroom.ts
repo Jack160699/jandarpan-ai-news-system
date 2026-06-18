@@ -219,6 +219,7 @@ export type GeneratedArticleInsert = {
   tags?: string[];
   published_at?: string | null;
   editorial_status?: EditorialArticleStatus;
+  workflow_status?: string;
   homepage_pin?: boolean;
   pinned_at?: string | null;
   reviewed_at?: string | null;
