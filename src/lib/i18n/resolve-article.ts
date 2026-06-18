@@ -65,7 +65,64 @@ export function resolveLocalizedFieldsStrict(
   return null;
 }
 
-/** @deprecated Use resolveLocalizedFieldsStrict for reader UI */
+export type StoryArticleResolution = LocalizedArticleFields & {
+  /** True when source-language copy is shown because translation is not ready (story only). */
+  usedSourceFallback: boolean;
+};
+
+/**
+ * Story pages — strict translation first; optional source fallback when translation
+ * is still being generated (never used on homepage feeds).
+ */
+export async function resolveStoryArticleFields(
+  row: GeneratedArticleRow,
+  displayLanguage: NewsroomLanguage,
+  options?: { allowSourceFallback?: boolean }
+): Promise<StoryArticleResolution | null> {
+  const strict = resolveLocalizedFieldsStrict(row, displayLanguage);
+  if (strict) {
+    return { ...strict, usedSourceFallback: false };
+  }
+
+  const { ensureArticleTranslation } = await import(
+    "@/lib/i18n/multilingual/ensure-translation"
+  );
+  const bundle = await ensureArticleTranslation(row, displayLanguage);
+  if (bundle) {
+    return {
+      headline: bundle.headline,
+      summary: bundle.summary,
+      articleBody: bundle.article_body ?? row.article_body ?? "",
+      seoTitle: bundle.seo_title,
+      seoDescription: bundle.seo_description,
+      readingTime: bundle.reading_time,
+      language: displayLanguage,
+      usedTranslation: true,
+      usedSourceFallback: false,
+    };
+  }
+
+  if (options?.allowSourceFallback !== false) {
+    // STORY_PAGE_SOURCE_FALLBACK — deep-linked story before translation persists.
+    if (!row.headline?.trim()) return null;
+    const source = normalizeArticleLanguage(row.language);
+    return {
+      headline: row.headline,
+      summary: row.summary ?? "",
+      articleBody: row.article_body ?? "",
+      seoTitle: row.seo_title ?? row.headline,
+      seoDescription: row.seo_description ?? row.summary ?? "",
+      readingTime: row.reading_time,
+      language: source,
+      usedTranslation: false,
+      usedSourceFallback: true,
+    };
+  }
+
+  return null;
+}
+
+/** @deprecated Use resolveLocalizedFieldsStrict or resolveStoryArticleFields */
 export function resolveLocalizedFields(
   row: GeneratedArticleRow,
   displayLanguage: NewsroomLanguage

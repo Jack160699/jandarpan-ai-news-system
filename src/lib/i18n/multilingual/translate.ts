@@ -206,7 +206,7 @@ export async function translateGeneratedArticle(
   return results;
 }
 
-async function persistArticleTranslations(
+export async function persistArticleTranslations(
   articleId: string,
   translations: ArticleTranslations,
   editorial_metadata: GeneratedArticleRow["editorial_metadata"]

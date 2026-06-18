@@ -16,13 +16,10 @@ import { resolveFallbackImage } from "@/lib/news/images/fallbacks";
 import { isDisplayableImage } from "@/lib/news/images/validate";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import {
-  resolveLocalizedFields,
   resolveLocalizedFieldsStrict,
 } from "@/lib/i18n/resolve-article";
-import type { LocalizedArticleFields } from "@/lib/i18n/resolve-article";
 import { homeDebug } from "@/lib/homepage/feed-safety";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
-import { localizeGeneratedFeed } from "@/lib/i18n/strict-locale";
 import {
   normalizeArticleLanguage,
   readingTimeLabel,
@@ -94,15 +91,7 @@ export function toHomeArticle(
   },
   displayLanguage: NewsroomLanguage = "hi"
 ): HomeArticle | null {
-  let localized: LocalizedArticleFields | null = resolveLocalizedFieldsStrict(
-    row,
-    displayLanguage
-  );
-  let localeMatch = true;
-  if (!localized) {
-    localized = resolveLocalizedFields(row, displayLanguage);
-    localeMatch = false;
-  }
+  const localized = resolveLocalizedFieldsStrict(row, displayLanguage);
   if (!localized?.headline?.trim()) return null;
 
   const { hero, og } = resolveImageUrls(row);
@@ -149,7 +138,6 @@ export function toHomeArticle(
       section,
       section === "chhattisgarh" || section === "raipur"
     ),
-    localeMatch,
   };
 }
 
@@ -188,7 +176,10 @@ export function buildGeneratedHomepageFeed(
   const rankedOutputs = rankArticlesForHomepage(rows, {
     personalization: options?.personalization,
   });
-  const hyperlocalBundle = buildHyperlocalFeedBundle(rows, { maxDistricts: 6 });
+  const hyperlocalBundle = buildHyperlocalFeedBundle(rows, {
+    maxDistricts: 6,
+    displayLanguage,
+  });
   const localAlerts = buildLocalBreakingAlerts(rows, { cgOnly: true, limit: 8 });
   const ranked = rankedOutputs
     .map((r) =>
@@ -366,5 +357,5 @@ export function buildGeneratedHomepageFeed(
     fetchedAt: new Date().toISOString(),
   };
 
-  return localizeGeneratedFeed(feed, displayLanguage);
+  return feed;
 }

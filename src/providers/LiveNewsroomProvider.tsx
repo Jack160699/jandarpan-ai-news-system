@@ -22,10 +22,7 @@ import {
   shouldShowUpdateBanner,
 } from "@/lib/realtime/merge-feed";
 import type { LiveHomepageSnapshot } from "@/lib/realtime/types";
-import { localizeGeneratedFeed } from "@/lib/i18n/strict-locale";
-import { normalizeAppLanguage } from "@/lib/i18n/safe-language";
 import {
-  ensureHomepageFeed,
   homeDebug,
   normalizeHomepageFeed,
 } from "@/lib/homepage/feed-safety";
@@ -58,43 +55,23 @@ export function LiveNewsroomProvider({
   enabled = true,
 }: LiveNewsroomProviderProps) {
   const languageCtx = useLanguageOptional();
-  const displayLanguage = normalizeAppLanguage(languageCtx?.language) || "en";
-  const languageReady = languageCtx?.ready ?? false;
   const contentLocked = languageCtx?.contentLocked ?? true;
 
   const safeInitial = normalizeHomepageFeed(initialFeed) ?? initialFeed;
   const [feed, setFeed] = useState(safeInitial);
-  const [localeReady, setLocaleReady] = useState(false);
-
-  useEffect(() => {
-    setLocaleReady(true);
-  }, []);
 
   useEffect(() => {
     const base = normalizeHomepageFeed(initialFeed) ?? initialFeed;
-    if (!localeReady || !languageReady || contentLocked) {
+    if (contentLocked) {
       setFeed(base);
       return;
     }
-    try {
-      const localized = localizeGeneratedFeed(base, displayLanguage);
-      const next = ensureHomepageFeed(base, localized);
-      homeDebug("LiveNewsroom localize", {
-        language: displayLanguage,
-        trending: next.trending.length,
-      });
-      setFeed(next);
-    } catch (err) {
-      console.error("[LiveNewsroom] localize feed", err);
-      setFeed(base);
-    }
-  }, [
-    initialFeed,
-    displayLanguage,
-    localeReady,
-    languageReady,
-    contentLocked,
-  ]);
+    homeDebug("LiveNewsroom server feed", {
+      language: languageCtx?.language,
+      trending: base.trending.length,
+    });
+    setFeed(base);
+  }, [initialFeed, contentLocked, languageCtx?.language]);
   const [lastSyncedAt, setLastSyncedAt] = useState(safeInitial.fetchedAt);
   const [freshIds, setFreshIds] = useState<Set<string>>(() => new Set());
   const [pendingSnapshot, setPendingSnapshot] =

@@ -153,7 +153,7 @@ export function LanguageProvider({
     refreshTimerRef.current = setTimeout(() => {
       traceStability("ROUTER_REFRESH", "language_change_refresh", { pathname });
       router.refresh();
-    }, 1200);
+    }, 400);
   }, [router, pathname]);
 
   const setLanguage = useCallback(

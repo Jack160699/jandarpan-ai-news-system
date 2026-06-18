@@ -5,6 +5,11 @@
 import { formatDistrictLabel, scoreRegionalTopicFromArticle } from "@/lib/regional/topic-scoring";
 import { geoFromRecord } from "@/lib/regional/geo-tagging";
 import {
+  normalizeArticleLanguage,
+  type NewsroomLanguage,
+} from "@/lib/i18n/languages";
+import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
+import {
   getDistrict,
   getPrioritizedDistricts,
   type CgDistrict,
@@ -43,15 +48,19 @@ export type HyperlocalFeedBundle = {
 
 function toRef(
   row: GeneratedArticleRow,
-  homeDistrict?: string | null
-): HyperlocalArticleRef {
+  homeDistrict?: string | null,
+  displayLanguage: NewsroomLanguage = "hi"
+): HyperlocalArticleRef | null {
+  const localized = resolveLocalizedFieldsStrict(row, displayLanguage);
+  if (!localized?.headline?.trim()) return null;
+
   const geo = geoFromRecord(row);
   const topic = scoreRegionalTopicFromArticle(row, homeDistrict);
   return {
     id: row.id,
     slug: row.slug,
-    headline: row.headline,
-    summary: row.summary?.trim() ?? "",
+    headline: localized.headline,
+    summary: localized.summary?.trim() ?? "",
     district: geo.primary_district,
     regionalScore: topic.score,
     publishedAt: row.published_at ?? row.created_at,
@@ -86,10 +95,14 @@ export function buildHyperlocalFeedBundle(
     homeDistrict?: string | null;
     maxDistricts?: number;
     perDistrict?: number;
+    displayLanguage?: NewsroomLanguage;
   }
 ): HyperlocalFeedBundle {
   const maxDistricts = options?.maxDistricts ?? 8;
   const perDistrict = options?.perDistrict ?? 6;
+  const displayLanguage = normalizeArticleLanguage(
+    options?.displayLanguage ?? "hi"
+  );
   const routed = routeArticlesByDistrict(rows);
   const order = getPrioritizedDistricts();
 
@@ -118,7 +131,10 @@ export function buildHyperlocalFeedBundle(
 
     const articles = sorted
       .slice(0, perDistrict)
-      .map((r) => toRef(r, options?.homeDistrict));
+      .map((r) => toRef(r, options?.homeDistrict, displayLanguage))
+      .filter((r): r is HyperlocalArticleRef => r !== null);
+
+    if (!articles.length) continue;
 
     const labels = formatDistrictLabel(slug);
 

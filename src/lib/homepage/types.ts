@@ -46,7 +46,7 @@ export type HomeArticle = {
   sourceCount: number;
   categoryLabel: string;
   desk: NewsDeskLabel;
-  /** False when article has no translation for active reader language */
+  /** @deprecated Language filtering happens before feed assembly */
   localeMatch?: boolean;
 };
 
