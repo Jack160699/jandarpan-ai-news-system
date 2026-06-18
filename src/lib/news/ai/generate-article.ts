@@ -420,6 +420,12 @@ async function persistGeneratedArticle(input: {
     geo,
   });
 
+  // Auto-publish gate: when NEWSROOM_AUTO_PUBLISH=true, articles that pass the
+  // editorial quality checks go straight to the public homepage instead of
+  // waiting in the human-approval workflow. Reaching persist already means
+  // quality.publish_allowed === true, so these are quality-passed stories.
+  const autoPublish = process.env.NEWSROOM_AUTO_PUBLISH === "true";
+
   const row: GeneratedArticleInsert = {
     tenant_id: getPipelineTenantId(),
     event_id: input.event.id,
@@ -437,8 +443,8 @@ async function persistGeneratedArticle(input: {
       : input.event.category
         ? [input.event.category]
         : [],
-    editorial_status: "pending",
-    published_at: null,
+    editorial_status: autoPublish ? "approved" : "pending",
+    published_at: autoPublish ? new Date().toISOString() : null,
     geo_metadata: geo,
     editorial_metadata: {
       ai_confidence: input.quality.ai_confidence,

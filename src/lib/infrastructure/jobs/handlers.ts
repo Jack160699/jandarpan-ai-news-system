@@ -15,6 +15,7 @@ import type { JobHandler, JobType } from "@/lib/infrastructure/jobs/types";
 import { createAdminServerClient } from "@/lib/supabase";
 import { asJson } from "@/types/json";
 import { clusterRecentSignals } from "@/lib/newsroom";
+import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 
 async function loadSignalsForEmbed(
   tenantId: string | null,
@@ -22,16 +23,49 @@ async function loadSignalsForEmbed(
   signalIds?: string[]
 ) {
   const supabase = createAdminServerClient();
-  let query = supabase
+
+  // Explicit id list (re-embed on demand) — no backlog filtering.
+  if (signalIds?.length) {
+    let q = supabase
+      .from("news_signals")
+      .select("id, title, raw_content, provider")
+      .in("id", signalIds)
+      .limit(limit);
+    if (tenantId) q = q.eq("tenant_id", tenantId);
+    const { data } = await q;
+    return data ?? [];
+  }
+
+  // Skip signals that already have an embedding so the worker advances through
+  // the backlog instead of re-embedding the newest N every run. Pull a bounded
+  // window of candidate ids (oldest first), drop already-embedded ones, then
+  // hydrate only the rows we will actually embed.
+  const { data: embeddedRows } = await supabase
+    .from("intelligence_embeddings")
+    .select("entity_id")
+    .eq("entity_type", "signal")
+    .limit(20000);
+  const embeddedIds = new Set((embeddedRows ?? []).map((r) => r.entity_id));
+
+  let idQuery = supabase
+    .from("news_signals")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(Math.max(limit * 20, 500));
+  if (tenantId) idQuery = idQuery.eq("tenant_id", tenantId);
+
+  const { data: candidateIds } = await idQuery;
+  const pending = (candidateIds ?? [])
+    .map((r) => r.id as string)
+    .filter((id) => !embeddedIds.has(id))
+    .slice(0, limit);
+
+  if (pending.length === 0) return [];
+
+  const { data } = await supabase
     .from("news_signals")
     .select("id, title, raw_content, provider")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (tenantId) query = query.eq("tenant_id", tenantId);
-  if (signalIds?.length) query = query.in("id", signalIds);
-
-  const { data } = await query;
+    .in("id", pending);
   return data ?? [];
 }
 
@@ -212,20 +246,23 @@ const damAnalyze: JobHandler = async (job) => {
 };
 
 const analyticsAggregate: JobHandler = async (job) => {
-  if (!job.tenant_id) {
+  // Jobs are often enqueued without an explicit tenant; fall back to the
+  // active pipeline tenant instead of hard-failing with tenant_required.
+  const tenantId = job.tenant_id ?? getPipelineTenantId();
+  if (!tenantId) {
     return { ok: false, error: "tenant_required", retryable: false };
   }
 
   const windowHours = Number(job.payload.windowHours ?? 168);
   const report = await buildEnterpriseAnalyticsReport(
-    job.tenant_id,
+    tenantId,
     windowHours
   );
 
   const supabase = createAdminServerClient();
   await supabase.from("analytics_snapshots").upsert(
     {
-      tenant_id: job.tenant_id,
+      tenant_id: tenantId,
       window_hours: windowHours,
       snapshot: asJson(report),
       built_at: new Date().toISOString(),
@@ -238,7 +275,7 @@ const analyticsAggregate: JobHandler = async (job) => {
     "@/lib/infrastructure/cache/keys"
   );
   await cacheSetJson(
-    WORKER_CACHE_KEYS.analytics(job.tenant_id, windowHours),
+    WORKER_CACHE_KEYS.analytics(tenantId, windowHours),
     report,
     300
   );
