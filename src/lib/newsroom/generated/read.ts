@@ -5,6 +5,10 @@
 import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { createAnonServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { logNewsroom } from "@/lib/newsroom/logger";
+import {
+  isPublicGeneratedArticle,
+  PUBLIC_EDITORIAL_STATUSES,
+} from "@/lib/newsroom/publish-state";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 const GENERATED_SELECT =
@@ -30,7 +34,7 @@ export async function fetchGeneratedArticlePool(
     .from("generated_articles")
     .select(GENERATED_SELECT)
     .not("published_at", "is", null)
-    .in("editorial_status", ["approved", "published", "live"])
+    .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(limit);
 
@@ -50,13 +54,7 @@ export async function fetchGeneratedArticlePool(
     editorial_metadata: row.editorial_metadata ?? {},
   }));
 
-  const publicRows = rows.filter((row) => {
-    const status = row.editorial_status ?? "approved";
-    const workflow = (row as { workflow_status?: string }).workflow_status;
-    if (workflow && workflow !== "published") return false;
-    if (status === "rejected" || status === "pending") return false;
-    return Boolean(row.published_at);
-  });
+  const publicRows = rows.filter((row) => isPublicGeneratedArticle(row));
 
   logLiveFeed("generated_pool", {
     publicCount: publicRows.length,
