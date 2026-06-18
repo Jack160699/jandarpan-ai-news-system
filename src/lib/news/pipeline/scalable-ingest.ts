@@ -3,6 +3,7 @@
  */
 
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { evaluateIngestionAlert } from "@/lib/observability/alerts";
 import { createAdminServerClient } from "@/lib/supabase";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
@@ -274,6 +275,21 @@ export async function runScalableIngestion(
     void publishIngestCompleted({
       signalsInserted,
       logId: logRow?.id ?? null,
+    }).catch(() => undefined);
+  }
+
+  if (
+    (inserted > 0 || signalsInserted > 0) &&
+    process.env.NEWSROOM_GENERATE_ARTICLES === "true"
+  ) {
+    const { enqueueJob } = await import("@/lib/infrastructure/jobs/queue");
+    const { getPipelineTenantId } = await import("@/lib/tenant/pipeline");
+    void enqueueJob({
+      jobType: "editorial_generate",
+      dedupeKey: `editorial:post-ingest:${logRow?.id ?? new Date().toISOString().slice(0, 13)}`,
+      tenantId: getPipelineTenantId(),
+      priority: 12,
+      payload: { limit: INFRA_CONFIG.editorialBatchLimit },
     }).catch(() => undefined);
   }
 

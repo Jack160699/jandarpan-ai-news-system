@@ -30,8 +30,8 @@ export type OrchestrateResult = {
 
 const DEFAULT_PIPELINE: WorkerId[] = [
   "ingest",
-  "ai_enrich",
   "editorial_generate",
+  "ai_enrich",
   "editorial_images",
   "job_processor",
   "intelligence_embed",
