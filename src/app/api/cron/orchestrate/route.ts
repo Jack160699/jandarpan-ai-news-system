@@ -32,7 +32,8 @@ export async function POST(request: Request) {
 }
 
 async function handleOrchestrate(request: Request) {
-  const auth = verifyCronRequest(request);
+  const rawBody = await request.text();
+  const auth = await verifyCronRequest(request, { rawBody });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
@@ -53,15 +54,17 @@ async function handleOrchestrate(request: Request) {
   }
 
   let workers: WorkerId[] | undefined;
-  try {
-    const body = (await request.json()) as { workers?: string[] };
-    if (Array.isArray(body.workers)) {
-      workers = body.workers.filter((w): w is WorkerId =>
-        VALID_WORKERS.has(w as WorkerId)
-      );
+  if (rawBody.trim()) {
+    try {
+      const body = JSON.parse(rawBody) as { workers?: string[] };
+      if (Array.isArray(body.workers)) {
+        workers = body.workers.filter((w): w is WorkerId =>
+          VALID_WORKERS.has(w as WorkerId)
+        );
+      }
+    } catch {
+      /* default pipeline */
     }
-  } catch {
-    /* default pipeline */
   }
 
   const result = await runCronOrchestration({

@@ -17,7 +17,8 @@
     "supabase:push": "npx supabase db push --linked",
     "schema:verify": "node scripts/verify-schema.mjs",
     "schema:checksum": "npx supabase db query --linked \"select public.get_schema_health()->>'schema_checksum' as checksum\" -o json",
-    "backfill:publish": "node scripts/backfill-generated-publication.mjs"
+    "backfill:publish": "node scripts/backfill-generated-publication.mjs",
+    "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.53.1",
@@ -35,6 +36,7 @@
     "@tiptap/extension-underline": "^3.23.6",
     "@tiptap/react": "^3.23.6",
     "@tiptap/starter-kit": "^3.23.6",
+    "@upstash/qstash": "^2.11.1",
     "@upstash/redis": "^1.38.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

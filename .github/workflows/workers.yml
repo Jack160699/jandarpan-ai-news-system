@@ -1,12 +1,9 @@
 name: Enterprise Workers
 
+# Primary scheduler: Upstash QStash (see docs/QSTASH_SCHEDULER_SETUP.md).
+# This workflow is manual-only — use for emergency pipeline runs or soak tests.
 on:
   workflow_dispatch:
-  schedule:
-    # 48×/day at :07 and :37 UTC — avoids GitHub Actions congestion at :00/:30 where
-    # scheduled jobs are often delayed or dropped (see GitHub schedule event docs).
-    - cron: "7 * * * *"
-    - cron: "37 * * * *"
 
 jobs:
   newsroom-pipeline:

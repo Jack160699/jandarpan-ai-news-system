@@ -22,7 +22,9 @@ export function cronAuthFailureResponse(
     );
   }
 
-  const hasCredential = Boolean(auth.bearerToken || auth.cronHeader);
+  const hasCredential = Boolean(
+    auth.bearerToken || auth.cronHeader || auth.qstashVerified
+  );
 
   if (!hasCredential) {
     return NextResponse.json(

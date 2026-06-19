@@ -78,7 +78,7 @@ function jsonCron(
 }
 
 export async function handleCronJobs(request: Request): Promise<NextResponse> {
-  const auth = verifyCronRequest(request);
+  const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
@@ -120,7 +120,7 @@ export async function handleCronWorker(
   request: Request,
   workerSlug: string
 ): Promise<NextResponse> {
-  const auth = verifyCronRequest(request);
+  const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
@@ -219,7 +219,7 @@ function evaluateCriticalHealth(input: {
 }
 
 export async function handleCronHealth(request: Request): Promise<NextResponse> {
-  const auth = verifyCronRequest(request);
+  const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }

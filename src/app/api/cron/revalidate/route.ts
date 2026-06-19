@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
 async function handleRevalidate(request: Request) {
   const startedAt = Date.now();
-  const auth = verifyCronRequest(request);
+  const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }

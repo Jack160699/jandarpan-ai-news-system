@@ -2,7 +2,7 @@
  * App Router API: GET/POST /api/fetch-news
  *
  * Scalable ingestion — parallel providers, incremental upserts, async AI queue.
- * Primary trigger: GitHub Actions (every 30m). Vercel cron is daily backup only.
+ * Primary trigger: Upstash QStash (every 30m). Vercel cron is daily backup only.
  */
 
 import { NextResponse } from "next/server";
@@ -46,7 +46,7 @@ async function handleFetchNews(request: Request) {
   const deadline = createExecutionDeadline();
   const userAgent = request.headers.get("user-agent")?.slice(0, 80) ?? "unknown";
 
-  const auth = verifyCronRequest(request);
+  const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     logIngestAuthDenied({
       bearerReceived: !!auth.bearerToken,

@@ -1,6 +1,9 @@
 # GitHub Actions Worker Scheduler
 
-Jan Darpan OS runs enterprise background workers on **GitHub Actions** instead of Vercel Cron. This keeps the app on **Vercel Hobby** while preserving Postgres job queues, Redis caching, Supabase pipelines, RBAC, and intelligence workers.
+> **Primary scheduler:** [Upstash QStash](./QSTASH_SCHEDULER_SETUP.md) — every 30 minutes.  
+> **This workflow:** manual-only (`workflow_dispatch`) for emergency runs and soak tests.
+
+Jan Darpan OS uses **Upstash QStash** for production scheduling so the app stays on **Vercel Hobby** while preserving Postgres job queues, Redis caching, Supabase pipelines, RBAC, and intelligence workers.
 
 ## Architecture
 
@@ -91,7 +94,9 @@ The GitHub health job fails the workflow on `critical: true`.
 
 ## Manual run
 
-Actions → **Enterprise Workers** → **Run workflow** → choose `jobs`, `snapshot`, `embed`, `health`, or `all`.
+Actions → **Enterprise Workers** → **Run workflow**.
+
+Scheduled runs were removed in favor of QStash. See [QSTASH_SCHEDULER_SETUP.md](./QSTASH_SCHEDULER_SETUP.md).
 
 ## Required GitHub secrets
 
