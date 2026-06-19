@@ -3,59 +3,77 @@ name: Enterprise Workers
 on:
   workflow_dispatch:
   schedule:
-    # Every 30 minutes — primary live ingestion trigger (Vercel/cron-job.org backup)
-    - cron: "*/30 * * * *"
+    # 48×/day at :07 and :37 UTC — avoids GitHub Actions congestion at :00/:30 where
+    # scheduled jobs are often delayed or dropped (see GitHub schedule event docs).
+    - cron: "7 * * * *"
+    - cron: "37 * * * *"
 
 jobs:
   newsroom-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    env:
+      APP_URL: ${{ secrets.PRODUCTION_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
     steps:
-      - name: Ingest wire + RSS
-        env:
-          APP_URL: ${{ secrets.PRODUCTION_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate and normalize production URL
         run: |
           if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
             echo "Set GitHub secrets: PRODUCTION_URL, CRON_SECRET"
             exit 1
           fi
-          curl -fsS -X POST "$APP_URL/api/fetch-news" \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            -H "Content-Type: application/json"
+
+          # Apex jandarpan.news returns HTTP 307 → www; use canonical host directly.
+          case "$APP_URL" in
+            https://jandarpan.news|http://jandarpan.news|https://jandarpan.news/|http://jandarpan.news/)
+              echo "::warning::PRODUCTION_URL uses apex domain. Normalizing to https://www.jandarpan.news — update the secret to skip redirects."
+              echo "APP_URL=https://www.jandarpan.news" >> "$GITHUB_ENV"
+              ;;
+          esac
+
+          echo "Using APP_URL=${APP_URL}"
+
+      - name: Ingest wire + RSS
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "fetch-news" \
+            "/api/fetch-news" \
+            "POST" \
+            "" \
+            "300"
 
       - name: Drain worker job queue
-        env:
-          APP_URL: ${{ secrets.PRODUCTION_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -fsS -X POST "$APP_URL/api/cron/jobs" \
-            -H "Authorization: Bearer $CRON_SECRET"
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "cron-jobs" \
+            "/api/cron/jobs" \
+            "POST"
 
       - name: Generate editorials from events
-        env:
-          APP_URL: ${{ secrets.PRODUCTION_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -fsS -X POST "$APP_URL/api/cron/worker/editorial_generate" \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            --max-time 120
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "editorial_generate" \
+            "/api/cron/worker/editorial_generate" \
+            "POST" \
+            "" \
+            "120"
 
       - name: Run full orchestration
-        env:
-          APP_URL: ${{ secrets.PRODUCTION_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -fsS -X POST "$APP_URL/api/cron/orchestrate" \
-            -H "Authorization: Bearer $CRON_SECRET" \
-            -H "Content-Type: application/json" \
-            -d "{}"
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "orchestrate" \
+            "/api/cron/orchestrate" \
+            "POST" \
+            "{}"
 
       - name: Worker health check
-        env:
-          APP_URL: ${{ secrets.PRODUCTION_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -fsS "$APP_URL/api/cron/workers/health" \
-            -H "Authorization: Bearer $CRON_SECRET"
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "workers-health" \
+            "/api/cron/workers/health" \
+            "GET"
