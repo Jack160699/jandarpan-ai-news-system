@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  if (!verifyCronRequest(request).authorized) {
+  if (!(await verifyCronRequest(request)).authorized) {
     return NextResponse.json(
       { ok: false, error: "Unauthorized" },
       { status: 401, headers: noStoreHeaders() }

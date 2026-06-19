@@ -12,7 +12,7 @@ export const maxDuration = 60;
  * POST /api/generate-articles — batch editorial generation from news_events
  */
 export async function POST(request: NextRequest) {
-  const auth = verifyCronRequest(request);
+  const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }

@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
 async function handleCluster(request: Request) {
   const startedAt = Date.now();
-  const auth = verifyCronRequest(request);
+  const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }

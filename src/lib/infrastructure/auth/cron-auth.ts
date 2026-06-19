@@ -1,11 +1,15 @@
 /**
  * Cron / worker route authentication
  *
- * Vercel Cron (when CRON_SECRET is set) sends:
- *   Authorization: Bearer <CRON_SECRET>
- *   x-vercel-cron: 1
+ * Accepted credentials (any one):
+ * - Authorization: Bearer <CRON_SECRET> (Vercel Cron, GitHub manual, QStash outbound)
+ * - x-cron-secret: <CRON_SECRET>
+ * - Upstash-Signature JWT (QStash primary scheduler)
+ *
+ * Vercel Cron (when CRON_SECRET is set) also sends x-vercel-cron: 1
  */
 
+import { Receiver } from "@upstash/qstash";
 import { isProductionDeployment } from "@/lib/infrastructure/production";
 
 export type CronAuthResult = {
@@ -14,6 +18,12 @@ export type CronAuthResult = {
   cronHeader: string | null;
   vercelCron: boolean;
   expectedSecretEnv: string | null;
+  qstashVerified?: boolean;
+};
+
+export type VerifyCronRequestOptions = {
+  /** Raw request body — required when the route reads the body after auth (e.g. orchestrate). */
+  rawBody?: string | null;
 };
 
 export function parseBearerToken(authorization: string | null): string | null {
@@ -56,7 +66,41 @@ export function getActiveCronSecret(): { secret: string | null; env: string | nu
   return getCronSecret();
 }
 
-export function verifyCronRequest(request: Request): CronAuthResult {
+function getQStashReceiver(): Receiver | null {
+  const currentSigningKey = process.env.QSTASH_CURRENT_SIGNING_KEY?.trim();
+  const nextSigningKey = process.env.QSTASH_NEXT_SIGNING_KEY?.trim();
+  if (!currentSigningKey || !nextSigningKey) return null;
+  return new Receiver({ currentSigningKey, nextSigningKey });
+}
+
+async function verifyQStashSignature(
+  request: Request,
+  body: string
+): Promise<boolean> {
+  const signature = request.headers.get("upstash-signature");
+  if (!signature) return false;
+
+  const receiver = getQStashReceiver();
+  if (!receiver) {
+    console.warn(
+      "[cron-auth] Upstash-Signature present but QSTASH signing keys are not configured"
+    );
+    return false;
+  }
+
+  try {
+    return await receiver.verify({
+      signature,
+      body,
+      url: request.url,
+    });
+  } catch (error) {
+    console.warn("[cron-auth] QStash signature verification failed", error);
+    return false;
+  }
+}
+
+function verifyCronSecret(request: Request): CronAuthResult {
   const { secret: cronSecret, env: expectedSecretEnv } = getCronSecret();
   const authHeader = request.headers.get("authorization");
   const bearerToken = parseBearerToken(authHeader);
@@ -84,6 +128,7 @@ export function verifyCronRequest(request: Request): CronAuthResult {
       bearerToken,
       cronHeader,
       vercelCron,
+      qstashSignature: Boolean(request.headers.get("upstash-signature")),
       path: new URL(request.url).pathname,
     });
   } catch {
@@ -126,5 +171,47 @@ export function verifyCronRequest(request: Request): CronAuthResult {
     cronHeader,
     vercelCron,
     expectedSecretEnv,
+  };
+}
+
+async function resolveRequestBody(
+  request: Request,
+  rawBody?: string | null
+): Promise<string> {
+  if (rawBody !== undefined && rawBody !== null) return rawBody;
+  if (!request.headers.get("upstash-signature")) return "";
+  try {
+    return await request.clone().text();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Validates cron/worker requests via CRON_SECRET and/or QStash request signing.
+ */
+export async function verifyCronRequest(
+  request: Request,
+  options?: VerifyCronRequestOptions
+): Promise<CronAuthResult> {
+  const syncResult = verifyCronSecret(request);
+  if (syncResult.authorized) {
+    return syncResult;
+  }
+
+  if (!request.headers.get("upstash-signature")) {
+    return syncResult;
+  }
+
+  const body = await resolveRequestBody(request, options?.rawBody);
+  const qstashValid = await verifyQStashSignature(request, body);
+  if (!qstashValid) {
+    return syncResult;
+  }
+
+  return {
+    ...syncResult,
+    authorized: true,
+    qstashVerified: true,
   };
 }

@@ -10,7 +10,7 @@ export const maxDuration = 60;
  * POST /api/process-editorial-images — drain editorial image queue
  */
 export async function POST(request: NextRequest) {
-  const auth = verifyCronRequest(request);
+  const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
