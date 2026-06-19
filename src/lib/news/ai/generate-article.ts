@@ -837,7 +837,8 @@ export async function generateEditorialsFromEvents(options?: {
     .from("news_events")
     .select("*")
     .order("urgency_score", { ascending: false })
-    .limit(limit * 3);
+    .order("created_at", { ascending: false })
+    .limit(limit * 20);
 
   if (error || !events?.length) {
     return {
