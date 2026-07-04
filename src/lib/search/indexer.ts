@@ -53,6 +53,56 @@ export type SearchIndex = {
   displayLanguage: NewsroomLanguage;
 };
 
+/** JSON-safe index — unstable_cache cannot persist Map/Set instances. */
+export type SearchIndexSnapshot = {
+  documents: Array<Omit<SearchDocument, "vector"> & { vector: Record<string, number> }>;
+  inverted: Record<string, string[]>;
+  vocabulary: string[];
+  idf: Record<string, number>;
+  builtAt: string;
+  displayLanguage: NewsroomLanguage;
+};
+
+export function snapshotSearchIndex(index: SearchIndex): SearchIndexSnapshot {
+  const inverted: Record<string, string[]> = {};
+  for (const [term, ids] of index.inverted) {
+    inverted[term] = [...ids];
+  }
+
+  return {
+    documents: index.documents.map((doc) => ({
+      ...doc,
+      vector: Object.fromEntries(doc.vector),
+    })),
+    inverted,
+    vocabulary: [...index.vocabulary],
+    idf: Object.fromEntries(index.idf),
+    builtAt: index.builtAt,
+    displayLanguage: index.displayLanguage,
+  };
+}
+
+export function restoreSearchIndex(snapshot: SearchIndexSnapshot): SearchIndex {
+  const inverted = new Map<string, Set<string>>();
+  for (const [term, ids] of Object.entries(snapshot.inverted ?? {})) {
+    inverted.set(term, new Set(Array.isArray(ids) ? ids : []));
+  }
+
+  return {
+    documents: (snapshot.documents ?? []).map((doc) => ({
+      ...doc,
+      vector: new Map(Object.entries(doc.vector ?? {})),
+    })),
+    inverted,
+    vocabulary: new Set(
+      Array.isArray(snapshot.vocabulary) ? snapshot.vocabulary : []
+    ),
+    idf: new Map(Object.entries(snapshot.idf ?? {})),
+    builtAt: snapshot.builtAt,
+    displayLanguage: snapshot.displayLanguage,
+  };
+}
+
 const DISTRICT_PATTERNS: Record<SearchDistrict, RegExp> = {
   raipur: /raipur|रायपुर|naya raipur/i,
   bilaspur: /bilaspur|बिलासपुर/i,

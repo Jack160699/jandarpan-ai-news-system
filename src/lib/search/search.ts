@@ -8,7 +8,13 @@ import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import { logNewsroom } from "@/lib/newsroom/logger";
-import { buildSearchIndex, searchIndex, type SearchIndex } from "@/lib/search/indexer";
+import {
+  buildSearchIndex,
+  restoreSearchIndex,
+  searchIndex,
+  snapshotSearchIndex,
+  type SearchIndexSnapshot,
+} from "@/lib/search/indexer";
 import { rankTrendingForQuery } from "@/lib/search/trending-queries";
 import type { SearchFilters, SearchResult } from "@/lib/search/types";
 
@@ -16,23 +22,26 @@ const INDEX_CACHE_TAG = "news-search-index";
 
 async function loadSearchIndexUncached(
   displayLanguage: NewsroomLanguage
-): Promise<SearchIndex> {
+): Promise<SearchIndexSnapshot> {
   const rows = await fetchGeneratedArticlePool(200);
-  return buildSearchIndex(rows, displayLanguage);
+  return snapshotSearchIndex(buildSearchIndex(rows, displayLanguage));
 }
 
-export async function getSearchIndex(
-  displayLanguage: NewsroomLanguage
-): Promise<SearchIndex> {
+/** ISR cache key: news-search-index-v3 + displayLanguage (hi | en) */
+export function getSearchIndexCacheKey(displayLanguage: NewsroomLanguage): string {
+  return `news-search-index-v3:${displayLanguage}`;
+}
+
+export async function getSearchIndex(displayLanguage: NewsroomLanguage) {
   const cached = unstable_cache(
     () => loadSearchIndexUncached(displayLanguage),
-    ["news-search-index-v2", displayLanguage],
+    ["news-search-index-v3", displayLanguage],
     {
       revalidate: 120,
       tags: [INDEX_CACHE_TAG, `${INDEX_CACHE_TAG}:${displayLanguage}`],
     }
   );
-  return cached();
+  return restoreSearchIndex(await cached());
 }
 
 export async function executeSearch(
