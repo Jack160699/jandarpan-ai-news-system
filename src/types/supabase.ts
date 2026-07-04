@@ -618,44 +618,62 @@ export type Database = {
       editorial_image_queue: {
         Row: {
           attempts: number
+          approval_status: string
           created_at: string
+          custom_prompt: string | null
           error: string | null
           generated_article_id: string
+          generation_history: Json
           hero_image_url: string | null
           id: string
           image_source: string | null
           max_attempts: number
           og_image_url: string | null
+          priority: number
           processed_at: string | null
+          processing_started_at: string | null
           prompt_hash: string | null
+          scheduled_at: string | null
           status: string
         }
         Insert: {
           attempts?: number
+          approval_status?: string
           created_at?: string
+          custom_prompt?: string | null
           error?: string | null
           generated_article_id: string
+          generation_history?: Json
           hero_image_url?: string | null
           id?: string
           image_source?: string | null
           max_attempts?: number
           og_image_url?: string | null
+          priority?: number
           processed_at?: string | null
+          processing_started_at?: string | null
           prompt_hash?: string | null
+          scheduled_at?: string | null
           status?: string
         }
         Update: {
           attempts?: number
+          approval_status?: string
           created_at?: string
+          custom_prompt?: string | null
           error?: string | null
           generated_article_id?: string
+          generation_history?: Json
           hero_image_url?: string | null
           id?: string
           image_source?: string | null
           max_attempts?: number
           og_image_url?: string | null
+          priority?: number
           processed_at?: string | null
+          processing_started_at?: string | null
           prompt_hash?: string | null
+          scheduled_at?: string | null
           status?: string
         }
         Relationships: [
@@ -667,6 +685,129 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      editorial_image_generations: {
+        Row: {
+          attempt_number: number
+          created_at: string
+          error: string | null
+          generated_article_id: string
+          hero_image_url: string | null
+          id: string
+          latency_ms: number | null
+          metadata: Json
+          model: string | null
+          og_image_url: string | null
+          prompt: string
+          prompt_hash: string | null
+          provider: string
+          quality_flags: string[] | null
+          quality_score: number | null
+          queue_id: string | null
+          status: string
+          visual_hash: string | null
+        }
+        Insert: {
+          attempt_number?: number
+          created_at?: string
+          error?: string | null
+          generated_article_id: string
+          hero_image_url?: string | null
+          id?: string
+          latency_ms?: number | null
+          metadata?: Json
+          model?: string | null
+          og_image_url?: string | null
+          prompt: string
+          prompt_hash?: string | null
+          provider?: string
+          quality_flags?: string[] | null
+          quality_score?: number | null
+          queue_id?: string | null
+          status: string
+          visual_hash?: string | null
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string
+          error?: string | null
+          generated_article_id?: string
+          hero_image_url?: string | null
+          id?: string
+          latency_ms?: number | null
+          metadata?: Json
+          model?: string | null
+          og_image_url?: string | null
+          prompt?: string
+          prompt_hash?: string | null
+          provider?: string
+          quality_flags?: string[] | null
+          quality_score?: number | null
+          queue_id?: string | null
+          status?: string
+          visual_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "editorial_image_generations_generated_article_id_fkey"
+            columns: ["generated_article_id"]
+            isOneToOne: false
+            referencedRelation: "generated_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "editorial_image_generations_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "editorial_image_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      editorial_image_metrics_daily: {
+        Row: {
+          ai_generated: number
+          avg_latency_ms: number | null
+          avg_quality_score: number | null
+          completed: number
+          day: string
+          failed: number
+          fallback_used: number
+          provider_errors: number
+          quality_rejections: number
+          retried: number
+          total_jobs: number
+          updated_at: string
+        }
+        Insert: {
+          ai_generated?: number
+          avg_latency_ms?: number | null
+          avg_quality_score?: number | null
+          completed?: number
+          day: string
+          failed?: number
+          fallback_used?: number
+          provider_errors?: number
+          quality_rejections?: number
+          retried?: number
+          total_jobs?: number
+          updated_at?: string
+        }
+        Update: {
+          ai_generated?: number
+          avg_latency_ms?: number | null
+          avg_quality_score?: number | null
+          completed?: number
+          day?: string
+          failed?: number
+          fallback_used?: number
+          provider_errors?: number
+          quality_rejections?: number
+          retried?: number
+          total_jobs?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       editorial_workflow_comments: {
         Row: {
@@ -3347,6 +3488,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_editorial_image_batch: {
+        Args: { claim_limit?: number }
+        Returns: Database["public"]["Tables"]["editorial_image_queue"]["Row"][]
+      }
       get_schema_health: { Args: never; Returns: Json }
       match_intelligence_embeddings: {
         Args: {

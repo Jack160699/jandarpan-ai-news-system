@@ -2,13 +2,11 @@
  * Editorial image prompt moderation + branded contextual prompts
  */
 
-import { createHash } from "crypto";
 import {
-  BRAND_VISUAL,
-  getCategoryVisualTemplate,
-  getRegionVisualOverlay,
-  hindiFriendlyCompositionNotes,
-} from "@/lib/news/ai/editorial-image-brand";
+  buildIntelligentEditorialPrompt,
+  hashImagePrompt,
+} from "@/lib/news/ai/editorial-image-prompt-builder";
+import type { EditorialImageContext } from "@/lib/news/ai/editorial-image-context";
 
 const PHOTOREAL_BAN_RE =
   /\b(photo(?:graph)?|photorealistic|realistic photo|cctv|dashcam|selfie|portrait of|headshot|paparazzi)\b/i;
@@ -32,9 +30,7 @@ export type ModerationResult = {
   sanitizedHeadline: string;
 };
 
-export function hashImagePrompt(prompt: string): string {
-  return createHash("sha256").update(prompt.trim()).digest("hex").slice(0, 16);
-}
+export { hashImagePrompt };
 
 export function moderateEditorialImageContext(input: {
   headline: string;
@@ -66,6 +62,7 @@ export function moderateEditorialImageContext(input: {
   return { allowed, flags, forceSymbolicOnly, sanitizedHeadline };
 }
 
+/** @deprecated Use buildIntelligentEditorialPrompt with full EditorialImageContext */
 export function buildEditorialImagePrompt(input: {
   headline: string;
   category: string;
@@ -75,46 +72,37 @@ export function buildEditorialImagePrompt(input: {
   moderation: ModerationResult;
   repairAttempt?: number;
 }): string {
-  const template = getCategoryVisualTemplate(input.category);
-  const urgency = input.urgencyScore;
+  const context: EditorialImageContext = {
+    headline: input.headline,
+    summary: input.eventSummary ?? "",
+    bodyExcerpt: "",
+    category: input.category,
+    region: input.region,
+    urgencyScore: input.urgencyScore,
+    tags: [input.category],
+    location: {
+      district: null,
+      state: input.region,
+      country: "india",
+      scope: "state",
+      matchedTerms: [],
+    },
+    entities: {
+      theme: "general",
+      people: [],
+      organizations: [],
+      keywords: [],
+      isBreaking: input.urgencyScore >= 75,
+    },
+    theme: "general",
+    signalTitles: [],
+  };
 
-  const style =
-    urgency >= 75
-      ? "dynamic Jan Darpan Chhattisgarh editorial illustration — credible breaking energy, not sensational"
-      : urgency >= 45
-        ? "modern Indian newsroom editorial illustration — confident trustworthy composition"
-        : "calm symbolic Jan Darpan Chhattisgarh artwork — clear visual storytelling";
-
-  const summarySlice = (input.eventSummary ?? "").slice(0, 220);
-
-  const safetyBlock = input.moderation.forceSymbolicOnly
-    ? "ONLY abstract symbolic shapes, maps, icons, silhouettes without identifiable faces. No humans resembling real people."
-    : "No identifiable real people, no politician likeness, no photorealism, no fake disaster photography.";
-
-  const repairNote =
-    input.repairAttempt && input.repairAttempt > 0
-      ? `Repair variant ${input.repairAttempt}: simplify and strengthen symbolism.`
-      : "";
-
-  return [
-    `${BRAND_VISUAL.style}`,
-    `Create a ${style} for ${BRAND_VISUAL.name} hero image.`,
-    `Story theme (abstract): ${input.moderation.sanitizedHeadline}.`,
-    `Category: ${input.category}. ${template.motifs}`,
-    `Mood: ${template.mood}. Composition: ${template.composition}.`,
-    getRegionVisualOverlay(input.region),
-    summarySlice ? `Context: ${summarySlice}` : "",
-    BRAND_VISUAL.palette,
-    BRAND_VISUAL.typographySpace,
-    hindiFriendlyCompositionNotes(),
-    "Visual language: editorial illustration only — soft gradients, symbolic storytelling, premium newspaper art direction.",
-    "Forbidden: photographs, photorealism, misleading incident imagery, gore, logos, watermarks, embedded text.",
-    safetyBlock,
-    repairNote,
-    "Output: single cohesive 16:9 hero illustration optimized for mobile and OpenGraph crop.",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  return buildIntelligentEditorialPrompt({
+    context,
+    moderation: input.moderation,
+    repairAttempt: input.repairAttempt,
+  });
 }
 
 export function moderateGeneratedPrompt(prompt: string): {

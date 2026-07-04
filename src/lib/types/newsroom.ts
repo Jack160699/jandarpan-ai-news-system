@@ -125,6 +125,12 @@ export type EditorialImageMeta = {
   storage_path?: string | null;
   moderation_flags?: string[];
   processed_at?: string;
+  prompt?: string | null;
+  theme?: string;
+  district?: string | null;
+  provider?: string;
+  model?: string;
+  approval_status?: string;
 };
 
 export type EditorialMetadata = {

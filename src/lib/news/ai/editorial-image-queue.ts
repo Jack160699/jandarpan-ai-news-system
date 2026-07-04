@@ -1,14 +1,27 @@
 /**
- * Editorial image generation queue — retries + duplicate prompt prevention
+ * Editorial image generation queue — atomic claims, backoff retries, history
  */
 
 import { createAdminServerClient } from "@/lib/supabase";
+import type { Json } from "@/types/supabase";
+import {
+  appendRetryLog,
+  computeScheduledAt,
+  getRetryConfig,
+  type RetryLogEntry,
+} from "@/lib/news/ai/editorial-image-retry";
 
 export type EditorialImageQueueStatus =
   | "pending"
   | "processing"
   | "completed"
   | "failed";
+
+export type EditorialImageApprovalStatus =
+  | "auto"
+  | "pending_review"
+  | "approved"
+  | "rejected";
 
 export type EditorialImageQueueRow = {
   id: string;
@@ -23,12 +36,21 @@ export type EditorialImageQueueRow = {
   error: string | null;
   created_at: string;
   processed_at: string | null;
+  scheduled_at?: string | null;
+  custom_prompt?: string | null;
+  approval_status?: EditorialImageApprovalStatus;
+  processing_started_at?: string | null;
+  priority?: number;
+  generation_history?: RetryLogEntry[];
 };
 
-const DEFAULT_MAX_ATTEMPTS = 3;
+function getDefaultMaxAttempts(): number {
+  return getRetryConfig().maxQueueAttempts;
+}
 
 export async function enqueueEditorialImage(
-  generatedArticleId: string
+  generatedArticleId: string,
+  options?: { customPrompt?: string; priority?: number }
 ): Promise<boolean> {
   const supabase = createAdminServerClient();
   const { error } = await supabase.from("editorial_image_queue").upsert(
@@ -36,7 +58,14 @@ export async function enqueueEditorialImage(
       generated_article_id: generatedArticleId,
       status: "pending",
       attempts: 0,
-      max_attempts: DEFAULT_MAX_ATTEMPTS,
+      max_attempts: getDefaultMaxAttempts(),
+      scheduled_at: null,
+      processing_started_at: null,
+      error: null,
+      custom_prompt: options?.customPrompt ?? null,
+      priority: options?.priority ?? 0,
+      approval_status: "auto",
+      generation_history: [] as Json,
     },
     { onConflict: "generated_article_id" }
   );
@@ -58,6 +87,16 @@ export async function countPendingEditorialImages(): Promise<number> {
   return count ?? 0;
 }
 
+export async function countProcessingEditorialImages(): Promise<number> {
+  const supabase = createAdminServerClient();
+  const { count } = await supabase
+    .from("editorial_image_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "processing");
+
+  return count ?? 0;
+}
+
 export async function findDuplicateImageByVisualHash(
   visualHash: string,
   isNearDuplicate: (a: string, b: string) => boolean
@@ -72,7 +111,7 @@ export async function findDuplicateImageByVisualHash(
     .select("hero_image_url, editorial_metadata")
     .not("hero_image_url", "is", null)
     .order("created_at", { ascending: false })
-    .limit(30);
+    .limit(100);
 
   for (const art of articles ?? []) {
     const img = (art.editorial_metadata as { image?: { visual_hash?: string; og_url?: string } })
@@ -111,80 +150,76 @@ export async function findDuplicateImageByPromptHash(
   };
 }
 
+export async function getQueueRowForArticle(
+  articleId: string
+): Promise<EditorialImageQueueRow | null> {
+  const supabase = createAdminServerClient();
+  const { data } = await supabase
+    .from("editorial_image_queue")
+    .select("*")
+    .eq("generated_article_id", articleId)
+    .maybeSingle();
+
+  return (data as EditorialImageQueueRow | null) ?? null;
+}
+
 export async function claimEditorialImageBatch(
   limit = 5
 ): Promise<EditorialImageQueueRow[]> {
   const supabase = createAdminServerClient();
 
-  const { data: pending, error } = await supabase
+  const { data, error } = await supabase.rpc("claim_editorial_image_batch", {
+    claim_limit: limit,
+  });
+
+  if (!error && data?.length) {
+    return data as EditorialImageQueueRow[];
+  }
+
+  if (error) {
+    console.warn("[editorial-image-queue] rpc claim failed, fallback:", error.message);
+  }
+
+  return claimEditorialImageBatchFallback(limit);
+}
+
+async function claimEditorialImageBatchFallback(
+  limit: number
+): Promise<EditorialImageQueueRow[]> {
+  const supabase = createAdminServerClient();
+  const staleCutoff = new Date(Date.now() - 10 * 60_000).toISOString();
+
+  await supabase
+    .from("editorial_image_queue")
+    .update({
+      status: "pending",
+      processing_started_at: null,
+    })
+    .eq("status", "processing")
+    .lt("processing_started_at", staleCutoff);
+
+  const now = new Date().toISOString();
+  const { data: pending } = await supabase
     .from("editorial_image_queue")
     .select("*")
     .eq("status", "pending")
+    .or(`scheduled_at.is.null,scheduled_at.lte.${now}`)
+    .order("priority", { ascending: false })
     .order("created_at", { ascending: true })
     .limit(limit);
 
-  if (error || !pending?.length) return [];
+  if (!pending?.length) return [];
 
   const ids = pending.map((r) => r.id);
   await supabase
     .from("editorial_image_queue")
-    .update({ status: "processing" })
+    .update({
+      status: "processing",
+      processing_started_at: now,
+    })
     .in("id", ids);
 
   return pending as EditorialImageQueueRow[];
-}
-
-export async function markEditorialImageCompleted(input: {
-  queueId: string;
-  generatedArticleId: string;
-  heroImageUrl: string;
-  ogImageUrl: string | null;
-  imageSource: string;
-  promptHash: string | null;
-}): Promise<void> {
-  const supabase = createAdminServerClient();
-  const now = new Date().toISOString();
-
-  await supabase
-    .from("editorial_image_queue")
-    .update({
-      status: "completed",
-      hero_image_url: input.heroImageUrl,
-      og_image_url: input.ogImageUrl,
-      image_source: input.imageSource,
-      prompt_hash: input.promptHash,
-      processed_at: now,
-      error: null,
-    })
-    .eq("id", input.queueId);
-
-  const { data: article } = await supabase
-    .from("generated_articles")
-    .select("editorial_metadata")
-    .eq("id", input.generatedArticleId)
-    .single();
-
-  const meta = (article?.editorial_metadata ?? {}) as Record<string, unknown>;
-  const imageMeta = (meta.image as Record<string, unknown> | undefined) ?? {};
-
-  await supabase
-    .from("generated_articles")
-    .update({
-      hero_image_url: input.heroImageUrl,
-      editorial_metadata: {
-        ...meta,
-        image: {
-          ...imageMeta,
-          hero_url: input.heroImageUrl,
-          og_url: input.ogImageUrl ?? input.heroImageUrl,
-          source: input.imageSource,
-          prompt_hash: input.promptHash,
-          processed_at: now,
-          status: "completed",
-        },
-      },
-    })
-    .eq("id", input.generatedArticleId);
 }
 
 export async function markEditorialImageCompletedWithMeta(input: {
@@ -195,6 +230,7 @@ export async function markEditorialImageCompletedWithMeta(input: {
   imageSource: string;
   promptHash: string | null;
   imageMeta: Record<string, unknown>;
+  approvalStatus?: EditorialImageApprovalStatus;
 }): Promise<void> {
   const supabase = createAdminServerClient();
   const now = new Date().toISOString();
@@ -208,7 +244,9 @@ export async function markEditorialImageCompletedWithMeta(input: {
       image_source: input.imageSource,
       prompt_hash: input.promptHash,
       processed_at: now,
+      processing_started_at: null,
       error: null,
+      approval_status: input.approvalStatus ?? "auto",
     })
     .eq("id", input.queueId);
 
@@ -234,6 +272,7 @@ export async function markEditorialImageCompletedWithMeta(input: {
           prompt_hash: input.promptHash,
           processed_at: now,
           status: "completed",
+          approval_status: input.approvalStatus ?? "auto",
         },
       },
     })
@@ -250,10 +289,12 @@ export async function markEditorialImageFailed(input: {
   fallbackHeroUrl?: string;
   fallbackOgUrl?: string | null;
   imageSource?: string;
+  generationHistory?: RetryLogEntry[];
 }): Promise<void> {
   const supabase = createAdminServerClient();
   const nextAttempts = input.attempts + 1;
   const status = input.retry ? "pending" : "failed";
+  const scheduledAt = input.retry ? computeScheduledAt(nextAttempts) : null;
 
   await supabase
     .from("editorial_image_queue")
@@ -262,9 +303,12 @@ export async function markEditorialImageFailed(input: {
       attempts: nextAttempts,
       error: input.error.slice(0, 500),
       processed_at: input.retry ? null : new Date().toISOString(),
+      processing_started_at: null,
+      scheduled_at: scheduledAt,
       hero_image_url: input.fallbackHeroUrl ?? null,
       og_image_url: input.fallbackOgUrl ?? null,
       image_source: input.imageSource ?? null,
+      generation_history: (input.generationHistory ?? []) as unknown as Json,
     })
     .eq("id", input.queueId);
 
@@ -275,3 +319,102 @@ export async function markEditorialImageFailed(input: {
       .eq("id", input.generatedArticleId);
   }
 }
+
+export async function updateQueueCustomPrompt(
+  articleId: string,
+  customPrompt: string
+): Promise<boolean> {
+  const supabase = createAdminServerClient();
+  const { error } = await supabase
+    .from("editorial_image_queue")
+    .update({ custom_prompt: customPrompt.slice(0, 4000) })
+    .eq("generated_article_id", articleId);
+
+  return !error;
+}
+
+export async function setImageApprovalStatus(
+  articleId: string,
+  approvalStatus: EditorialImageApprovalStatus
+): Promise<boolean> {
+  const supabase = createAdminServerClient();
+  const { error } = await supabase
+    .from("editorial_image_queue")
+    .update({ approval_status: approvalStatus })
+    .eq("generated_article_id", articleId);
+
+  if (error) return false;
+
+  const { data: article } = await supabase
+    .from("generated_articles")
+    .select("editorial_metadata")
+    .eq("id", articleId)
+    .single();
+
+  const meta = (article?.editorial_metadata ?? {}) as Record<string, unknown>;
+  const imageMeta = (meta.image as Record<string, unknown> | undefined) ?? {};
+
+  await supabase
+    .from("generated_articles")
+    .update({
+      editorial_metadata: {
+        ...meta,
+        image: { ...imageMeta, approval_status: approvalStatus },
+      },
+    })
+    .eq("id", articleId);
+
+  return true;
+}
+
+export async function replaceArticleHeroImage(
+  articleId: string,
+  heroUrl: string,
+  ogUrl?: string
+): Promise<boolean> {
+  const supabase = createAdminServerClient();
+  const { data: article } = await supabase
+    .from("generated_articles")
+    .select("editorial_metadata")
+    .eq("id", articleId)
+    .single();
+
+  const meta = (article?.editorial_metadata ?? {}) as Record<string, unknown>;
+  const imageMeta = (meta.image as Record<string, unknown> | undefined) ?? {};
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("generated_articles")
+    .update({
+      hero_image_url: heroUrl,
+      editorial_metadata: {
+        ...meta,
+        image: {
+          ...imageMeta,
+          hero_url: heroUrl,
+          og_url: ogUrl ?? heroUrl,
+          source: "manual_replace",
+          processed_at: now,
+          status: "completed",
+        },
+      },
+    })
+    .eq("id", articleId);
+
+  if (error) return false;
+
+  await supabase
+    .from("editorial_image_queue")
+    .update({
+      hero_image_url: heroUrl,
+      og_image_url: ogUrl ?? heroUrl,
+      image_source: "manual_replace",
+      status: "completed",
+      processed_at: now,
+    })
+    .eq("generated_article_id", articleId);
+
+  return true;
+}
+
+export { appendRetryLog };
