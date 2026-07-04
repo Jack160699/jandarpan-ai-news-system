@@ -1,0 +1,47 @@
+[
+  {
+    "path": "/admin/login",
+    "http": "307",
+    "hasDigest": false,
+    "hasLogin": false,
+    "hasAdminShell": false,
+    "hasError": false,
+    "bytes": 15
+  },
+  {
+    "path": "/admin",
+    "http": "200",
+    "hasDigest": false,
+    "hasLogin": false,
+    "hasAdminShell": true,
+    "hasError": false,
+    "bytes": 67713
+  },
+  {
+    "path": "/admin/editorial",
+    "http": "200",
+    "hasDigest": false,
+    "hasLogin": true,
+    "hasAdminShell": true,
+    "hasError": false,
+    "bytes": 86370
+  },
+  {
+    "path": "/admin/workflow",
+    "http": "200",
+    "hasDigest": false,
+    "hasLogin": true,
+    "hasAdminShell": true,
+    "hasError": false,
+    "bytes": 84990
+  },
+  {
+    "path": "/admin/intelligence",
+    "http": "200",
+    "hasDigest": false,
+    "hasLogin": true,
+    "hasAdminShell": true,
+    "hasError": false,
+    "bytes": 85159
+  }
+]

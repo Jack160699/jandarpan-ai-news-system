@@ -1,13 +1,8 @@
 /**
- * Premium AI editorial image pipeline — contextual visuals, quality gates, analytics
+ * Production AI editorial image pipeline — contextual prompts, quality gates, metrics
  *
- * Fallback hierarchy:
- * 1. AI-generated branded illustration (quality-scored, deduplicated)
- * 2. Visual-hash duplicate reuse
- * 3. Prompt-hash duplicate reuse
- * 4. Quality-scored source signal image
- * 5. Region + category curated Unsplash editorial art
- * 6. Branded CG Bhaskar placeholder
+ * Pipeline:
+ * Article → Context Builder → Prompt Builder → Provider → Quality → Retry → Storage → CDN
  */
 
 import { requestImageGeneration } from "@/lib/ai/providers";
@@ -16,11 +11,24 @@ import { getPublicSupabaseEnv } from "@/lib/supabase/env";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
 import { logEditorialImageAnalytics } from "@/lib/news/ai/editorial-image-analytics";
 import {
-  buildEditorialImagePrompt,
-  hashImagePrompt,
+  buildEditorialImageContext,
+  type EditorialImageContext,
+} from "@/lib/news/ai/editorial-image-context";
+import { logGenerationAttempt } from "@/lib/news/ai/editorial-image-history";
+import { incrementImageMetrics } from "@/lib/news/ai/editorial-image-metrics";
+import {
   moderateEditorialImageContext,
   moderateGeneratedPrompt,
 } from "@/lib/news/ai/editorial-image-moderation";
+import {
+  buildIntelligentEditorialPrompt,
+  buildRetryPromptVariant,
+  hashImagePrompt,
+} from "@/lib/news/ai/editorial-image-prompt-builder";
+import {
+  isImageProviderAvailable,
+  selectImageProvider,
+} from "@/lib/news/ai/editorial-image-provider";
 import {
   buildOpenGraphImageUrl,
   buildResponsiveSizes,
@@ -29,19 +37,21 @@ import {
   optimizeCdnImageUrl,
 } from "@/lib/news/ai/editorial-image-compress";
 import {
+  appendRetryLog,
   claimEditorialImageBatch,
   enqueueEditorialImage,
   findDuplicateImageByPromptHash,
   findDuplicateImageByVisualHash,
+  getQueueRowForArticle,
   markEditorialImageCompletedWithMeta,
   markEditorialImageFailed,
   type EditorialImageQueueRow,
 } from "@/lib/news/ai/editorial-image-queue";
-import { buildRepairPromptVariant } from "@/lib/news/ai/editorial-image-repair";
 import {
   isNearDuplicateVisual,
   scoreImageBuffer,
 } from "@/lib/news/ai/editorial-image-quality";
+import { getRetryConfig } from "@/lib/news/ai/editorial-image-retry";
 import { resolveContextualFallback } from "@/lib/news/images/editorial-visual-fallbacks";
 import { isDisplayableImage } from "@/lib/news/images/validate";
 import { logNewsroom } from "@/lib/newsroom/logger";
@@ -51,9 +61,6 @@ import type {
   NewsSignalRow,
 } from "@/lib/types/newsroom";
 
-const IMAGE_TIMEOUT_MS = 45_000;
-const MAX_AI_REPAIR_ATTEMPTS = 2;
-
 export type EditorialImageSource =
   | "ai_generated"
   | "source_extracted"
@@ -61,7 +68,8 @@ export type EditorialImageSource =
   | "region_curated"
   | "branded_placeholder"
   | "duplicate_reuse"
-  | "duplicate_visual_reuse";
+  | "duplicate_visual_reuse"
+  | "manual_replace";
 
 export type EditorialImageMetadata = {
   source: EditorialImageSource;
@@ -84,6 +92,11 @@ export type EditorialImageMetadata = {
   fallback_tier?: string;
   processed_at?: string;
   repair_attempts?: number;
+  theme?: string;
+  district?: string | null;
+  provider?: string;
+  model?: string;
+  approval_status?: string;
 };
 
 export type ResolveEditorialImageResult = {
@@ -123,10 +136,7 @@ function logImageGenerationPhase(
 }
 
 export function isEditorialImageGenerationEnabled(): boolean {
-  return (
-    process.env.NEWSROOM_EDITORIAL_IMAGES === "true" &&
-    Boolean(process.env.OPENAI_API_KEY?.trim())
-  );
+  return isImageProviderAvailable();
 }
 
 function getStorageBucket(): string {
@@ -172,7 +182,8 @@ async function uploadEditorialVariants(input: {
   promptHash: string;
   hero: Buffer;
   og: Buffer;
-}): Promise<{ heroUrl: string; ogUrl: string; heroPath: string } | null> {
+  mobile?: Buffer;
+}): Promise<{ heroUrl: string; ogUrl: string; mobileUrl?: string; heroPath: string } | null> {
   const supabase = createAdminServerClient();
   const bucket = getStorageBucket();
   const basePath = `${input.slug.slice(0, 80)}/${input.promptHash}`;
@@ -180,6 +191,7 @@ async function uploadEditorialVariants(input: {
 
   const heroPath = `${basePath}-hero.webp`;
   const ogPath = `${basePath}-og.webp`;
+  const mobilePath = `${basePath}-mobile.webp`;
 
   const heroUp = await supabase.storage.from(bucket).upload(heroPath, input.hero, {
     contentType: "image/webp",
@@ -202,17 +214,20 @@ async function uploadEditorialVariants(input: {
     upsert: true,
   });
 
-  if (ogUp.error) {
-    logEditorialImageAnalytics({
-      event: "storage_upload_fail",
-      error: ogUp.error.message,
-      metadata: { path: ogPath },
+  if (input.mobile) {
+    await supabase.storage.from(bucket).upload(mobilePath, input.mobile, {
+      contentType: "image/webp",
+      cacheControl,
+      upsert: true,
     });
   }
 
   const { url: supabaseUrl } = getPublicSupabaseEnv();
   const heroPub = supabase.storage.from(bucket).getPublicUrl(heroPath);
   const ogPub = supabase.storage.from(bucket).getPublicUrl(ogPath);
+  const mobilePub = input.mobile
+    ? supabase.storage.from(bucket).getPublicUrl(mobilePath)
+    : null;
 
   const heroUrl =
     heroPub.data.publicUrl ||
@@ -221,57 +236,103 @@ async function uploadEditorialVariants(input: {
     ? heroUrl
     : ogPub.data.publicUrl ||
       `${supabaseUrl}/storage/v1/object/public/${bucket}/${ogPath}`;
+  const mobileUrl = mobilePub?.data.publicUrl;
 
   logEditorialImageAnalytics({
     event: "storage_upload_ok",
-    metadata: { heroPath, ogPath },
+    metadata: { heroPath, ogPath, mobilePath: input.mobile ? mobilePath : null },
   });
 
-  return { heroUrl, ogUrl, heroPath };
+  return { heroUrl, ogUrl, mobileUrl, heroPath };
 }
 
-async function generateOpenAiIllustration(
-  prompt: string
-): Promise<Buffer | null> {
-  const promptCheck = moderateGeneratedPrompt(prompt);
-  if (!promptCheck.safe) {
-    logEditorialImageAnalytics({
-      event: "ai_generate_fail",
-      error: "prompt_moderation_blocked",
-      qualityFlags: promptCheck.flags,
-    });
-    return null;
-  }
+async function generateAiIllustration(input: {
+  prompt: string;
+  articleId?: string;
+  queueId?: string;
+  attemptNumber: number;
+}): Promise<{ buffer: Buffer | null; provider: string; model: string; latencyMs: number; error?: string }> {
+  const providerConfig = selectImageProvider();
+  const started = Date.now();
 
-  const model =
-    process.env.NEWSROOM_IMAGE_MODEL?.trim() ||
-    process.env.OPENAI_IMAGE_MODEL?.trim() ||
-    "dall-e-3";
+  const promptCheck = moderateGeneratedPrompt(input.prompt);
+  if (!promptCheck.safe) {
+    await logGenerationAttempt({
+      queueId: input.queueId,
+      generatedArticleId: input.articleId ?? "unknown",
+      attemptNumber: input.attemptNumber,
+      provider: providerConfig.id,
+      model: providerConfig.model,
+      prompt: input.prompt,
+      status: "failed",
+      error: "prompt_moderation_blocked",
+      metadata: { flags: promptCheck.flags },
+    });
+    return {
+      buffer: null,
+      provider: providerConfig.id,
+      model: providerConfig.model,
+      latencyMs: Date.now() - started,
+      error: "prompt_moderation_blocked",
+    };
+  }
 
   const extraBody: Record<string, unknown> = {};
-  if (model.includes("dall-e-3")) {
-    extraBody.quality = "standard";
-    extraBody.style = "vivid";
-  }
+  if (providerConfig.quality) extraBody.quality = providerConfig.quality;
+  if (providerConfig.style) extraBody.style = providerConfig.style;
+
+  await logGenerationAttempt({
+    queueId: input.queueId,
+    generatedArticleId: input.articleId ?? "unknown",
+    attemptNumber: input.attemptNumber,
+    provider: providerConfig.id,
+    model: providerConfig.model,
+    prompt: input.prompt,
+    promptHash: hashImagePrompt(input.prompt),
+    status: "started",
+  });
 
   const result = await requestImageGeneration({
     operation: "editorial_image",
-    prompt,
-    model,
-    timeoutMs: IMAGE_TIMEOUT_MS,
+    prompt: input.prompt,
+    model: providerConfig.model,
+    size: providerConfig.size,
+    timeoutMs: providerConfig.timeoutMs,
     extraBody,
   });
 
+  const latencyMs = Date.now() - started;
+
   if ("error" in result) {
+    await incrementImageMetrics({ providerError: true });
+    await logGenerationAttempt({
+      queueId: input.queueId,
+      generatedArticleId: input.articleId ?? "unknown",
+      attemptNumber: input.attemptNumber,
+      provider: providerConfig.id,
+      model: providerConfig.model,
+      prompt: input.prompt,
+      status: "failed",
+      latencyMs,
+      error: result.error.message,
+      metadata: { code: result.error.code },
+    });
     logEditorialImageAnalytics({
       event: "ai_generate_fail",
       error: result.error.message,
       metadata: { code: result.error.code },
     });
-    return null;
+    return {
+      buffer: null,
+      provider: providerConfig.id,
+      model: providerConfig.model,
+      latencyMs,
+      error: result.error.message,
+    };
   }
 
-  return downloadImageBuffer(result.url);
+  const buffer = await downloadImageBuffer(result.url);
+  return { buffer, provider: providerConfig.id, model: providerConfig.model, latencyMs };
 }
 
 function buildFallbackResult(input: {
@@ -280,6 +341,7 @@ function buildFallbackResult(input: {
   moderationFlags: string[];
   fallbackTier: string;
   qualityScore?: number;
+  context?: EditorialImageContext;
 }): ResolveEditorialImageResult {
   const og = buildOpenGraphImageUrl(input.url);
   logEditorialImageAnalytics({
@@ -303,6 +365,8 @@ function buildFallbackResult(input: {
       fallback_tier: input.fallbackTier,
       responsive_sizes: buildResponsiveSizes(),
       status: "completed",
+      theme: input.context?.theme,
+      district: input.context?.location.district,
       processed_at: new Date().toISOString(),
     },
   };
@@ -310,12 +374,16 @@ function buildFallbackResult(input: {
 
 async function trySourceImageWithQuality(
   sourceUrl: string,
-  moderationFlags: string[]
+  moderationFlags: string[],
+  context?: EditorialImageContext
 ): Promise<ResolveEditorialImageResult | null> {
   const buf = await downloadImageBuffer(sourceUrl);
   if (!buf) return null;
 
-  const quality = await scoreImageBuffer(buf, { minScore: 0.45 });
+  const quality = await scoreImageBuffer(buf, {
+    minScore: 0.48,
+    contextKeywords: context?.entities.keywords,
+  });
   if (!quality.passed) {
     logEditorialImageAnalytics({
       event: "quality_reject",
@@ -323,18 +391,9 @@ async function trySourceImageWithQuality(
       qualityScore: quality.score,
       qualityFlags: quality.flags,
     });
+    await incrementImageMetrics({ qualityRejection: true });
     return null;
   }
-
-  logEditorialImageAnalytics({
-    event: "quality_pass",
-    source: "source_extracted",
-    qualityScore: quality.score,
-    visualHash: quality.visualHash,
-    width: quality.width,
-    height: quality.height,
-    bytes: quality.bytes,
-  });
 
   return buildFallbackResult({
     url: sourceUrl,
@@ -342,11 +401,12 @@ async function trySourceImageWithQuality(
     moderationFlags,
     fallbackTier: "source_quality_pass",
     qualityScore: quality.score,
+    context,
   });
 }
 
 /**
- * Resolve hero image with full premium hierarchy.
+ * Resolve hero image with full production hierarchy.
  */
 export async function resolveEditorialHeroImage(input: {
   headline: string;
@@ -358,25 +418,61 @@ export async function resolveEditorialHeroImage(input: {
   signals?: NewsSignalRow[];
   skipAi?: boolean;
   articleId?: string;
+  queueId?: string;
+  article?: GeneratedArticleRow;
+  event?: NewsEventRow | null;
+  customPrompt?: string | null;
 }): Promise<ResolveEditorialImageResult> {
   const started = Date.now();
+  const retryConfig = getRetryConfig();
+
+  const imageContext = input.article
+    ? buildEditorialImageContext({
+        article: input.article,
+        event: input.event ?? null,
+        signals: input.signals,
+        customPrompt: input.customPrompt,
+      })
+    : buildEditorialImageContext({
+        article: {
+          id: input.articleId ?? "",
+          headline: input.headline,
+          summary: input.eventSummary,
+          article_body: null,
+          slug: input.slug,
+          tags: [input.category],
+        } as GeneratedArticleRow,
+        event: {
+          category: input.category,
+          region: input.region,
+          urgency_score: input.urgencyScore,
+          event_summary: input.eventSummary,
+        } as NewsEventRow,
+        signals: input.signals,
+        customPrompt: input.customPrompt,
+      });
+
   logEditorialImageAnalytics({
     event: "resolve_start",
     articleId: input.articleId,
     slug: input.slug,
     category: input.category,
     region: input.region,
+    metadata: {
+      theme: imageContext.theme,
+      district: imageContext.location.district,
+    },
   });
 
   const moderation = moderateEditorialImageContext({
     headline: input.headline,
-    eventSummary: input.eventSummary,
+    eventSummary: input.eventSummary ?? imageContext.summary,
     category: input.category,
   });
 
   const contextual = resolveContextualFallback({
     category: input.category,
-    region: input.region,
+    region: input.region ?? imageContext.location.state,
   });
   const sourceImageUrl = input.signals?.length
     ? pickSourceSignalImage(input.signals)
@@ -384,54 +480,42 @@ export async function resolveEditorialHeroImage(input: {
 
   if (!isEditorialImageGenerationEnabled() || input.skipAi || !moderation.allowed) {
     const sourceResult = sourceImageUrl
-      ? await trySourceImageWithQuality(sourceImageUrl, moderation.flags)
+      ? await trySourceImageWithQuality(sourceImageUrl, moderation.flags, imageContext)
       : null;
     if (sourceResult) {
-      logEditorialImageAnalytics({
-        event: "resolve_complete",
-        source: sourceResult.source,
+      await incrementImageMetrics({
+        completed: true,
+        fallbackUsed: true,
         latencyMs: Date.now() - started,
+        qualityScore: sourceResult.metadata.quality_score,
       });
       return sourceResult;
     }
     const result = buildFallbackResult({
       url: contextual.url,
       source:
-        contextual.tier === "region_curated"
-          ? "region_curated"
-          : "category_curated",
+        contextual.tier === "region_curated" ? "region_curated" : "category_curated",
       moderationFlags: moderation.flags,
       fallbackTier: contextual.fallbackKey,
+      context: imageContext,
     });
-    logEditorialImageAnalytics({
-      event: "resolve_complete",
-      source: result.source,
-      latencyMs: Date.now() - started,
-    });
+    await incrementImageMetrics({ completed: true, fallbackUsed: true, latencyMs: Date.now() - started });
     return result;
   }
 
-  const basePrompt = buildEditorialImagePrompt({
-    headline: input.headline,
-    category: input.category,
-    region: input.region,
-    urgencyScore: input.urgencyScore,
-    eventSummary: input.eventSummary,
+  const basePrompt = buildIntelligentEditorialPrompt({
+    context: imageContext,
     moderation,
   });
-
   const promptHash = hashImagePrompt(basePrompt);
 
   const promptDuplicate = await findDuplicateImageByPromptHash(promptHash);
   if (promptDuplicate) {
-    logEditorialImageAnalytics({
-      event: "duplicate_prompt_reuse",
-      promptHash,
-    });
     const og =
       promptDuplicate.og_image_url ??
       buildOpenGraphImageUrl(promptDuplicate.hero_image_url);
-    const result: ResolveEditorialImageResult = {
+    await incrementImageMetrics({ completed: true, latencyMs: Date.now() - started });
+    return {
       hero_image_url: promptDuplicate.hero_image_url,
       og_image_url: og,
       source: "duplicate_reuse",
@@ -442,162 +526,178 @@ export async function resolveEditorialHeroImage(input: {
         prompt_hash: promptHash,
         responsive_sizes: buildResponsiveSizes(),
         status: "completed",
+        theme: imageContext.theme,
+        district: imageContext.location.district,
         processed_at: new Date().toISOString(),
       },
     };
-    logEditorialImageAnalytics({
-      event: "resolve_complete",
-      source: "duplicate_reuse",
-      latencyMs: Date.now() - started,
-    });
-    return result;
   }
 
-  for (let attempt = 0; attempt <= MAX_AI_REPAIR_ATTEMPTS; attempt++) {
+  let lastQualityFlags: string[] = [];
+
+  for (let attempt = 0; attempt <= retryConfig.maxRepairAttempts; attempt++) {
     const prompt =
       attempt === 0
         ? basePrompt
-        : buildRepairPromptVariant({
+        : buildRetryPromptVariant({
             basePrompt,
             attempt,
-            category: input.category,
-            region: input.region,
-            moderation,
+            context: imageContext,
+            qualityFlags: lastQualityFlags,
           });
 
     if (attempt > 0) {
       logEditorialImageAnalytics({
         event: "repair_attempt",
         articleId: input.articleId,
-        metadata: { attempt },
+        metadata: { attempt, flags: lastQualityFlags },
       });
+      await incrementImageMetrics({ retried: true });
     }
 
-    logEditorialImageAnalytics({ event: "ai_generate_start", promptHash });
+    const gen = await generateAiIllustration({
+      prompt,
+      articleId: input.articleId,
+      queueId: input.queueId,
+      attemptNumber: attempt + 1,
+    });
 
-    try {
-      const rawBuffer = await generateOpenAiIllustration(prompt);
-      if (!rawBuffer) throw new Error("ai_generation_empty");
+    if (!gen.buffer) continue;
 
-      const quality = await scoreImageBuffer(rawBuffer);
-      if (!quality.passed) {
-        logEditorialImageAnalytics({
-          event: "quality_reject",
-          qualityScore: quality.score,
-          qualityFlags: quality.flags,
-          metadata: { attempt },
-        });
-        continue;
-      }
+    const quality = await scoreImageBuffer(gen.buffer, {
+      contextKeywords: imageContext.entities.keywords,
+      promptText: prompt,
+    });
+    lastQualityFlags = quality.flags;
 
-      const visualDup = await findDuplicateImageByVisualHash(
-        quality.visualHash,
-        isNearDuplicateVisual
-      );
-      if (visualDup) {
-        logEditorialImageAnalytics({
-          event: "duplicate_visual_reuse",
-          visualHash: quality.visualHash,
-          metadata: { matched: visualDup.matchedHash },
-        });
-        const og =
-          visualDup.og_image_url ??
-          buildOpenGraphImageUrl(visualDup.hero_image_url);
-        return {
-          hero_image_url: visualDup.hero_image_url,
-          og_image_url: og,
-          source: "duplicate_visual_reuse",
-          metadata: {
-            source: "duplicate_visual_reuse",
-            hero_url: visualDup.hero_image_url,
-            og_url: og,
-            visual_hash: quality.visualHash,
-            quality_score: quality.score,
-            responsive_sizes: buildResponsiveSizes(),
-            status: "completed",
-            processed_at: new Date().toISOString(),
-          },
-        };
-      }
-
-      logEditorialImageAnalytics({
-        event: "quality_pass",
-        qualityScore: quality.score,
-        visualHash: quality.visualHash,
-        width: quality.width,
-        height: quality.height,
-      });
-
-      const compressed = await compressEditorialImage(rawBuffer);
-      const uploaded = await uploadEditorialVariants({
-        slug: input.slug,
+    if (!quality.passed) {
+      await logGenerationAttempt({
+        queueId: input.queueId,
+        generatedArticleId: input.articleId ?? "unknown",
+        attemptNumber: attempt + 1,
+        provider: gen.provider,
+        model: gen.model,
+        prompt,
         promptHash,
-        hero: compressed.hero,
-        og: compressed.og,
+        status: "rejected",
+        qualityScore: quality.score,
+        qualityFlags: quality.flags,
+        visualHash: quality.visualHash,
+        latencyMs: gen.latencyMs,
       });
-
-      if (uploaded) {
-        logEditorialImageAnalytics({
-          event: "ai_generate_ok",
-          source: "ai_generated",
-          qualityScore: quality.score,
-          latencyMs: Date.now() - started,
-        });
-
-        const result: ResolveEditorialImageResult = {
-          hero_image_url: uploaded.heroUrl,
-          og_image_url: uploaded.ogUrl,
-          source: "ai_generated",
-          metadata: {
-            source: "ai_generated",
-            hero_url: uploaded.heroUrl,
-            og_url: uploaded.ogUrl,
-            prompt_hash: promptHash,
-            visual_hash: quality.visualHash,
-            prompt: prompt.slice(0, 500),
-            moderation_flags: moderation.flags,
-            quality_score: quality.score,
-            quality_flags: quality.flags,
-            compressed: true,
-            storage_path: uploaded.heroPath,
-            width: compressed.heroWidth,
-            height: compressed.heroHeight,
-            mobile_width: compressed.mobileWidth,
-            mobile_height: compressed.mobileHeight,
-            responsive_sizes: buildResponsiveSizes(),
-            status: attempt > 0 ? "repaired" : "completed",
-            repair_attempts: attempt,
-            processed_at: new Date().toISOString(),
-          },
-        };
-
-        logEditorialImageAnalytics({
-          event: "resolve_complete",
-          source: "ai_generated",
-          qualityScore: quality.score,
-          latencyMs: Date.now() - started,
-        });
-        return result;
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "ai_image_failed";
       logEditorialImageAnalytics({
-        event: "ai_generate_fail",
-        error: msg,
+        event: "quality_reject",
+        qualityScore: quality.score,
+        qualityFlags: quality.flags,
         metadata: { attempt },
       });
+      await incrementImageMetrics({ qualityRejection: true });
+      continue;
+    }
+
+    const visualDup = await findDuplicateImageByVisualHash(
+      quality.visualHash,
+      isNearDuplicateVisual
+    );
+    if (visualDup) {
+      const og =
+        visualDup.og_image_url ?? buildOpenGraphImageUrl(visualDup.hero_image_url);
+      await incrementImageMetrics({ completed: true, latencyMs: Date.now() - started });
+      return {
+        hero_image_url: visualDup.hero_image_url,
+        og_image_url: og,
+        source: "duplicate_visual_reuse",
+        metadata: {
+          source: "duplicate_visual_reuse",
+          hero_url: visualDup.hero_image_url,
+          og_url: og,
+          visual_hash: quality.visualHash,
+          quality_score: quality.score,
+          responsive_sizes: buildResponsiveSizes(),
+          status: "completed",
+          theme: imageContext.theme,
+          processed_at: new Date().toISOString(),
+        },
+      };
+    }
+
+    const compressed = await compressEditorialImage(gen.buffer);
+    const uploaded = await uploadEditorialVariants({
+      slug: input.slug,
+      promptHash,
+      hero: compressed.hero,
+      og: compressed.og,
+      mobile: compressed.mobile,
+    });
+
+    if (uploaded) {
+      await logGenerationAttempt({
+        queueId: input.queueId,
+        generatedArticleId: input.articleId ?? "unknown",
+        attemptNumber: attempt + 1,
+        provider: gen.provider,
+        model: gen.model,
+        prompt,
+        promptHash,
+        status: "completed",
+        qualityScore: quality.score,
+        qualityFlags: quality.flags,
+        heroImageUrl: uploaded.heroUrl,
+        ogImageUrl: uploaded.ogUrl,
+        visualHash: quality.visualHash,
+        latencyMs: gen.latencyMs,
+      });
+
+      await incrementImageMetrics({
+        completed: true,
+        aiGenerated: true,
+        latencyMs: Date.now() - started,
+        qualityScore: quality.score,
+      });
+
+      return {
+        hero_image_url: uploaded.heroUrl,
+        og_image_url: uploaded.ogUrl,
+        source: "ai_generated",
+        metadata: {
+          source: "ai_generated",
+          hero_url: uploaded.heroUrl,
+          og_url: uploaded.ogUrl,
+          prompt_hash: promptHash,
+          visual_hash: quality.visualHash,
+          prompt: prompt.slice(0, 500),
+          moderation_flags: moderation.flags,
+          quality_score: quality.score,
+          quality_flags: quality.flags,
+          compressed: true,
+          storage_path: uploaded.heroPath,
+          width: compressed.heroWidth,
+          height: compressed.heroHeight,
+          mobile_width: compressed.mobileWidth,
+          mobile_height: compressed.mobileHeight,
+          responsive_sizes: buildResponsiveSizes(),
+          status: attempt > 0 ? "repaired" : "completed",
+          repair_attempts: attempt,
+          theme: imageContext.theme,
+          district: imageContext.location.district,
+          provider: gen.provider,
+          model: gen.model,
+          processed_at: new Date().toISOString(),
+        },
+      };
     }
   }
 
   if (sourceImageUrl) {
     const sourceResult = await trySourceImageWithQuality(
       sourceImageUrl,
-      moderation.flags
+      moderation.flags,
+      imageContext
     );
     if (sourceResult) {
-      logEditorialImageAnalytics({
-        event: "resolve_complete",
-        source: "source_extracted",
+      await incrementImageMetrics({
+        completed: true,
+        fallbackUsed: true,
         latencyMs: Date.now() - started,
       });
       return sourceResult;
@@ -607,16 +707,14 @@ export async function resolveEditorialHeroImage(input: {
   const result = buildFallbackResult({
     url: contextual.url,
     source:
-      contextual.tier === "region_curated"
-        ? "region_curated"
-        : "category_curated",
+      contextual.tier === "region_curated" ? "region_curated" : "category_curated",
     moderationFlags: moderation.flags,
     fallbackTier: contextual.fallbackKey,
+    context: imageContext,
   });
-
-  logEditorialImageAnalytics({
-    event: "resolve_complete",
-    source: result.source,
+  await incrementImageMetrics({
+    completed: true,
+    fallbackUsed: true,
     latencyMs: Date.now() - started,
   });
   return result;
@@ -626,16 +724,17 @@ async function loadArticleContext(articleId: string): Promise<{
   article: GeneratedArticleRow;
   event: NewsEventRow | null;
   signals: NewsSignalRow[];
+  queueRow: EditorialImageQueueRow | null;
 } | null> {
   const supabase = createAdminServerClient();
 
-  const { data: article, error } = await supabase
-    .from("generated_articles")
-    .select("*")
-    .eq("id", articleId)
-    .single();
+  const [articleRes, queueRow] = await Promise.all([
+    supabase.from("generated_articles").select("*").eq("id", articleId).single(),
+    getQueueRowForArticle(articleId),
+  ]);
 
-  if (error || !article) return null;
+  const article = articleRes.data;
+  if (articleRes.error || !article) return null;
 
   let event: NewsEventRow | null = null;
   let signals: NewsSignalRow[] = [];
@@ -661,18 +760,20 @@ async function loadArticleContext(articleId: string): Promise<{
     article: article as unknown as GeneratedArticleRow,
     event: event as unknown as NewsEventRow | null,
     signals: signals as unknown as NewsSignalRow[],
+    queueRow,
   };
 }
 
 async function processQueueItem(
   row: EditorialImageQueueRow
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; usedFallback?: boolean }> {
   logImageGenerationPhase("image_generation_started", {
     queueId: row.id,
     generatedArticleId: row.generated_article_id,
     attempts: row.attempts,
     maxAttempts: row.max_attempts,
   });
+
   const ctx = await loadArticleContext(row.generated_article_id);
   if (!ctx) {
     logImageGenerationPhase("image_generation_failed", {
@@ -680,11 +781,12 @@ async function processQueueItem(
       generatedArticleId: row.generated_article_id,
       reason: "article_not_found",
     });
+    await incrementImageMetrics({ failed: true });
     return { ok: false, error: "article_not_found" };
   }
 
-  const { article, event, signals } = ctx;
-  const category = event?.category ?? article.tags[0] ?? "world";
+  const { article, event, signals, queueRow } = ctx;
+  const category = event?.category ?? article.tags[0] ?? "local";
 
   try {
     const resolved = await resolveEditorialHeroImage({
@@ -697,7 +799,44 @@ async function processQueueItem(
       signals,
       skipAi: !isEditorialImageGenerationEnabled(),
       articleId: article.id,
+      queueId: row.id,
+      article,
+      event,
+      customPrompt: queueRow?.custom_prompt ?? row.custom_prompt,
     });
+
+    const aiFailed =
+      isEditorialImageGenerationEnabled() &&
+      !["ai_generated", "duplicate_reuse", "duplicate_visual_reuse"].includes(
+        resolved.source
+      );
+
+    if (aiFailed && row.attempts + 1 < row.max_attempts) {
+      const history = appendRetryLog(row.generation_history, {
+        attempt: row.attempts + 1,
+        reason: "ai_fallback_used",
+        promptHash: resolved.metadata.prompt_hash ?? undefined,
+      });
+
+      await markEditorialImageFailed({
+        queueId: row.id,
+        generatedArticleId: article.id,
+        attempts: row.attempts,
+        maxAttempts: row.max_attempts,
+        error: "ai_generation_exhausted_fallback",
+        retry: true,
+        generationHistory: history,
+      });
+
+      await incrementImageMetrics({ retried: true });
+      logImageGenerationPhase("image_generation_failed", {
+        queueId: row.id,
+        generatedArticleId: article.id,
+        reason: "ai_fallback_retry_scheduled",
+        retry: true,
+      });
+      return { ok: false, error: "ai_fallback_retry_scheduled", usedFallback: true };
+    }
 
     await markEditorialImageCompletedWithMeta({
       queueId: row.id,
@@ -709,18 +848,13 @@ async function processQueueItem(
       imageMeta: resolved.metadata,
     });
 
-    logEditorialImageAnalytics({
-      event: "queue_item_complete",
-      articleId: article.id,
-      source: resolved.source,
-      qualityScore: resolved.metadata.quality_score,
-    });
-
     logImageGenerationPhase("image_generation_completed", {
       queueId: row.id,
       generatedArticleId: article.id,
       source: resolved.source,
       qualityScore: resolved.metadata.quality_score ?? null,
+      theme: resolved.metadata.theme,
+      district: resolved.metadata.district,
     });
 
     return { ok: true };
@@ -733,6 +867,10 @@ async function processQueueItem(
     const sourceImage = signals.length ? pickSourceSignalImage(signals) : null;
     const fallback = sourceImage ?? contextual.url;
     const retry = row.attempts + 1 < row.max_attempts;
+    const history = appendRetryLog(row.generation_history, {
+      attempt: row.attempts + 1,
+      reason: msg,
+    });
 
     await markEditorialImageFailed({
       queueId: row.id,
@@ -748,14 +886,15 @@ async function processQueueItem(
         : sourceImage
           ? "source_extracted"
           : "category_curated",
+      generationHistory: history,
     });
 
+    await incrementImageMetrics({ failed: !retry, retried: retry });
     logImageGenerationPhase("image_generation_failed", {
       queueId: row.id,
       generatedArticleId: article.id,
       reason: msg,
       retry,
-      nextAttempt: row.attempts + 1,
     });
 
     return { ok: false, error: msg };
@@ -820,4 +959,11 @@ export function initialHeroPlaceholder(
 export {
   enqueueEditorialImage,
   countPendingEditorialImages,
+  countProcessingEditorialImages,
 } from "@/lib/news/ai/editorial-image-queue";
+export { getImageMetricsSnapshot, getImageMetricsHistory } from "@/lib/news/ai/editorial-image-metrics";
+export { getProviderRecommendation } from "@/lib/news/ai/editorial-image-provider";
+export {
+  fetchGenerationHistory,
+  fetchRecentGenerationsForCompare,
+} from "@/lib/news/ai/editorial-image-history";

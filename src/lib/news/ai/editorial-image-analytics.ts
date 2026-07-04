@@ -18,7 +18,10 @@ export type EditorialImageAnalyticsEvent =
   | "queue_item_complete"
   | "queue_batch_complete"
   | "storage_upload_ok"
-  | "storage_upload_fail";
+  | "storage_upload_fail"
+  | "metrics_recorded"
+  | "queue_retry_scheduled"
+  | "approval_updated";
 
 export type EditorialImageAnalyticsPayload = {
   event: EditorialImageAnalyticsEvent;
