@@ -18,6 +18,19 @@ import { clusterRecentSignals } from "@/lib/newsroom";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
+import {
+  isNewsroomLanguage,
+  normalizeArticleLanguage,
+} from "@/lib/i18n/languages";
+import {
+  auditTranslationCoverage,
+  enqueueMissingTranslationJobs,
+  getStoredTranslation,
+  isTranslatableArticle,
+  scheduleTranslationBatchJob,
+} from "@/lib/i18n/multilingual/translation-queue";
+import { translateGeneratedArticle } from "@/lib/i18n/multilingual/translate";
+import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 async function loadSignalsForEmbed(
   tenantId: string | null,
@@ -194,8 +207,113 @@ const seoAnalysis: JobHandler = async (job) => {
 };
 
 const translationBatch: JobHandler = async (job) => {
-  await enqueueSnapshotRefresh(job.tenant_id);
-  return { ok: true, result: { delegated: "intelligence_snapshot" } };
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    return { ok: true, result: { skipped: true, reason: "no_openai" } };
+  }
+
+  const limit = Number(job.payload.limit ?? process.env.TRANSLATION_ENQUEUE_BATCH ?? 40);
+  const before = await auditTranslationCoverage();
+  const { enqueued, scanned } = await enqueueMissingTranslationJobs({ limit });
+
+  const after = await auditTranslationCoverage();
+  const remaining = after.hiMissingEn + after.enMissingHi;
+
+  if (remaining > 0 && enqueued === 0 && scanned > 0) {
+    await scheduleTranslationBatchJob(job.tenant_id);
+  } else if (remaining > enqueued) {
+    await scheduleTranslationBatchJob(job.tenant_id);
+  }
+
+  return {
+    ok: true,
+    result: {
+      enqueued,
+      scanned,
+      before,
+      after,
+      remaining,
+    },
+  };
+};
+
+const translateArticle: JobHandler = async (job) => {
+  if (!process.env.OPENAI_API_KEY?.trim()) {
+    return { ok: true, result: { skipped: true, reason: "no_openai" } };
+  }
+
+  const articleId = String(job.payload.articleId ?? "").trim();
+  const targetRaw = String(job.payload.targetLanguage ?? "en").trim().toLowerCase();
+
+  if (!articleId) {
+    return { ok: false, error: "articleId_required", retryable: false };
+  }
+
+  if (!isNewsroomLanguage(targetRaw)) {
+    return { ok: false, error: "invalid_target_language", retryable: false };
+  }
+
+  const targetLanguage = normalizeArticleLanguage(targetRaw);
+  const supabase = createAdminServerClient();
+
+  const { data: row, error } = await supabase
+    .from("generated_articles")
+    .select(
+      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, tenant_id, published_at, editorial_status"
+    )
+    .eq("id", articleId)
+    .maybeSingle();
+
+  if (error || !row) {
+    return { ok: false, error: "article_not_found", retryable: false };
+  }
+
+  if (!row.published_at || row.editorial_status !== "approved") {
+    return {
+      ok: true,
+      result: { skipped: true, reason: "not_published" },
+    };
+  }
+
+  const article = row as unknown as GeneratedArticleRow;
+
+  if (!isTranslatableArticle(article)) {
+    return {
+      ok: true,
+      result: { skipped: true, reason: "not_translatable" },
+    };
+  }
+
+  const source = normalizeArticleLanguage(article.language);
+
+  if (source === targetLanguage) {
+    return { ok: true, result: { skipped: true, reason: "same_language" } };
+  }
+
+  if (getStoredTranslation(article, targetLanguage)) {
+    return { ok: true, result: { skipped: true, reason: "already_translated" } };
+  }
+
+  const started = Date.now();
+  const results = await translateGeneratedArticle(article, [targetLanguage]);
+  const result = results.find((r) => r.language === targetLanguage);
+
+  if (!result?.ok) {
+    return {
+      ok: false,
+      error: result?.error ?? "translation_failed",
+      retryable: true,
+    };
+  }
+
+  return {
+    ok: true,
+    result: {
+      articleId,
+      slug: article.slug,
+      targetLanguage,
+      durationMs: Date.now() - started,
+    },
+  };
 };
 
 const damAnalyze: JobHandler = async (job) => {
@@ -320,6 +438,7 @@ const editorialGenerate: JobHandler = async (job) => {
       "@/lib/infrastructure/cache/isr"
     );
     await revalidateNewsroomCaches({ publishedStories: result.published });
+    await scheduleTranslationBatchJob(job.tenant_id);
   }
 
   return {
@@ -354,6 +473,7 @@ export const JOB_HANDLERS = new Map<JobType, JobHandler>([
   ["intelligence_summary", intelligenceSummary],
   ["seo_analysis", seoAnalysis],
   ["translation_batch", translationBatch],
+  ["translate_article", translateArticle],
   ["dam_analyze", damAnalyze],
   ["analytics_aggregate", analyticsAggregate],
   ["event_cluster", eventCluster],

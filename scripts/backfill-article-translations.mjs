@@ -5,6 +5,7 @@
  * Usage:
  *   node scripts/backfill-article-translations.mjs
  *   node scripts/backfill-article-translations.mjs --limit=20 --dry-run
+ *   node scripts/backfill-article-translations.mjs --resume-from=2025-01-01T00:00:00.000Z
  *
  * Requires OPENAI_API_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY in .env.local
  */
@@ -41,6 +42,8 @@ const args = Object.fromEntries(
 const limit = Number(args.limit ?? 60);
 const dryRun = args["dry-run"] === "true";
 const targetLang = args.lang ?? "en";
+const resumeFrom = args["resume-from"] ?? null;
+const stateFile = path.join(ROOT, ".translation-backfill-state.json");
 
 const env = loadEnv();
 if (!env.OPENAI_API_KEY?.trim()) {
@@ -58,6 +61,23 @@ const MODEL =
   env.NEWSROOM_TRANSLATION_MODEL?.trim() ||
   env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
   "gpt-4o-mini";
+
+const REQUIRED = ["headline", "summary", "article_body", "seo_title", "seo_description"];
+
+function bundleComplete(bundle) {
+  if (!bundle?.headline?.trim() || !bundle?.summary?.trim()) return false;
+  return REQUIRED.every((field) => typeof bundle[field] === "string" && bundle[field].trim());
+}
+
+function hasTranslation(row, lang) {
+  return bundleComplete(row.editorial_metadata?.translations?.[lang]);
+}
+
+function isTranslatable(row) {
+  const headline = row.headline?.trim() ?? "";
+  if (!headline || /^untitled story$/i.test(headline)) return false;
+  return Boolean(row.summary?.trim() || row.article_body?.trim());
+}
 
 async function translateBundle(row) {
   const body = {
@@ -79,7 +99,8 @@ async function translateBundle(row) {
           article_body: (row.article_body ?? "").slice(0, 12000),
           seo_title: row.seo_title ?? row.headline,
           seo_description: row.seo_description ?? row.summary ?? "",
-        })}`,
+          tags: row.tags ?? [],
+        })}\n\nReturn JSON with headline, summary, article_body, seo_title, seo_description, tags.`,
       },
     ],
   };
@@ -114,47 +135,100 @@ async function translateBundle(row) {
       0,
       165
     ),
+    tags: Array.isArray(parsed.tags)
+      ? parsed.tags.map((t) => String(t).trim()).filter(Boolean)
+      : row.tags ?? [],
     reading_time: row.reading_time ?? "3 min",
     translated_at: new Date().toISOString(),
     model: MODEL,
   };
 }
 
-function hasTranslation(row, lang) {
-  const bundle = row.editorial_metadata?.translations?.[lang];
-  return Boolean(bundle?.headline?.trim() && bundle?.summary?.trim());
+async function audit() {
+  const { data: rows } = await supabase
+    .from("generated_articles")
+    .select("id, language, editorial_metadata, published_at")
+    .not("published_at", "is", null)
+    .eq("editorial_status", "approved");
+
+  let hiSource = 0;
+  let hiMissingEn = 0;
+  for (const row of rows ?? []) {
+    if ((row.language ?? "hi").toLowerCase() !== "hi") continue;
+    hiSource += 1;
+    if (!hasTranslation(row, targetLang)) hiMissingEn += 1;
+  }
+
+  return {
+    hiSource,
+    hiMissingEn,
+    hiEnCoveragePct:
+      hiSource > 0
+        ? Math.round(((hiSource - hiMissingEn) / hiSource) * 1000) / 10
+        : 100,
+  };
+}
+
+function readState() {
+  if (!fs.existsSync(stateFile)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(stateFile, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writeState(state) {
+  fs.writeFileSync(stateFile, JSON.stringify(state, null, 2));
 }
 
 async function main() {
-  const { data: rows, error } = await supabase
+  const before = await audit();
+  console.log("Coverage before:", before);
+
+  let query = supabase
     .from("generated_articles")
     .select(
-      "id,slug,headline,summary,article_body,seo_title,seo_description,reading_time,language,editorial_metadata,published_at"
+      "id,slug,headline,summary,article_body,seo_title,seo_description,reading_time,language,tags,editorial_metadata,published_at"
     )
     .not("published_at", "is", null)
-    .in("editorial_status", ["approved", "published", "live"])
+    .eq("editorial_status", "approved")
+    .eq("language", "hi")
     .order("published_at", { ascending: false })
-    .limit(200);
+    .limit(Math.max(limit * 4, 200));
 
+  if (resumeFrom) {
+    query = query.lt("published_at", resumeFrom);
+  }
+
+  const { data: rows, error } = await query;
   if (error) {
     console.error(error.message);
     process.exit(1);
   }
 
-  const candidates = (rows ?? []).filter((row) => {
-    const source = (row.language ?? "hi").toLowerCase();
-    return source !== targetLang && !hasTranslation(row, targetLang);
-  });
-
+  const candidates = (rows ?? []).filter(
+    (row) => isTranslatable(row) && !hasTranslation(row, targetLang)
+  );
   console.log(
-    `Found ${candidates.length} articles missing ${targetLang} translation (processing up to ${limit})`
+    `Found ${candidates.length} Hindi articles missing ${targetLang} (processing up to ${limit})`
   );
 
   let ok = 0;
   let fail = 0;
+  let skipped = 0;
+  let lastPublishedAt = resumeFrom ?? null;
 
   for (const row of candidates.slice(0, limit)) {
+    lastPublishedAt = row.published_at;
     process.stdout.write(`${row.slug} … `);
+
+    if (hasTranslation(row, targetLang)) {
+      skipped += 1;
+      console.log("skip (already translated)");
+      continue;
+    }
+
     if (dryRun) {
       console.log("dry-run skip");
       continue;
@@ -167,6 +241,7 @@ async function main() {
       const { error: upErr } = await supabase
         .from("generated_articles")
         .update({
+          translations,
           editorial_metadata: {
             ...meta,
             translations,
@@ -178,6 +253,11 @@ async function main() {
       if (upErr) throw upErr;
       ok += 1;
       console.log("ok");
+      writeState({
+        lastPublishedAt: row.published_at,
+        lastSlug: row.slug,
+        updatedAt: new Date().toISOString(),
+      });
       await new Promise((r) => setTimeout(r, 500));
     } catch (err) {
       fail += 1;
@@ -185,7 +265,11 @@ async function main() {
     }
   }
 
-  console.log(`Done. ok=${ok} fail=${fail} dryRun=${dryRun}`);
+  const after = await audit();
+  console.log("Coverage after:", after);
+  console.log(
+    `Done. ok=${ok} fail=${fail} skipped=${skipped} dryRun=${dryRun} resumeCursor=${lastPublishedAt ?? "none"}`
+  );
 }
 
 main();

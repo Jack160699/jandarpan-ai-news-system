@@ -1,0 +1,385 @@
+/**
+ * Translation backlog queue — audit, enqueue, and worker integration
+ */
+
+import {
+  normalizeArticleLanguage,
+  type NewsroomLanguage,
+} from "@/lib/i18n/languages";
+import { enqueueJob, enqueueJobs, countPendingJobs } from "@/lib/infrastructure/jobs/queue";
+import { createAdminServerClient } from "@/lib/supabase";
+import type { ArticleLocaleBundle } from "@/lib/i18n/multilingual/types";
+import { getArticleTranslations } from "@/lib/i18n/resolve-article";
+import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+
+export const READER_TRANSLATION_PAIRS: Array<{
+  source: NewsroomLanguage;
+  target: NewsroomLanguage;
+}> = [
+  { source: "hi", target: "en" },
+  { source: "en", target: "hi" },
+];
+
+const TRANSLATION_JOB_BATCH =
+  Number(process.env.TRANSLATION_ENQUEUE_BATCH) || 40;
+
+const REQUIRED_BUNDLE_FIELDS: Array<keyof ArticleLocaleBundle> = [
+  "headline",
+  "summary",
+  "article_body",
+  "seo_title",
+  "seo_description",
+];
+
+export type TranslationCoverageAudit = {
+  publishedTotal: number;
+  hiSource: number;
+  enSource: number;
+  hiMissingEn: number;
+  enMissingHi: number;
+  hiEnCoveragePct: number;
+  enHiCoveragePct: number;
+  incompleteBundles: number;
+  queuePending: number;
+  queueTranslatePending: number;
+  queueBatchPending: number;
+  queueDead: number;
+  queueFailed: number;
+  deadLetters: number;
+};
+
+export function isTranslationBundleComplete(
+  bundle: Partial<ArticleLocaleBundle> | null | undefined
+): boolean {
+  if (!bundle?.headline?.trim() || !bundle.summary?.trim()) return false;
+
+  for (const field of REQUIRED_BUNDLE_FIELDS) {
+    const value = bundle[field];
+    if (typeof value !== "string" || !value.trim()) return false;
+  }
+
+  return true;
+}
+
+export function isTranslatableArticle(
+  row: Pick<GeneratedArticleRow, "headline" | "summary" | "article_body">
+): boolean {
+  const headline = row.headline?.trim() ?? "";
+  if (!headline || /^untitled story$/i.test(headline)) return false;
+  return Boolean(row.summary?.trim() || row.article_body?.trim());
+}
+
+export function hasReaderTranslation(
+  row: Pick<GeneratedArticleRow, "editorial_metadata">,
+  target: NewsroomLanguage
+): boolean {
+  const bundle = getArticleTranslations(row.editorial_metadata)[target];
+  return Boolean(bundle?.headline?.trim() && bundle?.summary?.trim());
+}
+
+export function getStoredTranslation(
+  row: Pick<GeneratedArticleRow, "editorial_metadata">,
+  target: NewsroomLanguage
+): ArticleLocaleBundle | null {
+  const bundle = getArticleTranslations(row.editorial_metadata)[target];
+  return bundle && isTranslationBundleComplete(bundle) ? bundle : null;
+}
+
+export function articleNeedsTranslation(
+  row: Pick<
+    GeneratedArticleRow,
+    "language" | "editorial_metadata" | "headline" | "summary" | "article_body"
+  >,
+  target: NewsroomLanguage
+): boolean {
+  const source = normalizeArticleLanguage(row.language);
+  if (source === target) return false;
+  if (!isTranslatableArticle(row)) return false;
+  if (hasReaderTranslation(row, target) && getStoredTranslation(row, target)) {
+    return false;
+  }
+  const bundle = getArticleTranslations(row.editorial_metadata)[target];
+  return !hasReaderTranslation(row, target) || !isTranslationBundleComplete(bundle);
+}
+
+export async function auditTranslationCoverage(): Promise<TranslationCoverageAudit> {
+  const supabase = createAdminServerClient();
+
+  const { data: articles, error } = await supabase
+    .from("generated_articles")
+    .select("id, language, editorial_metadata, published_at, editorial_status")
+    .not("published_at", "is", null)
+    .eq("editorial_status", "approved");
+
+  if (error) {
+    throw new Error(`audit_failed:${error.message}`);
+  }
+
+  let publishedTotal = 0;
+  let hiSource = 0;
+  let enSource = 0;
+  let hiMissingEn = 0;
+  let enMissingHi = 0;
+  let hiWithEn = 0;
+  let enWithHi = 0;
+  let incompleteBundles = 0;
+
+  for (const row of articles ?? []) {
+    publishedTotal += 1;
+    const typed = row as Pick<
+      GeneratedArticleRow,
+      "language" | "editorial_metadata"
+    >;
+    const source = normalizeArticleLanguage(typed.language);
+    if (source === "hi") hiSource += 1;
+    if (source === "en") enSource += 1;
+
+    const translations = getArticleTranslations(typed.editorial_metadata);
+    const enBundle = translations.en;
+    const hiBundle = translations.hi;
+
+    if (source === "hi") {
+      if (hasReaderTranslation(typed, "en")) hiWithEn += 1;
+      else hiMissingEn += 1;
+    }
+
+    if (source === "en") {
+      if (hasReaderTranslation(typed, "hi")) enWithHi += 1;
+      else enMissingHi += 1;
+    }
+
+    if (
+      (enBundle?.headline?.trim() && !isTranslationBundleComplete(enBundle)) ||
+      (hiBundle?.headline?.trim() && !isTranslationBundleComplete(hiBundle))
+    ) {
+      incompleteBundles += 1;
+    }
+  }
+
+  const { count: queueTranslatePending } = await supabase
+    .from("worker_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("job_type", "translate_article")
+    .eq("status", "pending");
+
+  const { count: queueBatchPending } = await supabase
+    .from("worker_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("job_type", "translation_batch")
+    .eq("status", "pending");
+
+  const { count: queueDead } = await supabase
+    .from("worker_jobs")
+    .select("id", { count: "exact", head: true })
+    .in("job_type", ["translate_article", "translation_batch"])
+    .eq("status", "dead");
+
+  const { count: queueFailed } = await supabase
+    .from("worker_jobs")
+    .select("id", { count: "exact", head: true })
+    .in("job_type", ["translate_article", "translation_batch"])
+    .in("status", ["failed", "claimed"]);
+
+  const { count: deadLetters } = await supabase
+    .from("worker_dead_letters")
+    .select("id", { count: "exact", head: true })
+    .in("job_type", ["translate_article", "translation_batch"]);
+
+  const queuePending =
+    (await countPendingJobs("translate_article")) +
+    (await countPendingJobs("translation_batch"));
+
+  return {
+    publishedTotal,
+    hiSource,
+    enSource,
+    hiMissingEn,
+    enMissingHi,
+    hiEnCoveragePct:
+      hiSource > 0 ? Math.round((hiWithEn / hiSource) * 1000) / 10 : 100,
+    enHiCoveragePct:
+      enSource > 0 ? Math.round((enWithHi / enSource) * 1000) / 10 : 100,
+    incompleteBundles,
+    queuePending,
+    queueTranslatePending: queueTranslatePending ?? 0,
+    queueBatchPending: queueBatchPending ?? 0,
+    queueDead: queueDead ?? 0,
+    queueFailed: queueFailed ?? 0,
+    deadLetters: deadLetters ?? 0,
+  };
+}
+
+export async function findArticlesMissingTranslation(input: {
+  source: NewsroomLanguage;
+  target: NewsroomLanguage;
+  limit?: number;
+  afterPublishedAt?: string | null;
+}): Promise<GeneratedArticleRow[]> {
+  const supabase = createAdminServerClient();
+  const limit = input.limit ?? TRANSLATION_JOB_BATCH;
+
+  let query = supabase
+    .from("generated_articles")
+    .select(
+      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, published_at, tenant_id"
+    )
+    .not("published_at", "is", null)
+    .eq("editorial_status", "approved")
+    .eq("language", input.source)
+    .order("published_at", { ascending: false })
+    .limit(Math.max(limit * 3, 120));
+
+  if (input.afterPublishedAt) {
+    query = query.gt("published_at", input.afterPublishedAt);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(`missing_scan_failed:${error.message}`);
+  }
+
+  return (data ?? [])
+    .filter((row) => articleNeedsTranslation(row as GeneratedArticleRow, input.target))
+    .slice(0, limit) as GeneratedArticleRow[];
+}
+
+export function buildTranslationDedupeKey(
+  articleId: string,
+  target: NewsroomLanguage
+): string {
+  return `translate:${articleId}:${target}`;
+}
+
+export async function enqueueArticleTranslation(
+  row: Pick<GeneratedArticleRow, "id" | "tenant_id">,
+  target: NewsroomLanguage,
+  options?: { priority?: number }
+): Promise<string | null> {
+  return enqueueJob({
+    jobType: "translate_article",
+    dedupeKey: buildTranslationDedupeKey(row.id, target),
+    tenantId: row.tenant_id ?? null,
+    payload: {
+      articleId: row.id,
+      targetLanguage: target,
+    },
+    priority: options?.priority ?? 6,
+    maxAttempts: 5,
+    timeoutMs: 120_000,
+  });
+}
+
+export async function enqueueMissingTranslationJobs(input?: {
+  limit?: number;
+  pairs?: Array<{ source: NewsroomLanguage; target: NewsroomLanguage }>;
+  priority?: number;
+}): Promise<{ enqueued: number; scanned: number }> {
+  const pairs = input?.pairs ?? READER_TRANSLATION_PAIRS;
+  const perPairLimit = Math.ceil((input?.limit ?? TRANSLATION_JOB_BATCH) / pairs.length);
+  let enqueued = 0;
+  let scanned = 0;
+
+  const jobs = [];
+
+  for (const pair of pairs) {
+    const rows = await findArticlesMissingTranslation({
+      source: pair.source,
+      target: pair.target,
+      limit: perPairLimit,
+    });
+    scanned += rows.length;
+
+    for (const row of rows) {
+      jobs.push({
+        jobType: "translate_article" as const,
+        dedupeKey: buildTranslationDedupeKey(row.id, pair.target),
+        tenantId: row.tenant_id ?? null,
+        payload: {
+          articleId: row.id,
+          targetLanguage: pair.target,
+        },
+        priority: input?.priority ?? 6,
+        maxAttempts: 5,
+        timeoutMs: 120_000,
+      });
+    }
+  }
+
+  if (jobs.length) {
+    enqueued = await enqueueJobs(jobs);
+  }
+
+  return { enqueued, scanned };
+}
+
+export async function scheduleTranslationBatchJob(
+  tenantId?: string | null
+): Promise<string | null> {
+  return enqueueJob({
+    jobType: "translation_batch",
+    dedupeKey: `translation_batch:${tenantId ?? "global"}`,
+    tenantId: tenantId ?? null,
+    payload: {
+      limit: TRANSLATION_JOB_BATCH,
+    },
+    priority: 7,
+    maxAttempts: 3,
+    timeoutMs: 180_000,
+  });
+}
+
+export type TranslationPerformanceEstimate = {
+  avgLatencyMs: number | null;
+  articlesPerHour: number | null;
+  backlogRemaining: number;
+  estimatedHoursRemaining: number | null;
+  estimatedOpenAiCostUsd: number | null;
+};
+
+export async function estimateTranslationPerformance(
+  backlogRemaining: number
+): Promise<TranslationPerformanceEstimate> {
+  const supabase = createAdminServerClient();
+  const { data: runs } = await supabase
+    .from("worker_job_runs")
+    .select("duration_ms, ok")
+    .eq("job_type", "translate_article")
+    .eq("ok", true)
+    .order("created_at", { ascending: false })
+    .limit(40);
+
+  const durations = (runs ?? [])
+    .map((r) => r.duration_ms)
+    .filter((ms): ms is number => typeof ms === "number" && ms > 0);
+
+  const avgLatencyMs =
+    durations.length > 0
+      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+      : null;
+
+  const articlesPerHour =
+    avgLatencyMs && avgLatencyMs > 0
+      ? Math.round((3_600_000 / avgLatencyMs) * 10) / 10
+      : avgLatencyMs === null
+        ? 120
+        : null;
+
+  const estimatedHoursRemaining =
+    articlesPerHour && articlesPerHour > 0
+      ? Math.round((backlogRemaining / articlesPerHour) * 10) / 10
+      : null;
+
+  const costPerArticle = Number(process.env.TRANSLATION_COST_USD_ESTIMATE) || 0.002;
+  const estimatedOpenAiCostUsd =
+    backlogRemaining > 0
+      ? Math.round(backlogRemaining * costPerArticle * 100) / 100
+      : 0;
+
+  return {
+    avgLatencyMs,
+    articlesPerHour,
+    backlogRemaining,
+    estimatedHoursRemaining,
+    estimatedOpenAiCostUsd,
+  };
+}

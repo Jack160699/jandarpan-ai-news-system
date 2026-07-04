@@ -6,6 +6,7 @@ export type ArticleLocaleBundle = {
   article_body?: string;
   seo_title: string;
   seo_description: string;
+  tags?: string[];
   reading_time: string;
   translated_at: string;
   model?: string;
