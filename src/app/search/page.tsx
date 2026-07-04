@@ -5,7 +5,8 @@ import { SearchPanel } from "@/components/search/SearchPanel";
 import { SearchResultsList } from "@/components/search/SearchResultsList";
 import { Footer } from "@/sections/Footer";
 import { executeSearch } from "@/lib/search/search";
-import { getTrendingSearches } from "@/lib/search/trending-queries";
+import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { BRAND } from "@/lib/brand";
 import { PRODUCTION_ROBOTS, SITE_URL } from "@/lib/seo";
 import type { SearchDistrict, SearchTimeScope } from "@/lib/search/types";
@@ -60,16 +61,21 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const category = params.category as HomeSectionId | undefined;
   const timeScope = params.time as SearchTimeScope | undefined;
 
-  const trending = getTrendingSearches(10);
+  const displayLanguage = await getServerReaderLanguage();
+  const trending = getTrendingSearchesForLanguage(displayLanguage, 10);
 
   let serverResult = null;
   if (q || district || category) {
-    serverResult = await executeSearch(q || "Chhattisgarh", {
-      district: district ?? null,
-      category: category ?? null,
-      timeScope: timeScope ?? "all",
-      limit: 20,
-    });
+    serverResult = await executeSearch(
+      q || "Chhattisgarh",
+      {
+        district: district ?? null,
+        category: category ?? null,
+        timeScope: timeScope ?? "all",
+        limit: 20,
+      },
+      displayLanguage
+    );
   }
 
   return (

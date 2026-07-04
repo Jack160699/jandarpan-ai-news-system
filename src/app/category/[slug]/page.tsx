@@ -10,6 +10,9 @@ import { TrendingKeywordsBar } from "@/components/seo/TrendingKeywordsBar";
 import { StoryCard } from "@/components/homepage/StoryCard";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
+import { filterPoolByLanguage } from "@/lib/i18n/article-language";
+import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import {
   buildCategoryMetadata,
@@ -64,13 +67,26 @@ export default async function CategoryPage({ params }: PageProps) {
   const config = getCategorySeo(slug);
   if (!config) notFound();
 
+  const displayLanguage = await getServerReaderLanguage();
   const pool = await fetchGeneratedArticlePool(120);
-  const matched = filterArticlesForCategory(pool, slug).slice(0, 24);
+  const langPool = filterPoolByLanguage(pool, displayLanguage);
+  const matched = filterArticlesForCategory(langPool, slug).slice(0, 24);
   const homeArticles = matched
-    .map((row) => toHomeArticle(row))
+    .map((row) => toHomeArticle(row, undefined, displayLanguage))
     .filter((a): a is NonNullable<typeof a> => a !== null);
+  const localizedForTrending = matched
+    .map((row) => {
+      const fields = resolveLocalizedFieldsStrict(row, displayLanguage);
+      if (!fields) return null;
+      return { ...row, headline: fields.headline };
+    })
+    .filter((row): row is GeneratedArticleRow => row !== null);
+  const localizedHeadlines = localizedForTrending.map((row) => ({
+    slug: row.slug,
+    headline: row.headline,
+  }));
   const trending = buildTrendingKeywords({
-    generatedRows: matched,
+    generatedRows: localizedForTrending,
     limit: 10,
   });
 
@@ -82,7 +98,7 @@ export default async function CategoryPage({ params }: PageProps) {
   const jsonLd = [
     categoryHubJsonLd(
       config,
-      matched.map((r) => ({ slug: r.slug, headline: r.headline }))
+      localizedHeadlines.map((r) => ({ slug: r.slug, headline: r.headline }))
     ),
     breadcrumbListJsonLd(breadcrumbs),
   ];
@@ -128,7 +144,10 @@ export default async function CategoryPage({ params }: PageProps) {
           links={[
             ...getCategoryHubLinks(8).filter((l) => l.href !== config.path),
             ...buildCategoryArticleLinks(
-              matched.map((r) => ({ slug: r.slug, headline: r.headline })),
+              localizedHeadlines.map((r) => ({
+                slug: r.slug,
+                headline: r.headline,
+              })),
               8
             ),
           ]}

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
 import { StoryCard } from "@/components/homepage/StoryCard";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
+import { filterPoolByLanguage } from "@/lib/i18n/article-language";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import {
   buildRegionalRankingPersonalization,
@@ -39,8 +41,10 @@ export default async function DistrictPage({ params }: PageProps) {
   const district = getDistrict(slug);
   if (!district) notFound();
 
+  const displayLanguage = await getServerReaderLanguage();
   const pool = await fetchGeneratedArticlePool(120);
-  const filtered = filterRowsForDistrict(pool, slug);
+  const langPool = filterPoolByLanguage(pool, displayLanguage);
+  const filtered = filterRowsForDistrict(langPool, slug);
   const personalization = buildRegionalRankingPersonalization({
     homeDistrict: slug,
     regionBoostMultiplier: 1.3,
@@ -49,14 +53,18 @@ export default async function DistrictPage({ params }: PageProps) {
 
   const articles = ranked
     .map((r) =>
-      toHomeArticle(r.row, {
-        priorityScore: r.ranking.priorityScore,
-        reasons: r.ranking.reasons,
-        isTrending: r.ranking.isTrending,
-        isBreaking: r.ranking.isBreaking,
-        duplicateClusterId: r.ranking.duplicateClusterId,
-        section: r.section,
-      })
+      toHomeArticle(
+        r.row,
+        {
+          priorityScore: r.ranking.priorityScore,
+          reasons: r.ranking.reasons,
+          isTrending: r.ranking.isTrending,
+          isBreaking: r.ranking.isBreaking,
+          duplicateClusterId: r.ranking.duplicateClusterId,
+          section: r.section,
+        },
+        displayLanguage
+      )
     )
     .filter((a): a is NonNullable<typeof a> => a !== null);
 

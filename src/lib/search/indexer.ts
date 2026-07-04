@@ -3,6 +3,9 @@
  */
 
 import { inferSection } from "@/lib/homepage/generated-feed";
+import { filterPoolByLanguage } from "@/lib/i18n/article-language";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
 import {
   buildTfIdfVector,
   computeIdf,
@@ -47,7 +50,58 @@ export type SearchIndex = {
   vocabulary: Set<string>;
   idf: Map<string, number>;
   builtAt: string;
+  displayLanguage: NewsroomLanguage;
 };
+
+/** JSON-safe index — unstable_cache cannot persist Map/Set instances. */
+export type SearchIndexSnapshot = {
+  documents: Array<Omit<SearchDocument, "vector"> & { vector: Record<string, number> }>;
+  inverted: Record<string, string[]>;
+  vocabulary: string[];
+  idf: Record<string, number>;
+  builtAt: string;
+  displayLanguage: NewsroomLanguage;
+};
+
+export function snapshotSearchIndex(index: SearchIndex): SearchIndexSnapshot {
+  const inverted: Record<string, string[]> = {};
+  for (const [term, ids] of index.inverted) {
+    inverted[term] = [...ids];
+  }
+
+  return {
+    documents: index.documents.map((doc) => ({
+      ...doc,
+      vector: Object.fromEntries(doc.vector),
+    })),
+    inverted,
+    vocabulary: [...index.vocabulary],
+    idf: Object.fromEntries(index.idf),
+    builtAt: index.builtAt,
+    displayLanguage: index.displayLanguage,
+  };
+}
+
+export function restoreSearchIndex(snapshot: SearchIndexSnapshot): SearchIndex {
+  const inverted = new Map<string, Set<string>>();
+  for (const [term, ids] of Object.entries(snapshot.inverted ?? {})) {
+    inverted.set(term, new Set(Array.isArray(ids) ? ids : []));
+  }
+
+  return {
+    documents: (snapshot.documents ?? []).map((doc) => ({
+      ...doc,
+      vector: new Map(Object.entries(doc.vector ?? {})),
+    })),
+    inverted,
+    vocabulary: new Set(
+      Array.isArray(snapshot.vocabulary) ? snapshot.vocabulary : []
+    ),
+    idf: new Map(Object.entries(snapshot.idf ?? {})),
+    builtAt: snapshot.builtAt,
+    displayLanguage: snapshot.displayLanguage,
+  };
+}
 
 const DISTRICT_PATTERNS: Record<SearchDistrict, RegExp> = {
   raipur: /raipur|रायपुर|naya raipur/i,
@@ -75,34 +129,43 @@ function hoursSince(iso: string): number {
   return (Date.now() - new Date(iso).getTime()) / 3_600_000;
 }
 
-export function buildSearchIndex(rows: GeneratedArticleRow[]): SearchIndex {
-  const ranked = rankArticlesForHomepage(rows);
+export function buildSearchIndex(
+  rows: GeneratedArticleRow[],
+  displayLanguage: NewsroomLanguage
+): SearchIndex {
+  const langPool = filterPoolByLanguage(rows, displayLanguage);
+  const ranked = rankArticlesForHomepage(langPool);
   const rankById = new Map(ranked.map((r) => [r.row.id, r.ranking.priorityScore]));
 
-  const documents: SearchDocument[] = rows.map((row) => {
+  const documents: SearchDocument[] = [];
+
+  for (const row of langPool) {
+    const fields = resolveLocalizedFieldsStrict(row, displayLanguage);
+    if (!fields?.headline?.trim()) continue;
+
     const section = inferSection(row);
-    const fullText = `${row.headline} ${row.summary ?? ""} ${row.article_body ?? ""} ${row.tags.join(" ")}`;
+    const fullText = `${fields.headline} ${fields.summary} ${fields.articleBody} ${row.tags.join(" ")}`;
     const tokens = tokenizeForSimilarity(fullText);
 
-    return {
+    documents.push({
       id: row.id,
       slug: row.slug,
-      headline: row.headline,
-      summary: row.summary?.trim() ?? "",
-      excerpt: (row.summary ?? row.article_body ?? "").slice(0, 220),
+      headline: fields.headline,
+      summary: fields.summary,
+      excerpt: (fields.summary || fields.articleBody).slice(0, 220),
       fullText,
       tags: row.tags,
       section,
       district: inferDistrict(fullText, section),
-      language: row.language ?? "hi",
+      language: displayLanguage,
       publishedAt: row.published_at ?? row.created_at,
-      readingTime: row.reading_time,
+      readingTime: fields.readingTime ?? row.reading_time,
       heroImageUrl: row.hero_image_url,
       priorityScore: rankById.get(row.id) ?? 0,
       tokens,
       vector: new Map(),
-    };
-  });
+    });
+  }
 
   const docTokens = documents.map((d) => d.tokens);
   const idf = computeIdf(docTokens);
@@ -130,6 +193,7 @@ export function buildSearchIndex(rows: GeneratedArticleRow[]): SearchIndex {
     vocabulary,
     idf,
     builtAt: new Date().toISOString(),
+    displayLanguage,
   };
 }
 

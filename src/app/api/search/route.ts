@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
+import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
 import { executeSearch } from "@/lib/search/search";
 import type { SearchDistrict, SearchTimeScope } from "@/lib/search/types";
 import type { HomeSectionId } from "@/lib/homepage/types";
 
 export const runtime = "nodejs";
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 const VALID_DISTRICTS = new Set([
   "raipur",
@@ -44,10 +46,16 @@ function parseTimeScope(v: string | null): SearchTimeScope | undefined {
   return undefined;
 }
 
+const LANGUAGE_AWARE_HEADERS = {
+  "Cache-Control": "private, no-cache",
+  Vary: "Cookie",
+};
+
 /**
  * GET /api/search?q=Raipur+crime+today&district=raipur&category=india&limit=15
  */
 export async function GET(request: NextRequest) {
+  const displayLanguage = await getServerReaderLanguage();
   const { searchParams } = request.nextUrl;
   const q = searchParams.get("q")?.trim() ?? "";
   const limit = Math.min(
@@ -56,9 +64,7 @@ export async function GET(request: NextRequest) {
   );
 
   if (!q && !searchParams.get("district") && !searchParams.get("category")) {
-    const trending = await import("@/lib/search/trending-queries").then((m) =>
-      m.getTrendingSearches(10)
-    );
+    const trending = getTrendingSearchesForLanguage(displayLanguage, 10);
     return NextResponse.json(
       {
         ok: true,
@@ -68,29 +74,25 @@ export async function GET(request: NextRequest) {
         trending,
         tookMs: 0,
       },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      }
+      { headers: LANGUAGE_AWARE_HEADERS }
     );
   }
 
   try {
-    const result = await executeSearch(q || "Chhattisgarh news", {
-      district: parseDistrict(searchParams.get("district")),
-      category: parseCategory(searchParams.get("category")),
-      timeScope: parseTimeScope(searchParams.get("time")),
-      limit,
-    });
+    const result = await executeSearch(
+      q || "Chhattisgarh news",
+      {
+        district: parseDistrict(searchParams.get("district")),
+        category: parseCategory(searchParams.get("category")),
+        timeScope: parseTimeScope(searchParams.get("time")),
+        limit,
+      },
+      displayLanguage
+    );
 
     return NextResponse.json(
       { ok: true, ...result },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-        },
-      }
+      { headers: LANGUAGE_AWARE_HEADERS }
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Search failed";
