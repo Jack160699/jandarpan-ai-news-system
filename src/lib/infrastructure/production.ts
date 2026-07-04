@@ -17,14 +17,13 @@ export function isCronPath(pathname: string): boolean {
 export function isProductionExemptPath(pathname: string): boolean {
   if (isCronPath(pathname)) return true;
   if (pathname === "/api/health") return true;
-  // Emergency authenticated diagnostics (cron-secret protected)
-  if (pathname === "/api/debug/env") return true;
-  if (pathname === "/api/debug/cron") return true;
-  if (pathname === "/api/debug/ingestion") return true;
-  if (pathname === "/api/debug/workers") return true;
   if (pathname === "/robots.txt") return true;
   if (pathname === "/sitemap.xml" || pathname === "/news-sitemap.xml") return true;
   return false;
+}
+
+export function isDeployedEnvironment(): boolean {
+  return Boolean(process.env.VERCEL_ENV);
 }
 
 export function isDebugPath(pathname: string): boolean {

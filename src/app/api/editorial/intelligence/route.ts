@@ -130,6 +130,23 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await enrichArticleIntelligence(body.articleId);
+  const rate = await checkRateLimit({
+    key: `intel:enrich:${auth.session.membership.tenantId}:${auth.session.userId}`,
+    limit: INFRA_CONFIG.apiRateLimitPerMinute,
+    windowSec: 60,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { ok: false, error: "rate_limit_exceeded" },
+      {
+        status: 429,
+        headers: rateLimitHeaders(rate, INFRA_CONFIG.apiRateLimitPerMinute),
+      }
+    );
+  }
+
+  const result = await enrichArticleIntelligence(body.articleId, {
+    tenantId: auth.session.membership.tenantId,
+  });
   return NextResponse.json(result, { status: result.ok ? 200 : 500 });
 }

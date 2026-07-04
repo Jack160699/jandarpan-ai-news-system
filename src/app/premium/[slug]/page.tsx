@@ -70,8 +70,8 @@ export default async function PremiumReportPage({ params }: PageProps) {
               Unlock for ₹{report.price_inr}
             </p>
             <p className="text-sm text-[var(--ink-muted)] mb-4">
-              Member subscribers get full access. Connect Stripe Checkout or
-              member session verification here.
+              Member subscribers get full access to premium reports and ad-light
+              reading. Join membership to unlock when checkout goes live.
             </p>
             <Link
               href="/membership"
@@ -80,10 +80,15 @@ export default async function PremiumReportPage({ params }: PageProps) {
               View membership plans
             </Link>
           </div>
-        ) : (
+        ) : report.content_path ? (
           <p className="story-prose-p">
-            Full report content loads from storage path:{" "}
-            {report.content_path ?? "not configured"}
+            Full report content is being prepared for members. Check back soon or
+            view membership options.
+          </p>
+        ) : (
+          <p className="story-prose-p text-[var(--ink-muted)]">
+            This report preview is available. Full content will be published here
+            when ready.
           </p>
         )}
 

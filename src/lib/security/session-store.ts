@@ -48,14 +48,13 @@ export async function touchSecuritySession(accessToken: string): Promise<void> {
   const tokenHash = hashSessionToken(accessToken);
 
   await withTimeoutFallback(
-    Promise.resolve(
-      supabase
+    (async () => {
+      await supabase
         .from("security_sessions")
         .update({ last_seen_at: new Date().toISOString() })
         .eq("session_token_hash", tokenHash)
-        .is("revoked_at", null)
-        .then(() => undefined),
-    ),
+        .is("revoked_at", null);
+    })(),
     undefined,
     { label: "touch_security_session", timeoutMs: SESSION_DB_TIMEOUT_MS }
   );
@@ -68,14 +67,14 @@ export async function isSessionRevoked(accessToken: string): Promise<boolean> {
   const tokenHash = hashSessionToken(accessToken);
 
   const row = await withTimeoutFallback(
-    Promise.resolve(
-      supabase
+    (async () => {
+      const { data } = await supabase
         .from("security_sessions")
         .select("id, revoked_at, expires_at")
         .eq("session_token_hash", tokenHash)
-        .maybeSingle()
-        .then((r) => r.data),
-    ),
+        .maybeSingle();
+      return data;
+    })(),
     null,
     { label: "session_revoked_check", timeoutMs: SESSION_DB_TIMEOUT_MS }
   );

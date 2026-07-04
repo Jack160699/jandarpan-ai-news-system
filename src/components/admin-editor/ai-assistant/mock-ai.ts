@@ -1,4 +1,5 @@
 import { createAiId } from "./lib/browser-safe";
+import { isProductionDeployment } from "@/lib/infrastructure/production";
 import type {
   AiQuickActionId,
   AiResponse,
@@ -42,6 +43,10 @@ export async function runMockAiGeneration(
     onTaskUpdate: (tasks: { id: string; label: string; status: "pending" | "running" | "done" }[]) => void;
   }
 ): Promise<AiResponse> {
+  if (isProductionDeployment()) {
+    throw new Error("Mock AI is disabled in production");
+  }
+
   const tasks = [
     { id: "1", label: "Reading draft context", status: "pending" as const },
     { id: "2", label: "Applying newsroom style", status: "pending" as const },

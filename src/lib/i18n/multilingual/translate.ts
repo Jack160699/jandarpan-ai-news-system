@@ -13,6 +13,7 @@ import {
   buildToneSystemPrompt,
   getRegionalToneProfile,
 } from "@/lib/i18n/multilingual/tone";
+import { getArticleTranslations } from "@/lib/i18n/resolve-article";
 import type {
   ArticleLocaleBundle,
   ArticleTranslations,
@@ -178,8 +179,10 @@ export async function translateGeneratedArticle(
   );
 
   const results: TranslationJobResult[] = [];
-  const existing =
-    (row.editorial_metadata?.translations as ArticleTranslations) ?? {};
+  const existing = getArticleTranslations(
+    row.editorial_metadata,
+    row.translations as ArticleTranslations | null
+  );
 
   for (const lang of langs) {
     const bundle = await translateArticleBundle({
@@ -222,6 +225,7 @@ export async function persistArticleTranslations(
   editorial_metadata: GeneratedArticleRow["editorial_metadata"]
 ): Promise<void> {
   const supabase = createAdminServerClient();
+  // Column is canonical; metadata mirror kept for backward-compatible readers.
   await supabase
     .from("generated_articles")
     .update({

@@ -78,7 +78,7 @@ export function NewsletterSignup({
         </button>
       </form>
       {status === "ok" ? (
-        <p className="anr-meta">Thanks — check your inbox to confirm.</p>
+        <p className="anr-meta">Thanks — you&apos;re subscribed to this edition.</p>
       ) : null}
       {status === "err" ? (
         <p className="anr-meta">Could not subscribe. Try again.</p>

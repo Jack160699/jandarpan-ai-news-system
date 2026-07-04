@@ -1,3 +1,4 @@
+import { ArticleMemoryTracker } from "@/components/editorial/ArticleMemoryTracker";
 import { LiveStoryJsonLd } from "@/components/seo/LiveStoryJsonLd";
 import { StoryBreadcrumbs } from "@/components/seo/StoryBreadcrumbs";
 import { StoryBody } from "@/components/story/StoryBody";
@@ -157,6 +158,7 @@ export function ImmersiveStoryPage({
         region={article.region}
         surface="story"
       />
+      <ArticleMemoryTracker slug={slug} title={headline} />
 
       <article
         className="immersive-story immersive-story--premium immersive-story--editorial immersive-story--cinematic multilingual-article route-story-page"

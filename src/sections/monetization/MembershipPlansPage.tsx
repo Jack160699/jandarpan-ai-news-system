@@ -15,8 +15,8 @@ export function MembershipPlansPage({
     <article className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold mb-2">Membership · {tenantName}</h1>
       <p className="text-[var(--ink-muted)] mb-8">
-        Support independent journalism. Stripe checkout can be wired to each
-        plan&apos;s <code>stripe_price_id</code>.
+        Support independent journalism in Chhattisgarh. Paid subscriptions are
+        opening soon — join the newsletter below for launch updates.
       </p>
 
       <div className="mnr-plans mb-10">
@@ -38,13 +38,10 @@ export function MembershipPlansPage({
                   <li key={f}>{f}</li>
                 ))}
               </ul>
-              <button
-                type="button"
-                className="mt-3 px-4 py-2 rounded-lg bg-[var(--brand-maroon)] text-white text-sm font-medium"
-                disabled
-              >
-                Subscribe (Stripe)
-              </button>
+              <p className="mt-3 text-sm text-[var(--ink-muted)]">
+                Online checkout opens soon. Subscribe to the newsletter for launch
+                updates.
+              </p>
             </div>
           ))
         ) : (

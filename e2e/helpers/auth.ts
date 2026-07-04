@@ -5,8 +5,6 @@ const E2E_AUTH_HEADER_VALUE = "playwright-local";
 
 const e2eHeaders = { [E2E_AUTH_HEADER]: E2E_AUTH_HEADER_VALUE };
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
-
 export async function setE2eDeskSession(
   request: APIRequestContext,
   role: "super_admin" | "editor"
@@ -27,12 +25,7 @@ export async function syncDeskCookiesToBrowser(
 ): Promise<void> {
   const state = await request.storageState();
   if (!state.cookies.length) return;
-  await context.addCookies(
-    state.cookies.map((cookie) => ({
-      ...cookie,
-      url: cookie.url ?? baseURL,
-    }))
-  );
+  await context.addCookies(state.cookies);
 }
 
 export async function clearE2eDeskSession(request: APIRequestContext): Promise<void> {

@@ -129,6 +129,10 @@ export function EditorialOverview() {
     () => (Array.isArray(data?.aiQueue) ? data.aiQueue : []),
     [data]
   );
+  const auditTrail = useMemo(
+    () => (Array.isArray(data?.auditTrail) ? data.auditTrail : []),
+    [data]
+  );
 
   const pending = useMemo(
     () => generated.filter((a) => a.editorial_status === "pending"),
@@ -554,6 +558,28 @@ export function EditorialOverview() {
       </div>
 
       <AdminCard title={`Pending review (${pending.length})`}>{null}</AdminCard>
+
+      {auditTrail.length > 0 ? (
+        <AdminCard
+          title="Recent editorial activity"
+          description="Who changed what in the newsroom"
+        >
+          <ul className="anr-audit-list">
+            {auditTrail.map((entry) => (
+              <li key={entry.id} className="anr-audit-list__item">
+                <strong>{entry.action.replace(/_/g, " ")}</strong>
+                <span>
+                  {entry.user_email ?? "system"}
+                  {entry.resource_id ? ` · ${entry.resource_id.slice(0, 8)}…` : ""}
+                  {" · "}
+                  {new Date(entry.created_at).toLocaleString("en-IN")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </AdminCard>
+      ) : null}
+
       <StoriesTable articles={pending.length ? pending : generated.slice(0, 8)} />
     </>
   );

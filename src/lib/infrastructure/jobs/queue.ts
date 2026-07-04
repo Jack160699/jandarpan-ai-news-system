@@ -15,6 +15,46 @@ import type {
 import { recordJobRun } from "@/lib/infrastructure/jobs/monitor";
 
 const DEFAULT_BATCH = Number(process.env.WORKER_JOB_BATCH) || 8;
+const STALE_CLAIM_MS = Number(process.env.WORKER_STALE_CLAIM_MS) || 120_000;
+
+/** Reclaim jobs stuck in claimed state (crashed worker recovery). */
+export async function reclaimStaleClaimedJobs(
+  staleMs = STALE_CLAIM_MS
+): Promise<number> {
+  const supabase = createAdminClient();
+  const threshold = new Date(Date.now() - staleMs).toISOString();
+
+  const { data, error } = await supabase
+    .from("worker_jobs")
+    .update({
+      status: "pending",
+      claimed_at: null,
+      last_error: "[reclaimed stale claim]",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("status", "claimed")
+    .lt("claimed_at", threshold)
+    .select("id");
+
+  if (error) {
+    console.warn("[worker-jobs] reclaim:", error.message);
+    return 0;
+  }
+
+  const reclaimed = data?.length ?? 0;
+  if (reclaimed > 0) {
+    console.log(
+      JSON.stringify({
+        tag: "[worker-jobs]",
+        phase: "reclaim_stale",
+        reclaimed,
+        staleMs,
+        ts: new Date().toISOString(),
+      })
+    );
+  }
+  return reclaimed;
+}
 
 export async function enqueueJob(input: EnqueueJobInput): Promise<string | null> {
   const supabase = createAdminClient();
@@ -81,6 +121,8 @@ export async function claimJobBatch(
   limit = DEFAULT_BATCH,
   jobTypes?: JobType[]
 ): Promise<WorkerJobRow[]> {
+  await reclaimStaleClaimedJobs();
+
   const supabase = createAdminClient();
   const now = new Date().toISOString();
 

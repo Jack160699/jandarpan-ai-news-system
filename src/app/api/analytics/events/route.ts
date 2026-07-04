@@ -3,6 +3,7 @@ import { persistReaderEvents } from "@/lib/analytics/persist";
 import { analyticsOptedOut } from "@/lib/analytics/privacy";
 import type { ReaderEventInput } from "@/lib/analytics/types";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { checkPublicApiRateLimit } from "@/lib/security/public-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,9 @@ type Body = {
 };
 
 export async function POST(request: Request) {
+  const rate = await checkPublicApiRateLimit(request, "analytics-events", 120, 60);
+  if (!rate.allowed) return rate.response;
+
   if (analyticsOptedOut()) {
     return NextResponse.json({ ok: true, skipped: "dnt" });
   }

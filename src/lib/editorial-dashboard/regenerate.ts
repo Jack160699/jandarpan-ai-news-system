@@ -21,13 +21,15 @@ const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const TIMEOUT_MS = 28_000;
 
 async function loadArticle(
-  articleId: string
+  articleId: string,
+  tenantId: string
 ): Promise<GeneratedArticleRow | null> {
   const supabase = createAdminServerClient();
   const { data } = await supabase
     .from("generated_articles")
     .select("*")
     .eq("id", articleId)
+    .eq("tenant_id", tenantId)
     .maybeSingle();
   return (data ?? null) as unknown as GeneratedArticleRow | null;
 }
@@ -148,14 +150,15 @@ async function callRegenerateLlm(
 }
 
 export async function regenerateGeneratedArticle(
-  articleId: string
+  articleId: string,
+  tenantId: string
 ): Promise<EditorialActionResult> {
   if (!isSupabaseConfigured()) return { ok: false, message: "No database" };
   if (!process.env.OPENAI_API_KEY?.trim()) {
     return { ok: false, message: "OPENAI_API_KEY not set" };
   }
 
-  const article = await loadArticle(articleId);
+  const article = await loadArticle(articleId, tenantId);
   if (!article) return { ok: false, message: "Article not found" };
 
   const eventId = article.event_id;
@@ -221,16 +224,22 @@ export async function regenerateGeneratedArticle(
         source_count: signals.length,
       },
     })
-    .eq("id", articleId);
+    .eq("id", articleId)
+    .eq("tenant_id", tenantId);
 
   if (error) return { ok: false, message: error.message };
   return { ok: true, message: "Article regenerated" };
 }
 
 export async function queueArticleImageRegeneration(
-  articleId: string
+  articleId: string,
+  tenantId: string
 ): Promise<EditorialActionResult> {
   if (!isSupabaseConfigured()) return { ok: false, message: "No database" };
+
+  const article = await loadArticle(articleId, tenantId);
+  if (!article) return { ok: false, message: "Article not found" };
+
   const queued = await enqueueEditorialImage(articleId);
   if (!queued) return { ok: false, message: "Failed to queue image" };
   return { ok: true, message: "Image queued for regeneration" };

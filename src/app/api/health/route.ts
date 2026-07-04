@@ -1,10 +1,14 @@
 /**
- * GET /api/health — enterprise platform health (public, cacheable)
+ * GET /api/health — public liveness (minimal) or ops detail (cron-authenticated)
  */
 
 import { NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { edgeCacheHeaders } from "@/lib/infrastructure/cache/edge";
-import { getProductionEnvChecks } from "@/lib/infrastructure/production";
+import {
+  getProductionEnvChecks,
+  isDeployedEnvironment,
+} from "@/lib/infrastructure/production";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { isSentryEnabled } from "@/lib/observability/sentry";
@@ -29,13 +33,34 @@ export async function GET(request: Request) {
   ]);
 
   const status = aggregateHealthStatus(checks);
+  const healthy = status === "healthy" || status === "degraded";
+
+  const cronAuth = await verifyCronRequest(request);
+  const detailed = cronAuth.authorized || !isDeployedEnvironment();
+
+  if (!detailed) {
+    return NextResponse.json(
+      {
+        ok: healthy,
+        service: "jan-darpan-os",
+        status,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        status: status === "unhealthy" ? 503 : 200,
+        headers: {
+          ...edgeCacheHeaders({ sMaxAge: 15, private: true }),
+          [REQUEST_ID_HEADER]: requestId,
+        },
+      }
+    );
+  }
+
   const productionEnv = getProductionEnvChecks();
   const stability = await computeStabilityScore({
     checks,
     apiSamples: metrics.api,
   });
-
-  const healthy = status === "healthy" || status === "degraded";
 
   return NextResponse.json(
     {

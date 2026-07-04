@@ -3,9 +3,18 @@ import { securityHeaders } from "./src/lib/security/headers";
 
 const nextConfig: NextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   poweredByHeader: false,
+  async redirects() {
+    return [
+      {
+        source: "/districts/:slug",
+        destination: "/district/:slug",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     const headers = Object.entries(securityHeaders()).map(([key, value]) => ({
       key,

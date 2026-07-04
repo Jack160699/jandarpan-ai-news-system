@@ -1,12 +1,12 @@
 /**
  * POST /api/admin/auth/bootstrap
- * Idempotent tenant + membership repair (CRON_SECRET or dev only)
+ * Idempotent tenant + membership repair (CRON_SECRET required)
  */
 
 import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
-import { isProductionDeployment } from "@/lib/infrastructure/production";
 import { bootstrapNewsroomAuth } from "@/lib/newsroom-auth/bootstrap";
+import { resolveRoleForEmail } from "@/lib/saas-auth/roles";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const auth = await verifyCronRequest(request);
 
-  if (isProductionDeployment() && !auth.authorized) {
+  if (!auth.authorized) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "supabase_not_configured" }, { status: 503 });
   }
 
-  let body: { email?: string; userId?: string; tenantSlug?: string };
+  let body: { email?: string; userId?: string; tenantSlug?: string; role?: string };
   try {
     body = await request.json();
   } catch {
@@ -49,16 +49,18 @@ export async function POST(request: Request) {
     );
   }
 
+  const forceRole = resolveRoleForEmail(email, body.role);
+
   const result = await bootstrapNewsroomAuth({
     userId,
     email,
     tenantSlug: body.tenantSlug,
-    forceRole: email === "shriyanshchandrakar@gmail.com" ? "super_admin" : undefined,
+    forceRole,
   });
 
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 500 });
   }
 
-  return NextResponse.json({ ...result, ok: true });
+  return NextResponse.json(result);
 }

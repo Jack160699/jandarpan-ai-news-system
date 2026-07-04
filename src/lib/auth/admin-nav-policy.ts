@@ -1,3 +1,4 @@
+import { canAccessAdminRoute } from "@/lib/newsroom-auth/rbac";
 import {
   canAccessBilling,
   canManageTeam,
@@ -54,7 +55,8 @@ export function isAdminNavItemVisible(
       return canAccessBilling(ctx);
     }
   }
-  return true;
+  if (!hasResolvedRole(ctx)) return false;
+  return canAccessAdminRoute(ctx.role!, href);
 }
 
 export function filterAdminNavItems<T extends { href: string }>(

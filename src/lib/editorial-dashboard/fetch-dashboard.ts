@@ -10,7 +10,9 @@ import type {
   EditorialDashboardSnapshot,
 } from "@/lib/editorial-dashboard/types";
 
-export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnapshot | null> {
+export async function fetchEditorialDashboard(
+  tenantId: string
+): Promise<EditorialDashboardSnapshot | null> {
   if (!isSupabaseConfigured()) return null;
 
   const supabase = createAdminServerClient();
@@ -24,6 +26,7 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
     articlesRes,
     imageQueueRes,
     signalsCount,
+    auditRes,
   ] = await Promise.all([
     supabase
       .from("ingestion_logs")
@@ -46,6 +49,7 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
       .select(
         "id, canonical_title, region, category, urgency_score, source_count, signal_ids, clustering_metadata, created_at"
       )
+      .eq("tenant_id", tenantId)
       .order("urgency_score", { ascending: false })
       .limit(25),
     supabase
@@ -53,6 +57,7 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
       .select(
         "id, slug, headline, summary, editorial_status, homepage_pin, published_at, editorial_metadata, language, created_at, hero_image_url, event_id"
       )
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(80),
     supabase
@@ -64,7 +69,14 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
       .limit(20),
     supabase
       .from("news_signals")
-      .select("id", { count: "exact", head: true }),
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId),
+    supabase
+      .from("editorial_audit_log")
+      .select("id, action, user_email, resource_id, created_at")
+      .eq("tenant_id", tenantId)
+      .order("created_at", { ascending: false })
+      .limit(12),
   ]);
 
   const healthMap = new Map(
@@ -180,10 +192,15 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
     .sort((a, b) => b.avgConfidence - a.avgConfidence)
     .slice(0, 12);
 
+  const tenantArticleIds = new Set((articlesRes.data ?? []).map((a) => a.id));
+  const tenantImageQueue = (imageQueueRes.data ?? []).filter((q) =>
+    tenantArticleIds.has(q.generated_article_id)
+  );
+
   const pending = generatedArticles.filter((a) => a.editorial_status === "pending").length;
   const approved = generatedArticles.filter((a) => a.editorial_status === "approved").length;
   const aiPending = (aiQueueRes.data ?? []).filter((q) => q.status === "pending").length;
-  const imagePending = (imageQueueRes.data ?? []).filter(
+  const imagePending = tenantImageQueue.filter(
     (q) => q.status === "pending"
   ).length;
 
@@ -242,7 +259,7 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
       created_at: e.created_at,
     })),
     generatedArticles,
-    imageQueue: (imageQueueRes.data ?? []).map((q) => ({
+    imageQueue: tenantImageQueue.map((q) => ({
       id: q.id,
       generated_article_id: q.generated_article_id,
       status: q.status,
@@ -265,5 +282,12 @@ export async function fetchEditorialDashboard(): Promise<EditorialDashboardSnaps
       breakingCount: generatedArticles.filter((a) => a.is_breaking).length,
     },
     sourceReliability,
+    auditTrail: (auditRes.data ?? []).map((a) => ({
+      id: a.id,
+      action: a.action,
+      user_email: a.user_email,
+      resource_id: a.resource_id,
+      created_at: a.created_at,
+    })),
   };
 }

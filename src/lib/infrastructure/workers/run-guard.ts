@@ -4,6 +4,7 @@
 
 import { isDuplicateRequest } from "@/lib/infrastructure/cache/dedup";
 import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
+import { isProductionDeployment } from "@/lib/infrastructure/production";
 
 export type WorkerRunPayload = {
   ok: boolean;
@@ -29,6 +30,12 @@ export async function acquireWorkerRunLock(
   workerKey: string,
   windowSec: number
 ): Promise<boolean> {
+  if (isProductionDeployment() && !isRedisConfigured()) {
+    console.error(
+      "[run-guard] UPSTASH_REDIS not configured in production — worker overlap protection is degraded"
+    );
+  }
+
   const duplicate = await isDuplicateRequest(`worker:lock:${workerKey}`, windowSec);
   if (duplicate) return false;
 

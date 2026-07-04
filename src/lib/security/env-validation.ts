@@ -2,6 +2,8 @@
  * Production environment validation — fail fast on misconfiguration
  */
 
+import { isProductionDeployment } from "@/lib/infrastructure/production";
+
 type EnvIssue = { key: string; severity: "error" | "warn"; message: string };
 
 const SECRET_PATTERNS = [
@@ -12,9 +14,7 @@ const SECRET_PATTERNS = [
 
 export function validateProductionEnv(): EnvIssue[] {
   const issues: EnvIssue[] = [];
-  const isProd =
-    process.env.NODE_ENV === "production" ||
-    process.env.VERCEL_ENV === "production";
+  const isProd = isProductionDeployment();
 
   if (!isProd) return issues;
 
@@ -23,6 +23,7 @@ export function validateProductionEnv(): EnvIssue[] {
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
     "CRON_SECRET",
+    "NEWSROOM_SUPER_ADMIN_EMAILS",
   ];
 
   for (const key of required) {
@@ -35,20 +36,31 @@ export function validateProductionEnv(): EnvIssue[] {
     }
   }
 
+  if (
+    process.env.ADMIN_EMERGENCY_MODE === "1" ||
+    process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE === "1"
+  ) {
+    issues.push({
+      key: "ADMIN_EMERGENCY_MODE",
+      severity: "error",
+      message: "Emergency admin mode must not be enabled in production",
+    });
+  }
+
+  if (process.env.ENABLE_E2E_AUTH === "1") {
+    issues.push({
+      key: "ENABLE_E2E_AUTH",
+      severity: "error",
+      message: "E2E auth must not be enabled in production",
+    });
+  }
+
   if (!process.env.SECURITY_2FA_ENCRYPTION_KEY?.trim()) {
     issues.push({
       key: "SECURITY_2FA_ENCRYPTION_KEY",
       severity: "warn",
       message:
         "2FA encryption key not set — falling back to service role key (set dedicated key for production)",
-    });
-  }
-
-  if (!process.env.NEWSROOM_SUPER_ADMIN_EMAILS?.trim()) {
-    issues.push({
-      key: "NEWSROOM_SUPER_ADMIN_EMAILS",
-      severity: "warn",
-      message: "No explicit super-admin email allowlist — using code default",
     });
   }
 
@@ -61,15 +73,30 @@ export function validateProductionEnv(): EnvIssue[] {
     });
   }
 
+  if (process.env.AI_LOCAL_ENRICH_ENABLED !== "false") {
+    issues.push({
+      key: "AI_LOCAL_ENRICH_ENABLED",
+      severity: "warn",
+      message: "Set AI_LOCAL_ENRICH_ENABLED=false in production to avoid mock AI enrichment",
+    });
+  }
+
   return issues;
 }
 
 export function assertProductionEnvSafe(): void {
   const issues = validateProductionEnv();
   const errors = issues.filter((i) => i.severity === "error");
-  if (errors.length > 0 && process.env.SECURITY_ENV_STRICT === "1") {
+  const strict =
+    process.env.SECURITY_ENV_STRICT === "1" || isProductionDeployment();
+
+  if (errors.length > 0 && strict) {
     throw new Error(
       `Production env validation failed:\n${errors.map((e) => `- ${e.message}`).join("\n")}`
     );
+  }
+
+  for (const warn of issues.filter((i) => i.severity === "warn")) {
+    console.warn(`[env-validation] ${warn.message}`);
   }
 }

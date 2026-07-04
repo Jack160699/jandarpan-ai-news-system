@@ -2,6 +2,8 @@
 /**
  * Idempotent QStash schedule setup for the Jandarpan newsroom pipeline.
  *
+ * Decomposed workers — no full ingest/editorial in orchestrate (avoids triple-fire).
+ *
  * Usage:
  *   QSTASH_TOKEN=... CRON_SECRET=... PRODUCTION_URL=https://www.jandarpan.news \
  *     node scripts/setup-qstash-schedules.mjs
@@ -51,11 +53,46 @@ const schedules = [
     method: "POST",
   },
   {
-    scheduleId: "jandarpan-orchestrate",
-    destination: `${baseUrl}/api/cron/orchestrate`,
-    cron: "15,45 * * * *",
+    scheduleId: "jandarpan-ai-enrich",
+    destination: `${baseUrl}/api/cron/worker/ai_enrich`,
+    cron: "12,42 * * * *",
     method: "POST",
-    body: "{}",
+  },
+  {
+    scheduleId: "jandarpan-editorial-images",
+    destination: `${baseUrl}/api/cron/worker/editorial_images`,
+    cron: "14,44 * * * *",
+    method: "POST",
+  },
+  {
+    scheduleId: "jandarpan-job-processor",
+    destination: `${baseUrl}/api/cron/worker/job_processor`,
+    cron: "16,46 * * * *",
+    method: "POST",
+  },
+  {
+    scheduleId: "jandarpan-intelligence-embed",
+    destination: `${baseUrl}/api/cron/worker/intelligence_embed`,
+    cron: "18,48 * * * *",
+    method: "POST",
+  },
+  {
+    scheduleId: "jandarpan-intelligence-snapshot",
+    destination: `${baseUrl}/api/cron/worker/intelligence_snapshot`,
+    cron: "22,52 * * * *",
+    method: "POST",
+  },
+  {
+    scheduleId: "jandarpan-analytics-aggregate",
+    destination: `${baseUrl}/api/cron/worker/analytics_aggregate`,
+    cron: "24,54 * * * *",
+    method: "POST",
+  },
+  {
+    scheduleId: "jandarpan-workers-health",
+    destination: `${baseUrl}/api/cron/workers/health`,
+    cron: "0 * * * *",
+    method: "GET",
   },
 ];
 
@@ -87,3 +124,9 @@ for (const schedule of schedules) {
 }
 
 console.log("\nDone. Verify deliveries in the Upstash QStash console (Logs tab).");
+console.log(
+  "Manual orchestrate: POST /api/cron/orchestrate with optional { workers: [...] } body."
+);
+console.log(
+  "Remove legacy jandarpan-orchestrate schedule if it still runs full ingest+editorial."
+);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
 import { executeSearch } from "@/lib/search/search";
+import { checkPublicApiRateLimit } from "@/lib/security/public-rate-limit";
 import type { SearchDistrict, SearchTimeScope } from "@/lib/search/types";
 import type { HomeSectionId } from "@/lib/homepage/types";
 
@@ -55,6 +56,9 @@ const LANGUAGE_AWARE_HEADERS = {
  * GET /api/search?q=Raipur+crime+today&district=raipur&category=india&limit=15
  */
 export async function GET(request: NextRequest) {
+  const rate = await checkPublicApiRateLimit(request, "search", 120, 60);
+  if (!rate.allowed) return rate.response;
+
   const displayLanguage = await getServerReaderLanguage();
   const { searchParams } = request.nextUrl;
   const q = searchParams.get("q")?.trim() ?? "";

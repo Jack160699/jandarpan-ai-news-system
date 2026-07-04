@@ -95,15 +95,23 @@ export async function deliverPendingEvents(
       const tenantId = event.tenant_id as string | null;
       const payload = jsonObjectFrom(event.payload);
 
+      const enqueueFailures: string[] = [];
       for (const jobType of jobs) {
         const dedupeKey = `${jobType}:${tenantId ?? "global"}:${event.dedupe_key ?? event.id}`;
-        await enqueueJob({
+        const jobId = await enqueueJob({
           jobType,
           dedupeKey,
           tenantId,
           payload: { ...payload, sourceEventId: event.id },
           priority: jobType === "intelligence_snapshot" ? 5 : 0,
         });
+        if (!jobId) {
+          enqueueFailures.push(jobType);
+        }
+      }
+
+      if (enqueueFailures.length > 0) {
+        throw new Error(`enqueue_failed:${enqueueFailures.join(",")}`);
       }
 
       await supabase
@@ -160,5 +168,44 @@ export async function publishIngestCompleted(input: {
       signalsInserted: input.signalsInserted,
       ...(input.logId != null ? { logId: input.logId } : {}),
     } as Record<string, unknown>),
+  });
+}
+
+export async function publishSignalsCreated(input: {
+  tenantId?: string | null;
+  signalIds: string[];
+  logId?: string | null;
+}): Promise<void> {
+  if (!input.signalIds.length) return;
+
+  const dedupeKey = input.logId
+    ? `signals:${input.logId}`
+    : `signals:${input.signalIds[0]}`;
+
+  await publishEvent({
+    topic: "signals.created",
+    eventType: "signals.created",
+    tenantId: input.tenantId,
+    dedupeKey,
+    payload: asJsonObject({
+      signalCount: input.signalIds.length,
+      signalIds: input.signalIds.slice(0, 100),
+      ...(input.logId != null ? { logId: input.logId } : {}),
+    } as Record<string, unknown>),
+  });
+}
+
+export async function publishArticlePublished(input: {
+  articleId: string;
+  tenantId: string;
+}): Promise<void> {
+  await publishEvent({
+    topic: "articles.published",
+    eventType: "articles.published",
+    tenantId: input.tenantId,
+    dedupeKey: `published:${input.articleId}`,
+    payload: asJsonObject({
+      articleId: input.articleId,
+    }),
   });
 }

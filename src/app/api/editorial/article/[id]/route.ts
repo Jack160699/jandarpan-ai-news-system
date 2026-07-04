@@ -3,6 +3,7 @@ import { logEditorialAudit } from "@/lib/dashboard/audit";
 import { appendEditorVersion } from "@/lib/editorial-editor/storage";
 import type { EditorVersionSnapshot } from "@/lib/editorial-editor/types";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
+import { assertGeneratedArticleTenantAccess } from "@/lib/security/tenant-guard";
 import {
   isMissingColumnError,
   traceSchemaMismatch,
@@ -26,6 +27,15 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+  const tenantId = auth.session.membership.tenantId;
+  const access = await assertGeneratedArticleTenantAccess(id, tenantId);
+  if (!access.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Article not found" },
+      { status: 404 }
+    );
+  }
+
   const supabase = createAdminServerClient();
 
   const selectWithTranslations =
@@ -37,6 +47,7 @@ export async function GET(request: Request, context: RouteContext) {
     .from("generated_articles")
     .select(selectWithTranslations)
     .eq("id", id)
+    .eq("tenant_id", tenantId)
     .maybeSingle();
 
   // Degraded mode: DB missing translations column (migration not applied).
@@ -49,6 +60,7 @@ export async function GET(request: Request, context: RouteContext) {
       .from("generated_articles")
       .select(selectWithoutTranslations)
       .eq("id", id)
+      .eq("tenant_id", tenantId)
       .maybeSingle();
     data = retry.data as typeof data;
     error = retry.error;
@@ -79,6 +91,15 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const { id } = await context.params;
+  const tenantId = auth.session.membership.tenantId;
+  const access = await assertGeneratedArticleTenantAccess(id, tenantId);
+  if (!access.ok) {
+    return NextResponse.json(
+      { ok: false, error: "Article not found" },
+      { status: 404 }
+    );
+  }
+
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
@@ -99,6 +120,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       .from("generated_articles")
       .select("editorial_metadata")
       .eq("id", id)
+      .eq("tenant_id", tenantId)
       .maybeSingle();
 
     const versions = appendEditorVersion(jsonObjectFrom(current?.editorial_metadata), {
@@ -149,6 +171,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       .from("generated_articles")
       .select("editorial_status, workflow_status")
       .eq("id", id)
+      .eq("tenant_id", tenantId)
       .maybeSingle();
     const isPublic =
       current &&
@@ -162,7 +185,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   let { error } = await supabase
     .from("generated_articles")
     .update(patch as never)
-    .eq("id", id);
+    .eq("id", id)
+    .eq("tenant_id", tenantId);
 
   // Degraded mode: if translations column missing, retry without it (and persist into metadata).
   if (error && isMissingColumnError(error.message, "translations")) {
@@ -187,7 +211,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     const retry = await supabase
       .from("generated_articles")
       .update(retryPatch as never)
-      .eq("id", id);
+      .eq("id", id)
+      .eq("tenant_id", tenantId);
     error = retry.error;
   }
 

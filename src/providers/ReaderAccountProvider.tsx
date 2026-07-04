@@ -114,6 +114,7 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
   const [guest, setGuest] = useState<GuestProfile | null>(null);
   const [interests, setInterestsState] = useState<string[]>(DEFAULT_INTERESTS);
   const [savedCount, setSavedCount] = useState(0);
+  const [isPremium, setIsPremium] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -130,6 +131,20 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
       /* ignore storage errors */
     }
   }, []);
+
+  useEffect(() => {
+    if (!user?.email || !client) {
+      setIsPremium(false);
+      return;
+    }
+    void client
+      .from("reader_subscriptions")
+      .select("status")
+      .eq("email", user.email)
+      .eq("status", "active")
+      .maybeSingle()
+      .then(({ data }) => setIsPremium(Boolean(data)));
+  }, [user, client]);
 
   const toggleInterest = useCallback((id: string) => {
     if (!mounted) return;
@@ -187,7 +202,7 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
       loading: authLoading,
       displayName,
       avatarInitial: displayName.charAt(0).toUpperCase() || "R",
-      isPremium: false,
+      isPremium,
       streakDays: guest?.streakDays ?? 1,
       savedCount,
       interests,
@@ -203,6 +218,7 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
       displayName,
       guest,
       savedCount,
+      isPremium,
       interests,
       toggleInterest,
       setInterests,

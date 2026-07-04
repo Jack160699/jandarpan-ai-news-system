@@ -103,6 +103,14 @@ export type DashboardSourceReliability = {
   articleCount: number;
 };
 
+export type EditorialAuditEntry = {
+  id: string;
+  action: string;
+  user_email: string | null;
+  resource_id: string | null;
+  created_at: string;
+};
+
 export type EditorialDashboardSnapshot = {
   fetchedAt: string;
   counts: {
@@ -132,4 +140,5 @@ export type EditorialDashboardSnapshot = {
   imageQueue: DashboardImageQueueItem[];
   trending: DashboardTrending;
   sourceReliability: DashboardSourceReliability[];
+  auditTrail: EditorialAuditEntry[];
 };

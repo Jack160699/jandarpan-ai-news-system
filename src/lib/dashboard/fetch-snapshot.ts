@@ -17,10 +17,10 @@ import type {
 export async function fetchSaasDashboard(
   session: DashboardSession
 ): Promise<SaasDashboardSnapshot | null> {
-  const base = await fetchEditorialDashboard();
+  const tenantId = session.membership.tenantId;
+  const base = await fetchEditorialDashboard(tenantId);
   if (!base) return null;
 
-  const tenantId = session.membership.tenantId;
   const { tenantSlug, tenantName } = session.membership;
 
   if (!isSupabaseConfigured()) {

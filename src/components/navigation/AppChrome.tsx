@@ -7,6 +7,7 @@ import { SkipLink } from "@/components/ui/SkipLink";
 import { LanguageGate } from "@/components/reader/LanguageGate";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { cn } from "@/lib/cn";
+import { ContinueRibbon } from "@/components/editorial/ContinueRibbon";
 import { HeadlinesMiniPlayer } from "@/components/listen/HeadlinesMiniPlayer";
 import { ArticleSpeechProvider } from "@/providers/ArticleSpeechProvider";
 import { HeadlinesListenProvider } from "@/providers/HeadlinesListenProvider";
@@ -68,6 +69,7 @@ function AppChromeShell({ children }: AppChromeProps) {
             </ScrollRetention>
           </PullToRefresh>
         </AppLayout>
+        <ContinueRibbon />
         <HeadlinesMiniPlayer />
       </div>
     </div>

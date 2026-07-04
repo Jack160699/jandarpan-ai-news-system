@@ -72,9 +72,9 @@ export function SuperMenuProfile({ onNavigate }: SuperMenuProfileProps) {
 
       <div className="sm-pref-sheet">
         <Link
-          href="/archive"
+          href="/archive#saved-stories"
           className="sm-pref-row sm-pref-row--link tap-target"
-          onClick={() => onNavigate("/archive")}
+          onClick={() => onNavigate("/archive#saved-stories")}
         >
           <span className="sm-pref-row__left">
             <span className="sm-pref-row__icon" aria-hidden>

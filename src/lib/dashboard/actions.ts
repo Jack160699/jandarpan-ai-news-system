@@ -58,43 +58,44 @@ export async function runDashboardAction(
 
   switch (action) {
     case "approve":
-      result = await setArticleEditorialStatus(articleId!, "approved");
+      result = await setArticleEditorialStatus(articleId!, tenantId, "approved");
       break;
     case "reject":
-      result = await setArticleEditorialStatus(articleId!, "rejected");
+      result = await setArticleEditorialStatus(articleId!, tenantId, "rejected");
       break;
     case "manual_publish":
-      result = await manualPublishArticle(articleId!);
+      result = await manualPublishArticle(articleId!, tenantId);
       break;
     case "pin":
-      result = await setHomepagePin(articleId!, true);
+      result = await setHomepagePin(articleId!, tenantId, true);
       break;
     case "unpin":
-      result = await setHomepagePin(articleId!, false);
+      result = await setHomepagePin(articleId!, tenantId, false);
       break;
     case "feature":
-      result = await setArticleFeatured(articleId!, true);
+      result = await setArticleFeatured(articleId!, tenantId, true);
       break;
     case "unfeature":
-      result = await setArticleFeatured(articleId!, false);
+      result = await setArticleFeatured(articleId!, tenantId, false);
       break;
     case "update_headline":
       result = await updateArticleHeadline(
         articleId!,
+        tenantId,
         String(body.headline ?? "")
       );
       break;
     case "mark_breaking":
-      result = await setArticleBreaking(articleId!, true);
+      result = await setArticleBreaking(articleId!, tenantId, true);
       break;
     case "unmark_breaking":
-      result = await setArticleBreaking(articleId!, false);
+      result = await setArticleBreaking(articleId!, tenantId, false);
       break;
     case "regenerate_article":
-      result = await regenerateGeneratedArticle(articleId!);
+      result = await regenerateGeneratedArticle(articleId!, tenantId);
       break;
     case "regenerate_image":
-      result = await queueArticleImageRegeneration(articleId!);
+      result = await queueArticleImageRegeneration(articleId!, tenantId);
       break;
     case "disable_rss":
       result = await disableRssSource(

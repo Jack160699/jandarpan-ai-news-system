@@ -26,14 +26,14 @@ export type VerifyCronRequestOptions = {
   rawBody?: string | null;
 };
 
+function isDeployedEnvironment(): boolean {
+  return Boolean(process.env.VERCEL_ENV);
+}
+
 export function parseBearerToken(authorization: string | null): string | null {
   if (!authorization) return null;
   const raw = authorization.trim();
 
-  // Common production misformats we want to be resilient to:
-  // - "Bearer Bearer <token>"
-  // - "Bearer: <token>"
-  // - raw token without scheme
   const normalized = raw.replace(/^Bearer\s+/i, "").replace(/^Bearer\s+/i, "");
   const withoutColon = normalized.replace(/^:\s*/, "");
   const token = withoutColon.trim();
@@ -41,29 +41,22 @@ export function parseBearerToken(authorization: string | null): string | null {
 }
 
 function getCronSecret(): { secret: string | null; env: string | null } {
-  const candidates: Array<[string, string | undefined]> = [
-    ["CRON_SECRET", process.env.CRON_SECRET],
-    // Back-compat fallbacks (misnamed envs in older deployments)
-    ["CRON_API_SECRET", process.env.CRON_API_SECRET],
-    ["ADMIN_SECRET", process.env.ADMIN_SECRET],
-    ["INTERNAL_API_KEY", process.env.INTERNAL_API_KEY],
-    ["AUTH_SECRET", process.env.AUTH_SECRET],
-    ["API_SECRET", process.env.API_SECRET],
-  ];
-
-  for (const [name, value] of candidates) {
-    const trimmed = value?.trim();
-    if (trimmed) return { secret: trimmed, env: name };
-  }
+  const trimmed = process.env.CRON_SECRET?.trim();
+  if (trimmed) return { secret: trimmed, env: "CRON_SECRET" };
   return { secret: null, env: null };
 }
 
 /**
  * Internal helper (server-only): resolves the active cron secret.
- * Prefer setting `CRON_SECRET`; fallbacks exist to keep older deployments running.
  */
 export function getActiveCronSecret(): { secret: string | null; env: string | null } {
   return getCronSecret();
+}
+
+function redactAuthHeader(authorization: string | null): string | null {
+  if (!authorization) return null;
+  if (/^Bearer\s+/i.test(authorization.trim())) return "Bearer [REDACTED]";
+  return "[REDACTED]";
 }
 
 function getQStashReceiver(): Receiver | null {
@@ -117,25 +110,26 @@ function verifyCronSecret(request: Request): CronAuthResult {
     };
   }
 
-  // Temporary emergency diagnostics: only log on auth failure.
-  // Keep the shape stable for log scrapers.
   try {
-    console.log({
-      authHeader,
-      expectedSecret: cronSecret,
-      envLoaded: Boolean(cronSecret),
-      expectedSecretEnv,
-      bearerToken,
-      cronHeader,
-      vercelCron,
-      qstashSignature: Boolean(request.headers.get("upstash-signature")),
-      path: new URL(request.url).pathname,
-    });
+    console.warn(
+      JSON.stringify({
+        tag: "[cron-auth]",
+        event: "auth_failed",
+        authHeader: redactAuthHeader(authHeader),
+        envLoaded: Boolean(cronSecret),
+        expectedSecretEnv,
+        bearerPresent: Boolean(bearerToken),
+        cronHeaderPresent: Boolean(cronHeader),
+        vercelCron,
+        qstashSignature: Boolean(request.headers.get("upstash-signature")),
+        path: new URL(request.url).pathname,
+      })
+    );
   } catch {
     // ignore logging failures
   }
 
-  if (isProductionDeployment()) {
+  if (isProductionDeployment() || isDeployedEnvironment()) {
     return {
       authorized: false,
       bearerToken,
@@ -145,17 +139,10 @@ function verifyCronSecret(request: Request): CronAuthResult {
     };
   }
 
-  const url = new URL(request.url);
-  if (url.searchParams.get("dev") === "1") {
-    return {
-      authorized: true,
-      bearerToken,
-      cronHeader,
-      vercelCron,
-      expectedSecretEnv,
-    };
-  }
-  if (!cronSecret) {
+  if (process.env.NODE_ENV !== "production" && !cronSecret) {
+    console.warn(
+      "[cron-auth] CRON_SECRET not set — allowing unauthenticated cron in local dev only"
+    );
     return {
       authorized: true,
       bearerToken,

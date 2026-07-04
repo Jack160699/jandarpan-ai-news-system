@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { runEditorAiAction } from "@/lib/editorial-editor/ai";
 import type { EditorAiAction } from "@/lib/editorial-editor/types";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
+import { checkEditorialAiRateLimit } from "@/lib/security/ai-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ const ACTIONS: EditorAiAction[] = [
 export async function POST(request: Request) {
   const auth = await requireEditorialAuth(request, "editorial:write");
   if (!auth.ok) return auth.response;
+
+  const rate = await checkEditorialAiRateLimit(auth.session, "editor-ai");
+  if (!rate.allowed) return rate.response;
 
   let body: {
     action?: EditorAiAction;

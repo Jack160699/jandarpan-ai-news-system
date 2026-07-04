@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   );
   const cached = !!snapshot;
   if (!snapshot) {
-    snapshot = await fetchEditorialDashboard();
+    snapshot = await fetchEditorialDashboard(tenantId);
     if (snapshot) {
       await setCachedDashboard(tenantId, "editorial", snapshot);
     }

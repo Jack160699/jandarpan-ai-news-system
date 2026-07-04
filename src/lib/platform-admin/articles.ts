@@ -1,3 +1,5 @@
+import { buildRejectPatch } from "@/lib/editorial/publication";
+import { buildPublicPublishPatch } from "@/lib/newsroom/publish-state";
 import { geoFromRecord } from "@/lib/regional/geo-tagging";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { asJson, jsonObjectFrom, type JsonObject } from "@/types/json";
@@ -56,7 +58,8 @@ async function loadMetricsBySlug(
 }
 
 export async function listAdminArticles(
-  filters: ArticleListFilters = {}
+  filters: ArticleListFilters = {},
+  tenantId?: string
 ): Promise<AdminArticleListResult | null> {
   if (!isSupabaseConfigured()) return null;
 
@@ -91,6 +94,9 @@ export async function listAdminArticles(
       q = q.not("published_at", "is", null);
     } else if (filters.published === "draft") {
       q = q.is("published_at", null);
+    }
+    if (tenantId) {
+      q = q.eq("tenant_id", tenantId);
     }
 
     const { data, error } = await q;
@@ -239,31 +245,44 @@ export type ArticlePatchPayload = {
 export async function patchAdminArticle(
   id: string,
   source: "generated" | "platform",
-  patch: ArticlePatchPayload
+  patch: ArticlePatchPayload,
+  tenantId?: string
 ): Promise<boolean> {
   if (!isSupabaseConfigured()) return false;
   const supabase = createAdminServerClient();
 
   if (source === "generated") {
     const update: Record<string, unknown> = {};
-    if (patch.workflowStatus) update.workflow_status = patch.workflowStatus;
-    if (patch.editorialStatus) update.editorial_status = patch.editorialStatus;
-    if (patch.publishedAt !== undefined) update.published_at = patch.publishedAt;
+
+    if (patch.workflowStatus === "published" || patch.editorialStatus === "approved") {
+      Object.assign(update, buildPublicPublishPatch());
+    } else if (patch.editorialStatus === "rejected") {
+      Object.assign(update, buildRejectPatch());
+    } else {
+      if (patch.workflowStatus) update.workflow_status = patch.workflowStatus;
+      if (patch.editorialStatus) update.editorial_status = patch.editorialStatus;
+      if (patch.publishedAt !== undefined) update.published_at = patch.publishedAt;
+    }
+
     if (patch.homepagePin !== undefined) update.homepage_pin = patch.homepagePin;
     if (patch.seoTitle !== undefined) update.seo_title = patch.seoTitle;
     if (patch.seoDescription !== undefined) update.seo_description = patch.seoDescription;
 
     if (patch.isBreaking !== undefined) {
-      const { data: existing } = await supabase
+      let existingQuery = supabase
         .from("generated_articles")
         .select("editorial_metadata")
-        .eq("id", id)
-        .maybeSingle();
+        .eq("id", id);
+      if (tenantId) existingQuery = existingQuery.eq("tenant_id", tenantId);
+      const { data: existing } = await existingQuery.maybeSingle();
+      if (!existing) return false;
       const meta = jsonObjectFrom(existing?.editorial_metadata);
       update.editorial_metadata = asJson({ ...meta, is_breaking: patch.isBreaking });
     }
 
-    const { error } = await supabase.from("generated_articles").update(update as never).eq("id", id);
+    let updateQuery = supabase.from("generated_articles").update(update as never).eq("id", id);
+    if (tenantId) updateQuery = updateQuery.eq("tenant_id", tenantId);
+    const { error } = await updateQuery;
     if (error) {
       console.error("[platform-admin] patch generated:", error.message);
       return false;

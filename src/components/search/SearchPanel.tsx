@@ -117,6 +117,7 @@ export function SearchPanel({
               key={d.id}
               type="button"
               className={`search-chip tap-target ${district === d.id ? "search-chip--active" : ""}`}
+              aria-pressed={district === d.id}
               onClick={() =>
                 setDistrict(district === d.id ? null : d.id)
               }
@@ -129,6 +130,7 @@ export function SearchPanel({
               key={c.id}
               type="button"
               className={`search-chip tap-target ${category === c.id ? "search-chip--active" : ""}`}
+              aria-pressed={category === c.id}
               onClick={() =>
                 setCategory(category === c.id ? null : c.id)
               }
@@ -139,6 +141,7 @@ export function SearchPanel({
           <button
             type="button"
             className={`search-chip tap-target ${timeScope === "today" ? "search-chip--active" : ""}`}
+            aria-pressed={timeScope === "today"}
             onClick={() =>
               setTimeScope(timeScope === "today" ? "all" : "today")
             }

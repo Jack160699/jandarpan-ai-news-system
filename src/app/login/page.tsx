@@ -86,8 +86,8 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-stone-500">
           {pickBilingualLabel(
             language,
-            "Save stories, sync interests, and unlock personalized feeds.",
-            "खबरें सेव करें, रुचियाँ सिंक करें और व्यक्तिगत फ़ीड पाएँ।"
+            "Sign in to personalize your feed. Saved stories stay on this device until cloud sync launches.",
+            "फ़ीड पर्सनलाइज़ करने के लिए साइन इन करें। सेव की गई खबरें अभी इसी डिवाइस पर रहती हैं।"
           )}
         </p>
 

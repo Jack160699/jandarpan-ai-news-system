@@ -24,7 +24,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     id: "bilaspur",
     label: "Bilaspur",
     labelHi: "बिलासपुर",
-    href: "/category/bilaspur",
+    href: "/district/bilaspur",
   },
   {
     id: "politics",

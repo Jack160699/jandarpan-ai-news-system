@@ -11,18 +11,21 @@ import { asJson, jsonObjectFrom } from "@/types/json";
 
 export async function enrichArticleIntelligence(
   articleId: string,
-  options?: { existingHeadlines?: string[] }
+  options?: { existingHeadlines?: string[]; tenantId?: string }
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isSupabaseConfigured()) {
     return { ok: false, error: "no_database" };
   }
 
   const supabase = createAdminServerClient();
-  const { data: row, error } = await supabase
+  let query = supabase
     .from("generated_articles")
     .select("*")
-    .eq("id", articleId)
-    .maybeSingle();
+    .eq("id", articleId);
+  if (options?.tenantId) {
+    query = query.eq("tenant_id", options.tenantId);
+  }
+  const { data: row, error } = await query.maybeSingle();
 
   if (error || !row) return { ok: false, error: error?.message ?? "not_found" };
 

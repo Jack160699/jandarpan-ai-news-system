@@ -199,8 +199,12 @@ function evaluateCriticalHealth(input: {
     reasons.push(`dead_letters:${input.queue.deadLetters}`);
   }
 
-  if (input.queue.claimed >= CRITICAL_CLAIMED_STALE) {
-    reasons.push(`claimed_stuck:${input.queue.claimed}`);
+  if (input.queue.staleClaimed >= CRITICAL_CLAIMED_STALE) {
+    reasons.push(`stale_claimed:${input.queue.staleClaimed}`);
+  }
+
+  if (input.queue.eventBusPending >= 50) {
+    reasons.push(`event_bus_backlog:${input.queue.eventBusPending}`);
   }
 
   for (const worker of input.health) {

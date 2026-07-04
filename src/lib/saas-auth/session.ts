@@ -160,7 +160,11 @@ export async function getDashboardSession(
     null;
 
   if (!isSupabaseConfigured()) {
-    if (process.env.NODE_ENV === "development" && !isProdRuntime()) {
+    if (
+      process.env.NODE_ENV === "development" &&
+      !isProdRuntime() &&
+      process.env.DASHBOARD_DEV_BYPASS === "1"
+    ) {
       return {
         userId: DEV_USER_ID,
         email: "dev@newsroom.local",

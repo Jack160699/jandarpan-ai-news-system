@@ -268,5 +268,10 @@ export function isAnyChatProviderConfigured(): boolean {
 }
 
 export function isLocalEnrichEnabled(): boolean {
-  return process.env.AI_LOCAL_ENRICH_ENABLED !== "false";
+  if (process.env.AI_LOCAL_ENRICH_ENABLED === "true") return true;
+  if (process.env.AI_LOCAL_ENRICH_ENABLED === "false") return false;
+  return (
+    process.env.NODE_ENV !== "production" &&
+    process.env.VERCEL_ENV !== "production"
+  );
 }

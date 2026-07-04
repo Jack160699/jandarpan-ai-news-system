@@ -1,7 +1,7 @@
 import type { DashboardPermission } from "@/lib/saas-auth/types";
 
 const ACTION_PERMISSIONS: Record<string, DashboardPermission> = {
-  approve: "editorial:write",
+  approve: "publish:write",
   reject: "editorial:write",
   update_headline: "editorial:write",
   regenerate_article: "editorial:write",

@@ -28,9 +28,8 @@ export type OrchestrateResult = {
   degraded: boolean;
 };
 
-const DEFAULT_PIPELINE: WorkerId[] = [
-  "ingest",
-  "editorial_generate",
+/** Scheduled separately via QStash: fetch-news, editorial_generate */
+export const INTELLIGENCE_PIPELINE: WorkerId[] = [
   "ai_enrich",
   "editorial_images",
   "job_processor",
@@ -38,6 +37,8 @@ const DEFAULT_PIPELINE: WorkerId[] = [
   "intelligence_snapshot",
   "analytics_aggregate",
 ];
+
+const DEFAULT_PIPELINE: WorkerId[] = INTELLIGENCE_PIPELINE;
 
 export async function runCronOrchestration(
   options: OrchestrateOptions

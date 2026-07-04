@@ -5,6 +5,7 @@
 import { NextResponse } from "next/server";
 import { logEditorialAudit } from "@/lib/dashboard/audit";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
+import { assertGeneratedArticleTenantAccess } from "@/lib/security/tenant-guard";
 import {
   enqueueEditorialImage,
   replaceArticleHeroImage,
@@ -74,6 +75,16 @@ export async function POST(request: Request) {
 
   if (!body.articleId && body.action !== "metrics") {
     return NextResponse.json({ ok: false, error: "articleId required" }, { status: 400 });
+  }
+
+  if (body.articleId) {
+    const access = await assertGeneratedArticleTenantAccess(
+      body.articleId,
+      auth.session.membership.tenantId
+    );
+    if (!access.ok) {
+      return NextResponse.json({ ok: false, error: "Article not found" }, { status: 404 });
+    }
   }
 
   let result: { ok: boolean; message?: string; data?: unknown };
