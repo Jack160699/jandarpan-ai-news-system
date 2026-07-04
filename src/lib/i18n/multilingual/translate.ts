@@ -50,6 +50,7 @@ type LlmTranslationResponse = {
   article_body?: string;
   seo_title?: string;
   seo_description?: string;
+  tags?: string[];
 };
 
 export async function translateArticleBundle(input: {
@@ -58,6 +59,7 @@ export async function translateArticleBundle(input: {
   article_body: string;
   seo_title: string;
   seo_description: string;
+  tags?: string[];
   sourceLanguage: NewsroomLanguage;
   targetLanguage: NewsroomLanguage;
 }): Promise<ArticleLocaleBundle | null> {
@@ -71,6 +73,7 @@ export async function translateArticleBundle(input: {
       article_body: input.article_body,
       seo_title: input.seo_title,
       seo_description: input.seo_description,
+      tags: input.tags,
       reading_time: readingTimeLabel(mins, input.targetLanguage),
       translated_at: new Date().toISOString(),
       tone_profile: getRegionalToneProfile(input.targetLanguage).id,
@@ -103,6 +106,7 @@ ${JSON.stringify({
   article_body: input.article_body.slice(0, 12000),
   seo_title: input.seo_title,
   seo_description: input.seo_description,
+  tags: input.tags ?? [],
 })}
 
 Return JSON only:
@@ -111,7 +115,8 @@ Return JSON only:
   "summary": "...",
   "article_body": "markdown sections preserved",
   "seo_title": "...",
-  "seo_description": "..."
+  "seo_description": "...",
+  "tags": ["..."]
 }`,
       },
     ],
@@ -142,6 +147,9 @@ Return JSON only:
 
     const article_body = parsed.article_body?.trim() || input.article_body;
     const mins = estimateMinutes(article_body);
+    const tags = Array.isArray(parsed.tags)
+      ? parsed.tags.map((t) => String(t).trim()).filter(Boolean)
+      : input.tags;
 
     return {
       headline,
@@ -149,6 +157,7 @@ Return JSON only:
       article_body,
       seo_title: (parsed.seo_title?.trim() || headline).slice(0, 70),
       seo_description: (parsed.seo_description?.trim() || summary).slice(0, 165),
+      tags: tags?.length ? tags : input.tags,
       reading_time: readingTimeLabel(mins, input.targetLanguage),
       translated_at: new Date().toISOString(),
       model: body.model,
@@ -179,6 +188,7 @@ export async function translateGeneratedArticle(
       article_body: row.article_body ?? "",
       seo_title: row.seo_title ?? row.headline,
       seo_description: row.seo_description ?? row.summary ?? "",
+      tags: row.tags ?? [],
       sourceLanguage: source,
       targetLanguage: lang,
     });
@@ -215,6 +225,7 @@ export async function persistArticleTranslations(
   await supabase
     .from("generated_articles")
     .update({
+      translations: asJson(translations),
       editorial_metadata: asJson({
         ...editorial_metadata,
         translations,

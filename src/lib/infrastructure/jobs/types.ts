@@ -21,6 +21,7 @@ export type JobType =
   | "intelligence_summary"
   | "seo_analysis"
   | "translation_batch"
+  | "translate_article"
   | "dam_analyze"
   | "analytics_aggregate"
   | "event_cluster";
@@ -76,7 +77,8 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   intelligence_cluster: "Semantic signal clustering",
   intelligence_summary: "Batch article summaries",
   seo_analysis: "SEO opportunity analysis",
-  translation_batch: "Translation suggestions",
+  translation_batch: "Translation backlog scan + enqueue",
+  translate_article: "Translate one article locale",
   dam_analyze: "DAM vision AI analysis",
   analytics_aggregate: "Analytics rollup snapshot",
   event_cluster: "Signal→event clustering",

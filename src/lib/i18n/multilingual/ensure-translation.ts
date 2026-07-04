@@ -73,6 +73,7 @@ export async function ensureArticleTranslation(
       article_body: row.article_body ?? "",
       seo_title: row.seo_title ?? row.headline,
       seo_description: row.seo_description ?? row.summary ?? "",
+      tags: row.tags ?? [],
       sourceLanguage: source,
       targetLanguage: target,
     });

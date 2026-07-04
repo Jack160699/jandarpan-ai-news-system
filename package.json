@@ -18,6 +18,8 @@
     "schema:verify": "node scripts/verify-schema.mjs",
     "schema:checksum": "npx supabase db query --linked \"select public.get_schema_health()->>'schema_checksum' as checksum\" -o json",
     "backfill:publish": "node scripts/backfill-generated-publication.mjs",
+    "backfill:translations": "node scripts/backfill-article-translations.mjs",
+    "audit:translations": "node scripts/audit-translation-coverage.mjs",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {

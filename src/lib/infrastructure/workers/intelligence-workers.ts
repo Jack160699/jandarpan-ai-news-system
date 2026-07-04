@@ -76,6 +76,7 @@ async function runIntelligenceSnapshot(ctx: WorkerContext): Promise<WorkerResult
       "intelligence_summary",
       "seo_analysis",
       "translation_batch",
+      "translate_article",
     ],
     workerId: "intelligence_snapshot",
   });
