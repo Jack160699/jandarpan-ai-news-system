@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageShell } from "@/components/layout/PageShell";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchShortsPool } from "@/lib/news/shorts/build-short";
 import { BRAND } from "@/lib/brand";
 import { PRODUCTION_ROBOTS, SITE_URL, webPageJsonLd } from "@/lib/seo";
@@ -23,7 +24,8 @@ type ListenPageProps = {
 
 export default async function ListenPage({ searchParams }: ListenPageProps) {
   const params = await searchParams;
-  const shorts = await fetchShortsPool(20);
+  const displayLanguage = await getServerReaderLanguage();
+  const shorts = await fetchShortsPool(20, displayLanguage);
   const autoPlay = params.play === "1";
 
   const jsonLd = webPageJsonLd(

@@ -4,7 +4,9 @@
 
 import { createAdminServerClient } from "@/lib/supabase";
 import { inferSection } from "@/lib/homepage/infer-section";
-import { normalizeArticleLanguage } from "@/lib/i18n/languages";
+import { isArticleAvailableInLanguage } from "@/lib/i18n/article-language";
+import { normalizeArticleLanguage, type NewsroomLanguage } from "@/lib/i18n/languages";
+import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { buildAnchorLine } from "@/lib/news/shorts/anchor";
 import { logShortsAnalytics } from "@/lib/news/shorts/analytics";
@@ -31,25 +33,54 @@ export function shortCardFromRow(row: GeneratedArticleRow): NewsShortCard | null
   if (!bundle) return null;
 
   const style = getShortStyle(bundle.section);
-  const lang = normalizeArticleLanguage(bundle.language ?? row.language);
+  const rowLang = normalizeArticleLanguage(row.language);
+  const bundleLang = normalizeArticleLanguage(bundle.language ?? row.language);
+  const lang = rowLang;
+  const useLocalizedCopy = rowLang !== bundleLang;
+  const summary = row.summary?.trim() ?? "";
+  const summary60s =
+    useLocalizedCopy && summary ? summary.slice(0, 320) : bundle.summary60s;
+  const highlights =
+    useLocalizedCopy && summary
+      ? summary
+          .split(/(?<=[.!?।])\s+/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 8)
+          .slice(0, 4)
+      : bundle.highlights;
+  const imageUrl = row.hero_image_url ?? "";
+  const anchorLine = useLocalizedCopy
+    ? buildAnchorLine(bundle.section, lang, row.headline)
+    : bundle.anchorLine;
+  const reelSlides =
+    useLocalizedCopy && summary
+      ? buildReelSlides({
+          headline: row.headline,
+          highlights: highlights.length ? highlights : [summary.slice(0, 80)],
+          imageUrl,
+          subtitles: bundle.subtitles,
+          durationSec: bundle.durationSec,
+        })
+      : bundle.reel.slides;
+
   const base: NewsShortCard = {
     articleId: row.id,
     slug: row.slug,
     headline: row.headline,
-    summary60s: bundle.summary60s,
-    anchorLine: bundle.anchorLine,
-    imageUrl: row.hero_image_url ?? "",
+    summary60s,
+    anchorLine,
+    imageUrl,
     videoUrl: null,
     section: bundle.section,
     styleId: bundle.styleId,
     durationSec: bundle.durationSec,
-    highlights: bundle.highlights,
+    highlights,
     hasVoice: bundle.voice.status === "ready",
     voiceStreamPath: bundle.voice.streamPath,
     publishedAt: row.published_at ?? row.created_at,
-    language: bundle.language,
+    language: lang,
     subtitles: bundle.subtitles,
-    reelSlides: bundle.reel.slides,
+    reelSlides,
     categoryLabel: pickBilingualLabel(lang, style.badge, style.badgeHi),
     sourceLabel: pickBilingualLabel(lang, "Jan Darpan Desk", "जन दर्पण डेस्क"),
     sourceCount: 1,
@@ -154,7 +185,25 @@ async function persistShortBundle(
     .eq("id", articleId);
 }
 
-export async function fetchShortsPool(limit = 40): Promise<NewsShortCard[]> {
+function localizeShortRow(
+  row: GeneratedArticleRow,
+  displayLanguage: NewsroomLanguage
+): GeneratedArticleRow | null {
+  if (!isArticleAvailableInLanguage(row, displayLanguage)) return null;
+  const fields = resolveLocalizedFieldsStrict(row, displayLanguage);
+  if (!fields?.headline?.trim()) return null;
+  return {
+    ...row,
+    headline: fields.headline,
+    summary: fields.summary,
+    language: fields.language,
+  };
+}
+
+export async function fetchShortsPool(
+  limit = 40,
+  displayLanguage?: NewsroomLanguage
+): Promise<NewsShortCard[]> {
   const supabase = createAdminServerClient();
   const { data, error } = await supabase
     .from("generated_articles")
@@ -172,7 +221,13 @@ export async function fetchShortsPool(limit = 40): Promise<NewsShortCard[]> {
     if (status === "rejected" || status === "pending") continue;
     if (!row.published_at && !row.summary) continue;
 
-    const full = row as unknown as GeneratedArticleRow;
+    let full = row as unknown as GeneratedArticleRow;
+    if (displayLanguage) {
+      const localized = localizeShortRow(full, displayLanguage);
+      if (!localized) continue;
+      full = localized;
+    }
+
     const card = ensureShortCard(full);
     if (card) cards.push(card);
     if (cards.length >= limit) break;

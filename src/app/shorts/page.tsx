@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ReelsPage } from "@/features/reels/ReelsPage";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchShortsPool } from "@/lib/news/shorts/build-short";
 import { BRAND } from "@/lib/brand";
 
@@ -38,7 +39,8 @@ function shortsJsonLd(shorts: { headline: string; slug: string }[]) {
 }
 
 export default async function ShortsPage() {
-  const shorts = await fetchShortsPool(32);
+  const displayLanguage = await getServerReaderLanguage();
+  const shorts = await fetchShortsPool(32, displayLanguage);
 
   return (
     <>
