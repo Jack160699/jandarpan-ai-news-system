@@ -32,10 +32,11 @@ export async function syncMembershipCookiesFromSession(
   }
 
   if (cookieTenant && cookieTenant !== tenantSlug) {
-    logAdminSession("tenant_mismatch", {
+    logAdminSession("session_desync", {
       cookieTenant,
       resolvedTenant: tenantSlug,
       userId: session.userId,
+      action: "overwrite_auth_tenant_cookie",
     });
   }
 

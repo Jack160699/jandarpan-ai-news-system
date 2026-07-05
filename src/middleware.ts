@@ -12,12 +12,13 @@ import {
   isProductionExemptPath,
   isSensitiveDevApiPath,
 } from "@/lib/infrastructure/production";
-import {
-  getTenantByDomain,
-  getDefaultTenantSlug,
-  getTenantBySlug,
-} from "@/lib/tenant/registry";
 import { TENANT_COOKIE, TENANT_HEADER } from "@/lib/tenant/resolve";
+import {
+  isAdminDeskPath,
+  resolvePublicContentTenant,
+  shouldWriteWhitelabelTenantCookie,
+  whitelabelTenantCookieSlug,
+} from "@/lib/tenant/middleware-routing";
 import { traceMiddleware } from "@/lib/observability/admin-boot";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -113,16 +114,16 @@ export async function middleware(request: NextRequest) {
     request.headers.get("host") ??
     "";
 
-  const tenant =
-    getTenantByDomain(host) ?? getTenantBySlug(getDefaultTenantSlug());
+  const adminDesk = isAdminDeskPath(pathname);
+  const publicTenant = adminDesk ? null : resolvePublicContentTenant(host);
 
   const requestId =
     getRequestIdFromHeaders(request.headers) ?? generateRequestId();
 
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(REQUEST_ID_HEADER, requestId);
-  if (tenant) {
-    requestHeaders.set(TENANT_HEADER, tenant.slug);
+  if (publicTenant) {
+    requestHeaders.set(TENANT_HEADER, publicTenant.slug);
   }
   requestHeaders.set("x-pathname", pathname);
 
@@ -132,12 +133,21 @@ export async function middleware(request: NextRequest) {
 
   response = applySecurityHeaders(response);
 
-  if (tenant) {
-    response.cookies.set(TENANT_COOKIE, tenant.slug, {
+  const tenantCookieSlug = whitelabelTenantCookieSlug(host);
+  if (shouldWriteWhitelabelTenantCookie(pathname, host) && tenantCookieSlug) {
+    response.cookies.set(TENANT_COOKIE, tenantCookieSlug, {
       path: "/",
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       maxAge: 60 * 60 * 24 * 365,
+    });
+  } else if (adminDesk) {
+    // Remove stale public whitelabel cookie — admin auth uses nr-dashboard-tenant
+    response.cookies.set(TENANT_COOKIE, "", {
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 0,
     });
   }
 
