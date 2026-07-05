@@ -2,7 +2,11 @@
 /**
  * Idempotent QStash schedule setup for the Jandarpan newsroom pipeline.
  *
- * Decomposed workers — no full ingest/editorial in orchestrate (avoids triple-fire).
+ * Production uses three staggered schedules (see docs/QSTASH_SCHEDULER_SETUP.md):
+ *   fetch-news → ingest
+ *   editorial_generate → event→article generation
+ *   orchestrate → intelligence pipeline (ai_enrich, editorial_images, job_processor,
+ *                 intelligence_embed, intelligence_snapshot, analytics_aggregate)
  *
  * Scheduled worker job ids (health monitoring) are defined in:
  *   src/lib/infrastructure/cron/registered-jobs.ts
@@ -56,40 +60,11 @@ const schedules = [
     method: "POST",
   },
   {
-    scheduleId: "jandarpan-ai-enrich",
-    destination: `${baseUrl}/api/cron/worker/ai_enrich`,
-    cron: "12,42 * * * *",
+    scheduleId: "jandarpan-orchestrate",
+    destination: `${baseUrl}/api/cron/orchestrate`,
+    cron: "15,45 * * * *",
     method: "POST",
-  },
-  {
-    scheduleId: "jandarpan-editorial-images",
-    destination: `${baseUrl}/api/cron/worker/editorial_images`,
-    cron: "14,44 * * * *",
-    method: "POST",
-  },
-  {
-    scheduleId: "jandarpan-job-processor",
-    destination: `${baseUrl}/api/cron/worker/job_processor`,
-    cron: "16,46 * * * *",
-    method: "POST",
-  },
-  {
-    scheduleId: "jandarpan-intelligence-embed",
-    destination: `${baseUrl}/api/cron/worker/intelligence_embed`,
-    cron: "18,48 * * * *",
-    method: "POST",
-  },
-  {
-    scheduleId: "jandarpan-intelligence-snapshot",
-    destination: `${baseUrl}/api/cron/worker/intelligence_snapshot`,
-    cron: "22,52 * * * *",
-    method: "POST",
-  },
-  {
-    scheduleId: "jandarpan-analytics-aggregate",
-    destination: `${baseUrl}/api/cron/worker/analytics_aggregate`,
-    cron: "24,54 * * * *",
-    method: "POST",
+    body: "{}",
   },
   {
     scheduleId: "jandarpan-workers-health",
@@ -128,8 +103,8 @@ for (const schedule of schedules) {
 
 console.log("\nDone. Verify deliveries in the Upstash QStash console (Logs tab).");
 console.log(
-  "Manual orchestrate: POST /api/cron/orchestrate with optional { workers: [...] } body."
+  "Remove legacy decomposed schedules if present (ai_enrich, editorial_images, job_processor, etc.)."
 );
 console.log(
-  "Remove legacy jandarpan-orchestrate schedule if it still runs full ingest+editorial."
+  "Manual recovery: POST /api/cron/orchestrate with optional { workers: [...] } body."
 );

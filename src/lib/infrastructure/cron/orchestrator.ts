@@ -28,7 +28,7 @@ export type OrchestrateResult = {
   degraded: boolean;
 };
 
-/** Scheduled separately via QStash: fetch-news, editorial_generate */
+/** Scheduled via QStash: fetch-news, editorial_generate, orchestrate (this pipeline) */
 export const INTELLIGENCE_PIPELINE: WorkerId[] = [
   "ai_enrich",
   "editorial_images",

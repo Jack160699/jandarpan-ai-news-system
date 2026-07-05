@@ -3,20 +3,19 @@
  *
  * Keep in sync with:
  * - scripts/setup-qstash-schedules.mjs (QStash destinations)
- * - vercel.json (daily backup crons)
+ * - docs/QSTASH_SCHEDULER_SETUP.md
+ * - vercel.json (daily backup crons for fetch-news + editorial_generate only)
  *
  * Job ids are normalized worker/route names, never URL paths.
+ *
+ * Intelligence workers (ai_enrich, editorial_images, job_processor, etc.) run
+ * inside the scheduled `orchestrate` endpoint — they are not separate cron jobs.
  */
 
 export const REGISTERED_CRON_JOBS = [
   "fetch-news",
+  "orchestrate",
   "editorial_generate",
-  "ai_enrich",
-  "editorial_images",
-  "job_processor",
-  "intelligence_embed",
-  "intelligence_snapshot",
-  "analytics_aggregate",
 ] as const;
 
 export type RegisteredCronJobId = (typeof REGISTERED_CRON_JOBS)[number];
