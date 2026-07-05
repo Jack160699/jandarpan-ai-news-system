@@ -4,6 +4,9 @@
  *
  * Decomposed workers — no full ingest/editorial in orchestrate (avoids triple-fire).
  *
+ * Scheduled worker job ids (health monitoring) are defined in:
+ *   src/lib/infrastructure/cron/registered-jobs.ts
+ *
  * Usage:
  *   QSTASH_TOKEN=... CRON_SECRET=... PRODUCTION_URL=https://www.jandarpan.news \
  *     node scripts/setup-qstash-schedules.mjs

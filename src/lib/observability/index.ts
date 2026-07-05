@@ -23,7 +23,12 @@ export {
 } from "@/lib/observability/metrics";
 export { trackOpsError, getRecentOpsErrors, getOpsErrorSummary } from "@/lib/observability/errors";
 export { evaluateIngestionAlert } from "@/lib/observability/alerts";
-export { recordCronRun, getCronMonitorState } from "@/lib/observability/cron-monitor";
+export {
+  recordCronRun,
+  getCronMonitorState,
+  REGISTERED_CRON_JOBS,
+} from "@/lib/observability/cron-monitor";
+export type { RegisteredCronJobId } from "@/lib/observability/cron-monitor";
 export { monitorWorkerResult } from "@/lib/observability/worker-monitor";
 export { withObservability } from "@/lib/observability/api-handler";
 export {

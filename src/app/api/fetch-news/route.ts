@@ -185,6 +185,14 @@ async function handleFetchNews(request: Request) {
         preservedExistingDb: true,
       });
 
+      await recordCronRun({
+        job: "fetch-news",
+        ok: false,
+        startedAt: new Date(startedAt).toISOString(),
+        durationMs,
+        error: "no_articles_fetched",
+      });
+
       return NextResponse.json(
         {
           ok: false,
