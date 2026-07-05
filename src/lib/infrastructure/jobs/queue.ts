@@ -12,10 +12,25 @@ import type {
   JobType,
   WorkerJobRow,
 } from "@/lib/infrastructure/jobs/types";
+import type { ExecutionDeadline } from "@/lib/serverless/deadline";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { recordJobRun } from "@/lib/infrastructure/jobs/monitor";
 
 const DEFAULT_BATCH = Number(process.env.WORKER_JOB_BATCH) || 8;
 const STALE_CLAIM_MS = Number(process.env.WORKER_STALE_CLAIM_MS) || 120_000;
+
+async function releaseClaimedJob(jobId: string): Promise<void> {
+  const supabase = createAdminClient();
+  await supabase
+    .from("worker_jobs")
+    .update({
+      status: "pending",
+      claimed_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", jobId)
+    .eq("status", "claimed");
+}
 
 /** Reclaim jobs stuck in claimed state (crashed worker recovery). */
 export async function reclaimStaleClaimedJobs(
@@ -233,19 +248,39 @@ async function isJobTimedOut(job: WorkerJobRow): Promise<boolean> {
 
 export async function processJobBatch(
   handlers: Map<JobType, JobHandler>,
-  options?: { limit?: number; jobTypes?: JobType[]; workerId?: string }
+  options?: {
+    limit?: number;
+    jobTypes?: JobType[];
+    workerId?: string;
+    deadline?: ExecutionDeadline;
+  }
 ): Promise<{
   processed: number;
   completed: number;
   failed: number;
   dead: number;
+  partial?: boolean;
+  released?: number;
 }> {
   const jobs = await claimJobBatch(options?.limit, options?.jobTypes);
+  const deadline = options?.deadline;
+  const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;
   let completed = 0;
   let failed = 0;
   let dead = 0;
+  let partial = false;
+  let released = 0;
+  let processed = 0;
 
   for (const job of jobs) {
+    if (deadline?.shouldStop() || (deadline && !deadline.hasBudgetFor(reserveMs))) {
+      await releaseClaimedJob(job.id);
+      released++;
+      partial = true;
+      continue;
+    }
+
+    processed++;
     const started = Date.now();
     const handler = handlers.get(job.job_type as JobType);
 
@@ -319,10 +354,12 @@ export async function processJobBatch(
   }
 
   return {
-    processed: jobs.length,
+    processed,
     completed,
     failed,
     dead,
+    partial,
+    released,
   };
 }
 

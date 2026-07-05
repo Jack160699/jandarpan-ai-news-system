@@ -5,6 +5,7 @@
 import { cacheGetJson, cacheSetJson } from "@/lib/infrastructure/cache";
 import type {
   ApiMetricSample,
+  QueueDrainMetric,
   QueueMetricSnapshot,
   WorkerMetricSample,
 } from "@/lib/observability/types";
@@ -17,6 +18,7 @@ const METRIC_KEYS = {
   workers: "ops:metrics:workers:v1",
   queues: "ops:metrics:queues:v1",
   db: "ops:metrics:db:v1",
+  drain: "ops:metrics:queue-drain:v1",
 } as const;
 
 type DbMetricSample = {
@@ -30,6 +32,7 @@ type DbMetricSample = {
 const memoryApi: ApiMetricSample[] = [];
 const memoryWorkers: WorkerMetricSample[] = [];
 const memoryDb: DbMetricSample[] = [];
+const memoryDrain: QueueDrainMetric[] = [];
 
 function pushRing<T>(buf: T[], item: T): void {
   buf.push(item);
@@ -75,19 +78,52 @@ export async function recordQueueSnapshot(
   await cacheSetJson(METRIC_KEYS.queues, snapshot, METRICS_TTL_SEC);
 }
 
+export async function recordQueueDrainMetric(
+  sample: QueueDrainMetric
+): Promise<void> {
+  pushRing(memoryDrain, sample);
+  const buf = await loadRing(METRIC_KEYS.drain, memoryDrain);
+  pushRing(buf, sample);
+  await saveRing(METRIC_KEYS.drain, buf);
+}
+
+export function summarizeWorkerDurations(
+  samples: WorkerMetricSample[]
+): Record<string, { count: number; avgMs: number; p95Ms: number }> {
+  const byWorker = new Map<string, number[]>();
+  for (const s of samples) {
+    const arr = byWorker.get(s.worker) ?? [];
+    arr.push(s.durationMs);
+    byWorker.set(s.worker, arr);
+  }
+  const result: Record<string, { count: number; avgMs: number; p95Ms: number }> = {};
+  for (const [worker, durations] of byWorker) {
+    const sum = durations.reduce((a, b) => a + b, 0);
+    result[worker] = {
+      count: durations.length,
+      avgMs: Math.round(sum / durations.length),
+      p95Ms: percentile(durations, 95),
+    };
+  }
+  return result;
+}
+
 export async function getMetricsDashboard(): Promise<{
   api: ApiMetricSample[];
   workers: WorkerMetricSample[];
   db: DbMetricSample[];
   queues: QueueMetricSnapshot | null;
+  queueDrain: QueueDrainMetric[];
+  workerDurationSummary: Record<string, { count: number; avgMs: number; p95Ms: number }>;
   memoryUsageMb: number;
   uptimeSec: number;
 }> {
-  const [api, workers, db, queues] = await Promise.all([
+  const [api, workers, db, queues, queueDrain] = await Promise.all([
     loadRing(METRIC_KEYS.api, memoryApi),
     loadRing(METRIC_KEYS.workers, memoryWorkers),
     loadRing(METRIC_KEYS.db, memoryDb),
     cacheGetJson<QueueMetricSnapshot>(METRIC_KEYS.queues),
+    loadRing(METRIC_KEYS.drain, memoryDrain),
   ]);
 
   const mem = process.memoryUsage();
@@ -97,6 +133,8 @@ export async function getMetricsDashboard(): Promise<{
     workers: workers.slice(-30),
     db: db.slice(-30),
     queues,
+    queueDrain: queueDrain.slice(-20),
+    workerDurationSummary: summarizeWorkerDurations(workers),
     memoryUsageMb: Math.round((mem.heapUsed / 1024 / 1024) * 10) / 10,
     uptimeSec: Math.round(process.uptime()),
   };

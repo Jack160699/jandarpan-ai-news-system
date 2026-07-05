@@ -134,6 +134,21 @@ export async function claimAiQueueBatch(
   return (claimed ?? []).map((r) => r.article_id);
 }
 
+export async function releaseAiQueueItems(
+  articleIds: readonly NewsArticleId[]
+): Promise<number> {
+  if (!articleIds.length) return 0;
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("news_ai_queue")
+    .update({ status: "pending" })
+    .in("article_id", [...articleIds])
+    .eq("status", "processing")
+    .select("article_id");
+
+  return data?.length ?? 0;
+}
+
 export async function markAiQueueCompleted(
   articleId: NewsArticleId,
   ok: boolean,

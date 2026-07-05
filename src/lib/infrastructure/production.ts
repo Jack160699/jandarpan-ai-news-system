@@ -95,6 +95,11 @@ export function getProductionEnvChecks(): {
     if (!process.env.CRON_SECRET?.trim()) {
       warnings.push("CRON_SECRET is required in production");
     }
+    if (!process.env.NEXT_PUBLIC_SITE_URL?.trim()) {
+      warnings.push(
+        "NEXT_PUBLIC_SITE_URL is missing — SEO canonical URLs, sitemaps, and invite links may be incorrect"
+      );
+    }
     if (
       !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ||
       !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()

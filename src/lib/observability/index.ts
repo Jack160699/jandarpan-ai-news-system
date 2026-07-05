@@ -17,9 +17,11 @@ export {
   recordApiMetric,
   recordDbMetric,
   recordQueueSnapshot,
+  recordQueueDrainMetric,
   recordWorkerMetric,
   getMetricsDashboard,
   summarizeApiLatency,
+  summarizeWorkerDurations,
 } from "@/lib/observability/metrics";
 export { trackOpsError, getRecentOpsErrors, getOpsErrorSummary } from "@/lib/observability/errors";
 export { evaluateIngestionAlert } from "@/lib/observability/alerts";

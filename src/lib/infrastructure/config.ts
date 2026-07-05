@@ -14,13 +14,25 @@ export const INFRA_CONFIG = {
 
   rssBatchSize: Number(process.env.RSS_BATCH_SIZE) || 4,
 
-  aiQueueBatch: Number(process.env.AI_QUEUE_BATCH) || 10,
+  aiQueueBatch: Number(process.env.AI_QUEUE_BATCH) || 15,
+  aiQueueMicroBatch: Number(process.env.AI_QUEUE_MICRO_BATCH) || 5,
   editorialBatchLimit: Number(process.env.EDITORIAL_BATCH_LIMIT) || 6,
   editorialConcurrency: Math.min(
     4,
     Math.max(1, Number(process.env.EDITORIAL_CONCURRENCY) || 2)
   ),
-  imageQueueBatch: Number(process.env.IMAGE_QUEUE_BATCH) || 5,
+  imageQueueBatch: Number(process.env.IMAGE_QUEUE_BATCH) || 3,
+  imageQueueConcurrency: Math.min(
+    3,
+    Math.max(1, Number(process.env.IMAGE_QUEUE_CONCURRENCY) || 2)
+  ),
+  /** Minimum remaining budget (ms) before starting a worker */
+  workerDeadlineReserveMs:
+    Number(process.env.WORKER_DEADLINE_RESERVE_MS) || 3_000,
+  /** Skip editorial_images when remaining budget is below this threshold */
+  editorialImagesDeadlineThresholdMs:
+    Number(process.env.EDITORIAL_IMAGES_DEADLINE_THRESHOLD_MS) || 15_000,
+  queueCheckpointTtlSec: Number(process.env.QUEUE_CHECKPOINT_TTL_SEC) || 86_400,
 
   homepageCacheSeconds: Number(process.env.HOMEPAGE_CACHE_SECONDS) || 60,
   apiEdgeCacheSeconds: Number(process.env.API_EDGE_CACHE_SECONDS) || 30,

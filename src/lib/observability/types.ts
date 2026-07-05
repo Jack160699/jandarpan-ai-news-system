@@ -40,6 +40,28 @@ export type WorkerMetricSample = {
   durationMs: number;
   skipped?: boolean;
   ts: string;
+  startedAt?: string;
+  finishedAt?: string;
+  recordsProcessed?: number;
+  recordsSkipped?: number;
+  remainingQueue?: number;
+  deadlineRemaining?: number;
+  reasonIfSkipped?: string;
+  status?: string;
+  recordsPerSec?: number;
+  batchDurationMs?: number;
+};
+
+export type QueueDrainMetric = {
+  worker: string;
+  recordsProcessed: number;
+  recordsSkipped: number;
+  remainingQueue: number;
+  durationMs: number;
+  recordsPerSec: number;
+  batchCount: number;
+  partial: boolean;
+  ts: string;
 };
 
 export type QueueMetricSnapshot = {

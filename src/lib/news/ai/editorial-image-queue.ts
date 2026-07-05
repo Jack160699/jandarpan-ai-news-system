@@ -224,6 +224,24 @@ async function claimEditorialImageBatchFallback(
   return (claimed ?? []) as EditorialImageQueueRow[];
 }
 
+export async function releaseEditorialImageBatch(
+  queueIds: string[]
+): Promise<number> {
+  if (!queueIds.length) return 0;
+  const supabase = createAdminServerClient();
+  const { data } = await supabase
+    .from("editorial_image_queue")
+    .update({
+      status: "pending",
+      processing_started_at: null,
+    })
+    .in("id", queueIds)
+    .eq("status", "processing")
+    .select("id");
+
+  return data?.length ?? 0;
+}
+
 export async function markEditorialImageCompletedWithMeta(input: {
   queueId: string;
   generatedArticleId: string;

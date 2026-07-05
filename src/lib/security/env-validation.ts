@@ -64,6 +64,15 @@ export function validateProductionEnv(): EnvIssue[] {
     });
   }
 
+  if (!process.env.NEXT_PUBLIC_SITE_URL?.trim()) {
+    issues.push({
+      key: "NEXT_PUBLIC_SITE_URL",
+      severity: "warn",
+      message:
+        "NEXT_PUBLIC_SITE_URL is not set — canonical URLs and production readiness score will be degraded",
+    });
+  }
+
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
   if (SECRET_PATTERNS.some((p) => p.test(anonKey))) {
     issues.push({
