@@ -36,6 +36,51 @@ type HealthPayload = {
   }>;
   caching: { redis: boolean };
   observability: { sentry: boolean };
+  queueAnalytics?: {
+    ai: {
+      pending: number;
+      dead: number;
+      drainPerHour: number;
+      eta: { etaLabel: string };
+    };
+    editorial: {
+      pending: number;
+      processing: number;
+      drainPerHour: number;
+      eta: { etaLabel: string };
+      avgGenerationMs: number | null;
+      openAiSuccessRate: number;
+      storageSuccessRate: number;
+      retries: number;
+      deadJobs: number;
+      failureReasons: Record<string, number>;
+    };
+    performance: {
+      aiRecordsPerSec: number;
+      editorialRecordsPerSec: number;
+      bottleneck: string;
+    };
+    recentFailures: {
+      ai: Array<{
+        articleId: string;
+        error: string;
+        provider?: string;
+        httpStatus?: number;
+        retryCount: number;
+        terminal: boolean;
+        category: string;
+      }>;
+      editorial: Array<{
+        articleId: string;
+        error: string;
+        provider?: string;
+        httpStatus?: number;
+        retryCount: number;
+        terminal: boolean;
+        category: string;
+      }>;
+    };
+  };
 };
 
 const STATUS_CLASS: Record<string, string> = {
@@ -159,13 +204,108 @@ export function HealthOperationsPanel() {
 
         <AdminCard title="Queue backlog" description="AI + editorial images">
           <p className="anr-meta">
-            AI pending: {data.metrics.queues?.aiPending ?? "—"}
+            AI pending: {data.metrics.queues?.aiPending ?? data.queueAnalytics?.ai.pending ?? "—"}
           </p>
           <p className="anr-meta">
-            Images pending: {data.metrics.queues?.editorialImagesPending ?? "—"}
+            Images pending:{" "}
+            {data.metrics.queues?.editorialImagesPending ??
+              data.queueAnalytics?.editorial.pending ??
+              "—"}
           </p>
+          {data.queueAnalytics ? (
+            <>
+              <p className="anr-meta">
+                AI drain: {data.queueAnalytics.ai.drainPerHour}/hr · ETA{" "}
+                {data.queueAnalytics.ai.eta.etaLabel}
+              </p>
+              <p className="anr-meta">
+                Editorial drain: {data.queueAnalytics.editorial.drainPerHour}/hr · ETA{" "}
+                {data.queueAnalytics.editorial.eta.etaLabel}
+              </p>
+            </>
+          ) : null}
         </AdminCard>
       </div>
+
+      {data.queueAnalytics ? (
+        <div className="anr-ingestion__split">
+          <AdminCard title="Queue throughput" description="Drain rates and performance">
+            <p className="anr-meta">
+              AI: {data.queueAnalytics.ai.drainPerHour}/hr ·{" "}
+              {data.queueAnalytics.performance.aiRecordsPerSec} rec/s
+            </p>
+            <p className="anr-meta">
+              Editorial: {data.queueAnalytics.editorial.drainPerHour}/hr ·{" "}
+              {data.queueAnalytics.performance.editorialRecordsPerSec} rec/s
+            </p>
+            <p className="anr-meta">
+              Bottleneck: {data.queueAnalytics.performance.bottleneck}
+            </p>
+            <p className="anr-meta">
+              AI dead jobs: {data.queueAnalytics.ai.dead}
+            </p>
+          </AdminCard>
+
+          <AdminCard title="Image pipeline" description="OpenAI, storage, retries">
+            <p className="anr-meta">
+              OpenAI success: {data.queueAnalytics.editorial.openAiSuccessRate}%
+            </p>
+            <p className="anr-meta">
+              Storage success: {data.queueAnalytics.editorial.storageSuccessRate}%
+            </p>
+            <p className="anr-meta">
+              Avg generation:{" "}
+              {data.queueAnalytics.editorial.avgGenerationMs != null
+                ? `${Math.round(data.queueAnalytics.editorial.avgGenerationMs / 1000)}s`
+                : "—"}
+            </p>
+            <p className="anr-meta">
+              Retries: {data.queueAnalytics.editorial.retries} · Dead:{" "}
+              {data.queueAnalytics.editorial.deadJobs}
+            </p>
+            {Object.keys(data.queueAnalytics.editorial.failureReasons).length > 0 ? (
+              <ul>
+                {Object.entries(data.queueAnalytics.editorial.failureReasons).map(
+                  ([reason, count]) => (
+                    <li key={reason} className="anr-meta">
+                      {reason}: {count}
+                    </li>
+                  )
+                )}
+              </ul>
+            ) : null}
+          </AdminCard>
+        </div>
+      ) : null}
+
+      {data.queueAnalytics &&
+      (data.queueAnalytics.recentFailures.ai.length > 0 ||
+        data.queueAnalytics.recentFailures.editorial.length > 0) ? (
+        <AdminCard title="Recent queue failures" description="Structured failure records">
+          <ul className="anr-health-ops__errors">
+            {[
+              ...data.queueAnalytics.recentFailures.editorial,
+              ...data.queueAnalytics.recentFailures.ai,
+            ]
+              .slice(0, 10)
+              .map((f) => (
+                <li key={`${f.articleId}-${f.error}`}>
+                  <span className={`anr-tag anr-tag--${f.terminal ? "critical" : "medium"}`}>
+                    {f.terminal ? "dead" : "retry"}
+                  </span>
+                  <strong>{f.articleId.slice(0, 8)}…</strong> — {f.error}
+                  <br />
+                  <span className="anr-meta">
+                    {f.category}
+                    {f.provider ? ` · ${f.provider}` : ""}
+                    {f.httpStatus ? ` · HTTP ${f.httpStatus}` : ""}
+                    {` · attempt ${f.retryCount}`}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </AdminCard>
+      ) : null}
 
       <AdminCard title="Recent errors" description="Admin error tracking">
         <ul className="anr-health-ops__errors">

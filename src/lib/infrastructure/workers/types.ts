@@ -21,9 +21,17 @@ export type WorkerResult = {
   metadata?: import("@/types/json").JsonObject;
 };
 
+export type WorkerTuningHints = {
+  aiPending?: number;
+  editorialPending?: number;
+  /** Ms reclaimed from faster upstream workers */
+  bonusBudgetMs?: number;
+};
+
 export type WorkerContext = {
   deadline: ExecutionDeadline;
   requestUrl: string;
+  tuning?: WorkerTuningHints;
 };
 
 export type QueueWorker = {

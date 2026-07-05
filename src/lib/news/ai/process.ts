@@ -26,9 +26,13 @@ import { createAdminClient } from "@/lib/supabase";
 
 import {
   claimAiQueueBatch,
-  markAiQueueCompleted,
   releaseAiQueueItems,
 } from "@/lib/news/ai/queue";
+import {
+  markAiQueueOutcome,
+  promoteRetryReadyAiQueueItems,
+} from "@/lib/news/ai/ai-queue-retry";
+import { recordQueueFailure } from "@/lib/infrastructure/queue/failure-record";
 import type { ExecutionDeadline } from "@/lib/serverless/deadline";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 
@@ -347,6 +351,10 @@ export async function processAiQueueBatch(
   const microBatch = options?.microBatchSize ?? INFRA_CONFIG.aiQueueMicroBatch;
   const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;
 
+  await promoteRetryReadyAiQueueItems().catch((err) => {
+    console.error("[ai-queue] promote retries:", err instanceof Error ? err.message : err);
+  });
+
   let totalProcessed = 0;
   let totalSkipped = 0;
   let localFallback = 0;
@@ -394,7 +402,7 @@ export async function processAiQueueBatch(
         try {
           const enriched = await enrichArticle(article);
           if (!enriched) {
-            await markAiQueueCompleted(article.id, false, "no_enrichment");
+            await markAiQueueOutcome(article.id, false, "no_enrichment", { retryable: false });
             pendingIds.delete(article.id);
             return;
           }
@@ -411,18 +419,35 @@ export async function processAiQueueBatch(
 
           if (updateError) {
             errors.push(updateError.message);
-            await markAiQueueCompleted(article.id, false, updateError.message);
+            await markAiQueueOutcome(article.id, false, updateError.message, {
+              retryable: true,
+            });
+            await recordQueueFailure({
+              worker: "ai_enrich",
+              articleId: article.id,
+              error: updateError.message,
+              category: "database",
+              retryCount: 0,
+              terminal: false,
+            });
           } else {
             batchProcessed++;
             if (enriched.via === "local") localFallback++;
             else cloudSuccess++;
-            await markAiQueueCompleted(article.id, true);
+            await markAiQueueOutcome(article.id, true);
           }
           pendingIds.delete(article.id);
         } catch (err) {
           const msg = err instanceof Error ? err.message : "AI enrich failed";
           errors.push(`${article.id}: ${msg}`);
-          await markAiQueueCompleted(article.id, false, msg);
+          await markAiQueueOutcome(article.id, false, msg, { retryable: true });
+          await recordQueueFailure({
+            worker: "ai_enrich",
+            articleId: article.id,
+            error: msg,
+            retryCount: 0,
+            terminal: false,
+          });
           pendingIds.delete(article.id);
         }
       })

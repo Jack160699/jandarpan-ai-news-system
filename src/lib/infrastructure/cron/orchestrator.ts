@@ -16,6 +16,9 @@ import {
 } from "@/lib/infrastructure/workers/deadline-aware";
 import type { WorkerId, WorkerResult } from "@/lib/infrastructure/workers/types";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
+import { countPendingAiQueue } from "@/lib/news/ai/queue";
+import { countPendingEditorialImages } from "@/lib/news/ai/generate-editorial-image";
+import { estimateBudgetSurplus } from "@/lib/infrastructure/queue/tuning";
 
 export type OrchestrateOptions = {
   requestUrl: string;
@@ -48,7 +51,8 @@ const HEAVY_WORKERS = new Set<WorkerId>(["editorial_images"]);
 
 function shouldSkipHeavyWorker(
   workerId: WorkerId,
-  deadline: ReturnType<typeof createExecutionDeadline>
+  deadline: ReturnType<typeof createExecutionDeadline>,
+  bonusBudgetMs = 0
 ): { skip: boolean; reason?: string } {
   if (!HEAVY_WORKERS.has(workerId)) {
     if (!deadline.hasBudgetFor(INFRA_CONFIG.workerDeadlineReserveMs)) {
@@ -57,9 +61,12 @@ function shouldSkipHeavyWorker(
     return { skip: false };
   }
 
-  if (
-    !deadline.hasBudgetFor(INFRA_CONFIG.editorialImagesDeadlineThresholdMs)
-  ) {
+  const effectiveThreshold = Math.max(
+    8_000,
+    INFRA_CONFIG.editorialImagesDeadlineThresholdMs - bonusBudgetMs
+  );
+
+  if (!deadline.hasBudgetFor(effectiveThreshold)) {
     return { skip: true, reason: "deadline_budget" };
   }
 
@@ -97,6 +104,12 @@ export async function runCronOrchestration(
   const workerIds = options.workers ?? DEFAULT_PIPELINE;
   const results: WorkerResult[] = [];
   let degraded = false;
+  let bonusBudgetMs = 0;
+
+  const [aiPending, editorialPending] = await Promise.all([
+    countPendingAiQueue().catch(() => 0),
+    countPendingEditorialImages().catch(() => 0),
+  ]);
 
   logIngestionAnalytics({
     event: "orchestrate_start",
@@ -104,12 +117,14 @@ export async function runCronOrchestration(
       workers: workerIds,
       budgetMs: deadline.maxDurationMs,
       stopAtMs: deadline.stopAtMs,
+      aiPending,
+      editorialPending,
     },
   });
 
   for (const id of workerIds) {
     const workerStarted = Date.now();
-    const budgetCheck = shouldSkipHeavyWorker(id, deadline);
+    const budgetCheck = shouldSkipHeavyWorker(id, deadline, bonusBudgetMs);
 
     if (budgetCheck.skip) {
       degraded = true;
@@ -122,13 +137,24 @@ export async function runCronOrchestration(
         metadata: {
           reason: budgetCheck.reason,
           deadlineRemaining: deadline.remainingMs(),
+          bonusBudgetMs,
         },
       });
       continue;
     }
 
-    const result = await runQueueWorker(id, { deadline, requestUrl: options.requestUrl });
+    const result = await runQueueWorker(id, {
+      deadline,
+      requestUrl: options.requestUrl,
+      tuning: {
+        aiPending,
+        editorialPending,
+        bonusBudgetMs,
+      },
+    });
     results.push(result);
+
+    bonusBudgetMs += estimateBudgetSurplus(id, result.durationMs, Boolean(result.skipped));
 
     if (result.metadata?.status === "partial" || result.metadata?.status === "degraded") {
       degraded = true;

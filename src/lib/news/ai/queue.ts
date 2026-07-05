@@ -90,6 +90,8 @@ export async function enqueueArticlesForAi(
   return queued;
 }
 
+import { promoteRetryReadyAiQueueItems } from "@/lib/news/ai/ai-queue-retry";
+
 export async function countPendingAiQueue(): Promise<number> {
   const supabase = createAdminClient();
   const { count, error } = await supabase
@@ -112,6 +114,8 @@ export async function claimAiQueueBatch(
     .update({ status: "pending" })
     .eq("status", "processing")
     .lt("created_at", staleThreshold);
+
+  await promoteRetryReadyAiQueueItems().catch(() => 0);
 
   const { data: pending, error } = await supabase
     .from("news_ai_queue")

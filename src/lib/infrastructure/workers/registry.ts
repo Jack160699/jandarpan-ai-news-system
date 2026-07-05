@@ -9,6 +9,11 @@ import {
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
 import { saveQueueCheckpoint } from "@/lib/infrastructure/queue/checkpoint";
+import {
+  resolveAiWorkerTuning,
+  resolveImageWorkerTuning,
+} from "@/lib/infrastructure/queue/tuning";
+import { recordPerfAudit } from "@/lib/observability/queue-analytics";
 import { monitorWorkerResult } from "@/lib/observability/worker-monitor";
 import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 import {
@@ -63,38 +68,83 @@ async function runAiWorker(ctx: WorkerContext): Promise<WorkerResult> {
     return skippedWorkerResult("ai_enrich", started, ctx.deadline, "deadline_precheck", pending);
   }
 
-  const batch = INFRA_CONFIG.aiQueueBatch;
-  const result = await processAiQueueBatch(batch, { deadline: ctx.deadline });
+  let totalProcessed = 0;
+  let totalSkipped = 0;
+  let localFallback = 0;
+  let cloudSuccess = 0;
+  let released = 0;
+  let batchCount = 0;
+  let partial = false;
+  const errors: string[] = [];
+  let loops = 0;
+  const maxLoops = 8;
+
+  while (loops < maxLoops) {
+    loops++;
+    const pending = await countPendingAiQueue();
+    if (!pending) break;
+    if (ctx.deadline.shouldStop() || !ctx.deadline.hasBudgetFor(INFRA_CONFIG.workerDeadlineReserveMs)) {
+      partial = true;
+      break;
+    }
+
+    const tuning = resolveAiWorkerTuning(pending, ctx.deadline);
+    const result = await processAiQueueBatch(tuning.batchSize, {
+      deadline: ctx.deadline,
+      microBatchSize: tuning.microBatchSize,
+    });
+
+    totalProcessed += result.processed;
+    totalSkipped += result.skipped;
+    localFallback += result.localFallback;
+    cloudSuccess += result.cloudSuccess;
+    released += result.released ?? 0;
+    batchCount += result.batchCount ?? 1;
+    errors.push(...result.errors.slice(0, 3));
+    if (result.partial) {
+      partial = true;
+      break;
+    }
+    if (result.processed === 0) break;
+  }
+
   const pending = await countPendingAiQueue();
+  const durationMs = Date.now() - started;
 
   await saveQueueCheckpoint({
     worker: "ai_enrich",
     lastRunAt: new Date().toISOString(),
-    recordsProcessed: result.processed,
-    recordsSkipped: result.skipped,
+    recordsProcessed: totalProcessed,
+    recordsSkipped: totalSkipped,
     remainingQueue: pending,
-    partial: result.partial ?? false,
-    durationMs: Date.now() - started,
+    partial,
+    durationMs,
     recordsPerSec:
-      Date.now() - started > 0
-        ? Math.round((result.processed / (Date.now() - started)) * 1000 * 100) / 100
-        : 0,
-    batchCount: result.batchCount ?? 1,
+      durationMs > 0 ? Math.round((totalProcessed / durationMs) * 1000 * 100) / 100 : 0,
+    batchCount,
   });
 
-  const build = result.partial ? partialWorkerResult : completeWorkerResult;
+  await recordPerfAudit({
+    worker: "ai_enrich",
+    ts: new Date().toISOString(),
+    recordsPerSec:
+      durationMs > 0 ? Math.round((totalProcessed / durationMs) * 1000 * 100) / 100 : 0,
+  });
+
+  const build = partial ? partialWorkerResult : completeWorkerResult;
   return build("ai_enrich", started, ctx.deadline, {
-    recordsProcessed: result.processed,
-    recordsSkipped: result.skipped,
+    recordsProcessed: totalProcessed,
+    recordsSkipped: totalSkipped,
     remainingQueue: pending,
-    partial: result.partial ?? false,
+    partial,
     extra: {
       pending,
-      localFallback: result.localFallback,
-      cloudSuccess: result.cloudSuccess,
-      ...(result.released != null ? { released: result.released } : {}),
-      ...(result.batchCount != null ? { batchCount: result.batchCount } : {}),
-      errors: result.errors.slice(0, 5),
+      localFallback,
+      cloudSuccess,
+      released,
+      batchCount,
+      loops,
+      errors: errors.slice(0, 5),
     },
   });
 }
@@ -137,15 +187,19 @@ async function runEditorialWorker(ctx: WorkerContext): Promise<WorkerResult> {
 
 async function runImagesWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
-  const pending = await countPendingEditorialImages();
+  let pending = await countPendingEditorialImages();
 
   if (!pending) {
     return skippedWorkerResult("editorial_images", started, ctx.deadline, "queue_empty", 0);
   }
 
-  if (
-    !ctx.deadline.hasBudgetFor(INFRA_CONFIG.editorialImagesDeadlineThresholdMs)
-  ) {
+  const bonusBudgetMs = ctx.tuning?.bonusBudgetMs ?? 0;
+  const effectiveThreshold = Math.max(
+    8_000,
+    INFRA_CONFIG.editorialImagesDeadlineThresholdMs - bonusBudgetMs
+  );
+
+  if (!ctx.deadline.hasBudgetFor(effectiveThreshold)) {
     return skippedWorkerResult(
       "editorial_images",
       started,
@@ -155,39 +209,90 @@ async function runImagesWorker(ctx: WorkerContext): Promise<WorkerResult> {
     );
   }
 
-  const result = await processEditorialImageQueue(INFRA_CONFIG.imageQueueBatch, {
-    deadline: ctx.deadline,
-    concurrency: INFRA_CONFIG.imageQueueConcurrency,
-  });
+  let totalCompleted = 0;
+  let totalFailed = 0;
+  let totalRetried = 0;
+  let totalSkipped = 0;
+  let totalProcessed = 0;
+  let released = 0;
+  let partial = false;
+  const errors: string[] = [];
+  let loops = 0;
+  const maxLoops = 6;
+  const promptHashCache = new Map<string, { hero_image_url: string; og_image_url: string | null }>();
+
+  while (loops < maxLoops) {
+    loops++;
+    pending = await countPendingEditorialImages();
+    if (!pending) break;
+    if (
+      ctx.deadline.shouldStop() ||
+      !ctx.deadline.hasBudgetFor(INFRA_CONFIG.workerDeadlineReserveMs)
+    ) {
+      partial = true;
+      break;
+    }
+
+    const tuning = resolveImageWorkerTuning(pending, ctx.deadline, bonusBudgetMs);
+    const result = await processEditorialImageQueue(tuning.batchSize, {
+      deadline: ctx.deadline,
+      concurrency: tuning.concurrency,
+      promptHashCache,
+    });
+
+    totalCompleted += result.completed;
+    totalFailed += result.failed;
+    totalRetried += result.retried ?? 0;
+    totalSkipped += result.skipped;
+    totalProcessed += result.processed;
+    released += result.released ?? 0;
+    errors.push(...result.errors.slice(0, 3));
+
+    if (result.partial) {
+      partial = true;
+      break;
+    }
+    if (result.processed === 0) break;
+  }
+
   const remaining = await countPendingEditorialImages();
+  const durationMs = Date.now() - started;
 
   await saveQueueCheckpoint({
     worker: "editorial_images",
     lastRunAt: new Date().toISOString(),
-    recordsProcessed: result.completed,
-    recordsSkipped: result.skipped,
+    recordsProcessed: totalCompleted,
+    recordsSkipped: totalSkipped + totalFailed,
     remainingQueue: remaining,
-    partial: result.partial ?? false,
-    durationMs: Date.now() - started,
+    partial,
+    durationMs,
     recordsPerSec:
-      Date.now() - started > 0
-        ? Math.round((result.completed / (Date.now() - started)) * 1000 * 100) / 100
-        : 0,
-    batchCount: 1,
+      durationMs > 0 ? Math.round((totalCompleted / durationMs) * 1000 * 100) / 100 : 0,
+    batchCount: loops,
   });
 
-  const build = result.partial ? partialWorkerResult : completeWorkerResult;
+  await recordPerfAudit({
+    worker: "editorial_images",
+    ts: new Date().toISOString(),
+    recordsPerSec:
+      durationMs > 0 ? Math.round((totalCompleted / durationMs) * 1000 * 100) / 100 : 0,
+  });
+
+  const build = partial ? partialWorkerResult : completeWorkerResult;
   return build("editorial_images", started, ctx.deadline, {
-    recordsProcessed: result.completed,
-    recordsSkipped: result.skipped + result.failed,
+    recordsProcessed: totalCompleted,
+    recordsSkipped: totalSkipped + totalFailed,
     remainingQueue: remaining,
-    partial: result.partial ?? false,
+    partial,
     extra: {
-      processed: result.processed,
-      completed: result.completed,
-      failed: result.failed,
-      ...(result.released != null ? { released: result.released } : {}),
+      processed: totalProcessed,
+      completed: totalCompleted,
+      failed: totalFailed,
+      retried: totalRetried,
+      released,
       pending: remaining,
+      loops,
+      errors: errors.slice(0, 5),
     },
   });
 }

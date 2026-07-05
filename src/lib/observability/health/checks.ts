@@ -12,7 +12,8 @@ import { getApiProviderHealthDashboard } from "@/lib/infrastructure/providers/ap
 import { getRssHealthDashboard } from "@/lib/news/rss-health";
 import { getProviderRegistryDashboard } from "@/lib/news/providers/circuit-breaker";
 import { getAggregationMetrics } from "@/lib/news/live-feed/observability";
-import { recordQueueSnapshot } from "@/lib/observability/metrics";
+import { recordQueueSnapshot, getMetricsDashboard } from "@/lib/observability/metrics";
+import { computeDrainPerHour, computeQueueEta } from "@/lib/infrastructure/queue/tuning";
 import {
   createAdminServerClient,
   createAnonServerClient,
@@ -177,14 +178,28 @@ export async function checkVectors(): Promise<HealthCheckResult> {
 
 export async function checkQueues(): Promise<HealthCheckResult> {
   return timed("queues", "Processing queues", async () => {
-    const [aiPending, editorialImagesPending] = await Promise.all([
+    const [aiPending, editorialImagesPending, metrics] = await Promise.all([
       countPendingAiQueue().catch(() => -1),
       countPendingEditorialImages().catch(() => -1),
+      getMetricsDashboard().catch(() => null),
     ]);
+
+    const aiDrain = metrics
+      ? computeDrainPerHour(metrics.queueDrain, "ai_enrich")
+      : 0;
+    const editorialDrain = metrics
+      ? computeDrainPerHour(metrics.queueDrain, "editorial_images")
+      : 0;
+    const aiEta = computeQueueEta(Math.max(0, aiPending), aiDrain);
+    const editorialEta = computeQueueEta(Math.max(0, editorialImagesPending), editorialDrain);
 
     const snapshot = {
       aiPending: Math.max(0, aiPending),
       editorialImagesPending: Math.max(0, editorialImagesPending),
+      aiDrainPerHour: aiDrain,
+      editorialDrainPerHour: editorialDrain,
+      aiEtaLabel: aiEta.etaLabel,
+      editorialEtaLabel: editorialEta.etaLabel,
       ts: new Date().toISOString(),
     };
     await recordQueueSnapshot(snapshot);

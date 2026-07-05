@@ -39,6 +39,11 @@ export {
   checkSupabase,
 } from "@/lib/observability/health/checks";
 export { computeStabilityScore } from "@/lib/observability/stability-score";
+export {
+  getQueueAnalyticsDashboard,
+  recordPerfAudit,
+} from "@/lib/observability/queue-analytics";
+export type { QueueAnalyticsDashboard } from "@/lib/observability/queue-analytics";
 export type {
   HealthCheckResult,
   HealthStatus,

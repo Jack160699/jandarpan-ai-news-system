@@ -68,6 +68,10 @@ export type QueueMetricSnapshot = {
   aiPending: number;
   editorialImagesPending: number;
   ts: string;
+  aiDrainPerHour?: number;
+  editorialDrainPerHour?: number;
+  aiEtaLabel?: string;
+  editorialEtaLabel?: string;
 };
 
 export type StabilityScore = {

@@ -50,6 +50,7 @@ import {
 } from "@/lib/news/ai/editorial-image-queue";
 import type { ExecutionDeadline } from "@/lib/serverless/deadline";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { recordQueueFailure } from "@/lib/infrastructure/queue/failure-record";
 import {
   isNearDuplicateVisual,
   scoreImageBuffer,
@@ -113,6 +114,7 @@ export type ProcessEditorialImageQueueResult = {
   processed: number;
   completed: number;
   failed: number;
+  retried?: number;
   skipped: number;
   errors: string[];
   partial?: boolean;
@@ -180,10 +182,19 @@ async function downloadImageBuffer(url: string): Promise<Buffer | null> {
       headers: { Accept: "image/*" },
       next: { revalidate: 3600 },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      logImage("download_fail", { url: url.slice(0, 120), httpStatus: res.status });
+      return null;
+    }
     const buf = Buffer.from(await res.arrayBuffer());
-    return buf.length > 1024 ? buf : null;
-  } catch {
+    if (buf.length <= 1024) {
+      logImage("download_fail", { url: url.slice(0, 120), reason: "buffer_too_small", bytes: buf.length });
+      return null;
+    }
+    return buf;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "download_failed";
+    logImage("download_fail", { url: url.slice(0, 120), error: msg });
     return null;
   }
 }
@@ -263,7 +274,14 @@ async function generateAiIllustration(input: {
   articleId?: string;
   queueId?: string;
   attemptNumber: number;
-}): Promise<{ buffer: Buffer | null; provider: string; model: string; latencyMs: number; error?: string }> {
+}): Promise<{
+  buffer: Buffer | null;
+  provider: string;
+  model: string;
+  latencyMs: number;
+  error?: string;
+  httpStatus?: number;
+}> {
   const providerConfig = selectImageProvider();
   const started = Date.now();
 
@@ -332,7 +350,11 @@ async function generateAiIllustration(input: {
     logEditorialImageAnalytics({
       event: "ai_generate_fail",
       error: result.error.message,
-      metadata: { code: result.error.code },
+      metadata: {
+        code: result.error.code,
+        httpStatus: result.error.httpStatus ?? null,
+        retryable: result.error.retryable,
+      },
     });
     return {
       buffer: null,
@@ -340,10 +362,37 @@ async function generateAiIllustration(input: {
       model: providerConfig.model,
       latencyMs,
       error: result.error.message,
+      httpStatus: result.error.httpStatus,
     };
   }
 
+  const downloadStarted = Date.now();
   const buffer = await downloadImageBuffer(result.url);
+  if (!buffer) {
+    await incrementImageMetrics({ providerError: true });
+    const downloadError = "openai_image_download_failed";
+    await logGenerationAttempt({
+      queueId: input.queueId,
+      generatedArticleId: input.articleId ?? "unknown",
+      attemptNumber: input.attemptNumber,
+      provider: providerConfig.id,
+      model: providerConfig.model,
+      prompt: input.prompt,
+      status: "failed",
+      latencyMs: Date.now() - started,
+      error: downloadError,
+    });
+    return {
+      buffer: null,
+      provider: providerConfig.id,
+      model: providerConfig.model,
+      latencyMs: Date.now() - started,
+      error: downloadError,
+      httpStatus: 200,
+    };
+  }
+
+  logImage("download_ok", { downloadMs: Date.now() - downloadStarted, bytes: buffer.length });
   return { buffer, provider: providerConfig.id, model: providerConfig.model, latencyMs };
 }
 
@@ -867,7 +916,7 @@ async function processQueueItem(
     queueRow: EditorialImageQueueRow | null;
   },
   promptHashCache?: Map<string, { hero_image_url: string; og_image_url: string | null }>
-): Promise<{ ok: boolean; error?: string; usedFallback?: boolean }> {
+): Promise<{ ok: boolean; error?: string; usedFallback?: boolean; retried?: boolean; terminal?: boolean }> {
   logImageGenerationPhase("image_generation_started", {
     queueId: row.id,
     generatedArticleId: row.generated_article_id,
@@ -877,13 +926,32 @@ async function processQueueItem(
 
   const ctx = preloaded ?? (await loadArticleContext(row.generated_article_id));
   if (!ctx) {
+    const error = "article_not_found";
+    await markEditorialImageFailed({
+      queueId: row.id,
+      generatedArticleId: row.generated_article_id,
+      attempts: Math.max(0, row.max_attempts - 1),
+      maxAttempts: row.max_attempts,
+      error,
+      retry: false,
+    });
+    await incrementImageMetrics({ failed: true });
+    await recordQueueFailure({
+      worker: "editorial_images",
+      articleId: row.generated_article_id,
+      error,
+      category: "database",
+      retryCount: row.attempts,
+      terminal: true,
+    });
     logImageGenerationPhase("image_generation_failed", {
       queueId: row.id,
       generatedArticleId: row.generated_article_id,
-      reason: "article_not_found",
+      reason: error,
+      terminal: true,
+      retryCount: row.attempts,
     });
-    await incrementImageMetrics({ failed: true });
-    return { ok: false, error: "article_not_found" };
+    return { ok: false, error, terminal: true };
   }
 
   const { article, event, signals, queueRow } = ctx;
@@ -936,8 +1004,9 @@ async function processQueueItem(
         generatedArticleId: article.id,
         reason: "ai_fallback_retry_scheduled",
         retry: true,
+        retryCount: row.attempts + 1,
       });
-      return { ok: false, error: "ai_fallback_retry_scheduled", usedFallback: true };
+      return { ok: false, error: "ai_fallback_retry_scheduled", usedFallback: true, retried: true };
     }
 
     await markEditorialImageCompletedWithMeta({
@@ -992,14 +1061,22 @@ async function processQueueItem(
     });
 
     await incrementImageMetrics({ failed: !retry, retried: retry });
+    await recordQueueFailure({
+      worker: "editorial_images",
+      articleId: article.id,
+      error: msg,
+      retryCount: row.attempts + 1,
+      terminal: !retry,
+    });
     logImageGenerationPhase("image_generation_failed", {
       queueId: row.id,
       generatedArticleId: article.id,
       reason: msg,
       retry,
+      retryCount: row.attempts + 1,
     });
 
-    return { ok: false, error: msg };
+    return { ok: false, error: msg, retried: retry, terminal: !retry };
   }
 }
 
@@ -1036,12 +1113,12 @@ export async function processEditorialImageQueue(
   const promptHashCache = options?.promptHashCache ?? new Map();
 
   if (deadline?.shouldStop()) {
-    return { processed: 0, completed: 0, failed: 0, skipped: 0, errors: [], partial: true };
+    return { processed: 0, completed: 0, failed: 0, retried: 0, skipped: 0, errors: [], partial: true };
   }
 
   const batch = await claimEditorialImageBatch(limit);
   if (!batch.length) {
-    return { processed: 0, completed: 0, failed: 0, skipped: 0, errors: [] };
+    return { processed: 0, completed: 0, failed: 0, retried: 0, skipped: 0, errors: [] };
   }
 
   const contexts = await batchLoadArticleContexts(
@@ -1050,6 +1127,7 @@ export async function processEditorialImageQueue(
 
   let completed = 0;
   let failed = 0;
+  let retried = 0;
   let skipped = 0;
   const errors: string[] = [];
   let partial = false;
@@ -1085,6 +1163,7 @@ export async function processEditorialImageQueue(
       continue;
     }
     if (result.ok) completed++;
+    else if (result.retried) retried++;
     else {
       failed++;
       if (result.error) errors.push(`${row.generated_article_id}: ${result.error}`);
@@ -1098,13 +1177,14 @@ export async function processEditorialImageQueue(
 
   logEditorialImageAnalytics({
     event: "queue_batch_complete",
-    metadata: { completed, failed, processed: batch.length, partial, released, concurrency },
+    metadata: { completed, failed, retried, processed: batch.length, partial, released, concurrency },
   });
 
   return {
     processed: batch.length - skipped,
     completed,
     failed,
+    retried,
     skipped,
     errors,
     partial,
