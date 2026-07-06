@@ -4,6 +4,10 @@
  */
 
 import { createAdminClient } from "@/lib/supabase";
+import {
+  getEditorialImageMeta,
+  isTerminalEditorialImageSource,
+} from "@/lib/news/ai/editorial-image-terminal";
 import { computeDrainPerHour, computeQueueEta } from "@/lib/infrastructure/queue/tuning";
 import { getMetricsDashboard } from "@/lib/observability/metrics";
 import { parseAiQueueRetryMeta } from "@/lib/news/ai/ai-queue-retry";
@@ -432,7 +436,7 @@ async function classifyImageStale(): Promise<StaleCandidate[]> {
     const articleIds = rows.map((r) => r.generated_article_id);
     const { data: articles } = await supabase
       .from("generated_articles")
-      .select("id, event_id, hero_image_url, published_at, created_at, editorial_status")
+      .select("id, event_id, hero_image_url, published_at, created_at, editorial_status, editorial_metadata")
       .in("id", articleIds);
 
     const articleMap = new Map((articles ?? []).map((a) => [a.id, a]));
@@ -441,7 +445,7 @@ async function classifyImageStale(): Promise<StaleCandidate[]> {
     const { data: newerByEvent } = eventIds.length
       ? await supabase
           .from("generated_articles")
-          .select("id, event_id, created_at, hero_image_url")
+          .select("id, event_id, created_at, hero_image_url, editorial_metadata")
           .in("event_id", eventIds)
           .not("hero_image_url", "is", null)
       : { data: [] };
@@ -455,10 +459,11 @@ async function classifyImageStale(): Promise<StaleCandidate[]> {
       if (!article) {
         reasons.push("entity_missing");
       } else {
-        if (article.hero_image_url || row.hero_image_url) {
+        const imageSource = getEditorialImageMeta(article.editorial_metadata).source;
+        if (isTerminalEditorialImageSource(imageSource)) {
           reasons.push("image_already_generated");
         }
-        if (article.published_at && article.hero_image_url) {
+        if (article.published_at && isTerminalEditorialImageSource(imageSource)) {
           reasons.push("already_published");
         }
         if (row.created_at < staleCutoff) reasons.push("older_than_48h");
@@ -469,7 +474,9 @@ async function classifyImageStale(): Promise<StaleCandidate[]> {
               a.event_id === article.event_id &&
               a.id !== article.id &&
               a.created_at > article.created_at &&
-              a.hero_image_url
+              isTerminalEditorialImageSource(
+                getEditorialImageMeta(a.editorial_metadata).source
+              )
           );
           if (superseding) reasons.push("superseded");
         }
