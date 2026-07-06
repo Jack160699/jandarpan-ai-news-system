@@ -10,7 +10,7 @@ export default function AdminExecutivePage() {
     <AdminPageGate permission="monitoring:read">
       <AdminShell
         title="Executive AI CFO"
-        subtitle="CEO/CFO command center — AI spend, profitability, forecasts, and optimization."
+        subtitle="AI spend, profitability & forecasts at a glance."
       >
         <ExecutiveCfoPanel />
       </AdminShell>
