@@ -12,6 +12,7 @@ import {
 } from "@/lib/tenant/metadata";
 import { getLanguageConfig } from "@/lib/i18n/languages";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
+import { fetchOrganizationSettings } from "@/lib/organization/settings";
 import { getTenantConfig, stripTenantForClient } from "@/lib/tenant/resolve";
 import "@/styles/globals.css";
 import "@/styles/monetization.css";
@@ -45,6 +46,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const tenant = await getTenantConfig();
+  const organization = await fetchOrganizationSettings();
   const readerLang = await getServerReaderLanguage();
   const langCfg = getLanguageConfig(readerLang);
 
@@ -61,7 +63,7 @@ export default async function RootLayout({
       <body className="min-h-full antialiased text-[var(--ink-primary)]">
         <ThemeScript />
         <LanguageGateScript />
-        <TenantRoot tenant={stripTenantForClient(tenant)}>
+        <TenantRoot tenant={stripTenantForClient(tenant)} organization={organization}>
           <ReaderPreferencesProvider>
             <LanguageProvider
               defaultLanguage={readerLang}

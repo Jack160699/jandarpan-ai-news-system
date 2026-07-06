@@ -3,6 +3,7 @@
  */
 
 import type { MetadataRoute } from "next";
+import { LEGAL_SITEMAP_PATHS } from "@/lib/legal/foundation-policies";
 import { CATEGORY_SEO } from "@/lib/seo/categories";
 import { SEO_HOMEPAGE_CLUSTERS } from "@/lib/seo/homepage-hub";
 import { SITE_URL } from "@/lib/seo/constants";
@@ -144,8 +145,16 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
     /* optional */
   }
 
+  const legalRoutes: MetadataRoute.Sitemap = LEGAL_SITEMAP_PATHS.map((path) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: path === "/about" || path === "/contact" ? 0.6 : 0.45,
+  }));
+
   return [
     ...staticRoutes,
+    ...legalRoutes,
     ...categoryRoutes,
     ...districtRoutes,
     ...topicRoutes,
