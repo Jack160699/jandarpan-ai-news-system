@@ -129,7 +129,7 @@ export function buildDuplicateIndex(
         tokensByArticleId.get(b.id) ?? new Set()
       );
 
-      if (sim >= 0.72 || tokenSim >= 0.52) {
+      if (sim >= 0.68 || tokenSim >= 0.48) {
         mergeClusters(clusterByArticleId, a.id, b.id, nextClusterId);
       }
     }

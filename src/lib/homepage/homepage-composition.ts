@@ -281,8 +281,8 @@ export function composeHomepageSlots(
   });
   for (const g of globalBrief) reserved.add(g.id);
 
-  const reelsPicks = pickUniqueArticles({
-    pool: ranked,
+  const reelsFromFresh = pickUniqueArticles({
+    pool: ranked.filter((a) => !reserved.has(a.id)),
     limit: 10,
     reserved: new Set<string>(),
     index,
@@ -290,14 +290,28 @@ export function composeHomepageSlots(
     allowClusterRepresentativeOnly: true,
   });
 
-  let reelsOverlap = 0;
-  const reelsArticleIds: string[] = [];
-  for (const reel of reelsPicks) {
-    if (reserved.has(reel.id)) {
-      if (reelsOverlap >= 1) continue;
-      reelsOverlap++;
+  let reelsArticleIds = reelsFromFresh.map((a) => a.id);
+
+  if (reelsArticleIds.length < 6) {
+    const reelsWithOverlap = pickUniqueArticles({
+      pool: ranked,
+      limit: 10,
+      reserved: new Set(reelsArticleIds),
+      index,
+      scoreFn: (a) => scoreReelsCandidate(a, rowsById.get(a.id)),
+      allowClusterRepresentativeOnly: true,
+    });
+
+    let overlap = 0;
+    for (const reel of reelsWithOverlap) {
+      if (reelsArticleIds.length >= 10) break;
+      if (reserved.has(reel.id)) {
+        if (overlap >= 1) continue;
+        overlap++;
+      }
+      if (reelsArticleIds.includes(reel.id)) continue;
+      reelsArticleIds.push(reel.id);
     }
-    reelsArticleIds.push(reel.id);
   }
 
   const listenPicks = pickUniqueArticles({
