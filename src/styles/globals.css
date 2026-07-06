@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./platform/tokens.css";
+@import "./platform/primitives.css";
 @import "./platform/ticker-motion.css";
 @import "./accent-system.css";
 @import "./platform/base.css";

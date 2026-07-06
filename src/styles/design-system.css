@@ -4,56 +4,55 @@
  */
 
 :root {
-  /* ── Surfaces (light) — newspaper paper ── */
-  --ds-surface: #f5f1e8;
-  --ds-surface-raised: #fffdf8;
-  --ds-surface-sunken: #efe7da;
-  --ds-surface-overlay: rgb(255 253 248 / 0.92);
-  --ds-surface-elevated: #fffdf8;
-  --ds-surface-inset: #efe7da;
+  /* ── Surfaces — alias canonical tokens ── */
+  --ds-surface: var(--color-paper);
+  --ds-surface-raised: var(--color-surface);
+  --ds-surface-sunken: var(--color-surface-muted);
+  --ds-surface-overlay: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --ds-surface-elevated: var(--color-surface);
+  --ds-surface-inset: var(--color-surface-muted);
 
-  /* ── Ink (light) ── */
-  --ds-ink: #1a1a1a;
-  --ds-ink-secondary: #3a3834;
-  --ds-ink-tertiary: #5e5a55;
-  --ds-ink-quaternary: #7a756e;
-  --ds-ink-inverse: #fffdf8;
+  /* ── Ink ── */
+  --ds-ink: var(--color-ink);
+  --ds-ink-secondary: var(--color-ink-secondary);
+  --ds-ink-tertiary: var(--color-ink-muted);
+  --ds-ink-quaternary: var(--color-ink-faint);
+  --ds-ink-inverse: var(--color-surface);
 
   /* ── Rules ── */
-  --ds-separator: #d8ccb8;
-  --ds-separator-strong: #c9bba3;
+  --ds-separator: var(--color-rule);
+  --ds-separator-strong: var(--color-rule-strong);
 
-  /* ── Brand accents — News Red cinematic system ── */
-  --ds-accent: #ff2b2b;
-  --ds-accent-hover: #e50914;
-  --ds-accent-soft: rgb(255 43 43 / 0.08);
-  --ds-accent-glow: rgb(255 43 43 / 0.35);
-  --ds-masthead-rule: #b71c1c;
-  --ds-live: #ff2b2b;
-  --ds-live-hover: #e50914;
-  --ds-live-soft: rgb(255 43 43 / 0.08);
-  --ds-live-glow: rgb(255 43 43 / 0.35);
-  --ds-breaking: #ff2b2b;
-  --ds-breaking-soft: rgb(255 43 43 / 0.06);
+  /* ── Brand accents ── */
+  --ds-accent: var(--color-primary);
+  --ds-accent-hover: var(--color-primary-deep);
+  --ds-accent-soft: var(--color-primary-soft);
+  --ds-accent-glow: var(--color-primary-glow);
+  --ds-masthead-rule: var(--color-primary-dark);
+  --ds-live: var(--color-primary);
+  --ds-live-hover: var(--color-primary-deep);
+  --ds-live-soft: var(--color-primary-soft);
+  --ds-live-glow: var(--color-primary-glow);
+  --ds-breaking: var(--color-primary);
+  --ds-breaking-soft: var(--color-primary-soft);
 
-  /* ── Spacing scale (4px base) ── */
-  --ds-space-0: 0;
-  --ds-space-1: 0.25rem;
-  --ds-space-2: 0.5rem;
-  --ds-space-3: 0.75rem;
-  --ds-space-4: 1rem;
-  --ds-space-5: 1.25rem;
-  --ds-space-6: 1.5rem;
-  --ds-space-8: 2rem;
-  --ds-space-10: 2.5rem;
-  --ds-space-12: 3rem;
-  --ds-space-16: 4rem;
-  --ds-space-20: 5rem;
-  /* Gutters & section rhythm — overridden by responsive-foundation.css */
-  --ds-gutter: 1rem;
-  --ds-section-gap: 1.25rem;
-  --ds-card-pad: var(--ds-space-4);
-  --ds-card-gap: var(--ds-space-3);
+  /* ── Spacing scale ── */
+  --ds-space-0: var(--space-0);
+  --ds-space-1: var(--space-1);
+  --ds-space-2: var(--space-2);
+  --ds-space-3: var(--space-3);
+  --ds-space-4: var(--space-4);
+  --ds-space-5: var(--space-5);
+  --ds-space-6: var(--space-6);
+  --ds-space-8: var(--space-8);
+  --ds-space-10: var(--space-10);
+  --ds-space-12: var(--space-12);
+  --ds-space-16: var(--space-16);
+  --ds-space-20: var(--space-20);
+  --ds-gutter: var(--gutter);
+  --ds-section-gap: var(--section-gap);
+  --ds-card-pad: var(--card-pad);
+  --ds-card-gap: var(--space-3);
 
   /* ── Typography scale ── */
   --ds-font-display: var(--font-display), Georgia, "Times New Roman", serif;
@@ -61,68 +60,65 @@
   --ds-font-ui: var(--font-ui), system-ui, sans-serif;
   --ds-font-meta: var(--font-meta), ui-monospace, monospace;
 
-  --ds-text-2xs: 0.75rem;
-  --ds-text-xs: 0.875rem;
-  --ds-text-sm: 1rem;
-  --ds-text-base: 1.0625rem;
-  --ds-text-md: 1.1875rem;
-  --ds-text-lg: 1.3125rem;
-  --ds-text-xl: 1.5rem;
+  --ds-text-2xs: var(--text-2xs);
+  --ds-text-xs: var(--text-xs);
+  --ds-text-sm: var(--text-sm);
+  --ds-text-base: var(--text-base);
+  --ds-text-md: var(--text-md);
+  --ds-text-lg: var(--text-lg);
+  --ds-text-xl: var(--text-xl);
   --ds-text-2xl: clamp(1.625rem, 3.5vw, 2rem);
   --ds-text-3xl: clamp(2rem, 5vw, 2.75rem);
   --ds-text-4xl: clamp(2.25rem, 6vw, 3.5rem);
-  --ds-text-hero: clamp(2.5rem, 7vw, 4rem);
+  --ds-text-hero: var(--text-hero);
 
-  --ds-leading-tight: 1.15;
-  --ds-leading-snug: 1.3;
-  --ds-leading-normal: 1.5;
-  --ds-leading-relaxed: 1.65;
+  --ds-leading-tight: var(--leading-tight);
+  --ds-leading-snug: var(--leading-snug);
+  --ds-leading-normal: var(--leading-normal);
+  --ds-leading-relaxed: var(--leading-relaxed);
 
   --ds-tracking-tight: -0.025em;
   --ds-tracking-normal: 0;
   --ds-tracking-wide: 0.06em;
   --ds-tracking-wider: 0.1em;
 
-  /* Legacy aliases */
-  --ds-text-caption: var(--ds-text-xs);
-  --ds-text-ui: var(--ds-text-sm);
-  --ds-text-body: var(--ds-text-md);
+  --ds-text-caption: var(--type-caption);
+  --ds-text-ui: var(--type-ui);
+  --ds-text-body: var(--type-body);
   --ds-text-title: var(--ds-text-2xl);
 
-  /* ── Border radius ── */
-  --ds-radius-xs: 4px;
-  --ds-radius-sm: 8px;
-  --ds-radius-md: 12px;
-  --ds-radius-lg: 16px;
-  --ds-radius-xl: 20px;
+  /* ── Border radius (legacy ds names → unified scale) ── */
+  --ds-radius-xs: var(--radius-xs);
+  --ds-radius-sm: var(--radius-md);
+  --ds-radius-md: var(--radius-lg);
+  --ds-radius-lg: var(--radius-xl);
+  --ds-radius-xl: var(--radius-2xl);
   --ds-radius-2xl: 24px;
-  --ds-radius-full: 999px;
+  --ds-radius-full: var(--radius-full);
 
-  /* ── Elevation (layered depth) ── */
-  --ds-elevation-0: none;
-  --ds-elevation-1: 0 1px 2px rgb(26 24 22 / 0.04), 0 1px 3px rgb(26 24 22 / 0.06);
-  --ds-elevation-2: 0 4px 12px rgb(26 24 22 / 0.06), 0 2px 4px rgb(26 24 22 / 0.04);
-  --ds-elevation-3: 0 8px 24px rgb(26 24 22 / 0.08), 0 4px 8px rgb(26 24 22 / 0.04);
-  --ds-elevation-4: 0 16px 48px rgb(26 24 22 / 0.1), 0 8px 16px rgb(26 24 22 / 0.06);
-  --ds-elevation-accent: 0 8px 28px var(--ds-accent-glow);
-  --ds-elevation-live: 0 8px 28px var(--ds-live-glow);
+  /* ── Elevation ── */
+  --ds-elevation-0: var(--elevation-0);
+  --ds-elevation-1: var(--elevation-1);
+  --ds-elevation-2: var(--elevation-2);
+  --ds-elevation-3: var(--elevation-3);
+  --ds-elevation-4: var(--elevation-4);
+  --ds-elevation-accent: 0 8px 28px var(--color-primary-glow);
+  --ds-elevation-live: 0 8px 28px var(--color-primary-glow);
 
-  /* ── Shadows (semantic) ── */
-  --ds-shadow-sm: var(--ds-elevation-1);
-  --ds-shadow-md: var(--ds-elevation-2);
-  --ds-shadow-lg: var(--ds-elevation-3);
-  --ds-shadow-xl: var(--ds-elevation-4);
+  --ds-shadow-sm: var(--shadow-sm);
+  --ds-shadow-md: var(--shadow-md);
+  --ds-shadow-lg: var(--shadow-lg);
+  --ds-shadow-xl: var(--shadow-xl);
 
-  /* ── Card system tokens ── */
-  --ds-card-bg: var(--ds-surface-raised);
-  --ds-card-border: var(--ds-separator);
-  --ds-card-radius: var(--ds-radius-lg);
-  --ds-card-shadow: var(--ds-shadow-sm);
-  --ds-card-shadow-hover: var(--ds-shadow-md);
-  --ds-thumb-radius: var(--ds-radius-md);
+  /* ── Card system ── */
+  --ds-card-bg: var(--color-surface);
+  --ds-card-border: var(--color-rule);
+  --ds-card-radius: var(--card-radius);
+  --ds-card-shadow: var(--shadow-card);
+  --ds-card-shadow-hover: var(--shadow-card-hover);
+  --ds-thumb-radius: var(--radius-lg);
   --ds-thumb-aspect-16-9: 16 / 9;
   --ds-thumb-aspect-4-5: 4 / 5;
-  /* Legacy aliases */
   --ds-thumb-aspect-wide: 16 / 9;
   --ds-thumb-aspect-cinematic: 16 / 9;
   --ds-thumb-aspect-standard: 16 / 9;
@@ -141,106 +137,35 @@
   );
   --ds-gradient-breaking: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--ds-live) 12%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary) 12%, transparent) 0%,
     transparent 55%
   );
 
   /* ── Motion ── */
-  --ds-duration-instant: 100ms;
-  --ds-duration-fast: 180ms;
-  --ds-duration-normal: 280ms;
-  --ds-duration-slow: 420ms;
+  --ds-duration-instant: var(--duration-instant);
+  --ds-duration-fast: var(--duration-fast);
+  --ds-duration-normal: var(--duration-normal);
+  --ds-duration-slow: var(--duration-slow);
   --ds-duration-slower: 600ms;
   --ds-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --ds-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ds-ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --ds-ease-out: var(--ease-out);
+  --ds-ease-spring: var(--ease-spring);
   --ds-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* ── Layout ── */
   --ds-content-max: 100%;
   --ds-read-max: 40rem;
 
-  /* Layout/z-index: responsive-system.css */
-}
-
-/* Map legacy tokens → design system */
-:root {
-  --paper: var(--ds-surface);
-  --paper-elevated: var(--ds-surface-raised);
-  --paper-warm: var(--ds-surface-sunken);
-  --paper-muted: var(--ds-surface-sunken);
-  --paper-shadow: var(--ds-surface-inset);
-
-  --ink-headline: var(--ds-ink);
-  --ink-primary: var(--ds-ink);
-  --ink-body: var(--ds-ink-secondary);
-  --ink-secondary: var(--ds-ink-secondary);
-  --ink-muted: var(--ds-ink-tertiary);
-  --ink-faint: var(--ds-ink-quaternary);
-
-  --rule: var(--ds-separator);
-  --rule-strong: var(--ds-separator-strong);
-
-  --accent-orange: var(--ds-accent);
-  --accent-orange-deep: var(--ds-accent-hover);
-  --accent-red: var(--ds-live);
-  --accent-red-deep: var(--ds-live-hover);
-  --brand-maroon: var(--ds-ink);
-  --brand-maroon-deep: var(--ds-ink);
-  --brand-orange: var(--ds-accent);
-  --accent-breaking: var(--ds-breaking);
-  --accent-category: var(--ds-ink-tertiary);
-  --accent-live: var(--ds-live);
-
-  --selection-bg: var(--ds-accent-soft);
-  --selection-fg: var(--ds-ink);
-  --background: var(--paper);
-  --foreground: var(--ink-primary);
-
-  --space-section: var(--ds-section-gap);
-  --space-gutter: var(--ds-gutter);
-  --max-editorial: var(--ds-content-max);
-
   --ease-cinematic: var(--ds-ease-out);
   --ease-editorial: var(--ds-ease);
   --ease-paper: var(--ds-ease-out);
   --ease-breath: var(--ds-ease);
+  --max-editorial: var(--ds-content-max);
 }
 
-/* ── Dark theme — premium AMOLED black ── */
+/* ── Dark theme — alias canonical tokens ── */
 html[data-theme="dark"] {
-  --ds-surface: #050505;
-  --ds-surface-raised: #0b0b0b;
-  --ds-surface-sunken: #111111;
-  --ds-surface-overlay: rgb(11 11 11 / 0.94);
-  --ds-surface-elevated: #111111;
-  --ds-surface-inset: #050505;
-
-  --ds-ink: #ffffff;
-  --ds-ink-secondary: rgb(255 255 255 / 0.72);
-  --ds-ink-tertiary: rgb(255 255 255 / 0.72);
-  --ds-ink-quaternary: rgb(255 255 255 / 0.45);
-  --ds-ink-inverse: #000000;
-
-  --ds-separator: rgb(255 255 255 / 0.05);
-  --ds-separator-strong: rgb(255 255 255 / 0.08);
-
-  --ds-accent: #ff2b2b;
-  --ds-accent-hover: #ff4d4d;
-  --ds-accent-soft: rgb(255 43 43 / 0.14);
-  --ds-accent-glow: rgb(255 43 43 / 0.35);
-  --ds-live: #ff2b2b;
-  --ds-live-hover: #ff4d4d;
-  --ds-live-soft: rgb(255 43 43 / 0.14);
-  --ds-live-glow: rgb(255 43 43 / 0.35);
-  --ds-breaking: #ff2b2b;
-  --ds-breaking-soft: rgb(255 43 43 / 0.12);
-
-  --ds-card-bg: var(--ds-surface-raised);
-  --ds-card-border: var(--ds-separator);
-  --ds-card-shadow: 0 4px 20px rgb(0 0 0 / 0.45);
-  --ds-card-shadow-hover: 0 8px 28px rgb(0 0 0 / 0.55);
-
+  --ds-surface-overlay: color-mix(in srgb, var(--color-surface) 94%, transparent);
   --ds-gradient-thumb: linear-gradient(
     180deg,
     transparent 0%,
@@ -249,11 +174,12 @@ html[data-theme="dark"] {
   );
   --ds-gradient-breaking: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--ds-live) 18%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary) 18%, transparent) 0%,
     transparent 60%
   );
-
-  --paper-shadow: #0a0a0a;
+  --ds-card-shadow: var(--shadow-card);
+  --ds-card-shadow-hover: var(--shadow-card-hover);
+  --paper-shadow: var(--color-surface-muted);
 }
 
 /* ── Typography utilities ── */

@@ -400,6 +400,29 @@
   height: 1.05rem;
 }
 
+/* ── Legal nav links ── */
+.jd-footer__legal-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+}
+
+.jd-footer__legal-link {
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: var(--ds-text-xs, 0.8125rem);
+  font-weight: 600;
+  color: var(--ink-secondary, var(--color-text-secondary));
+  text-decoration: none;
+  transition: color 200ms var(--ds-ease, ease);
+}
+
+.jd-footer__legal-link:hover {
+  color: var(--ds-accent, var(--color-accent));
+}
+
 /* ── Copyright ── */
 .jd-footer__legal {
   margin-top: 0.1rem;

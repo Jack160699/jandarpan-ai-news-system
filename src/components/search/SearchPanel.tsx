@@ -6,12 +6,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import { IMAGE_BLUR } from "@/lib/image-placeholder";
+import {
+  addSearchHistory,
+  clearSearchHistory,
+  getSearchHistory,
+} from "@/lib/search/history";
 import type { SearchHit, SearchResult } from "@/lib/search/types";
 import type { HomeSectionId } from "@/lib/homepage/types";
+import type { SearchTimeScope } from "@/lib/search/types";
 
 type SearchPanelProps = {
   initialQuery?: string;
+  initialDistrict?: string | null;
+  initialCategory?: HomeSectionId | null;
+  initialTime?: SearchTimeScope;
   compact?: boolean;
+  autoFocus?: boolean;
+  suppressResults?: boolean;
   onNavigate?: () => void;
 };
 
@@ -31,26 +42,46 @@ const CATEGORIES: { id: HomeSectionId; label: string }[] = [
 
 export function SearchPanel({
   initialQuery = "",
+  initialDistrict = null,
+  initialCategory = null,
+  initialTime = "all",
   compact = false,
+  autoFocus = false,
+  suppressResults = false,
   onNavigate,
 }: SearchPanelProps) {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState(initialQuery);
-  const [district, setDistrict] = useState<string | null>(null);
-  const [category, setCategory] = useState<HomeSectionId | null>(null);
-  const [timeScope, setTimeScope] = useState<"today" | "week" | "all">("all");
+  const [district, setDistrict] = useState<string | null>(initialDistrict);
+  const [category, setCategory] = useState<HomeSectionId | null>(initialCategory);
+  const [timeScope, setTimeScope] = useState<SearchTimeScope>(initialTime);
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<string[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setHistory(getSearchHistory());
+  }, []);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [autoFocus]);
 
   const runSearch = useCallback(
     async (q: string) => {
       if (!q.trim() && !district && !category) {
         setResult(null);
+        setError(null);
         return;
       }
 
       setLoading(true);
+      setError(null);
       try {
         const params = new URLSearchParams();
         if (q.trim()) params.set("q", q.trim());
@@ -63,9 +94,12 @@ export function SearchPanel({
         const json = (await res.json()) as SearchResult & { ok?: boolean };
         if (json.ok !== false) {
           setResult(json);
+        } else {
+          setError("Search unavailable. Try again.");
         }
       } catch {
         setResult(null);
+        setError("Search unavailable. Check your connection.");
       } finally {
         setLoading(false);
       }
@@ -74,6 +108,7 @@ export function SearchPanel({
   );
 
   useEffect(() => {
+    if (suppressResults) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       runSearch(query);
@@ -81,7 +116,7 @@ export function SearchPanel({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, district, category, timeScope, runSearch]);
+  }, [query, district, category, timeScope, runSearch, suppressResults]);
 
   const openFullSearch = () => {
     const params = new URLSearchParams();
@@ -89,27 +124,57 @@ export function SearchPanel({
     if (district) params.set("district", district);
     if (category) params.set("category", category);
     if (timeScope !== "all") params.set("time", timeScope);
+    if (query.trim()) addSearchHistory(query.trim());
     onNavigate?.();
     router.push(`/search?${params.toString()}`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (query.trim()) addSearchHistory(query.trim());
     openFullSearch();
+  };
+
+  const clearQuery = () => {
+    setQuery("");
+    setResult(null);
+    setError(null);
+    inputRef.current?.focus();
+  };
+
+  const onHistorySelect = (term: string) => {
+    setQuery(term);
+    if (!compact) {
+      addSearchHistory(term);
+    }
   };
 
   return (
     <div className={compact ? "" : "search-page"}>
       <form className="search-form" onSubmit={handleSubmit}>
-        <input
-          type="search"
-          className="search-form__input"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search in Hindi or English…"
-          aria-label="Search news"
-          autoComplete="off"
-        />
+        <div className="search-form__field">
+          <input
+            ref={inputRef}
+            type="search"
+            className="search-form__input"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search in Hindi or English…"
+            aria-label="Search news"
+            autoComplete="off"
+            enterKeyHint="search"
+          />
+          {query ? (
+            <button
+              type="button"
+              className="search-form__clear tap-target"
+              onClick={clearQuery}
+              aria-label="Clear search"
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
 
         <div className="search-filters" role="group" aria-label="Filters">
           {DISTRICTS.map((d) => (
@@ -161,6 +226,37 @@ export function SearchPanel({
         ) : null}
       </form>
 
+      {history.length > 0 && !query && !loading ? (
+        <div className="search-history">
+          <div className="search-history__head">
+            <p className="search-history__label">Recent searches</p>
+            <button
+              type="button"
+              className="search-history__clear tap-target"
+              onClick={() => {
+                clearSearchHistory();
+                setHistory([]);
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          <ul className="search-history__list">
+            {history.map((term) => (
+              <li key={term}>
+                <button
+                  type="button"
+                  className="search-history__item tap-target"
+                  onClick={() => onHistorySelect(term)}
+                >
+                  {term}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {loading ? (
         <div className="search-loading" aria-live="polite" aria-busy="true">
           <p className="search-meta">Searching…</p>
@@ -175,7 +271,13 @@ export function SearchPanel({
         </div>
       ) : null}
 
-      {result?.trending?.length && !result.hits.length && !query ? (
+      {error ? (
+        <p className="search-empty" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      {!suppressResults && result?.trending?.length && !result.hits.length && !query ? (
         <div className="search-trending">
           <p className="search-trending__label">Trending searches</p>
           <ul className="search-trending__list">
@@ -194,20 +296,13 @@ export function SearchPanel({
         </div>
       ) : null}
 
-      {result && result.hits.length > 0 ? (
+      {!suppressResults && result && result.hits.length > 0 ? (
         <div className={compact ? "search-overlay-results" : ""}>
-          {result.parsed.district || result.parsed.category ? (
-            <p className="search-meta">
-              {result.total} result{result.total === 1 ? "" : "s"}
-              {result.parsed.district ? ` · ${result.parsed.district}` : ""}
-              {result.tookMs ? ` · ${result.tookMs}ms` : ""}
-            </p>
-          ) : (
-            <p className="search-meta">
-              {result.total} result{result.total === 1 ? "" : "s"} ·{" "}
-              {result.tookMs}ms
-            </p>
-          )}
+          <p className="search-meta">
+            {result.total} result{result.total === 1 ? "" : "s"}
+            {result.parsed.district ? ` · ${result.parsed.district}` : ""}
+            {result.tookMs ? ` · ${result.tookMs}ms` : ""}
+          </p>
           <ul className="search-results">
             {result.hits.map((hit) => (
               <SearchHitCard
@@ -220,8 +315,10 @@ export function SearchPanel({
         </div>
       ) : null}
 
-      {result && !loading && query && result.hits.length === 0 ? (
-        <p className="search-empty">No stories match. Try a broader term or remove filters.</p>
+      {!suppressResults && result && !loading && query && result.hits.length === 0 ? (
+        <p className="search-empty">
+          No stories match. Try a broader term or remove filters.
+        </p>
       ) : null}
     </div>
   );

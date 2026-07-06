@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CommandPalette } from "@/components/admin-newsroom/platform-settings/CommandPalette";
@@ -118,6 +119,13 @@ export function PlatformSettingsDashboard({
           </div>
 
           <CommandHero saving={!!savingId} onOpenCommand={openCommand} />
+
+          <p className="anr-meta mb-4">
+            <Link href="/admin/settings/organization" className="text-sky-400 hover:underline">
+              Organization settings →
+            </Link>
+            <span className="text-zinc-500"> — footer, contact, JSON-LD, social links</span>
+          </p>
 
           <div className="anr-ps-command-layout">
             <AiRecommendations settings={newsroomSettings} />

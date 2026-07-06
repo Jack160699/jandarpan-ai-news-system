@@ -22,7 +22,7 @@
 [data-script="bengali"] .editorial-body,
 [data-script="bengali"] .deck,
 [data-language="bn"] .immersive-story__title {
-  font-family: var(--font-bengali), var(--font-body), serif;
+  font-family: var(--font-body), Georgia, serif;
   line-height: 1.78;
   letter-spacing: 0.005em;
   word-break: break-word;
@@ -33,7 +33,7 @@
 [data-script="tamil"] .editorial-body,
 [data-script="tamil"] .deck,
 [data-language="ta"] .immersive-story__title {
-  font-family: var(--font-tamil), var(--font-body), serif;
+  font-family: var(--font-body), Georgia, serif;
   line-height: 1.8;
   letter-spacing: 0.01em;
   word-break: break-word;
