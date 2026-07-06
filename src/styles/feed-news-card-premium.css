@@ -2,6 +2,17 @@
  * Standard feed news card — mobile-first horizontal layout
  */
 
+.feed-news-card--enter {
+  animation: motion-rise-in var(--motion-duration-slow) var(--motion-ease-out) both;
+  animation-delay: calc(min(var(--motion-i, 0), 6) * var(--motion-stagger));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-news-card--enter {
+    animation: none;
+  }
+}
+
 .feed-news-card {
   --feed-radius: var(--card-radius);
   --feed-pad: var(--card-pad);

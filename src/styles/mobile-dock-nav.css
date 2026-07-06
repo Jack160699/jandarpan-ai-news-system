@@ -95,9 +95,11 @@ html[data-theme="dark"] .mobile-dock__pill {
   width: 2.25rem;
   height: 2.25rem;
   border-radius: 999px;
+  transform: translateY(0) scale(1);
   transition:
     background 220ms var(--ease-out),
-    box-shadow 220ms var(--ease-out);
+    box-shadow 220ms var(--ease-out),
+    transform 280ms var(--motion-ease-spring);
 }
 
 .mobile-dock__icon {
@@ -122,6 +124,7 @@ html[data-theme="dark"] .mobile-dock__pill {
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--color-primary) 22%, transparent),
     0 0 20px color-mix(in srgb, var(--color-primary) 28%, transparent);
+  transform: translateY(-1px) scale(1.06);
 }
 
 .mobile-dock__item--live.is-active .mobile-dock__icon-wrap--live {
@@ -175,6 +178,10 @@ html[data-theme="dark"] .mobile-dock__pill {
   }
 
   .mobile-dock__item:active {
+    transform: none;
+  }
+
+  .mobile-dock__item.is-active .mobile-dock__icon-wrap {
     transform: none;
   }
 }

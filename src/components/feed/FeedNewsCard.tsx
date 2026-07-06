@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { type CSSProperties } from "react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
 import { HeroCardActions } from "@/components/layout/HeroCardActions";
 import { MediaImage } from "@/components/media/MediaImage";
@@ -17,6 +17,7 @@ import {
   type FeedRhythmLayout,
 } from "@/lib/feed/rhythm";
 import type { SpeechLangHint } from "@/lib/speech/voice-utils";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useLanguage } from "@/providers/LanguageProvider";
 
 export type FeedNewsCardVariant = "standard" | "compact" | "lead";
@@ -109,27 +110,15 @@ export function FeedNewsCard({
     (publishedAt ? time(publishedAt) : null);
   const storyHref = href ?? `/story/${slug}`;
 
-  const motionProps = reduceMotion
-    ? {}
-    : {
-        initial: { opacity: 0, y: 10 },
-        animate: { opacity: 1, y: 0 },
-        transition: {
-          duration: 0.38,
-          delay: Math.min(index * 0.04, 0.24),
-          ease: [0.22, 1, 0.36, 1] as const,
-        },
-      };
-
   const showSummaryResolved =
     rhythm === "emphasis"
       ? Boolean(summary)
       : showSummary;
 
   return (
-    <motion.article
-      className={`feed-news-card feed-news-card--${variant}${rhythm === "emphasis" ? " feed-news-card--emphasis" : ""}`}
-      {...motionProps}
+    <article
+      className={`feed-news-card feed-news-card--${variant}${rhythm === "emphasis" ? " feed-news-card--emphasis" : ""}${!reduceMotion ? " feed-news-card--enter" : ""}`}
+      style={{ "--motion-i": index } as CSSProperties}
     >
       <div className="feed-news-card__main">
         <TrackedStoryLink
@@ -238,6 +227,6 @@ export function FeedNewsCard({
           className="feed-news-card__actions"
         />
       </div>
-    </motion.article>
+    </article>
   );
 }

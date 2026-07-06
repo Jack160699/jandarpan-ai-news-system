@@ -1,15 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useTenant } from "@/providers/TenantProvider";
-import { SearchOverlay } from "@/components/reader/SearchOverlay";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
 import { HeaderLanguageSwitcher } from "@/components/navigation/HeaderLanguageSwitcher";
 import { IconMoon, IconSearch, IconSun } from "./NavIcons";
+
+const SearchOverlay = dynamic(
+  () =>
+    import("@/components/reader/SearchOverlay").then((m) => ({
+      default: m.SearchOverlay,
+    })),
+  { ssr: false }
+);
 
 /** Global top header — logo, locale, utilities */
 export function TopHeader() {

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { AdSlot } from "@/components/monetization/AdSlot";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -7,9 +8,8 @@ import { SkipLink } from "@/components/ui/SkipLink";
 import { LanguageGate } from "@/components/reader/LanguageGate";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { cn } from "@/lib/cn";
-import { ContinueRibbon } from "@/components/editorial/ContinueRibbon";
-import { HeadlinesMiniPlayer } from "@/components/listen/HeadlinesMiniPlayer";
 import { ArticleSpeechProvider } from "@/providers/ArticleSpeechProvider";
+import { EditorialIntelligenceProvider } from "@/providers/EditorialIntelligenceProvider";
 import { HeadlinesListenProvider } from "@/providers/HeadlinesListenProvider";
 import { NavigationProvider } from "@/providers/NavigationProvider";
 import { ReaderAccountProvider } from "@/providers/ReaderAccountProvider";
@@ -19,6 +19,22 @@ import { PullToRefresh } from "@/components/mobile/PullToRefresh";
 import { ScrollRetention } from "@/components/mobile/ScrollRetention";
 import { AppHydration } from "./AppHydration";
 import { RouteTransition } from "./RouteTransition";
+
+const ContinueRibbon = dynamic(
+  () =>
+    import("@/components/editorial/ContinueRibbon").then((m) => ({
+      default: m.ContinueRibbon,
+    })),
+  { ssr: false }
+);
+
+const HeadlinesMiniPlayer = dynamic(
+  () =>
+    import("@/components/listen/HeadlinesMiniPlayer").then((m) => ({
+      default: m.HeadlinesMiniPlayer,
+    })),
+  { ssr: false }
+);
 
 type AppChromeProps = {
   children: React.ReactNode;
@@ -90,31 +106,35 @@ export function AppChrome({ children }: AppChromeProps) {
 
   if (pathname === "/shorts") {
     return (
+      <EditorialIntelligenceProvider>
+        <HeadlinesListenProvider>
+          <ArticleSpeechProvider>
+            <NavigationProvider>
+              <ReaderAccountProvider>
+                <NativeTouchLayer>
+                  <ShortsLanguageShell>{children}</ShortsLanguageShell>
+                </NativeTouchLayer>
+              </ReaderAccountProvider>
+            </NavigationProvider>
+          </ArticleSpeechProvider>
+        </HeadlinesListenProvider>
+      </EditorialIntelligenceProvider>
+    );
+  }
+
+  return (
+    <EditorialIntelligenceProvider>
       <HeadlinesListenProvider>
         <ArticleSpeechProvider>
           <NavigationProvider>
             <ReaderAccountProvider>
               <NativeTouchLayer>
-                <ShortsLanguageShell>{children}</ShortsLanguageShell>
+                <AppChromeShell>{children}</AppChromeShell>
               </NativeTouchLayer>
             </ReaderAccountProvider>
           </NavigationProvider>
         </ArticleSpeechProvider>
       </HeadlinesListenProvider>
-    );
-  }
-
-  return (
-    <HeadlinesListenProvider>
-      <ArticleSpeechProvider>
-      <NavigationProvider>
-        <ReaderAccountProvider>
-          <NativeTouchLayer>
-            <AppChromeShell>{children}</AppChromeShell>
-          </NativeTouchLayer>
-        </ReaderAccountProvider>
-      </NavigationProvider>
-      </ArticleSpeechProvider>
-    </HeadlinesListenProvider>
+    </EditorialIntelligenceProvider>
   );
 }
