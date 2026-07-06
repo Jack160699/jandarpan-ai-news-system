@@ -4,8 +4,9 @@
   --read-max: 42rem;
   --read-pad: clamp(1.25rem, 4vw, 2rem);
   --read-prose: 1.125rem;
-  --read-leading: 1.8;
-  --read-para-gap: 1.375rem;
+  --read-leading: 1.78;
+  --read-para-gap: 1.5rem;
+  --read-section-gap: 2.5rem;
   padding-bottom: calc(4.25rem + var(--safe-bottom));
   background: var(--paper);
 }
@@ -228,57 +229,62 @@ html[data-font-scale="xl"] .immersive-story {
 
 /* AI summary */
 .immersive-summary {
-  margin-top: 2.5rem;
-  padding: 1.25rem 1.5rem;
+  margin-top: var(--space-8);
+  padding: var(--space-5) var(--space-6);
   border: 1px solid var(--rule);
   background: var(--paper-elevated);
   max-width: var(--read-max);
+  border-radius: var(--radius-sm);
 }
 
 .immersive-summary__label {
   font-family: var(--font-ui);
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-size: var(--type-badge);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--accent-category);
-  margin-bottom: 0.625rem;
+  margin-bottom: var(--space-3);
 }
 
-.immersive-summary__text {
+.immersive-summary__text,
+.story-deck {
   font-family: var(--font-body), Georgia, serif;
-  font-size: calc(var(--read-prose) * 0.95);
-  line-height: var(--read-leading);
-  color: var(--ink-body);
+  font-size: var(--type-title);
+  line-height: var(--leading-snug);
+  color: var(--ink-secondary);
   margin: 0;
+  max-width: 38ch;
 }
 
 /* Prose */
 .immersive-story__prose {
-  margin-top: 2.5rem;
+  margin-top: var(--space-10);
   max-width: var(--read-max);
 }
 
 .immersive-story__section {
-  margin-bottom: 2.25rem;
+  margin-bottom: var(--read-section-gap);
 }
 
 .immersive-story__section-title {
   font-family: var(--font-display), Georgia, serif;
-  font-size: 1.375rem;
-  font-weight: 600;
-  line-height: 1.25;
+  font-size: var(--type-headline);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
   color: var(--ink-headline);
-  margin: 0 0 1rem;
-  padding-top: 0.5rem;
+  margin: 0 0 var(--space-5);
+  padding-top: var(--space-2);
 }
 
-.immersive-story__paragraph {
+.immersive-story__paragraph,
+.story-prose-p {
   font-family: var(--font-body), Georgia, serif;
   font-size: var(--read-prose);
   line-height: var(--read-leading);
   color: var(--ink-body);
-  margin: 0 0 1.35rem;
+  margin: 0 0 var(--read-para-gap);
+  max-width: var(--read-max);
 }
 
 /* Timeline */
@@ -410,14 +416,39 @@ html[data-font-scale="xl"] .immersive-story {
   margin-top: 0.35rem;
 }
 
-/* Progress bar enhancement */
+/* Progress bar */
+.reading-progress {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 60;
+  height: 2px;
+  background: var(--rule);
+  pointer-events: none;
+}
+
+.reading-progress__bar {
+  height: 100%;
+  transform-origin: left center;
+  background: var(--color-primary);
+  transition: transform var(--duration-fast) var(--ease-out);
+  will-change: transform;
+}
+
 .reading-progress--immersive {
   height: 3px;
   z-index: 60;
 }
 
 .reading-progress--immersive .reading-progress__bar {
-  background: var(--accent-red-deep);
+  background: var(--color-primary-deep);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading-progress__bar {
+    transition: none;
+  }
 }
 
 /* ── Premium layout ── */
@@ -446,7 +477,7 @@ html[data-font-scale="xl"] .immersive-story {
 }
 
 .immersive-story__content {
-  padding-top: 0.5rem;
+  padding-top: var(--space-2);
 }
 
 .immersive-story__aside {
@@ -662,48 +693,54 @@ html[data-font-scale="xl"] .immersive-story {
 
 /* Highlights */
 .story-highlights {
-  margin-top: 2rem;
-  padding: 1.25rem 1.35rem;
+  margin-top: var(--space-8);
+  padding: var(--space-5) var(--space-6);
   border-left: 3px solid var(--ds-accent);
-  background: color-mix(in srgb, var(--ds-accent-soft) 55%, var(--paper-elevated));
+  background: color-mix(in srgb, var(--ds-accent-soft) 45%, var(--paper-elevated));
   max-width: var(--read-max);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 
 .story-highlights__title {
   font-family: var(--font-display), Georgia, serif;
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0 0 0.85rem;
+  font-size: var(--type-title);
+  font-weight: var(--weight-semibold);
+  margin: 0 0 var(--space-4);
   color: var(--ink-headline);
 }
 
 .story-highlights__list {
   margin: 0;
-  padding: 0 0 0 1.15rem;
+  padding: 0 0 0 var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: var(--space-3);
 }
 
 .story-highlights__item {
   font-family: var(--font-body), Georgia, serif;
-  font-size: calc(var(--read-prose) * 0.92);
-  line-height: 1.55;
+  font-size: var(--type-body);
+  line-height: var(--leading-normal);
   color: var(--ink-body);
 }
 
 /* Prose lists + inline images */
 .story-prose-list {
-  margin: 0 0 1.35rem;
-  padding-left: 1.25rem;
+  margin: 0 0 var(--read-para-gap);
+  padding-left: var(--space-5);
   font-family: var(--font-body), Georgia, serif;
   font-size: var(--read-prose);
   line-height: var(--read-leading);
   color: var(--ink-body);
+  max-width: var(--read-max);
 }
 
 .story-prose-list li {
-  margin-bottom: 0.45rem;
+  margin-bottom: var(--space-2);
+}
+
+.story-prose-list li:last-child {
+  margin-bottom: 0;
 }
 
 .story-inline-figure {
@@ -764,14 +801,14 @@ html[data-font-scale="xl"] .immersive-story {
   z-index: 58;
   display: flex;
   align-items: stretch;
-  gap: 0.35rem;
-  padding: 0.5rem var(--read-pad);
-  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0));
-  background: var(--ds-surface-overlay);
-  backdrop-filter: saturate(180%) blur(14px);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--read-pad);
+  padding-bottom: calc(var(--space-2) + var(--safe-bottom));
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
   border-top: 1px solid var(--rule);
-  box-shadow: 0 -4px 24px color-mix(in srgb, var(--ink-headline) 8%, transparent);
+  box-shadow: 0 -4px 24px color-mix(in srgb, var(--ink-headline) 6%, transparent);
 }
 
 @media (min-width: 768px) {
