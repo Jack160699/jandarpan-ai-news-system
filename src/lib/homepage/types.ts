@@ -88,6 +88,8 @@ export type GeneratedHomepageFeed = {
   trending: HomeArticle[];
   shorts: HomeArticle[];
   newsShorts: NewsShortCard[];
+  /** Article ids for listen queue — separate pool, max 2 homepage overlap */
+  listenArticleIds?: string[];
   categoryStreams: RegionalSectionBlock[];
   footerIntelligence: FooterIntelligence;
   hyperlocalFeeds: HyperlocalFeedSummary[];

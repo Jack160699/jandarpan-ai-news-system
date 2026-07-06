@@ -67,7 +67,21 @@ async function buildFeedFromPool(
   });
   if (!feed) return null;
 
-  const newsShorts = buildTrendingShortsFromPool(langPool, 10, displayLanguage);
+  const reservedIds = new Set([
+    feed.editorsPicks.lead.id,
+    ...feed.editorsPicks.supporting.map((a) => a.id),
+    ...feed.breakingTicker.map((a) => a.id),
+    ...feed.trending.map((a) => a.id),
+    ...feed.liveWire.map((a) => a.id),
+    ...feed.regionalHighlights.map((a) => a.id),
+    ...feed.shorts.map((a) => a.id),
+  ]);
+
+  const newsShorts = buildTrendingShortsFromPool(langPool, 10, displayLanguage, {
+    preferredArticleIds: feed.shorts.map((a) => a.id),
+    reservedIds,
+    maxHomepageOverlap: 1,
+  });
   return { ...feed, newsShorts };
 }
 
@@ -117,7 +131,7 @@ export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed 
       const { rows: freshPool } = await resolveLiveArticlePool(120);
       return buildFeedFromPool(freshPool, displayLanguage);
     },
-    ["homepage-generated-feed-v6", tenant.slug, displayLanguage],
+    ["homepage-generated-feed-v7", tenant.slug, displayLanguage],
     {
       revalidate: INFRA_CONFIG.homepageCacheSeconds,
       tags: [

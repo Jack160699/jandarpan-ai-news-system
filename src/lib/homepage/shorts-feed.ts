@@ -49,20 +49,55 @@ export function buildNewsShortsFromPool(
   return cards;
 }
 
-/** Trending shorts — prefer live + recent for homepage hero rail */
+/** Trending shorts — separate pool from homepage slots */
 export function buildTrendingShortsFromPool(
   rows: GeneratedArticleRow[],
   limit = 8,
-  displayLanguage: NewsroomLanguage = "hi"
+  displayLanguage: NewsroomLanguage = "hi",
+  options?: {
+    preferredArticleIds?: string[];
+    reservedIds?: Set<string>;
+    maxHomepageOverlap?: number;
+  }
 ): NewsShortCard[] {
-  const cards = buildNewsShortsFromPool(rows, limit * 2, displayLanguage);
-  return [...cards]
-    .sort((a, b) => {
-      const live = (b.isLive ? 2 : 0) - (a.isLive ? 2 : 0);
-      if (live !== 0) return live;
-      return (
-        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-      );
-    })
-    .slice(0, limit);
+  const reserved = options?.reservedIds ?? new Set<string>();
+  const maxOverlap = options?.maxHomepageOverlap ?? 1;
+  const preferred = new Set(options?.preferredArticleIds ?? []);
+
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const cards: NewsShortCard[] = [];
+  let overlap = 0;
+
+  const pushRow = (row: GeneratedArticleRow) => {
+    const localized = rowForLanguage(row, displayLanguage);
+    if (!localized) return;
+    const card = ensureShortCard(localized);
+    if (card) cards.push(card);
+  };
+
+  for (const id of preferred) {
+    if (cards.length >= limit) break;
+    const row = byId.get(id);
+    if (!row) continue;
+    if (reserved.has(id)) {
+      if (overlap >= maxOverlap) continue;
+      overlap++;
+    }
+    pushRow(row);
+  }
+
+  if (cards.length >= limit) return cards.slice(0, limit);
+
+  const filler = buildNewsShortsFromPool(rows, limit * 3, displayLanguage);
+  for (const card of filler) {
+    if (cards.length >= limit) break;
+    if (cards.some((c) => c.articleId === card.articleId)) continue;
+    if (reserved.has(card.articleId)) {
+      if (overlap >= maxOverlap) continue;
+      overlap++;
+    }
+    cards.push(card);
+  }
+
+  return cards.slice(0, limit);
 }

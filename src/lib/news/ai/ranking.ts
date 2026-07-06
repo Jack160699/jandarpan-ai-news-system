@@ -234,6 +234,26 @@ function buildDuplicateClusters(
   const clusterById = new Map<string, string>();
   let clusterSeq = 0;
 
+  for (const item of items) {
+    const eventId = item.row.event_id?.trim();
+    if (!eventId) continue;
+
+    const sibling = items.find(
+      (other) =>
+        other.row.id !== item.row.id &&
+        other.row.event_id?.trim() === eventId
+    );
+    if (!sibling) continue;
+
+    const idA = item.row.id;
+    const idB = sibling.row.id;
+    const clusterA = clusterById.get(idA);
+    const clusterB = clusterById.get(idB);
+    const clusterId = clusterA ?? clusterB ?? `dup-${clusterSeq++}`;
+    clusterById.set(idA, clusterId);
+    clusterById.set(idB, clusterId);
+  }
+
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
       const sim = titleSimilarity(

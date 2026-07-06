@@ -100,21 +100,19 @@ export function assignFeaturedDistrictSlug(
 export function buildDistrictArticlePool(
   feed: GeneratedHomepageFeed
 ): HomeArticle[] {
-  const seen = new Set<string>();
-  const out: HomeArticle[] = [];
+  const heroId = feed.editorsPicks.lead.id;
+  const reserved = new Set<string>([
+    heroId,
+    ...feed.breakingTicker.map((a) => a.id),
+    ...feed.trending.map((a) => a.id),
+  ]);
 
-  const push = (article: HomeArticle) => {
-    if (seen.has(article.id)) return;
-    seen.add(article.id);
-    out.push(article);
-  };
+  const source =
+    feed.regionalHighlights.length > 0
+      ? feed.regionalHighlights
+      : feed.liveWire;
 
-  for (const article of feed.liveWire) push(article);
-  for (const article of feed.regionalHighlights) push(article);
-  for (const article of feed.trending.slice(0, 16)) push(article);
-  for (const article of feed.editorsPicks.supporting ?? []) push(article);
-
-  return out;
+  return source.filter((a) => !reserved.has(a.id));
 }
 
 export function filterArticlesByDistrict(

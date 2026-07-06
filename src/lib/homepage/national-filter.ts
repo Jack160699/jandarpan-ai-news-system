@@ -61,20 +61,14 @@ export function buildNationalArticlePool(
   feed: GeneratedHomepageFeed,
   wireItems: HomeArticle[]
 ): HomeArticle[] {
-  const seen = new Set<string>();
-  const out: HomeArticle[] = [];
+  const reserved = new Set<string>([
+    feed.editorsPicks.lead.id,
+    ...feed.breakingTicker.map((a) => a.id),
+    ...feed.trending.map((a) => a.id),
+    ...feed.regionalHighlights.map((a) => a.id),
+  ]);
 
-  const push = (article: HomeArticle) => {
-    if (seen.has(article.id)) return;
-    seen.add(article.id);
-    out.push(article);
-  };
-
-  for (const article of wireItems) push(article);
-  for (const article of feed.trending.slice(0, 12)) push(article);
-  for (const article of feed.regionalHighlights.slice(0, 8)) push(article);
-
-  return out;
+  return wireItems.filter((a) => !reserved.has(a.id));
 }
 
 export function filterArticlesByNationalSegment(
