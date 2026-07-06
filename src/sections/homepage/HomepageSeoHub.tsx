@@ -6,6 +6,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { getSeoHomepagePrimaryClusters } from "@/lib/seo/homepage-hub";
+import { SITE_URL } from "@/lib/seo/constants";
 import { useLanguage } from "@/providers/LanguageProvider";
 
 export function HomepageSeoHub() {
@@ -28,7 +29,7 @@ export function HomepageSeoHub() {
         "@type": "ListItem",
         position: i + 1,
         name: pickBilingualLabel(language, c.titleEn, c.titleHi),
-        url: `https://jandarpancg.in${c.path}`,
+        url: `${SITE_URL}${c.path}`,
         description: pickBilingualLabel(
           language,
           c.descriptionEn,

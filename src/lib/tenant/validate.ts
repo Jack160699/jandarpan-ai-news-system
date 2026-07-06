@@ -1,8 +1,21 @@
 import { NEWSROOM_LANGUAGES, type NewsroomLanguage } from "@/lib/i18n/languages";
 import { defaultMonetizationSettings } from "@/lib/monetization/placements";
+import { resolveCanonicalSiteUrl } from "@/lib/seo/canonical-url";
 import { getDefaultTenant } from "@/lib/tenant/registry";
 import type { TenantConfig } from "@/lib/tenant/types";
 import type { TenantMonetizationSettings } from "@/lib/monetization/types";
+
+function resolveTenantSiteUrl(value: string): string {
+  const trimmed = value.replace(/\/$/, "");
+  if (
+    trimmed.includes("vercel.app") ||
+    trimmed.includes("localhost") ||
+    trimmed.includes("127.0.0.1")
+  ) {
+    return resolveCanonicalSiteUrl();
+  }
+  return trimmed;
+}
 
 export function normalizeTenantConfig(
   partial: Record<string, unknown>
@@ -42,7 +55,7 @@ export function normalizeTenantConfig(
     domains: Array.isArray(partial.domains)
       ? (partial.domains as string[])
       : base.domains,
-    siteUrl: String(partial.siteUrl ?? base.siteUrl),
+    siteUrl: resolveTenantSiteUrl(String(partial.siteUrl ?? base.siteUrl)),
     branding,
     theme,
     typography,

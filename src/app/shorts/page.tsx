@@ -5,6 +5,7 @@ import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchShortsPool } from "@/lib/news/shorts/build-short";
 import { BRAND } from "@/lib/brand";
+import { SITE_URL } from "@/lib/seo/constants";
 
 export const revalidate = 60;
 
@@ -32,7 +33,7 @@ function shortsJsonLd(shorts: { headline: string; slug: string }[]) {
     itemListElement: shorts.slice(0, 12).map((s, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `/shorts/${s.slug}`,
+      url: `${SITE_URL}/shorts/${s.slug}`,
       name: s.headline,
     })),
   };
