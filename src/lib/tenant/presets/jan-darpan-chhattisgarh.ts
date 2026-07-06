@@ -1,9 +1,9 @@
 import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
 import { defaultMonetizationSettings } from "@/lib/monetization/placements";
+import { resolveCanonicalSiteUrl } from "@/lib/seo/canonical-url";
 import type { TenantConfig } from "@/lib/tenant/types";
 
-const SITE =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://newspaper-motion.vercel.app";
+const SITE_URL = resolveCanonicalSiteUrl();
 
 /** Jan Darpan Chhattisgarh — official regional digital news identity */
 export const JAN_DARPAN_CHHATTISGARH_TENANT: TenantConfig = {
@@ -15,9 +15,9 @@ export const JAN_DARPAN_CHHATTISGARH_TENANT: TenantConfig = {
     "localhost",
     "127.0.0.1",
     "newspaper-motion.vercel.app",
-    new URL(SITE).hostname,
+    new URL(SITE_URL).hostname,
   ].filter(Boolean),
-  siteUrl: SITE,
+  siteUrl: SITE_URL,
   branding: {
     nameEn: "Jan Darpan Chhattisgarh",
     nameHi: "जन दर्पण छत्तीसगढ़",

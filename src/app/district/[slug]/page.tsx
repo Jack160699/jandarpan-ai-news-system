@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
+import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { StoryCard } from "@/components/homepage/StoryCard";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
 import { filterPoolByLanguage } from "@/lib/i18n/article-language";
@@ -14,6 +15,12 @@ import {
   getDistrict,
 } from "@/lib/regional";
 import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
+import {
+  breadcrumbListJsonLd,
+  buildPageMetadata,
+  collectionPageJsonLd,
+} from "@/lib/seo";
+import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
 
 export const revalidate = 60;
 
@@ -30,10 +37,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const district = getDistrict(slug);
   if (!district) return { title: "District not found" };
 
-  return {
+  return buildPageMetadata({
     title: `${district.name} News | Chhattisgarh Hyperlocal`,
     description: `Latest AI-curated news from ${district.name}, Chhattisgarh.`,
-  };
+    path: `/district/${slug}`,
+    keywords: [district.name, district.nameHi, "Chhattisgarh", "hyperlocal news"],
+    locale: "hi_IN",
+    ogType: "website",
+  });
 }
 
 export default async function DistrictPage({ params }: PageProps) {
@@ -68,8 +79,26 @@ export default async function DistrictPage({ params }: PageProps) {
     )
     .filter((a): a is NonNullable<typeof a> => a !== null);
 
+  const path = `/district/${slug}`;
+  const jsonLd = [
+    collectionPageJsonLd({
+      name: `${district.name} News`,
+      description: `Latest AI-curated news from ${district.name}, Chhattisgarh.`,
+      path,
+      items: articles.slice(0, 20).map((article) => ({
+        url: `/story/${article.slug}`,
+        name: article.headline,
+      })),
+    }),
+    breadcrumbListJsonLd([
+      buildHomeBreadcrumb(),
+      { name: district.name, href: path },
+    ]),
+  ];
+
   return (
     <PageShell>
+      <JsonLdScript data={jsonLd} />
       <header className="mb-8 border-b border-neutral-200 pb-6">
         <p className="text-sm uppercase tracking-wide text-neutral-500">
           Hyperlocal · छत्तीसगढ़

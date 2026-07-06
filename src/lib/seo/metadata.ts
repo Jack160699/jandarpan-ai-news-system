@@ -62,7 +62,7 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
     description: input.description,
     keywords: [...new Set([...(input.keywords ?? []), ...REGIONAL_KEYWORDS.slice(0, 6)])],
     alternates: {
-      canonical: canonicalPath,
+      canonical: url,
       languages,
     },
     robots: input.noindex ? { index: false, follow: false } : PRODUCTION_ROBOTS,

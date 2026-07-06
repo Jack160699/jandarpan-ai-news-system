@@ -5,6 +5,7 @@
 import type { Article } from "@/lib/articles";
 import { BRAND } from "@/lib/brand";
 import { breadcrumbListJsonLd, type BreadcrumbItem } from "@/lib/seo/breadcrumbs";
+import { resolveNewsArticleModifiedAt } from "@/lib/seo/article-dates";
 import {
   PUBLISHER_LOGO_URL,
   SITE_NAME,
@@ -214,7 +215,7 @@ export function liveNewsArticleJsonLd(input: LiveNewsArticleJsonLdInput) {
     },
     thumbnailUrl: input.image,
     datePublished: article.published_at ?? article.created_at,
-    dateModified: article.updated_at,
+    dateModified: resolveNewsArticleModifiedAt(article) ?? undefined,
     author: {
       "@type": "Organization",
       name: article.author?.trim() || SITE_NAME,
