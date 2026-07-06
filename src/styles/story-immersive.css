@@ -5,8 +5,13 @@
   --read-pad: clamp(1.25rem, 4vw, 2rem);
   --read-prose: 1.125rem;
   --read-leading: 1.8;
-  padding-bottom: clamp(3rem, 10vw, 5rem);
+  --read-para-gap: 1.375rem;
+  padding-bottom: calc(4.25rem + var(--safe-bottom));
   background: var(--paper);
+}
+
+.app-shell--story .immersive-story {
+  padding-bottom: calc(4.5rem + var(--safe-bottom));
 }
 
 html[data-font-scale="sm"] .immersive-story {
@@ -33,30 +38,42 @@ html[data-font-scale="xl"] .immersive-story {
 /* Sticky reader chrome */
 .immersive-chrome {
   position: sticky;
-  top: 2px;
+  top: var(--safe-top);
   z-index: 55;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.625rem var(--read-pad);
+  gap: var(--space-3);
+  padding: var(--space-2) var(--read-pad);
   margin-inline: calc(-1 * var(--read-pad));
   background: var(--ds-surface-overlay);
-  backdrop-filter: saturate(180%) blur(16px);
-  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  backdrop-filter: saturate(180%) blur(var(--glass-blur-strong));
+  -webkit-backdrop-filter: saturate(180%) blur(var(--glass-blur-strong));
   border-bottom: 1px solid var(--rule);
 }
 
 .immersive-chrome__back {
   font-family: var(--font-ui);
-  font-size: 0.8125rem;
+  font-size: var(--type-caption);
   color: var(--ink-muted);
   text-decoration: none;
   white-space: nowrap;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: var(--space-2) 0;
+  min-height: 2.75rem;
 }
 
-.immersive-chrome__back:hover {
+.immersive-chrome__back:hover,
+.immersive-chrome__back:focus-visible {
   color: var(--ink-headline);
+}
+
+.immersive-chrome__back:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .immersive-chrome__tools {
@@ -137,10 +154,10 @@ html[data-font-scale="xl"] .immersive-story {
   font-family: var(--font-display), Georgia, serif;
   font-size: clamp(2rem, 6vw, 3rem);
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1.12;
   letter-spacing: -0.03em;
   color: var(--ink-headline);
-  margin: 0.75rem 0 0;
+  margin: var(--space-3) 0 0;
 }
 
 .immersive-story__subtitle {
@@ -148,7 +165,7 @@ html[data-font-scale="xl"] .immersive-story {
   font-size: clamp(1.125rem, 2.5vw, 1.375rem);
   line-height: 1.55;
   color: var(--ink-muted);
-  margin: 1rem 0 0;
+  margin: var(--space-4) 0 0;
   max-width: var(--read-max);
 }
 
@@ -156,8 +173,8 @@ html[data-font-scale="xl"] .immersive-story {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
-  margin-top: 1.25rem;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-5);
   font-family: var(--font-ui);
   font-size: 0.8125rem;
   color: var(--ink-muted);
@@ -195,7 +212,7 @@ html[data-font-scale="xl"] .immersive-story {
 /* Hero */
 .immersive-story__hero {
   position: relative;
-  margin-top: 2rem;
+  margin-top: var(--space-8);
   aspect-ratio: 16 / 10;
   max-height: min(52vh, 480px);
   overflow: hidden;

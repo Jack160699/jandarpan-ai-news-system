@@ -9,7 +9,7 @@ import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 export function SearchOverlay() {
   const { searchOpen, setSearchOpen } = useReaderPreferences();
   const { t } = useLanguage();
-  const inputRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -37,13 +37,13 @@ export function SearchOverlay() {
       onClick={() => setSearchOpen(false)}
     >
       <div
-        ref={inputRef}
+        ref={panelRef}
         className="search-overlay__panel"
         onClick={(e) => e.stopPropagation()}
       >
         {isMobile ? <div className="mobile-sheet__handle mb-3" aria-hidden /> : null}
         <p className="meta-label text-[var(--ink-faint)]">{t.search.title}</p>
-        <SearchPanel compact onNavigate={() => setSearchOpen(false)} />
+        <SearchPanel compact autoFocus onNavigate={() => setSearchOpen(false)} />
         <button
           type="button"
           className="meta-label mt-5 min-h-[44px] text-[var(--ink-faint)] tap-target"
