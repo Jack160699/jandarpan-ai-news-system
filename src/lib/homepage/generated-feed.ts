@@ -32,6 +32,7 @@ import { resolveEditorialDesk } from "@/lib/newsroom/desk-branding";
 import { composeHomepageSlots } from "@/lib/homepage/homepage-composition";
 import type {
   EditorsPicksBlock,
+  EditorialDeskBlock,
   GeneratedHomepageFeed,
   HomeArticle,
   HomeSectionId,
@@ -146,10 +147,11 @@ function pickCategoryStreams(
   ranked: HomeArticle[],
   usedIds: Set<string>,
   displayLanguage: NewsroomLanguage,
+  editorialDesks: EditorialDeskBlock[],
   perSection = 4
 ): RegionalSectionBlock[] {
   const dict = getDictionary(displayLanguage);
-  return REGIONAL_SECTIONS.map((def) => {
+  const sectionStreams = REGIONAL_SECTIONS.map((def) => {
     const articles = ranked
       .filter((a) => a.section === def.id && !usedIds.has(a.id))
       .sort((a, b) => b.priorityScore - a.priorityScore)
@@ -162,6 +164,32 @@ function pickCategoryStreams(
       articles,
     };
   }).filter((s) => s.articles.length > 0);
+
+  const deskSectionMap: Partial<Record<HomeSectionId, string[]>> = {
+    india: ["politics", "national", "opinion", "fact-check", "explainers"],
+    business: ["business", "technology"],
+    sports: ["sports"],
+    education: ["education", "health"],
+    world: ["international", "entertainment", "weather"],
+    chhattisgarh: ["district", "crime", "election"],
+  };
+
+  for (const stream of sectionStreams) {
+    const deskIds = deskSectionMap[stream.id] ?? [];
+    for (const deskId of deskIds) {
+      const deskBlock = editorialDesks.find((d) => d.id === deskId);
+      if (!deskBlock) continue;
+      for (const article of deskBlock.articles) {
+        if (usedIds.has(article.id)) continue;
+        if (stream.articles.some((a) => a.id === article.id)) continue;
+        if (stream.articles.length >= perSection) break;
+        stream.articles.push(article);
+      }
+    }
+    stream.articles.sort((a, b) => b.priorityScore - a.priorityScore);
+  }
+
+  return sectionStreams;
 }
 
 export function buildGeneratedHomepageFeed(
@@ -233,7 +261,13 @@ export function buildGeneratedHomepageFeed(
         slots.reelsArticleIds.indexOf(a.id) - slots.reelsArticleIds.indexOf(b.id)
     );
 
-  const categoryStreams = pickCategoryStreams(ranked, usedIds, displayLanguage, 5);
+  const categoryStreams = pickCategoryStreams(
+    ranked,
+    usedIds,
+    displayLanguage,
+    slots.editorialDesks,
+    5
+  );
 
   const avgConfidence =
     ranked.length > 0
@@ -253,6 +287,8 @@ export function buildGeneratedHomepageFeed(
     newsShorts: [],
     listenArticleIds: slots.listenArticleIds,
     categoryStreams,
+    editorialDesks: slots.editorialDesks,
+    deskQuality: slots.deskQuality,
     footerIntelligence: {
       fetchedAt: new Date().toISOString(),
       storyCount: ranked.length,

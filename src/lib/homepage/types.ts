@@ -79,6 +79,27 @@ export type HyperlocalFeedSummary = {
   topHeadline: string | null;
 };
 
+export type EditorialDeskBlock = {
+  id: string;
+  label: string;
+  labelHi: string;
+  articles: HomeArticle[];
+  collapsed?: boolean;
+};
+
+export type HomepageDeskQuality = {
+  categoryDiversity: number;
+  districtDiversity: number;
+  avgFreshnessHours: number;
+  avgConfidence: number;
+  avgImageQuality: number;
+  duplicateCount: number;
+  sectionCompletionPct: number;
+  heroQuality: number;
+  desksFilled: number;
+  desksTotal: number;
+};
+
 /** Premium AI newsroom homepage — 8 sections */
 export type GeneratedHomepageFeed = {
   breakingTicker: HomeArticle[];
@@ -91,6 +112,9 @@ export type GeneratedHomepageFeed = {
   /** Article ids for listen queue — separate pool, max 2 homepage overlap */
   listenArticleIds?: string[];
   categoryStreams: RegionalSectionBlock[];
+  /** Editorial desk quotas — composition metadata (collapse when empty) */
+  editorialDesks?: EditorialDeskBlock[];
+  deskQuality?: HomepageDeskQuality;
   footerIntelligence: FooterIntelligence;
   hyperlocalFeeds: HyperlocalFeedSummary[];
   localBreakingAlerts: Array<{

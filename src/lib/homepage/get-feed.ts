@@ -131,7 +131,7 @@ export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed 
       const { rows: freshPool } = await resolveLiveArticlePool(120);
       return buildFeedFromPool(freshPool, displayLanguage);
     },
-    ["homepage-generated-feed-v7", tenant.slug, displayLanguage],
+    ["homepage-generated-feed-v8", tenant.slug, displayLanguage],
     {
       revalidate: INFRA_CONFIG.homepageCacheSeconds,
       tags: [
