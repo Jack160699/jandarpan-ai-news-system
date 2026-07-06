@@ -11,7 +11,7 @@ import {
   buildTenantViewport,
 } from "@/lib/tenant/metadata";
 import { getLanguageConfig } from "@/lib/i18n/languages";
-import { getServerReaderLanguage } from "@/lib/i18n/server-language";
+import { getServerLanguageChosen, getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchOrganizationSettings } from "@/lib/organization/settings";
 import { getTenantConfig, stripTenantForClient } from "@/lib/tenant/resolve";
 import "@/styles/globals.css";
@@ -48,6 +48,7 @@ export default async function RootLayout({
   const tenant = await getTenantConfig();
   const organization = await fetchOrganizationSettings();
   const readerLang = await getServerReaderLanguage();
+  const languageChosen = await getServerLanguageChosen();
   const langCfg = getLanguageConfig(readerLang);
 
   return (
@@ -68,6 +69,7 @@ export default async function RootLayout({
             <LanguageProvider
               defaultLanguage={readerLang}
               enabledLanguages={tenant.newsroom.enabledLanguages}
+              initialLanguageChosen={languageChosen}
             >
               <AppChrome>{children}</AppChrome>
             </LanguageProvider>

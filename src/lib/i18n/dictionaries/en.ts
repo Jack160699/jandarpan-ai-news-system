@@ -201,6 +201,9 @@ export const en: Dictionary = {
     hint: "All districts · categories · Hindi & English",
     noResults: "No stories found",
     searching: "Searching…",
+    recentSearches: "Recent searches",
+    seeAllResults: "See all results →",
+    clearHistory: "Clear",
   },
   archive: {
     backToEdition: "← Home",

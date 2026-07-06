@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import { IMAGE_BLUR } from "@/lib/image-placeholder";
+import { useLanguage } from "@/providers/LanguageProvider";
 import {
   addSearchHistory,
   clearSearchHistory,
@@ -51,6 +52,7 @@ export function SearchPanel({
   onNavigate,
 }: SearchPanelProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState(initialQuery);
   const [district, setDistrict] = useState<string | null>(initialDistrict);
@@ -59,12 +61,10 @@ export function SearchPanel({
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<string[]>(() =>
+    typeof window !== "undefined" ? getSearchHistory() : []
+  );
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    setHistory(getSearchHistory());
-  }, []);
 
   useEffect(() => {
     if (!autoFocus) return;
@@ -159,10 +159,15 @@ export function SearchPanel({
             className="search-form__input"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search in Hindi or English…"
-            aria-label="Search news"
+            placeholder={t.search.placeholder}
+            aria-label={t.search.title}
             autoComplete="off"
             enterKeyHint="search"
+            inputMode="search"
+            autoCorrect="off"
+            role="combobox"
+            aria-expanded={Boolean(result?.hits.length)}
+            aria-controls="search-results-list"
           />
           {query ? (
             <button
@@ -221,7 +226,7 @@ export function SearchPanel({
             className="meta-label mt-2 min-h-[44px] text-left text-[var(--accent-category)] tap-target"
             onClick={openFullSearch}
           >
-            See all results →
+            {t.search.seeAllResults ?? "See all results →"}
           </button>
         ) : null}
       </form>
@@ -229,7 +234,7 @@ export function SearchPanel({
       {history.length > 0 && !query && !loading ? (
         <div className="search-history">
           <div className="search-history__head">
-            <p className="search-history__label">Recent searches</p>
+            <p className="search-history__label">{t.search.recentSearches ?? "Recent searches"}</p>
             <button
               type="button"
               className="search-history__clear tap-target"
@@ -259,7 +264,7 @@ export function SearchPanel({
 
       {loading ? (
         <div className="search-loading" aria-live="polite" aria-busy="true">
-          <p className="search-meta">Searching…</p>
+          <p className="search-meta">{t.search.searching}</p>
           <div className="mt-4 space-y-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="flex gap-3">
@@ -298,12 +303,12 @@ export function SearchPanel({
 
       {!suppressResults && result && result.hits.length > 0 ? (
         <div className={compact ? "search-overlay-results" : ""}>
-          <p className="search-meta">
+          <p className="search-meta" aria-live="polite" aria-atomic="true">
             {result.total} result{result.total === 1 ? "" : "s"}
             {result.parsed.district ? ` · ${result.parsed.district}` : ""}
             {result.tookMs ? ` · ${result.tookMs}ms` : ""}
           </p>
-          <ul className="search-results">
+          <ul className="search-results" id="search-results-list" role="listbox">
             {result.hits.map((hit) => (
               <SearchHitCard
                 key={hit.id}
@@ -317,7 +322,7 @@ export function SearchPanel({
 
       {!suppressResults && result && !loading && query && result.hits.length === 0 ? (
         <p className="search-empty">
-          No stories match. Try a broader term or remove filters.
+          {t.search.noResults}
         </p>
       ) : null}
     </div>

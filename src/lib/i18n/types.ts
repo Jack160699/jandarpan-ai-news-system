@@ -206,6 +206,9 @@ export type Dictionary = {
     hint: string;
     noResults: string;
     searching: string;
+    recentSearches?: string;
+    seeAllResults?: string;
+    clearHistory?: string;
   };
   archive: {
     backToEdition: string;

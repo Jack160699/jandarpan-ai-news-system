@@ -201,6 +201,16 @@ export async function transitionWorkflow(input: {
 
   if (updateError) return { ok: false, error: updateError.message };
 
+  if (input.toStatus === "published") {
+    const { publishArticlePublished } = await import(
+      "@/lib/infrastructure/events/event-bus"
+    );
+    void publishArticlePublished({
+      articleId: input.articleId,
+      tenantId,
+    }).catch(() => undefined);
+  }
+
   await supabase.from("editorial_workflow_events").insert({
     tenant_id: tenantId,
     article_id: input.articleId,

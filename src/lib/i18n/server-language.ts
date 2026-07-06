@@ -18,3 +18,8 @@ export async function getServerReaderLanguage(
   if (isReaderLanguage(raw)) return raw;
   return isReaderLanguage(fallback) ? fallback : "hi";
 }
+
+export async function getServerLanguageChosen(): Promise<boolean> {
+  const jar = await cookies();
+  return jar.get(LANGUAGE_CHOSEN_COOKIE)?.value === "1";
+}

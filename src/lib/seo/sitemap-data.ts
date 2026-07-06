@@ -57,6 +57,18 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.5,
     },
+    {
+      url: `${SITE_URL}/listen`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.72,
+    },
+    {
+      url: `${SITE_URL}/shorts`,
+      lastModified: now,
+      changeFrequency: "hourly",
+      priority: 0.78,
+    },
   ];
 
   const categoryRoutes: MetadataRoute.Sitemap = CATEGORY_SEO.map((c) => ({
@@ -152,7 +164,7 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === "/about" || path === "/contact" ? 0.6 : 0.45,
   }));
 
-  return [
+  const merged = [
     ...staticRoutes,
     ...legalRoutes,
     ...categoryRoutes,
@@ -162,6 +174,14 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
     ...storyRoutes,
     ...liveRoutes,
   ];
+
+  const seen = new Set<string>();
+  return merged.filter((entry) => {
+    const key = entry.url.replace(/\/$/, "");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export async function buildGoogleNewsEntries() {

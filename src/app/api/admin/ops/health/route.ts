@@ -21,6 +21,7 @@ import { ANALYTICS_CACHE_TTL_SEC } from "@/lib/infrastructure/cache";
 import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { isSentryEnabled, sentryReadyState } from "@/lib/observability/sentry";
 import { getProductionEnvChecks } from "@/lib/infrastructure/production";
+import { getLaunchHealthWidgets } from "@/lib/ops/launch-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
   const auth = await requireEditorialAuth(request, "monitoring:read");
   if (!auth.ok) return auth.response;
 
-  const [checks, metrics, cron, errors, errorList, queueAnalytics, openAiUsage, aiFinancial] =
+  const [checks, metrics, cron, errors, errorList, queueAnalytics, openAiUsage, aiFinancial, launchWidgets] =
     await Promise.all([
     runAllHealthChecks(),
     getMetricsDashboard(),
@@ -39,6 +40,7 @@ export async function GET(request: Request) {
     getQueueAnalyticsDashboard(),
     getOpenAiUsageDashboard(),
     getAiFinancialDashboard(),
+    getLaunchHealthWidgets(),
   ]);
 
   const status = aggregateHealthStatus(checks);
@@ -67,6 +69,7 @@ export async function GET(request: Request) {
       sentryReady: sentryReadyState(),
     },
     production: getProductionEnvChecks(),
+    launchWidgets,
     timestamp: new Date().toISOString(),
   });
 }

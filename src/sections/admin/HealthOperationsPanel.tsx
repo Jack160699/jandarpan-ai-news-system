@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
+import { LaunchHealthWidgets } from "@/components/admin-newsroom/LaunchHealthWidgets";
 
 type HealthPayload = {
   ok: boolean;
@@ -274,6 +275,7 @@ export function HealthOperationsPanel() {
 
   return (
     <div className="anr-health-ops">
+      <LaunchHealthWidgets />
       <div className="anr-health-ops__toolbar">
         <p className="anr-meta">
           Status: <strong>{data.status}</strong> · Grade{" "}

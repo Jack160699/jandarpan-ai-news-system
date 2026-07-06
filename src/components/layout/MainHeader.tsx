@@ -24,7 +24,7 @@ const SearchOverlay = dynamic(
 export function MainHeader() {
   const { tenant, headerLocation } = useTenant();
   const { language, t } = useLanguage();
-  const { setSearchOpen } = useReaderPreferences();
+  const { setSearchOpen, searchOpen } = useReaderPreferences();
   const { startNavigation, toggleMenu, menuOpen } = useNavigation();
   const isMobile = useIsMobile();
   const scrolled = useHeaderScrolled();
@@ -93,6 +93,8 @@ export function MainHeader() {
               type="button"
               className="main-header__btn tap-target"
               aria-label={t.header.search}
+              aria-haspopup="dialog"
+              aria-expanded={searchOpen}
               onClick={() => setSearchOpen(true)}
             >
               <IconSearch />
