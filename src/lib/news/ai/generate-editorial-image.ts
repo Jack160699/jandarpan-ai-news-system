@@ -56,6 +56,7 @@ import {
   scoreImageBuffer,
 } from "@/lib/news/ai/editorial-image-quality";
 import { getRetryConfig } from "@/lib/news/ai/editorial-image-retry";
+import { isTerminalEditorialImageSource } from "@/lib/news/ai/editorial-image-terminal";
 import { resolveContextualFallback } from "@/lib/news/images/editorial-visual-fallbacks";
 import { isDisplayableImage } from "@/lib/news/images/validate";
 import { logNewsroom } from "@/lib/newsroom/logger";
@@ -759,7 +760,7 @@ export async function resolveEditorialHeroImage(input: {
     }
   }
 
-  if (sourceImageUrl) {
+  if (!input.queueId && sourceImageUrl) {
     const sourceResult = await trySourceImageWithQuality(
       sourceImageUrl,
       moderation.flags,
@@ -981,9 +982,7 @@ async function processQueueItem(
 
     const aiFailed =
       isEditorialImageGenerationEnabled() &&
-      !["ai_generated", "duplicate_reuse", "duplicate_visual_reuse"].includes(
-        resolved.source
-      );
+      !isTerminalEditorialImageSource(resolved.source);
 
     if (aiFailed && row.attempts + 1 < row.max_attempts) {
       const history = appendRetryLog(row.generation_history, {
@@ -1039,7 +1038,8 @@ async function processQueueItem(
       category,
       region: event?.region ?? null,
     });
-    const sourceImage = signals.length ? pickSourceSignalImage(signals) : null;
+    const aiEnabled = isEditorialImageGenerationEnabled();
+    const sourceImage = !aiEnabled && signals.length ? pickSourceSignalImage(signals) : null;
     const fallback = sourceImage ?? contextual.url;
     const retry = row.attempts + 1 < row.max_attempts;
     const history = appendRetryLog(row.generation_history, {
@@ -1060,7 +1060,9 @@ async function processQueueItem(
         ? undefined
         : sourceImage
           ? "source_extracted"
-          : "category_curated",
+          : contextual.tier === "region_curated"
+            ? "region_curated"
+            : "category_curated",
       generationHistory: history,
     });
 

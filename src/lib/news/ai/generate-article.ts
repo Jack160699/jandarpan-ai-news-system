@@ -17,7 +17,6 @@ import { geoFromRecord, mergeGeoMetadata, tagGeoFromContent } from "@/lib/region
 import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
 import { optimizeSeoSlug } from "@/lib/seo/slug-optimize";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
-import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
 import { buildOptimizedFactPack } from "@/lib/news/ai/optimized-fact-pack";
 import {
   classifyEditorialTier,
@@ -287,13 +286,6 @@ async function loadExistingHeadlines(): Promise<string[]> {
   return (data ?? []).map((r) => r.headline);
 }
 
-function pickSourceHeroImage(signals: NewsSignalRow[]): string | null {
-  const ranked = [...signals].sort(
-    (a, b) => scoreSourceConfidence(b) - scoreSourceConfidence(a)
-  );
-  return ranked.find((s) => s.image_url)?.image_url ?? null;
-}
-
 function evaluateDraft(input: {
   draft: EditorialDraft;
   event: NewsEventRow;
@@ -337,8 +329,7 @@ async function persistGeneratedArticle(input: {
     input.event.category ??
     input.signals.find((s) => s.category)?.category ??
     "world";
-  const hero_image_url =
-    pickSourceHeroImage(input.signals) ?? initialHeroPlaceholder(category);
+  const hero_image_url = initialHeroPlaceholder(category, input.event.region);
 
   const signalGeos = input.signals.map((s) =>
     tagGeoFromContent({
@@ -429,9 +420,7 @@ async function persistGeneratedArticle(input: {
       image: {
         status: "queued",
         hero_url: hero_image_url,
-        source: pickSourceHeroImage(input.signals)
-          ? "source_extracted"
-          : "category_fallback",
+        source: "category_fallback",
       },
     },
   };
