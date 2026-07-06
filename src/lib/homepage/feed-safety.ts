@@ -27,6 +27,8 @@ export function normalizeHomepageFeed(
     newsShorts: feed.newsShorts ?? [],
     regionalHighlights: feed.regionalHighlights ?? [],
     categoryStreams: feed.categoryStreams ?? [],
+    editorialDesks: feed.editorialDesks ?? [],
+    deskQuality: feed.deskQuality,
     hyperlocalFeeds: feed.hyperlocalFeeds ?? [],
     localBreakingAlerts: feed.localBreakingAlerts ?? [],
     editorsPicks,

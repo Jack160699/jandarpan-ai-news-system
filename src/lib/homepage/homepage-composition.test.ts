@@ -174,4 +174,32 @@ describe("homepage composition", () => {
     expect(countHomepageDuplicates(badFeed)).toBeGreaterThan(0);
     expect(homepageDiversityScore(badFeed)).toBeLessThan(100);
   });
+
+  it("balances editorial desks in trending", () => {
+    const now = new Date().toISOString();
+    const articles = [
+      mockArticle("p1", "Congress leader rally politics", { tags: ["politics"], section: "india" }),
+      mockArticle("b1", "Raipur market economy growth", { tags: ["business"], section: "raipur" }),
+      mockArticle("s1", "Cricket match IPL sports", { tags: ["sports"], section: "sports" }),
+      mockArticle("t1", "AI smartphone technology launch", { tags: ["technology"], section: "business" }),
+      mockArticle("c1", "Murder arrest police crime", { tags: ["crime"], section: "raipur" }),
+      mockArticle("c2", "Theft case police crime", { tags: ["crime"], section: "chhattisgarh" }),
+      mockArticle("c3", "Robbery police crime", { tags: ["crime"], section: "chhattisgarh" }),
+      mockArticle("e1", "School exam education results", { tags: ["education"], section: "education" }),
+      mockArticle("h1", "Hospital health camp", { tags: ["health"], section: "education" }),
+      mockArticle("d1", "Bilaspur road project", { section: "chhattisgarh" }),
+      mockArticle("d2", "Korba power plant", { section: "chhattisgarh" }),
+      mockArticle("lead", "Raipur headline lead", { section: "raipur", publishedAt: now }),
+    ];
+
+    const outputs = articles.map((a) => toRankedOutput(mockRow(a.id, a.headline)));
+    const slots = composeHomepageSlots(articles, outputs);
+
+    const crimeInTrending = slots.trending.filter(
+      (a) => a.tags.includes("crime") || /crime|murder|police/i.test(a.headline)
+    ).length;
+    expect(crimeInTrending).toBeLessThanOrEqual(2);
+    expect(slots.editorialDesks.length).toBeGreaterThan(0);
+    expect(slots.deskQuality.duplicateCount).toBe(0);
+  });
 });
