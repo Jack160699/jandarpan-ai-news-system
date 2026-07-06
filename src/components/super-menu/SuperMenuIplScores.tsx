@@ -13,6 +13,7 @@ import {
   IPL_CLIENT_POLL_MS,
   teamMeta,
 } from "@/lib/super-menu/ipl-scores";
+import { isIplSeason } from "@/lib/super-menu/ipl-season";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { useLanguage } from "@/providers/LanguageProvider";
@@ -138,22 +139,33 @@ function IplSkeleton() {
 export function SuperMenuIplScores({ menuOpen }: SuperMenuIplScoresProps) {
   const { language } = useLanguage();
   const [snap, setSnap] = useState<IplScoresSnapshot | null>(null);
+  const [loading, setLoading] = useState(false);
+  const inSeason = isIplSeason();
 
   const load = useCallback(async () => {
     try {
       const res = await fetch("/api/ipl-scores", { cache: "default" });
-      if (!res.ok) throw new Error("ipl fetch failed");
+      if (!res.ok) {
+        setSnap(null);
+        return;
+      }
       const data = (await res.json()) as IplScoresSnapshot;
-      setSnap(data);
+      if (data.source === "cricapi" && data.cards.length > 0) {
+        setSnap(data);
+      } else {
+        setSnap(null);
+      }
     } catch {
-      const { getCachedIplScores } = await import("@/lib/super-menu/ipl-scores");
-      setSnap(getCachedIplScores());
+      setSnap(null);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen || !inSeason) return;
     let cancelled = false;
+    setLoading(true);
     void load().then(() => {
       if (cancelled) return;
     });
@@ -164,7 +176,15 @@ export function SuperMenuIplScores({ menuOpen }: SuperMenuIplScoresProps) {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [menuOpen, load]);
+  }, [menuOpen, inSeason, load]);
+
+  if (!inSeason) {
+    return null;
+  }
+
+  if (!snap && !loading) {
+    return null;
+  }
 
   const title = pickBilingualLabel(
     language,
@@ -174,9 +194,9 @@ export function SuperMenuIplScores({ menuOpen }: SuperMenuIplScoresProps) {
 
   return (
     <SuperMenuBlock id="sm-ipl-scores" title={title} className="sm-block--tight">
-      {!snap ? (
+      {loading && !snap ? (
         <IplSkeleton />
-      ) : (
+      ) : snap ? (
         <div className="sm-ipl-stack" role="list">
           {snap.cards.map((card) => (
             <div key={`${card.kind}-${card.match.id}`} role="listitem">
@@ -184,7 +204,7 @@ export function SuperMenuIplScores({ menuOpen }: SuperMenuIplScoresProps) {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
     </SuperMenuBlock>
   );
 }

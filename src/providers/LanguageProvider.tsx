@@ -23,9 +23,9 @@ import {
   saveStoredLanguage,
   unlockLanguageGateDocument,
 } from "@/lib/i18n/storage";
+import { filterReaderLanguages } from "@/lib/i18n/reader-languages";
 import type { AppLanguage, Dictionary, LanguageOption } from "@/lib/i18n/types";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
-import { LANGUAGE_OPTIONS } from "@/lib/i18n/types";
 import { PREFS_STORAGE_KEY } from "@/lib/reader-preferences";
 
 type LanguageContextValue = {
@@ -76,11 +76,10 @@ export function LanguageProvider({
   const pathname = usePathname() ?? "/";
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const languageOptions = useMemo(() => {
-    if (!enabledLanguages?.length) return LANGUAGE_OPTIONS;
-    const allowed = new Set(enabledLanguages);
-    return LANGUAGE_OPTIONS.filter((o) => allowed.has(o.id as NewsroomLanguage));
-  }, [enabledLanguages]);
+  const languageOptions = useMemo(
+    () => filterReaderLanguages(enabledLanguages),
+    [enabledLanguages]
+  );
 
   const gateLanguageOptions = useMemo(
     () => filterGateOptions(enabledLanguages),

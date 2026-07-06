@@ -122,7 +122,7 @@ export default async function RootLayout({
         <TenantRoot tenant={stripTenantForClient(tenant)}>
           <ReaderPreferencesProvider>
             <LanguageProvider
-              defaultLanguage={tenant.newsroom.defaultLanguage}
+              defaultLanguage={readerLang}
               enabledLanguages={tenant.newsroom.enabledLanguages}
             >
               <EditorialIntelligenceProvider>

@@ -1,4 +1,5 @@
 import { isNewsroomLanguage, getLanguageConfig } from "@/lib/i18n/languages";
+import { toReaderLanguage } from "@/lib/i18n/reader-languages";
 import type { AppLanguage } from "./types";
 import { PREFS_STORAGE_KEY } from "@/lib/reader-preferences";
 
@@ -6,6 +7,7 @@ export const LANGUAGE_STORAGE_KEY = "cgb-language";
 /** Legacy / user-facing alias */
 export const LANGUAGE_STORAGE_KEY_ALIAS = "jd-language";
 export const LANGUAGE_CHOSEN_KEY = "cgb-language-chosen";
+export const LANGUAGE_CHOSEN_COOKIE = LANGUAGE_CHOSEN_KEY;
 
 export function isAppLanguage(value: string | null | undefined): value is AppLanguage {
   return isNewsroomLanguage(value);
@@ -26,16 +28,16 @@ function readLanguageKey(): string | null {
 
 export function loadStoredLanguage(): StoredLanguageState {
   if (typeof window === "undefined") {
-    return { language: "en", chosen: false };
+    return { language: "hi", chosen: false };
   }
 
   try {
     const rawLang = readLanguageKey();
     const chosenFlag = localStorage.getItem(LANGUAGE_CHOSEN_KEY);
 
-    if (rawLang && isAppLanguage(rawLang)) {
+    if (rawLang && isNewsroomLanguage(rawLang)) {
       return {
-        language: rawLang,
+        language: toReaderLanguage(rawLang),
         chosen: chosenFlag === "1",
       };
     }
@@ -46,7 +48,7 @@ export function loadStoredLanguage(): StoredLanguageState {
     /* ignore */
   }
 
-  return { language: "en", chosen: false };
+  return { language: "hi", chosen: false };
 }
 
 function migrateFromReaderPrefs(): StoredLanguageState | null {
@@ -57,9 +59,9 @@ function migrateFromReaderPrefs(): StoredLanguageState | null {
       language?: string;
       languageChosen?: boolean;
     };
-    if (!isAppLanguage(p.language)) return null;
+    if (!isNewsroomLanguage(p.language)) return null;
     const state = {
-      language: p.language,
+      language: toReaderLanguage(p.language),
       chosen: p.languageChosen === true,
     };
     saveStoredLanguage(state.language, state.chosen);
@@ -75,6 +77,7 @@ export function saveStoredLanguage(language: AppLanguage, chosen: boolean) {
   localStorage.setItem(LANGUAGE_STORAGE_KEY_ALIAS, language);
   localStorage.setItem(LANGUAGE_CHOSEN_KEY, chosen ? "1" : "0");
   document.cookie = `${LANGUAGE_STORAGE_KEY}=${language}; path=/; max-age=31536000; SameSite=Lax`;
+  document.cookie = `${LANGUAGE_CHOSEN_COOKIE}=${chosen ? "1" : "0"}; path=/; max-age=31536000; SameSite=Lax`;
 }
 
 export function applyLanguageToDocument(language: AppLanguage) {

@@ -127,6 +127,10 @@ html:not([data-theme="dark"]) .hero-news-card__article--premium {
   pointer-events: none;
 }
 
+.hero-news-card__float-top > * {
+  pointer-events: none;
+}
+
 .hero-news-card__category-badge {
   display: inline-flex;
   align-items: center;

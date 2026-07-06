@@ -129,7 +129,7 @@ export function getNativeAdCreative(adIndex: number): NativeAdCreative {
         ...base,
         kind: "sponsored",
         sponsorName: "State Partner",
-        headline: "Premium regional coverage, powered by AI",
+        headline: "Premium regional coverage for Chhattisgarh",
         description:
           "Clear, trustworthy reporting for Chhattisgarh — with transparent sponsorship labels.",
         ctaLabel: "See partnership",
