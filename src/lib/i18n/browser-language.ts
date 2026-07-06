@@ -1,9 +1,9 @@
 import type { AppLanguage } from "@/lib/i18n/types";
 import { isGateLanguage } from "@/lib/i18n/gate-languages";
 
-/** Map browser BCP-47 tag to newsroom language for gate UI + default highlight */
+/** Map browser BCP-47 tag to reader language for gate UI + default highlight */
 export function detectBrowserLanguage(): AppLanguage {
-  if (typeof navigator === "undefined") return "en";
+  if (typeof navigator === "undefined") return "hi";
 
   const tags = [
     navigator.language,
@@ -14,13 +14,10 @@ export function detectBrowserLanguage(): AppLanguage {
     const base = tag.toLowerCase().split("-")[0];
     if (base === "en") return "en";
     if (base === "hi") return "hi";
-    if (base === "bn") return "bn";
-    if (base === "mr") return "mr";
-    if (base === "ta") return "ta";
     if (base === "cg") return "cg";
   }
 
-  return "en";
+  return "cg";
 }
 
 /** Default highlight for onboarding when no saved preference */

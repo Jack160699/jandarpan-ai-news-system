@@ -1,4 +1,5 @@
-import { NEWSROOM_LANGUAGES, type NewsroomLanguage } from "@/lib/i18n/languages";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { isReaderLanguage } from "@/lib/i18n/reader-languages";
 import { defaultMonetizationSettings } from "@/lib/monetization/placements";
 import { resolveCanonicalSiteUrl } from "@/lib/seo/canonical-url";
 import { getDefaultTenant } from "@/lib/tenant/registry";
@@ -42,7 +43,7 @@ export function normalizeTenantConfig(
   };
 
   const enabled = (newsroom.enabledLanguages as NewsroomLanguage[] | undefined)?.filter(
-    (l) => NEWSROOM_LANGUAGES.includes(l)
+    (l) => isReaderLanguage(l)
   );
 
   return {

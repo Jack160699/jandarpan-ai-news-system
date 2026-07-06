@@ -11,7 +11,8 @@ export function LanguageGateScript() {
       dangerouslySetInnerHTML={{
         __html: `
           try {
-            var chosen = localStorage.getItem('cgb-language-chosen') === '1';
+            var chosen = localStorage.getItem('cgb-language-chosen') === '1'
+              || document.cookie.indexOf('cgb-language-chosen=1') !== -1;
             if (!chosen) {
               document.documentElement.setAttribute('data-lang-gate', 'locked');
             }

@@ -51,11 +51,12 @@ export function SuperMenuTodayLive({ menuOpen }: SuperMenuTodayLiveProps) {
 
   const time = useMemo(() => formatIstTime(language), [language, tick]);
 
-  const breaking =
-    briefing.breakingHeadline?.trim() ||
-    t.footer.todayLive.defaultBreaking;
-  const local =
-    briefing.localAlert?.trim() || t.footer.todayLive.defaultLocal;
+  const breaking = briefing.breakingHeadline?.trim() || null;
+  const local = briefing.localAlert?.trim() || null;
+
+  if (!breaking && !local) {
+    return null;
+  }
 
   return (
     <SuperMenuBlock
@@ -72,7 +73,7 @@ export function SuperMenuTodayLive({ menuOpen }: SuperMenuTodayLiveProps) {
           <time className="sm-today-v2__time">{time}</time>
         </div>
         <p className="sm-today-v2__headline">{breaking}</p>
-        <p className="sm-today-v2__alert">{local}</p>
+        {local ? <p className="sm-today-v2__alert">{local}</p> : null}
       </div>
     </SuperMenuBlock>
   );

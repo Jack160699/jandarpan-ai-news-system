@@ -65,7 +65,7 @@ export function HomepageSeoHub() {
           <p className="seo-hub__desc">
             {pickBilingualLabel(
               language,
-              "SEO-friendly hubs for jobs, markets, districts, cricket, fact-check, and more — updated by our editorial desk.",
+              "Jobs, markets, districts, cricket, fact-check, and more — updated by our editorial desk.",
               "नौकरी, बाजार, जिला, क्रिकेट, फैक्ट चेक और अन्य विषय — संपादकीय डेस्क द्वारा अपडेट।"
             )}
           </p>

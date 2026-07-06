@@ -1,36 +1,17 @@
 import { EmptyState } from "@/components/ui/EmptyState";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 
-export function HomepageEmpty() {
-  const configured = isSupabaseConfigured();
+export async function HomepageEmpty() {
+  const lang = await getServerReaderLanguage();
+  const t = getDictionary(lang);
 
   return (
     <EmptyState
       className="nr-empty"
-      kicker="Chhattisgarh desk"
-      title="Stories are on their way"
+      title={t.home.emptyTitle}
       icon="◌"
-      description={
-        <>
-          <p>
-            The homepage reads from AI-generated editorials. Run clustering and
-            generation, then refresh.
-          </p>
-          {!configured ? (
-            <p className="mt-3">
-              Supabase is not configured. Set{" "}
-              <code className="text-[var(--ink-headline)]">NEXT_PUBLIC_SUPABASE_URL</code>{" "}
-              and your anon key.
-            </p>
-          ) : (
-            <p className="mt-3 text-[var(--ds-text-caption)]">
-              Enable <code>NEWSROOM_CLUSTER_EVENTS</code> and{" "}
-              <code>NEWSROOM_GENERATE_ARTICLES</code>, then call{" "}
-              <code>/api/generate-articles</code>.
-            </p>
-          )}
-        </>
-      }
+      description={<p>{t.home.emptyBody}</p>}
     />
   );
 }
