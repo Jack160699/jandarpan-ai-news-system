@@ -7,6 +7,10 @@ import type {
   EditorialDraft,
   SupportedEditorialLanguage,
 } from "@/lib/news/ai/editorial-types";
+import {
+  isDuplicateOfSummary,
+  stripDuplicateSummaryFromBody,
+} from "@/lib/news/ai/editorial-body";
 import { scoreHeadlineQuality } from "@/lib/news/ai/editorial-intelligence";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
 import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
@@ -57,7 +61,7 @@ export function enhanceHeadlineQuality(
   };
 }
 
-/** Build summary from intro section when LLM summary is thin */
+/** Build summary from body lead when LLM summary is thin */
 export function autoGenerateSummary(draft: EditorialDraft): EditorialDraft {
   let summary = draft.summary.replace(/\s+/g, " ").trim();
 
@@ -65,20 +69,13 @@ export function autoGenerateSummary(draft: EditorialDraft): EditorialDraft {
     return { ...draft, summary: summary.slice(0, 320) };
   }
 
-  const introMatch = draft.article_body.match(
-    /^##\s*[^\n]+\n+([\s\S]*?)(?=\n##|$)/m
-  );
-  const introText = introMatch?.[1]?.replace(/^[-*•]\s+/gm, "").trim() ?? "";
+  const bodyText = draft.article_body.replace(/^##[^\n]*\n+/gm, "").trim();
+  const firstPara = bodyText.split(/\n{2,}/)[0]?.trim() ?? "";
 
-  if (introText.length >= 40) {
-    const firstPara = introText.split(/\n{2,}/)[0]?.trim() ?? introText;
+  if (firstPara.length >= 40 && !isDuplicateOfSummary(firstPara, summary)) {
     summary = firstPara.slice(0, 280);
-  } else if (draft.article_body.length >= 80) {
-    summary = draft.article_body
-      .replace(/^##[^\n]*\n+/gm, "")
-      .replace(/\n+/g, " ")
-      .trim()
-      .slice(0, 280);
+  } else if (bodyText.length >= 80) {
+    summary = bodyText.replace(/\n+/g, " ").trim().slice(0, 280);
   }
 
   if (summary.length < 40 && draft.headline.length >= 12) {
@@ -102,27 +99,16 @@ export function normalizeEditorialFormatting(draft: EditorialDraft): EditorialDr
     .replace(/[ \t]+\n/g, "\n")
     .trim();
 
-  if (!body.startsWith("##") && body.length > 40) {
-    const label = draft.language === "hi" ? "सारांश" : "Summary";
-    body = `## ${label}\n\n${body}`;
-  }
-
   const summary = draft.summary.replace(/\s+/g, " ").trim();
-  const expandedSummary =
-    summary.length < 60 && body.length > 80
-      ? `${summary} ${body.replace(/^##[^\n]*\n+/m, "").slice(0, 180).trim()}`.slice(
-          0,
-          320
-        )
-      : summary;
+  body = stripDuplicateSummaryFromBody(body, summary);
 
   return {
     ...draft,
     headline: trimHeadline(stripClickbait(draft.headline)),
-    summary: expandedSummary,
+    summary,
     article_body: body,
     seo_title: trimHeadline(draft.seo_title || draft.headline, 70),
-    seo_description: (draft.seo_description || expandedSummary).slice(0, 160),
+    seo_description: (draft.seo_description || summary).slice(0, 160),
     reading_time: draft.reading_time,
   };
 }
@@ -148,7 +134,7 @@ export function applyEditorialEnhancements(
 }
 
 /**
- * Template fallback when LLM JSON fails — still original layout, source-bound text.
+ * Template fallback when LLM JSON fails — source-bound text without filler sections.
  */
 export function buildFallbackDraftFromFactPack(input: {
   event: NewsEventRow;
@@ -176,25 +162,14 @@ export function buildFallbackDraftFromFactPack(input: {
       ? `${headline} — ${signals.length} स्रोतों से संकलित ताज़ा अपडेट।`
       : `${headline} — compiled update from ${signals.length} sources.`);
 
-  const labels =
-    language === "hi"
-      ? { intro: "सारांश", key: "मुख्य बिंदु", regional: "क्षेत्रीय संदर्भ" }
-      : { intro: "Summary", key: "Key points", regional: "Regional context" };
+  const leadPara =
+    lead?.raw_content?.trim().slice(0, 400) ||
+    (language === "hi"
+      ? `${headline} पर ${signals.length} स्रोतों से जानकारी मिली है।`
+      : `Reports from ${signals.length} sources on ${headline}.`);
 
-  const regionalBit =
-    event.region === "chhattisgarh" || /chhattisgarh|छत्तीसगढ/i.test(headline)
-      ? language === "hi"
-        ? "यह घटना छत्तीसगढ़ के पाठकों के लिए प्रासंगिक है।"
-        : "This development matters for readers in Chhattisgarh."
-      : language === "hi"
-        ? "स्थानीय प्रभाव पर नज़र रखें।"
-        : "Watch for local impact as details emerge.";
-
-  const article_body = [
-    `## ${labels.intro}\n\n${summary}`,
-    `## ${labels.key}\n\n${bullets.map((b) => `- ${b}`).join("\n")}`,
-    `## ${labels.regional}\n\n${regionalBit}`,
-  ].join("\n\n");
+  const detailsBlock = bullets.map((b) => `• ${b}`).join("\n");
+  const article_body = [leadPara, detailsBlock].filter(Boolean).join("\n\n");
 
   const wordCount = article_body.split(/\s+/).length;
   const reading_time =
@@ -234,7 +209,7 @@ export async function regenerateIntroSection(input: {
       process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
       process.env.OPENAI_MODEL?.trim() ||
       "gpt-4o-mini";
-    const systemContent = `${lang} Improve ONLY headline and intro. Use fact pack only. Return JSON: {"headline":"","summary":"","intro":""}`;
+    const systemContent = `${lang} Improve ONLY headline and lead paragraph. Use fact pack only. Lead must differ from summary. Return JSON: {"headline":"","summary":"","lead":""}`;
     const userContent = `Current headline: ${input.draft.headline}\nCurrent summary: ${input.draft.summary}\n\n${input.factPackText}`;
     const started = Date.now();
 
@@ -298,18 +273,15 @@ export async function regenerateIntroSection(input: {
     const parsed = JSON.parse(content) as {
       headline?: string;
       summary?: string;
+      lead?: string;
       intro?: string;
     };
 
-    const label = input.language === "hi" ? "सारांश" : "Summary";
+    const leadText = (parsed.lead ?? parsed.intro)?.trim();
     let body = input.draft.article_body;
-    if (parsed.intro?.trim()) {
-      const introBlock = `## ${label}\n\n${parsed.intro.trim()}`;
-      if (body.match(/^##\s/m)) {
-        body = body.replace(/^##[^\n]+\n+[\s\S]*?(?=\n##|$)/, `${introBlock}\n\n`);
-      } else {
-        body = `${introBlock}\n\n${body}`;
-      }
+    if (leadText && !isDuplicateOfSummary(leadText, parsed.summary ?? input.draft.summary)) {
+      const rest = body.replace(/^[\s\S]*?(?=\n{2,}|$)/, "").trim();
+      body = rest ? `${leadText}\n\n${rest}` : leadText;
     }
 
     return normalizeEditorialFormatting({

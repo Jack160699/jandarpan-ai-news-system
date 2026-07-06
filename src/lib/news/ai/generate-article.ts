@@ -2,6 +2,11 @@
  * AI editorial generation — production-tolerant publishing from news_events
  */
 
+import {
+  buildEditorialPipelineSystemPrompt,
+  getCategoryEditorialHint,
+  resolveDeskTemplateFromCategory,
+} from "@/lib/ai/prompts";
 import { requestChatCompletion } from "@/lib/ai/providers";
 import { createAdminServerClient } from "@/lib/supabase";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
@@ -35,6 +40,11 @@ import {
   buildFallbackDraftFromFactPack,
   repairBorderlineDraft,
 } from "@/lib/news/ai/editorial-repair";
+import {
+  analyzeEditorialBody,
+  assembleEditorialBody,
+  type LlmEditorialSections,
+} from "@/lib/news/ai/editorial-body";
 import type {
   BatchEditorialResult,
   EditorialDraft,
@@ -63,37 +73,13 @@ const BATCH_RESCUE_COUNT = 2;
 type LlmEditorialResponse = {
   headline?: string;
   summary?: string;
-  sections?: {
-    intro?: string;
-    key_developments?: string;
-    regional_implications?: string;
-    background?: string;
-    conclusion?: string;
-  };
+  sections?: LlmEditorialSections;
   seo_title?: string;
   seo_description?: string;
   tags?: string[];
 };
 
-const SECTION_LABELS: Record<
-  SupportedEditorialLanguage,
-  Record<keyof NonNullable<LlmEditorialResponse["sections"]>, string>
-> = {
-  hi: {
-    intro: "सारांश",
-    key_developments: "मुख्य घटनाक्रम",
-    regional_implications: "क्षेत्रीय प्रभाव",
-    background: "पृष्ठभूमि",
-    conclusion: "निष्कर्ष",
-  },
-  en: {
-    intro: "Summary",
-    key_developments: "Key developments",
-    regional_implications: "Regional implications",
-    background: "Background",
-    conclusion: "Conclusion",
-  },
-};
+export { analyzeEditorialBody };
 
 type PendingCandidate = {
   event: NewsEventRow;
@@ -183,25 +169,9 @@ function computeReadingTime(body: string, language: SupportedEditorialLanguage):
 
 function assembleArticleBody(
   sections: NonNullable<LlmEditorialResponse["sections"]>,
-  language: SupportedEditorialLanguage
+  summary: string
 ): string {
-  const labels = SECTION_LABELS[language];
-  const order: (keyof typeof labels)[] = [
-    "intro",
-    "key_developments",
-    "regional_implications",
-    "background",
-    "conclusion",
-  ];
-
-  return order
-    .map((key) => {
-      const text = sections[key]?.trim();
-      if (!text) return "";
-      return `## ${labels[key]}\n\n${text}`;
-    })
-    .filter(Boolean)
-    .join("\n\n");
+  return assembleEditorialBody(sections, summary);
 }
 
 function parseLlmDraft(
@@ -209,16 +179,15 @@ function parseLlmDraft(
   language: SupportedEditorialLanguage
 ): EditorialDraft | null {
   const sections = raw.sections ?? {};
-  const article_body = assembleArticleBody(sections, language);
   const headline = raw.headline?.trim();
   const summary = raw.summary?.trim();
 
   if (!headline || !summary) return null;
+
+  const article_body = assembleArticleBody(sections, summary);
   if (!article_body && summary.length < 20) return null;
 
-  const body =
-    article_body ||
-    `## ${SECTION_LABELS[language].intro}\n\n${summary}`;
+  const body = article_body || summary;
 
   const seo_title = (raw.seo_title?.trim() || headline).slice(0, 70);
   const seo_description = (raw.seo_description?.trim() || summary).slice(0, 160);
@@ -245,35 +214,17 @@ async function callEditorialLlm(
   event: NewsEventRow,
   signalCount: number
 ): Promise<LlmEditorialResponse | null> {
-  const langInstruction =
-    language === "hi"
-      ? "Write in clear, simple Hindi (Devanagari). Short sentences OK for breaking wire."
-      : "Write in clear, simple English. Short wire-style OK for breaking news.";
+  const deskTemplate = resolveDeskTemplateFromCategory(event.category, {
+    region: event.region,
+    urgencyScore: event.urgency_score,
+  });
+  const categoryHint = getCategoryEditorialHint(event.category);
 
-  const system = `You are a senior editor for a trustworthy regional digital newspaper (Chhattisgarh-first).
-${langInstruction}
-
-Rules:
-- Synthesize ONLY facts present in the user fact pack. Do NOT invent names, numbers, quotes, or outcomes.
-- Prefer original phrasing; light paraphrase of wire copy is acceptable for regional/breaking items.
-- Professional, concise tone. Avoid sensationalism.
-- Short regional or breaking stories are valid — partial sections are OK if facts are thin.
-
-Return JSON only:
-{
-  "headline": "original headline",
-  "summary": "1-3 sentence summary",
-  "sections": {
-    "intro": "paragraph",
-    "key_developments": "prose or bullets as prose",
-    "regional_implications": "local angle (optional if thin)",
-    "background": "brief context (optional)",
-    "conclusion": "closing (optional)"
-  },
-  "seo_title": "max 60 chars",
-  "seo_description": "max 155 chars",
-  "tags": ["tag1","tag2"]
-}`;
+  const system = buildEditorialPipelineSystemPrompt({
+    language,
+    deskTemplate,
+    categoryHint,
+  });
 
   const model =
     process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
@@ -470,13 +421,11 @@ async function persistGeneratedArticle(input: {
       publish_decision: input.quality.publishDecision,
       regional: geo,
       regional_topic_score: regionalTopic.score,
-      structure: [
-        "intro",
-        "key_developments",
-        "regional_implications",
-        "background",
-        "conclusion",
-      ],
+      structure: ["lead", "details", "context"],
+      desk_template: resolveDeskTemplateFromCategory(input.event.category, {
+        region: input.event.region,
+        urgencyScore: input.event.urgency_score,
+      }),
       image: {
         status: "queued",
         hero_url: hero_image_url,
@@ -677,6 +626,44 @@ async function prepareCandidate(
     },
     skipped: false,
   };
+}
+
+/**
+ * Dry-run editorial draft for verification — does not persist or run repair.
+ */
+export async function previewEditorialDraftFromEvent(
+  event: NewsEventRow
+): Promise<{
+  draft: EditorialDraft | null;
+  usedFallback: boolean;
+  reason?: string;
+}> {
+  const signals = await loadSignalsForEvent(event);
+  if (!signals.length) {
+    return { draft: null, usedFallback: false, reason: "no_signals_for_event" };
+  }
+
+  const language = resolveLanguage(event, signals);
+  const { factPackText } = buildFactPack(event, signals);
+
+  let draft: EditorialDraft | null = null;
+  let usedFallback = false;
+
+  try {
+    const llmRaw = await callEditorialLlm(factPackText, language, event, signals.length);
+    draft = llmRaw ? parseLlmDraft(llmRaw, language) : null;
+  } catch {
+    draft = null;
+  }
+
+  if (!draft) {
+    draft = buildFallbackDraftFromFactPack({ event, signals, language });
+    usedFallback = true;
+  } else {
+    draft = applyEditorialEnhancements(draft, event);
+  }
+
+  return { draft, usedFallback };
 }
 
 /**
