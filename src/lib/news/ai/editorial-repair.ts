@@ -9,6 +9,8 @@ import type {
 } from "@/lib/news/ai/editorial-types";
 import { scoreHeadlineQuality } from "@/lib/news/ai/editorial-intelligence";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
+import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
+import { repairMaxTokens } from "@/lib/observability/openai-cost/adaptive-tokens";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const REPAIR_TIMEOUT_MS = 18_000;
@@ -228,6 +230,14 @@ export async function regenerateIntroSection(input: {
       : "Write in English.";
 
   try {
+    const model =
+      process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
+      process.env.OPENAI_MODEL?.trim() ||
+      "gpt-4o-mini";
+    const systemContent = `${lang} Improve ONLY headline and intro. Use fact pack only. Return JSON: {"headline":"","summary":"","intro":""}`;
+    const userContent = `Current headline: ${input.draft.headline}\nCurrent summary: ${input.draft.summary}\n\n${input.factPackText}`;
+    const started = Date.now();
+
     const res = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
@@ -235,20 +245,17 @@ export async function regenerateIntroSection(input: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model:
-          process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
-          process.env.OPENAI_MODEL?.trim() ||
-          "gpt-4o-mini",
+        model,
         temperature: 0.3,
-        max_tokens: 600,
+        max_tokens: repairMaxTokens(),
         messages: [
           {
             role: "system",
-            content: `${lang} Improve ONLY headline and intro. Use fact pack only. Return JSON: {"headline":"","summary":"","intro":""}`,
+            content: systemContent,
           },
           {
             role: "user",
-            content: `Current headline: ${input.draft.headline}\nCurrent summary: ${input.draft.summary}\n\n${input.factPackText}`,
+            content: userContent,
           },
         ],
         response_format: { type: "json_object" },
@@ -256,12 +263,36 @@ export async function regenerateIntroSection(input: {
       signal: AbortSignal.timeout(REPAIR_TIMEOUT_MS),
     });
 
-    if (!res.ok) return normalizeEditorialFormatting(input.draft);
+    const latencyMs = Date.now() - started;
+
+    if (!res.ok) {
+      recordDirectChatCompletion({
+        operation: "editorial_repair",
+        model,
+        system: systemContent,
+        user: userContent,
+        latencyMs,
+        success: false,
+        context: { worker: "editorial_generate" },
+      });
+      return normalizeEditorialFormatting(input.draft);
+    }
 
     const json = (await res.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const content = json.choices?.[0]?.message?.content;
+    recordDirectChatCompletion({
+      operation: "editorial_repair",
+      model,
+      system: systemContent,
+      user: userContent,
+      json,
+      content: content ?? undefined,
+      latencyMs,
+      success: Boolean(content),
+      context: { worker: "editorial_generate" },
+    });
     if (!content) return normalizeEditorialFormatting(input.draft);
 
     const parsed = JSON.parse(content) as {

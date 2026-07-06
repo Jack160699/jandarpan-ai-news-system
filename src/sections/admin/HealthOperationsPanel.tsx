@@ -81,6 +81,132 @@ type HealthPayload = {
       }>;
     };
   };
+  openAiUsage?: {
+    todaySpendUsd: number;
+    yesterdaySpendUsd: number;
+    last7DaysSpendUsd: number;
+    last30DaysSpendUsd: number;
+    costByWorker: Array<{ worker: string; costUsd: number; requests: number }>;
+    costByModel: Array<{ model: string; costUsd: number; requests: number }>;
+    costByArticle: Array<{ articleId: string; costUsd: number; requests: number }>;
+    avgTokensPerRequest: { input: number; output: number };
+    largestPromptToday: {
+      operation: string;
+      inputTokens: number;
+      promptChars: number | null;
+      articleId: string | null;
+      createdAt: string;
+    } | null;
+    largestCompletionToday: {
+      operation: string;
+      outputTokens: number;
+      completionChars: number | null;
+      articleId: string | null;
+      createdAt: string;
+    } | null;
+    mostExpensiveArticle: { articleId: string; costUsd: number; requests: number } | null;
+    mostExpensiveWorker: { worker: string; costUsd: number; requests: number } | null;
+    retryCostUsd: number;
+    duplicateWorkDetected: Array<{
+      promptHash: string;
+      count: number;
+      totalCostUsd: number;
+      operations: string[];
+    }>;
+    topExpensiveRequests: Array<{
+      id: string;
+      operation: string;
+      worker: string | null;
+      model: string;
+      articleId: string | null;
+      inputTokens: number;
+      outputTokens: number;
+      estimatedCostUsd: number;
+      createdAt: string;
+      retryCount: number;
+    }>;
+    optimizationOpportunities: Array<{
+      id: string;
+      category: string;
+      description: string;
+      estimatedMonthlySavingsUsd: number;
+    }>;
+    totalRequests: number;
+    instrumentedSince: string | null;
+  };
+  aiFinancial?: {
+    exchangeRate: number;
+    spend: {
+      today: { usdLabel: string; inrLabel: string };
+      yesterday: { usdLabel: string; inrLabel: string };
+      last7Days: { usdLabel: string; inrLabel: string };
+      last30Days: { usdLabel: string; inrLabel: string };
+      currentMonth: { usdLabel: string; inrLabel: string };
+      projectedMonthly: { usdLabel: string; inrLabel: string };
+      projectedYearly: { usdLabel: string; inrLabel: string };
+    };
+    costByWorker: Array<{
+      label: string;
+      cost: { usdLabel: string; inrLabel: string };
+      requests: number;
+    }>;
+    articlesToday: {
+      count: number;
+      avgCostPerArticle: { usdLabel: string; inrLabel: string };
+      medianCostPerArticle: { usdLabel: string; inrLabel: string };
+      highest: { title: string; cost: { usdLabel: string; inrLabel: string } } | null;
+      lowest: { title: string; cost: { usdLabel: string; inrLabel: string } } | null;
+    };
+    topExpensiveArticles: Array<{
+      title: string;
+      worker: string;
+      model: string;
+      inputTokens: number;
+      outputTokens: number;
+      cost: { usdLabel: string; inrLabel: string };
+    }>;
+    cache: { hits: number; misses: number; saved: { usdLabel: string; inrLabel: string } };
+    repair: { skipped: number; estimatedSaved: { usdLabel: string; inrLabel: string } };
+    retries: { count: number; cost: { usdLabel: string; inrLabel: string } };
+    duplicates: {
+      prevented: number;
+      estimatedSaved: { usdLabel: string; inrLabel: string };
+    };
+    budget: {
+      monthlyLimit: { usdLabel: string; inrLabel: string };
+      currentSpend: { usdLabel: string; inrLabel: string };
+      percentUsed: number;
+      forecast: { usdLabel: string; inrLabel: string };
+      daysRemaining: number;
+      burnRatePerDay: { usdLabel: string; inrLabel: string };
+      warnings: string[];
+    };
+    forecast: {
+      burnPerDay: { usdLabel: string; inrLabel: string };
+      projectedMonth: { usdLabel: string; inrLabel: string };
+      projectedYear: { usdLabel: string; inrLabel: string };
+      backlogAiQueueCost: { usdLabel: string; inrLabel: string };
+      backlogEditorialImagesCost: { usdLabel: string; inrLabel: string };
+    };
+    optimizationReport: {
+      topCostDrivers: Array<{ name: string; cost: { usdLabel: string; inrLabel: string }; sharePct: number }>;
+      topRetryCosts: { usdLabel: string; inrLabel: string };
+      topDuplicateCosts: { usdLabel: string; inrLabel: string };
+    };
+    tokens: {
+      avgInputPerRequest: number;
+      avgOutputPerRequest: number;
+      avgInputPerArticle: number;
+      avgOutputPerArticle: number;
+    };
+    successMetrics: {
+      targetCostReductionPct: string;
+      targetInputTokenReductionPct: string;
+      targetOutputTokenReductionPct: string;
+      targetDuplicateReductionPct: string;
+    };
+    totalRequests: number;
+  };
 };
 
 const STATUS_CLASS: Record<string, string> = {
@@ -89,6 +215,15 @@ const STATUS_CLASS: Record<string, string> = {
   unhealthy: "anr-pulse-item--breaking",
   unknown: "",
 };
+
+function DualMoney({ amount }: { amount: { usdLabel: string; inrLabel: string } }) {
+  return (
+    <>
+      <p className="anr-health-ops__score">{amount.usdLabel}</p>
+      <p className="anr-meta">({amount.inrLabel})</p>
+    </>
+  );
+}
 
 export function HealthOperationsPanel() {
   const [data, setData] = useState<HealthPayload | null>(null);
@@ -305,6 +440,206 @@ export function HealthOperationsPanel() {
               ))}
           </ul>
         </AdminCard>
+      ) : null}
+
+      {data.aiFinancial ? (
+        <>
+          <AdminCard
+            title="AI Financial Dashboard"
+            description={`USD + INR · Rate 1 USD = ₹${data.aiFinancial.exchangeRate}`}
+          >
+            <div className="anr-ingestion__grid">
+              <div>
+                <p className="anr-meta">OpenAI Spend Today</p>
+                <DualMoney amount={data.aiFinancial.spend.today} />
+              </div>
+              <div>
+                <p className="anr-meta">Yesterday</p>
+                <DualMoney amount={data.aiFinancial.spend.yesterday} />
+              </div>
+              <div>
+                <p className="anr-meta">Last 7 Days</p>
+                <DualMoney amount={data.aiFinancial.spend.last7Days} />
+              </div>
+              <div>
+                <p className="anr-meta">Last 30 Days</p>
+                <DualMoney amount={data.aiFinancial.spend.last30Days} />
+              </div>
+            </div>
+            <p className="anr-meta">
+              Current month: {data.aiFinancial.spend.currentMonth.usdLabel} (
+              {data.aiFinancial.spend.currentMonth.inrLabel}) · Projected month:{" "}
+              {data.aiFinancial.spend.projectedMonthly.usdLabel} (
+              {data.aiFinancial.spend.projectedMonthly.inrLabel}) · Projected year:{" "}
+              {data.aiFinancial.spend.projectedYearly.usdLabel} (
+              {data.aiFinancial.spend.projectedYearly.inrLabel})
+            </p>
+          </AdminCard>
+
+          <div className="anr-ingestion__split">
+            <AdminCard title="Cost by Worker" description="Last 30 days">
+              <ul>
+                {data.aiFinancial.costByWorker.map((w) => (
+                  <li key={w.label} className="anr-meta">
+                    <strong>{w.label}</strong>: {w.cost.usdLabel} ({w.cost.inrLabel}) ·{" "}
+                    {w.requests} req
+                  </li>
+                ))}
+              </ul>
+            </AdminCard>
+            <AdminCard title="Budget Monitor" description="Monthly OpenAI budget">
+              <p className="anr-meta">
+                Limit: {data.aiFinancial.budget.monthlyLimit.usdLabel} (
+                {data.aiFinancial.budget.monthlyLimit.inrLabel})
+              </p>
+              <p className="anr-meta">
+                Spent: {data.aiFinancial.budget.currentSpend.usdLabel} (
+                {data.aiFinancial.budget.currentSpend.inrLabel}) —{" "}
+                {data.aiFinancial.budget.percentUsed}% used
+              </p>
+              <p className="anr-meta">
+                Burn/day: {data.aiFinancial.budget.burnRatePerDay.usdLabel} (
+                {data.aiFinancial.budget.burnRatePerDay.inrLabel}) · {data.aiFinancial.budget.daysRemaining} days left
+              </p>
+              {data.aiFinancial.budget.warnings.length > 0 ? (
+                <p className="anr-meta anr-meta--warn">
+                  Warnings: {data.aiFinancial.budget.warnings.join("%, ")}%
+                </p>
+              ) : null}
+              <div
+                style={{
+                  height: 8,
+                  background: "#e5e7eb",
+                  borderRadius: 4,
+                  marginTop: 8,
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${Math.min(100, data.aiFinancial.budget.percentUsed)}%`,
+                    height: "100%",
+                    background:
+                      data.aiFinancial.budget.percentUsed >= 90
+                        ? "#dc2626"
+                        : data.aiFinancial.budget.percentUsed >= 75
+                          ? "#f59e0b"
+                          : "#16a34a",
+                  }}
+                />
+              </div>
+            </AdminCard>
+          </div>
+
+          <AdminCard title="Cost per Article" description="Today's article economics">
+            <p className="anr-meta">Articles tracked: {data.aiFinancial.articlesToday.count}</p>
+            <p className="anr-meta">
+              Avg/article: {data.aiFinancial.articlesToday.avgCostPerArticle.usdLabel} (
+              {data.aiFinancial.articlesToday.avgCostPerArticle.inrLabel}) · Median:{" "}
+              {data.aiFinancial.articlesToday.medianCostPerArticle.usdLabel} (
+              {data.aiFinancial.articlesToday.medianCostPerArticle.inrLabel})
+            </p>
+            {data.aiFinancial.articlesToday.highest ? (
+              <p className="anr-meta">
+                Highest: {data.aiFinancial.articlesToday.highest.title} —{" "}
+                {data.aiFinancial.articlesToday.highest.cost.usdLabel} (
+                {data.aiFinancial.articlesToday.highest.cost.inrLabel})
+              </p>
+            ) : null}
+            {data.aiFinancial.articlesToday.lowest ? (
+              <p className="anr-meta">
+                Lowest: {data.aiFinancial.articlesToday.lowest.title} —{" "}
+                {data.aiFinancial.articlesToday.lowest.cost.usdLabel} (
+                {data.aiFinancial.articlesToday.lowest.cost.inrLabel})
+              </p>
+            ) : null}
+          </AdminCard>
+
+          {data.aiFinancial.topExpensiveArticles.length > 0 ? (
+            <AdminCard title="Top 20 Expensive Articles" description="USD + INR">
+              <ul className="anr-health-ops__errors">
+                {data.aiFinancial.topExpensiveArticles.map((a) => (
+                  <li key={a.title}>
+                    <strong>{a.title}</strong> · {a.worker} · {a.model}
+                    <br />
+                    <span className="anr-meta">
+                      {a.inputTokens} in / {a.outputTokens} out · {a.cost.usdLabel} ({a.cost.inrLabel})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </AdminCard>
+          ) : null}
+
+          <div className="anr-ingestion__split">
+            <AdminCard title="Optimization Savings" description="Cache, repair, retries, duplicates">
+              <p className="anr-meta">
+                Cache hits: {data.aiFinancial.cache.hits} · misses: {data.aiFinancial.cache.misses}
+              </p>
+              <p className="anr-meta">
+                Cache saved: {data.aiFinancial.cache.saved.usdLabel} ({data.aiFinancial.cache.saved.inrLabel})
+              </p>
+              <p className="anr-meta">
+                Repairs skipped: {data.aiFinancial.repair.skipped} · saved{" "}
+                {data.aiFinancial.repair.estimatedSaved.usdLabel} (
+                {data.aiFinancial.repair.estimatedSaved.inrLabel})
+              </p>
+              <p className="anr-meta">
+                Retry cost: {data.aiFinancial.retries.cost.usdLabel} ({data.aiFinancial.retries.cost.inrLabel}) ·{" "}
+                {data.aiFinancial.retries.count} retries
+              </p>
+              <p className="anr-meta">
+                Duplicates prevented: {data.aiFinancial.duplicates.prevented} · saved{" "}
+                {data.aiFinancial.duplicates.estimatedSaved.usdLabel} (
+                {data.aiFinancial.duplicates.estimatedSaved.inrLabel})
+              </p>
+            </AdminCard>
+            <AdminCard title="Cost Forecast" description="Burn rate and backlog">
+              <p className="anr-meta">
+                Burn/day: {data.aiFinancial.forecast.burnPerDay.usdLabel} (
+                {data.aiFinancial.forecast.burnPerDay.inrLabel})
+              </p>
+              <p className="anr-meta">
+                Projected month: {data.aiFinancial.forecast.projectedMonth.usdLabel} (
+                {data.aiFinancial.forecast.projectedMonth.inrLabel})
+              </p>
+              <p className="anr-meta">
+                Projected year: {data.aiFinancial.forecast.projectedYear.usdLabel} (
+                {data.aiFinancial.forecast.projectedYear.inrLabel})
+              </p>
+              <p className="anr-meta">
+                AI queue backlog est.: {data.aiFinancial.forecast.backlogAiQueueCost.usdLabel} (
+                {data.aiFinancial.forecast.backlogAiQueueCost.inrLabel})
+              </p>
+              <p className="anr-meta">
+                Image queue backlog est.: {data.aiFinancial.forecast.backlogEditorialImagesCost.usdLabel} (
+                {data.aiFinancial.forecast.backlogEditorialImagesCost.inrLabel})
+              </p>
+            </AdminCard>
+          </div>
+
+          <AdminCard title="Optimization Report" description="Top cost drivers">
+            <ul>
+              {data.aiFinancial.optimizationReport.topCostDrivers.map((d) => (
+                <li key={d.name} className="anr-meta">
+                  {d.name}: {d.cost.usdLabel} ({d.cost.inrLabel}) — {d.sharePct}%
+                </li>
+              ))}
+            </ul>
+            <p className="anr-meta">
+              Tokens/request: {data.aiFinancial.tokens.avgInputPerRequest} in /{" "}
+              {data.aiFinancial.tokens.avgOutputPerRequest} out · Per article:{" "}
+              {data.aiFinancial.tokens.avgInputPerArticle} in /{" "}
+              {data.aiFinancial.tokens.avgOutputPerArticle} out
+            </p>
+            <p className="anr-meta">
+              Targets: cost {data.aiFinancial.successMetrics.targetCostReductionPct} · input tokens{" "}
+              {data.aiFinancial.successMetrics.targetInputTokenReductionPct} · output{" "}
+              {data.aiFinancial.successMetrics.targetOutputTokenReductionPct} · duplicates{" "}
+              {data.aiFinancial.successMetrics.targetDuplicateReductionPct}
+            </p>
+          </AdminCard>
+        </>
       ) : null}
 
       <AdminCard title="Recent errors" description="Admin error tracking">

@@ -4,6 +4,8 @@
 
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import type { HomeSectionId } from "@/lib/homepage/types";
+import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
+import { shortsMaxTokens } from "@/lib/observability/openai-cost/adaptive-tokens";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -40,7 +42,7 @@ export async function generate60SecondSummary(input: {
       process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
       "gpt-4o-mini",
     temperature: 0.35,
-    max_tokens: 900,
+    max_tokens: shortsMaxTokens((input.articleBody ?? input.summary).length),
     response_format: { type: "json_object" as const },
     messages: [
       {
@@ -68,6 +70,7 @@ Body excerpt: ${(input.articleBody ?? "").slice(0, 2500)}`,
   };
 
   try {
+    const started = Date.now();
     const res = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
@@ -78,11 +81,35 @@ Body excerpt: ${(input.articleBody ?? "").slice(0, 2500)}`,
       signal: AbortSignal.timeout(45_000),
     });
 
-    if (!res.ok) return buildFallbackSummary(input);
+    const latencyMs = Date.now() - started;
+
+    if (!res.ok) {
+      recordDirectChatCompletion({
+        operation: "shorts_summary",
+        model: body.model,
+        system: body.messages[0]!.content as string,
+        user: body.messages[1]!.content as string,
+        latencyMs,
+        success: false,
+        context: { worker: "shorts" },
+      });
+      return buildFallbackSummary(input);
+    }
     const json = (await res.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const text = json.choices?.[0]?.message?.content?.trim();
+    recordDirectChatCompletion({
+      operation: "shorts_summary",
+      model: body.model,
+      system: body.messages[0]!.content as string,
+      user: body.messages[1]!.content as string,
+      json,
+      content: text,
+      latencyMs,
+      success: Boolean(text),
+      context: { worker: "shorts" },
+    });
     if (!text) return buildFallbackSummary(input);
 
     const parsed = JSON.parse(text) as {

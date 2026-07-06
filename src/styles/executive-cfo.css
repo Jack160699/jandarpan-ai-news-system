@@ -1,0 +1,512 @@
+/* Executive AI CFO Dashboard — Stripe / Datadog premium dark glass */
+
+.ecfo {
+  --ecfo-glass: rgba(10, 10, 14, 0.78);
+  --ecfo-glass-hover: rgba(16, 16, 22, 0.88);
+  --ecfo-border: rgba(255, 255, 255, 0.06);
+  --ecfo-border-accent: rgba(99, 102, 241, 0.35);
+  --ecfo-accent: #6366f1;
+  --ecfo-accent-2: #8b5cf6;
+  --ecfo-success: #10b981;
+  --ecfo-warn: #f59e0b;
+  --ecfo-danger: #ef4444;
+  --ecfo-muted: #71717a;
+  --ecfo-text: #e4e4e7;
+  --ecfo-glow: 0 0 40px rgba(99, 102, 241, 0.08);
+}
+
+.ecfo__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.25rem;
+  background: var(--ecfo-glass);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--ecfo-border);
+  border-radius: 14px;
+  box-shadow: var(--ecfo-glow);
+}
+
+.ecfo__header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ecfo__header-title h2 {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ecfo-accent);
+}
+
+.ecfo__header-title span {
+  font-size: 0.8rem;
+  color: var(--ecfo-muted);
+}
+
+.ecfo__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ecfo__rate-badge {
+  font-size: 0.72rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  color: var(--ecfo-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ecfo__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--ecfo-success);
+}
+
+.ecfo__live::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ecfo-success);
+  box-shadow: 0 0 10px var(--ecfo-success);
+  animation: ecfo-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes ecfo-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.ecfo__section {
+  margin-bottom: 1.75rem;
+}
+
+.ecfo__section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--ecfo-border);
+}
+
+.ecfo__section-head h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ecfo-text);
+}
+
+.ecfo__section-head span {
+  font-size: 0.7rem;
+  color: var(--ecfo-muted);
+}
+
+.ecfo__kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+
+.ecfo__kpi-grid--hero {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.ecfo__kpi {
+  padding: 1.15rem 1.25rem;
+  border-radius: 14px;
+  background: var(--ecfo-glass);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--ecfo-border);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ecfo__kpi:hover {
+  transform: translateY(-2px);
+  border-color: var(--ecfo-border-accent);
+  box-shadow: var(--ecfo-glow);
+}
+
+.ecfo__kpi--hero {
+  padding: 1.35rem 1.5rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(10, 10, 14, 0.85) 100%);
+}
+
+.ecfo__kpi-label {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ecfo-muted);
+  margin-bottom: 0.5rem;
+}
+
+.ecfo__kpi-usd {
+  display: block;
+  font-size: 1.65rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+}
+
+.ecfo__kpi--hero .ecfo__kpi-usd {
+  font-size: 2rem;
+}
+
+.ecfo__kpi-inr {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ecfo-muted);
+  margin-top: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ecfo__kpi-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ecfo-text);
+}
+
+.ecfo__split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 0.85rem;
+}
+
+.ecfo__card {
+  padding: 1.15rem 1.25rem;
+  border-radius: 14px;
+  background: var(--ecfo-glass);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--ecfo-border);
+}
+
+.ecfo__card h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ecfo-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ecfo__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.ecfo__table th {
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ecfo-muted);
+  border-bottom: 1px solid var(--ecfo-border);
+}
+
+.ecfo__table td {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  color: var(--ecfo-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ecfo__table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ecfo__table .ecfo__money-usd {
+  font-weight: 600;
+}
+
+.ecfo__table .ecfo__money-inr {
+  font-size: 0.72rem;
+  color: var(--ecfo-muted);
+}
+
+.ecfo__score-ring {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.ecfo__score-main {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(
+    var(--ecfo-accent) calc(var(--score, 0) * 3.6deg),
+    rgba(255, 255, 255, 0.06) 0
+  );
+  position: relative;
+}
+
+.ecfo__score-main::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: var(--ecfo-glass);
+}
+
+.ecfo__score-main strong,
+.ecfo__score-main span {
+  position: relative;
+  z-index: 1;
+}
+
+.ecfo__score-main strong {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--ecfo-text);
+}
+
+.ecfo__score-main span {
+  font-size: 0.65rem;
+  color: var(--ecfo-muted);
+  text-transform: uppercase;
+}
+
+.ecfo__score-bars {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ecfo__score-bar {
+  display: grid;
+  grid-template-columns: 120px 1fr 36px;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+}
+
+.ecfo__score-bar-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.ecfo__score-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--ecfo-accent), var(--ecfo-accent-2));
+  transition: width 0.4s ease;
+}
+
+.ecfo__slider-wrap {
+  padding: 1rem 0;
+}
+
+.ecfo__slider {
+  width: 100%;
+  accent-color: var(--ecfo-accent);
+  margin: 0.75rem 0;
+}
+
+.ecfo__slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--ecfo-muted);
+}
+
+.ecfo__rec-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.ecfo__rec {
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--ecfo-border);
+  transition: border-color 0.2s ease;
+}
+
+.ecfo__rec:hover {
+  border-color: var(--ecfo-border-accent);
+}
+
+.ecfo__rec-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.ecfo__rec-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ecfo-text);
+}
+
+.ecfo__rec-savings {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ecfo__rec-savings strong {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--ecfo-success);
+}
+
+.ecfo__rec-savings span {
+  font-size: 0.72rem;
+  color: var(--ecfo-muted);
+}
+
+.ecfo__rec-desc {
+  font-size: 0.75rem;
+  color: var(--ecfo-muted);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.ecfo__badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.ecfo__badge--high { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.ecfo__badge--medium { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+.ecfo__badge--low { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+
+.ecfo__anomaly {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border-left: 3px solid var(--ecfo-warn);
+  background: rgba(245, 158, 11, 0.06);
+  margin-bottom: 0.5rem;
+  font-size: 0.78rem;
+}
+
+.ecfo__anomaly--critical {
+  border-left-color: var(--ecfo-danger);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.ecfo__anomaly time {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  color: var(--ecfo-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ecfo__alert-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.65rem;
+}
+
+.ecfo__alert {
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--ecfo-border);
+  font-size: 0.72rem;
+}
+
+.ecfo__alert--on {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.ecfo__alert--off {
+  opacity: 0.65;
+}
+
+.ecfo__chart {
+  width: 100%;
+  height: 220px;
+  margin-top: 0.5rem;
+}
+
+.ecfo__chart--tall {
+  height: 280px;
+}
+
+.ecfo__charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 0.85rem;
+}
+
+.ecfo__export-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.ecfo__placeholder {
+  font-size: 0.75rem;
+  color: var(--ecfo-muted);
+  font-style: italic;
+}
+
+.ecfo__budget-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.ecfo__budget-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--ecfo-success), var(--ecfo-warn), var(--ecfo-danger));
+  transition: width 0.4s ease;
+}
+
+@media (max-width: 640px) {
+  .ecfo__kpi-grid--hero {
+    grid-template-columns: 1fr;
+  }
+  .ecfo__kpi-usd {
+    font-size: 1.4rem;
+  }
+  .ecfo__charts-grid {
+    grid-template-columns: 1fr;
+  }
+}

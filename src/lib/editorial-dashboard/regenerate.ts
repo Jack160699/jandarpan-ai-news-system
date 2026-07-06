@@ -16,6 +16,7 @@ import type {
   NewsEventRow,
   NewsSignalRow,
 } from "@/lib/types/newsroom";
+import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const TIMEOUT_MS = 28_000;
@@ -74,6 +75,13 @@ async function callRegenerateLlm(
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
 
+  const model =
+    process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
+    process.env.OPENAI_MODEL?.trim() ||
+    "gpt-4o-mini";
+  const systemContent = `Regenerate a news article from the fact pack. Return JSON: {"headline":"","summary":"","sections":{"intro":"","key_developments":"","regional_implications":""}}. Language: ${language === "hi" ? "Hindi" : "English"}.`;
+  const started = Date.now();
+
   const res = await fetch(OPENAI_URL, {
     method: "POST",
     headers: {
@@ -81,16 +89,13 @@ async function callRegenerateLlm(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model:
-        process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
-        process.env.OPENAI_MODEL?.trim() ||
-        "gpt-4o-mini",
+      model,
       temperature: 0.35,
       max_tokens: 2400,
       messages: [
         {
           role: "system",
-          content: `Regenerate a news article from the fact pack. Return JSON: {"headline":"","summary":"","sections":{"intro":"","key_developments":"","regional_implications":""}}. Language: ${language === "hi" ? "Hindi" : "English"}.`,
+          content: systemContent,
         },
         { role: "user", content: factPack },
       ],
@@ -99,11 +104,35 @@ async function callRegenerateLlm(
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
 
-  if (!res.ok) return null;
+  const latencyMs = Date.now() - started;
+
+  if (!res.ok) {
+    recordDirectChatCompletion({
+      operation: "editorial_regenerate",
+      model,
+      system: systemContent,
+      user: factPack,
+      latencyMs,
+      success: false,
+      context: { worker: "admin_regenerate" },
+    });
+    return null;
+  }
   const json = (await res.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
   };
   const raw = json.choices?.[0]?.message?.content;
+  recordDirectChatCompletion({
+    operation: "editorial_regenerate",
+    model,
+    system: systemContent,
+    user: factPack,
+    json,
+    content: raw ?? undefined,
+    latencyMs,
+    success: Boolean(raw),
+    context: { worker: "admin_regenerate" },
+  });
   if (!raw) return null;
 
   const parsed = JSON.parse(raw) as {

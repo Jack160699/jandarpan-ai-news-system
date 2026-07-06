@@ -3,6 +3,7 @@
  */
 
 import type { DamFaceGroup, DamMediaType } from "@/lib/dam/types";
+import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
 
 export type DamAiAnalysis = {
   tags: string[];
@@ -29,6 +30,12 @@ export async function analyzeAssetWithAi(input: {
   if (!apiKey) return fallback;
 
   try {
+    const model = process.env.OPENAI_VISION_MODEL ?? "gpt-4o-mini";
+    const systemContent = `You are a newsroom DAM assistant. Return ONLY valid JSON:
+{"tags":[],"objects":[],"ocr":"","caption":"","faceGroups":[{"groupId":"g1","label":"description","count":1}]}
+Tags: lowercase, news-relevant. OCR: visible text in image. Caption: one neutral sentence.`;
+    const started = Date.now();
+
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -36,15 +43,13 @@ export async function analyzeAssetWithAi(input: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_VISION_MODEL ?? "gpt-4o-mini",
+        model,
         temperature: 0.2,
         max_tokens: 500,
         messages: [
           {
             role: "system",
-            content: `You are a newsroom DAM assistant. Return ONLY valid JSON:
-{"tags":[],"objects":[],"ocr":"","caption":"","faceGroups":[{"groupId":"g1","label":"description","count":1}]}
-Tags: lowercase, news-relevant. OCR: visible text in image. Caption: one neutral sentence.`,
+            content: systemContent,
           },
           {
             role: "user",
@@ -65,12 +70,36 @@ Tags: lowercase, news-relevant. OCR: visible text in image. Caption: one neutral
       }),
     });
 
-    if (!res.ok) return fallback;
+    const latencyMs = Date.now() - started;
+
+    if (!res.ok) {
+      recordDirectChatCompletion({
+        operation: "dam_vision",
+        model,
+        system: systemContent,
+        user: `Analyze: ${input.name}`,
+        latencyMs,
+        success: false,
+        context: { worker: "dam_analyze" },
+      });
+      return fallback;
+    }
 
     const json = (await res.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const raw = json.choices?.[0]?.message?.content?.trim() ?? "";
+    recordDirectChatCompletion({
+      operation: "dam_vision",
+      model,
+      system: systemContent,
+      user: `Analyze: ${input.name}`,
+      json,
+      content: raw,
+      latencyMs,
+      success: Boolean(raw),
+      context: { worker: "dam_analyze" },
+    });
     const parsed = JSON.parse(extractJson(raw)) as {
       tags?: string[];
       objects?: string[];

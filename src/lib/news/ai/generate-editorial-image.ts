@@ -329,6 +329,10 @@ async function generateAiIllustration(input: {
     size: providerConfig.size,
     timeoutMs: providerConfig.timeoutMs,
     extraBody,
+    context: {
+      worker: "editorial_images",
+      articleId: input.articleId ?? undefined,
+    },
   });
 
   const latencyMs = Date.now() - started;

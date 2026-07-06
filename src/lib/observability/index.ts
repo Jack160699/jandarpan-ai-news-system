@@ -50,3 +50,15 @@ export type {
   OpsErrorEvent,
   StabilityScore,
 } from "@/lib/observability/types";
+export {
+  getOpenAiUsageDashboard,
+  getAiFinancialDashboard,
+  OPENAI_CALL_SITES,
+} from "@/lib/observability/openai-cost";
+export type {
+  OpenAiUsageDashboard,
+  AiFinancialDashboard,
+  MoneyAmount,
+} from "@/lib/observability/openai-cost";
+export { getExecutiveDashboard } from "@/lib/observability/executive-dashboard";
+export type { ExecutiveDashboard } from "@/lib/observability/executive-dashboard";

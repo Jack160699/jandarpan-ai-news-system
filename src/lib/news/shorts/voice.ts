@@ -8,6 +8,7 @@ import {
   type NewsroomLanguage,
 } from "@/lib/i18n/languages";
 import type { ShortVoiceMeta } from "@/lib/news/shorts/types";
+import { recordDirectTts } from "@/lib/observability/openai-cost";
 
 const OPENAI_SPEECH_URL = "https://api.openai.com/v1/audio/speech";
 
@@ -67,8 +68,10 @@ export async function synthesizeShortVoice(input: {
   }
 
   const truncated = input.script.slice(0, 4096);
+  const model = process.env.NEWSROOM_TTS_MODEL?.trim() || "tts-1";
 
   try {
+    const started = Date.now();
     const res = await fetch(OPENAI_SPEECH_URL, {
       method: "POST",
       headers: {
@@ -76,7 +79,7 @@ export async function synthesizeShortVoice(input: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.NEWSROOM_TTS_MODEL?.trim() || "tts-1",
+        model,
         voice: voiceId,
         input: truncated,
         response_format: "mp3",
@@ -84,7 +87,17 @@ export async function synthesizeShortVoice(input: {
       signal: AbortSignal.timeout(60_000),
     });
 
+    const latencyMs = Date.now() - started;
+
     if (!res.ok) {
+      recordDirectTts({
+        operation: "tts_speech",
+        model,
+        script: truncated,
+        latencyMs,
+        success: false,
+        context: { worker: "shorts_voice" },
+      });
       return {
         audio: new ArrayBuffer(0),
         voice: {
@@ -95,6 +108,14 @@ export async function synthesizeShortVoice(input: {
     }
 
     const audio = await res.arrayBuffer();
+    recordDirectTts({
+      operation: "tts_speech",
+      model,
+      script: truncated,
+      latencyMs,
+      success: true,
+      context: { worker: "shorts_voice" },
+    });
     return {
       audio,
       voice: {

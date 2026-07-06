@@ -13,6 +13,11 @@ import {
   recordProviderRequestStarted,
 } from "@/lib/ai/providers/health";
 import type { ClassifiedAiError } from "@/lib/ai/providers/types";
+import {
+  buildUsageRecord,
+  logOpenAiUsage,
+} from "@/lib/observability/openai-cost";
+import type { OpenAiCallContext } from "@/lib/observability/openai-cost";
 
 const OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations";
 
@@ -23,6 +28,7 @@ export async function requestImageGeneration(input: {
   size?: string;
   timeoutMs?: number;
   extraBody?: Record<string, unknown>;
+  context?: OpenAiCallContext;
 }): Promise<{ url: string } | { error: ClassifiedAiError }> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
@@ -120,9 +126,42 @@ export async function requestImageGeneration(input: {
       input.operation,
       Date.now() - started
     );
+
+    const imageSize = String(body.size ?? "1024x1024");
+    logOpenAiUsage(
+      buildUsageRecord({
+        operation: input.operation,
+        endpoint: "images.generations",
+        model,
+        inputTokens: 0,
+        outputTokens: 0,
+        latencyMs: Date.now() - started,
+        success: true,
+        user: input.prompt,
+        imageSize,
+        imageCount: 1,
+        context: input.context,
+      })
+    );
+
     return { url };
   } catch (err) {
-    return { error: classifyAiNetworkError(err) };
+    const classified = classifyAiNetworkError(err);
+    logOpenAiUsage(
+      buildUsageRecord({
+        operation: input.operation,
+        endpoint: "images.generations",
+        model,
+        inputTokens: 0,
+        outputTokens: 0,
+        latencyMs: Date.now() - started,
+        success: false,
+        user: input.prompt,
+        context: input.context,
+        metadata: { error: classified.code },
+      })
+    );
+    return { error: classified };
   } finally {
     clearTimeout(timer);
   }

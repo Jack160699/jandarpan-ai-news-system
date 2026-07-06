@@ -14,6 +14,15 @@ import {
   recordProviderFallback,
 } from "@/lib/ai/providers/health";
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
+import {
+  buildUsageRecord,
+  logOpenAiUsage,
+  parseChatCompletionUsage,
+} from "@/lib/observability/openai-cost";
+import {
+  lookupPromptCache,
+  storePromptCache,
+} from "@/lib/observability/openai-cost/prompt-cache";
 import type {
   AiProviderId,
   ChatCompletionRequest,
@@ -133,6 +142,7 @@ async function postChat(
 
     const json = (await res.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
+      usage?: Record<string, unknown>;
     };
     const content = json.choices?.[0]?.message?.content?.trim();
     if (!content) {
@@ -148,6 +158,47 @@ async function postChat(
     }
 
     recordProviderRequestCompleted(config.id, request.operation, latencyMs);
+
+    const usage = parseChatCompletionUsage(json);
+    logOpenAiUsage(
+      buildUsageRecord({
+        operation: request.operation,
+        endpoint: "chat.completions",
+        model: request.model ?? config.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        cachedTokens: usage.cachedTokens,
+        latencyMs,
+        success: true,
+        system: request.system,
+        user: request.user,
+        completion: content,
+        context: request.context,
+        metadata: { provider: config.id },
+      })
+    );
+
+    void storePromptCache({
+      system: request.system,
+      user: request.user,
+      operation: request.operation,
+      worker: request.context?.worker ?? request.operation,
+      articleId: request.context?.articleId,
+      eventId: request.context?.eventId,
+      model: request.model ?? config.model,
+      result: content,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      estimatedCostUsd: buildUsageRecord({
+        operation: request.operation,
+        endpoint: "chat.completions",
+        model: request.model ?? config.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        success: true,
+      }).estimatedCostUsd,
+    });
+
     return { content, latencyMs };
   } catch (err) {
     if (
@@ -185,15 +236,55 @@ async function requestFromProvider(
   }
 
   const started = Date.now();
+  let retryCount = 0;
+
+  const worker = request.context?.worker ?? request.operation;
+  const cached = await lookupPromptCache({
+    system: request.system,
+    user: request.user,
+    operation: request.operation,
+    worker,
+    articleId: request.context?.articleId,
+    eventId: request.context?.eventId,
+  });
+  if (cached.hit && cached.result) {
+    return { ok: true, content: cached.result, provider: config.id, latencyMs: 0 };
+  }
+
   try {
     const { content, latencyMs } = await withTransientAiRetry({
       operation: request.operation,
       provider: config.id,
       isRetryable: (e) => e.retryable,
-      fn: async () => postChat(config, request),
+      fn: async (attempt) => {
+        retryCount = attempt;
+        return postChat(config, request);
+      },
     });
     return { ok: true, content, provider: config.id, latencyMs };
   } catch (err) {
+    logOpenAiUsage(
+      buildUsageRecord({
+        operation: request.operation,
+        endpoint: "chat.completions",
+        model: request.model ?? config.model,
+        inputTokens: 0,
+        outputTokens: 0,
+        latencyMs: Date.now() - started,
+        retryCount,
+        success: false,
+        system: request.system,
+        user: request.user,
+        context: request.context,
+        metadata: {
+          provider: config.id,
+          error:
+            err && typeof err === "object" && "code" in err
+              ? (err as ClassifiedAiError).code
+              : "unknown",
+        },
+      })
+    );
     const error =
       err && typeof err === "object" && "code" in err
         ? (err as ClassifiedAiError)

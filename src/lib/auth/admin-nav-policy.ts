@@ -19,6 +19,7 @@ export type AdminNavHref =
   | "/admin/sources"
   | "/admin/live-wire"
   | "/admin/health"
+  | "/admin/executive"
   | "/admin/ingestion"
   | "/admin/images"
   | "/admin/media"

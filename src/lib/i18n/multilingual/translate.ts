@@ -20,6 +20,16 @@ import type {
   TranslationJobResult,
 } from "@/lib/i18n/multilingual/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
+import {
+  adaptiveTranslationBodySlice,
+  translationMaxTokens,
+} from "@/lib/observability/openai-cost/adaptive-tokens";
+import {
+  lookupPromptCache,
+  storePromptCache,
+} from "@/lib/observability/openai-cost/prompt-cache";
+import { buildUsageRecord } from "@/lib/observability/openai-cost/record";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -63,6 +73,7 @@ export async function translateArticleBundle(input: {
   tags?: string[];
   sourceLanguage: NewsroomLanguage;
   targetLanguage: NewsroomLanguage;
+  articleId?: string;
 }): Promise<ArticleLocaleBundle | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
@@ -86,25 +97,19 @@ export async function translateArticleBundle(input: {
     input.sourceLanguage
   );
 
-  const body = {
-    model:
-      process.env.NEWSROOM_TRANSLATION_MODEL?.trim() ||
-      process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
-      "gpt-4o-mini",
-    temperature: 0.25,
-    max_tokens: 3200,
-    response_format: { type: "json_object" as const },
-    messages: [
-      { role: "system", content: system },
-      {
-        role: "user",
-        content: `Translate this news article JSON fields into the target language.
+  const bodySlice = adaptiveTranslationBodySlice(input.article_body);
+  const maxTokens = translationMaxTokens({
+    bodyChars: bodySlice.length,
+    targetLanguage: input.targetLanguage,
+  });
+
+  const userContent = `Translate this news article JSON fields into the target language.
 
 Source JSON:
 ${JSON.stringify({
   headline: input.headline,
   summary: input.summary,
-  article_body: input.article_body.slice(0, 12000),
+  article_body: bodySlice,
   seo_title: input.seo_title,
   seo_description: input.seo_description,
   tags: input.tags ?? [],
@@ -118,12 +123,62 @@ Return JSON only:
   "seo_title": "...",
   "seo_description": "...",
   "tags": ["..."]
-}`,
+}`;
+
+  const cached = await lookupPromptCache({
+    system,
+    user: userContent,
+    operation: "translation",
+    worker: "translation",
+    articleId: input.articleId,
+  });
+  if (cached.hit && cached.result) {
+    try {
+      const parsed = JSON.parse(cached.result) as LlmTranslationResponse;
+      const headline = parsed.headline?.trim();
+      const summary = parsed.summary?.trim();
+      if (headline && summary) {
+        const article_body = parsed.article_body?.trim() || input.article_body;
+        const mins = estimateMinutes(article_body);
+        return {
+          headline,
+          summary,
+          article_body,
+          seo_title: (parsed.seo_title?.trim() || headline).slice(0, 70),
+          seo_description: (parsed.seo_description?.trim() || summary).slice(0, 165),
+          tags: Array.isArray(parsed.tags)
+            ? parsed.tags.map((t) => String(t).trim()).filter(Boolean)
+            : input.tags,
+          reading_time: readingTimeLabel(mins, input.targetLanguage),
+          translated_at: new Date().toISOString(),
+          model: process.env.NEWSROOM_TRANSLATION_MODEL?.trim() || "gpt-4o-mini",
+          tone_profile: getRegionalToneProfile(input.targetLanguage).id,
+        };
+      }
+    } catch {
+      /* cache parse failed — fall through */
+    }
+  }
+
+  const body = {
+    model:
+      process.env.NEWSROOM_TRANSLATION_MODEL?.trim() ||
+      process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
+      "gpt-4o-mini",
+    temperature: 0.25,
+    max_tokens: maxTokens,
+    response_format: { type: "json_object" as const },
+    messages: [
+      { role: "system", content: system },
+      {
+        role: "user",
+        content: userContent,
       },
     ],
   };
 
   try {
+    const started = Date.now();
     const res = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
@@ -134,17 +189,61 @@ Return JSON only:
       signal: AbortSignal.timeout(90_000),
     });
 
-    if (!res.ok) return null;
+    const latencyMs = Date.now() - started;
+
+    if (!res.ok) {
+      recordDirectChatCompletion({
+        operation: "translation",
+        model: body.model,
+        system,
+        user: userContent,
+        latencyMs,
+        success: false,
+        context: { worker: "translation", articleId: input.articleId },
+      });
+      return null;
+    }
     const json = (await res.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
     };
     const text = json.choices?.[0]?.message?.content?.trim();
+    recordDirectChatCompletion({
+      operation: "translation",
+      model: body.model,
+      system,
+      user: body.messages[1]!.content as string,
+      json,
+      content: text,
+      latencyMs,
+      success: Boolean(text),
+      context: { worker: "translation", articleId: input.articleId },
+    });
     if (!text) return null;
 
     const parsed = JSON.parse(text) as LlmTranslationResponse;
     const headline = parsed.headline?.trim();
     const summary = parsed.summary?.trim();
     if (!headline || !summary) return null;
+
+    void storePromptCache({
+      system,
+      user: userContent,
+      operation: "translation",
+      worker: "translation",
+      articleId: input.articleId,
+      model: body.model,
+      result: text,
+      inputTokens: 0,
+      outputTokens: 0,
+      estimatedCostUsd: buildUsageRecord({
+        operation: "translation",
+        endpoint: "chat.completions",
+        model: body.model,
+        inputTokens: 0,
+        outputTokens: 0,
+        success: true,
+      }).estimatedCostUsd,
+    });
 
     const article_body = parsed.article_body?.trim() || input.article_body;
     const mins = estimateMinutes(article_body);
@@ -194,6 +293,7 @@ export async function translateGeneratedArticle(
       tags: row.tags ?? [],
       sourceLanguage: source,
       targetLanguage: lang,
+      articleId: row.id,
     });
 
     if (!bundle) {

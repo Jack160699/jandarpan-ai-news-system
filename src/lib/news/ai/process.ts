@@ -25,6 +25,9 @@ import {
 import { createAdminClient } from "@/lib/supabase";
 
 import {
+  enrichMaxTokens,
+} from "@/lib/observability/openai-cost/adaptive-tokens";
+import {
   claimAiQueueBatch,
   releaseAiQueueItems,
 } from "@/lib/news/ai/queue";
@@ -94,7 +97,7 @@ Return JSON only: {"summary":"2-3 sentence summary","headline":"max 12 words","c
 
   const user = `Title: ${article.title}\nDescription: ${article.description ?? ""}\nSource category: ${article.category}\nLanguage hint: ${article.language ?? "en"}`;
 
-
+  const descLen = (article.description ?? article.title ?? "").length;
 
   if (isAnyChatProviderConfigured()) {
 
@@ -108,11 +111,13 @@ Return JSON only: {"summary":"2-3 sentence summary","headline":"max 12 words","c
 
       temperature: 0.3,
 
-      maxTokens: 400,
+      maxTokens: enrichMaxTokens(descLen),
 
       jsonMode: true,
 
       timeoutMs: 8_000,
+
+      context: { worker: "ai_enrich", articleId: String(article.id) },
 
     });
 
