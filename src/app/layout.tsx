@@ -74,9 +74,17 @@ const notoArabic = Noto_Sans_Arabic({
 
 const fontClassName = `${playfair.variable} ${sourceSerif.variable} ${notoDevanagari.variable} ${notoBengali.variable} ${notoTamil.variable} ${notoArabic.variable} ${dmMono.variable} native-scroll min-h-full`;
 
+const GOOGLE_SITE_VERIFICATION =
+  "oqiFouZAWNqKNdef92A7wMcF-xaLQO9d-YnT-dNIpm4";
+
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenantConfig();
-  return buildTenantSiteMetadata(tenant);
+  return {
+    ...buildTenantSiteMetadata(tenant),
+    verification: {
+      google: GOOGLE_SITE_VERIFICATION,
+    },
+  };
 }
 
 export async function generateViewport(): Promise<Viewport> {
