@@ -4,7 +4,7 @@
 
 import { resolveArticleProvider } from "@/lib/news/article-provider";
 import { regionalBoostScore } from "@/lib/news/home-ranking";
-import { titleHash } from "@/lib/news/normalize";
+import { normalizeTitle, titleHash, titleSimilarity } from "@/lib/news/normalize";
 import { buildArticleSlug } from "@/lib/news/slug";
 import type { NewsArticleRow } from "@/lib/types/news-article";
 
@@ -63,14 +63,34 @@ export function pickRelatedStories(
   limit = 6
 ): NewsArticleRow[] {
   const seenTitles = new Set<string>();
+  const sourceNorm = normalizeTitle(source.title ?? "");
 
   return pool
     .map((c) => ({ article: c, score: scoreRelatedness(source, c) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .filter(({ article }) => {
+      if (article.id === source.id) return false;
+
       const th = titleHash(article.title);
       if (seenTitles.has(th)) return false;
+
+      const norm = normalizeTitle(article.title ?? "");
+      if (norm && sourceNorm && norm === sourceNorm) return false;
+      if (titleSimilarity(source.title ?? "", article.title ?? "") >= 0.78) {
+        return false;
+      }
+
+      const sourceEvent = (source as { event_id?: string | null }).event_id;
+      const candidateEvent = (article as { event_id?: string | null }).event_id;
+      if (
+        sourceEvent &&
+        candidateEvent &&
+        sourceEvent === candidateEvent
+      ) {
+        return false;
+      }
+
       seenTitles.add(th);
       return true;
     })

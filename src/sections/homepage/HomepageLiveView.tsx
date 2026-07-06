@@ -104,19 +104,17 @@ function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
   const lead = feed.editorsPicks.lead;
   const supporting = feed.editorsPicks.supporting ?? [];
 
-  const topStories = [
-    ...(feed.breakingTicker ?? []).slice(0, 3),
-    ...supporting.slice(0, 3),
-  ].filter(
-    (a, i, arr) =>
-      a?.id && a.headline?.trim() && arr.findIndex((x) => x?.id === a.id) === i
-  );
+  const topStories = supporting
+    .filter(
+      (a, i, arr) =>
+        a?.id &&
+        a.id !== lead.id &&
+        a.headline?.trim() &&
+        arr.findIndex((x) => x?.id === a.id) === i
+    )
+    .slice(0, 4);
 
-  const heroLead =
-    feed.breakingTicker?.[0] ??
-    lead ??
-    feed.trending?.[0] ??
-    feed.liveWire?.[0];
+  const heroLead = lead;
 
   if (!heroLead?.headline?.trim()) {
     return <HomepageFeedFallback />;

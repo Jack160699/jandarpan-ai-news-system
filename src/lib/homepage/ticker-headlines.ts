@@ -3,15 +3,12 @@ import type { GeneratedHomepageFeed, HomeArticle } from "./types";
 
 const TICKER_HEADLINE_LIMIT = 12;
 
-/** Latest headlines from the active homepage feed — newest first, deduped */
+/** Breaking-only ticker — excludes hero and other reserved homepage slots */
 export function buildTickerHeadlines(feed: GeneratedHomepageFeed): HomeArticle[] {
-  const pool: HomeArticle[] = [
-    ...(feed.breakingTicker ?? []),
-    ...(feed.liveWire ?? []),
-    ...(feed.trending ?? []),
-    ...(feed.editorsPicks?.lead ? [feed.editorsPicks.lead] : []),
-    ...(feed.editorsPicks?.supporting ?? []),
-  ];
+  const heroId = feed.editorsPicks?.lead?.id;
+  const pool: HomeArticle[] = (feed.breakingTicker ?? []).filter(
+    (a) => a?.id && a.id !== heroId
+  );
 
   const seen = new Set<string>();
   const unique: HomeArticle[] = [];

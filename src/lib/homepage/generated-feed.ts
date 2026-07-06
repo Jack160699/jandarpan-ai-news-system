@@ -29,6 +29,7 @@ import { getSectionLabel } from "@/lib/i18n/section-labels";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { resolveEditorialDesk } from "@/lib/newsroom/desk-branding";
+import { composeHomepageSlots } from "@/lib/homepage/homepage-composition";
 import type {
   EditorsPicksBlock,
   GeneratedHomepageFeed,
@@ -206,94 +207,31 @@ export function buildGeneratedHomepageFeed(
     return null;
   }
 
-  const usedIds = new Set<string>();
-
   const pinnedRow = rows.find((r) => r.homepage_pin);
   const pinnedArticle = pinnedRow
     ? ranked.find((a) => a.id === pinnedRow.id)
     : undefined;
 
-  const editorialPool = [...ranked].sort(
-    (a, b) => b.priorityScore - a.priorityScore || b.aiConfidence - a.aiConfidence
-  );
+  const slots = composeHomepageSlots(ranked, rankedOutputs, {
+    pinnedLead: pinnedArticle,
+  });
 
-  const localAlertSlugs = new Set(localAlerts.map((a) => a.slug));
-  const cgBreaking = editorialPool.filter(
-    (a) =>
-      localAlertSlugs.has(a.slug) ||
-      ((a.section === "chhattisgarh" || a.section === "raipur") &&
-        (a.ranking.isBreaking || a.urgency === "high"))
-  );
-
-  const breakingTicker = cgBreaking.length
-    ? cgBreaking.slice(0, 8)
-    : editorialPool
-        .filter((a) => a.ranking.isBreaking || a.urgency === "high")
-        .slice(0, 8);
-
-  const tickerItems =
-    breakingTicker.length >= 3
-      ? breakingTicker
-      : editorialPool.filter((a) => a.isLive).slice(0, 8);
-
-  const lead =
-    pinnedArticle ??
-    editorialPool.find((a) => a.aiConfidence >= 0.45) ??
-    editorialPool[0];
-
-  const supporting = editorialPool
-    .filter((a) => a.id !== lead.id)
-    .slice(0, 4);
-
-  usedIds.add(lead.id);
-  for (const s of supporting) usedIds.add(s.id);
-
+  const usedIds = new Set(slots.reservedIds);
+  const lead = slots.hero;
+  const supporting = slots.supporting;
   const editorsPicks: EditorsPicksBlock = { lead, supporting };
+  const breakingTicker = slots.breakingTicker;
+  const tickerItems = breakingTicker;
+  const trending = slots.trending;
+  const liveWire = slots.globalBrief;
+  const regionalHighlights = slots.districtWire;
 
-  const liveWire = [...ranked]
-    .filter((a) => !usedIds.has(a.id))
-    .sort((a, b) => {
-      const live = (b.isLive ? 2 : 0) - (a.isLive ? 2 : 0);
-      if (live !== 0) return live;
-      return (
-        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-      );
-    })
-    .slice(0, 12);
-
-  for (const w of liveWire) usedIds.add(w.id);
-
-  const regionalHighlights = ranked
-    .filter(
-      (a) =>
-        !usedIds.has(a.id) &&
-        (a.section === "chhattisgarh" || a.section === "raipur")
-    )
-    .sort((a, b) => b.priorityScore - a.priorityScore)
-    .slice(0, 6);
-
-  for (const r of regionalHighlights) usedIds.add(r.id);
-
-  let trending = ranked
-    .filter((a) => !usedIds.has(a.id) && a.ranking.isTrending)
-    .sort((a, b) => b.priorityScore - a.priorityScore)
-    .slice(0, 8);
-
-  if (trending.length < 4) {
-    const filler = ranked
-      .filter((a) => !usedIds.has(a.id) && !trending.some((t) => t.id === a.id))
-      .slice(0, 8 - trending.length);
-    trending = [...trending, ...filler];
-  }
-
-  for (const t of trending) usedIds.add(t.id);
-
-  const shorts = [...ranked]
-    .filter((a) => !usedIds.has(a.id))
-    .sort((a, b) => a.summary.length - b.summary.length)
-    .slice(0, 10);
-
-  for (const s of shorts) usedIds.add(s.id);
+  const shorts = ranked
+    .filter((a) => slots.reelsArticleIds.includes(a.id))
+    .sort(
+      (a, b) =>
+        slots.reelsArticleIds.indexOf(a.id) - slots.reelsArticleIds.indexOf(b.id)
+    );
 
   const categoryStreams = pickCategoryStreams(ranked, usedIds, displayLanguage, 5);
 
@@ -306,18 +244,14 @@ export function buildGeneratedHomepageFeed(
       : 0;
 
   const feed: GeneratedHomepageFeed = {
-    breakingTicker: tickerItems.length ? tickerItems : editorialPool.slice(0, 6),
+    breakingTicker: tickerItems,
     editorsPicks,
-    liveWire: liveWire.length ? liveWire : editorialPool.slice(0, 10),
-    regionalHighlights:
-      regionalHighlights.length > 0
-        ? regionalHighlights
-        : ranked
-            .filter((a) => a.section === "chhattisgarh" || a.section === "raipur")
-            .slice(0, 6),
+    liveWire,
+    regionalHighlights,
     trending,
     shorts,
     newsShorts: [],
+    listenArticleIds: slots.listenArticleIds,
     categoryStreams,
     footerIntelligence: {
       fetchedAt: new Date().toISOString(),

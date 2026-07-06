@@ -202,7 +202,12 @@ function localizeShortRow(
 
 export async function fetchShortsPool(
   limit = 40,
-  displayLanguage?: NewsroomLanguage
+  displayLanguage?: NewsroomLanguage,
+  options?: {
+    preferredArticleIds?: string[];
+    reservedIds?: Set<string>;
+    maxHomepageOverlap?: number;
+  }
 ): Promise<NewsShortCard[]> {
   const supabase = createAdminServerClient();
   const { data, error } = await supabase
@@ -215,23 +220,45 @@ export async function fetchShortsPool(
 
   if (error || !data?.length) return [];
 
+  const reserved = options?.reservedIds ?? new Set<string>();
+  const maxOverlap = options?.maxHomepageOverlap ?? 2;
+  const preferred = options?.preferredArticleIds ?? [];
+  let overlap = 0;
+
+  const byId = new Map(data.map((row) => [row.id, row]));
   const cards: NewsShortCard[] = [];
-  for (const row of data) {
+
+  const tryAdd = (row: (typeof data)[number]) => {
     const status = row.editorial_status ?? "approved";
-    if (status === "rejected" || status === "pending") continue;
-    if (!row.published_at && !row.summary) continue;
+    if (status === "rejected" || status === "pending") return;
+
+    if (reserved.has(row.id)) {
+      if (overlap >= maxOverlap) return;
+      overlap++;
+    }
 
     let full = row as unknown as GeneratedArticleRow;
     if (displayLanguage) {
       const localized = localizeShortRow(full, displayLanguage);
-      if (!localized) continue;
+      if (!localized) return;
       full = localized;
     }
 
     const card = ensureShortCard(full);
     if (card) cards.push(card);
+  };
+
+  for (const id of preferred) {
     if (cards.length >= limit) break;
+    const row = byId.get(id);
+    if (row) tryAdd(row);
   }
 
-  return cards;
+  for (const row of data) {
+    if (cards.length >= limit) break;
+    if (cards.some((c) => c.articleId === row.id)) continue;
+    tryAdd(row);
+  }
+
+  return cards.slice(0, limit);
 }
