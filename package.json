@@ -22,6 +22,8 @@
     "audit:translations": "node scripts/audit-translation-coverage.mjs",
     "ops:queue-audit": "npx tsx scripts/queue-cleanup-phase4.ts --audit",
     "ops:queue-cleanup": "npx tsx scripts/queue-cleanup-phase4.ts --execute",
+    "ops:queue-reset": "npx tsx scripts/production-queue-reset.ts --execute",
+    "ops:queue-reset-audit": "npx tsx scripts/production-queue-reset.ts --audit",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {

@@ -38,7 +38,8 @@ export type StaleReason =
   | "image_already_generated"
   | "already_enriched"
   | "older_than_48h"
-  | "superseded";
+  | "superseded"
+  | "production_reset";
 
 export type StaleCounts = {
   ai: Record<StaleReason, number> & { total: number };
@@ -80,6 +81,7 @@ function emptyReasons(): Record<StaleReason, number> {
     already_enriched: 0,
     older_than_48h: 0,
     superseded: 0,
+    production_reset: 0,
   };
 }
 
@@ -710,7 +712,8 @@ function summarizeStale(
 
 async function archiveAndRemove(
   candidates: StaleCandidate[],
-  dryRun: boolean
+  dryRun: boolean,
+  archivePhase: "phase4_cleanup" | "production_reset" = "phase4_cleanup"
 ): Promise<{ removed: number; archived: number }> {
   if (!candidates.length || dryRun) {
     return { removed: dryRun ? 0 : 0, archived: 0 };
@@ -729,7 +732,7 @@ async function archiveAndRemove(
       payload: (c.payload ?? {}) as Json,
       stale_reasons: c.reasons,
       original_status: c.status,
-      metadata: { phase: "phase4_cleanup" },
+      metadata: { phase: archivePhase },
     }));
 
     // Archive table added in migration 044 — cast until types are regenerated
@@ -896,5 +899,286 @@ export async function runQueueCleanup(options?: {
     staleCounts,
     remaining,
     health,
+  };
+}
+
+/** Freshness window — jobs newer than this may still be actionable wire enrichment */
+const USEFUL_AI_AGE_MS = 6 * 60 * 60 * 1000;
+
+export type AiJobAuditRow = {
+  queueId: string;
+  articleId: string;
+  createdAt: string;
+  articleExists: boolean;
+  alreadyEnriched: boolean;
+  wirePublished: boolean;
+  relatedSignalId: string | null;
+  relatedEventId: string | null;
+  stillUseful: boolean;
+};
+
+export type RemainingAiAuditSummary = {
+  total: number;
+  oldest: string | null;
+  newest: string | null;
+  articleExists: number;
+  articleMissing: number;
+  alreadyEnriched: number;
+  wirePublished: number;
+  withRelatedEvent: number;
+  stillUseful: number;
+  notUseful: number;
+  samples: AiJobAuditRow[];
+};
+
+export type ProductionResetResult = {
+  dryRun: boolean;
+  aiArchived: number;
+  aiCancelled: number;
+  workerArchived: number;
+  workerKept: number;
+  remaining: QueueAuditReport;
+  health: PostCleanupHealth;
+  aiAudit: RemainingAiAuditSummary;
+};
+
+export async function auditRemainingAiJobs(): Promise<RemainingAiAuditSummary> {
+  const supabase = createAdminClient();
+  const usefulCutoff = new Date(Date.now() - USEFUL_AI_AGE_MS).toISOString();
+
+  const { data: rows } = await supabase
+    .from("news_ai_queue")
+    .select("id, article_id, created_at, status")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+
+  if (!rows?.length) {
+    return {
+      total: 0,
+      oldest: null,
+      newest: null,
+      articleExists: 0,
+      articleMissing: 0,
+      alreadyEnriched: 0,
+      wirePublished: 0,
+      withRelatedEvent: 0,
+      stillUseful: 0,
+      notUseful: 0,
+      samples: [],
+    };
+  }
+
+  const articleIds = rows.map((r) => r.article_id);
+  const { data: articles } = await supabase
+    .from("news_articles")
+    .select("id, article_url, ai_summary, published_at, created_at")
+    .in("id", articleIds);
+
+  const articleMap = new Map((articles ?? []).map((a) => [a.id, a]));
+  const urls = [
+    ...new Set(
+      (articles ?? [])
+        .map((a) => a.article_url)
+        .filter((u): u is string => typeof u === "string" && u.length > 0)
+    ),
+  ];
+
+  const { data: signals } = urls.length
+    ? await supabase
+        .from("news_signals")
+        .select("id, article_url")
+        .in("article_url", urls)
+    : { data: [] };
+
+  const signalByUrl = new Map((signals ?? []).map((s) => [s.article_url, s]));
+  const signalIds = (signals ?? []).map((s) => s.id);
+
+  const eventBySignal = new Map<string, string>();
+  if (signalIds.length) {
+    const { data: events } = await supabase
+      .from("news_events")
+      .select("id, signal_ids")
+      .limit(5000);
+    for (const ev of events ?? []) {
+      for (const sid of (ev.signal_ids as string[] | null) ?? []) {
+        if (signalIds.includes(sid) && !eventBySignal.has(sid)) {
+          eventBySignal.set(sid, ev.id);
+        }
+      }
+    }
+  }
+
+  const auditRows: AiJobAuditRow[] = [];
+  let articleExists = 0;
+  let articleMissing = 0;
+  let alreadyEnriched = 0;
+  let wirePublished = 0;
+  let withRelatedEvent = 0;
+  let stillUseful = 0;
+
+  for (const row of rows) {
+    const article = articleMap.get(row.article_id);
+    const exists = Boolean(article);
+    const enriched = Boolean(article?.ai_summary);
+    const published = Boolean(article?.published_at);
+    const signal =
+      article?.article_url ? signalByUrl.get(article.article_url) : null;
+    const eventId = signal ? eventBySignal.get(signal.id) ?? null : null;
+
+    if (exists) articleExists += 1;
+    else articleMissing += 1;
+    if (enriched) alreadyEnriched += 1;
+    if (published) wirePublished += 1;
+    if (eventId) withRelatedEvent += 1;
+
+    const useful =
+      exists &&
+      !enriched &&
+      row.created_at >= usefulCutoff;
+
+    if (useful) stillUseful += 1;
+
+    auditRows.push({
+      queueId: row.id,
+      articleId: String(row.article_id),
+      createdAt: row.created_at,
+      articleExists: exists,
+      alreadyEnriched: enriched,
+      wirePublished: published,
+      relatedSignalId: signal?.id ?? null,
+      relatedEventId: eventId,
+      stillUseful: useful,
+    });
+  }
+
+  const dates = rows.map((r) => r.created_at);
+
+  return {
+    total: rows.length,
+    oldest: oldestDate(dates),
+    newest: dates.reduce((a, b) => (a > b ? a : b)),
+    articleExists,
+    articleMissing,
+    alreadyEnriched,
+    wirePublished,
+    withRelatedEvent,
+    stillUseful,
+    notUseful: rows.length - stillUseful,
+    samples: auditRows.slice(0, 5),
+  };
+}
+
+async function collectAllPendingAiCandidates(): Promise<StaleCandidate[]> {
+  const supabase = createAdminClient();
+  const candidates: StaleCandidate[] = [];
+  let offset = 0;
+
+  while (true) {
+    const { data: rows } = await supabase
+      .from("news_ai_queue")
+      .select("id, article_id, status, created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .range(offset, offset + BATCH_SIZE - 1);
+
+    if (!rows?.length) break;
+
+    for (const row of rows) {
+      candidates.push({
+        id: row.id,
+        table: "news_ai_queue",
+        jobType: "ai_enrich",
+        status: row.status,
+        reasons: ["production_reset"],
+        payload: { article_id: row.article_id, created_at: row.created_at },
+      });
+    }
+
+    if (rows.length < BATCH_SIZE) break;
+    offset += BATCH_SIZE;
+  }
+
+  return candidates;
+}
+
+/** Archive stale backlog worker jobs; keep only future-scheduled active workers */
+async function collectStaleWorkerCandidates(): Promise<{
+  archive: StaleCandidate[];
+  keep: Array<{ id: string; job_type: string; scheduled_at: string }>;
+}> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: pending } = await supabase
+    .from("worker_jobs")
+    .select("id, job_type, status, payload, scheduled_at, created_at, dedupe_key")
+    .eq("status", "pending");
+
+  const archive: StaleCandidate[] = [];
+  const keep: Array<{ id: string; job_type: string; scheduled_at: string }> = [];
+
+  for (const row of pending ?? []) {
+    const isFutureScheduled = row.scheduled_at > now;
+    const isActiveBatch =
+      row.job_type === "translation_batch" && isFutureScheduled;
+
+    if (isActiveBatch) {
+      keep.push({
+        id: row.id,
+        job_type: row.job_type,
+        scheduled_at: row.scheduled_at,
+      });
+      continue;
+    }
+
+    archive.push({
+      id: row.id,
+      table: "worker_jobs",
+      jobType: row.job_type,
+      status: row.status,
+      reasons: ["production_reset"],
+      payload: row.payload as Json,
+    });
+  }
+
+  return { archive, keep };
+}
+
+export async function runProductionQueueReset(options?: {
+  dryRun?: boolean;
+}): Promise<ProductionResetResult> {
+  const dryRun = options?.dryRun ?? true;
+
+  const [aiAudit, aiCandidates, workerResult] = await Promise.all([
+    auditRemainingAiJobs(),
+    collectAllPendingAiCandidates(),
+    collectStaleWorkerCandidates(),
+  ]);
+
+  const allCandidates = [...aiCandidates, ...workerResult.archive];
+
+  const { removed, archived } = await archiveAndRemove(
+    allCandidates,
+    dryRun,
+    "production_reset"
+  );
+
+  const aiRemoved = dryRun ? 0 : Math.min(removed, aiCandidates.length);
+  const workerRemoved = dryRun ? 0 : removed - aiRemoved;
+
+  const [remaining, health] = await Promise.all([
+    auditAllQueues(),
+    computePostCleanupHealth(),
+  ]);
+
+  return {
+    dryRun,
+    aiArchived: dryRun ? 0 : Math.min(archived, aiCandidates.length),
+    aiCancelled: dryRun ? aiCandidates.length : aiRemoved,
+    workerArchived: dryRun ? 0 : workerRemoved,
+    workerKept: workerResult.keep.length,
+    remaining,
+    health,
+    aiAudit,
   };
 }
