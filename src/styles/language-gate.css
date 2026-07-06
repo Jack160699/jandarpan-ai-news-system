@@ -13,10 +13,11 @@ html[data-lang-gate="locked"] .lang-gate {
 }
 
 .app-shell--lang-locked .app-shell__content {
-  filter: blur(12px) saturate(0.8);
+  filter: blur(var(--glass-blur)) saturate(0.8);
   opacity: 0.28;
   pointer-events: none;
   user-select: none;
+  transition: opacity var(--duration-normal) var(--ease-out), filter var(--duration-normal) var(--ease-out);
 }
 
 .lang-gate {
@@ -30,7 +31,7 @@ html[data-lang-gate="locked"] .lang-gate {
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.32s ease;
+  transition: opacity var(--duration-normal) var(--ease-out);
 }
 
 .lang-gate--visible {

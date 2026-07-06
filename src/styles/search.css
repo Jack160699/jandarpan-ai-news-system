@@ -23,13 +23,13 @@
 .search-form__input {
   width: 100%;
   font-family: var(--font-ui);
-  font-size: var(--ds-text-body);
-  padding: 0.875rem 1rem;
+  font-size: var(--type-body);
+  padding: var(--input-pad-y) var(--input-pad-x);
   border: 1px solid var(--rule);
   background: var(--paper-elevated);
   color: var(--ink-body);
-  border-radius: var(--ds-radius-md);
-  transition: border-color var(--ds-duration-fast) var(--ds-ease);
+  border-radius: var(--input-radius);
+  transition: border-color var(--duration-fast) var(--ease-out);
 }
 
 .search-form__input:focus {
@@ -46,14 +46,17 @@
 
 .search-chip {
   font-family: var(--font-ui);
-  font-size: 0.75rem;
-  padding: 0.4rem 0.75rem;
+  font-size: var(--type-badge);
+  padding: var(--chip-pad-y) var(--chip-pad-x);
   border: 1px solid var(--rule);
-  border-radius: 999px;
+  border-radius: var(--chip-radius);
   background: var(--paper);
   color: var(--ink-muted);
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
 }
 
 .search-chip:hover,
@@ -87,12 +90,12 @@
 
 .search-trending__link {
   font-family: var(--font-ui);
-  font-size: 0.8125rem;
-  padding: 0.5rem 0.875rem;
+  font-size: var(--type-caption);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--rule);
   text-decoration: none;
   color: var(--ink-body);
-  border-radius: 999px;
+  border-radius: var(--chip-radius);
 }
 
 .search-trending__link:hover {
