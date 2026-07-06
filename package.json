@@ -20,6 +20,8 @@
     "backfill:publish": "node scripts/backfill-generated-publication.mjs",
     "backfill:translations": "node scripts/backfill-article-translations.mjs",
     "audit:translations": "node scripts/audit-translation-coverage.mjs",
+    "ops:queue-audit": "npx tsx scripts/queue-cleanup-phase4.ts --audit",
+    "ops:queue-cleanup": "npx tsx scripts/queue-cleanup-phase4.ts --execute",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {
