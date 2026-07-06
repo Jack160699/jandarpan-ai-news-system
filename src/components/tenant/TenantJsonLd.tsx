@@ -1,7 +1,8 @@
 import type { TenantConfig } from "@/lib/tenant/types";
+import { PUBLISHER_LOGO_URL, SITE_URL } from "@/lib/seo/constants";
 
 export function TenantJsonLd({ tenant }: { tenant: TenantConfig }) {
-  const { branding, siteUrl, seo } = tenant;
+  const { branding, seo } = tenant;
   const primaryRegion = tenant.regions.find((r) => r.isPrimary) ?? tenant.regions[0];
 
   const organization = {
@@ -10,10 +11,12 @@ export function TenantJsonLd({ tenant }: { tenant: TenantConfig }) {
     name: branding.nameEn,
     alternateName: branding.nameHi,
     description: branding.taglineEn,
-    url: siteUrl,
+    url: SITE_URL,
     logo: {
       "@type": "ImageObject",
-      url: new URL(branding.logoUrl, siteUrl).toString(),
+      url: branding.logoUrl.startsWith("http")
+        ? branding.logoUrl
+        : PUBLISHER_LOGO_URL,
     },
     areaServed: primaryRegion
       ? {
@@ -21,8 +24,8 @@ export function TenantJsonLd({ tenant }: { tenant: TenantConfig }) {
           name: primaryRegion.name,
         }
       : undefined,
-    publishingPrinciples: `${siteUrl}/archive`,
-    sameAs: [siteUrl],
+    publishingPrinciples: `${SITE_URL}/archive`,
+    sameAs: [SITE_URL],
   };
 
   const website = {
@@ -30,7 +33,7 @@ export function TenantJsonLd({ tenant }: { tenant: TenantConfig }) {
     "@type": "WebSite",
     name: branding.nameEn,
     alternateName: branding.nameHi,
-    url: siteUrl,
+    url: SITE_URL,
     description: seo.defaultDescription,
     inLanguage: tenant.newsroom.enabledLanguages.map((l) =>
       l === "en" ? "en-IN" : "hi-IN"
@@ -38,7 +41,7 @@ export function TenantJsonLd({ tenant }: { tenant: TenantConfig }) {
     publisher: {
       "@type": "NewsMediaOrganization",
       name: branding.nameEn,
-      url: siteUrl,
+      url: SITE_URL,
     },
   };
 
