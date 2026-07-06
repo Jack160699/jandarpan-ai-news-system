@@ -4,8 +4,11 @@
 
 import type { MetadataRoute } from "next";
 import { CATEGORY_SEO } from "@/lib/seo/categories";
+import { SEO_HOMEPAGE_CLUSTERS } from "@/lib/seo/homepage-hub";
 import { SITE_URL } from "@/lib/seo/constants";
 import { getLiveCoverageSlugs } from "@/lib/news/coverage/read";
+import { getAllDistrictSlugs } from "@/lib/regional";
+import { loadPlatformTopics } from "@/lib/newsroom-platform/config/topics";
 import {
   fetchGeneratedArticlePool,
   getGeneratedArticleSlugs,
@@ -62,6 +65,44 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.88,
   }));
 
+  const districtRoutes: MetadataRoute.Sitemap = getAllDistrictSlugs().map(
+    (slug) => ({
+      url: `${SITE_URL}/district/${encodeURIComponent(slug)}`,
+      lastModified: now,
+      changeFrequency: "hourly" as const,
+      priority: 0.82,
+    })
+  );
+
+  let topicRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const topics = await withQueryTimeout(loadPlatformTopics(), []);
+    topicRoutes = topics.map((topic) => ({
+      url: `${SITE_URL}/topics/${encodeURIComponent(topic.slug)}`,
+      lastModified: now,
+      changeFrequency: "hourly" as const,
+      priority: 0.8,
+    }));
+  } catch {
+    /* optional DB */
+  }
+
+  const hubPaths = new Set<string>();
+  for (const cluster of SEO_HOMEPAGE_CLUSTERS) {
+    if (cluster.path.startsWith("/")) hubPaths.add(cluster.path);
+    for (const link of cluster.links) {
+      if (link.href.startsWith("/") && !link.href.startsWith("/search")) {
+        hubPaths.add(link.href);
+      }
+    }
+  }
+  const hubRoutes: MetadataRoute.Sitemap = [...hubPaths].map((path) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
+
   let storyRoutes: MetadataRoute.Sitemap = [];
   try {
     const pool = await withQueryTimeout(
@@ -103,7 +144,15 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
     /* optional */
   }
 
-  return [...staticRoutes, ...categoryRoutes, ...storyRoutes, ...liveRoutes];
+  return [
+    ...staticRoutes,
+    ...categoryRoutes,
+    ...districtRoutes,
+    ...topicRoutes,
+    ...hubRoutes,
+    ...storyRoutes,
+    ...liveRoutes,
+  ];
 }
 
 export async function buildGoogleNewsEntries() {

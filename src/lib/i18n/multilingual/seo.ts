@@ -6,6 +6,11 @@ import type { Metadata } from "next";
 import { SITE_URL } from "@/lib/seo/constants";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import {
+  buildTrendingKeywords,
+  newsKeywordsForArticle,
+} from "@/lib/seo/trending-keywords";
+import { resolveGeneratedArticleModifiedAt } from "@/lib/seo/article-dates";
+import {
   getLanguageConfig,
   NEWSROOM_LANGUAGES,
   normalizeArticleLanguage,
@@ -59,6 +64,19 @@ export function buildLocalizedStoryMetadata(
   const path = `/story/${slug}`;
   const config = getLanguageConfig(lang);
 
+  const trending = buildTrendingKeywords({ limit: 6 });
+  const newsKeywords = newsKeywordsForArticle({
+    headline: fields.seoTitle,
+    category: row.tags[0] ?? "local",
+    region:
+      (row.geo_metadata as { region?: string } | null | undefined)?.region ??
+      "chhattisgarh",
+    tags: row.tags,
+    trendingPool: trending,
+  });
+  const modifiedTime = resolveGeneratedArticleModifiedAt(row);
+  const canonical = `${SITE_URL}${path}`;
+
   const base = buildPageMetadata({
     title: fields.seoTitle,
     description: fields.seoDescription,
@@ -68,14 +86,15 @@ export function buildLocalizedStoryMetadata(
     ogImage: options?.ogImage,
     ogType: "article",
     publishedTime: row.published_at,
-    modifiedTime: row.created_at,
+    modifiedTime,
     section: row.tags[0],
+    newsKeywords,
   });
 
   return {
     ...base,
     alternates: {
-      canonical: path,
+      canonical,
       languages: buildStoryLanguageAlternates(slug, row),
     },
   };

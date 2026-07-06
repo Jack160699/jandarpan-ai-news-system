@@ -5,6 +5,7 @@
 import { buildArticleSlug } from "@/lib/news/slug";
 import { inferSection } from "@/lib/homepage/infer-section";
 import { resolveEditorialDesk } from "@/lib/newsroom/desk-branding";
+import { resolveGeneratedArticleModifiedAt } from "@/lib/seo/article-dates";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
 
@@ -50,7 +51,7 @@ export function generatedToNewsArticle(
     slug: row.slug ?? buildArticleSlug(row.headline, row.id),
     published_at: row.published_at,
     created_at: row.created_at,
-    updated_at: row.created_at,
+    updated_at: resolveGeneratedArticleModifiedAt(row) ?? row.created_at,
     provider: "editorial",
     language: row.language,
     region: section === "chhattisgarh" || section === "raipur" ? "chhattisgarh" : "india",

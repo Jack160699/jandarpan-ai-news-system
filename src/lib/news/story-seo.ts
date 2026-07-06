@@ -14,6 +14,7 @@ import {
   newsKeywordsForArticle,
 } from "@/lib/seo";
 import { buildTrendingKeywords } from "@/lib/seo/trending-keywords";
+import { resolveNewsArticleModifiedAt } from "@/lib/seo/article-dates";
 import { SITE_URL } from "@/lib/seo/constants";
 import {
   displaySourceLine,
@@ -82,7 +83,7 @@ export function liveStoryMetadata(
     ogImage,
     ogType: "article",
     publishedTime: article.published_at,
-    modifiedTime: article.updated_at,
+    modifiedTime: resolveNewsArticleModifiedAt(article),
     section: article.category,
     newsKeywords,
   });

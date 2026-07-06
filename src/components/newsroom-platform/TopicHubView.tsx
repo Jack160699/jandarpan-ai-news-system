@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
+import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { platformArticlesToHomeArticles } from "@/lib/newsroom-platform/content/adapters";
 import { fetchTopicFeed } from "@/lib/newsroom-platform/feeds/topics";
 import { getPlatformTopic } from "@/lib/newsroom-platform/config/topics";
+import { breadcrumbListJsonLd, collectionPageJsonLd } from "@/lib/seo";
+import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
 import { QuickUpdateFeed } from "@/components/quick-update/QuickUpdateFeed";
 import { notFound } from "next/navigation";
 
@@ -24,9 +27,26 @@ export async function TopicHubView({ slug, language = "en" }: TopicHubViewProps)
   const homeArticles = platformArticlesToHomeArticles(feed.items);
   const title = language === "hi" ? meta.titleHi : meta.titleEn;
   const desc = language === "hi" ? meta.descriptionHi : meta.descriptionEn;
+  const path = `/topics/${slug}`;
+  const jsonLd = [
+    collectionPageJsonLd({
+      name: meta.titleEn,
+      description: meta.descriptionEn,
+      path,
+      items: homeArticles.slice(0, 20).map((article) => ({
+        url: `/story/${article.slug}`,
+        name: article.headline,
+      })),
+    }),
+    breadcrumbListJsonLd([
+      buildHomeBreadcrumb(),
+      { name: meta.titleEn, href: path },
+    ]),
+  ];
 
   return (
     <PageShell>
+      <JsonLdScript data={jsonLd} />
       <article className="nr-topic-hub pl-container py-6 pb-24">
         <p className="nr-topic-hub__kicker">Topic hub</p>
         <h1 className="nr-topic-hub__title">{title}</h1>

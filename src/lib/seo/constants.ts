@@ -1,11 +1,11 @@
 import { BRAND } from "@/lib/brand";
 import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
+import { resolveCanonicalSiteUrl } from "@/lib/seo/canonical-url";
 
-/** Production deploy — override via NEXT_PUBLIC_SITE_URL or NEXT_PUBLIC_APP_URL */
-export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ??
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "https://newspaper-motion.vercel.app";
+/** Production deploy — never emits preview *.vercel.app URLs in SEO output */
+export const SITE_URL = resolveCanonicalSiteUrl();
+
+export { CANONICAL_SITE_URL } from "@/lib/seo/canonical-url";
 
 export const SITE_NAME = BRAND.nameEn;
 export const SITE_NAME_HI = BRAND.nameHi;
