@@ -4,6 +4,7 @@ type AdminSessionLogEvent =
   | "tenant_mismatch"
   | "session_desync"
   | "layout_membership_unresolved"
+  | "layout_session_error"
   | "client_hydration_degraded"
   | "session_error"
   | "session_refresh_failed"

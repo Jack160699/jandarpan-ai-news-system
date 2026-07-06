@@ -19,7 +19,22 @@ export async function enqueueArticlesForAi(
   if (!isAiQueueEnabled() || !articleIds.length) return 0;
 
   const supabase = createAdminClient();
-  const rows = articleIds.map((article_id) => ({
+
+  const { data: existing } = await supabase
+    .from("news_ai_queue")
+    .select("article_id, status")
+    .in("article_id", [...articleIds]);
+
+  const blocked = new Set(
+    (existing ?? [])
+      .filter((r) => r.status === "processing" || r.status === "completed")
+      .map((r) => r.article_id)
+  );
+
+  const toEnqueue = articleIds.filter((id) => !blocked.has(id));
+  if (!toEnqueue.length) return 0;
+
+  const rows = toEnqueue.map((article_id) => ({
     article_id,
     status: "pending" as const,
   }));
@@ -30,6 +45,7 @@ export async function enqueueArticlesForAi(
       phase: "enqueue_attempt",
       onConflict: "article_id",
       total: rows.length,
+      skippedInFlight: articleIds.length - rows.length,
       sampleArticleIds: rows.slice(0, 5).map((r) => r.article_id),
       ts: new Date().toISOString(),
     })
@@ -74,6 +90,8 @@ export async function enqueueArticlesForAi(
   return queued;
 }
 
+import { promoteRetryReadyAiQueueItems } from "@/lib/news/ai/ai-queue-retry";
+
 export async function countPendingAiQueue(): Promise<number> {
   const supabase = createAdminClient();
   const { count, error } = await supabase
@@ -89,6 +107,15 @@ export async function claimAiQueueBatch(
   limit = QUEUE_BATCH
 ): Promise<NewsArticleId[]> {
   const supabase = createAdminClient();
+  const staleThreshold = new Date(Date.now() - 10 * 60_000).toISOString();
+
+  await supabase
+    .from("news_ai_queue")
+    .update({ status: "pending" })
+    .eq("status", "processing")
+    .lt("created_at", staleThreshold);
+
+  await promoteRetryReadyAiQueueItems().catch(() => 0);
 
   const { data: pending, error } = await supabase
     .from("news_ai_queue")
@@ -100,14 +127,30 @@ export async function claimAiQueueBatch(
   if (error || !pending?.length) return [];
 
   const ids = pending.map((r) => r.id);
-  const articleIds = pending.map((r) => r.article_id);
 
-  await supabase
+  const { data: claimed } = await supabase
     .from("news_ai_queue")
     .update({ status: "processing" })
-    .in("id", ids);
+    .in("id", ids)
+    .eq("status", "pending")
+    .select("article_id");
 
-  return articleIds;
+  return (claimed ?? []).map((r) => r.article_id);
+}
+
+export async function releaseAiQueueItems(
+  articleIds: readonly NewsArticleId[]
+): Promise<number> {
+  if (!articleIds.length) return 0;
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("news_ai_queue")
+    .update({ status: "pending" })
+    .in("article_id", [...articleIds])
+    .eq("status", "processing")
+    .select("article_id");
+
+  return data?.length ?? 0;
 }
 
 export async function markAiQueueCompleted(

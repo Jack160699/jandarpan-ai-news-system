@@ -21,9 +21,14 @@ export type LocalizedArticleFields = {
   usedTranslation: boolean;
 };
 
+/** Canonical read: `generated_articles.translations` column, metadata mirror as fallback. */
 export function getArticleTranslations(
-  meta: EditorialMetadata | null | undefined
+  meta: EditorialMetadata | null | undefined,
+  columnTranslations?: ArticleTranslations | null
 ): ArticleTranslations {
+  if (columnTranslations && Object.keys(columnTranslations).length > 0) {
+    return columnTranslations;
+  }
   return (meta?.translations as ArticleTranslations) ?? {};
 }
 
@@ -33,7 +38,10 @@ export function resolveLocalizedFieldsStrict(
   displayLanguage: NewsroomLanguage
 ): LocalizedArticleFields | null {
   const source = normalizeArticleLanguage(row.language);
-  const translations = getArticleTranslations(row.editorial_metadata);
+  const translations = getArticleTranslations(
+    row.editorial_metadata,
+    row.translations as ArticleTranslations | null
+  );
 
   if (displayLanguage === source) {
     return {

@@ -13,6 +13,13 @@ import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
 import { optimizeSeoSlug } from "@/lib/seo/slug-optimize";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
+import { buildOptimizedFactPack } from "@/lib/news/ai/optimized-fact-pack";
+import {
+  classifyEditorialTier,
+  editorialMaxTokens,
+} from "@/lib/observability/openai-cost/adaptive-tokens";
+import { shouldRunEditorialRepair } from "@/lib/observability/openai-cost/repair-policy";
+import { logOpenAiUsage, buildUsageRecord } from "@/lib/observability/openai-cost/record";
 import {
   initialHeroPlaceholder,
   queueEditorialImageForArticle,
@@ -51,7 +58,6 @@ export type {
 } from "@/lib/news/ai/editorial-types";
 
 const EDITORIAL_TIMEOUT_MS = 28_000;
-const EXCERPT_MAX = 420;
 const BATCH_RESCUE_COUNT = 2;
 
 type LlmEditorialResponse = {
@@ -161,35 +167,12 @@ function buildFactPack(event: NewsEventRow, signals: NewsSignalRow[]): {
   sourceTexts: string[];
   attributions: SourceAttribution[];
 } {
-  const attributions: SourceAttribution[] = signals.map((s) => ({
-    signal_id: s.id,
-    source: s.source,
-    provider: s.provider,
-    article_url: s.article_url,
-    published_at: s.published_at,
-    confidence: scoreSourceConfidence(s),
-  }));
-
-  const facts = signals.map((s, i) => {
-    const excerpt = (s.raw_content ?? s.title).trim().slice(0, EXCERPT_MAX);
-    return `[${i + 1}] source=${s.source ?? s.provider} | url=${s.article_url} | published=${s.published_at ?? "unknown"}\nTitle: ${s.title}\nExcerpt: ${excerpt}`;
-  });
-
-  const factPackText = [
-    `Event: ${event.canonical_title}`,
-    `Category: ${event.category ?? "general"}`,
-    `Region: ${event.region ?? "india"}`,
-    `Editorial summary (cluster): ${event.event_summary ?? ""}`,
-    `Source count: ${signals.length}`,
-    "--- Facts from sources (synthesize only from these) ---",
-    ...facts,
-  ].join("\n\n");
-
-  const sourceTexts = signals.map(
-    (s) => `${s.title} ${s.raw_content ?? ""}`.trim()
-  );
-
-  return { factPackText, sourceTexts, attributions };
+  const optimized = buildOptimizedFactPack(event, signals);
+  return {
+    factPackText: optimized.factPackText,
+    sourceTexts: optimized.sourceTexts,
+    attributions: optimized.attributions,
+  };
 }
 
 function computeReadingTime(body: string, language: SupportedEditorialLanguage): string {
@@ -258,7 +241,9 @@ function parseLlmDraft(
 
 async function callEditorialLlm(
   factPackText: string,
-  language: SupportedEditorialLanguage
+  language: SupportedEditorialLanguage,
+  event: NewsEventRow,
+  signalCount: number
 ): Promise<LlmEditorialResponse | null> {
   const langInstruction =
     language === "hi"
@@ -295,15 +280,24 @@ Return JSON only:
     process.env.OPENAI_MODEL?.trim() ||
     "gpt-4o-mini";
 
+  const tier = classifyEditorialTier({
+    urgencyScore: event.urgency_score,
+    signalCount,
+    factPackChars: factPackText.length,
+    category: event.category,
+  });
+  const maxTokens = editorialMaxTokens(tier);
+
   const result = await requestChatCompletion({
     operation: "editorial_generate",
     system,
     user: factPackText,
     model,
     temperature: 0.35,
-    maxTokens: 2800,
+    maxTokens,
     jsonMode: true,
     timeoutMs: EDITORIAL_TIMEOUT_MS,
+    context: { worker: "editorial_generate", eventId: event.id },
   });
 
   if (!result.ok) return null;
@@ -597,7 +591,7 @@ async function prepareCandidate(
   let usedFallback = false;
 
   try {
-    const llmRaw = await callEditorialLlm(factPackText, language);
+    const llmRaw = await callEditorialLlm(factPackText, language, event, signals.length);
     draft = llmRaw ? parseLlmDraft(llmRaw, language) : null;
   } catch (err) {
     logEditorial("llm_error", {
@@ -624,7 +618,9 @@ async function prepareCandidate(
     existingHeadlines,
   });
 
-  if (quality.should_repair && !quality.hard_reject) {
+  const repairDecision = shouldRunEditorialRepair(quality);
+
+  if (repairDecision.shouldRepair) {
     draft = await repairBorderlineDraft({
       draft,
       event,
@@ -644,6 +640,28 @@ async function prepareCandidate(
       eventId: event.id,
       confidence: quality.ai_confidence,
       passed: quality.publish_allowed,
+      reasons: repairDecision.reasons,
+    });
+  } else if (quality.should_repair && !quality.hard_reject) {
+    logOpenAiUsage(
+      buildUsageRecord({
+        operation: "editorial_repair",
+        endpoint: "chat.completions",
+        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+        inputTokens: 0,
+        outputTokens: 0,
+        success: true,
+        context: { worker: "editorial_generate", eventId: event.id },
+        metadata: {
+          repairSkipped: true,
+          repairSavedUsd: 0.002,
+          skippedReasons: repairDecision.reasons,
+        },
+      })
+    );
+    logEditorial("repair_skipped", {
+      eventId: event.id,
+      reasons: repairDecision.reasons,
     });
   }
 

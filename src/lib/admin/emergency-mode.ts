@@ -1,23 +1,23 @@
 /**
- * Emergency admin recovery — OPT-IN ONLY.
+ * Emergency admin recovery — OPT-IN ONLY, local development only.
  *
- * Enable when Supabase is down or admin is inaccessible:
+ * Enable when Supabase is down or admin is inaccessible (local dev):
  *   ADMIN_EMERGENCY_MODE=1
- *   NEXT_PUBLIC_ADMIN_EMERGENCY_MODE=1
  *
- * Disable for normal production (default):
- *   unset both, or set to 0
+ * NEVER enable in production or on Vercel deployments.
  */
 
+import { isProductionDeployment } from "@/lib/infrastructure/production";
+
 export function isAdminEmergencyMode(): boolean {
-  return (
-    process.env.ADMIN_EMERGENCY_MODE === "1" ||
-    process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE === "1"
-  );
+  if (isProductionDeployment()) return false;
+  if (process.env.VERCEL_ENV) return false;
+  return process.env.ADMIN_EMERGENCY_MODE === "1";
 }
 
+/** Client-side emergency flag is disabled — server auth is authoritative. */
 export function isAdminEmergencyModeClient(): boolean {
-  return process.env.NEXT_PUBLIC_ADMIN_EMERGENCY_MODE === "1";
+  return false;
 }
 
 export function isAdminEmergencyPath(pathname: string): boolean {

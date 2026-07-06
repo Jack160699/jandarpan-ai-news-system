@@ -10,7 +10,7 @@ import {
   MessageSquare,
   User,
 } from "lucide-react";
-import { nextStatusesForRole } from "@/lib/editorial-workflow/engine";
+import { canApproveWorkflow, nextStatusesForRole } from "@/lib/editorial-workflow/engine";
 import {
   WORKFLOW_LABELS,
   WORKFLOW_STATUSES,
@@ -29,6 +29,7 @@ export function WorkflowBoardPanel() {
   const [comment, setComment] = useState("");
   const [rejectReason, setRejectReason] = useState("");
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [assignTo, setAssignTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [timeline, setTimeline] = useState<{
@@ -84,6 +85,10 @@ export function WorkflowBoardPanel() {
     }
   }, [board, selected?.id]);
 
+  useEffect(() => {
+    if (selected) setAssignTo(selected.workflow_assigned_to ?? "");
+  }, [selected?.id, selected?.workflow_assigned_to]);
+
   async function transition(
     articleId: string,
     toStatus: WorkflowStatus,
@@ -116,6 +121,28 @@ export function WorkflowBoardPanel() {
         const updated = board?.columns[toStatus]?.find((c) => c.id === articleId);
         if (updated) setSelected(updated);
       }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function assignArticle(articleId: string, assignToUserId: string | null) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/editorial/workflow/assign", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articleId, assignToUserId }),
+      });
+      const json = await res.json();
+      if (!json.ok) {
+        setToast(json.error ?? "Assign failed");
+        return;
+      }
+      setToast(assignToUserId ? "Assignee updated" : "Assignment cleared");
+      setAssignTo("");
+      await refresh();
     } finally {
       setBusy(false);
     }
@@ -154,6 +181,7 @@ export function WorkflowBoardPanel() {
   const nextActions = selected
     ? nextStatusesForRole(role, selected.workflow_status)
     : [];
+  const canAssign = canApproveWorkflow(role);
 
   return (
     <div className="wf-board">
@@ -248,6 +276,40 @@ export function WorkflowBoardPanel() {
               >
                 Open editor
               </Link>
+
+              {canAssign ? (
+                <label className="wf-field">
+                  <span>
+                    <User size={12} /> Assignment
+                  </span>
+                  <select
+                    className="anr-input"
+                    value={assignTo || selected.workflow_assigned_to || ""}
+                    onChange={(e) => setAssignTo(e.target.value)}
+                  >
+                    <option value="">Unassigned</option>
+                    {(board.assignees ?? []).map((member) => (
+                      <option key={member.user_id} value={member.user_id}>
+                        {member.email}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="anr-btn anr-btn--ghost"
+                    disabled={busy}
+                    onClick={() =>
+                      void assignArticle(selected.id, assignTo || null)
+                    }
+                  >
+                    Save assignment
+                  </button>
+                </label>
+              ) : selected.assignee_email ? (
+                <p className="anr-meta">
+                  Assigned to {selected.assignee_email}
+                </p>
+              ) : null}
 
               <div className="wf-drawer__actions">
                 <p className="wf-drawer__label">Transitions</p>

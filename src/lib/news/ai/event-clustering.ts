@@ -26,6 +26,7 @@ import {
 import { mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { logNewsroom } from "@/lib/newsroom/logger";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
+import { recordDirectEmbedding } from "@/lib/observability/openai-cost";
 import { asJson, asJsonObject } from "@/types/json";
 import type { NewsEventInsert } from "@/lib/types/newsroom";
 import type { NewsSignalRow } from "@/lib/types/newsroom";
@@ -195,6 +196,9 @@ async function fetchEmbeddings(
   }
 
   try {
+    const model =
+      process.env.OPENAI_EMBEDDING_MODEL?.trim() || "text-embedding-3-small";
+    const started = Date.now();
     const res = await fetch("https://api.openai.com/v1/embeddings", {
       method: "POST",
       headers: {
@@ -202,17 +206,38 @@ async function fetchEmbeddings(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_EMBEDDING_MODEL?.trim() || "text-embedding-3-small",
+        model,
         input: texts.map((t) => t.slice(0, 2000)),
       }),
       signal: AbortSignal.timeout(12_000),
     });
 
-    if (!res.ok) return texts.map(() => null);
+    const latencyMs = Date.now() - started;
+
+    if (!res.ok) {
+      recordDirectEmbedding({
+        operation: "cluster_embeddings",
+        model,
+        texts,
+        latencyMs,
+        success: false,
+        context: { worker: "event_cluster" },
+      });
+      return texts.map(() => null);
+    }
 
     const json = (await res.json()) as {
       data?: Array<{ embedding?: number[] }>;
     };
+    recordDirectEmbedding({
+      operation: "cluster_embeddings",
+      model,
+      texts,
+      json,
+      latencyMs,
+      success: true,
+      context: { worker: "event_cluster" },
+    });
     return (json.data ?? []).map((d) => d.embedding ?? null);
   } catch {
     return texts.map(() => null);

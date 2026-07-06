@@ -15,6 +15,7 @@ import {
   getArticleTranslations,
   resolveLocalizedFields,
 } from "@/lib/i18n/resolve-article";
+import type { ArticleTranslations } from "@/lib/i18n/multilingual/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 export function buildStoryLanguageAlternates(
@@ -24,7 +25,10 @@ export function buildStoryLanguageAlternates(
   const path = `/story/${slug}`;
   const base = `${SITE_URL}${path}`;
   const source = normalizeArticleLanguage(row.language);
-  const translations = getArticleTranslations(row.editorial_metadata);
+  const translations = getArticleTranslations(
+    row.editorial_metadata,
+    row.translations as ArticleTranslations | null
+  );
 
   const languages: Record<string, string> = {
     [getLanguageConfig(source).hreflang]: base,

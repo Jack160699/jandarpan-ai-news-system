@@ -30,7 +30,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     seoTitle: payload.seoTitle as string | undefined,
     seoDescription: payload.seoDescription as string | undefined,
     isBreaking: payload.isBreaking as boolean | undefined,
-  });
+  }, auth.session.membership.tenantId);
 
   if (!ok) {
     return NextResponse.json({ ok: false, error: "update_failed" }, { status: 500 });

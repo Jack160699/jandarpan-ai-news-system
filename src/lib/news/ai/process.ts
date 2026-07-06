@@ -25,12 +25,19 @@ import {
 import { createAdminClient } from "@/lib/supabase";
 
 import {
-
+  enrichMaxTokens,
+} from "@/lib/observability/openai-cost/adaptive-tokens";
+import {
   claimAiQueueBatch,
-
-  markAiQueueCompleted,
-
+  releaseAiQueueItems,
 } from "@/lib/news/ai/queue";
+import {
+  markAiQueueOutcome,
+  promoteRetryReadyAiQueueItems,
+} from "@/lib/news/ai/ai-queue-retry";
+import { recordQueueFailure } from "@/lib/infrastructure/queue/failure-record";
+import type { ExecutionDeadline } from "@/lib/serverless/deadline";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 
 import type { NewsArticleRow } from "@/lib/types/news-article";
 
@@ -41,17 +48,19 @@ const BATCH_LIMIT = 8;
 
 
 export type AiProcessResult = {
-
   processed: number;
-
   skipped: number;
-
   errors: string[];
-
   localFallback: number;
-
   cloudSuccess: number;
+  partial?: boolean;
+  released?: number;
+  batchCount?: number;
+};
 
+export type AiProcessOptions = {
+  deadline?: ExecutionDeadline;
+  microBatchSize?: number;
 };
 
 
@@ -88,7 +97,7 @@ Return JSON only: {"summary":"2-3 sentence summary","headline":"max 12 words","c
 
   const user = `Title: ${article.title}\nDescription: ${article.description ?? ""}\nSource category: ${article.category}\nLanguage hint: ${article.language ?? "en"}`;
 
-
+  const descLen = (article.description ?? article.title ?? "").length;
 
   if (isAnyChatProviderConfigured()) {
 
@@ -102,11 +111,13 @@ Return JSON only: {"summary":"2-3 sentence summary","headline":"max 12 words","c
 
       temperature: 0.3,
 
-      maxTokens: 400,
+      maxTokens: enrichMaxTokens(descLen),
 
       jsonMode: true,
 
       timeoutMs: 8_000,
+
+      context: { worker: "ai_enrich", articleId: String(article.id) },
 
     });
 
@@ -326,229 +337,164 @@ export async function processRecentArticlesWithAi(
 
 
 
-/** Process articles from news_ai_queue (used by /api/process-ai) */
-
+/** Process articles from news_ai_queue with deadline-aware micro-batching */
 export async function processAiQueueBatch(
-
-  limit = 10
-
+  limit = 10,
+  options?: AiProcessOptions
 ): Promise<AiProcessResult> {
-
   if (!isAiEnabled()) {
-
     return {
-
       processed: 0,
-
       skipped: 0,
-
       errors: [],
-
       localFallback: 0,
-
       cloudSuccess: 0,
-
     };
-
   }
 
+  const deadline = options?.deadline;
+  const microBatch = options?.microBatchSize ?? INFRA_CONFIG.aiQueueMicroBatch;
+  const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;
 
+  await promoteRetryReadyAiQueueItems().catch((err) => {
+    console.error("[ai-queue] promote retries:", err instanceof Error ? err.message : err);
+  });
 
-  const articleIds = await claimAiQueueBatch(limit);
-
-  console.log(
-
-    JSON.stringify({
-
-      tag: "[ai-pipeline]",
-
-      phase: "queue_claimed",
-
-      requestedLimit: limit,
-
-      claimed: articleIds.length,
-
-      articleIds: articleIds.slice(0, 20),
-
-      ts: new Date().toISOString(),
-
-    })
-
-  );
-
-  if (!articleIds.length) {
-
-    return {
-
-      processed: 0,
-
-      skipped: 0,
-
-      errors: [],
-
-      localFallback: 0,
-
-      cloudSuccess: 0,
-
-    };
-
-  }
-
-
-
-  const supabase = createAdminClient();
-
-  const { data: rows, error } = await supabase
-
-    .from("news_articles")
-
-    .select("*")
-
-    .in("id", articleIds);
-
-
-
-  if (error || !rows?.length) {
-
-    return {
-
-      processed: 0,
-
-      skipped: 0,
-
-      errors: error ? [error.message] : [],
-
-      localFallback: 0,
-
-      cloudSuccess: 0,
-
-    };
-
-  }
-
-
-
-  let processed = 0;
-
+  let totalProcessed = 0;
+  let totalSkipped = 0;
   let localFallback = 0;
-
   let cloudSuccess = 0;
-
   const errors: string[] = [];
+  let released = 0;
+  let batchCount = 0;
+  let partial = false;
+  let remaining = limit;
 
+  while (remaining > 0) {
+    if (deadline?.shouldStop()) {
+      partial = true;
+      break;
+    }
+    if (deadline && !deadline.hasBudgetFor(reserveMs)) {
+      partial = true;
+      break;
+    }
 
+    const claimSize = Math.min(microBatch, remaining);
+    const articleIds = await claimAiQueueBatch(claimSize);
+    batchCount++;
 
-  await Promise.allSettled(
+    if (!articleIds.length) break;
 
-    rows.map(async (row) => {
+    const supabase = createAdminClient();
+    const { data: rows, error } = await supabase
+      .from("news_articles")
+      .select("*")
+      .in("id", articleIds);
 
-      const article = row as NewsArticleRow;
+    if (error || !rows?.length) {
+      await releaseAiQueueItems(articleIds);
+      errors.push(...(error ? [error.message] : []));
+      break;
+    }
 
-      try {
+    const pendingIds = new Set(articleIds);
+    let batchProcessed = 0;
 
-        const enriched = await enrichArticle(article);
+    await Promise.allSettled(
+      rows.map(async (row) => {
+        const article = row as NewsArticleRow;
+        try {
+          const enriched = await enrichArticle(article);
+          if (!enriched) {
+            await markAiQueueOutcome(article.id, false, "no_enrichment", { retryable: false });
+            pendingIds.delete(article.id);
+            return;
+          }
 
-        if (!enriched) {
+          const { error: updateError } = await supabase
+            .from("news_articles")
+            .update({
+              ai_summary: enriched.ai_summary,
+              ai_headline: enriched.ai_headline,
+              category: enriched.category,
+              ai_processed_at: new Date().toISOString(),
+            })
+            .eq("id", article.id);
 
-          await markAiQueueCompleted(article.id, false, "no_enrichment");
-
-          return;
-
+          if (updateError) {
+            errors.push(updateError.message);
+            await markAiQueueOutcome(article.id, false, updateError.message, {
+              retryable: true,
+            });
+            await recordQueueFailure({
+              worker: "ai_enrich",
+              articleId: article.id,
+              error: updateError.message,
+              category: "database",
+              retryCount: 0,
+              terminal: false,
+            });
+          } else {
+            batchProcessed++;
+            if (enriched.via === "local") localFallback++;
+            else cloudSuccess++;
+            await markAiQueueOutcome(article.id, true);
+          }
+          pendingIds.delete(article.id);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "AI enrich failed";
+          errors.push(`${article.id}: ${msg}`);
+          await markAiQueueOutcome(article.id, false, msg, { retryable: true });
+          await recordQueueFailure({
+            worker: "ai_enrich",
+            articleId: article.id,
+            error: msg,
+            retryCount: 0,
+            terminal: false,
+          });
+          pendingIds.delete(article.id);
         }
+      })
+    );
 
+    totalProcessed += batchProcessed;
+    totalSkipped += rows.length - batchProcessed;
+    remaining -= articleIds.length;
 
-
-        const { error: updateError } = await supabase
-
-          .from("news_articles")
-
-          .update({
-
-            ai_summary: enriched.ai_summary,
-
-            ai_headline: enriched.ai_headline,
-
-            category: enriched.category,
-
-            ai_processed_at: new Date().toISOString(),
-
-          })
-
-          .eq("id", article.id);
-
-
-
-        if (updateError) {
-
-          errors.push(updateError.message);
-
-          await markAiQueueCompleted(article.id, false, updateError.message);
-
-        } else {
-
-          processed++;
-
-          if (enriched.via === "local") localFallback++;
-
-          else cloudSuccess++;
-
-          await markAiQueueCompleted(article.id, true);
-
-        }
-
-      } catch (err) {
-
-        const msg = err instanceof Error ? err.message : "AI enrich failed";
-
-        errors.push(`${article.id}: ${msg}`);
-
-        await markAiQueueCompleted(article.id, false, msg);
-
+    if (deadline?.shouldStop() || (deadline && !deadline.hasBudgetFor(reserveMs))) {
+      if (pendingIds.size > 0) {
+        released += await releaseAiQueueItems([...pendingIds]);
+        partial = true;
       }
-
-    })
-
-  );
-
-
+      break;
+    }
+  }
 
   console.log(
-
     JSON.stringify({
-
       tag: "[ai-pipeline]",
-
       phase: "batch_complete",
-
-      processed,
-
+      processed: totalProcessed,
       localFallback,
-
       cloudSuccess,
-
       errorCount: errors.length,
-
+      partial,
+      released,
+      batchCount,
       ts: new Date().toISOString(),
-
     })
-
   );
-
-
 
   return {
-
-    processed,
-
-    skipped: rows.length - processed,
-
+    processed: totalProcessed,
+    skipped: totalSkipped,
     errors,
-
     localFallback,
-
     cloudSuccess,
-
+    partial,
+    released,
+    batchCount,
   };
-
 }
 

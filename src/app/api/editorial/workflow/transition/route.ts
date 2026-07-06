@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { logPublishingAlert } from "@/lib/collaboration/store";
 import { logEditorialAudit } from "@/lib/dashboard/audit";
+import { createAdminServerClient } from "@/lib/supabase";
 import type { WorkflowStatus } from "@/lib/editorial-workflow/types";
 import { WORKFLOW_STATUSES } from "@/lib/editorial-workflow/types";
 import { transitionWorkflow } from "@/lib/editorial-workflow/store";
@@ -60,6 +62,21 @@ export async function POST(request: Request) {
           : {}),
       } as Record<string, unknown>),
     });
+
+    if (body.toStatus === "published") {
+      const supabase = createAdminServerClient();
+      const { data: row } = await supabase
+        .from("generated_articles")
+        .select("headline")
+        .eq("id", body.articleId)
+        .maybeSingle();
+      await logPublishingAlert({
+        tenantId: auth.session.membership.tenantId,
+        actorEmail: auth.session.email,
+        articleId: body.articleId,
+        headline: row?.headline ?? "Story",
+      });
+    }
   }
 
   return NextResponse.json(result, { status: result.ok ? 200 : 400 });

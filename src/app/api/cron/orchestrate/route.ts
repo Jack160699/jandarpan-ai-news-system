@@ -1,5 +1,7 @@
 /**
- * POST /api/cron/orchestrate — full newsroom pipeline (Vercel cron entry)
+ * POST /api/cron/orchestrate — scheduled intelligence pipeline runner.
+ * QStash fires this at :15/:45 UTC; runs INTELLIGENCE_PIPELINE workers inline.
+ * Manual runs also supported via POST with optional { workers: [...] } body.
  */
 
 import { NextResponse } from "next/server";
@@ -7,20 +9,22 @@ import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import {
+  INTELLIGENCE_PIPELINE,
   listWorkers,
   runCronOrchestration,
 } from "@/lib/infrastructure/cron/orchestrator";
+import { runWorkerEndpoint } from "@/lib/infrastructure/workers/run-guard";
 import type { WorkerId } from "@/lib/infrastructure/workers/types";
+import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const VALID_WORKERS = new Set<WorkerId>([
+  ...INTELLIGENCE_PIPELINE,
   "ingest",
-  "ai_enrich",
   "editorial_generate",
-  "editorial_images",
 ]);
 
 export async function GET(request: Request) {
@@ -32,6 +36,7 @@ export async function POST(request: Request) {
 }
 
 async function handleOrchestrate(request: Request) {
+  const startedAt = Date.now();
   const rawBody = await request.text();
   const auth = await verifyCronRequest(request, { rawBody });
   if (!auth.authorized) {
@@ -67,10 +72,60 @@ async function handleOrchestrate(request: Request) {
     }
   }
 
-  const result = await runCronOrchestration({
-    requestUrl: request.url,
-    workers,
+  const lockResult = await runWorkerEndpoint("orchestrate", 1700, async () => {
+    const result = await runCronOrchestration({
+      requestUrl: request.url,
+      workers: workers?.length ? workers : undefined,
+    });
+    return {
+      ok: result.ok,
+      processed: result.workers.filter((w) => w.ok && !w.skipped).length,
+      failed: result.workers.filter((w) => !w.ok && !w.skipped).length,
+      details: { result },
+    };
   });
+
+  if (lockResult.skipped && lockResult.reason === "overlap_lock") {
+    await recordCronRun({
+      job: "orchestrate",
+      ok: true,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs: lockResult.duration_ms,
+      degraded: true,
+    });
+    return NextResponse.json(
+      {
+        ok: true,
+        skipped: true,
+        reason: "overlap_lock",
+        durationMs: lockResult.duration_ms,
+        availableWorkers: listWorkers(),
+      },
+      { headers: noStoreHeaders() }
+    );
+  }
+
+  const result = lockResult.details?.result as Awaited<
+    ReturnType<typeof runCronOrchestration>
+  > | undefined;
+
+  if (!result) {
+    await recordCronRun({
+      job: "orchestrate",
+      ok: false,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs: lockResult.duration_ms,
+      error: lockResult.reason ?? "orchestrate_failed",
+    });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: lockResult.reason ?? "orchestrate_failed",
+        durationMs: lockResult.duration_ms,
+      },
+      { status: 500, headers: noStoreHeaders() }
+    );
+  }
 
   return NextResponse.json(
     {

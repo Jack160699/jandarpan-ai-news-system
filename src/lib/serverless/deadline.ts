@@ -10,7 +10,10 @@ const HOBBY_BUDGET_MS = 9_000;
 export type ExecutionDeadline = {
   startedAt: number;
   maxDurationMs: number;
+  stopAtMs: number;
   elapsedMs: () => number;
+  remainingMs: () => number;
+  hasBudgetFor: (minMs: number) => boolean;
   shouldStop: () => boolean;
   timedOutSafely: boolean;
   markTimedOut: () => void;
@@ -38,8 +41,14 @@ export function createExecutionDeadline(
   const deadline: ExecutionDeadline = {
     startedAt,
     maxDurationMs: budget,
+    stopAtMs: stopAt,
     timedOutSafely: false,
     elapsedMs: () => Date.now() - startedAt,
+    remainingMs: () => Math.max(0, stopAt - (Date.now() - startedAt)),
+    hasBudgetFor: (minMs: number) => {
+      if (state.timedOutSafely) return false;
+      return stopAt - (Date.now() - startedAt) >= minMs;
+    },
     shouldStop: () => {
       if (state.timedOutSafely) return true;
       if (Date.now() - startedAt >= stopAt) {

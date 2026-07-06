@@ -5,6 +5,8 @@
 import { createAdminClient } from "@/lib/supabase";
 import { asJsonObject, type JsonObject } from "@/types/json";
 
+const STALE_CLAIM_MS = Number(process.env.WORKER_STALE_CLAIM_MS) || 120_000;
+
 export type JobRunRecord = {
   workerId: string;
   jobId?: string | null;
@@ -93,11 +95,17 @@ export async function getQueueStats(): Promise<{
   pending: number;
   claimed: number;
   deadLetters: number;
+  staleClaimed: number;
+  eventBusPending: number;
+  aiQueuePending: number;
+  aiQueueProcessing: number;
   byType: Record<string, number>;
 }> {
   const supabase = createAdminClient();
+  const staleThreshold = new Date(Date.now() - STALE_CLAIM_MS).toISOString();
 
-  const [pendingRes, claimedRes, dlRes, typeRes] = await Promise.all([
+  const [pendingRes, claimedRes, dlRes, typeRes, staleRes, eventRes, aiPendingRes, aiProcessingRes] =
+    await Promise.all([
     supabase
       .from("worker_jobs")
       .select("id", { count: "exact", head: true })
@@ -110,6 +118,23 @@ export async function getQueueStats(): Promise<{
       .from("worker_dead_letters")
       .select("id", { count: "exact", head: true }),
     supabase.from("worker_jobs").select("job_type").eq("status", "pending"),
+    supabase
+      .from("worker_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "claimed")
+      .lt("claimed_at", staleThreshold),
+    supabase
+      .from("event_bus_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase
+      .from("news_ai_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase
+      .from("news_ai_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "processing"),
   ]);
 
   const byType: Record<string, number> = {};
@@ -121,6 +146,10 @@ export async function getQueueStats(): Promise<{
     pending: pendingRes.count ?? 0,
     claimed: claimedRes.count ?? 0,
     deadLetters: dlRes.count ?? 0,
+    staleClaimed: staleRes.count ?? 0,
+    eventBusPending: eventRes.count ?? 0,
+    aiQueuePending: aiPendingRes.count ?? 0,
+    aiQueueProcessing: aiProcessingRes.count ?? 0,
     byType,
   };
 }

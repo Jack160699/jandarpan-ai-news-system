@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
   HeartPulse,
+  Landmark,
   BarChart3,
   Bell,
   BookOpen,
@@ -55,6 +56,7 @@ const NAV = [
   { href: "/admin/sources", label: "Sources", icon: Radio },
   { href: "/admin/live-wire", label: "Live wire", icon: Activity },
   { href: "/admin/health", label: "Health", icon: HeartPulse },
+  { href: "/admin/executive", label: "AI CFO", icon: Landmark },
   { href: "/admin/ingestion", label: "Ingestion", icon: Database },
   { href: "/admin/images", label: "Images", icon: ImageIcon },
   { href: "/admin/media", label: "Media", icon: Images },

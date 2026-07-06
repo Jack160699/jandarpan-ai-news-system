@@ -32,7 +32,7 @@ function hasOpenAiKey(): boolean {
 
 /**
  * Translate a single article to `targetLanguage` if missing. Persists to
- * `editorial_metadata.translations`. Safe to call repeatedly — deduped.
+ * `generated_articles.translations` (canonical) with metadata mirror.
  */
 export async function ensureArticleTranslation(
   row: GeneratedArticleRow,
@@ -45,7 +45,10 @@ export async function ensureArticleTranslation(
     return null;
   }
 
-  const existing = getArticleTranslations(row.editorial_metadata)[target];
+  const existing = getArticleTranslations(
+    row.editorial_metadata,
+    row.translations as ArticleTranslations | null
+  )[target];
   if (existing?.headline?.trim() && existing.summary?.trim()) {
     return existing;
   }
@@ -61,7 +64,12 @@ export async function ensureArticleTranslation(
   const pending = inFlight.get(key);
   if (pending) {
     const ok = await pending;
-    return ok ? getArticleTranslations(row.editorial_metadata)[target] ?? null : null;
+    return ok
+      ? getArticleTranslations(
+          row.editorial_metadata,
+          row.translations as ArticleTranslations | null
+        )[target] ?? null
+      : null;
   }
 
   const job = (async (): Promise<boolean> => {
@@ -80,8 +88,10 @@ export async function ensureArticleTranslation(
 
     if (!bundle) return false;
 
-    const translations =
-      (row.editorial_metadata?.translations as ArticleTranslations) ?? {};
+    const translations = getArticleTranslations(
+      row.editorial_metadata,
+      row.translations as ArticleTranslations | null
+    );
 
     await persistArticleTranslations(
       row.id,
@@ -100,7 +110,12 @@ export async function ensureArticleTranslation(
   inFlight.set(key, job);
   try {
     const ok = await job;
-    return ok ? getArticleTranslations(row.editorial_metadata)[target] ?? null : null;
+    return ok
+      ? getArticleTranslations(
+          row.editorial_metadata,
+          row.translations as ArticleTranslations | null
+        )[target] ?? null
+      : null;
   } finally {
     inFlight.delete(key);
   }

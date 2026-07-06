@@ -8,4 +8,6 @@ export const CG_BHASKAR_TENANT: TenantConfig = {
   ...JAN_DARPAN_CHHATTISGARH_TENANT,
   slug: "cg-bhaskar",
   id: "00000000-0000-4000-8000-000000000001",
+  /** Legacy slug only — do not inherit host routing from Jan Darpan preset */
+  domains: [],
 };

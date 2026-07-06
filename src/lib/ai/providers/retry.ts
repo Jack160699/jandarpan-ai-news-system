@@ -1,6 +1,9 @@
 import type { ClassifiedAiError } from "@/lib/ai/providers/types";
+import {
+  maxRetryAttempts,
+  shouldRetryAiError,
+} from "@/lib/observability/openai-cost/retry-policy";
 
-const MAX_ATTEMPTS = 3;
 const BASE_DELAY_MS = 800;
 
 function sleep(ms: number): Promise<void> {
@@ -14,8 +17,9 @@ export async function withTransientAiRetry<T>(input: {
   isRetryable: (err: ClassifiedAiError) => boolean;
 }): Promise<T> {
   let lastError: ClassifiedAiError | null = null;
+  const maxAttempts = maxRetryAttempts(input.operation);
 
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       return await input.fn(attempt);
     } catch (err) {
@@ -25,12 +29,12 @@ export async function withTransientAiRetry<T>(input: {
           : null;
       if (!classified) throw err;
       lastError = classified;
-      if (!input.isRetryable(classified) || attempt >= MAX_ATTEMPTS - 1) {
+      if (!shouldRetryAiError(classified, attempt, maxAttempts)) {
         throw classified;
       }
       const delay = BASE_DELAY_MS * 2 ** attempt;
       console.warn(
-        `[ai-retry] ${input.provider}/${input.operation} attempt ${attempt + 1}/${MAX_ATTEMPTS}: ${classified.message} — retry in ${delay}ms`
+        `[ai-retry] ${input.provider}/${input.operation} attempt ${attempt + 1}/${maxAttempts}: ${classified.message} — retry in ${delay}ms`
       );
       await sleep(delay);
     }

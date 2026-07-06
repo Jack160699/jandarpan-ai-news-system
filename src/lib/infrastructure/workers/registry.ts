@@ -8,8 +8,20 @@ import {
 } from "@/lib/ai/providers";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
+import { saveQueueCheckpoint } from "@/lib/infrastructure/queue/checkpoint";
+import {
+  resolveAiWorkerTuning,
+  resolveImageWorkerTuning,
+} from "@/lib/infrastructure/queue/tuning";
+import { recordPerfAudit } from "@/lib/observability/queue-analytics";
 import { monitorWorkerResult } from "@/lib/observability/worker-monitor";
 import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
+import {
+  completeWorkerResult,
+  partialWorkerResult,
+  shouldSkipForDeadline,
+  skippedWorkerResult,
+} from "@/lib/infrastructure/workers/deadline-aware";
 import { processAiQueueBatch } from "@/lib/news/ai/process";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
@@ -23,23 +35,17 @@ import type { QueueWorker, WorkerContext, WorkerResult } from "@/lib/infrastruct
 
 async function runIngestWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
-  if (ctx.deadline.shouldStop()) {
-    return {
-      worker: "ingest",
-      ok: false,
-      durationMs: 0,
-      skipped: true,
-      error: "deadline_precheck",
-    };
+  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
+    return skippedWorkerResult("ingest", started, ctx.deadline, "deadline_precheck");
   }
 
   const result = await runScalableIngestion(ctx.deadline);
 
-  return {
-    worker: "ingest",
-    ok: result.ok,
-    durationMs: Date.now() - started,
-    metadata: {
+  return completeWorkerResult("ingest", started, ctx.deadline, {
+    recordsProcessed: result.inserted,
+    recordsSkipped: 0,
+    partial: result.timedOutSafely,
+    extra: {
       inserted: result.inserted,
       signalsInserted: result.signalsInserted,
       totalFetched: result.totalFetched,
@@ -48,79 +54,113 @@ async function runIngestWorker(ctx: WorkerContext): Promise<WorkerResult> {
       completedProviders: result.completedProviders,
       logId: result.logId,
     },
-  };
+  });
 }
 
 async function runAiWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
   if (!isAnyChatProviderConfigured() && !isLocalEnrichEnabled()) {
-    return {
-      worker: "ai_enrich",
-      ok: true,
-      durationMs: 0,
-      skipped: true,
-      metadata: { message: "No AI providers and local enrich disabled" },
-    };
+    return skippedWorkerResult("ai_enrich", started, ctx.deadline, "no_ai_providers");
   }
 
-  if (ctx.deadline.shouldStop()) {
-    return {
-      worker: "ai_enrich",
-      ok: false,
-      durationMs: 0,
-      skipped: true,
-      error: "deadline_precheck",
-    };
+  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
+    const pending = await countPendingAiQueue();
+    return skippedWorkerResult("ai_enrich", started, ctx.deadline, "deadline_precheck", pending);
   }
 
-  const batch = INFRA_CONFIG.aiQueueBatch;
-  const result = await processAiQueueBatch(batch);
+  let totalProcessed = 0;
+  let totalSkipped = 0;
+  let localFallback = 0;
+  let cloudSuccess = 0;
+  let released = 0;
+  let batchCount = 0;
+  let partial = false;
+  const errors: string[] = [];
+  let loops = 0;
+  const maxLoops = 8;
+
+  while (loops < maxLoops) {
+    loops++;
+    const pending = await countPendingAiQueue();
+    if (!pending) break;
+    if (ctx.deadline.shouldStop() || !ctx.deadline.hasBudgetFor(INFRA_CONFIG.workerDeadlineReserveMs)) {
+      partial = true;
+      break;
+    }
+
+    const tuning = resolveAiWorkerTuning(pending, ctx.deadline);
+    const result = await processAiQueueBatch(tuning.batchSize, {
+      deadline: ctx.deadline,
+      microBatchSize: tuning.microBatchSize,
+    });
+
+    totalProcessed += result.processed;
+    totalSkipped += result.skipped;
+    localFallback += result.localFallback;
+    cloudSuccess += result.cloudSuccess;
+    released += result.released ?? 0;
+    batchCount += result.batchCount ?? 1;
+    errors.push(...result.errors.slice(0, 3));
+    if (result.partial) {
+      partial = true;
+      break;
+    }
+    if (result.processed === 0) break;
+  }
+
   const pending = await countPendingAiQueue();
+  const durationMs = Date.now() - started;
 
-  return {
+  await saveQueueCheckpoint({
     worker: "ai_enrich",
-    ok: true,
-    durationMs: Date.now() - started,
-    metadata: {
-      processed: result.processed,
-      skipped: result.skipped,
+    lastRunAt: new Date().toISOString(),
+    recordsProcessed: totalProcessed,
+    recordsSkipped: totalSkipped,
+    remainingQueue: pending,
+    partial,
+    durationMs,
+    recordsPerSec:
+      durationMs > 0 ? Math.round((totalProcessed / durationMs) * 1000 * 100) / 100 : 0,
+    batchCount,
+  });
+
+  await recordPerfAudit({
+    worker: "ai_enrich",
+    ts: new Date().toISOString(),
+    recordsPerSec:
+      durationMs > 0 ? Math.round((totalProcessed / durationMs) * 1000 * 100) / 100 : 0,
+  });
+
+  const build = partial ? partialWorkerResult : completeWorkerResult;
+  return build("ai_enrich", started, ctx.deadline, {
+    recordsProcessed: totalProcessed,
+    recordsSkipped: totalSkipped,
+    remainingQueue: pending,
+    partial,
+    extra: {
       pending,
-      localFallback: result.localFallback,
-      cloudSuccess: result.cloudSuccess,
-      errors: result.errors.slice(0, 5),
+      localFallback,
+      cloudSuccess,
+      released,
+      batchCount,
+      loops,
+      errors: errors.slice(0, 5),
     },
-  };
+  });
 }
 
 async function runEditorialWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
   if (process.env.NEWSROOM_GENERATE_ARTICLES !== "true") {
-    return {
-      worker: "editorial_generate",
-      ok: true,
-      durationMs: 0,
-      skipped: true,
-      metadata: { message: "NEWSROOM_GENERATE_ARTICLES not enabled" },
-    };
+    return skippedWorkerResult("editorial_generate", started, ctx.deadline, "not_enabled");
   }
 
   if (!process.env.OPENAI_API_KEY?.trim()) {
-    return {
-      worker: "editorial_generate",
-      ok: true,
-      durationMs: 0,
-      skipped: true,
-    };
+    return skippedWorkerResult("editorial_generate", started, ctx.deadline, "no_openai_key");
   }
 
-  if (ctx.deadline.shouldStop()) {
-    return {
-      worker: "editorial_generate",
-      ok: false,
-      durationMs: 0,
-      skipped: true,
-      error: "deadline_precheck",
-    };
+  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
+    return skippedWorkerResult("editorial_generate", started, ctx.deadline, "deadline_precheck");
   }
 
   const result = await generateEditorialsFromEvents({
@@ -131,56 +171,130 @@ async function runEditorialWorker(ctx: WorkerContext): Promise<WorkerResult> {
     await revalidateNewsroomCaches({ publishedStories: result.published });
   }
 
-  return {
-    worker: "editorial_generate",
-    ok: result.published > 0 || result.generated > 0,
-    durationMs: Date.now() - started,
-    metadata: {
+  return completeWorkerResult("editorial_generate", started, ctx.deadline, {
+    recordsProcessed: result.published,
+    recordsSkipped: result.rejected,
+    partial: false,
+    extra: {
       published: result.published,
       rejected: result.rejected,
       generated: result.generated,
       avgConfidence: result.avgConfidence,
       concurrency: INFRA_CONFIG.editorialConcurrency,
     },
-  };
+  });
 }
 
 async function runImagesWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
-  if (ctx.deadline.shouldStop()) {
-    return {
-      worker: "editorial_images",
-      ok: false,
-      durationMs: 0,
-      skipped: true,
-      error: "deadline_precheck",
-    };
-  }
+  let pending = await countPendingEditorialImages();
 
-  const pending = await countPendingEditorialImages();
   if (!pending) {
-    return {
-      worker: "editorial_images",
-      ok: true,
-      durationMs: Date.now() - started,
-      skipped: true,
-      metadata: { pending: 0 },
-    };
+    return skippedWorkerResult("editorial_images", started, ctx.deadline, "queue_empty", 0);
   }
 
-  const result = await processEditorialImageQueue(INFRA_CONFIG.imageQueueBatch);
+  const bonusBudgetMs = ctx.tuning?.bonusBudgetMs ?? 0;
+  const effectiveThreshold = Math.max(
+    8_000,
+    INFRA_CONFIG.editorialImagesDeadlineThresholdMs - bonusBudgetMs
+  );
 
-  return {
+  if (!ctx.deadline.hasBudgetFor(effectiveThreshold)) {
+    return skippedWorkerResult(
+      "editorial_images",
+      started,
+      ctx.deadline,
+      "deadline_budget",
+      pending
+    );
+  }
+
+  let totalCompleted = 0;
+  let totalFailed = 0;
+  let totalRetried = 0;
+  let totalSkipped = 0;
+  let totalProcessed = 0;
+  let released = 0;
+  let partial = false;
+  const errors: string[] = [];
+  let loops = 0;
+  const maxLoops = 6;
+  const promptHashCache = new Map<string, { hero_image_url: string; og_image_url: string | null }>();
+
+  while (loops < maxLoops) {
+    loops++;
+    pending = await countPendingEditorialImages();
+    if (!pending) break;
+    if (
+      ctx.deadline.shouldStop() ||
+      !ctx.deadline.hasBudgetFor(INFRA_CONFIG.workerDeadlineReserveMs)
+    ) {
+      partial = true;
+      break;
+    }
+
+    const tuning = resolveImageWorkerTuning(pending, ctx.deadline, bonusBudgetMs);
+    const result = await processEditorialImageQueue(tuning.batchSize, {
+      deadline: ctx.deadline,
+      concurrency: tuning.concurrency,
+      promptHashCache,
+    });
+
+    totalCompleted += result.completed;
+    totalFailed += result.failed;
+    totalRetried += result.retried ?? 0;
+    totalSkipped += result.skipped;
+    totalProcessed += result.processed;
+    released += result.released ?? 0;
+    errors.push(...result.errors.slice(0, 3));
+
+    if (result.partial) {
+      partial = true;
+      break;
+    }
+    if (result.processed === 0) break;
+  }
+
+  const remaining = await countPendingEditorialImages();
+  const durationMs = Date.now() - started;
+
+  await saveQueueCheckpoint({
     worker: "editorial_images",
-    ok: result.completed > 0 || result.processed === 0,
-    durationMs: Date.now() - started,
-    metadata: {
-      processed: result.processed,
-      completed: result.completed,
-      failed: result.failed,
-      pending: await countPendingEditorialImages(),
+    lastRunAt: new Date().toISOString(),
+    recordsProcessed: totalCompleted,
+    recordsSkipped: totalSkipped + totalFailed,
+    remainingQueue: remaining,
+    partial,
+    durationMs,
+    recordsPerSec:
+      durationMs > 0 ? Math.round((totalCompleted / durationMs) * 1000 * 100) / 100 : 0,
+    batchCount: loops,
+  });
+
+  await recordPerfAudit({
+    worker: "editorial_images",
+    ts: new Date().toISOString(),
+    recordsPerSec:
+      durationMs > 0 ? Math.round((totalCompleted / durationMs) * 1000 * 100) / 100 : 0,
+  });
+
+  const build = partial ? partialWorkerResult : completeWorkerResult;
+  return build("editorial_images", started, ctx.deadline, {
+    recordsProcessed: totalCompleted,
+    recordsSkipped: totalSkipped + totalFailed,
+    remainingQueue: remaining,
+    partial,
+    extra: {
+      processed: totalProcessed,
+      completed: totalCompleted,
+      failed: totalFailed,
+      retried: totalRetried,
+      released,
+      pending: remaining,
+      loops,
+      errors: errors.slice(0, 5),
     },
-  };
+  });
 }
 
 export const QUEUE_WORKERS: QueueWorker[] = [
@@ -209,7 +323,11 @@ export async function runQueueWorker(
     };
   }
 
-  logIngestionAnalytics({ event: "worker_start", worker: workerId });
+  logIngestionAnalytics({
+    event: "worker_start",
+    worker: workerId,
+    metadata: { deadlineRemaining: ctx.deadline.remainingMs() },
+  });
 
   try {
     const result = await worker.run(ctx);
@@ -230,7 +348,7 @@ export async function runQueueWorker(
     const failed = {
       worker: workerId,
       ok: false,
-      durationMs: 0,
+      durationMs: Date.now() - ctx.deadline.startedAt,
       error: msg,
     } satisfies WorkerResult;
     return monitorWorkerResult(failed);

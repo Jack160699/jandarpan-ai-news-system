@@ -1,4 +1,5 @@
 import type { EditorAiAction } from "@/lib/editorial-editor/types";
+import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
 
 type AiInput = {
   action: EditorAiAction;
@@ -10,9 +11,16 @@ type AiInput = {
   targetLang?: string;
 };
 
-async function chatCompletion(system: string, user: string): Promise<string | null> {
+async function chatCompletion(
+  system: string,
+  user: string,
+  operation: string
+): Promise<string | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
+
+  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+  const started = Date.now();
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -21,7 +29,7 @@ async function chatCompletion(system: string, user: string): Promise<string | nu
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
+      model,
       temperature: 0.4,
       max_tokens: 800,
       messages: [
@@ -31,11 +39,36 @@ async function chatCompletion(system: string, user: string): Promise<string | nu
     }),
   });
 
-  if (!res.ok) return null;
+  const latencyMs = Date.now() - started;
+
+  if (!res.ok) {
+    recordDirectChatCompletion({
+      operation,
+      model,
+      system,
+      user,
+      latencyMs,
+      success: false,
+      context: { worker: "editor_ai" },
+    });
+    return null;
+  }
   const json = (await res.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
   };
-  return json.choices?.[0]?.message?.content?.trim() ?? null;
+  const content = json.choices?.[0]?.message?.content?.trim() ?? null;
+  recordDirectChatCompletion({
+    operation,
+    model,
+    system,
+    user,
+    json,
+    content: content ?? undefined,
+    latencyMs,
+    success: Boolean(content),
+    context: { worker: "editor_ai" },
+  });
+  return content;
 }
 
 export async function runEditorAiAction(
@@ -48,7 +81,8 @@ export async function runEditorAiAction(
     case "rewrite": {
       const text = await chatCompletion(
         `You are a senior ${lang} news editor. Rewrite for clarity and neutrality. Return only the rewritten body markdown.`,
-        `Headline: ${input.headline}\n\nBody:\n${excerpt}`
+        `Headline: ${input.headline}\n\nBody:\n${excerpt}`,
+        "editor_rewrite"
       );
       if (!text) return { ok: false, error: "ai_unavailable" };
       return { ok: true, result: { body: text } };
@@ -56,7 +90,8 @@ export async function runEditorAiAction(
     case "headlines": {
       const text = await chatCompletion(
         "Suggest 5 distinct headline options for a regional Indian newsroom. Return JSON array of strings only.",
-        `Current: ${input.headline}\nSummary: ${input.summary}\nExcerpt: ${excerpt.slice(0, 600)}`
+        `Current: ${input.headline}\nSummary: ${input.summary}\nExcerpt: ${excerpt.slice(0, 600)}`,
+        "editor_headlines"
       );
       if (!text) return { ok: false, error: "ai_unavailable" };
       try {
@@ -69,7 +104,8 @@ export async function runEditorAiAction(
     case "seo": {
       const text = await chatCompletion(
         "Return JSON: { seo_title, seo_description, focus_keyword } optimized for Google News India.",
-        `Headline: ${input.headline}\nSummary: ${input.summary}`
+        `Headline: ${input.headline}\nSummary: ${input.summary}`,
+        "editor_seo"
       );
       if (!text) return { ok: false, error: "ai_unavailable" };
       try {
@@ -82,7 +118,8 @@ export async function runEditorAiAction(
     case "grammar": {
       const text = await chatCompletion(
         `Fix grammar and spelling in ${lang}. Return only corrected body markdown.`,
-        excerpt
+        excerpt,
+        "editor_grammar"
       );
       if (!text) return { ok: false, error: "ai_unavailable" };
       return { ok: true, result: { body: text } };
@@ -90,7 +127,8 @@ export async function runEditorAiAction(
     case "summarize": {
       const text = await chatCompletion(
         `Write a 2-sentence dek/summary in ${lang}. Return plain text only.`,
-        `Headline: ${input.headline}\n\n${excerpt.slice(0, 1500)}`
+        `Headline: ${input.headline}\n\n${excerpt.slice(0, 1500)}`,
+        "editor_summarize"
       );
       if (!text) return { ok: false, error: "ai_unavailable" };
       return { ok: true, result: { summary: text } };
@@ -103,7 +141,8 @@ export async function runEditorAiAction(
           headline: input.headline,
           summary: input.summary,
           body: excerpt.slice(0, 2500),
-        })
+        }),
+        "editor_translate"
       );
       if (!text) return { ok: false, error: "ai_unavailable" };
       try {
@@ -117,7 +156,8 @@ export async function runEditorAiAction(
       const tone = input.tone ?? "neutral";
       const text = await chatCompletion(
         `Adjust tone to "${tone}" for Indian regional news. Return only body markdown.`,
-        excerpt
+        excerpt,
+        "editor_tone"
       );
       if (!text) return { ok: false, error: "ai_unavailable" };
       return { ok: true, result: { body: text } };
@@ -125,7 +165,8 @@ export async function runEditorAiAction(
     case "tags": {
       const text = await chatCompletion(
         "Suggest 6–8 lowercase topic tags for Chhattisgarh news SEO. Return JSON array of strings.",
-        `Headline: ${input.headline}\n${input.summary}`
+        `Headline: ${input.headline}\n${input.summary}`,
+        "editor_tags"
       );
       if (!text) return { ok: false, error: "ai_unavailable" };
       try {

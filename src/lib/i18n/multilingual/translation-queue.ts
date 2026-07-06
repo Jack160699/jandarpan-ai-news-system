@@ -8,7 +8,7 @@ import {
 } from "@/lib/i18n/languages";
 import { enqueueJob, enqueueJobs, countPendingJobs } from "@/lib/infrastructure/jobs/queue";
 import { createAdminServerClient } from "@/lib/supabase";
-import type { ArticleLocaleBundle } from "@/lib/i18n/multilingual/types";
+import type { ArticleLocaleBundle, ArticleTranslations } from "@/lib/i18n/multilingual/types";
 import { getArticleTranslations } from "@/lib/i18n/resolve-article";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
@@ -70,25 +70,31 @@ export function isTranslatableArticle(
 }
 
 export function hasReaderTranslation(
-  row: Pick<GeneratedArticleRow, "editorial_metadata">,
+  row: Pick<GeneratedArticleRow, "editorial_metadata" | "translations">,
   target: NewsroomLanguage
 ): boolean {
-  const bundle = getArticleTranslations(row.editorial_metadata)[target];
+  const bundle = getArticleTranslations(
+    row.editorial_metadata,
+    row.translations as ArticleTranslations | null
+  )[target];
   return Boolean(bundle?.headline?.trim() && bundle?.summary?.trim());
 }
 
 export function getStoredTranslation(
-  row: Pick<GeneratedArticleRow, "editorial_metadata">,
+  row: Pick<GeneratedArticleRow, "editorial_metadata" | "translations">,
   target: NewsroomLanguage
 ): ArticleLocaleBundle | null {
-  const bundle = getArticleTranslations(row.editorial_metadata)[target];
+  const bundle = getArticleTranslations(
+    row.editorial_metadata,
+    row.translations as ArticleTranslations | null
+  )[target];
   return bundle && isTranslationBundleComplete(bundle) ? bundle : null;
 }
 
 export function articleNeedsTranslation(
   row: Pick<
     GeneratedArticleRow,
-    "language" | "editorial_metadata" | "headline" | "summary" | "article_body"
+    "language" | "editorial_metadata" | "translations" | "headline" | "summary" | "article_body"
   >,
   target: NewsroomLanguage
 ): boolean {
@@ -98,7 +104,10 @@ export function articleNeedsTranslation(
   if (hasReaderTranslation(row, target) && getStoredTranslation(row, target)) {
     return false;
   }
-  const bundle = getArticleTranslations(row.editorial_metadata)[target];
+  const bundle = getArticleTranslations(
+    row.editorial_metadata,
+    row.translations as ArticleTranslations | null
+  )[target];
   return !hasReaderTranslation(row, target) || !isTranslationBundleComplete(bundle);
 }
 
@@ -107,7 +116,7 @@ export async function auditTranslationCoverage(): Promise<TranslationCoverageAud
 
   const { data: articles, error } = await supabase
     .from("generated_articles")
-    .select("id, language, editorial_metadata, published_at, editorial_status")
+    .select("id, language, editorial_metadata, translations, published_at, editorial_status")
     .not("published_at", "is", null)
     .eq("editorial_status", "approved");
 
@@ -128,13 +137,16 @@ export async function auditTranslationCoverage(): Promise<TranslationCoverageAud
     publishedTotal += 1;
     const typed = row as Pick<
       GeneratedArticleRow,
-      "language" | "editorial_metadata"
+      "language" | "editorial_metadata" | "translations"
     >;
     const source = normalizeArticleLanguage(typed.language);
     if (source === "hi") hiSource += 1;
     if (source === "en") enSource += 1;
 
-    const translations = getArticleTranslations(typed.editorial_metadata);
+    const translations = getArticleTranslations(
+      typed.editorial_metadata,
+      typed.translations as ArticleTranslations | null
+    );
     const enBundle = translations.en;
     const hiBundle = translations.hi;
 
@@ -221,7 +233,7 @@ export async function findArticlesMissingTranslation(input: {
   let query = supabase
     .from("generated_articles")
     .select(
-      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, published_at, tenant_id"
+      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, translations, published_at, tenant_id"
     )
     .not("published_at", "is", null)
     .eq("editorial_status", "approved")

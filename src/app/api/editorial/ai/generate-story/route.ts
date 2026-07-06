@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { generateNewsroomStory } from "@/lib/ai/generate-story";
 import type { AiDeskTemplate, AiGenerateStoryMode } from "@/lib/ai/types";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
+import { checkEditorialAiRateLimit } from "@/lib/security/ai-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,6 +12,9 @@ const MODES: AiGenerateStoryMode[] = ["prompt", "text", "link"];
 export async function POST(request: Request) {
   const auth = await requireEditorialAuth(request, "editorial:write");
   if (!auth.ok) return auth.response;
+
+  const rate = await checkEditorialAiRateLimit(auth.session, "generate-story");
+  if (!rate.allowed) return rate.response;
 
   let body: {
     mode?: AiGenerateStoryMode;

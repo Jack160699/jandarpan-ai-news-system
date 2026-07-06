@@ -1,3 +1,4 @@
+import { canAccessAdminRoute } from "@/lib/newsroom-auth/rbac";
 import {
   canAccessBilling,
   canManageTeam,
@@ -18,6 +19,7 @@ export type AdminNavHref =
   | "/admin/sources"
   | "/admin/live-wire"
   | "/admin/health"
+  | "/admin/executive"
   | "/admin/ingestion"
   | "/admin/images"
   | "/admin/media"
@@ -54,7 +56,8 @@ export function isAdminNavItemVisible(
       return canAccessBilling(ctx);
     }
   }
-  return true;
+  if (!hasResolvedRole(ctx)) return false;
+  return canAccessAdminRoute(ctx.role!, href);
 }
 
 export function filterAdminNavItems<T extends { href: string }>(

@@ -2,6 +2,8 @@
  * Canonical newsroom RBAC roles (DB + app)
  */
 
+import { isProductionDeployment } from "@/lib/infrastructure/production";
+
 export const CANONICAL_ROLES = [
   "super_admin",
   "editor",
@@ -33,22 +35,35 @@ export function normalizeDashboardRole(role: string): CanonicalRole {
   return "journalist";
 }
 
-export const SUPER_ADMIN_EMAILS = new Set(
-  (
-    process.env.NEWSROOM_SUPER_ADMIN_EMAILS ??
-    "shriyanshchandrakar@gmail.com"
-  )
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean)
-);
+function parseSuperAdminEmails(): Set<string> {
+  const raw = process.env.NEWSROOM_SUPER_ADMIN_EMAILS?.trim();
+  if (!raw) return new Set();
+  return new Set(
+    raw
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+export function getSuperAdminEmails(): Set<string> {
+  return parseSuperAdminEmails();
+}
+
+/** @deprecated Use getSuperAdminEmails() — kept for existing imports */
+export const SUPER_ADMIN_EMAILS = parseSuperAdminEmails();
 
 export function resolveRoleForEmail(
   email: string,
   existingRole?: string | null
 ): CanonicalRole {
   const normalized = email.trim().toLowerCase();
-  if (SUPER_ADMIN_EMAILS.has(normalized)) return "super_admin";
+  const allowlist = parseSuperAdminEmails();
+  if (allowlist.size === 0 && isProductionDeployment()) {
+    if (existingRole) return normalizeDashboardRole(existingRole);
+    return "journalist";
+  }
+  if (allowlist.has(normalized)) return "super_admin";
   if (existingRole) return normalizeDashboardRole(existingRole);
   return "journalist";
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { mapDashboardToAdminSession } from "@/lib/auth/map-admin-session";
 import { logAdminSession } from "@/lib/auth/admin-session-log";
 import { syncMembershipCookiesFromSession } from "@/lib/auth/sync-membership-cookies";
@@ -7,9 +8,9 @@ import { getDashboardSession } from "@/lib/saas-auth/session";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getDashboardSession();
+    const session = await getDashboardSession(request);
 
     if (!session) {
       return NextResponse.json(

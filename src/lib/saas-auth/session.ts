@@ -18,7 +18,14 @@ import {
   TENANT_COOKIE_AUTH,
 } from "@/lib/security/constants";
 import { secureCookieOptions } from "@/lib/security/cookies";
-import { safeGetUser } from "@/lib/auth/auth-safe";
+import { safeGetSession, safeGetUser } from "@/lib/auth/auth-safe";
+import {
+  buildAuthTraceSnapshot,
+  logAuthTrace,
+  summarizeAuthCookies,
+  traceGetSessionResult,
+  traceGetUserResult,
+} from "@/lib/auth/auth-trace";
 import { logAdminSession } from "@/lib/auth/admin-session-log";
 import { traceAdminBoot } from "@/lib/observability/admin-boot";
 import { isTimeoutError, withTimeout, withTimeoutFallback } from "@/lib/utils/withTimeout";
@@ -150,17 +157,46 @@ function devBypassMembership(tenantSlug?: string | null): TenantMembership {
   };
 }
 
+function resolveAuthTenantHint(
+  request: Request | undefined,
+  cookieStore: Awaited<ReturnType<typeof cookies>>
+): {
+  used: string | null;
+  header: string | null;
+  authCookie: string | null;
+  whitelabelCookie: string | null;
+} {
+  const header = request?.headers.get("x-tenant-slug") ?? null;
+  const authCookie = cookieStore.get(TENANT_COOKIE_AUTH)?.value ?? null;
+  const whitelabelCookie = cookieStore.get("nr-tenant-slug")?.value ?? null;
+  const used = header ?? authCookie ?? null;
+  return { used, header, authCookie, whitelabelCookie };
+}
+
 export async function getDashboardSession(
   request?: Request
 ): Promise<DashboardSession | null> {
   const cookieStore = await cookies();
-  const tenantHint =
-    request?.headers.get("x-tenant-slug") ??
-    cookieStore.get("nr-tenant-slug")?.value ??
-    null;
+  const cookieSummary = summarizeAuthCookies(cookieStore.getAll());
+  const tenantHints = resolveAuthTenantHint(request, cookieStore);
+  const tenantHint = tenantHints.used;
 
   if (!isSupabaseConfigured()) {
-    if (process.env.NODE_ENV === "development" && !isProdRuntime()) {
+    logAuthTrace(
+      buildAuthTraceSnapshot({
+        phase: "getDashboardSession",
+        supabaseConfigured: false,
+        cookies: cookieSummary,
+        tenantHints,
+        failureStep: "supabase_not_configured",
+        failureDetail: "isSupabaseConfigured() returned false",
+      })
+    );
+    if (
+      process.env.NODE_ENV === "development" &&
+      !isProdRuntime() &&
+      process.env.DASHBOARD_DEV_BYPASS === "1"
+    ) {
       return {
         userId: DEV_USER_ID,
         email: "dev@newsroom.local",
@@ -175,12 +211,33 @@ export async function getDashboardSession(
   traceAdminBoot("AUTH_INIT", "getUser");
   const supabase = await createCookieServerClient();
   const cookieAuth = await safeGetUser(supabase, "AUTH_INIT_getUser");
+  const sessionProbe = await safeGetSession(supabase, "AUTH_INIT_getSession");
 
   const user = cookieAuth.user;
   const timedOut = cookieAuth.timedOut;
   const error = cookieAuth.error;
 
-  if (timedOut || error || !user) return null;
+  if (timedOut || error || !user) {
+    logAuthTrace(
+      buildAuthTraceSnapshot({
+        phase: "getDashboardSession",
+        supabaseConfigured: true,
+        cookies: cookieSummary,
+        tenantHints,
+        getUser: traceGetUserResult(cookieAuth),
+        getSession: traceGetSessionResult(sessionProbe),
+        failureStep: timedOut
+          ? "auth_getUser_timeout"
+          : error
+            ? "auth_getUser_error"
+            : "auth_getUser_null",
+        failureDetail: timedOut
+          ? "safeGetUser timed out in getDashboardSession"
+          : error?.message ?? "auth.getUser() returned no user",
+      })
+    );
+    return null;
+  }
 
   const userData = { user };
 
@@ -223,17 +280,63 @@ export async function getDashboardSession(
       userId: userData.user.id,
       timedOut: membershipTimedOut,
     });
+    logAuthTrace(
+      buildAuthTraceSnapshot({
+        phase: "getDashboardSession",
+        supabaseConfigured: true,
+        cookies: cookieSummary,
+        tenantHints,
+        getUser: traceGetUserResult(cookieAuth),
+        getSession: traceGetSessionResult(sessionProbe),
+        membership: {
+          resolved: false,
+          tenantSlug: null,
+          role: null,
+          timedOut: membershipTimedOut,
+          failureReason: membershipTimedOut
+            ? "membership_lookup_timeout"
+            : "membership_unresolved",
+        },
+        failureStep: membershipTimedOut
+          ? "membership_lookup_timeout"
+          : "membership_unresolved",
+        failureDetail: "Active tenant_memberships row not found for user",
+      })
+    );
     return null;
   }
 
   if (tenantHint && membership.tenantSlug !== tenantHint) {
-    logAdminSession("tenant_mismatch", {
+    logAdminSession("session_desync", {
       userId: userData.user.id,
-      expectedTenant: tenantHint,
+      staleAuthTenantHint: tenantHint,
       resolvedTenant: membership.tenantSlug,
+      whitelabelTenantCookie: tenantHints.whitelabelCookie,
     });
-    return null;
+    try {
+      await setMembershipContextCookies(membership.role, membership.tenantSlug);
+    } catch {
+      /* route handler may not allow cookie mutation — session route syncs after */
+    }
   }
+
+  logAuthTrace(
+    buildAuthTraceSnapshot({
+      phase: "getDashboardSession",
+      supabaseConfigured: true,
+      cookies: cookieSummary,
+      tenantHints,
+      getUser: traceGetUserResult(cookieAuth),
+      getSession: traceGetSessionResult(sessionProbe),
+      membership: {
+        resolved: true,
+        tenantSlug: membership.tenantSlug,
+        role: membership.role,
+        timedOut: false,
+        failureReason: null,
+      },
+    })
+  );
 
   console.log("[SESSION_OK]", "resolved_authenticated_session", {
     userId: userData.user.id,

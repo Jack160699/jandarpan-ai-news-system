@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { persistReaderEvents } from "@/lib/analytics/persist";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { checkPublicApiRateLimit } from "@/lib/security/public-rate-limit";
 import { asJsonObject } from "@/types/json";
 
 export const runtime = "nodejs";
@@ -16,6 +17,9 @@ type LegacyBody = {
 
 /** Legacy endpoint — forwards to analytics engine */
 export async function POST(request: Request) {
+  const rate = await checkPublicApiRateLimit(request, "story-analytics", 120, 60);
+  if (!rate.allowed) return rate.response;
+
   let body: LegacyBody;
 
   try {

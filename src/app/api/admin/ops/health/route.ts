@@ -12,6 +12,9 @@ import {
   getOpsErrorSummary,
   computeStabilityScore,
   getRecentOpsErrors,
+  getQueueAnalyticsDashboard,
+  getOpenAiUsageDashboard,
+  getAiFinancialDashboard,
 } from "@/lib/observability";
 import { DASHBOARD_CACHE_META } from "@/lib/infrastructure/cache/dashboard";
 import { ANALYTICS_CACHE_TTL_SEC } from "@/lib/infrastructure/cache";
@@ -26,12 +29,16 @@ export async function GET(request: Request) {
   const auth = await requireEditorialAuth(request, "monitoring:read");
   if (!auth.ok) return auth.response;
 
-  const [checks, metrics, cron, errors, errorList] = await Promise.all([
+  const [checks, metrics, cron, errors, errorList, queueAnalytics, openAiUsage, aiFinancial] =
+    await Promise.all([
     runAllHealthChecks(),
     getMetricsDashboard(),
     getCronMonitorState(),
     getOpsErrorSummary(),
     getRecentOpsErrors(25),
+    getQueueAnalyticsDashboard(),
+    getOpenAiUsageDashboard(),
+    getAiFinancialDashboard(),
   ]);
 
   const status = aggregateHealthStatus(checks);
@@ -43,6 +50,9 @@ export async function GET(request: Request) {
     stability: score,
     checks,
     metrics,
+    queueAnalytics,
+    openAiUsage,
+    aiFinancial,
     cron,
     errors,
     recentErrors: errorList,

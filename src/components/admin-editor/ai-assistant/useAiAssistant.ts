@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createAiId, readStorage, writeStorage } from "./lib/browser-safe";
+import { isProductionDeployment } from "@/lib/infrastructure/production";
+import { runEditorAiAssistantGeneration } from "./real-ai-api";
 import {
   getQuickActionLabel,
   runMockAiGeneration,
@@ -56,12 +58,19 @@ export function useAiAssistant(
       setActiveTab("chat");
 
       try {
-        const response = await runMockAiGeneration({
-          prompt: userPrompt,
-          actionId,
-          context,
-          onTaskUpdate: setTasks,
-        });
+        const response = isProductionDeployment()
+          ? await runEditorAiAssistantGeneration({
+              prompt: userPrompt,
+              actionId,
+              context,
+              onTaskUpdate: setTasks,
+            })
+          : await runMockAiGeneration({
+              prompt: userPrompt,
+              actionId,
+              context,
+              onTaskUpdate: setTasks,
+            });
 
         setResponses((prev) => [response, ...prev].slice(0, 20));
         setHistory((prev) =>
@@ -92,6 +101,10 @@ export function useAiAssistant(
         }
 
         callbacks.onToast?.("AI suggestion ready");
+      } catch (err) {
+        callbacks.onToast?.(
+          err instanceof Error ? err.message : "AI unavailable — check API key"
+        );
       } finally {
         setIsGenerating(false);
         setTimeout(() => setTasks([]), 1200);

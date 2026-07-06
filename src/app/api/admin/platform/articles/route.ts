@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     language: searchParams.get("language") ?? undefined,
     breaking: searchParams.get("breaking") === "true" ? true : undefined,
     published: (searchParams.get("published") as "all" | "published" | "draft") ?? "all",
-  });
+  }, auth.session.membership.tenantId);
 
   if (!result) {
     return NextResponse.json(

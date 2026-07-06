@@ -211,15 +211,35 @@ async function claimEditorialImageBatchFallback(
   if (!pending?.length) return [];
 
   const ids = pending.map((r) => r.id);
-  await supabase
+  const { data: claimed } = await supabase
     .from("editorial_image_queue")
     .update({
       status: "processing",
       processing_started_at: now,
     })
-    .in("id", ids);
+    .in("id", ids)
+    .eq("status", "pending")
+    .select("*");
 
-  return pending as EditorialImageQueueRow[];
+  return (claimed ?? []) as EditorialImageQueueRow[];
+}
+
+export async function releaseEditorialImageBatch(
+  queueIds: string[]
+): Promise<number> {
+  if (!queueIds.length) return 0;
+  const supabase = createAdminServerClient();
+  const { data } = await supabase
+    .from("editorial_image_queue")
+    .update({
+      status: "pending",
+      processing_started_at: null,
+    })
+    .in("id", queueIds)
+    .eq("status", "processing")
+    .select("id");
+
+  return data?.length ?? 0;
 }
 
 export async function markEditorialImageCompletedWithMeta(input: {

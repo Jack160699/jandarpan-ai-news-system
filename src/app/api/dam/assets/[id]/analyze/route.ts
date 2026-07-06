@@ -3,6 +3,7 @@ import { analyzeAssetWithAi } from "@/lib/dam/ai-analysis";
 import { getDamAsset } from "@/lib/dam/store";
 import { createAdminServerClient } from "@/lib/supabase/admin";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
+import { checkEditorialAiRateLimit } from "@/lib/security/ai-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,6 +13,9 @@ type RouteCtx = { params: Promise<{ id: string }> };
 export async function POST(request: Request, ctx: RouteCtx) {
   const guard = await requireDashboardSession(request, "editorial:write");
   if (!guard.ok) return guard.response;
+
+  const rate = await checkEditorialAiRateLimit(guard.session, "dam-analyze");
+  if (!rate.allowed) return rate.response;
 
   const { id } = await ctx.params;
   const tenantId = guard.session.membership.tenantId;

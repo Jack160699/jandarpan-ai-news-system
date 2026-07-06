@@ -1,9 +1,6 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
-import {
-  deadlineForStatus,
-  syncLegacyEditorialStatus,
-  validateTransition,
-} from "@/lib/editorial-workflow/engine";
+import { validateTransition } from "@/lib/editorial-workflow/engine";
+import { buildWorkflowTransitionPatch } from "@/lib/editorial/publication";
 import type {
   WorkflowArticleCard,
   WorkflowBoardSnapshot,
@@ -31,7 +28,7 @@ export async function fetchWorkflowBoard(
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
 
-  const [articlesRes, eventsRes] = await Promise.all([
+  const [articlesRes, eventsRes, membersRes] = await Promise.all([
     supabase
       .from("generated_articles")
       .select(
@@ -49,6 +46,12 @@ export async function fetchWorkflowBoard(
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(40),
+    supabase
+      .from("tenant_memberships")
+      .select("user_id, email")
+      .eq("tenant_id", tenantId)
+      .eq("status", "active")
+      .order("email", { ascending: true }),
   ]);
 
   const articles = articlesRes.data ?? [];
@@ -129,6 +132,10 @@ export async function fetchWorkflowBoard(
         .sort((a, b) => b.count - a.count)
         .slice(0, 8),
     },
+    assignees: (membersRes.data ?? []).map((m) => ({
+      user_id: m.user_id,
+      email: m.email,
+    })),
     events: (eventsRes.data ?? []) as WorkflowEventRecord[],
     fetchedAt: new Date().toISOString(),
   };
@@ -178,27 +185,19 @@ export async function transitionWorkflow(input: {
   if (input.toStatus === "published" && !publishedAt) {
     publishedAt = new Date().toISOString();
   }
-  if (input.toStatus === "scheduled" && !publishedAt) {
-    publishedAt = null;
-  }
 
-  const patch: Record<string, unknown> = {
-    workflow_status: input.toStatus,
-    workflow_deadline_at: deadlineForStatus(input.toStatus),
-    workflow_rejection_reason: rejectionReason,
-    editorial_status: syncLegacyEditorialStatus(input.toStatus, publishedAt),
-    published_at: publishedAt,
-    reviewed_at: new Date().toISOString(),
-  };
-
-  if (input.assignToUserId !== undefined) {
-    patch.workflow_assigned_to = input.assignToUserId;
-  }
+  const patch = buildWorkflowTransitionPatch({
+    toStatus: input.toStatus,
+    publishedAt,
+    rejectionReason,
+    assignToUserId: input.assignToUserId,
+  });
 
   const { error: updateError } = await supabase
     .from("generated_articles")
     .update(patch as never)
-    .eq("id", input.articleId);
+    .eq("id", input.articleId)
+    .eq("tenant_id", tenantId);
 
   if (updateError) return { ok: false, error: updateError.message };
 

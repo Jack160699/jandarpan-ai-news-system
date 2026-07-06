@@ -1,7 +1,6 @@
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { FeedPage, GlobalBriefSegment, PlatformArticle } from "../content/types";
-import { queryArticles, queryGeneratedAsPlatform } from "../db/queries";
-import { articleRowToPlatform } from "../db/types-map";
+import { queryGeneratedAsPlatform } from "../db/queries";
 import { sortByTrending } from "../content/validate";
 import { ISR } from "../config/isr";
 
@@ -40,16 +39,11 @@ export async function fetchGlobalBriefFeed(
   }
 
   const offset = (page - 1) * pageSize;
-  const platformRows = await queryArticles({
-    category,
-    limit: pageSize,
+  const generated = await queryGeneratedAsPlatform({
+    limit: pageSize + 20,
     offset,
   });
-  const generated = await queryGeneratedAsPlatform({ limit: pageSize, offset });
-  const items = [
-    ...platformRows.map(articleRowToPlatform),
-    ...generated.filter((g) => g.category === category),
-  ];
+  const items = generated.filter((g) => g.category === category);
   const sorted = sortByTrending(items);
   const slice = sorted.slice(0, pageSize);
 

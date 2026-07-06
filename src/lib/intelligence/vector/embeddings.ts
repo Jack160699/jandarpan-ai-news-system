@@ -2,6 +2,13 @@
  * OpenAI embedding client — text-embedding-3-small (1536 dims)
  */
 
+import {
+  buildUsageRecord,
+  logOpenAiUsage,
+  parseEmbeddingUsage,
+} from "@/lib/observability/openai-cost";
+import type { OpenAiCallContext } from "@/lib/observability/openai-cost";
+
 const MODEL = process.env.OPENAI_EMBEDDING_MODEL?.trim() || "text-embedding-3-small";
 const DIM = 1536;
 
@@ -28,7 +35,8 @@ export async function embedTexts(
 
 /** Defensive OpenAI client — never throws; surfaces retry hints for workers */
 export async function embedTextsSafe(
-  texts: string[]
+  texts: string[],
+  context?: OpenAiCallContext & { operation?: string }
 ): Promise<EmbedTextsResult> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey || texts.length === 0) {
@@ -36,6 +44,7 @@ export async function embedTextsSafe(
   }
 
   const inputs = texts.map((t) => t.slice(0, 8000));
+  const started = Date.now();
 
   try {
     const res = await fetch("https://api.openai.com/v1/embeddings", {
@@ -66,7 +75,24 @@ export async function embedTextsSafe(
 
     const json = (await res.json()) as {
       data?: Array<{ embedding?: number[]; index?: number }>;
+      usage?: Record<string, unknown>;
     };
+
+    const usage = parseEmbeddingUsage(json);
+    logOpenAiUsage(
+      buildUsageRecord({
+        operation: context?.operation ?? "embeddings",
+        endpoint: "embeddings",
+        model: MODEL,
+        inputTokens: usage.inputTokens,
+        outputTokens: 0,
+        latencyMs: Date.now() - started,
+        success: true,
+        user: inputs.join("\n").slice(0, 2000),
+        context,
+        metadata: { batchSize: texts.length },
+      })
+    );
 
     const out: (number[] | null)[] = texts.map(() => null);
     for (const row of json.data ?? []) {

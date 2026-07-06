@@ -16,18 +16,21 @@ import type {
   NewsEventRow,
   NewsSignalRow,
 } from "@/lib/types/newsroom";
+import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const TIMEOUT_MS = 28_000;
 
 async function loadArticle(
-  articleId: string
+  articleId: string,
+  tenantId: string
 ): Promise<GeneratedArticleRow | null> {
   const supabase = createAdminServerClient();
   const { data } = await supabase
     .from("generated_articles")
     .select("*")
     .eq("id", articleId)
+    .eq("tenant_id", tenantId)
     .maybeSingle();
   return (data ?? null) as unknown as GeneratedArticleRow | null;
 }
@@ -72,6 +75,13 @@ async function callRegenerateLlm(
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
 
+  const model =
+    process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
+    process.env.OPENAI_MODEL?.trim() ||
+    "gpt-4o-mini";
+  const systemContent = `Regenerate a news article from the fact pack. Return JSON: {"headline":"","summary":"","sections":{"intro":"","key_developments":"","regional_implications":""}}. Language: ${language === "hi" ? "Hindi" : "English"}.`;
+  const started = Date.now();
+
   const res = await fetch(OPENAI_URL, {
     method: "POST",
     headers: {
@@ -79,16 +89,13 @@ async function callRegenerateLlm(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model:
-        process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
-        process.env.OPENAI_MODEL?.trim() ||
-        "gpt-4o-mini",
+      model,
       temperature: 0.35,
       max_tokens: 2400,
       messages: [
         {
           role: "system",
-          content: `Regenerate a news article from the fact pack. Return JSON: {"headline":"","summary":"","sections":{"intro":"","key_developments":"","regional_implications":""}}. Language: ${language === "hi" ? "Hindi" : "English"}.`,
+          content: systemContent,
         },
         { role: "user", content: factPack },
       ],
@@ -97,11 +104,35 @@ async function callRegenerateLlm(
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
 
-  if (!res.ok) return null;
+  const latencyMs = Date.now() - started;
+
+  if (!res.ok) {
+    recordDirectChatCompletion({
+      operation: "editorial_regenerate",
+      model,
+      system: systemContent,
+      user: factPack,
+      latencyMs,
+      success: false,
+      context: { worker: "admin_regenerate" },
+    });
+    return null;
+  }
   const json = (await res.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
   };
   const raw = json.choices?.[0]?.message?.content;
+  recordDirectChatCompletion({
+    operation: "editorial_regenerate",
+    model,
+    system: systemContent,
+    user: factPack,
+    json,
+    content: raw ?? undefined,
+    latencyMs,
+    success: Boolean(raw),
+    context: { worker: "admin_regenerate" },
+  });
   if (!raw) return null;
 
   const parsed = JSON.parse(raw) as {
@@ -148,14 +179,15 @@ async function callRegenerateLlm(
 }
 
 export async function regenerateGeneratedArticle(
-  articleId: string
+  articleId: string,
+  tenantId: string
 ): Promise<EditorialActionResult> {
   if (!isSupabaseConfigured()) return { ok: false, message: "No database" };
   if (!process.env.OPENAI_API_KEY?.trim()) {
     return { ok: false, message: "OPENAI_API_KEY not set" };
   }
 
-  const article = await loadArticle(articleId);
+  const article = await loadArticle(articleId, tenantId);
   if (!article) return { ok: false, message: "Article not found" };
 
   const eventId = article.event_id;
@@ -221,16 +253,22 @@ export async function regenerateGeneratedArticle(
         source_count: signals.length,
       },
     })
-    .eq("id", articleId);
+    .eq("id", articleId)
+    .eq("tenant_id", tenantId);
 
   if (error) return { ok: false, message: error.message };
   return { ok: true, message: "Article regenerated" };
 }
 
 export async function queueArticleImageRegeneration(
-  articleId: string
+  articleId: string,
+  tenantId: string
 ): Promise<EditorialActionResult> {
   if (!isSupabaseConfigured()) return { ok: false, message: "No database" };
+
+  const article = await loadArticle(articleId, tenantId);
+  if (!article) return { ok: false, message: "Article not found" };
+
   const queued = await enqueueEditorialImage(articleId);
   if (!queued) return { ok: false, message: "Failed to queue image" };
   return { ok: true, message: "Image queued for regeneration" };

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
 import { SearchPanel } from "@/components/search/SearchPanel";
 import { SearchResultsList } from "@/components/search/SearchResultsList";
+import { SearchEmptyState } from "@/components/search/SearchEmptyState";
 import { Footer } from "@/sections/Footer";
 import { executeSearch } from "@/lib/search/search";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
@@ -106,6 +107,8 @@ export default async function SearchPage({ searchParams }: PageProps) {
               </p>
               <SearchResultsList hits={serverResult.hits} />
             </>
+          ) : serverResult && serverResult.hits.length === 0 ? (
+            <SearchEmptyState query={q || undefined} />
           ) : null}
 
           {!q && (

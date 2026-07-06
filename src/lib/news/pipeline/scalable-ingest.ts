@@ -7,7 +7,7 @@ import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { evaluateIngestionAlert } from "@/lib/observability/alerts";
 import { createAdminServerClient } from "@/lib/supabase";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
-import { clusterRecentSignals, logNewsroom } from "@/lib/newsroom";
+import { logNewsroom } from "@/lib/newsroom";
 import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
 import {
   ingestProviderArticles,
@@ -16,7 +16,6 @@ import {
 import type { ArticleValidationStats } from "@/lib/news/sanitize-article";
 import { runParallelApiProviders } from "@/lib/news/providers/run-provider";
 import { runRssBatched } from "@/lib/news/providers/rss-batch";
-import { getActiveCronSecret } from "@/lib/infrastructure/auth/cron-auth";
 import { bootstrapPlatformSources } from "@/lib/platform-admin/bootstrap";
 import type { ExecutionDeadline } from "@/lib/serverless/deadline";
 
@@ -73,6 +72,7 @@ export async function runScalableIngestion(
   let totalFetched = 0;
   let queuedForAI = 0;
   let imageAnalytics: ImageEnrichmentAnalytics | null = null;
+  const insertedSignalIds: string[] = [];
   const validationStats: ArticleValidationStats = {
     total: 0,
     sanitized: 0,
@@ -103,6 +103,7 @@ export async function runScalableIngestion(
 
     inserted += ingested.inserted;
     signalsInserted += ingested.signalsInserted;
+    insertedSignalIds.push(...ingested.signalIds);
     skippedDuplicates += ingested.skippedDuplicates;
     failedValidation += ingested.failedValidation;
     queuedForAI += ingested.queuedForAI;
@@ -141,6 +142,8 @@ export async function runScalableIngestion(
         });
 
         inserted += ingested.inserted;
+        signalsInserted += ingested.signalsInserted;
+        insertedSignalIds.push(...ingested.signalIds);
         skippedDuplicates += ingested.skippedDuplicates;
         failedValidation += ingested.failedValidation;
         queuedForAI += ingested.queuedForAI;
@@ -171,27 +174,7 @@ export async function runScalableIngestion(
   const durationMs = Date.now() - startedAt;
   const pendingAi = await countPendingAiQueue().catch(() => queuedForAI);
 
-  const clusterResult = await clusterRecentSignals(30).catch(() => ({
-    eventsCreated: 0,
-    eventsUpdated: 0,
-    signalsProcessed: 0,
-    signalsClustered: 0,
-    duplicatesMerged: 0,
-    skipped: true,
-    analytics: {
-      signalsFetched: 0,
-      unprocessedCount: 0,
-      pairsCompared: 0,
-      duplicatePairs: 0,
-      clustersFormed: 0,
-      singletonClusters: 0,
-      multiSourceClusters: 0,
-      avgClusterSize: 0,
-      avgSimilarity: 0,
-      method: "keyword_tfidf" as const,
-      sourceConfidenceAvg: 0,
-    },
-  }));
+  // Clustering runs via event_cluster job on ingest.completed — no inline duplicate.
 
   const supabase = createAdminServerClient();
   const status =
@@ -228,9 +211,7 @@ export async function runScalableIngestion(
         image_analytics: imageAnalytics,
         validation_stats: validationStats,
         signals_inserted: signalsInserted,
-        events_clustered: clusterResult.eventsCreated,
-        duplicates_merged: clusterResult.duplicatesMerged,
-        clustering_analytics: clusterResult.analytics,
+        signal_ids_sample: insertedSignalIds.slice(0, 20),
         newsroom_layers: ["news_signals", "news_events"],
         scalable: true,
       },
@@ -269,29 +250,20 @@ export async function runScalableIngestion(
   }
 
   if (signalsInserted > 0 && process.env.INTELLIGENCE_WORKERS_ENABLED !== "false") {
-    const { publishIngestCompleted } = await import(
+    const { publishIngestCompleted, publishSignalsCreated } = await import(
       "@/lib/infrastructure/events/event-bus"
     );
     void publishIngestCompleted({
       signalsInserted,
       logId: logRow?.id ?? null,
     }).catch(() => undefined);
-  }
-
-  if (
-    (inserted > 0 || signalsInserted > 0) &&
-    process.env.NEWSROOM_GENERATE_ARTICLES === "true"
-  ) {
-    const { enqueueJob } = await import("@/lib/infrastructure/jobs/queue");
-    const { getPipelineTenantId } = await import("@/lib/tenant/pipeline");
-    void enqueueJob({
-      jobType: "editorial_generate",
-      dedupeKey: `editorial:post-ingest:${logRow?.id ?? new Date().toISOString().slice(0, 13)}`,
-      tenantId: getPipelineTenantId(),
-      priority: 12,
-      payload: { limit: INFRA_CONFIG.editorialBatchLimit },
+    void publishSignalsCreated({
+      signalIds: insertedSignalIds,
+      logId: logRow?.id ?? null,
     }).catch(() => undefined);
   }
+
+  // editorial_generate is enqueued by event-bus on ingest.completed — no direct duplicate here.
 
   logNewsroom("pipeline", "INGESTION_FINAL_REPORT", {
     fetched: totalFetched,
@@ -303,9 +275,6 @@ export async function runScalableIngestion(
     rejected: validationStats.rejected,
     failedValidation,
     queuedForAI: pendingAi,
-    eventsClustered: clusterResult.eventsCreated,
-    duplicatesMerged: clusterResult.duplicatesMerged,
-    clusteringAnalytics: clusterResult.analytics,
     durationMs,
     completedProviders,
     skippedProviders,
@@ -340,18 +309,7 @@ export async function runScalableIngestion(
   };
 }
 
-export function triggerAiProcessing(requestUrl: string): void {
-  const secret = getActiveCronSecret().secret;
-  if (!secret || !process.env.OPENAI_API_KEY?.trim()) return;
-
-  const origin = new URL(requestUrl).origin;
-  const url = `${origin}/api/process-ai`;
-
-  fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      "Content-Type": "application/json",
-    },
-  }).catch(() => null);
+/** @deprecated AI enrichment runs via ai_enrich worker — do not fire-and-forget /api/process-ai */
+export function triggerAiProcessing(_requestUrl: string): void {
+  /* no-op: duplicate of ai_enrich worker */
 }

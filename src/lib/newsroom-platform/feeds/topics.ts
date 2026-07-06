@@ -1,10 +1,7 @@
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { ContentType, FeedPage, PlatformArticle } from "../content/types";
 import { contentTypesForTopic, getPlatformTopic, isPlatformTopicSlug } from "../config/topics";
-import { ingestCategoriesForContentTypes } from "../db/category-bridge";
-import { queryNewsArticlesAsPlatform } from "../db/news-articles-bridge";
-import { queryArticles, queryGeneratedAsPlatform } from "../db/queries";
-import { articleRowToPlatform } from "../db/types-map";
+import { queryGeneratedAsPlatform } from "../db/queries";
 import { sortByTrending } from "../content/validate";
 import { ISR } from "../config/isr";
 
@@ -55,28 +52,14 @@ export async function fetchTopicFeed(
   }
 
   const types = await contentTypesForTopic(topic);
-  const ingestCategories = ingestCategoriesForContentTypes(types);
   const offset = (page - 1) * pageSize;
-  const items: PlatformArticle[] = [];
-
-  for (const cat of types) {
-    const rows = await queryArticles({ category: cat, limit: pageSize, offset });
-    items.push(...rows.map(articleRowToPlatform));
-  }
-
-  const wireRows = await queryNewsArticlesAsPlatform({
-    categories: ingestCategories,
-    limit: pageSize,
+  const generated = await queryGeneratedAsPlatform({
+    limit: pageSize + 20,
     offset,
   });
-  items.push(...wireRows);
-
-  const generated = await queryGeneratedAsPlatform({ limit: pageSize, offset });
-  for (const g of generated) {
-    if (types.some((t) => g.category === t || g.tags.some((tag) => tag.includes(t)))) {
-      items.push(g);
-    }
-  }
+  const items = generated.filter((g) =>
+    types.some((t) => g.category === t || g.tags.some((tag) => tag.includes(t)))
+  );
 
   const sorted = sortByTrending(items);
   const slice = sorted.slice(0, pageSize);

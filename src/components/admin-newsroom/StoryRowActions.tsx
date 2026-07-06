@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useStoriesDesk } from "@/hooks/useStoriesDesk";
+import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
+import { hasPermission } from "@/lib/auth/admin-permissions";
 import { ActionButton } from "@/components/admin-newsroom/ui/ActionButton";
 import type { DashboardGeneratedArticle } from "@/lib/editorial-dashboard/types";
 
@@ -11,10 +13,15 @@ type StoryRowActionsProps = {
 
 export function StoryRowActions({ article }: StoryRowActionsProps) {
   const { runAction, busyId } = useStoriesDesk();
+  const { role, roleResolved, permissions } = useAdminNewsroom();
   const [showSources, setShowSources] = useState(false);
   const [editingHeadline, setEditingHeadline] = useState(false);
   const [headline, setHeadline] = useState(article.headline);
   const busy = busyId?.includes(article.id) ?? false;
+
+  const permCtx = { role, authReady: roleResolved, permissions };
+  const canPublish = hasPermission(permCtx, "publish:write");
+  const canEdit = hasPermission(permCtx, "editorial:write");
 
   async function act(action: string, extra?: Record<string, string | boolean>) {
     const optimisticMap: Record<
@@ -53,10 +60,23 @@ export function StoryRowActions({ article }: StoryRowActionsProps) {
     );
   }
 
+  if (!canEdit) {
+    return (
+      <a
+        href={`/story/${article.slug}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="anr-btn anr-btn--ghost"
+      >
+        View
+      </a>
+    );
+  }
+
   return (
     <div>
       <div className={`anr-actions ${busy ? "anr-row--optimistic" : ""}`}>
-        {article.editorial_status !== "approved" ? (
+        {canPublish && article.editorial_status !== "approved" ? (
           <ActionButton variant="primary" disabled={busy} onClick={() => act("approve")}>
             Approve
           </ActionButton>
@@ -66,21 +86,27 @@ export function StoryRowActions({ article }: StoryRowActionsProps) {
             Reject
           </ActionButton>
         ) : null}
-        <ActionButton disabled={busy} onClick={() => act("manual_publish")}>
-          Publish
-        </ActionButton>
-        <ActionButton
-          disabled={busy}
-          onClick={() => act(article.is_breaking ? "unmark_breaking" : "mark_breaking")}
-        >
-          {article.is_breaking ? "Unbreak" : "Breaking"}
-        </ActionButton>
-        <ActionButton
-          disabled={busy}
-          onClick={() => act(article.is_featured ? "unfeature" : "feature")}
-        >
-          {article.is_featured ? "Unfeature" : "Feature"}
-        </ActionButton>
+        {canPublish ? (
+          <ActionButton disabled={busy} onClick={() => act("manual_publish")}>
+            Publish
+          </ActionButton>
+        ) : null}
+        {canPublish ? (
+          <>
+            <ActionButton
+              disabled={busy}
+              onClick={() => act(article.is_breaking ? "unmark_breaking" : "mark_breaking")}
+            >
+              {article.is_breaking ? "Unbreak" : "Breaking"}
+            </ActionButton>
+            <ActionButton
+              disabled={busy}
+              onClick={() => act(article.is_featured ? "unfeature" : "feature")}
+            >
+              {article.is_featured ? "Unfeature" : "Feature"}
+            </ActionButton>
+          </>
+        ) : null}
         <ActionButton disabled={busy} onClick={() => act("regenerate_article")}>
           Regen text
         </ActionButton>
@@ -93,6 +119,12 @@ export function StoryRowActions({ article }: StoryRowActionsProps) {
         <ActionButton variant="ghost" onClick={() => setShowSources((v) => !v)}>
           Sources
         </ActionButton>
+        <a
+          href={`/admin/editor/${article.id}`}
+          className="anr-btn anr-btn--ghost"
+        >
+          Edit
+        </a>
         <a
           href={`/story/${article.slug}`}
           target="_blank"

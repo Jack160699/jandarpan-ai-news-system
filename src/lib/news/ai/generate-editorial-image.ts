@@ -45,8 +45,12 @@ import {
   getQueueRowForArticle,
   markEditorialImageCompletedWithMeta,
   markEditorialImageFailed,
+  releaseEditorialImageBatch,
   type EditorialImageQueueRow,
 } from "@/lib/news/ai/editorial-image-queue";
+import type { ExecutionDeadline } from "@/lib/serverless/deadline";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { recordQueueFailure } from "@/lib/infrastructure/queue/failure-record";
 import {
   isNearDuplicateVisual,
   scoreImageBuffer,
@@ -110,8 +114,17 @@ export type ProcessEditorialImageQueueResult = {
   processed: number;
   completed: number;
   failed: number;
+  retried?: number;
   skipped: number;
   errors: string[];
+  partial?: boolean;
+  released?: number;
+};
+
+export type EditorialImageProcessOptions = {
+  deadline?: ExecutionDeadline;
+  concurrency?: number;
+  promptHashCache?: Map<string, { hero_image_url: string; og_image_url: string | null }>;
 };
 
 function logImage(message: string, context?: Record<string, unknown>): void {
@@ -169,10 +182,19 @@ async function downloadImageBuffer(url: string): Promise<Buffer | null> {
       headers: { Accept: "image/*" },
       next: { revalidate: 3600 },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      logImage("download_fail", { url: url.slice(0, 120), httpStatus: res.status });
+      return null;
+    }
     const buf = Buffer.from(await res.arrayBuffer());
-    return buf.length > 1024 ? buf : null;
-  } catch {
+    if (buf.length <= 1024) {
+      logImage("download_fail", { url: url.slice(0, 120), reason: "buffer_too_small", bytes: buf.length });
+      return null;
+    }
+    return buf;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "download_failed";
+    logImage("download_fail", { url: url.slice(0, 120), error: msg });
     return null;
   }
 }
@@ -208,19 +230,20 @@ async function uploadEditorialVariants(input: {
     return null;
   }
 
-  const ogUp = await supabase.storage.from(bucket).upload(ogPath, input.og, {
-    contentType: "image/webp",
-    cacheControl,
-    upsert: true,
-  });
-
-  if (input.mobile) {
-    await supabase.storage.from(bucket).upload(mobilePath, input.mobile, {
+  const [ogUp] = await Promise.all([
+    supabase.storage.from(bucket).upload(ogPath, input.og, {
       contentType: "image/webp",
       cacheControl,
       upsert: true,
-    });
-  }
+    }),
+    input.mobile
+      ? supabase.storage.from(bucket).upload(mobilePath, input.mobile, {
+          contentType: "image/webp",
+          cacheControl,
+          upsert: true,
+        })
+      : Promise.resolve({ error: null }),
+  ]);
 
   const { url: supabaseUrl } = getPublicSupabaseEnv();
   const heroPub = supabase.storage.from(bucket).getPublicUrl(heroPath);
@@ -251,7 +274,14 @@ async function generateAiIllustration(input: {
   articleId?: string;
   queueId?: string;
   attemptNumber: number;
-}): Promise<{ buffer: Buffer | null; provider: string; model: string; latencyMs: number; error?: string }> {
+}): Promise<{
+  buffer: Buffer | null;
+  provider: string;
+  model: string;
+  latencyMs: number;
+  error?: string;
+  httpStatus?: number;
+}> {
   const providerConfig = selectImageProvider();
   const started = Date.now();
 
@@ -299,6 +329,10 @@ async function generateAiIllustration(input: {
     size: providerConfig.size,
     timeoutMs: providerConfig.timeoutMs,
     extraBody,
+    context: {
+      worker: "editorial_images",
+      articleId: input.articleId ?? undefined,
+    },
   });
 
   const latencyMs = Date.now() - started;
@@ -320,7 +354,11 @@ async function generateAiIllustration(input: {
     logEditorialImageAnalytics({
       event: "ai_generate_fail",
       error: result.error.message,
-      metadata: { code: result.error.code },
+      metadata: {
+        code: result.error.code,
+        httpStatus: result.error.httpStatus ?? null,
+        retryable: result.error.retryable,
+      },
     });
     return {
       buffer: null,
@@ -328,10 +366,37 @@ async function generateAiIllustration(input: {
       model: providerConfig.model,
       latencyMs,
       error: result.error.message,
+      httpStatus: result.error.httpStatus,
     };
   }
 
+  const downloadStarted = Date.now();
   const buffer = await downloadImageBuffer(result.url);
+  if (!buffer) {
+    await incrementImageMetrics({ providerError: true });
+    const downloadError = "openai_image_download_failed";
+    await logGenerationAttempt({
+      queueId: input.queueId,
+      generatedArticleId: input.articleId ?? "unknown",
+      attemptNumber: input.attemptNumber,
+      provider: providerConfig.id,
+      model: providerConfig.model,
+      prompt: input.prompt,
+      status: "failed",
+      latencyMs: Date.now() - started,
+      error: downloadError,
+    });
+    return {
+      buffer: null,
+      provider: providerConfig.id,
+      model: providerConfig.model,
+      latencyMs: Date.now() - started,
+      error: downloadError,
+      httpStatus: 200,
+    };
+  }
+
+  logImage("download_ok", { downloadMs: Date.now() - downloadStarted, bytes: buffer.length });
   return { buffer, provider: providerConfig.id, model: providerConfig.model, latencyMs };
 }
 
@@ -422,6 +487,7 @@ export async function resolveEditorialHeroImage(input: {
   article?: GeneratedArticleRow;
   event?: NewsEventRow | null;
   customPrompt?: string | null;
+  promptHashCache?: Map<string, { hero_image_url: string; og_image_url: string | null }>;
 }): Promise<ResolveEditorialImageResult> {
   const started = Date.now();
   const retryConfig = getRetryConfig();
@@ -509,7 +575,12 @@ export async function resolveEditorialHeroImage(input: {
   });
   const promptHash = hashImagePrompt(basePrompt);
 
-  const promptDuplicate = await findDuplicateImageByPromptHash(promptHash);
+  const cachedDup = input.promptHashCache?.get(promptHash);
+  const promptDuplicate =
+    cachedDup ?? (await findDuplicateImageByPromptHash(promptHash));
+  if (promptDuplicate && !cachedDup) {
+    input.promptHashCache?.set(promptHash, promptDuplicate);
+  }
   if (promptDuplicate) {
     const og =
       promptDuplicate.og_image_url ??
@@ -720,6 +791,82 @@ export async function resolveEditorialHeroImage(input: {
   return result;
 }
 
+async function batchLoadArticleContexts(
+  articleIds: string[]
+): Promise<
+  Map<
+    string,
+    {
+      article: GeneratedArticleRow;
+      event: NewsEventRow | null;
+      signals: NewsSignalRow[];
+      queueRow: EditorialImageQueueRow | null;
+    }
+  >
+> {
+  const result = new Map<
+    string,
+    {
+      article: GeneratedArticleRow;
+      event: NewsEventRow | null;
+      signals: NewsSignalRow[];
+      queueRow: EditorialImageQueueRow | null;
+    }
+  >();
+  if (!articleIds.length) return result;
+
+  const supabase = createAdminServerClient();
+  const [articlesRes, queueRows] = await Promise.all([
+    supabase.from("generated_articles").select("*").in("id", articleIds),
+    Promise.all(articleIds.map((id) => getQueueRowForArticle(id))),
+  ]);
+
+  const articles = articlesRes.data ?? [];
+  const eventIds = [
+    ...new Set(
+      articles.map((a) => a.event_id).filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  let events: NewsEventRow[] = [];
+  if (eventIds.length) {
+    const { data } = await supabase.from("news_events").select("*").in("id", eventIds);
+    events = (data ?? []) as unknown as NewsEventRow[];
+  }
+
+  const eventMap = new Map(events.map((e) => [e.id, e]));
+  const allSignalIds = [
+    ...new Set(events.flatMap((e) => e.signal_ids ?? [])),
+  ];
+  let signals: NewsSignalRow[] = [];
+  if (allSignalIds.length) {
+    const { data } = await supabase
+      .from("news_signals")
+      .select("*")
+      .in("id", allSignalIds);
+    signals = (data ?? []) as unknown as NewsSignalRow[];
+  }
+  const signalMap = new Map(signals.map((s) => [s.id, s]));
+
+  for (let i = 0; i < articles.length; i++) {
+    const article = articles[i] as unknown as GeneratedArticleRow;
+    const event = article.event_id ? eventMap.get(article.event_id) ?? null : null;
+    const articleSignals = event?.signal_ids?.length
+      ? event.signal_ids
+          .map((id) => signalMap.get(id))
+          .filter((s): s is NewsSignalRow => Boolean(s))
+      : [];
+    result.set(article.id, {
+      article,
+      event,
+      signals: articleSignals,
+      queueRow: queueRows[i] ?? null,
+    });
+  }
+
+  return result;
+}
+
 async function loadArticleContext(articleId: string): Promise<{
   article: GeneratedArticleRow;
   event: NewsEventRow | null;
@@ -765,8 +912,15 @@ async function loadArticleContext(articleId: string): Promise<{
 }
 
 async function processQueueItem(
-  row: EditorialImageQueueRow
-): Promise<{ ok: boolean; error?: string; usedFallback?: boolean }> {
+  row: EditorialImageQueueRow,
+  preloaded?: {
+    article: GeneratedArticleRow;
+    event: NewsEventRow | null;
+    signals: NewsSignalRow[];
+    queueRow: EditorialImageQueueRow | null;
+  },
+  promptHashCache?: Map<string, { hero_image_url: string; og_image_url: string | null }>
+): Promise<{ ok: boolean; error?: string; usedFallback?: boolean; retried?: boolean; terminal?: boolean }> {
   logImageGenerationPhase("image_generation_started", {
     queueId: row.id,
     generatedArticleId: row.generated_article_id,
@@ -774,15 +928,34 @@ async function processQueueItem(
     maxAttempts: row.max_attempts,
   });
 
-  const ctx = await loadArticleContext(row.generated_article_id);
+  const ctx = preloaded ?? (await loadArticleContext(row.generated_article_id));
   if (!ctx) {
+    const error = "article_not_found";
+    await markEditorialImageFailed({
+      queueId: row.id,
+      generatedArticleId: row.generated_article_id,
+      attempts: Math.max(0, row.max_attempts - 1),
+      maxAttempts: row.max_attempts,
+      error,
+      retry: false,
+    });
+    await incrementImageMetrics({ failed: true });
+    await recordQueueFailure({
+      worker: "editorial_images",
+      articleId: row.generated_article_id,
+      error,
+      category: "database",
+      retryCount: row.attempts,
+      terminal: true,
+    });
     logImageGenerationPhase("image_generation_failed", {
       queueId: row.id,
       generatedArticleId: row.generated_article_id,
-      reason: "article_not_found",
+      reason: error,
+      terminal: true,
+      retryCount: row.attempts,
     });
-    await incrementImageMetrics({ failed: true });
-    return { ok: false, error: "article_not_found" };
+    return { ok: false, error, terminal: true };
   }
 
   const { article, event, signals, queueRow } = ctx;
@@ -803,6 +976,7 @@ async function processQueueItem(
       article,
       event,
       customPrompt: queueRow?.custom_prompt ?? row.custom_prompt,
+      promptHashCache,
     });
 
     const aiFailed =
@@ -834,8 +1008,9 @@ async function processQueueItem(
         generatedArticleId: article.id,
         reason: "ai_fallback_retry_scheduled",
         retry: true,
+        retryCount: row.attempts + 1,
       });
-      return { ok: false, error: "ai_fallback_retry_scheduled", usedFallback: true };
+      return { ok: false, error: "ai_fallback_retry_scheduled", usedFallback: true, retried: true };
     }
 
     await markEditorialImageCompletedWithMeta({
@@ -890,49 +1065,134 @@ async function processQueueItem(
     });
 
     await incrementImageMetrics({ failed: !retry, retried: retry });
+    await recordQueueFailure({
+      worker: "editorial_images",
+      articleId: article.id,
+      error: msg,
+      retryCount: row.attempts + 1,
+      terminal: !retry,
+    });
     logImageGenerationPhase("image_generation_failed", {
       queueId: row.id,
       generatedArticleId: article.id,
       reason: msg,
       retry,
+      retryCount: row.attempts + 1,
     });
 
-    return { ok: false, error: msg };
+    return { ok: false, error: msg, retried: retry, terminal: !retry };
   }
 }
 
+async function runWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  let index = 0;
+
+  async function worker(): Promise<void> {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await fn(items[i]);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () =>
+    worker()
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 export async function processEditorialImageQueue(
-  limit = 5
+  limit = 5,
+  options?: EditorialImageProcessOptions
 ): Promise<ProcessEditorialImageQueueResult> {
+  const deadline = options?.deadline;
+  const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;
+  const concurrency =
+    options?.concurrency ?? INFRA_CONFIG.imageQueueConcurrency;
+  const promptHashCache = options?.promptHashCache ?? new Map();
+
+  if (deadline?.shouldStop()) {
+    return { processed: 0, completed: 0, failed: 0, retried: 0, skipped: 0, errors: [], partial: true };
+  }
+
   const batch = await claimEditorialImageBatch(limit);
   if (!batch.length) {
-    return { processed: 0, completed: 0, failed: 0, skipped: 0, errors: [] };
+    return { processed: 0, completed: 0, failed: 0, retried: 0, skipped: 0, errors: [] };
   }
+
+  const contexts = await batchLoadArticleContexts(
+    batch.map((r) => r.generated_article_id)
+  );
 
   let completed = 0;
   let failed = 0;
+  let retried = 0;
+  let skipped = 0;
   const errors: string[] = [];
+  let partial = false;
+  let released = 0;
+  const toRelease: string[] = [];
 
+  const toProcess: EditorialImageQueueRow[] = [];
   for (const row of batch) {
-    const result = await processQueueItem(row);
+    if (deadline && !deadline.hasBudgetFor(reserveMs)) {
+      toRelease.push(row.id);
+      skipped++;
+      continue;
+    }
+    toProcess.push(row);
+  }
+
+  const outcomes = await runWithConcurrency(toProcess, concurrency, async (row) => {
+    if (deadline?.shouldStop()) {
+      return { ok: false, error: "deadline_budget", release: true };
+    }
+    const preloaded = contexts.get(row.generated_article_id);
+    const result = await processQueueItem(row, preloaded, promptHashCache);
+    return { ...result, release: false };
+  });
+
+  for (let i = 0; i < outcomes.length; i++) {
+    const result = outcomes[i];
+    const row = toProcess[i];
+    if (result.release) {
+      toRelease.push(row.id);
+      skipped++;
+      partial = true;
+      continue;
+    }
     if (result.ok) completed++;
+    else if (result.retried) retried++;
     else {
       failed++;
       if (result.error) errors.push(`${row.generated_article_id}: ${result.error}`);
     }
   }
 
+  if (toRelease.length) {
+    released = await releaseEditorialImageBatch([...new Set(toRelease)]);
+    partial = true;
+  }
+
   logEditorialImageAnalytics({
     event: "queue_batch_complete",
-    metadata: { completed, failed, processed: batch.length },
+    metadata: { completed, failed, retried, processed: batch.length, partial, released, concurrency },
   });
 
   return {
-    processed: batch.length,
+    processed: batch.length - skipped,
     completed,
     failed,
-    skipped: 0,
+    retried,
+    skipped,
     errors,
+    partial,
+    released,
   };
 }
 

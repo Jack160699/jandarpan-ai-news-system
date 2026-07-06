@@ -6,68 +6,77 @@ import { deliverPendingEvents } from "@/lib/infrastructure/events/event-bus";
 import { JOB_HANDLERS } from "@/lib/infrastructure/jobs/handlers";
 import { processJobBatch, countPendingJobs } from "@/lib/infrastructure/jobs/queue";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import {
+  completeWorkerResult,
+  partialWorkerResult,
+  shouldSkipForDeadline,
+  skippedWorkerResult,
+} from "@/lib/infrastructure/workers/deadline-aware";
 import type { QueueWorker, WorkerContext, WorkerResult } from "@/lib/infrastructure/workers/types";
 
 async function runJobProcessor(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
-  if (ctx.deadline.shouldStop()) {
-    return {
-      worker: "job_processor",
-      ok: false,
-      durationMs: 0,
-      skipped: true,
-      error: "deadline_precheck",
-    };
+  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
+    const pending = await countPendingJobs();
+    return skippedWorkerResult("job_processor", started, ctx.deadline, "deadline_precheck", pending);
   }
 
   const eventDelivery = await deliverPendingEvents(15);
   const batch = await processJobBatch(JOB_HANDLERS, {
     limit: INFRA_CONFIG.workerJobBatch,
     workerId: "job_processor",
+    deadline: ctx.deadline,
   });
   const pending = await countPendingJobs();
 
-  return {
-    worker: "job_processor",
-    ok: batch.completed > 0 || eventDelivery.delivered > 0 || pending === 0,
-    durationMs: Date.now() - started,
-    metadata: {
+  const build = batch.partial ? partialWorkerResult : completeWorkerResult;
+  return build("job_processor", started, ctx.deadline, {
+    recordsProcessed: batch.completed + eventDelivery.delivered,
+    recordsSkipped: batch.failed,
+    remainingQueue: pending,
+    partial: batch.partial ?? false,
+    extra: {
       ...batch,
       eventsDelivered: eventDelivery.delivered,
       eventsFailed: eventDelivery.failed,
       pending,
+      ...(batch.released != null ? { released: batch.released } : {}),
     },
-  };
+  });
 }
 
 async function runIntelligenceEmbed(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
   if (!process.env.OPENAI_API_KEY?.trim()) {
-    return {
-      worker: "intelligence_embed",
-      ok: true,
-      durationMs: 0,
-      skipped: true,
-      metadata: { message: "OPENAI_API_KEY not set" },
-    };
+    return skippedWorkerResult("intelligence_embed", started, ctx.deadline, "no_openai_key");
+  }
+
+  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
+    return skippedWorkerResult("intelligence_embed", started, ctx.deadline, "deadline_precheck");
   }
 
   const batch = await processJobBatch(JOB_HANDLERS, {
     limit: INFRA_CONFIG.workerJobBatch,
     jobTypes: ["embed_signals", "embed_articles"],
     workerId: "intelligence_embed",
+    deadline: ctx.deadline,
   });
 
-  return {
-    worker: "intelligence_embed",
-    ok: batch.completed > 0 || batch.processed === 0,
-    durationMs: Date.now() - started,
-    metadata: batch,
-  };
+  const build = batch.partial ? partialWorkerResult : completeWorkerResult;
+  return build("intelligence_embed", started, ctx.deadline, {
+    recordsProcessed: batch.completed,
+    recordsSkipped: batch.failed,
+    partial: batch.partial ?? false,
+    extra: { ...batch, ...(batch.released != null ? { released: batch.released } : {}) },
+  });
 }
 
 async function runIntelligenceSnapshot(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
+  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
+    return skippedWorkerResult("intelligence_snapshot", started, ctx.deadline, "deadline_precheck");
+  }
+
   const batch = await processJobBatch(JOB_HANDLERS, {
     limit: 2,
     jobTypes: [
@@ -79,62 +88,82 @@ async function runIntelligenceSnapshot(ctx: WorkerContext): Promise<WorkerResult
       "translate_article",
     ],
     workerId: "intelligence_snapshot",
+    deadline: ctx.deadline,
   });
 
-  return {
-    worker: "intelligence_snapshot",
-    ok: batch.completed > 0 || batch.processed === 0,
-    durationMs: Date.now() - started,
-    metadata: batch,
-  };
+  const build = batch.partial ? partialWorkerResult : completeWorkerResult;
+  return build("intelligence_snapshot", started, ctx.deadline, {
+    recordsProcessed: batch.completed,
+    recordsSkipped: batch.failed,
+    partial: batch.partial ?? false,
+    extra: { ...batch, ...(batch.released != null ? { released: batch.released } : {}) },
+  });
 }
 
 async function runAnalyticsWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
+  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
+    return skippedWorkerResult("analytics_aggregate", started, ctx.deadline, "deadline_precheck");
+  }
+
   const batch = await processJobBatch(JOB_HANDLERS, {
     limit: 3,
     jobTypes: ["analytics_aggregate"],
     workerId: "analytics_aggregate",
+    deadline: ctx.deadline,
   });
 
-  return {
-    worker: "analytics_aggregate",
-    ok: batch.completed > 0 || batch.processed === 0,
-    durationMs: Date.now() - started,
-    metadata: batch,
-  };
+  const build = batch.partial ? partialWorkerResult : completeWorkerResult;
+  return build("analytics_aggregate", started, ctx.deadline, {
+    recordsProcessed: batch.completed,
+    recordsSkipped: batch.failed,
+    partial: batch.partial ?? false,
+    extra: { ...batch, ...(batch.released != null ? { released: batch.released } : {}) },
+  });
 }
 
 async function runDamAnalyzeWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
+  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
+    return skippedWorkerResult("dam_analyze", started, ctx.deadline, "deadline_precheck");
+  }
+
   const batch = await processJobBatch(JOB_HANDLERS, {
     limit: INFRA_CONFIG.damAnalyzeBatch,
     jobTypes: ["dam_analyze"],
     workerId: "dam_analyze",
+    deadline: ctx.deadline,
   });
 
-  return {
-    worker: "dam_analyze",
-    ok: batch.completed > 0 || batch.processed === 0,
-    durationMs: Date.now() - started,
-    metadata: batch,
-  };
+  const build = batch.partial ? partialWorkerResult : completeWorkerResult;
+  return build("dam_analyze", started, ctx.deadline, {
+    recordsProcessed: batch.completed,
+    recordsSkipped: batch.failed,
+    partial: batch.partial ?? false,
+    extra: batch,
+  });
 }
 
 async function runEventClusterWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
+  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
+    return skippedWorkerResult("event_cluster", started, ctx.deadline, "deadline_precheck");
+  }
+
   const batch = await processJobBatch(JOB_HANDLERS, {
     limit: 1,
     jobTypes: ["event_cluster"],
     workerId: "event_cluster",
+    deadline: ctx.deadline,
   });
 
-  return {
-    worker: "event_cluster",
-    ok: batch.completed > 0 || batch.processed === 0,
-    durationMs: Date.now() - started,
-    metadata: batch,
-  };
+  const build = batch.partial ? partialWorkerResult : completeWorkerResult;
+  return build("event_cluster", started, ctx.deadline, {
+    recordsProcessed: batch.completed,
+    recordsSkipped: batch.failed,
+    partial: batch.partial ?? false,
+    extra: batch,
+  });
 }
 
 export const INTELLIGENCE_WORKERS: QueueWorker[] = [

@@ -2,6 +2,15 @@
 /**
  * Idempotent QStash schedule setup for the Jandarpan newsroom pipeline.
  *
+ * Production uses three staggered schedules (see docs/QSTASH_SCHEDULER_SETUP.md):
+ *   fetch-news → ingest
+ *   editorial_generate → event→article generation
+ *   orchestrate → intelligence pipeline (ai_enrich, editorial_images, job_processor,
+ *                 intelligence_embed, intelligence_snapshot, analytics_aggregate)
+ *
+ * Scheduled worker job ids (health monitoring) are defined in:
+ *   src/lib/infrastructure/cron/registered-jobs.ts
+ *
  * Usage:
  *   QSTASH_TOKEN=... CRON_SECRET=... PRODUCTION_URL=https://www.jandarpan.news \
  *     node scripts/setup-qstash-schedules.mjs
@@ -57,6 +66,12 @@ const schedules = [
     method: "POST",
     body: "{}",
   },
+  {
+    scheduleId: "jandarpan-workers-health",
+    destination: `${baseUrl}/api/cron/workers/health`,
+    cron: "0 * * * *",
+    method: "GET",
+  },
 ];
 
 const authHeaders = {
@@ -87,3 +102,9 @@ for (const schedule of schedules) {
 }
 
 console.log("\nDone. Verify deliveries in the Upstash QStash console (Logs tab).");
+console.log(
+  "Remove legacy decomposed schedules if present (ai_enrich, editorial_images, job_processor, etc.)."
+);
+console.log(
+  "Manual recovery: POST /api/cron/orchestrate with optional { workers: [...] } body."
+);

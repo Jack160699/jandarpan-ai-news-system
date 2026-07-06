@@ -3,6 +3,7 @@
  */
 
 import { cacheGetJson, cacheSetJson } from "@/lib/infrastructure/cache";
+import { REGISTERED_CRON_JOBS } from "@/lib/infrastructure/cron/registered-jobs";
 import { opsLogger } from "@/lib/observability/logger";
 import type { WorkerResult } from "@/lib/infrastructure/workers/types";
 
@@ -21,24 +22,27 @@ export type CronRunRecord = {
 
 type CronState = Record<string, CronRunRecord>;
 
+export { REGISTERED_CRON_JOBS } from "@/lib/infrastructure/cron/registered-jobs";
+export type { RegisteredCronJobId } from "@/lib/infrastructure/cron/registered-jobs";
+
+function heartbeatStatus(record: CronRunRecord): string {
+  if (!record.ok) return "failed";
+  if (record.degraded) return "degraded";
+  return "ok";
+}
+
 export async function recordCronRun(record: CronRunRecord): Promise<void> {
   const state = (await cacheGetJson<CronState>(CRON_STATE_KEY)) ?? {};
   state[record.job] = record;
   await cacheSetJson(CRON_STATE_KEY, state, CRON_TTL_SEC);
 
-  opsLogger.info("worker_heartbeat_updated", {
+  opsLogger.info("heartbeat_recorded", {
     job: record.job,
-    ok: record.ok,
     startedAt: record.startedAt,
     durationMs: record.durationMs,
-    degraded: record.degraded ?? false,
-  });
-
-  opsLogger.info("cron_run_recorded", {
-    job: record.job,
+    status: heartbeatStatus(record),
     ok: record.ok,
-    durationMs: record.durationMs,
-    degraded: record.degraded,
+    degraded: record.degraded ?? false,
   });
 }
 
@@ -55,24 +59,31 @@ export async function getCronMonitorState(): Promise<{
   const now = Date.now();
   const staleJobs: string[] = [];
 
-  const expectedJobs = ["orchestrate", "fetch-news", "cluster", "revalidate"];
-  for (const job of expectedJobs) {
+  for (const job of REGISTERED_CRON_JOBS) {
     const rec = state[job];
     if (!rec) {
       staleJobs.push(job);
-      opsLogger.warn("worker_marked_stale", {
+      opsLogger.warn("worker_heartbeat_stale", {
         job,
         reason: "missing_heartbeat",
+        expectedHeartbeat: job,
+        lastHeartbeat: null,
+        ageMs: null,
+        thresholdMs: maxAgeMs,
       });
       continue;
     }
-    if (now - new Date(rec.startedAt).getTime() > maxAgeMs) {
+
+    const ageMs = now - new Date(rec.startedAt).getTime();
+    if (ageMs > maxAgeMs) {
       staleJobs.push(job);
-      opsLogger.warn("worker_marked_stale", {
+      opsLogger.warn("worker_heartbeat_stale", {
         job,
         reason: "heartbeat_expired",
-        startedAt: rec.startedAt,
-        maxAgeMs,
+        expectedHeartbeat: job,
+        lastHeartbeat: rec.startedAt,
+        ageMs,
+        thresholdMs: maxAgeMs,
       });
     }
   }

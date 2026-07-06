@@ -2131,6 +2131,189 @@ export type Database = {
         }
         Relationships: []
       }
+      openai_usage_events: {
+        Row: {
+          id: string
+          created_at: string
+          worker: string | null
+          operation: string
+          cron_job: string | null
+          article_id: string | null
+          event_id: string | null
+          tenant_id: string | null
+          model: string
+          endpoint: string
+          input_tokens: number
+          output_tokens: number
+          cached_tokens: number
+          estimated_cost_usd: number
+          latency_ms: number | null
+          retry_count: number
+          success: boolean
+          prompt_hash: string | null
+          prompt_chars: number | null
+          completion_chars: number | null
+          metadata: Json | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          worker?: string | null
+          operation: string
+          cron_job?: string | null
+          article_id?: string | null
+          event_id?: string | null
+          tenant_id?: string | null
+          model: string
+          endpoint: string
+          input_tokens?: number
+          output_tokens?: number
+          cached_tokens?: number
+          estimated_cost_usd?: number
+          latency_ms?: number | null
+          retry_count?: number
+          success?: boolean
+          prompt_hash?: string | null
+          prompt_chars?: number | null
+          completion_chars?: number | null
+          metadata?: Json | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          worker?: string | null
+          operation?: string
+          cron_job?: string | null
+          article_id?: string | null
+          event_id?: string | null
+          tenant_id?: string | null
+          model?: string
+          endpoint?: string
+          input_tokens?: number
+          output_tokens?: number
+          cached_tokens?: number
+          estimated_cost_usd?: number
+          latency_ms?: number | null
+          retry_count?: number
+          success?: boolean
+          prompt_hash?: string | null
+          prompt_chars?: number | null
+          completion_chars?: number | null
+          metadata?: Json | null
+        }
+        Relationships: []
+      }
+      openai_prompt_cache: {
+        Row: {
+          id: string
+          prompt_hash: string
+          operation: string
+          worker: string
+          cache_version: string
+          article_id: string | null
+          event_id: string | null
+          model: string
+          result_json: import("@/types/json").JsonObject
+          input_tokens: number
+          output_tokens: number
+          estimated_cost_usd: number
+          created_at: string
+          expires_at: string
+        }
+        Insert: {
+          id?: string
+          prompt_hash: string
+          operation: string
+          worker: string
+          cache_version?: string
+          article_id?: string | null
+          event_id?: string | null
+          model: string
+          result_json: import("@/types/json").JsonObject
+          input_tokens?: number
+          output_tokens?: number
+          estimated_cost_usd?: number
+          created_at?: string
+          expires_at?: string
+        }
+        Update: {
+          id?: string
+          prompt_hash?: string
+          operation?: string
+          worker?: string
+          cache_version?: string
+          article_id?: string | null
+          event_id?: string | null
+          model?: string
+          result_json?: import("@/types/json").JsonObject
+          input_tokens?: number
+          output_tokens?: number
+          estimated_cost_usd?: number
+          created_at?: string
+          expires_at?: string
+        }
+        Relationships: []
+      }
+      executive_report_snapshots: {
+        Row: {
+          id: string
+          created_at: string
+          period: string
+          format: string
+          exchange_rate: number | null
+          payload: Json
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          period: string
+          format: string
+          exchange_rate?: number | null
+          payload?: Json
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          period?: string
+          format?: string
+          exchange_rate?: number | null
+          payload?: Json
+        }
+        Relationships: []
+      }
+      executive_alert_events: {
+        Row: {
+          id: string
+          created_at: string
+          alert_type: string
+          severity: string
+          message: string
+          payload: Json
+          acknowledged_at: string | null
+          notified_email: boolean
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          alert_type: string
+          severity: string
+          message: string
+          payload?: Json
+          acknowledged_at?: string | null
+          notified_email?: boolean
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          alert_type?: string
+          severity?: string
+          message?: string
+          payload?: Json
+          acknowledged_at?: string | null
+          notified_email?: boolean
+        }
+        Relationships: []
+      }
       platform_ai_logs: {
         Row: {
           article_id: string | null

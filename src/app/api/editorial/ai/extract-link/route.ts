@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractLinkContent } from "@/lib/ai/extract-link";
 import { requireEditorialAuth } from "@/lib/editorial-dashboard/auth";
+import { checkEditorialAiRateLimit } from "@/lib/security/ai-rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,6 +9,9 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const auth = await requireEditorialAuth(request, "editorial:write");
   if (!auth.ok) return auth.response;
+
+  const rate = await checkEditorialAiRateLimit(auth.session, "extract-link");
+  if (!rate.allowed) return rate.response;
 
   let body: { url?: string };
 

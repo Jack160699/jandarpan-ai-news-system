@@ -27,6 +27,7 @@ import {
   type WorkerRunPayload,
 } from "@/lib/infrastructure/workers/run-guard";
 import type { WorkerId } from "@/lib/infrastructure/workers/types";
+import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -120,6 +121,7 @@ export async function handleCronWorker(
   request: Request,
   workerSlug: string
 ): Promise<NextResponse> {
+  const startedAt = Date.now();
   const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
@@ -142,13 +144,21 @@ export async function handleCronWorker(
   }
 
   if (!isSupabaseConfigured()) {
+    const durationMs = Date.now() - startedAt;
+    await recordCronRun({
+      job: workerId,
+      ok: false,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs,
+      error: "supabase_not_configured",
+    });
     return jsonCron(
       {
         ok: false,
         worker: workerId,
         processed: 0,
         failed: 0,
-        duration_ms: 0,
+        duration_ms: durationMs,
         reason: "supabase_not_configured",
       },
       500
@@ -186,6 +196,20 @@ export async function handleCronWorker(
     };
   });
 
+  const workerResult = payload.details?.result as
+    | { skipped?: boolean; ok?: boolean }
+    | undefined;
+  const degraded = Boolean(payload.skipped || workerResult?.skipped);
+
+  await recordCronRun({
+    job: workerId,
+    ok: payload.ok,
+    startedAt: new Date(startedAt).toISOString(),
+    durationMs: payload.duration_ms,
+    degraded,
+    ...(payload.reason && !payload.ok ? { error: payload.reason } : {}),
+  });
+
   return jsonCron(toCronResponse(workerId, payload));
 }
 
@@ -199,8 +223,12 @@ function evaluateCriticalHealth(input: {
     reasons.push(`dead_letters:${input.queue.deadLetters}`);
   }
 
-  if (input.queue.claimed >= CRITICAL_CLAIMED_STALE) {
-    reasons.push(`claimed_stuck:${input.queue.claimed}`);
+  if (input.queue.staleClaimed >= CRITICAL_CLAIMED_STALE) {
+    reasons.push(`stale_claimed:${input.queue.staleClaimed}`);
+  }
+
+  if (input.queue.eventBusPending >= 50) {
+    reasons.push(`event_bus_backlog:${input.queue.eventBusPending}`);
   }
 
   for (const worker of input.health) {

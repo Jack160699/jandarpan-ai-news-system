@@ -7,6 +7,7 @@ export type IngestionAnalyticsEvent =
   | "orchestrate_complete"
   | "worker_start"
   | "worker_complete"
+  | "worker_skipped"
   | "provider_fetch"
   | "provider_retry"
   | "provider_disabled"

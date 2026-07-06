@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { PageShell } from "@/components/layout/PageShell";
 import type { GlobalBriefSegment } from "@/lib/newsroom-platform/content/types";
 import { platformArticlesToHomeArticles } from "@/lib/newsroom-platform/content/adapters";
@@ -11,7 +12,11 @@ type GlobalBriefPageViewProps = {
 };
 
 export async function GlobalBriefPageView({ segment }: GlobalBriefPageViewProps) {
-  const feed = await fetchGlobalBriefFeed({ segment, pageSize: 10, useMock: true });
+  const feed = await fetchGlobalBriefFeed({
+    segment,
+    pageSize: 10,
+    useMock: !isSupabaseConfigured(),
+  });
   const articles = platformArticlesToHomeArticles(feed.items);
   const title = segment === "national" ? "National News" : "International News";
   const other = segment === "national" ? "international" : "national";

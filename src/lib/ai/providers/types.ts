@@ -36,6 +36,14 @@ export type ClassifiedAiError = {
   rateLimited: boolean;
 };
 
+export type OpenAiTelemetryContext = {
+  worker?: string;
+  cron?: string;
+  articleId?: string;
+  eventId?: string;
+  tenantId?: string;
+};
+
 export type ChatCompletionRequest = {
   operation: string;
   system: string;
@@ -45,6 +53,7 @@ export type ChatCompletionRequest = {
   maxTokens?: number;
   jsonMode?: boolean;
   timeoutMs?: number;
+  context?: OpenAiTelemetryContext;
 };
 
 export type ChatCompletionResult =

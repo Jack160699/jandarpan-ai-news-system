@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { persistMonetizationEvent } from "@/lib/monetization/analytics";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { checkPublicApiRateLimit } from "@/lib/security/public-rate-limit";
 import { asJsonObject } from "@/types/json";
 
 export async function POST(request: Request) {
+  const rate = await checkPublicApiRateLimit(request, "newsletter-signup", 10, 3600);
+  if (!rate.allowed) return rate.response;
+
   let body: { email?: string; newsletterSlug?: string };
   try {
     body = await request.json();

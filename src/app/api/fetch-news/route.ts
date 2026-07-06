@@ -19,10 +19,8 @@ import {
   logIngestStart,
   logIngestSuccess,
 } from "@/lib/news/pipeline/ingest-logger";
-import {
-  runScalableIngestion,
-  triggerAiProcessing,
-} from "@/lib/news/pipeline/scalable-ingest";
+import { runScalableIngestion } from "@/lib/news/pipeline/scalable-ingest";
+import { runWorkerEndpoint } from "@/lib/infrastructure/workers/run-guard";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
@@ -97,11 +95,10 @@ async function handleFetchNews(request: Request) {
     userAgent,
   });
 
-  try {
+  const lockResult = await runWorkerEndpoint("fetch-news", 1700, async () => {
     logIngestionAnalytics({ event: "worker_start", worker: "ingest" });
 
     const result = await runScalableIngestion(deadline);
-    const durationMs = Date.now() - startedAt;
     const providerCount = result.completedProviders.length;
     const quota = detectQuotaStatus(result.errors);
 
@@ -109,14 +106,62 @@ async function handleFetchNews(request: Request) {
       await revalidateNewsroomCaches();
     }
 
-    triggerAiProcessing(request.url);
-
     const { refreshSnapshotFromDatabase } = await import(
       "@/lib/news/live-feed/resolve-pool"
     );
     if (result.inserted > 0 || result.signalsInserted > 0) {
       await refreshSnapshotFromDatabase(120).catch(() => null);
     }
+
+    return {
+      ok: result.ok,
+      processed: result.inserted + result.signalsInserted,
+      failed: result.errors.length,
+      details: { result, providerCount, quota },
+    };
+  });
+
+  if (lockResult.skipped && lockResult.reason === "overlap_lock") {
+    await recordCronRun({
+      job: "fetch-news",
+      ok: true,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs: Date.now() - startedAt,
+      degraded: true,
+    });
+    return NextResponse.json(
+      {
+        ok: true,
+        skipped: true,
+        reason: "overlap_lock",
+        durationMs: Date.now() - startedAt,
+      },
+      { headers: noStoreHeaders() }
+    );
+  }
+
+  if (!lockResult.ok || !lockResult.details?.result) {
+    const message = lockResult.reason ?? "ingest_worker_failed";
+    await recordCronRun({
+      job: "fetch-news",
+      ok: false,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs: Date.now() - startedAt,
+      error: message,
+    });
+    return NextResponse.json(
+      { ok: false, error: message, durationMs: Date.now() - startedAt },
+      { status: 500, headers: noStoreHeaders() }
+    );
+  }
+
+  try {
+    const result = lockResult.details.result as Awaited<
+      ReturnType<typeof runScalableIngestion>
+    >;
+    const providerCount = lockResult.details.providerCount as number;
+    const quota = lockResult.details.quota as ReturnType<typeof detectQuotaStatus>;
+    const durationMs = Date.now() - startedAt;
 
     const hasPartialSuccess =
       result.inserted > 0 ||
@@ -138,6 +183,14 @@ async function handleFetchNews(request: Request) {
         skippedProviders: result.skippedProviders,
         errors: result.errors.slice(0, 8),
         preservedExistingDb: true,
+      });
+
+      await recordCronRun({
+        job: "fetch-news",
+        ok: false,
+        startedAt: new Date(startedAt).toISOString(),
+        durationMs,
+        error: "no_articles_fetched",
       });
 
       return NextResponse.json(

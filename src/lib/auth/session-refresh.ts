@@ -53,16 +53,12 @@ const E2E_AUTH_HEADER = "x-e2e-auth";
 const E2E_AUTH_HEADER_VALUE = "playwright-local";
 
 export function isE2eAuthEnabled(request?: Request): boolean {
-  const vercelEnv = process.env.VERCEL_ENV;
-  if (vercelEnv === "production") return false;
-  if (process.env.NODE_ENV === "production" && process.env.ENABLE_E2E_AUTH !== "1") {
-    return false;
-  }
-
+  if (process.env.VERCEL_ENV) return false;
+  if (process.env.NODE_ENV === "production") return false;
   if (process.env.ENABLE_E2E_AUTH === "1") return true;
 
   if (request?.headers.get(E2E_AUTH_HEADER) === E2E_AUTH_HEADER_VALUE) {
-    return process.env.NODE_ENV !== "production";
+    return true;
   }
 
   return false;

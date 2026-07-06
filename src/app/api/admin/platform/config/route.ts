@@ -21,8 +21,12 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const auth = await requireEditorialAuth(request, "editorial:write");
+  const auth = await requireEditorialAuth(request, "team:write");
   if (!auth.ok) return auth.response;
+
+  if (auth.session.membership.role !== "super_admin") {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
 
   let body: unknown;
   try {

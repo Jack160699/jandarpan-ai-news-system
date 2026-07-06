@@ -1,8 +1,7 @@
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { FeedPage, PlatformArticle } from "../content/types";
 import { getPlatformDistrict } from "../config/districts";
-import { queryArticles, queryGeneratedAsPlatform } from "../db/queries";
-import { articleRowToPlatform } from "../db/types-map";
+import { queryGeneratedAsPlatform } from "../db/queries";
 import { sortByTrending } from "../content/validate";
 import { ISR } from "../config/isr";
 
@@ -63,19 +62,11 @@ export async function fetchDistrictFeed(
   }
 
   const offset = (page - 1) * pageSize;
-  const [platformRows, generatedItems] = await Promise.all([
-    queryArticles({ district: options.district, limit: pageSize + 20, offset }),
-    queryGeneratedAsPlatform({
-      district: options.district,
-      limit: pageSize + 20,
-      offset,
-    }),
-  ]);
-
-  let items = [
-    ...platformRows.map(articleRowToPlatform),
-    ...generatedItems,
-  ];
+  let items = await queryGeneratedAsPlatform({
+    district: options.district,
+    limit: pageSize + 20,
+    offset,
+  });
 
   if (options.section && options.section !== "top") {
     const key = options.section.toLowerCase();

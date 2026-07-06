@@ -66,6 +66,11 @@ export type WorkflowCommentRecord = {
   created_at: string;
 };
 
+export type WorkflowAssignee = {
+  user_id: string;
+  email: string;
+};
+
 export type WorkflowBoardSnapshot = {
   columns: Record<WorkflowStatus, WorkflowArticleCard[]>;
   analytics: {
@@ -76,6 +81,7 @@ export type WorkflowBoardSnapshot = {
     by_status: Record<WorkflowStatus, number>;
     workload: { email: string; count: number }[];
   };
+  assignees: WorkflowAssignee[];
   events: WorkflowEventRecord[];
   fetchedAt: string;
 };

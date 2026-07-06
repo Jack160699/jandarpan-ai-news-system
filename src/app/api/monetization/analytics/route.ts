@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { persistMonetizationEvent } from "@/lib/monetization/analytics";
 import type { MonetizationEventType } from "@/lib/monetization/types";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { checkPublicApiRateLimit } from "@/lib/security/public-rate-limit";
 import { asJsonObject } from "@/types/json";
 
 export async function POST(request: Request) {
+  const rate = await checkPublicApiRateLimit(request, "monetization-analytics", 120, 60);
+  if (!rate.allowed) return rate.response;
+
   let body: {
     eventType?: MonetizationEventType;
     slotId?: string;
