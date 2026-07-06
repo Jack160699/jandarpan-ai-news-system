@@ -1,0 +1,181 @@
+/**
+ * Unified interactive primitives — buttons, cards, chips, inputs
+ * Single interaction model across reader surfaces.
+ */
+
+.jd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--btn-height-sm);
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  border-radius: var(--btn-radius);
+  border: 1px solid transparent;
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: var(--type-ui);
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    opacity var(--duration-fast) var(--ease-out);
+}
+
+.jd-btn:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.jd-btn:active:not(:disabled) {
+  transform: scale(var(--motion-tap-scale));
+}
+
+.jd-btn--primary {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: var(--elevation-1);
+}
+
+.jd-btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-deep);
+  box-shadow: var(--elevation-2);
+}
+
+.jd-btn--secondary {
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+  border-color: var(--color-rule);
+}
+
+.jd-btn--secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-surface-muted) 85%, var(--color-ink) 15%);
+  border-color: var(--color-rule-strong);
+}
+
+.jd-btn--outline {
+  background: transparent;
+  color: var(--color-ink);
+  border-color: var(--color-rule-strong);
+}
+
+.jd-btn--outline:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-rule));
+}
+
+.jd-btn--ghost {
+  background: transparent;
+  color: var(--color-ink-secondary);
+}
+
+.jd-btn--ghost:hover:not(:disabled) {
+  background: var(--color-primary-soft);
+  color: var(--color-ink);
+}
+
+.jd-btn--danger {
+  background: var(--color-red-dark);
+  color: #fff;
+}
+
+.jd-btn--danger:hover:not(:disabled) {
+  background: var(--color-red-darker);
+}
+
+.jd-btn--sm {
+  min-height: 2rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--type-caption);
+}
+
+.jd-btn--lg {
+  min-height: var(--btn-height);
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--type-body);
+}
+
+.jd-card {
+  background: var(--color-surface);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow var(--duration-normal) var(--ease-out),
+    border-color var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .jd-card--interactive:hover {
+    border-color: color-mix(in srgb, var(--color-primary) 18%, var(--color-rule));
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(var(--motion-hover-lift));
+  }
+}
+
+.jd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--chip-pad-y) var(--chip-pad-x);
+  border-radius: var(--chip-radius);
+  border: 1px solid var(--color-rule);
+  background: var(--color-paper);
+  color: var(--color-ink-muted);
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: var(--type-badge);
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.jd-chip:hover,
+.jd-chip--active {
+  border-color: var(--color-primary);
+  color: var(--color-ink);
+  background: var(--color-primary-soft);
+}
+
+.jd-input {
+  width: 100%;
+  padding: var(--input-pad-y) var(--input-pad-x);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--input-radius);
+  background: var(--color-surface);
+  color: var(--color-ink-secondary);
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: var(--type-body);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.jd-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 40%, transparent);
+  outline-offset: 0;
+  border-color: var(--color-rule-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jd-btn,
+  .jd-card,
+  .jd-chip,
+  .jd-input {
+    transition: none;
+  }
+
+  .jd-btn:active:not(:disabled),
+  .jd-card--interactive:hover {
+    transform: none;
+  }
+}

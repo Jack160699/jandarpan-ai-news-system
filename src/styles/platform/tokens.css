@@ -48,6 +48,7 @@
   --paper: var(--color-paper);
   --paper-elevated: var(--color-surface);
   --paper-muted: var(--color-surface-muted);
+  --paper-warm: var(--color-surface-muted);
   --ink-headline: var(--color-ink);
   --ink-primary: var(--color-ink);
   --ink-body: var(--color-ink-secondary);
@@ -60,6 +61,23 @@
   --th-primary-soft: var(--color-primary-soft);
   --ds-accent: var(--color-primary);
   --ds-live: var(--color-primary);
+
+  --accent-orange: var(--color-primary);
+  --accent-orange-deep: var(--color-primary-dark);
+  --accent-red: var(--color-red);
+  --accent-red-deep: var(--color-red-deep);
+  --accent-breaking: var(--color-red);
+  --accent-category: var(--color-ink-muted);
+  --accent-live: var(--color-red);
+  --brand-maroon: var(--color-ink);
+  --brand-maroon-deep: var(--color-ink);
+  --brand-orange: var(--color-primary);
+  --selection-bg: var(--color-primary-soft);
+  --selection-fg: var(--color-ink);
+  --background: var(--paper);
+  --foreground: var(--ink-primary);
+  --space-section: var(--section-gap);
+  --space-gutter: var(--gutter);
 
   --tenant-primary: var(--color-primary);
   --tenant-primary-dark: var(--color-primary-dark);
@@ -129,12 +147,90 @@
   --leading-normal: 1.58;
   --leading-relaxed: 1.62;
 
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
-  --shadow-card: 0 1px 2px rgb(42 32 18 / 0.06), 0 1px 4px rgb(42 32 18 / 0.04);
-  --shadow-card-hover: 0 4px 18px rgb(42 32 18 / 0.1), 0 1px 3px rgb(42 32 18 / 0.05);
-  --shadow-hero: 0 2px 10px rgb(42 32 18 / 0.08), 0 14px 36px rgb(42 32 18 / 0.07);
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* Spacing scale (4px base) */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+
+  /* Elevation / shadows */
+  --shadow-sm: 0 1px 2px rgb(42 32 18 / 0.06), 0 1px 3px rgb(42 32 18 / 0.04);
+  --shadow-md: 0 4px 12px rgb(42 32 18 / 0.08), 0 2px 4px rgb(42 32 18 / 0.04);
+  --shadow-lg: 0 8px 24px rgb(42 32 18 / 0.1), 0 4px 8px rgb(42 32 18 / 0.05);
+  --shadow-xl: 0 16px 48px rgb(42 32 18 / 0.12), 0 8px 16px rgb(42 32 18 / 0.06);
+  --shadow-card: var(--shadow-sm);
+  --shadow-card-hover: var(--shadow-md);
+  --shadow-hero: var(--shadow-lg);
+  --elevation-0: none;
+  --elevation-1: var(--shadow-sm);
+  --elevation-2: var(--shadow-md);
+  --elevation-3: var(--shadow-lg);
+  --elevation-4: var(--shadow-xl);
+
+  /* Glass (frosted surfaces) */
+  --glass-blur: 12px;
+  --glass-blur-strong: 18px;
+  --glass-saturate: 1.35;
+  --glass-bg: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  --glass-border: color-mix(in srgb, var(--color-rule) 65%, transparent);
+
+  /* Motion — single timing model */
+  --duration-instant: 100ms;
+  --duration-slow: 420ms;
+  --ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --motion-tap-scale: 0.97;
+  --motion-hover-lift: -1px;
+
+  /* Typography roles */
+  --type-display: var(--text-hero);
+  --type-headline: var(--text-xl);
+  --type-title: var(--text-lg);
+  --type-body: var(--text-md);
+  --type-ui: var(--text-sm);
+  --type-caption: var(--text-xs);
+  --type-meta: var(--text-meta);
+  --type-badge: var(--text-2xs);
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-extrabold: 800;
+
+  /* Semantic ink aliases */
+  --color-text-muted: var(--color-ink-muted);
+  --color-text-secondary: var(--color-ink-secondary);
+
+  /* Interactive primitives */
+  --btn-radius: var(--radius-md);
+  --btn-height: 2.75rem;
+  --btn-height-sm: 2.25rem;
+  --btn-pad-x: var(--space-4);
+  --btn-pad-y: var(--space-2);
+  --chip-radius: var(--radius-full);
+  --chip-pad-x: var(--space-3);
+  --chip-pad-y: var(--space-1);
+  --card-radius: var(--radius-xl);
+  --card-pad: var(--space-4);
+  --card-border: 1px solid var(--color-rule);
+  --input-radius: var(--radius-md);
+  --input-pad-x: var(--space-4);
+  --input-pad-y: var(--space-3);
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-snappy: cubic-bezier(0.33, 1, 0.68, 1);
@@ -196,4 +292,9 @@ html[data-theme="dark"] {
   --shadow-card: 0 4px 20px rgb(0 0 0 / 0.5);
   --shadow-card-hover: 0 8px 28px rgb(0 0 0 / 0.62);
   --shadow-hero: 0 4px 24px rgb(0 0 0 / 0.55);
+  --shadow-sm: var(--shadow-card);
+  --shadow-md: var(--shadow-card-hover);
+  --shadow-lg: var(--shadow-hero);
+  --glass-bg: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  --glass-border: color-mix(in srgb, var(--color-rule) 55%, transparent);
 }

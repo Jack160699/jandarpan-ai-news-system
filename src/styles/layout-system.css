@@ -34,6 +34,7 @@
 
 .route-transition-host--out .route-transition__viewport {
   opacity: 0.92;
+  transition: opacity var(--duration-normal) var(--ease-out);
 }
 
 .route-loading__brand {

@@ -3,9 +3,9 @@
  */
 
 .feed-news-card {
-  --feed-radius: 16px;
-  --feed-pad: 16px;
-  --feed-gap-y: 20px;
+  --feed-radius: var(--card-radius);
+  --feed-pad: var(--card-pad);
+  --feed-gap-y: var(--space-5);
   --feed-charcoal: #141416;
   --feed-charcoal-muted: #242428;
   --feed-ink: #f5f5f7;
@@ -50,8 +50,8 @@ html:not([data-theme="dark"]) .feed-news-card__main {
 @media (hover: hover) and (pointer: fine) {
   .feed-news-card__main {
     transition:
-      box-shadow 280ms var(--ease-out),
-      border-color 280ms var(--ease-out);
+      box-shadow var(--duration-normal) var(--ease-out),
+      border-color var(--duration-normal) var(--ease-out);
   }
 
   .feed-news-card:hover .feed-news-card__main {

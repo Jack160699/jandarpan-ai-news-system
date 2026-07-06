@@ -3,7 +3,7 @@
  */
 
 .hero-news-card--premium {
-  --hero-radius: 20px;
+  --hero-radius: var(--radius-2xl);
   --hero-charcoal: #141416;
   --hero-charcoal-elevated: #1c1c1f;
   --hero-charcoal-muted: #2a2a2e;
@@ -47,8 +47,8 @@ html:not([data-theme="dark"]) .hero-news-card__article--premium {
 @media (hover: hover) and (pointer: fine) {
   .hero-news-card__article--premium {
     transition:
-      box-shadow 320ms var(--ease-out),
-      transform 320ms var(--ease-out);
+      box-shadow var(--duration-normal) var(--ease-out),
+      transform var(--duration-normal) var(--ease-out);
   }
 
   .hero-news-card__article--premium:hover {
@@ -135,7 +135,7 @@ html:not([data-theme="dark"]) .hero-news-card__article--premium {
   display: inline-flex;
   align-items: center;
   padding: 0.3125rem 0.625rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-family: var(--font-ui), system-ui, sans-serif;
   font-size: 0.6875rem;
   font-weight: 700;
@@ -154,7 +154,7 @@ html:not([data-theme="dark"]) .hero-news-card__article--premium {
   align-items: center;
   gap: 0.35rem;
   padding: 0.3125rem 0.625rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-family: var(--font-ui), system-ui, sans-serif;
   font-size: 0.6875rem;
   font-weight: 800;
@@ -408,13 +408,13 @@ html:not([data-theme="dark"]) .hero-news-card__article--premium {
   );
   background-size: 200% 100%;
   animation: hero-shimmer 1.35s ease-in-out infinite;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 .hero-news-card__shimmer--badge {
   width: 5rem;
   height: 1.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .hero-news-card__shimmer--headline {
