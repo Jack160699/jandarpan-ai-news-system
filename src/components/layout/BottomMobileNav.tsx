@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
 import { BOTTOM_NAV_TABS } from "@/lib/navigation";
 import {
   isBottomNavActive,
@@ -48,36 +47,18 @@ function DockIcon({
   active: boolean;
   isLive?: boolean;
 }) {
-  const reduceMotion = useReducedMotion();
   if (tab.icon === "menu") {
     return <IconMenu className="mobile-dock__icon" />;
   }
   const Icon = ICONS[tab.icon];
   if (!Icon) return null;
 
-  const icon = <Icon className="mobile-dock__icon" />;
-
-  if (reduceMotion) {
-    return (
-      <span
-        className={`mobile-dock__icon-wrap${active ? " is-active" : ""}${isLive ? " mobile-dock__icon-wrap--live" : ""}`}
-      >
-        {icon}
-      </span>
-    );
-  }
-
   return (
-    <motion.span
+    <span
       className={`mobile-dock__icon-wrap${active ? " is-active" : ""}${isLive ? " mobile-dock__icon-wrap--live" : ""}`}
-      animate={{
-        scale: active ? 1.06 : 1,
-        y: active ? -1 : 0,
-      }}
-      transition={{ type: "spring", stiffness: 420, damping: 28 }}
     >
-      {icon}
-    </motion.span>
+      <Icon className="mobile-dock__icon" />
+    </span>
   );
 }
 

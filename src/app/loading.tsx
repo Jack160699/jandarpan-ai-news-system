@@ -21,7 +21,7 @@ export default function RootLoading() {
           alt={name}
           width={JAN_DARPAN_LOGO_INTRINSIC.width}
           height={JAN_DARPAN_LOGO_INTRINSIC.height}
-          priority
+          loading="lazy"
           quality={92}
           className="route-loading__logo"
         />

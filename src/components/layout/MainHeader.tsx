@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { LayoutGrid } from "lucide-react";
 import { useHeaderScrolled } from "@/hooks/useHeaderScrolled";
@@ -10,8 +11,15 @@ import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { ThemeToggleButton } from "@/components/navigation/ThemeToggleButton";
 import { IconBell, IconSearch } from "@/components/navigation/NavIcons";
-import { SearchOverlay } from "@/components/reader/SearchOverlay";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
+
+const SearchOverlay = dynamic(
+  () =>
+    import("@/components/reader/SearchOverlay").then((m) => ({
+      default: m.SearchOverlay,
+    })),
+  { ssr: false }
+);
 
 export function MainHeader() {
   const { tenant, headerLocation } = useTenant();

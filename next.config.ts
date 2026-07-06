@@ -6,6 +6,13 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "@tanstack/react-query",
+    ],
+  },
   async redirects() {
     return [
       {
