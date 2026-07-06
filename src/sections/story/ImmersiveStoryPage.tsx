@@ -8,8 +8,6 @@ import { StoryContinueReading } from "@/components/story/StoryContinueReading";
 import { StoryFloatingCTA } from "@/components/story/StoryFloatingCTA";
 import { StoryFooterDisclaimer } from "@/components/story/StoryFooterDisclaimer";
 import { StoryHighlights } from "@/components/story/StoryHighlights";
-import { StoryInlineBreaking } from "@/components/story/StoryInlineBreaking";
-import { StoryInlineRelated } from "@/components/story/StoryInlineRelated";
 import { StoryMobileShareBar } from "@/components/story/StoryMobileShareBar";
 import { ArticleCardActions } from "@/components/article/ArticleCardActions";
 import { StoryReaderShell } from "@/components/story/StoryReaderShell";
@@ -26,6 +24,8 @@ import { StoryTimeline } from "@/components/story/StoryTimeline";
 import { StoryTopicChips } from "@/components/story/StoryTopicChips";
 import { isArticleLive } from "@/lib/news/home-ranking";
 import { buildEditorialHeroDisplay } from "@/lib/news/images/editorial-hero-display";
+import { StoryReadHelpers } from "@/components/story/StoryReadHelpers";
+import { partitionRelatedStories } from "@/lib/news/partition-related-stories";
 import { resolveStorySlug } from "@/lib/news/related-stories";
 import {
   bodySections,
@@ -122,29 +122,12 @@ export function ImmersiveStoryPage({
     ? formatRelativeTime(article.published_at, displayLanguage)
     : null;
 
-  const inlineRelated = related.slice(0, 3);
-  const gridRelated = related.slice(0, 8);
-  const continueRelated = related.slice(0, 6);
+  const { grid: gridRelated, continue: continueRelated } =
+    partitionRelatedStories(related, 6, 4);
 
   const liveHref = liveCoverage
     ? `/live/${liveCoverage.slug}`
     : "/#breaking";
-
-  const inlineSlot = (
-    <>
-      {liveCoverage ? (
-        <StoryInlineBreaking
-          headline={
-            liveCoverage.headline ??
-            "Live coverage is updating for this story."
-          }
-          href={liveHref}
-          sourceCount={liveCoverage.sourceCount}
-        />
-      ) : null}
-      <StoryInlineRelated articles={inlineRelated} />
-    </>
-  );
 
   return (
     <>
@@ -240,8 +223,6 @@ export function ImmersiveStoryPage({
                 sections={contentSections}
                 plainParagraphs={plainParagraphs}
                 plainBlocks={parsed.plainBlocks}
-                inlineSlot={inlineSlot}
-                inlineAfterParagraph={3}
               />
 
               <AdSlot
@@ -282,6 +263,7 @@ export function ImmersiveStoryPage({
           shortsHref="/shorts"
         />
         <StoryMobileShareBar url={canonicalUrl} title={headline} />
+        <StoryReadHelpers readTime={readTime} />
       </article>
     </>
   );

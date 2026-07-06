@@ -51,7 +51,8 @@ export function scoreRelatedness(
           new Date(candidate.published_at).getTime()
       ) / 3_600_000;
     if (ageH < 6) score += 15;
-    if (ageH < 24) score += 8;
+    else if (ageH < 12) score += 10;
+    else if (ageH < 24) score += 8;
   }
 
   return score;
