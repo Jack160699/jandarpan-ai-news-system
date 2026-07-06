@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { BookmarkButton } from "@/components/mobile/BookmarkButton";
 import { StoryReadingProgress } from "@/components/story/StoryReadingProgress";
+import { useStoryBack } from "@/hooks/useStoryBack";
 import { triggerHaptic } from "@/lib/mobile/haptics";
 import {
   loadReadingMemory,
@@ -28,6 +28,7 @@ export function StoryReaderToolbar({
   const { t } = useLanguage();
   const { prefs, toggleTheme, cycleFontScale, toggleReadingMode } =
     useReaderPreferences();
+  const goBack = useStoryBack();
   const [saved, setSaved] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -38,8 +39,8 @@ export function StoryReaderToolbar({
 
   const showToast = useCallback((message: string) => {
     setToast(message);
-    const t = window.setTimeout(() => setToast(null), 2200);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setToast(null), 2200);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const onSave = () => {
@@ -80,9 +81,16 @@ export function StoryReaderToolbar({
       <StoryReadingProgress />
 
       <div className="immersive-chrome" role="toolbar" aria-label="Reading tools">
-        <Link href="/" className="immersive-chrome__back tap-target">
+        <button
+          type="button"
+          className="immersive-chrome__back tap-target"
+          onClick={() => {
+            triggerHaptic("selection");
+            goBack();
+          }}
+        >
           ← Edition
-        </Link>
+        </button>
 
         <div className="immersive-chrome__tools">
           <span className="hidden sm:inline font-[family-name:var(--font-ui)] text-xs text-[var(--ink-muted)]">

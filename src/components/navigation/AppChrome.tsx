@@ -41,12 +41,16 @@ function ShortsLanguageShell({ children }: AppChromeProps) {
 }
 
 function AppChromeShell({ children }: AppChromeProps) {
+  const pathname = usePathname();
   const { contentLocked } = useLanguage();
+  const isStory = pathname.startsWith("/story/");
 
   return (
     <div
       className={cn(
-        "app-shell has-bottom-nav",
+        "app-shell",
+        !isStory && "has-bottom-nav",
+        isStory && "app-shell--story",
         contentLocked && "app-shell--lang-locked"
       )}
       data-hydrated="false"

@@ -9,6 +9,7 @@ import {
   resolveNavHref,
 } from "@/lib/navigation/active";
 import { triggerHaptic } from "@/lib/mobile/haptics";
+import { useDockScrollHide } from "@/hooks/useDockScrollHide";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
 import {
@@ -84,9 +85,16 @@ export function BottomMobileNav() {
   const { pathname, hash, pendingPath, startNavigation, menuOpen, toggleMenu } =
     useNavigation();
   const { t } = useLanguage();
+  const isStory = pathname.startsWith("/story/");
+  const scrollHidden = useDockScrollHide(!isStory);
+
+  if (isStory) return null;
 
   return (
-    <nav className="mobile-dock md:hidden" aria-label="Main">
+    <nav
+      className={`mobile-dock md:hidden${scrollHidden ? " mobile-dock--hidden" : ""}`}
+      aria-label="Main"
+    >
       <div className="mobile-dock__shell">
         <div className="mobile-dock__pill">
           {BOTTOM_NAV_TABS.map((tab) => {

@@ -95,7 +95,14 @@ export default async function SearchPage({ searchParams }: PageProps) {
             more.
           </p>
 
-          <SearchPanel initialQuery={q} />
+          <SearchPanel
+            initialQuery={q}
+            initialDistrict={district ?? null}
+            initialCategory={category ?? null}
+            initialTime={timeScope ?? "all"}
+            suppressResults={Boolean(serverResult && serverResult.hits.length > 0)}
+            autoFocus
+          />
 
           {serverResult && serverResult.hits.length > 0 ? (
             <>
