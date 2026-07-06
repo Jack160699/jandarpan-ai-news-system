@@ -65,12 +65,15 @@ type LanguageProviderProps = {
   children: ReactNode;
   defaultLanguage?: NewsroomLanguage;
   enabledLanguages?: NewsroomLanguage[];
+  /** Server-read cookie — avoids post-hydration lock flash for returning readers */
+  initialLanguageChosen?: boolean;
 };
 
 export function LanguageProvider({
   children,
   defaultLanguage = "hi",
   enabledLanguages,
+  initialLanguageChosen = false,
 }: LanguageProviderProps) {
   const router = useRouter();
   const pathname = usePathname() ?? "/";
@@ -87,9 +90,9 @@ export function LanguageProvider({
   );
 
   const [language, setLanguageState] = useState<AppLanguage>(defaultLanguage);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(initialLanguageChosen);
   const [mounted, setMounted] = useState(false);
-  const [gateOpen, setGateOpen] = useState(true);
+  const [gateOpen, setGateOpen] = useState(!initialLanguageChosen);
 
   useEffect(() => {
     setMounted(true);
@@ -180,7 +183,7 @@ export function LanguageProvider({
   const t = useMemo(() => getDictionary(safeLanguage), [safeLanguage]);
 
   const showLanguageGate = mounted && ready && gateOpen;
-  const contentLocked = !mounted || !ready || gateOpen;
+  const contentLocked = gateOpen;
 
   const value = useMemo(
     () => ({

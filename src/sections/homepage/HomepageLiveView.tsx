@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, type CSSProperties } from "react";
 import {
   HeroNewsCard,
   NewsGrid,
@@ -12,7 +12,6 @@ import { LazyHomeSection } from "@/components/homepage/LazyHomeSection";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
 import { NewUpdatesBanner } from "@/components/live-newsroom/NewUpdatesBanner";
 import { HomeSectionErrorBoundary } from "@/components/errors/HomeSectionErrorBoundary";
-import { HomepageLoadingView } from "@/components/loading";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import {
   hasValidHomeLead,
@@ -45,8 +44,7 @@ type HomepageLiveViewProps = {
 };
 
 export function HomepageLiveView({ feed: serverFeed }: HomepageLiveViewProps) {
-  const { contentLocked, ready, language, mounted: langMounted } = useLanguage();
-  const [mounted, setMounted] = useState(false);
+  const { contentLocked, language } = useLanguage();
 
   const normalizedServer = useMemo(
     () => normalizeHomepageFeed(serverFeed),
@@ -55,22 +53,15 @@ export function HomepageLiveView({ feed: serverFeed }: HomepageLiveViewProps) {
   const feed = useLocalizedFeed(normalizedServer) ?? normalizedServer;
 
   useEffect(() => {
-    setMounted(true);
     homeDebug("HomepageLiveView", {
       language,
-      ready,
-      langMounted,
       contentLocked,
       hasLead: hasValidHomeLead(feed),
     });
-  }, [language, ready, langMounted, contentLocked, feed]);
+  }, [language, contentLocked, feed]);
 
   if (contentLocked) {
     return null;
-  }
-
-  if (!mounted || !langMounted) {
-    return <HomepageLoadingView />;
   }
 
   if (!feed || !hasValidHomeLead(feed)) {

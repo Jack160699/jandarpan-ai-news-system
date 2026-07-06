@@ -12,6 +12,7 @@ import {
   auditTranslationCoverage,
   enqueueMissingTranslationJobs,
   estimateTranslationPerformance,
+  requeueDeadTranslationJobs,
   scheduleTranslationBatchJob,
 } from "@/lib/i18n/multilingual/translation-queue";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -68,6 +69,7 @@ async function handleBackfill(request: NextRequest) {
     );
   }
 
+  const requeued = await requeueDeadTranslationJobs(25);
   const enqueue = await enqueueMissingTranslationJobs({ limit: enqueueLimit });
   await scheduleTranslationBatchJob(null);
 
@@ -78,7 +80,7 @@ async function handleBackfill(request: NextRequest) {
   });
 
   const coverageAfter = await auditTranslationCoverage();
-  const backlogAfter = coverageAfter.hiMissingEn + coverageAfter.enMissingHi;
+  const backlogAfter = coverageAfter.backlogTotal;
   const performance = await estimateTranslationPerformance(backlogAfter);
 
   return NextResponse.json(
@@ -89,6 +91,12 @@ async function handleBackfill(request: NextRequest) {
       coverageAfter,
       backlogBefore,
       backlogAfter,
+      pairs: {
+        hiToEn: coverageAfter.hiMissingEn,
+        hiToCg: coverageAfter.hiMissingCg,
+        enToHi: coverageAfter.enMissingHi,
+      },
+      requeued,
       enqueued: enqueue.enqueued,
       scanned: enqueue.scanned,
       processed,

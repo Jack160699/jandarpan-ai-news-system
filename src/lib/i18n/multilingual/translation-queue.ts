@@ -17,8 +17,17 @@ export const READER_TRANSLATION_PAIRS: Array<{
   target: NewsroomLanguage;
 }> = [
   { source: "hi", target: "en" },
+  { source: "hi", target: "cg" },
   { source: "en", target: "hi" },
 ];
+
+export function translationTargetsForSource(
+  source: NewsroomLanguage
+): NewsroomLanguage[] {
+  return READER_TRANSLATION_PAIRS.filter((p) => p.source === source).map(
+    (p) => p.target
+  );
+}
 
 const TRANSLATION_JOB_BATCH =
   Number(process.env.TRANSLATION_ENQUEUE_BATCH) || 40;
@@ -36,8 +45,10 @@ export type TranslationCoverageAudit = {
   hiSource: number;
   enSource: number;
   hiMissingEn: number;
+  hiMissingCg: number;
   enMissingHi: number;
   hiEnCoveragePct: number;
+  hiCgCoveragePct: number;
   enHiCoveragePct: number;
   incompleteBundles: number;
   queuePending: number;
@@ -45,8 +56,12 @@ export type TranslationCoverageAudit = {
   queueBatchPending: number;
   queueDead: number;
   queueFailed: number;
+  queueStalled: number;
   deadLetters: number;
+  backlogTotal: number;
 };
+
+export type TranslationHealthStatus = "healthy" | "degraded" | "unhealthy";
 
 export function isTranslationBundleComplete(
   bundle: Partial<ArticleLocaleBundle> | null | undefined
@@ -128,8 +143,10 @@ export async function auditTranslationCoverage(): Promise<TranslationCoverageAud
   let hiSource = 0;
   let enSource = 0;
   let hiMissingEn = 0;
+  let hiMissingCg = 0;
   let enMissingHi = 0;
   let hiWithEn = 0;
+  let hiWithCg = 0;
   let enWithHi = 0;
   let incompleteBundles = 0;
 
@@ -149,10 +166,13 @@ export async function auditTranslationCoverage(): Promise<TranslationCoverageAud
     );
     const enBundle = translations.en;
     const hiBundle = translations.hi;
+    const cgBundle = translations.cg;
 
     if (source === "hi") {
       if (hasReaderTranslation(typed, "en")) hiWithEn += 1;
       else hiMissingEn += 1;
+      if (hasReaderTranslation(typed, "cg")) hiWithCg += 1;
+      else hiMissingCg += 1;
     }
 
     if (source === "en") {
@@ -162,7 +182,8 @@ export async function auditTranslationCoverage(): Promise<TranslationCoverageAud
 
     if (
       (enBundle?.headline?.trim() && !isTranslationBundleComplete(enBundle)) ||
-      (hiBundle?.headline?.trim() && !isTranslationBundleComplete(hiBundle))
+      (hiBundle?.headline?.trim() && !isTranslationBundleComplete(hiBundle)) ||
+      (cgBundle?.headline?.trim() && !isTranslationBundleComplete(cgBundle))
     ) {
       incompleteBundles += 1;
     }
@@ -186,11 +207,19 @@ export async function auditTranslationCoverage(): Promise<TranslationCoverageAud
     .in("job_type", ["translate_article", "translation_batch"])
     .eq("status", "dead");
 
+  const staleThreshold = new Date(Date.now() - 10 * 60_000).toISOString();
   const { count: queueFailed } = await supabase
     .from("worker_jobs")
     .select("id", { count: "exact", head: true })
     .in("job_type", ["translate_article", "translation_batch"])
-    .in("status", ["failed", "claimed"]);
+    .eq("status", "failed");
+
+  const { count: queueStalled } = await supabase
+    .from("worker_jobs")
+    .select("id", { count: "exact", head: true })
+    .in("job_type", ["translate_article", "translation_batch"])
+    .eq("status", "claimed")
+    .lt("claimed_at", staleThreshold);
 
   const { count: deadLetters } = await supabase
     .from("worker_dead_letters")
@@ -201,14 +230,19 @@ export async function auditTranslationCoverage(): Promise<TranslationCoverageAud
     (await countPendingJobs("translate_article")) +
     (await countPendingJobs("translation_batch"));
 
+  const backlogTotal = hiMissingEn + hiMissingCg + enMissingHi;
+
   return {
     publishedTotal,
     hiSource,
     enSource,
     hiMissingEn,
+    hiMissingCg,
     enMissingHi,
     hiEnCoveragePct:
       hiSource > 0 ? Math.round((hiWithEn / hiSource) * 1000) / 10 : 100,
+    hiCgCoveragePct:
+      hiSource > 0 ? Math.round((hiWithCg / hiSource) * 1000) / 10 : 100,
     enHiCoveragePct:
       enSource > 0 ? Math.round((enWithHi / enSource) * 1000) / 10 : 100,
     incompleteBundles,
@@ -217,8 +251,107 @@ export async function auditTranslationCoverage(): Promise<TranslationCoverageAud
     queueBatchPending: queueBatchPending ?? 0,
     queueDead: queueDead ?? 0,
     queueFailed: queueFailed ?? 0,
+    queueStalled: queueStalled ?? 0,
     deadLetters: deadLetters ?? 0,
+    backlogTotal,
   };
+}
+
+export function resolveTranslationHealth(
+  audit: TranslationCoverageAudit
+): TranslationHealthStatus {
+  if (
+    audit.queueDead > 0 ||
+    audit.deadLetters > 5 ||
+    audit.queueStalled > 3 ||
+    (audit.backlogTotal > 50 && audit.queuePending === 0)
+  ) {
+    return "unhealthy";
+  }
+  if (
+    audit.backlogTotal > 0 ||
+    audit.queueFailed > 0 ||
+    audit.incompleteBundles > 0 ||
+    audit.queuePending > 100
+  ) {
+    return "degraded";
+  }
+  return "healthy";
+}
+
+export async function enqueueTranslationsForPublishedArticle(
+  articleId: string,
+  tenantId?: string | null
+): Promise<number> {
+  const supabase = createAdminServerClient();
+  const { data: row, error } = await supabase
+    .from("generated_articles")
+    .select(
+      "id, tenant_id, language, headline, summary, article_body, editorial_metadata, translations, published_at, editorial_status"
+    )
+    .eq("id", articleId)
+    .maybeSingle();
+
+  if (error || !row) return 0;
+  if (!row.published_at || row.editorial_status !== "approved") return 0;
+
+  const article = row as GeneratedArticleRow;
+  if (!isTranslatableArticle(article)) return 0;
+
+  const source = normalizeArticleLanguage(article.language);
+  const targets = translationTargetsForSource(source);
+  let enqueued = 0;
+
+  for (const target of targets) {
+    if (!articleNeedsTranslation(article, target)) continue;
+    const id = await enqueueArticleTranslation(
+      { id: article.id, tenant_id: tenantId ?? article.tenant_id },
+      target,
+      { priority: 8 }
+    );
+    if (id) enqueued += 1;
+  }
+
+  if (enqueued > 0) {
+    await scheduleTranslationBatchJob(tenantId ?? article.tenant_id ?? null);
+  }
+
+  return enqueued;
+}
+
+export async function requeueDeadTranslationJobs(
+  limit = 20
+): Promise<number> {
+  const supabase = createAdminServerClient();
+  const { data: deadLetters } = await supabase
+    .from("worker_dead_letters")
+    .select("job_type, payload, tenant_id")
+    .in("job_type", ["translate_article", "translation_batch"])
+    .order("created_at", { ascending: true })
+    .limit(limit);
+
+  if (!deadLetters?.length) return 0;
+
+  let requeued = 0;
+  for (const dl of deadLetters) {
+    if (dl.job_type === "translate_article") {
+      const payload = dl.payload as { articleId?: string; targetLanguage?: string };
+      const articleId = String(payload.articleId ?? "").trim();
+      const target = payload.targetLanguage as NewsroomLanguage | undefined;
+      if (!articleId || !target) continue;
+      const id = await enqueueArticleTranslation(
+        { id: articleId, tenant_id: dl.tenant_id },
+        target,
+        { priority: 7 }
+      );
+      if (id) requeued += 1;
+    } else if (dl.job_type === "translation_batch") {
+      const id = await scheduleTranslationBatchJob(dl.tenant_id);
+      if (id) requeued += 1;
+    }
+  }
+
+  return requeued;
 }
 
 export async function findArticlesMissingTranslation(input: {

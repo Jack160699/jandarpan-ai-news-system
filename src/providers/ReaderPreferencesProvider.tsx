@@ -42,12 +42,26 @@ type ReaderPreferencesContextValue = {
 const ReaderPreferencesContext =
   createContext<ReaderPreferencesContextValue | null>(null);
 
+function readInitialPrefs(): ReaderPreferences {
+  if (typeof window === "undefined") return DEFAULT_PREFERENCES;
+  const loaded = loadPreferences();
+  const langState = loadStoredLanguage();
+  const themeFromDom =
+    document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  return {
+    ...loaded,
+    theme: themeFromDom,
+    language: langState.language,
+    languageChosen: langState.chosen,
+  };
+}
+
 export function ReaderPreferencesProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [prefs, setPrefs] = useState<ReaderPreferences>(DEFAULT_PREFERENCES);
+  const [prefs, setPrefs] = useState<ReaderPreferences>(readInitialPrefs);
   const [hydrated, setHydrated] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 

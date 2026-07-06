@@ -3995,6 +3995,41 @@
   margin-bottom: 1rem;
 }
 
+.anr-health-ops__launch-strip {
+  margin-bottom: 1.25rem;
+}
+
+.anr-health-ops__launch-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.65rem;
+}
+
+.anr-health-ops__launch-grid .anr-pulse-item {
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--anr-border, rgba(255, 255, 255, 0.08));
+}
+
+.anr-health-ops__launch-grid .anr-pulse-item__label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+
+.anr-health-ops__launch-grid .anr-pulse-item__value {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+}
+
 .anr-health-ops__score {
   font-size: 2rem;
   font-weight: 700;

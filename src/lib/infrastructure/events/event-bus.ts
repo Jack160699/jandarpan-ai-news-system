@@ -199,6 +199,13 @@ export async function publishArticlePublished(input: {
   articleId: string;
   tenantId: string;
 }): Promise<void> {
+  const { enqueueTranslationsForPublishedArticle } = await import(
+    "@/lib/i18n/multilingual/translation-queue"
+  );
+  void enqueueTranslationsForPublishedArticle(input.articleId, input.tenantId).catch(
+    (err) => console.warn("[translation] publish enqueue:", err)
+  );
+
   await publishEvent({
     topic: "articles.published",
     eventType: "articles.published",

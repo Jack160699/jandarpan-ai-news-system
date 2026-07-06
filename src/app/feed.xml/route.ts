@@ -16,36 +16,64 @@ function escapeXml(s: string): string {
     .replace(/'/g, "&apos;");
 }
 
+function absoluteImage(url: string | null | undefined): string | null {
+  if (!url?.trim()) return null;
+  if (url.startsWith("http")) return url;
+  return `${SITE_URL}${url.startsWith("/") ? url : `/${url}`}`;
+}
+
+function languageTag(lang: string | null | undefined): string {
+  if (lang === "en") return "en-IN";
+  if (lang === "cg") return "hi-IN";
+  return "hi-IN";
+}
+
 export async function GET() {
   const [org, pool] = await Promise.all([
     fetchOrganizationSettings(),
-    fetchGeneratedArticlePool(50).catch(() => []),
+    fetchGeneratedArticlePool(100).catch(() => []),
   ]);
 
+  const seenGuids = new Set<string>();
   const items = pool
     .filter((row) => row.slug && row.headline)
     .map((row) => {
       const url = `${SITE_URL}/story/${encodeURIComponent(row.slug)}`;
+      if (seenGuids.has(url)) return "";
+      seenGuids.add(url);
+
       const pubDate = row.published_at ?? row.created_at;
+      const image = absoluteImage(row.hero_image_url);
+      const lang = languageTag(row.language);
+
       return `
     <item>
       <title>${escapeXml(row.headline)}</title>
       <link>${escapeXml(url)}</link>
       <guid isPermaLink="true">${escapeXml(url)}</guid>
       <pubDate>${new Date(pubDate).toUTCString()}</pubDate>
+      <language>${lang}</language>
       ${row.summary ? `<description>${escapeXml(row.summary)}</description>` : ""}
+      ${image ? `<enclosure url="${escapeXml(image)}" type="image/jpeg" length="0" />` : ""}
+      ${image ? `<media:content url="${escapeXml(image)}" medium="image" />` : ""}
+      <author>${escapeXml(org.email)} (${escapeXml(org.organizationName)})</author>
     </item>`;
     })
+    .filter(Boolean)
     .join("");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<rss version="2.0"
+  xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:media="http://search.yahoo.com/mrss/">
   <channel>
     <title>${escapeXml(org.organizationName)}</title>
     <link>${SITE_URL}</link>
-    <description>${escapeXml("Chhattisgarh news — district bureaus, state desk, and live coverage.")}</description>
+    <description>${escapeXml(`${org.organizationName} — Chhattisgarh news from district bureaus and the state desk.`)}</description>
     <language>hi-IN</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <managingEditor>${escapeXml(org.editorialEmail)} (${escapeXml(org.organizationName)})</managingEditor>
+    <webMaster>${escapeXml(org.email)} (${escapeXml(org.organizationName)})</webMaster>
     <atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml"/>
     ${items}
   </channel>

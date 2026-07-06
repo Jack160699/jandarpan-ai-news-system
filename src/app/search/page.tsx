@@ -101,7 +101,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
             initialCategory={category ?? null}
             initialTime={timeScope ?? "all"}
             suppressResults={Boolean(serverResult && serverResult.hits.length > 0)}
-            autoFocus
           />
 
           {serverResult && serverResult.hits.length > 0 ? (
