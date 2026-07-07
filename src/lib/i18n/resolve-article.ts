@@ -92,23 +92,12 @@ export async function resolveStoryArticleFields(
     return { ...strict, usedSourceFallback: false };
   }
 
-  const { ensureArticleTranslation } = await import(
-    "@/lib/i18n/multilingual/ensure-translation"
+  const { enqueueArticleTranslation } = await import(
+    "@/lib/i18n/multilingual/translation-queue"
   );
-  const bundle = await ensureArticleTranslation(row, displayLanguage);
-  if (bundle) {
-    return {
-      headline: bundle.headline,
-      summary: bundle.summary,
-      articleBody: bundle.article_body ?? row.article_body ?? "",
-      seoTitle: bundle.seo_title,
-      seoDescription: bundle.seo_description,
-      readingTime: bundle.reading_time,
-      language: displayLanguage,
-      usedTranslation: true,
-      usedSourceFallback: false,
-    };
-  }
+  void enqueueArticleTranslation(row, displayLanguage, { priority: 9 }).catch(
+    () => undefined
+  );
 
   if (options?.allowSourceFallback !== false) {
     // STORY_PAGE_SOURCE_FALLBACK — deep-linked story before translation persists.

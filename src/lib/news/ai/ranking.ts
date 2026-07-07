@@ -187,7 +187,8 @@ function scoreSourceTrust(row: GeneratedArticleRow): number {
 function scoreEngagement(row: GeneratedArticleRow): number {
   let score = 0;
   const summaryLen = row.summary?.trim().length ?? 0;
-  const bodyLen = row.article_body?.trim().length ?? 0;
+  const bodyLen =
+    row.article_body?.trim().length ?? row.summary?.trim().length ?? 0;
 
   if (row.hero_image_url) score += 5;
   if (summaryLen > 80) score += 4;

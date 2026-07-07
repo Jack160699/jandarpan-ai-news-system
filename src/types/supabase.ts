@@ -1336,6 +1336,7 @@ export type Database = {
           error: string | null
           id: string
           processed_at: string | null
+          processing_started_at: string | null
           status: string
         }
         Insert: {
@@ -1344,6 +1345,7 @@ export type Database = {
           error?: string | null
           id?: string
           processed_at?: string | null
+          processing_started_at?: string | null
           status?: string
         }
         Update: {
@@ -1352,6 +1354,7 @@ export type Database = {
           error?: string | null
           id?: string
           processed_at?: string | null
+          processing_started_at?: string | null
           status?: string
         }
         Relationships: [
@@ -3671,6 +3674,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_ai_queue_batch: {
+        Args: { claim_limit?: number; stale_reclaim_minutes?: number }
+        Returns: { article_id: number }[]
+      }
       claim_editorial_image_batch: {
         Args: { claim_limit?: number }
         Returns: Database["public"]["Tables"]["editorial_image_queue"]["Row"][]

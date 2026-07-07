@@ -1,11 +1,18 @@
 /**
- * POST /api/cron/translation-backfill — audit, enqueue, and drain translation jobs
+ * POST /api/cron/translation-backfill — audit, enqueue gaps, optional job drain
+ *
+ * Normal operation: enqueue-only (job_processor via orchestrate executes translations).
+ * Processing runs on Vercel daily backup, forceProcess body, or TRANSLATION_BACKFILL_PROCESS=true.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
+import {
+  shouldProcessTranslationBackfill,
+  type TranslationBackfillTrigger,
+} from "@/lib/infrastructure/cron/translation-policy";
 import { JOB_HANDLERS } from "@/lib/infrastructure/jobs/handlers";
 import { processJobBatch } from "@/lib/infrastructure/jobs/queue";
 import {
@@ -13,7 +20,6 @@ import {
   enqueueMissingTranslationJobs,
   estimateTranslationPerformance,
   requeueDeadTranslationJobs,
-  scheduleTranslationBatchJob,
 } from "@/lib/i18n/multilingual/translation-queue";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -45,15 +51,24 @@ async function handleBackfill(request: NextRequest) {
     enqueueLimit?: number;
     processLimit?: number;
     dryRun?: boolean;
+    forceProcess?: boolean;
   };
 
   const enqueueLimit = Number(body.enqueueLimit ?? process.env.TRANSLATION_ENQUEUE_BATCH ?? 40);
   const processLimit = Number(body.processLimit ?? process.env.TRANSLATION_PROCESS_BATCH ?? 8);
   const dryRun = body.dryRun === true;
 
+  const trigger: TranslationBackfillTrigger = body.forceProcess
+    ? "manual_override"
+    : auth.vercelCron
+      ? "vercel_backup"
+      : "scheduled_cron";
+
+  const processGate = shouldProcessTranslationBackfill(trigger);
+
   const coverageBefore = await auditTranslationCoverage();
   const backlogBefore =
-    coverageBefore.hiMissingEn + coverageBefore.enMissingHi;
+    coverageBefore.hiMissingEn + coverageBefore.hiMissingCg + coverageBefore.enMissingHi;
 
   if (dryRun) {
     const performance = await estimateTranslationPerformance(backlogBefore);
@@ -61,6 +76,8 @@ async function handleBackfill(request: NextRequest) {
       {
         ok: true,
         dryRun: true,
+        trigger,
+        processGate,
         coverageBefore,
         backlogBefore,
         performance,
@@ -71,13 +88,15 @@ async function handleBackfill(request: NextRequest) {
 
   const requeued = await requeueDeadTranslationJobs(25);
   const enqueue = await enqueueMissingTranslationJobs({ limit: enqueueLimit });
-  await scheduleTranslationBatchJob(null);
 
-  const processed = await processJobBatch(JOB_HANDLERS, {
-    limit: processLimit,
-    jobTypes: ["translate_article", "translation_batch"],
-    workerId: "translation_backfill",
-  });
+  let processed: Awaited<ReturnType<typeof processJobBatch>> | null = null;
+  if (processGate.allowed) {
+    processed = await processJobBatch(JOB_HANDLERS, {
+      limit: processLimit,
+      jobTypes: ["translate_article", "translation_batch"],
+      workerId: "translation_backfill",
+    });
+  }
 
   const coverageAfter = await auditTranslationCoverage();
   const backlogAfter = coverageAfter.backlogTotal;
@@ -87,6 +106,8 @@ async function handleBackfill(request: NextRequest) {
     {
       ok: true,
       dryRun: false,
+      trigger,
+      processGate,
       coverageBefore,
       coverageAfter,
       backlogBefore,
@@ -100,7 +121,6 @@ async function handleBackfill(request: NextRequest) {
       enqueued: enqueue.enqueued,
       scanned: enqueue.scanned,
       processed,
-      performance,
     },
     { headers: noStoreHeaders() }
   );

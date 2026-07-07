@@ -38,8 +38,9 @@ export function isPublicGeneratedArticle(row: {
   published_at?: string | null;
   workflow_status?: string | null;
 }): boolean {
-  const status = (row.editorial_status ?? "approved") as EditorialArticleStatus;
-  if (status === "rejected" || status === "pending") return false;
+  const status = (row.editorial_status ?? "approved") as string;
+  if (status === "rejected" || status === "pending" || status === "archived") return false;
+  if (row.workflow_status === "archived") return false;
   if (!row.published_at) return false;
   if (!PUBLIC_EDITORIAL_STATUSES.includes(status as PublicEditorialStatus)) return false;
   return true;

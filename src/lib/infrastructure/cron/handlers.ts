@@ -172,6 +172,12 @@ export async function handleCronWorker(
     const result = await runQueueWorker(workerId, {
       deadline,
       requestUrl: request.url,
+      editorialGenerateTrigger:
+        workerId === "editorial_generate"
+          ? auth.vercelCron
+            ? "vercel_backup"
+            : "scheduled_cron"
+          : undefined,
     });
 
     const metadata = result.metadata as

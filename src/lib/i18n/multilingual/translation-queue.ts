@@ -6,6 +6,7 @@ import {
   normalizeArticleLanguage,
   type NewsroomLanguage,
 } from "@/lib/i18n/languages";
+import { DEFAULT_TRANSLATION_TARGETS } from "@/lib/i18n/multilingual/translate";
 import { enqueueJob, enqueueJobs, countPendingJobs } from "@/lib/infrastructure/jobs/queue";
 import { createAdminServerClient } from "@/lib/supabase";
 import type { ArticleLocaleBundle, ArticleTranslations } from "@/lib/i18n/multilingual/types";
@@ -27,6 +28,25 @@ export function translationTargetsForSource(
   return READER_TRANSLATION_PAIRS.filter((p) => p.source === source).map(
     (p) => p.target
   );
+}
+
+/** Reader pairs by default; full NEWSROOM_TRANSLATE_LANGS when auto-translate enabled. */
+export function translationTargetsForPublishedArticle(
+  source: NewsroomLanguage
+): NewsroomLanguage[] {
+  if (process.env.NEWSROOM_AUTO_TRANSLATE !== "true") {
+    return translationTargetsForSource(source);
+  }
+
+  const raw = process.env.NEWSROOM_TRANSLATE_LANGS?.trim();
+  const langs = raw
+    ? raw
+        .split(",")
+        .map((s) => normalizeArticleLanguage(s.trim()))
+        .filter((l, i, arr) => arr.indexOf(l) === i)
+    : DEFAULT_TRANSLATION_TARGETS;
+
+  return langs.filter((target) => target !== source);
 }
 
 const TRANSLATION_JOB_BATCH =
@@ -299,7 +319,7 @@ export async function enqueueTranslationsForPublishedArticle(
   if (!isTranslatableArticle(article)) return 0;
 
   const source = normalizeArticleLanguage(article.language);
-  const targets = translationTargetsForSource(source);
+  const targets = translationTargetsForPublishedArticle(source);
   let enqueued = 0;
 
   for (const target of targets) {

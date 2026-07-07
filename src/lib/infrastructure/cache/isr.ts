@@ -3,8 +3,8 @@
  */
 
 import { revalidatePath, revalidateTag } from "next/cache";
-import { cacheDelete, CACHE_KEYS } from "@/lib/infrastructure/cache";
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
+import { invalidateHomepageRedisCaches } from "@/lib/infrastructure/cache/invalidate-homepage-redis";
 import { LIVE_NEWS_CACHE_TAG } from "@/lib/news/home-ranking";
 
 export const ISR_TAGS = {
@@ -35,13 +35,15 @@ export async function revalidateNewsroomCaches(options?: {
     revalidatePath(ISR_PATHS.home);
     revalidatePath("/category", "layout");
 
-    await cacheDelete(CACHE_KEYS.homepageFeed);
+    const redisInvalidation = await invalidateHomepageRedisCaches();
 
     logIngestionAnalytics({
       event: "revalidate",
       metadata: {
         tags: Object.values(ISR_TAGS),
         publishedStories: options?.publishedStories ?? 0,
+        homepageRedisKeysDeleted: redisInvalidation.keysDeleted,
+        homepageTenantsInvalidated: redisInvalidation.tenantCount,
       },
     });
   } catch (err) {

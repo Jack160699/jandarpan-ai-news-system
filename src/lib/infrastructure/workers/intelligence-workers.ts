@@ -84,8 +84,6 @@ async function runIntelligenceSnapshot(ctx: WorkerContext): Promise<WorkerResult
       "intelligence_snapshot",
       "intelligence_summary",
       "seo_analysis",
-      "translation_batch",
-      "translate_article",
     ],
     workerId: "intelligence_snapshot",
     deadline: ctx.deadline,

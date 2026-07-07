@@ -6,6 +6,7 @@ import {
   isAnyChatProviderConfigured,
   isLocalEnrichEnabled,
 } from "@/lib/ai/providers";
+import { resolveDirectEditorialGate } from "@/lib/infrastructure/cron/editorial-generate-policy";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
 import { saveQueueCheckpoint } from "@/lib/infrastructure/queue/checkpoint";
@@ -151,6 +152,19 @@ async function runAiWorker(ctx: WorkerContext): Promise<WorkerResult> {
 
 async function runEditorialWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
+
+  const gate = resolveDirectEditorialGate(
+    ctx.editorialGenerateTrigger ?? "scheduled_cron"
+  );
+  if (!gate.allowed) {
+    return skippedWorkerResult(
+      "editorial_generate",
+      started,
+      ctx.deadline,
+      gate.reason
+    );
+  }
+
   if (process.env.NEWSROOM_GENERATE_ARTICLES !== "true") {
     return skippedWorkerResult("editorial_generate", started, ctx.deadline, "not_enabled");
   }

@@ -15,6 +15,7 @@ import {
 } from "@/lib/infrastructure/cron/orchestrator";
 import { runWorkerEndpoint } from "@/lib/infrastructure/workers/run-guard";
 import type { WorkerId } from "@/lib/infrastructure/workers/types";
+import { pipelineLog } from "@/lib/observability/production-log";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -42,14 +43,11 @@ async function handleOrchestrate(request: Request) {
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
-  console.log(
-    JSON.stringify({
-      tag: "[cron_triggered]",
-      job: "orchestrate",
-      path: new URL(request.url).pathname,
-      ts: new Date().toISOString(),
-    })
-  );
+  pipelineLog("[cron_triggered]", {
+    job: "orchestrate",
+    path: new URL(request.url).pathname,
+    ts: new Date().toISOString(),
+  });
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
@@ -76,6 +74,7 @@ async function handleOrchestrate(request: Request) {
     const result = await runCronOrchestration({
       requestUrl: request.url,
       workers: workers?.length ? workers : undefined,
+      explicitWorkers: Boolean(workers?.length),
     });
     return {
       ok: result.ok,

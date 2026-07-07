@@ -8,6 +8,7 @@ import {
   createAnonServerClient,
   isSupabaseConfigured,
 } from "@/lib/supabase";
+import { pipelineLog, pipelineWarn } from "@/lib/observability/production-log";
 import { buildHomepageFeed } from "@/lib/news/home-ranking";
 import { normalizeArticlePool } from "@/lib/news/normalize-pool";
 import { pickRelatedStories, resolveStorySlug } from "@/lib/news/related-stories";
@@ -62,7 +63,8 @@ export async function fetchArticlePool(): Promise<NewsArticleRow[]> {
   }
 
   const articles = normalizeArticlePool(data ?? []);
-  console.log("LIVE QUERY RESULT", articles.length, {
+  pipelineLog("[news-db] fetchArticlePool", {
+    count: articles.length,
     rawRows: data?.length ?? 0,
     tableCount: count ?? null,
     error: error?.message ?? null,
@@ -92,12 +94,12 @@ export async function getLiveNewsFeed(): Promise<LiveNewsFeed | null> {
   }
 
   const pool = await fetchArticlePool();
-  console.log("LIVE QUERY RESULT", pool.length);
+  pipelineLog("[news-db] getLiveNewsFeed pool", { count: pool.length });
 
   if (!pool.length) {
-    console.warn(
-      "[news-db] Empty pool after query — verify RLS policy 'Public read news articles' on news_articles (migration 001 or 005)"
-    );
+    pipelineWarn("[news-db] Empty pool after query", {
+      hint: "verify RLS policy on news_articles",
+    });
     return null;
   }
 

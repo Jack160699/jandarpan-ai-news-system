@@ -56,7 +56,12 @@ async function runDevOrchestration(
 
   for (const id of workers) {
     const deadline = createExecutionDeadline(DEV_STAGE_BUDGET_MS[id]);
-    const result = await runQueueWorker(id, { deadline, requestUrl });
+    const result = await runQueueWorker(id, {
+      deadline,
+      requestUrl,
+      editorialGenerateTrigger:
+        id === "editorial_generate" ? "manual_override" : undefined,
+    });
     results.push(result);
     if (!result.ok && !result.skipped) degraded = true;
   }
