@@ -5,6 +5,11 @@
 type IngestLogPayload = Record<string, unknown>;
 
 function emit(tag: string, payload: IngestLogPayload, level: "log" | "warn" | "error"): void {
+  if (level === "log" && process.env.NODE_ENV === "production") {
+    const logLevel = process.env.LOG_LEVEL?.toLowerCase();
+    if (logLevel !== "debug" && logLevel !== "info") return;
+  }
+
   const line = JSON.stringify({
     tag,
     ts: new Date().toISOString(),

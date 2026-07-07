@@ -42,5 +42,6 @@ export function isPublicGeneratedArticle(row: {
   if (status === "rejected" || status === "pending") return false;
   if (!row.published_at) return false;
   if (!PUBLIC_EDITORIAL_STATUSES.includes(status as PublicEditorialStatus)) return false;
+  if (row.workflow_status === "archived") return false;
   return true;
 }

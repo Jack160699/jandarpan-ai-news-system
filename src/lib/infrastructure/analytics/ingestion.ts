@@ -31,6 +31,11 @@ export type IngestionAnalyticsPayload = {
 };
 
 export function logIngestionAnalytics(payload: IngestionAnalyticsPayload): void {
+  if (process.env.NODE_ENV === "production") {
+    const logLevel = process.env.LOG_LEVEL?.toLowerCase();
+    if (logLevel !== "debug" && logLevel !== "info") return;
+  }
+
   const entry = {
     type: "INGESTION_ANALYTICS",
     ts: new Date().toISOString(),

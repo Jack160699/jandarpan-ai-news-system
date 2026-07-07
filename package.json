@@ -24,6 +24,8 @@
     "ops:queue-cleanup": "npx tsx scripts/queue-cleanup-phase4.ts --execute",
     "ops:queue-reset": "npx tsx scripts/production-queue-reset.ts --execute",
     "ops:queue-reset-audit": "npx tsx scripts/production-queue-reset.ts --audit",
+    "ops:data-retention": "npx tsx scripts/data-retention.ts --dry-run",
+    "ops:data-retention:execute": "npx tsx scripts/data-retention.ts --execute",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {
