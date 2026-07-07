@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -8,28 +8,25 @@ import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { InternalSeoLinks } from "@/components/seo/InternalSeoLinks";
 import { TrendingKeywordsBar } from "@/components/seo/TrendingKeywordsBar";
 import { StoryCard } from "@/components/homepage/StoryCard";
-import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
-import { toHomeArticle } from "@/lib/homepage/generated-feed";
-import { filterPoolByLanguage } from "@/lib/i18n/article-language";
-import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
-import { getServerReaderLanguage } from "@/lib/i18n/server-language";
-import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { getCachedCategoryHubData } from "@/lib/category/get-category-hub";
 import {
   buildCategoryMetadata,
   buildCategoryArticleLinks,
   breadcrumbListJsonLd,
-  buildTrendingKeywords,
   categoryHubJsonLd,
-  getCategorySeo,
+  getAllCategorySlugs,
   getCategoryHubLinks,
-  matchesCategoryArticle,
+  getCategorySeo,
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
-import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
 };
+
+export function generateStaticParams() {
+  return getAllCategorySlugs().map((slug) => ({ slug }));
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -44,51 +41,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   });
 }
 
-function filterArticlesForCategory(
-  rows: GeneratedArticleRow[],
-  slug: string
-): GeneratedArticleRow[] {
-  const config = getCategorySeo(slug);
-  if (!config) return [];
-
-  return rows.filter((row) => {
-    const article = generatedToNewsArticle(row);
-    return matchesCategoryArticle(config, {
-      category: article.category,
-      tags: row.tags,
-      headline: row.headline,
-      summary: row.summary ?? undefined,
-    });
-  });
-}
-
 export default async function CategoryPage({ params }: PageProps) {
   const { slug } = await params;
   const config = getCategorySeo(slug);
   if (!config) notFound();
 
-  const displayLanguage = await getServerReaderLanguage();
-  const pool = await fetchGeneratedArticlePool(120);
-  const langPool = filterPoolByLanguage(pool, displayLanguage);
-  const matched = filterArticlesForCategory(langPool, slug).slice(0, 24);
-  const homeArticles = matched
-    .map((row) => toHomeArticle(row, undefined, displayLanguage))
-    .filter((a): a is NonNullable<typeof a> => a !== null);
-  const localizedForTrending = matched
-    .map((row) => {
-      const fields = resolveLocalizedFieldsStrict(row, displayLanguage);
-      if (!fields) return null;
-      return { ...row, headline: fields.headline };
-    })
-    .filter((row): row is GeneratedArticleRow => row !== null);
-  const localizedHeadlines = localizedForTrending.map((row) => ({
-    slug: row.slug,
-    headline: row.headline,
-  }));
-  const trending = buildTrendingKeywords({
-    generatedRows: localizedForTrending,
-    limit: 10,
-  });
+  const hub = await getCachedCategoryHubData(slug);
+  if (!hub) notFound();
+
+  const { homeArticles, localizedHeadlines, trending } = hub;
 
   const breadcrumbs = [
     buildHomeBreadcrumb(),

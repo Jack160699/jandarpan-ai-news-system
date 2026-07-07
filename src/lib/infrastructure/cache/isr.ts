@@ -29,6 +29,7 @@ export async function revalidateNewsroomCaches(options?: {
   try {
     revalidateTag(ISR_TAGS.homepage, "default");
     revalidateTag(ISR_TAGS.homepageFeed, "default");
+    revalidateTag(ISR_TAGS.categories, "default");
     if ((options?.publishedStories ?? 0) > 0) {
       revalidateTag(ISR_TAGS.stories, "default");
     }
