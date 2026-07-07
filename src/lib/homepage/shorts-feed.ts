@@ -8,6 +8,18 @@ import { ensureShortCard } from "@/lib/news/shorts/ensure-card";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
+function shortCandidates(
+  rows: GeneratedArticleRow[]
+): GeneratedArticleRow[] {
+  return [...rows]
+    .filter((r) => (r.summary?.length ?? 0) > 40)
+    .sort(
+      (a, b) =>
+        new Date(b.published_at ?? b.created_at).getTime() -
+        new Date(a.published_at ?? a.created_at).getTime()
+    );
+}
+
 function rowForLanguage(
   row: GeneratedArticleRow,
   displayLanguage: NewsroomLanguage
@@ -27,14 +39,7 @@ export function buildNewsShortsFromPool(
   limit = 6,
   displayLanguage: NewsroomLanguage = "hi"
 ): NewsShortCard[] {
-  const candidates = [...rows]
-    .filter((r) => (r.summary?.length ?? 0) > 40)
-    .sort(
-      (a, b) =>
-        new Date(b.published_at ?? b.created_at).getTime() -
-        new Date(a.published_at ?? a.created_at).getTime()
-    )
-    .slice(0, limit * 4);
+  const candidates = shortCandidates(rows).slice(0, limit * 4);
 
   const cards: NewsShortCard[] = [];
 
@@ -88,10 +93,12 @@ export function buildTrendingShortsFromPool(
 
   if (cards.length >= limit) return cards.slice(0, limit);
 
-  const filler = buildNewsShortsFromPool(rows, limit * 3, displayLanguage);
-  for (const card of filler) {
+  for (const row of shortCandidates(rows)) {
     if (cards.length >= limit) break;
-    if (cards.some((c) => c.articleId === card.articleId)) continue;
+    const localized = rowForLanguage(row, displayLanguage);
+    if (!localized) continue;
+    const card = ensureShortCard(localized);
+    if (!card || cards.some((c) => c.articleId === card.articleId)) continue;
     if (reserved.has(card.articleId)) {
       if (overlap >= maxOverlap) continue;
       overlap++;

@@ -1,3 +1,4 @@
+import type { EditorialGenerateTrigger } from "@/lib/infrastructure/cron/editorial-generate-policy";
 import type { ExecutionDeadline } from "@/lib/serverless/deadline";
 
 export type WorkerId =
@@ -32,6 +33,8 @@ export type WorkerContext = {
   deadline: ExecutionDeadline;
   requestUrl: string;
   tuning?: WorkerTuningHints;
+  /** When set, gates direct `editorial_generate` queue worker invocations */
+  editorialGenerateTrigger?: EditorialGenerateTrigger;
 };
 
 export type QueueWorker = {

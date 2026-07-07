@@ -24,6 +24,8 @@ export type OrchestrateOptions = {
   requestUrl: string;
   /** Subset of workers; default full pipeline */
   workers?: WorkerId[];
+  /** True when `workers` was explicitly requested (manual / failover) */
+  explicitWorkers?: boolean;
   skipRevalidate?: boolean;
 };
 
@@ -146,6 +148,10 @@ export async function runCronOrchestration(
     const result = await runQueueWorker(id, {
       deadline,
       requestUrl: options.requestUrl,
+      editorialGenerateTrigger:
+        id === "editorial_generate" && options.explicitWorkers
+          ? "manual_override"
+          : undefined,
       tuning: {
         aiPending,
         editorialPending,

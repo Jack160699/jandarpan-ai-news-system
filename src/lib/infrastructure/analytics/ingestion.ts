@@ -2,6 +2,8 @@
  * Structured ingestion analytics — [INGESTION_ANALYTICS]
  */
 
+import { pipelineLog } from "@/lib/observability/production-log";
+
 export type IngestionAnalyticsEvent =
   | "orchestrate_start"
   | "orchestrate_complete"
@@ -36,5 +38,5 @@ export function logIngestionAnalytics(payload: IngestionAnalyticsPayload): void 
     ts: new Date().toISOString(),
     ...payload,
   };
-  console.log("[INGESTION_ANALYTICS]", JSON.stringify(entry));
+  pipelineLog("[INGESTION_ANALYTICS]", entry as Record<string, unknown>);
 }

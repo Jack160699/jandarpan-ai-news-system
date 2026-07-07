@@ -12,7 +12,6 @@ import { createAdminServerClient } from "@/lib/supabase";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
 import { buildNewsShortForArticle } from "@/lib/news/shorts/build-short";
-import { translateGeneratedArticle } from "@/lib/i18n/multilingual/translate";
 import { geoFromRecord, mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
 import { optimizeSeoSlug } from "@/lib/seo/slug-optimize";
@@ -478,11 +477,13 @@ async function persistGeneratedArticle(input: {
 
   await queueEditorialImageForArticle(inserted.id);
 
-  if (process.env.OPENAI_API_KEY?.trim()) {
-    const autoAll = process.env.NEWSROOM_AUTO_TRANSLATE === "true";
-    void translateGeneratedArticle(
-      inserted as unknown as GeneratedArticleRow,
-      autoAll ? undefined : ["en"]
+  if (publishNow && process.env.OPENAI_API_KEY?.trim()) {
+    const { enqueueTranslationsForPublishedArticle } = await import(
+      "@/lib/i18n/multilingual/translation-queue"
+    );
+    void enqueueTranslationsForPublishedArticle(
+      inserted.id,
+      inserted.tenant_id ?? getPipelineTenantId()
     ).catch(() => undefined);
   }
 

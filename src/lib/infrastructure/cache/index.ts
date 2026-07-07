@@ -64,6 +64,19 @@ export async function cacheDelete(key: string): Promise<void> {
   }
 }
 
+export async function cacheDeleteMany(keys: readonly string[]): Promise<void> {
+  const unique = [...new Set(keys.filter(Boolean))];
+  if (!unique.length) return;
+
+  for (const key of unique) {
+    memoryCacheDelete(key);
+  }
+
+  if (isRedisConfigured()) {
+    await Promise.all(unique.map((key) => redisDel(key)));
+  }
+}
+
 export async function cacheGetJson<T>(key: string): Promise<T | null> {
   const raw = await cacheGet(key);
   if (!raw) return null;

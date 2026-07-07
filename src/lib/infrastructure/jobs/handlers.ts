@@ -438,7 +438,6 @@ const editorialGenerate: JobHandler = async (job) => {
       "@/lib/infrastructure/cache/isr"
     );
     await revalidateNewsroomCaches({ publishedStories: result.published });
-    await scheduleTranslationBatchJob(job.tenant_id);
   }
 
   return {

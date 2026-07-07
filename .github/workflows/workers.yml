@@ -46,19 +46,11 @@ jobs:
 
       - name: Drain worker job queue
         run: |
+          # Editorial generation runs via job_processor (ingest.completed → worker_jobs).
           bash .github/scripts/invoke-cron-endpoint.sh \
             "cron-jobs" \
             "/api/cron/jobs" \
             "POST"
-
-      - name: Generate editorials from events
-        run: |
-          bash .github/scripts/invoke-cron-endpoint.sh \
-            "editorial_generate" \
-            "/api/cron/worker/editorial_generate" \
-            "POST" \
-            "" \
-            "120"
 
       - name: Run full orchestration
         run: |

@@ -66,7 +66,7 @@ export async function promoteRetryReadyAiQueueItems(): Promise<number> {
 
     const { data } = await supabase
       .from("news_ai_queue")
-      .update({ status: "pending" })
+      .update({ status: "pending", processing_started_at: null })
       .eq("id", row.id)
       .eq("status", "failed")
       .select("id");
@@ -90,6 +90,7 @@ export async function markAiQueueOutcome(
       .update({
         status: "completed",
         processed_at: new Date().toISOString(),
+        processing_started_at: null,
         error: null,
       })
       .eq("article_id", articleId)
@@ -116,6 +117,7 @@ export async function markAiQueueOutcome(
       .update({
         status: "failed",
         processed_at: new Date().toISOString(),
+        processing_started_at: null,
         error: encodeAiQueueRetryMeta(meta),
       })
       .eq("article_id", articleId)
@@ -143,6 +145,7 @@ export async function markAiQueueOutcome(
     .update({
       status: "pending",
       processed_at: null,
+      processing_started_at: null,
       error: encodeAiQueueRetryMeta(meta),
     })
     .eq("article_id", articleId)

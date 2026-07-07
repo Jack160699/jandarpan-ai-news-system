@@ -18,6 +18,9 @@ export const INFRA_CONFIG = {
   aiQueueBatchMax: Number(process.env.AI_QUEUE_BATCH_MAX) || 120,
   aiQueueMicroBatch: Number(process.env.AI_QUEUE_MICRO_BATCH) || 10,
   aiQueueMicroBatchMax: Number(process.env.AI_QUEUE_MICRO_BATCH_MAX) || 25,
+  /** Reclaim processing rows only after this long since processing_started_at */
+  aiQueueStaleProcessingMs:
+    Number(process.env.AI_QUEUE_STALE_PROCESSING_MS) || 10 * 60_000,
   editorialBatchLimit: Number(process.env.EDITORIAL_BATCH_LIMIT) || 6,
   editorialConcurrency: Math.min(
     4,

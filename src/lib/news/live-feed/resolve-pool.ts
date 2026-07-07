@@ -24,7 +24,7 @@ import {
 } from "@/lib/news/live-feed/stale-snapshot";
 import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { wireArticlesToGeneratedPool } from "@/lib/news/live-feed/wire-to-generated";
-import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { fetchGeneratedArticlePool, type GeneratedPoolSelect } from "@/lib/newsroom/generated/read";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
@@ -94,7 +94,8 @@ function finalizePool(
  * Resolve articles for homepage + live polling. Never returns an empty array.
  */
 export async function resolveLiveArticlePool(
-  limit = 120
+  limit = 120,
+  options?: { select?: GeneratedPoolSelect }
 ): Promise<ResolvedLivePool> {
   resetAggregationMetrics();
 
@@ -118,7 +119,9 @@ export async function resolveLiveArticlePool(
 
   if (diagnostics.supabaseConfigured) {
     try {
-      dbRows = await fetchGeneratedArticlePool(limit);
+      dbRows = await fetchGeneratedArticlePool(limit, {
+        select: options?.select,
+      });
       diagnostics.dbCount = dbRows.length;
       logLiveFeed("db_pool", { count: dbRows.length });
     } catch (err) {
@@ -223,10 +226,11 @@ export async function resolveLiveArticlePool(
 
 /** Call after successful cron ingest to refresh SWR snapshot */
 export async function refreshSnapshotFromDatabase(
-  limit = 120
+  limit = 120,
+  options?: { select?: GeneratedPoolSelect }
 ): Promise<void> {
   if (!isSupabaseConfigured()) return;
-  const rows = await fetchGeneratedArticlePool(limit);
+  const rows = await fetchGeneratedArticlePool(limit, options);
   if (rows.length >= AGGREGATION_CONFIG.dbCriticalThreshold) {
     const ranked = rankPoolByFeedQuality(rows);
     await saveFeedSnapshot(ranked, "database");

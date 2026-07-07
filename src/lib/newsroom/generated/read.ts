@@ -14,6 +14,12 @@ import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 const GENERATED_SELECT =
   "id,event_id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,created_at";
 
+/** Homepage ranking uses headline/summary/metadata — omits heavy article_body payloads. */
+export const GENERATED_SELECT_HOMEPAGE =
+  "id,event_id,slug,headline,summary,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,created_at";
+
+export type GeneratedPoolSelect = "full" | "homepage";
+
 const MIN_POOL_LOG = 3;
 
 /** Event id suffix embedded in SEO slugs (`optimizeSeoSlug`). */
@@ -84,7 +90,8 @@ async function fetchPublicGeneratedRow(
 }
 
 export async function fetchGeneratedArticlePool(
-  limit = 280
+  limit = 280,
+  options?: { select?: GeneratedPoolSelect }
 ): Promise<GeneratedArticleRow[]> {
   if (!isSupabaseConfigured()) {
     warnLiveFeed("generated_pool_skip", {
@@ -97,13 +104,22 @@ export async function fetchGeneratedArticlePool(
   const supabase = createAnonServerClient();
   const startedAt = Date.now();
 
-  const { data, error } = await supabase
-    .from("generated_articles")
-    .select(GENERATED_SELECT)
-    .not("published_at", "is", null)
-    .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(limit);
+  const { data, error } =
+    options?.select === "homepage"
+      ? await supabase
+          .from("generated_articles")
+          .select(GENERATED_SELECT_HOMEPAGE)
+          .not("published_at", "is", null)
+          .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
+          .order("published_at", { ascending: false, nullsFirst: false })
+          .limit(limit)
+      : await supabase
+          .from("generated_articles")
+          .select(GENERATED_SELECT)
+          .not("published_at", "is", null)
+          .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
+          .order("published_at", { ascending: false, nullsFirst: false })
+          .limit(limit);
 
   if (error) {
     errorLiveFeed("generated_pool_query_error", {

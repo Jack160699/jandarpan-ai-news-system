@@ -23,6 +23,7 @@ import { runScalableIngestion } from "@/lib/news/pipeline/scalable-ingest";
 import { runWorkerEndpoint } from "@/lib/infrastructure/workers/run-guard";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { pipelineLog } from "@/lib/observability/production-log";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { trackOpsError } from "@/lib/observability/errors";
 
@@ -62,14 +63,11 @@ async function handleFetchNews(request: Request) {
       { status: 401, headers: noStoreHeaders() }
     );
   }
-  console.log(
-    JSON.stringify({
-      tag: "[cron_triggered]",
-      job: "fetch-news",
-      path: new URL(request.url).pathname,
-      ts: new Date().toISOString(),
-    })
-  );
+  pipelineLog("[cron_triggered]", {
+    job: "fetch-news",
+    path: new URL(request.url).pathname,
+    ts: new Date().toISOString(),
+  });
 
   if (!isSupabaseConfigured()) {
     logIngestFailure({ reason: "supabase_not_configured", durationMs: 0 });
