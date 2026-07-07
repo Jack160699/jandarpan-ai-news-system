@@ -1,9 +1,13 @@
 import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
 import { defaultMonetizationSettings } from "@/lib/monetization/placements";
-import { resolveCanonicalSiteUrl } from "@/lib/seo/canonical-url";
+import {
+  resolveCanonicalSiteHostname,
+  resolveCanonicalSiteUrl,
+} from "@/lib/seo/canonical-url";
 import type { TenantConfig } from "@/lib/tenant/types";
 
 const SITE_URL = resolveCanonicalSiteUrl();
+const SITE_HOSTNAME = resolveCanonicalSiteHostname();
 
 /** Jan Darpan Chhattisgarh — official regional digital news identity */
 export const JAN_DARPAN_CHHATTISGARH_TENANT: TenantConfig = {
@@ -15,7 +19,7 @@ export const JAN_DARPAN_CHHATTISGARH_TENANT: TenantConfig = {
     "localhost",
     "127.0.0.1",
     "newspaper-motion.vercel.app",
-    new URL(SITE_URL).hostname,
+    SITE_HOSTNAME,
   ].filter(Boolean),
   siteUrl: SITE_URL,
   branding: {
