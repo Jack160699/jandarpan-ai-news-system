@@ -23,6 +23,7 @@ import { traceMiddleware } from "@/lib/observability/admin-boot";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { evaluateSessionGuard } from "@/lib/auth/middleware-session-guard";
+import { requiresMiddlewareSupabaseAuth } from "@/lib/auth/middleware-auth-policy";
 import {
   E2E_AUTH_COOKIE,
   isE2eAuthEnabled,
@@ -153,7 +154,10 @@ export async function middleware(request: NextRequest) {
 
   let authUser: { id: string; email?: string } | null = null;
 
-  if (isSupabaseConfigured()) {
+  if (
+    isSupabaseConfigured() &&
+    requiresMiddlewareSupabaseAuth(pathname, request)
+  ) {
     const session = await updateSupabaseSession(request, response);
     response = session.response;
     authUser = session.user;
