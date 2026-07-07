@@ -6,19 +6,16 @@ import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
 import {
   applyLocalizedFieldsToNewsArticle,
-  resolveLocalizedFieldsStrict,
   resolveStoryArticleFields,
 } from "@/lib/i18n/resolve-article";
-import { filterPoolByLanguage } from "@/lib/i18n/article-language";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { buildLocalizedStoryMetadata } from "@/lib/i18n/multilingual/seo";
 import { isNewsroomLanguage } from "@/lib/i18n/languages";
-import { pickRelatedStories } from "@/lib/news/related-stories";
 import {
-  fetchGeneratedArticlePool,
-  getGeneratedArticleBySlug,
-  getGeneratedArticleSlugs,
-} from "@/lib/newsroom/generated/read";
+  getStoryArticleBySlug,
+  getStoryRelatedArticles,
+  getStoryStaticSlugs,
+} from "@/lib/story/get-story-data";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { fetchSponsoredStory } from "@/lib/monetization/fetch-payload";
 import {
@@ -37,7 +34,7 @@ type PageProps = {
 
 export async function generateStaticParams() {
   try {
-    const generated = await getGeneratedArticleSlugs(200);
+    const generated = await getStoryStaticSlugs(200);
     if (generated.length) {
       return generated.map((slug) => ({ slug }));
     }
@@ -52,7 +49,7 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
   const { lang: langParam } = await searchParams;
   const displayLang = isNewsroomLanguage(langParam) ? langParam : undefined;
 
-  const generated = await getGeneratedArticleBySlug(slug);
+  const generated = await getStoryArticleBySlug(slug);
   if (generated) {
     const article = generatedToNewsArticle(generated);
     const ogImage =
@@ -83,7 +80,7 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     ? langParam
     : await getServerReaderLanguage();
 
-  const generatedRow = await getGeneratedArticleBySlug(slug);
+  const generatedRow = await getStoryArticleBySlug(slug);
 
   if (generatedRow) {
     if (
@@ -93,28 +90,16 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
       permanentRedirect(`/story/${generatedRow.slug}`);
     }
 
-    const poolRows = filterPoolByLanguage(
-      await fetchGeneratedArticlePool(80),
-      readerLang
-    );
-    const localized = await resolveStoryArticleFields(generatedRow, readerLang);
+    const [localized, related] = await Promise.all([
+      resolveStoryArticleFields(generatedRow, readerLang),
+      getStoryRelatedArticles(generatedRow.slug ?? slug, readerLang),
+    ]);
     if (!localized?.headline?.trim()) notFound();
 
     const liveArticle = applyLocalizedFieldsToNewsArticle(
       generatedToNewsArticle(generatedRow),
       localized
     );
-    const poolArticles = poolRows
-      .map((r) => {
-        const fields = resolveLocalizedFieldsStrict(r, readerLang);
-        if (!fields?.headline?.trim()) return null;
-        return applyLocalizedFieldsToNewsArticle(
-          generatedToNewsArticle(r),
-          fields
-        );
-      })
-      .filter((a): a is NonNullable<typeof a> => a !== null);
-    const related = pickRelatedStories(liveArticle, poolArticles, 8);
 
     let liveCoverage: {
       slug: string;
