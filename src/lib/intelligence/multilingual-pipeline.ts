@@ -2,7 +2,7 @@
  * Multilingual AI publishing pipeline status
  */
 
-import { DEFAULT_TRANSLATION_TARGETS } from "@/lib/i18n/multilingual/translate";
+import { getTranslationTargets } from "@/lib/i18n/multilingual/targets";
 import type { MultilingualPipelineStatus } from "@/lib/intelligence/types";
 import type { Json } from "@/types/supabase";
 import { jsonObjectFrom } from "@/types/json";
@@ -16,9 +16,7 @@ type ArticleTranslationRow = {
 export function getMultilingualPipelineStatus(
   articles: ArticleTranslationRow[]
 ): MultilingualPipelineStatus {
-  const targets =
-    process.env.NEWSROOM_TRANSLATE_LANGS?.split(",").map((s) => s.trim()) ??
-    DEFAULT_TRANSLATION_TARGETS;
+  const targets = getTranslationTargets();
 
   const enabled = Boolean(process.env.OPENAI_API_KEY?.trim());
   let pendingCount = 0;
@@ -51,4 +49,4 @@ export function getMultilingualPipelineStatus(
   };
 }
 
-export { DEFAULT_TRANSLATION_TARGETS };
+export { getTranslationTargets } from "@/lib/i18n/multilingual/targets";

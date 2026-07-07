@@ -8,6 +8,7 @@ import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import { JOB_HANDLERS } from "@/lib/infrastructure/jobs/handlers";
 import { processJobBatch } from "@/lib/infrastructure/jobs/queue";
+import { recordCronRun } from "@/lib/observability/cron-monitor";
 import {
   auditTranslationCoverage,
   enqueueMissingTranslationJobs,
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleBackfill(request: NextRequest) {
+  const startedAt = Date.now();
   const auth = await verifyCronRequest(request);
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
@@ -82,6 +84,14 @@ async function handleBackfill(request: NextRequest) {
   const coverageAfter = await auditTranslationCoverage();
   const backlogAfter = coverageAfter.backlogTotal;
   const performance = await estimateTranslationPerformance(backlogAfter);
+
+  await recordCronRun({
+    job: "translation_backfill",
+    ok: true,
+    startedAt: new Date(startedAt).toISOString(),
+    durationMs: Date.now() - startedAt,
+    degraded: backlogAfter > backlogBefore,
+  }).catch(() => null);
 
   return NextResponse.json(
     {

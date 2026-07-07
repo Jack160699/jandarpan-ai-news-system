@@ -2,7 +2,7 @@
 /**
  * Idempotent QStash schedule setup for the Jandarpan newsroom pipeline.
  *
- * Production uses three staggered schedules (see docs/QSTASH_SCHEDULER_SETUP.md):
+ * Production uses four staggered schedules (see docs/QSTASH_SCHEDULER_SETUP.md):
  *   fetch-news → ingest
  *   editorial_generate → event→article generation
  *   orchestrate → intelligence pipeline (ai_enrich, editorial_images, job_processor,
@@ -71,6 +71,13 @@ const schedules = [
     destination: `${baseUrl}/api/cron/workers/health`,
     cron: "0 * * * *",
     method: "GET",
+  },
+  {
+    scheduleId: "jandarpan-data-retention",
+    destination: `${baseUrl}/api/cron/data-retention`,
+    cron: "30 2 * * *",
+    method: "POST",
+    body: "{}",
   },
 ];
 

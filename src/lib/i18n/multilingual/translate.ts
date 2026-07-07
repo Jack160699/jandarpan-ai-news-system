@@ -13,6 +13,7 @@ import {
   buildToneSystemPrompt,
   getRegionalToneProfile,
 } from "@/lib/i18n/multilingual/tone";
+import { getTranslationTargets } from "@/lib/i18n/multilingual/targets";
 import { getArticleTranslations } from "@/lib/i18n/resolve-article";
 import type {
   ArticleLocaleBundle,
@@ -33,21 +34,11 @@ import { buildUsageRecord } from "@/lib/observability/openai-cost/record";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
-export const DEFAULT_TRANSLATION_TARGETS: NewsroomLanguage[] = [
-  "en",
-  "cg",
-  "mr",
-  "bn",
-  "ta",
-];
+export const DEFAULT_TRANSLATION_TARGETS: NewsroomLanguage[] =
+  getTranslationTargets();
 
 function parseTranslationTargets(): NewsroomLanguage[] {
-  const raw = process.env.NEWSROOM_TRANSLATE_LANGS?.trim();
-  if (!raw) return DEFAULT_TRANSLATION_TARGETS;
-  return raw
-    .split(",")
-    .map((s) => normalizeArticleLanguage(s))
-    .filter((l, i, arr) => arr.indexOf(l) === i);
+  return getTranslationTargets();
 }
 
 function estimateMinutes(body: string): number {

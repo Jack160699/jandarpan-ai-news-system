@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
+import { legacyCronApiHeaders } from "@/lib/infrastructure/auth/legacy-cron-headers";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
 import { getEditorialThresholds } from "@/lib/news/ai/editorial-guards";
-import { processEditorialImageQueue } from "@/lib/news/ai/generate-editorial-image";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const SUCCESSOR = "/api/cron/worker/editorial_generate";
+
 /**
- * POST /api/generate-articles — batch editorial generation from news_events
+ * POST /api/generate-articles — legacy batch editorial generation.
+ * @deprecated Use POST /api/cron/worker/editorial_generate (QStash primary)
  */
 export async function POST(request: NextRequest) {
   const auth = await verifyCronRequest(request);
@@ -37,34 +40,34 @@ export async function POST(request: NextRequest) {
   const thresholds = getEditorialThresholds();
   const result = await generateEditorialsFromEvents({ limit });
 
-  const imageQueue =
-    result.published > 0
-      ? await processEditorialImageQueue(Math.min(result.published, 5))
-      : null;
-
-  return NextResponse.json({
-    ok: true,
-    generated: result.generated,
-    rejected: result.rejected,
-    published: result.published,
-    repaired: result.repaired,
-    skipped: result.skipped,
-    avgConfidence: result.avgConfidence,
-    topStory: result.topStory,
-    thresholds: {
-      minConfidence: thresholds.minConfidence,
-      strictMode: thresholds.strictMode,
+  return NextResponse.json(
+    {
+      ok: true,
+      generated: result.generated,
+      rejected: result.rejected,
+      published: result.published,
+      repaired: result.repaired,
+      skipped: result.skipped,
+      avgConfidence: result.avgConfidence,
+      topStory: result.topStory,
+      thresholds: {
+        minConfidence: thresholds.minConfidence,
+        strictMode: thresholds.strictMode,
+      },
+      errors: result.errors.slice(0, 20),
+      results: result.results,
+      deprecated: true,
+      successor: SUCCESSOR,
+      note: "Editorial images are drained by orchestrate worker editorial_images",
+      intelligenceFields: [
+        "confidence",
+        "readability",
+        "seoQuality",
+        "localRelevance",
+        "originality",
+        "publishDecision",
+      ],
     },
-    errors: result.errors.slice(0, 20),
-    results: result.results,
-    editorial_images: imageQueue,
-    intelligenceFields: [
-      "confidence",
-      "readability",
-      "seoQuality",
-      "localRelevance",
-      "originality",
-      "publishDecision",
-    ],
-  });
+    { headers: legacyCronApiHeaders(SUCCESSOR) }
+  );
 }

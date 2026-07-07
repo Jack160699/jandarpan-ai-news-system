@@ -6,12 +6,14 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { cacheDelete, CACHE_KEYS } from "@/lib/infrastructure/cache";
 import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion";
 import { LIVE_NEWS_CACHE_TAG } from "@/lib/news/home-ranking";
+import { CACHE_TAGS } from "@/lib/newsroom-platform/config/isr";
 
 export const ISR_TAGS = {
   homepage: LIVE_NEWS_CACHE_TAG,
   homepageFeed: "homepage-feed",
   stories: "generated-stories",
   categories: "category-hubs",
+  searchIndex: "news-search-index",
 } as const;
 
 export const ISR_PATHS = {
@@ -29,6 +31,9 @@ export async function revalidateNewsroomCaches(options?: {
   try {
     revalidateTag(ISR_TAGS.homepage, "default");
     revalidateTag(ISR_TAGS.homepageFeed, "default");
+    revalidateTag(CACHE_TAGS.breaking, "default");
+    revalidateTag(CACHE_TAGS.homepage, "default");
+    revalidateTag(ISR_TAGS.searchIndex, "default");
     if ((options?.publishedStories ?? 0) > 0) {
       revalidateTag(ISR_TAGS.stories, "default");
     }

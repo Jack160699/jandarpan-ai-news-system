@@ -62,12 +62,6 @@ export async function fetchArticlePool(): Promise<NewsArticleRow[]> {
   }
 
   const articles = normalizeArticlePool(data ?? []);
-  console.log("LIVE QUERY RESULT", articles.length, {
-    rawRows: data?.length ?? 0,
-    tableCount: count ?? null,
-    error: error?.message ?? null,
-    code: error?.code ?? null,
-  });
 
   if (error) {
     console.error("[news-db] fetchArticlePool:", {
@@ -92,7 +86,6 @@ export async function getLiveNewsFeed(): Promise<LiveNewsFeed | null> {
   }
 
   const pool = await fetchArticlePool();
-  console.log("LIVE QUERY RESULT", pool.length);
 
   if (!pool.length) {
     console.warn(

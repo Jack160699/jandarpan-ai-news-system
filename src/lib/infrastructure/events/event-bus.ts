@@ -26,7 +26,6 @@ export type PublishEventInput = {
 /** Maps event topics to downstream job types */
 const TOPIC_JOB_MAP: Partial<Record<EventTopic, JobType[]>> = {
   "ingest.completed": [
-    "editorial_generate",
     "event_cluster",
     "intelligence_snapshot",
     "analytics_aggregate",
