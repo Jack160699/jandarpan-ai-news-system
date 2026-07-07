@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchLiveSnapshotShared } from "@/lib/realtime/live-poll-coordinator";
 
 export type MenuBriefing = {
   breakingHeadline: string | null;
@@ -13,7 +14,7 @@ const FALLBACK: MenuBriefing = {
 };
 
 /**
- * Lightweight briefing when menu opens — uses live API only if needed.
+ * Lightweight briefing when menu opens — reuses shared live snapshot cache.
  */
 export function useMenuBriefing(
   menuOpen: boolean,
@@ -30,25 +31,12 @@ export function useMenuBriefing(
 
     (async () => {
       try {
-        const res = await fetch("/api/homepage/live", {
-          signal: ac.signal,
-          cache: "no-store",
-        });
-        if (!res.ok || cancelled) return;
-        const json = (await res.json()) as {
-          ok?: boolean;
-          snapshot?: {
-            breakingTicker?: { headline?: string }[];
-            localBreakingAlerts?: {
-              headline?: string;
-              district?: string;
-            }[];
-          };
-        };
-        if (!json.ok || !json.snapshot || cancelled) return;
+        const result = await fetchLiveSnapshotShared({ signal: ac.signal });
+        if (!result.ok || !result.snapshot || cancelled) return;
+
         const breaking =
-          json.snapshot.breakingTicker?.[0]?.headline?.trim() ?? null;
-        const alert = json.snapshot.localBreakingAlerts?.[0];
+          result.snapshot.breakingTicker?.[0]?.headline?.trim() ?? null;
+        const alert = result.snapshot.localBreakingAlerts?.[0];
         const localAlert = alert
           ? alert.district
             ? `${alert.district}: ${alert.headline}`
