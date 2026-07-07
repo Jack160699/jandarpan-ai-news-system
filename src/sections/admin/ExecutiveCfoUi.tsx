@@ -19,6 +19,40 @@ import {
   systemReliability,
   topAlert,
 } from "@/sections/admin/executive-cfo-helpers";
+import { EDITORIAL_CAPACITY } from "@/lib/newsroom/editorial-capacity";
+
+function resolveEditionWindow(now = new Date()): {
+  current: string;
+  next: string;
+} {
+  // Edition scheduler windows (IST): 06:00, 09:00, 12:00, 15:00, 18:00, 21:00
+  const tz = "Asia/Kolkata";
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    timeZone: tz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+  const currentMins = hour * 60 + minute;
+  const slots = [360, 540, 720, 900, 1080, 1260]; // 06:00..21:00
+
+  const fmt = (mins: number) => {
+    const h = String(Math.floor(mins / 60)).padStart(2, "0");
+    const m = String(mins % 60).padStart(2, "0");
+    return `${h}:${m}`;
+  };
+
+  const nextSlot = slots.find((s) => s > currentMins) ?? slots[0]!;
+  const currentSlot = [...slots].reverse().find((s) => s <= currentMins) ?? slots[slots.length - 1]!;
+
+  return { current: fmt(currentSlot), next: fmt(nextSlot) };
+}
+
+function workerCost(d: ExecutiveDashboard, label: string) {
+  return d.workerFinancials.find((w) => w.label.toLowerCase() === label.toLowerCase())?.cost ?? null;
+}
 
 export function DualMoney({
   amount,
@@ -277,6 +311,12 @@ export const OverviewTab = memo(function OverviewTab({
   const platform = platformStatus(d);
   const alert = topAlert(d);
   const reliability = systemReliability(d);
+  const capacity = EDITORIAL_CAPACITY.dailyLimit;
+  const published = d.businessKpis.publishedToday;
+  const remainingQuota = Math.max(0, capacity - published);
+  const edition = resolveEditionWindow();
+  const imageCost = workerCost(d, "Images");
+  const translationCost = workerCost(d, "Translation");
 
   if (empty) {
     return (
@@ -292,6 +332,21 @@ export const OverviewTab = memo(function OverviewTab({
   return (
     <div className="ecfo__overview">
       <div className="ecfo__overview-grid">
+        <KpiCard label="Daily Capacity" icon="🏁">
+          <span className="ecfo__overview-stat">{capacity}</span>
+          <span className="ecfo__overview-sub">All editions (IST)</span>
+        </KpiCard>
+
+        <KpiCard label="Remaining Quota" icon="🧮" tone={remainingQuota <= 5 ? "warn" : undefined}>
+          <span className="ecfo__overview-stat">{remainingQuota}</span>
+          <span className="ecfo__overview-sub">{published} published</span>
+        </KpiCard>
+
+        <KpiCard label="Current Edition" icon="🕒">
+          <span className="ecfo__overview-stat">{edition.current}</span>
+          <span className="ecfo__overview-sub">Next: {edition.next}</span>
+        </KpiCard>
+
         <KpiCard
           label="Today's AI Cost"
           icon="💰"
@@ -299,6 +354,22 @@ export const OverviewTab = memo(function OverviewTab({
           onClick={() => onNavigate("financials")}
         >
           <DualMoney amount={d.overview.todaySpend} compact />
+        </KpiCard>
+
+        <KpiCard label="AI Cost" icon="🤖" onClick={() => onNavigate("analytics")}>
+          <DualMoney amount={d.overview.todaySpend} compact />
+        </KpiCard>
+
+        <KpiCard label="Image Cost" icon="🖼️" onClick={() => onNavigate("analytics")}>
+          {imageCost ? <DualMoney amount={imageCost} compact /> : <span className="ecfo__placeholder">—</span>}
+        </KpiCard>
+
+        <KpiCard label="Translation Cost" icon="🌐" onClick={() => onNavigate("analytics")}>
+          {translationCost ? (
+            <DualMoney amount={translationCost} compact />
+          ) : (
+            <span className="ecfo__placeholder">—</span>
+          )}
         </KpiCard>
 
         <KpiCard label="Monthly Spend" icon="📊" onClick={() => onNavigate("financials")}>
@@ -322,6 +393,16 @@ export const OverviewTab = memo(function OverviewTab({
             <AnimatedNumber value={d.businessKpis.publishedToday} />
           </span>
           <span className="ecfo__overview-sub">{d.businessKpis.generatedToday} generated</span>
+        </KpiCard>
+
+        <KpiCard label="Breaking Queue" icon="🚨">
+          <span className="ecfo__overview-stat">—</span>
+          <span className="ecfo__overview-sub">Immediate publish uses override</span>
+        </KpiCard>
+
+        <KpiCard label="Ready Queue" icon="📬" onClick={() => onNavigate("operations")}>
+          <span className="ecfo__overview-stat">—</span>
+          <span className="ecfo__overview-sub">Scheduled-for-publish backlog</span>
         </KpiCard>
 
         <KpiCard

@@ -134,7 +134,8 @@ export async function enqueueJobs(
 
 export async function claimJobBatch(
   limit = DEFAULT_BATCH,
-  jobTypes?: JobType[]
+  jobTypes?: JobType[],
+  options?: { oldestFirst?: boolean }
 ): Promise<WorkerJobRow[]> {
   await reclaimStaleClaimedJobs();
 
@@ -146,8 +147,14 @@ export async function claimJobBatch(
     .select("*")
     .eq("status", "pending")
     .lte("scheduled_at", now)
-    .order("priority", { ascending: false })
-    .order("scheduled_at", { ascending: true })
+    .order("scheduled_at", { ascending: true });
+
+  if (!options?.oldestFirst) {
+    // Normal mode: honor priority, but keep FIFO inside priority bands.
+    query = query.order("priority", { ascending: false });
+  }
+
+  query = query
     .limit(limit);
 
   if (jobTypes?.length) {
@@ -253,6 +260,7 @@ export async function processJobBatch(
     jobTypes?: JobType[];
     workerId?: string;
     deadline?: ExecutionDeadline;
+    oldestFirst?: boolean;
   }
 ): Promise<{
   processed: number;
@@ -262,7 +270,9 @@ export async function processJobBatch(
   partial?: boolean;
   released?: number;
 }> {
-  const jobs = await claimJobBatch(options?.limit, options?.jobTypes);
+  const jobs = await claimJobBatch(options?.limit, options?.jobTypes, {
+    oldestFirst: options?.oldestFirst,
+  });
   const deadline = options?.deadline;
   const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;
   let completed = 0;

@@ -2,6 +2,8 @@
  * Production newsroom tunables — Vercel-safe defaults
  */
 
+import { EDITORIAL_LIMITS } from "@/lib/newsroom/editorial-capacity";
+
 export const INFRA_CONFIG = {
   /** Serverless budget before soft stop (ms) */
   ingestBudgetMs: Number(process.env.INGEST_BUDGET_MS) || 52_000,
@@ -21,7 +23,9 @@ export const INFRA_CONFIG = {
   /** Reclaim processing rows only after this long since processing_started_at */
   aiQueueStaleProcessingMs:
     Number(process.env.AI_QUEUE_STALE_PROCESSING_MS) || 10 * 60_000,
-  editorialBatchLimit: Number(process.env.EDITORIAL_BATCH_LIMIT) || 6,
+  editorialBatchLimit:
+    Number(process.env.EDITORIAL_BATCH_LIMIT) ||
+    EDITORIAL_LIMITS.defaultEditorialBatchLimit,
   editorialConcurrency: Math.min(
     4,
     Math.max(1, Number(process.env.EDITORIAL_CONCURRENCY) || 2)

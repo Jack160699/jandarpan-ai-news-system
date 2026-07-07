@@ -26,6 +26,7 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import { pipelineLog } from "@/lib/observability/production-log";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { trackOpsError } from "@/lib/observability/errors";
+import { buildQueueHealthSnapshot } from "@/lib/infrastructure/queue/health-manager";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -94,6 +95,20 @@ async function handleFetchNews(request: Request) {
   });
 
   const lockResult = await runWorkerEndpoint("fetch-news", 1700, async () => {
+    const health = await buildQueueHealthSnapshot().catch(() => null);
+    if (health?.pauseIngestion) {
+      return {
+        ok: true,
+        processed: 0,
+        failed: 0,
+        details: {
+          skipped: true,
+          reason: "queue_backpressure",
+          queueHealth: health,
+        },
+      };
+    }
+
     logIngestionAnalytics({ event: "worker_start", worker: "ingest" });
 
     const result = await runScalableIngestion(deadline);

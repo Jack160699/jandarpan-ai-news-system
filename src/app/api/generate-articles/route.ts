@@ -4,6 +4,7 @@ import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
 import { getEditorialThresholds } from "@/lib/news/ai/editorial-guards";
 import { processEditorialImageQueue } from "@/lib/news/ai/generate-editorial-image";
+import { EDITORIAL_LIMITS } from "@/lib/newsroom/editorial-capacity";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,10 +25,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let limit = 6;
+  let limit: number = EDITORIAL_LIMITS.defaultEditorialBatchLimit;
   try {
     const body = (await request.json()) as { limit?: number };
-    if (typeof body.limit === "number" && body.limit > 0 && body.limit <= 15) {
+    if (
+      typeof body.limit === "number" &&
+      body.limit > 0 &&
+      body.limit <= EDITORIAL_LIMITS.maxManualGenerateBatchLimit
+    ) {
       limit = body.limit;
     }
   } catch {
@@ -39,7 +44,9 @@ export async function POST(request: NextRequest) {
 
   const imageQueue =
     result.published > 0
-      ? await processEditorialImageQueue(Math.min(result.published, 5))
+      ? await processEditorialImageQueue(
+          Math.min(result.published, EDITORIAL_LIMITS.postGenerateImageQueueLimit)
+        )
       : null;
 
   return NextResponse.json({

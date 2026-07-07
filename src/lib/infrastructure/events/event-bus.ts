@@ -199,20 +199,48 @@ export async function publishArticlePublished(input: {
   articleId: string;
   tenantId: string;
 }): Promise<void> {
+  const supabase = createAdminClient();
+  const { data: row } = await supabase
+    .from("generated_articles")
+    .select("id, tenant_id, editorial_metadata, headline, summary, article_body, slug, published_at, created_at, language, tags, hero_image_url")
+    .eq("id", input.articleId)
+    .eq("tenant_id", input.tenantId)
+    .maybeSingle();
+
+  const meta = (row?.editorial_metadata ?? {}) as Record<string, unknown>;
+  const tier = Number(meta.cost_tier ?? (meta.cost_plan as { tier?: number } | undefined)?.tier);
+
+  const tier1 = tier === 1;
+
   const { enqueueTranslationsForPublishedArticle } = await import(
     "@/lib/i18n/multilingual/translation-queue"
   );
-  void enqueueTranslationsForPublishedArticle(input.articleId, input.tenantId).catch(
-    (err) => console.warn("[translation] publish enqueue:", err)
-  );
+  if (tier1) {
+    void enqueueTranslationsForPublishedArticle(input.articleId, input.tenantId).catch(
+      (err) => console.warn("[translation] publish enqueue:", err)
+    );
+  }
 
-  await publishEvent({
-    topic: "articles.published",
-    eventType: "articles.published",
-    tenantId: input.tenantId,
-    dedupeKey: `published:${input.articleId}`,
-    payload: asJsonObject({
-      articleId: input.articleId,
-    }),
-  });
+  if (
+    tier1 &&
+    process.env.NEWSROOM_AUTO_SHORTS === "true" &&
+    process.env.OPENAI_API_KEY?.trim() &&
+    row
+  ) {
+    const { buildNewsShortForArticle } = await import("@/lib/news/shorts/build-short");
+    void buildNewsShortForArticle(row as never).catch(() => undefined);
+  }
+
+  // Tier 1 only: embeddings + SEO analysis + intelligence snapshot.
+  if (tier1) {
+    await publishEvent({
+      topic: "articles.published",
+      eventType: "articles.published",
+      tenantId: input.tenantId,
+      dedupeKey: `published:${input.articleId}`,
+      payload: asJsonObject({
+        articleId: input.articleId,
+      }),
+    });
+  }
 }

@@ -135,6 +135,10 @@ export type EditorialImageMeta = {
 
 export type EditorialMetadata = {
   ai_confidence?: number;
+  /** Back-compat: some modules read derived values at top-level. */
+  local_relevance?: number;
+  /** Breaking-news immediate publish override flag. */
+  breaking_override?: boolean;
   quality_breakdown?: {
     structure: number;
     originality: number;

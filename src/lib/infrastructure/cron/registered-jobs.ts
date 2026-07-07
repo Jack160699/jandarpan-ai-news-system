@@ -41,6 +41,8 @@ export const REGISTERED_CRON_JOBS = [
 
   "orchestrate",
 
+  "edition-publish",
+
   "editorial_generate",
 
   "translation-backfill",

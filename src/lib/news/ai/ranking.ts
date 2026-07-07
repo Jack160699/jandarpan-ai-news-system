@@ -14,8 +14,7 @@ import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 const LIVE_WINDOW_HOURS = 8;
 const STALE_AFTER_HOURS = 48;
-const BREAKING_RE =
-  /\b(breaking|live|urgent|exclusive|alert|ब्रेकिंग|लाइव|ताजा|बड़ी खबर)\b/i;
+// IMPORTANT: do not boost clickbait-y "breaking" phrases from text.
 
 const CATEGORY_WEIGHT: Record<HomeSectionId, number> = {
   chhattisgarh: 1,
@@ -29,13 +28,14 @@ const CATEGORY_WEIGHT: Record<HomeSectionId, number> = {
 
 export type RankingFactorBreakdown = {
   freshness: number;
-  urgency: number;
   regional: number;
   districtBoost: number;
-  sourceTrust: number;
-  engagement: number;
+  verifiedSources: number;
+  urgency: number;
+  readerValue: number;
+  editorialQuality: number;
   category: number;
-  breakingBoost: number;
+  clickbaitPenalty: number;
   staleDecay: number;
   duplicatePenalty: number;
 };
@@ -172,61 +172,151 @@ function scoreDistrictBoost(
 }
 
 function scoreSourceTrust(row: GeneratedArticleRow): number {
+  // Back-compat shim (kept for any external callers); replaced by
+  // scoreVerifiedSources + scoreEditorialQuality in the homepage scoring path.
   const meta = row.editorial_metadata ?? {};
-  const confidence = meta.ai_confidence ?? 0.5;
   const sources = meta.source_attribution ?? [];
   const avgConf =
     sources.length > 0
       ? sources.reduce((s, a) => s + (a.confidence ?? 0.5), 0) / sources.length
-      : confidence;
-
-  const countBoost = Math.min(10, (meta.source_count ?? sources.length ?? 1) * 2.5);
-  return Math.min(18, avgConf * 12 + countBoost * 0.35);
+      : (meta.ai_confidence ?? 0.5);
+  const unique = new Set(
+    sources.map((s) => (s.source ?? "").trim().toLowerCase()).filter(Boolean)
+  ).size;
+  return Math.min(18, avgConf * 12 + Math.min(10, unique * 3) * 0.35);
 }
 
-function scoreEngagement(row: GeneratedArticleRow): number {
+const TRUSTED_SOURCE_MARKERS = [
+  "pti",
+  "ani",
+  "reuters",
+  "associated press",
+  " ap ",
+  "bbc",
+  "the hindu",
+  "indian express",
+  "ndtv",
+  "india today",
+] as const;
+
+function scoreVerifiedSources(row: GeneratedArticleRow): number {
+  const meta = row.editorial_metadata ?? {};
+  const sources = Array.isArray(meta.source_attribution) ? meta.source_attribution : [];
+
+  const uniqueSources = new Set(
+    sources.map((s) => (s.source ?? "").trim().toLowerCase()).filter(Boolean)
+  );
+  const uniqueCount = Math.max(0, uniqueSources.size);
+
+  const avgAttributionConfidence =
+    sources.length > 0
+      ? sources.reduce((s, a) => s + Number(a.confidence ?? 0.5), 0) / sources.length
+      : Number(meta.ai_confidence ?? 0.5);
+
+  const trustedHit =
+    [...uniqueSources].some((s) => TRUSTED_SOURCE_MARKERS.some((m) => s.includes(m))) ||
+    TRUSTED_SOURCE_MARKERS.some((m) =>
+      `${row.headline} ${row.summary ?? ""}`.toLowerCase().includes(m)
+    );
+
+  // Verified sources priority: unique > count hint > attribution confidence.
+  let score = 0;
+  score += Math.min(16, uniqueCount * 5); // 0..16
+  if (trustedHit) score += 6;
+  score += Math.min(10, avgAttributionConfidence * 10);
+
+  // Penalize fallback-only drafts slightly (they can still be high quality).
+  if (meta.used_fallback) score -= 3;
+
+  return Math.max(0, Math.min(26, score));
+}
+
+function scoreReaderValue(row: GeneratedArticleRow): number {
+  // Reader value: completeness + scannability + useful tags + image presence.
   let score = 0;
   const summaryLen = row.summary?.trim().length ?? 0;
-  const bodyLen =
-    row.article_body?.trim().length ?? row.summary?.trim().length ?? 0;
+  const bodyLen = row.article_body?.trim().length ?? 0;
 
   if (row.hero_image_url) score += 5;
-  if (summaryLen > 80) score += 4;
-  if (bodyLen > 400) score += 5;
+  if (summaryLen >= 90) score += 5;
+  if (bodyLen >= 650) score += 8;
+  else if (bodyLen >= 380) score += 5;
   if ((row.tags?.length ?? 0) >= 2) score += 2;
 
-  const headlineWords = row.headline.split(/\s+/).length;
+  const headlineWords = row.headline.split(/\s+/).filter(Boolean).length;
   if (headlineWords >= 6 && headlineWords <= 14) score += 3;
 
-  return Math.min(16, score);
+  return Math.max(0, Math.min(22, score));
+}
+
+function scoreEditorialQuality(row: GeneratedArticleRow): number {
+  const meta = row.editorial_metadata ?? {};
+  const q =
+    (meta.quality_breakdown as
+      | {
+          readability?: number;
+          seo_quality?: number;
+          local_relevance?: number;
+          originality?: number;
+          structure?: number;
+          spam_score?: number;
+        }
+      | undefined) ?? {};
+
+  const readability = Number(q.readability ?? 0.45);
+  const seo = Number(q.seo_quality ?? 0.45);
+  const local = Number(q.local_relevance ?? 0.45);
+  const originality = Number(q.originality ?? 0.45);
+  const structure = Number(q.structure ?? 0.45);
+  const spam = Number(q.spam_score ?? 0);
+
+  // Weighted editorial quality (0..24). Strongly favors local relevance + readability.
+  const raw =
+    readability * 7 +
+    local * 7 +
+    originality * 4 +
+    seo * 4 +
+    structure * 2 -
+    spam * 6;
+
+  return Math.max(0, Math.min(24, Math.round(raw * 10) / 10));
 }
 
 function scoreUrgency(row: GeneratedArticleRow, hours: number): number {
   const meta = row.editorial_metadata ?? {};
   let score = 0;
 
-  if (hours <= 2) score += 12;
-  else if (hours <= 6) score += 8;
+  // Time-based urgency.
+  if (hours <= 1) score += 13;
+  else if (hours <= 3) score += 10;
+  else if (hours <= 6) score += 7;
   else if (hours <= LIVE_WINDOW_HOURS) score += 4;
 
-  if (BREAKING_RE.test(row.headline)) score += 10;
-  if ((meta.source_count ?? 1) >= 3) score += 4;
+  // Use model-derived signals, not headline buzzwords.
+  const breakingScore = Number(meta.breaking_score ?? 0);
+  const trendScore = Number(meta.trend_score ?? 0);
+  score += Math.min(8, breakingScore * 8);
+  score += Math.min(6, trendScore * 6);
 
-  return Math.min(20, score);
+  // Multi-source adds urgency confidence (verified stories move faster).
+  const srcCount = Number(meta.source_count ?? meta.source_attribution?.length ?? 1);
+  if (srcCount >= 3) score += 3;
+
+  return Math.max(0, Math.min(26, score));
 }
 
 function scoreCategory(section: HomeSectionId): number {
   return CATEGORY_WEIGHT[section] * 12;
 }
 
-function scoreBreakingBoost(row: GeneratedArticleRow, hours: number): number {
+function scoreClickbaitPenalty(row: GeneratedArticleRow): number {
   const meta = row.editorial_metadata ?? {};
-  if (meta.is_breaking) {
-    return hours > LIVE_WINDOW_HOURS ? 6 : 16;
-  }
-  if (!BREAKING_RE.test(`${row.headline} ${row.summary ?? ""}`)) return 0;
-  if (hours > LIVE_WINDOW_HOURS) return 4;
-  return 14;
+  const quality =
+    (meta.quality_report as { clickbait_flags?: string[] } | undefined) ?? {};
+  const flags = Array.isArray(quality.clickbait_flags) ? quality.clickbait_flags : [];
+  if (flags.length === 0) return 0;
+  // Penalize clickbait signals; never boost them.
+  return Math.min(12, 4 + flags.length * 3);
 }
 
 function buildDuplicateClusters(
@@ -316,10 +406,12 @@ function buildReasons(factors: RankingFactorBreakdown, flags: {
   if (factors.freshness >= 20) reasons.push("high_freshness");
   if (factors.regional >= 18) reasons.push("regional_priority");
   if (factors.districtBoost >= 10) reasons.push("district_hyperlocal_boost");
-  if (factors.sourceTrust >= 12) reasons.push("trusted_multi_source");
-  if (factors.engagement >= 10) reasons.push("strong_engagement_signals");
+  if (factors.verifiedSources >= 14) reasons.push("verified_sources_priority");
+  if (factors.editorialQuality >= 14) reasons.push("high_editorial_quality");
+  if (factors.readerValue >= 12) reasons.push("high_reader_value");
   if (flags.isTrending) reasons.push("trending_velocity");
   if (flags.duplicatePenalty > 0) reasons.push("duplicate_cluster_penalty");
+  if (factors.clickbaitPenalty > 0) reasons.push("clickbait_penalty");
   if (factors.staleDecay > 8) reasons.push("stale_content_decay");
   if (flags.section === "chhattisgarh" || flags.section === "raipur") {
     reasons.push("cg_first_policy");
@@ -346,28 +438,40 @@ export function computeHomepagePriorityScore(
   const staleDecay = scoreStaleDecay(hours);
   const regional = scoreRegional(section, personalization);
   const districtBoost = scoreDistrictBoost(row, personalization);
-  const sourceTrust = scoreSourceTrust(row);
-  const engagement = scoreEngagement(row);
   const urgency = scoreUrgency(row, hours);
+  const verifiedSources = scoreVerifiedSources(row);
+  const readerValue = scoreReaderValue(row);
+  const editorialQuality = scoreEditorialQuality(row);
   const category = scoreCategory(section);
-  const breakingBoost = scoreBreakingBoost(row, hours);
+  const clickbaitPenalty = scoreClickbaitPenalty(row);
   const duplicatePenalty = options?.duplicatePenalty ?? 0;
 
   let slugBoost = 0;
   if (personalization?.boostSlugs?.includes(row.slug)) slugBoost = 8;
+
+  // Reduce duplicate national stories: slightly downweight india section unless strongly regional.
+  const meta = row.editorial_metadata ?? {};
+  const hasRegionalSignal =
+    geoFromRecord(row).is_chhattisgarh ||
+    Boolean(geoFromRecord(row).primary_district) ||
+    Number(meta.local_relevance ?? meta.quality_breakdown?.local_relevance ?? 0) >= 0.6;
+  const nationalCrowdPenalty =
+    section === "india" && !hasRegionalSignal ? 6 : 0;
 
   const raw =
     freshness +
     urgency +
     regional +
     districtBoost +
-    sourceTrust +
-    engagement +
+    verifiedSources +
+    readerValue +
+    editorialQuality +
     category +
-    breakingBoost +
     slugBoost -
     staleDecay -
-    duplicatePenalty;
+    duplicatePenalty -
+    clickbaitPenalty -
+    nationalCrowdPenalty;
 
   const score = Math.max(0, Math.min(100, Math.round(raw * 10) / 10));
 
@@ -378,14 +482,16 @@ export function computeHomepagePriorityScore(
       urgency,
       regional,
       districtBoost,
-      sourceTrust,
-      engagement,
+      verifiedSources,
+      readerValue,
+      editorialQuality,
       category,
-      breakingBoost,
+      clickbaitPenalty,
       staleDecay,
       duplicatePenalty,
     },
-    isBreaking: breakingBoost > 0,
+    // Breaking = model-derived breaking score or breaking override.
+    isBreaking: Number(meta.breaking_score ?? 0) >= 0.75 || Boolean(meta.breaking_override),
   };
 }
 
