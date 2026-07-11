@@ -63,6 +63,9 @@ export interface ObservationSnapshot {
   executionPending: number;
   copilotRecommendations: number;
   gscPagesLowCtr: number;
+  serpQuotaExhausted: boolean;
+  serpIntelligenceMode: "hybrid" | "gsc_only";
+  serpSearchesRemaining: number;
   errors: string[];
 }
 

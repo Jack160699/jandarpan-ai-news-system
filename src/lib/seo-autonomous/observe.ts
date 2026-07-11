@@ -4,6 +4,8 @@
 
 import { getCompetitorDashboardStats } from "@/lib/competitor-intelligence/repository";
 import { listOpportunities as listSerpOpportunities } from "@/lib/serp-intelligence/repository";
+import { getSerpQuotaStatus } from "@/lib/serp-intelligence/quota-manager";
+import { logSerp } from "@/lib/serp-intelligence/logger";
 import { getExecutionDashboard } from "@/lib/seo-execution/repository";
 import { listRecommendations } from "@/lib/ai-copilot/repository";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
@@ -19,8 +21,29 @@ export async function observe(): Promise<ObservationSnapshot> {
     executionPending: 0,
     copilotRecommendations: 0,
     gscPagesLowCtr: 0,
+    serpQuotaExhausted: false,
+    serpIntelligenceMode: "hybrid",
+    serpSearchesRemaining: 0,
     errors,
   };
+
+  try {
+    const quota = await getSerpQuotaStatus();
+    snapshot.serpQuotaExhausted = quota.quotaExhausted;
+    snapshot.serpIntelligenceMode = quota.mode;
+    snapshot.serpSearchesRemaining = quota.searchesRemaining;
+    if (quota.quotaExhausted) {
+      logSerp("gsc_only_mode", {
+        source: "autonomous_observe",
+        searchesUsed: quota.searchesUsed,
+        dailyUsed: quota.dailyUsed,
+      });
+    }
+  } catch (err) {
+    errors.push(`serp_quota: ${err instanceof Error ? err.message : "failed"}`);
+    snapshot.serpIntelligenceMode = "gsc_only";
+    snapshot.serpQuotaExhausted = true;
+  }
 
   try {
     const competitor = await getCompetitorDashboardStats();
@@ -31,7 +54,7 @@ export async function observe(): Promise<ObservationSnapshot> {
 
   try {
     const serp = await listSerpOpportunities(50);
-    snapshot.serpOpportunities = serp.length;
+    snapshot.serpOpportunities = snapshot.serpQuotaExhausted ? 0 : serp.length;
   } catch (err) {
     errors.push(`serp: ${err instanceof Error ? err.message : "failed"}`);
   }

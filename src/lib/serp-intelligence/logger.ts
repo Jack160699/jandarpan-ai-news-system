@@ -8,7 +8,10 @@ type SerpLogEvent =
   | "rank_changes"
   | "new_keywords"
   | "lost_keywords"
-  | "opportunities_found";
+  | "opportunities_found"
+  | "serp_request"
+  | "serp_skipped_quota"
+  | "gsc_only_mode";
 
 export function logSerp(
   event: SerpLogEvent,

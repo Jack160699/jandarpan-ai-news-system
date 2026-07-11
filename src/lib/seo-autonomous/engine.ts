@@ -5,6 +5,7 @@
  * Each stage is isolated; failure in one stage does not stop the pipeline.
  */
 
+import type { ObservationSnapshot } from "@/lib/seo-autonomous/types";
 import { isAutonomousSeoEnabled } from "@/lib/seo-autonomous/config";
 import { observe } from "@/lib/seo-autonomous/observe";
 import { analyze } from "@/lib/seo-autonomous/analyze";
@@ -65,13 +66,16 @@ export async function runAutonomousSeoEngine(): Promise<PipelineRunResult> {
 
   // ── Observe ──
   const observeStart = Date.now();
-  let observation = {
+  let observation: ObservationSnapshot = {
     competitorArticles24h: 0,
     serpOpportunities: 0,
     gscOpenRecommendations: 0,
     executionPending: 0,
     copilotRecommendations: 0,
     gscPagesLowCtr: 0,
+    serpQuotaExhausted: false,
+    serpIntelligenceMode: "hybrid",
+    serpSearchesRemaining: 0,
     errors: [] as string[],
   };
   try {

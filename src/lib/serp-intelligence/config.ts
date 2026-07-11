@@ -18,6 +18,19 @@ export const SERP_MAX_KEYWORDS_PER_RUN = Number(
   process.env.SERP_MAX_KEYWORDS_PER_RUN ?? 40
 );
 
+/** Monthly SerpAPI / SERP fetch budget. */
+export const SERP_MONTHLY_LIMIT = Number(
+  process.env.SERP_MONTHLY_LIMIT ?? 250
+);
+
+/** Percent of monthly budget held in reserve until month-end. */
+export const SERP_RESERVED_PERCENT = Number(
+  process.env.SERP_RESERVED_PERCENT ?? 10
+);
+
+/** Max SERP API calls per calendar day. */
+export const SERP_DAILY_MAX = Number(process.env.SERP_DAILY_MAX ?? 8);
+
 /** HTTP timeout for SERP API calls (ms). */
 export const SERP_FETCH_TIMEOUT_MS = Number(
   process.env.SERP_FETCH_TIMEOUT_MS ?? 15_000

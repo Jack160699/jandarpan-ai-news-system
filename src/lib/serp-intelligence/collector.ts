@@ -92,6 +92,7 @@ export async function collectSerpForKeyword(
 ): Promise<SerpCollectedSnapshot | null> {
   if (!hasSerpProviderConfigured()) return null;
 
+  // Quota is enforced by the engine before calling this function.
   if (process.env.SERPAPI_KEY) {
     return collectViaSerpApi(keyword);
   }

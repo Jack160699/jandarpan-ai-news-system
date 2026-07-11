@@ -8,18 +8,30 @@ import { getExecutionDashboard } from "@/lib/seo-execution/repository";
 import type { AnalysisOpportunity, ObservationSnapshot } from "@/lib/seo-autonomous/types";
 import { AUTONOMOUS_MAX_ARTICLES } from "@/lib/seo-autonomous/config";
 import { logAutonomous } from "@/lib/seo-autonomous/logger";
+import { logSerp } from "@/lib/serp-intelligence/logger";
 
 export async function analyze(
   observation: ObservationSnapshot
 ): Promise<AnalysisOpportunity[]> {
   const opportunities: AnalysisOpportunity[] = [];
   const seen = new Set<string>();
+  const gscOnlyMode = observation.serpQuotaExhausted;
+
+  if (gscOnlyMode) {
+    logSerp("gsc_only_mode", {
+      source: "autonomous_analyze",
+      gscOpenRecommendations: observation.gscOpenRecommendations,
+      gscPagesLowCtr: observation.gscPagesLowCtr,
+    });
+  }
 
   function add(opp: AnalysisOpportunity): void {
     if (seen.has(opp.article_id)) return;
     seen.add(opp.article_id);
     opportunities.push(opp);
   }
+
+  const gscBoost = gscOnlyMode ? 20 : 0;
 
   try {
     const execution = await getExecutionDashboard();
@@ -67,9 +79,66 @@ export async function analyze(
           article_id: row.id,
           article_slug: row.slug,
           opportunity_type: "ctr_opportunity",
-          score: 75 + Math.min(Number(page.impressions) / 100, 20),
-          reason: `Low CTR (${Number(page.ctr).toFixed(3)}) with ${page.impressions} impressions`,
-          metadata: { ctr: page.ctr, impressions: page.impressions },
+          score: 75 + Math.min(Number(page.impressions) / 100, 20) + gscBoost,
+          reason: `Low CTR (${Number(page.ctr).toFixed(3)}) with ${page.impressions} impressions${
+            gscOnlyMode ? " [GSC-only mode]" : ""
+          }`,
+          metadata: { ctr: page.ctr, impressions: page.impressions, gsc_only: gscOnlyMode },
+        });
+      }
+    } catch {
+      /* isolated */
+    }
+
+    try {
+      const { data: gscQueries } = await supabase
+        .from("gsc_queries" as never)
+        .select("query, clicks, impressions, position, position_delta, trend, generated_article_id")
+        .order("impressions", { ascending: false })
+        .limit(gscOnlyMode ? 25 : 10);
+
+      for (const query of (gscQueries ?? []) as Array<Record<string, unknown>>) {
+        if (!query.generated_article_id) continue;
+        const articleId = String(query.generated_article_id);
+        if (seen.has(articleId)) continue;
+
+        let score = 55 + gscBoost;
+        const reasons: string[] = [];
+
+        if (Number(query.impressions) > 100) {
+          score += Math.min(Number(query.impressions) / 200, 25);
+          reasons.push(`${query.impressions} impressions`);
+        }
+        if (query.trend === "rising") {
+          score += 15;
+          reasons.push("rising GSC query");
+        }
+        if (Number(query.position_delta) > 0) {
+          score += Math.min(Number(query.position_delta) * 5, 20);
+          reasons.push(`ranking drop +${query.position_delta}`);
+        }
+
+        const { data: article } = await supabase
+          .from("generated_articles")
+          .select("id, slug")
+          .eq("id", articleId)
+          .maybeSingle();
+        if (!article) continue;
+
+        const row = article as { id: string; slug: string };
+        add({
+          article_id: row.id,
+          article_slug: row.slug,
+          opportunity_type: "gsc_query_opportunity",
+          score,
+          reason: `${String(query.query)}: ${reasons.join(", ") || "high GSC visibility"}${
+            gscOnlyMode ? " [GSC-only mode]" : ""
+          }`,
+          metadata: {
+            query: query.query,
+            impressions: query.impressions,
+            gsc_only: gscOnlyMode,
+          },
         });
       }
     } catch {
@@ -139,6 +208,7 @@ export async function analyze(
   logAutonomous("analyze_complete", {
     count: ranked.length,
     observationSignals: observation,
+    gscOnlyMode,
   });
 
   return ranked;

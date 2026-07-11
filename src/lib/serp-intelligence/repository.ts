@@ -14,17 +14,25 @@ import type {
   SerpKeywordRecord,
   SerpMovementRecord,
   SerpOpportunityRecord,
+  SerpQuotaStatus,
   SerpRankingsDashboard,
   SerpRankingRecord,
 } from "@/lib/serp-intelligence/types";
 import type { ExistingRankingState } from "@/lib/serp-intelligence/rank-tracker";
+import type { GapReportRecord } from "@/lib/seo-intelligence/types";
+import {
+  defaultQuotaStatus,
+  getSerpQuotaStatus,
+} from "@/lib/serp-intelligence/quota-manager";
 
 type SerpTable =
   | "serp_keywords"
   | "serp_snapshots"
   | "serp_rankings"
   | "serp_movements"
-  | "serp_opportunities";
+  | "serp_opportunities"
+  | "serp_quota_usage"
+  | "serp_quota_log";
 
 function fromSerp(table: SerpTable) {
   return createAdminServerClient().from(table as never);
@@ -53,6 +61,148 @@ export async function loadEnabledKeywords(
 
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => mapKeyword(row as Record<string, unknown>));
+}
+
+export async function loadAllEnabledKeywords(): Promise<SerpKeywordRecord[]> {
+  const { data, error } = await fromSerp("serp_keywords")
+    .select("*")
+    .eq("enabled", true)
+    .order("group_name");
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => mapKeyword(row as Record<string, unknown>));
+}
+
+export async function loadRecentJandarpanRankingDrops(): Promise<
+  Map<string, number>
+> {
+  const map = new Map<string, number>();
+  if (!isSupabaseConfigured()) return map;
+
+  const { data, error } = await fromSerp("serp_rankings")
+    .select("keyword_id, position_delta")
+    .eq("is_jandarpan", true)
+    .not("position_delta", "is", null)
+    .lt("position_delta", 0);
+
+  if (error) return map;
+
+  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  for (const row of rows) {
+    const keywordId = String(row.keyword_id);
+    const drop = Math.abs(Number(row.position_delta));
+    const existing = map.get(keywordId) ?? 0;
+    map.set(keywordId, Math.max(existing, drop));
+  }
+
+  return map;
+}
+
+export async function loadTopGapKeywords(
+  limit = 50
+): Promise<GapReportRecord[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  const supabase = createAdminServerClient();
+  const { data, error } = await supabase
+    .from("seo_gap_reports" as never)
+    .select("*")
+    .order("gap_score", { ascending: false })
+    .limit(limit);
+
+  if (error) return [];
+  return (data ?? []) as GapReportRecord[];
+}
+
+export async function getQuotaUsageRow(
+  periodMonth: string
+): Promise<{
+  searches_used: number;
+  searches_skipped: number;
+  daily_usage: Record<string, number>;
+} | null> {
+  if (!isSupabaseConfigured()) return null;
+
+  const { data, error } = await fromSerp("serp_quota_usage")
+    .select("searches_used, searches_skipped, daily_usage")
+    .eq("period_month", periodMonth)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const row = data as Record<string, unknown>;
+  return {
+    searches_used: Number(row.searches_used ?? 0),
+    searches_skipped: Number(row.searches_skipped ?? 0),
+    daily_usage:
+      row.daily_usage && typeof row.daily_usage === "object"
+        ? (row.daily_usage as Record<string, number>)
+        : {},
+  };
+}
+
+export async function incrementQuotaUsage(input: {
+  periodMonth: string;
+  dayKey: string;
+  searchesUsedDelta: number;
+  searchesSkippedDelta: number;
+}): Promise<{
+  searches_used: number;
+  searches_skipped: number;
+  daily_usage: Record<string, number>;
+}> {
+  const existing =
+    (await getQuotaUsageRow(input.periodMonth)) ?? {
+      searches_used: 0,
+      searches_skipped: 0,
+      daily_usage: {},
+    };
+
+  const dailyUsage = { ...existing.daily_usage };
+  if (input.searchesUsedDelta > 0) {
+    dailyUsage[input.dayKey] =
+      (dailyUsage[input.dayKey] ?? 0) + input.searchesUsedDelta;
+  }
+
+  const next = {
+    period_month: input.periodMonth,
+    searches_used: existing.searches_used + input.searchesUsedDelta,
+    searches_skipped: existing.searches_skipped + input.searchesSkippedDelta,
+    daily_usage: dailyUsage,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await fromSerp("serp_quota_usage").upsert(next as never, {
+    onConflict: "period_month",
+  });
+  if (error) throw new Error(error.message);
+
+  return {
+    searches_used: next.searches_used,
+    searches_skipped: next.searches_skipped,
+    daily_usage: next.daily_usage,
+  };
+}
+
+export async function insertQuotaLog(input: {
+  keyword: string;
+  keywordId: string;
+  action: "search" | "skipped_quota" | "skipped_daily";
+  reason?: string | null;
+  priorityScore?: number | null;
+}): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const { error } = await fromSerp("serp_quota_log").insert({
+    keyword: input.keyword,
+    keyword_id: input.keywordId,
+    action: input.action,
+    reason: input.reason ?? null,
+    priority_score: input.priorityScore ?? null,
+    metadata: {},
+  } as never);
+
+  if (error) throw new Error(error.message);
 }
 
 export async function loadExistingRankingsForKeyword(
@@ -227,6 +377,8 @@ export async function getSerpRankingsDashboard(): Promise<SerpRankingsDashboard>
     return emptyDashboard();
   }
 
+  const quota = await getSerpQuotaStatus();
+
   const [keywordsRes, rankingsRes, movementsRes, opportunitiesRes, snapshotsRes] =
     await Promise.all([
       fromSerp("serp_keywords").select("id, keyword, group_name").eq("enabled", true),
@@ -328,6 +480,7 @@ export async function getSerpRankingsDashboard(): Promise<SerpRankingsDashboard>
   });
 
   return {
+    quota,
     visibilityScore,
     averagePosition,
     keywordsTracked: keywords.length,
@@ -388,6 +541,7 @@ export async function getSerpRankingsDashboard(): Promise<SerpRankingsDashboard>
 
 function emptyDashboard(): SerpRankingsDashboard {
   return {
+    quota: defaultQuotaStatus(),
     visibilityScore: 0,
     averagePosition: null,
     keywordsTracked: 0,

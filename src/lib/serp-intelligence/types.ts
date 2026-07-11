@@ -159,7 +159,40 @@ export interface SerpAiAction {
   jandarpan_url?: string;
 }
 
+export type SerpIntelligenceMode = "hybrid" | "gsc_only";
+
+export interface SerpQuotaStatus {
+  monthlyLimit: number;
+  reservedSearches: number;
+  usableMonthlyLimit: number;
+  searchesUsed: number;
+  searchesRemaining: number;
+  searchesSkipped: number;
+  keywordsCheckedToday: number;
+  dailyMax: number;
+  dailyUsed: number;
+  dailyRemaining: number;
+  canSearch: boolean;
+  quotaExhausted: boolean;
+  mode: SerpIntelligenceMode;
+  periodMonth: string;
+  estimatedResetAt: string;
+}
+
+export interface PrioritizedKeyword {
+  keyword: SerpKeywordRecord;
+  priorityScore: number;
+  signals: {
+    gscImpressions?: number;
+    gscClicks?: number;
+    rankingDrop?: number;
+    gscTrend?: string;
+    competitorGapScore?: number;
+  };
+}
+
 export interface SerpRankingsDashboard {
+  quota: SerpQuotaStatus;
   visibilityScore: number;
   averagePosition: number | null;
   keywordsTracked: number;
@@ -209,6 +242,10 @@ export interface SerpTrackerResult {
   newKeywords: number;
   lostKeywords: number;
   opportunitiesFound: number;
+  serpSearchesPerformed: number;
+  serpSearchesSkipped: number;
+  intelligenceMode: SerpIntelligenceMode;
+  quota: SerpQuotaStatus;
   errors: string[];
   skippedReason?: string;
 }

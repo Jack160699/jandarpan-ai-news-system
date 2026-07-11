@@ -150,10 +150,58 @@ export function SerpRankingsPanel() {
             Set <code>SEO_SERP_TRACKER=true</code> and configure{" "}
             <code>SERPAPI_KEY</code> (preferred) or{" "}
             <code>GOOGLE_CSE_API_KEY</code> + <code>GOOGLE_CSE_CX</code>.
-            Runs twice daily via cron.
+            Runs twice daily via cron. SerpAPI budget:{" "}
+            <code>SERP_MONTHLY_LIMIT</code>, <code>SERP_DAILY_MAX</code>.
+            GSC remains primary when quota is exhausted.
           </p>
         </AdminCard>
       )}
+
+      <div className="anr-kpis anr-icenter__kpis">
+        <article className="anr-kpi anr-icenter__kpi">
+          <span>Monthly Quota</span>
+          <strong>{dashboard.quota.monthlyLimit}</strong>
+        </article>
+        <article className="anr-kpi anr-icenter__kpi">
+          <span>Searches Used</span>
+          <strong>{dashboard.quota.searchesUsed}</strong>
+        </article>
+        <article className="anr-kpi anr-icenter__kpi">
+          <span>Remaining</span>
+          <strong
+            className={
+              dashboard.quota.searchesRemaining <= 10
+                ? "anr-kpi--warn"
+                : undefined
+            }
+          >
+            {dashboard.quota.searchesRemaining}
+          </strong>
+        </article>
+        <article className="anr-kpi anr-icenter__kpi">
+          <span>Checked Today</span>
+          <strong>{dashboard.quota.keywordsCheckedToday}</strong>
+        </article>
+        <article className="anr-kpi anr-icenter__kpi">
+          <span>Mode</span>
+          <strong>
+            {dashboard.quota.mode === "gsc_only" ? "GSC only" : "Hybrid"}
+          </strong>
+        </article>
+        <article className="anr-kpi anr-icenter__kpi">
+          <span>Reset</span>
+          <strong>
+            {dashboard.quota.estimatedResetAt ? (
+              <ClientTime
+                iso={dashboard.quota.estimatedResetAt}
+                preset="date"
+              />
+            ) : (
+              "—"
+            )}
+          </strong>
+        </article>
+      </div>
 
       <div className="anr-kpis anr-icenter__kpis">
         <article className="anr-kpi anr-icenter__kpi">
