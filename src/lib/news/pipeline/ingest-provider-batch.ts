@@ -15,6 +15,7 @@ import {
   validateArticlesForIngest,
   type ArticleValidationStats,
 } from "@/lib/news/sanitize-article";
+import { dedupeArticles } from "@/lib/news/normalize";
 import { revalidateLiveHomepage } from "@/lib/news/revalidate-home";
 import {
   persistNewsSignals,
@@ -108,7 +109,20 @@ export async function ingestProviderArticles(
     sampleFailures: failures.slice(0, 3),
   });
 
-  const { articles: enriched, analytics } = await enrichArticleImages(valid, {
+  const { unique: dedupedValid, skipped: urlDuplicates } = dedupeArticles(valid, {
+    fuzzy: true,
+  });
+  if (urlDuplicates > 0) {
+    logIngestTrace("provider_articles_deduped", {
+      provider,
+      duplicateCount: urlDuplicates,
+      inputCount: valid.length,
+      outputCount: dedupedValid.length,
+    });
+    result.skippedDuplicates += urlDuplicates;
+  }
+
+  const { articles: enriched, analytics } = await enrichArticleImages(dedupedValid, {
     maxPageFetches: options?.maxImagePageFetches ?? 12,
   });
   result.imageAnalytics = analytics;

@@ -119,13 +119,6 @@ async function handleFetchNews(request: Request) {
       await revalidateNewsroomCaches();
     }
 
-    const { refreshSnapshotFromDatabase } = await import(
-      "@/lib/news/live-feed/resolve-pool"
-    );
-    if (result.inserted > 0 || result.signalsInserted > 0) {
-      await refreshSnapshotFromDatabase(120).catch(() => null);
-    }
-
     return {
       ok: result.ok,
       processed: result.inserted + result.signalsInserted,
