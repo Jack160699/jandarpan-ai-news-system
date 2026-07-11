@@ -7,6 +7,8 @@ import { EDITORIAL_LIMITS } from "@/lib/newsroom/editorial-capacity";
 export const INFRA_CONFIG = {
   /** Serverless budget before soft stop (ms) */
   ingestBudgetMs: Number(process.env.INGEST_BUDGET_MS) || 52_000,
+  /** Orchestrate pipeline budget — must stay below route maxDuration */
+  orchestrateBudgetMs: Number(process.env.ORCHESTRATE_BUDGET_MS) || 110_000,
   ingestStopRatio: Number(process.env.INGEST_STOP_RATIO) || 0.82,
 
   providerFetchTimeoutMs:

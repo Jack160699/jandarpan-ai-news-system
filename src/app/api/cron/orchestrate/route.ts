@@ -20,7 +20,7 @@ import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const VALID_WORKERS = new Set<WorkerId>([
   ...INTELLIGENCE_PIPELINE,

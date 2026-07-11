@@ -97,7 +97,7 @@ async function runAiWorker(ctx: WorkerContext): Promise<WorkerResult> {
   let partial = false;
   const errors: string[] = [];
   let loops = 0;
-  const maxLoops = 8;
+  const maxLoops = 5;
 
   while (loops < maxLoops) {
     loops++;

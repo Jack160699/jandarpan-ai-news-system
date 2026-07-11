@@ -253,6 +253,19 @@ async function isJobTimedOut(job: WorkerJobRow): Promise<boolean> {
   return elapsed > job.timeout_ms;
 }
 
+function resolveJobRaceTimeoutMs(
+  job: WorkerJobRow,
+  deadline?: ExecutionDeadline
+): number {
+  const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;
+  if (deadline) {
+    const budget = deadline.remainingMs() - reserveMs;
+    if (budget <= 0) return 1;
+    return Math.min(job.timeout_ms, budget);
+  }
+  return job.timeout_ms;
+}
+
 export async function processJobBatch(
   handlers: Map<JobType, JobHandler>,
   options?: {
@@ -307,12 +320,13 @@ export async function processJobBatch(
     }
 
     try {
+      const raceTimeoutMs = resolveJobRaceTimeoutMs(job, deadline);
       const result: JobHandlerResult = await Promise.race([
         handler(job),
         new Promise<JobHandlerResult>((_, reject) =>
           setTimeout(
             () => reject(new Error("job_timeout")),
-            job.timeout_ms
+            raceTimeoutMs
           )
         ),
       ]);
