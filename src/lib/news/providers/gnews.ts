@@ -13,8 +13,8 @@ import {
 import type { NormalizedArticle, ProviderFetchResult } from "@/lib/news/types";
 
 const GNEWS_BASE = "https://gnews.io/api/v4/top-headlines";
-const GNEWS_CATEGORY_BATCH_SIZE = 2;
-const GNEWS_CATEGORY_DELAY_MS = 400;
+const GNEWS_CATEGORY_BATCH_SIZE = 1;
+const GNEWS_CATEGORY_DELAY_MS = 600;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
