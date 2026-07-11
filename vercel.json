@@ -3,15 +3,23 @@
   "crons": [
     {
       "path": "/api/fetch-news",
-      "schedule": "15 0 * * *"
+      "schedule": "7,37 * * * *"
     },
     {
-      "path": "/api/cron/worker/editorial_generate",
-      "schedule": "45 0 * * *"
+      "path": "/api/cron/orchestrate",
+      "schedule": "15,45 * * * *"
+    },
+    {
+      "path": "/api/cron/edition-publish",
+      "schedule": "30 0,3,6,9,12,15 * * *"
+    },
+    {
+      "path": "/api/cron/workers/health",
+      "schedule": "0 * * * *"
     },
     {
       "path": "/api/cron/translation-backfill",
-      "schedule": "20 1 * * *"
+      "schedule": "20 */6 * * *"
     },
     {
       "path": "/api/cron/cleanup",
