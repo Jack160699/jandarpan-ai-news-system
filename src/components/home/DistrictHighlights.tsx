@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { breakpointQueries } from "@/design-system/tokens/breakpoints";
 import { DistrictFeed } from "@/components/home/DistrictFeed";
 import { DistrictSegmentedControl } from "@/components/home/DistrictSegmentedControl";
 import { SectionHeader } from "@/components/homepage/SectionHeader";
@@ -46,7 +47,7 @@ export function DistrictHighlights({
 
       if (
         typeof window !== "undefined" &&
-        window.matchMedia("(max-width: 1023px)").matches
+        window.matchMedia(breakpointQueries.belowDesktop).matches
       ) {
         requestAnimationFrame(() => {
           feedRef.current?.scrollIntoView({

@@ -1,13 +1,16 @@
-import { TrendingStoriesSkeleton } from "@/components/loading";
+import { ProfileV3Skeleton } from "@/features/profile-v3";
+import { isProfileV3Enabled } from "@/features/profile-v3/config";
+import { PageContainer } from "@/layouts";
+import "@/features/profile-v3/styles/profile-v3.css";
 
 export default function ArchiveLoading() {
-  return (
-    <div
-      className="route-loading route-loading--premium nr-wrap py-6 pl-stagger"
-      aria-busy="true"
-      aria-label="Loading saved stories"
-    >
-      <TrendingStoriesSkeleton count={6} />
-    </div>
-  );
+  if (isProfileV3Enabled()) {
+    return (
+      <PageContainer width="default" className="pv3-page">
+        <ProfileV3Skeleton />
+      </PageContainer>
+    );
+  }
+
+  return null;
 }

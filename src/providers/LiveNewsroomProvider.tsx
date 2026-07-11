@@ -146,7 +146,9 @@ export function LiveNewsroomProvider({
     enabled,
     onSnapshot: handleSnapshot,
     onError: (code) => {
-      console.warn("[LiveNewsroom] background sync failed:", code);
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[LiveNewsroom] background sync failed:", code);
+      }
     },
   });
 

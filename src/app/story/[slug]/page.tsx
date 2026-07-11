@@ -2,6 +2,8 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ArticleView } from "@/sections/ArticleView";
 import { ImmersiveStoryPage } from "@/sections/story/ImmersiveStoryPage";
+import { ArticleExperienceV3 } from "@/features/article-v3";
+import { isArticleV3Enabled } from "@/features/article-v3/config";
 import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
 import {
@@ -27,6 +29,9 @@ import {
   shouldRedirectToCanonicalSlug,
 } from "@/lib/seo";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { resolveStorySlug } from "@/lib/news/related-stories";
+import { bodySections } from "@/lib/news/story-markdown";
+import { SITE_URL } from "@/lib/seo/constants";
 
 export const revalidate = 60;
 
@@ -132,6 +137,40 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
         ? await fetchSponsoredStory(tenant.id, generatedRow.slug)
         : null;
 
+    const articleV3 = isArticleV3Enabled();
+    const slugResolved = resolveStorySlug(liveArticle);
+    const canonicalUrl = `${SITE_URL}/story/${slugResolved}`;
+    const headline = liveArticle.ai_headline?.trim() || liveArticle.title;
+    const aiSummary = liveArticle.ai_summary?.trim() || null;
+    const shareSummary = aiSummary ?? plainParagraphs.slice(0, 2).join(" ");
+    const contentSections = bodySections(parsed.sections);
+
+    if (articleV3) {
+      return (
+        <PageShell variant="news">
+          <ArticleExperienceV3
+            article={liveArticle}
+            sponsoredStory={sponsoredStory}
+            related={relatedResult.articles}
+            relatedDiscoverySubtitle={relatedResult.discoverySubtitle}
+            intelligence={intelligence}
+            editorialMeta={generatedRow.editorial_metadata}
+            generatedRow={generatedRow}
+            contentSections={contentSections}
+            plainParagraphs={plainParagraphs}
+            plainBlocks={parsed.plainBlocks}
+            canonicalUrl={canonicalUrl}
+            slug={slugResolved}
+            headline={headline}
+            shareSummary={shareSummary}
+            translationActive={
+              localized.usedTranslation && !localized.usedSourceFallback
+            }
+          />
+        </PageShell>
+      );
+    }
+
     return (
       <PageShell variant="news">
         <main id="main-content" className="relative z-[2]" role="main">
@@ -161,6 +200,8 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
         }}
       />
       <main
+        id="main-content"
+        role="main"
         data-narrative-root
         className="home-news-flow mobile-comfort thumb-zone relative z-[2]"
       >

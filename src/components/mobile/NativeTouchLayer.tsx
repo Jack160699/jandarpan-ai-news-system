@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { breakpointQueries } from "@/design-system/tokens/breakpoints";
 
 /** Enables native-app document classes on mobile viewports */
 export function NativeTouchLayer({ children }: { children: ReactNode }) {
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
+    const mq = window.matchMedia(breakpointQueries.mobile);
     const apply = () => {
       document.documentElement.classList.toggle("native-app", mq.matches);
     };

@@ -1,5 +1,7 @@
 import { PageShell } from "@/components/layout/PageShell";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
+import { LiveV3Page } from "@/features/live-v3";
+import { isLiveV3Enabled } from "@/features/live-v3/config";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { BRAND } from "@/lib/brand";
 import {
@@ -62,6 +64,18 @@ export default async function LivePage() {
       { name: "Live Desk", href: BASE_PATH },
     ]),
   ];
+
+  if (isLiveV3Enabled()) {
+    return (
+      <PageShell variant="news">
+        <JsonLdScript data={jsonLd} />
+        <main id="main-content" className="live-page lv3-route-root nr-root" role="main">
+          <LiveV3Page feed={feed} />
+        </main>
+        <Footer />
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell variant="news">

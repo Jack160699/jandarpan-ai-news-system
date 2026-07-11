@@ -200,6 +200,139 @@ export type DeadLetterRemediationResult = {
   dispositions: DeadLetterDisposition[];
 };
 
+export type DeadWorkerJobRemediationResult = {
+  examined: number;
+  revived: number;
+  discarded: number;
+  skippedActive: number;
+  dispositions: DeadLetterDisposition[];
+};
+
+/** Revive dead rows still in worker_jobs (not copied to worker_dead_letters). */
+export async function reviveDeadWorkerJobs(options?: {
+  dryRun?: boolean;
+  limit?: number;
+  jobTypes?: string[];
+}): Promise<DeadWorkerJobRemediationResult> {
+  const dryRun = options?.dryRun ?? true;
+  const limit = options?.limit ?? 100;
+  const jobTypes = options?.jobTypes ?? ["translate_article", "translation_batch"];
+  const supabase = createAdminServerClient();
+
+  let query = supabase
+    .from("worker_jobs")
+    .select("id, job_type, dedupe_key, payload, tenant_id, last_error, updated_at")
+    .eq("status", "dead")
+    .order("updated_at", { ascending: true })
+    .limit(limit);
+
+  if (jobTypes.length) {
+    query = query.in("job_type", jobTypes);
+  }
+
+  const { data: rows, error } = await query;
+  if (error) {
+    throw new Error(`dead_worker_job_load_failed:${error.message}`);
+  }
+
+  const dispositions: DeadLetterDisposition[] = [];
+  let revived = 0;
+  let discarded = 0;
+  let skippedActive = 0;
+
+  for (const row of rows ?? []) {
+    const disposition = await classifyDeadLetter({
+      id: row.id,
+      job_id: row.id,
+      job_type: row.job_type,
+      dedupe_key: row.dedupe_key,
+      payload: (row.payload as Record<string, unknown>) ?? {},
+      tenant_id: row.tenant_id,
+      last_error: row.last_error,
+      failed_at: row.updated_at,
+    });
+    dispositions.push(disposition);
+
+    if (disposition.action === "skip_active") {
+      skippedActive += 1;
+      continue;
+    }
+    if (disposition.action === "discard") {
+      discarded += 1;
+      continue;
+    }
+    if (disposition.action === "requeue" && !dryRun) {
+      const jobId = await reviveDeadJob(
+        row.job_type as JobType,
+        row.dedupe_key
+      );
+      if (jobId) revived += 1;
+      else discarded += 1;
+    } else if (disposition.action === "requeue") {
+      revived += 1;
+    }
+  }
+
+  return {
+    examined: rows?.length ?? 0,
+    revived,
+    discarded,
+    skippedActive,
+    dispositions,
+  };
+}
+
+/** Remove dead worker_jobs rows superseded by pending/claimed siblings (same dedupe_key). */
+export async function purgeSupersededDeadJobs(options?: {
+  dryRun?: boolean;
+  jobTypes?: string[];
+}): Promise<{ examined: number; purged: number }> {
+  const dryRun = options?.dryRun ?? true;
+  const jobTypes = options?.jobTypes ?? ["translate_article", "translation_batch"];
+  const supabase = createAdminServerClient();
+
+  const { data: deadRows, error } = await supabase
+    .from("worker_jobs")
+    .select("id, job_type, dedupe_key")
+    .eq("status", "dead")
+    .in("job_type", jobTypes);
+
+  if (error) {
+    throw new Error(`purge_dead_load_failed:${error.message}`);
+  }
+
+  const idsToPurge: string[] = [];
+
+  for (const row of deadRows ?? []) {
+    const { count } = await supabase
+      .from("worker_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("job_type", row.job_type)
+      .eq("dedupe_key", row.dedupe_key)
+      .in("status", ["pending", "claimed"])
+      .neq("id", row.id);
+
+    if ((count ?? 0) > 0) {
+      idsToPurge.push(row.id);
+    }
+  }
+
+  if (!dryRun && idsToPurge.length > 0) {
+    const { error: delErr } = await supabase
+      .from("worker_jobs")
+      .delete()
+      .in("id", idsToPurge);
+    if (delErr) {
+      throw new Error(`purge_dead_delete_failed:${delErr.message}`);
+    }
+  }
+
+  return {
+    examined: deadRows?.length ?? 0,
+    purged: dryRun ? idsToPurge.length : idsToPurge.length,
+  };
+}
+
 export async function runDeadLetterRemediation(options?: {
   dryRun?: boolean;
   limit?: number;

@@ -338,10 +338,12 @@ export async function getDashboardSession(
     })
   );
 
-  console.log("[SESSION_OK]", "resolved_authenticated_session", {
-    userId: userData.user.id,
-    tenantSlug: membership.tenantSlug,
-  });
+  if (process.env.ADMIN_DEBUG === "1") {
+    console.log("[SESSION_OK]", "resolved_authenticated_session", {
+      userId: userData.user.id,
+      tenantSlug: membership.tenantSlug,
+    });
+  }
 
   return {
     userId: userData.user.id,

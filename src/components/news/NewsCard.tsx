@@ -16,6 +16,10 @@ function storyCategory(story: FeedStory): string {
   return story.kicker.toLowerCase().replace(/\s+/g, "-") || "world";
 }
 
+/**
+ * @deprecated Legacy news card — delegates to FeedNewsCard (design-system primitives inside).
+ * Migrate to EditorialCard / CompactCard / FeaturedCard from @/design-system.
+ */
 export function NewsCard({
   story,
   variant = "horizontal",

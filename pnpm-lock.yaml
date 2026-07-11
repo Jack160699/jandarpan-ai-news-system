@@ -11,6 +11,9 @@ importers:
       '@sentry/nextjs':
         specifier: ^10.53.1
         version: 10.63.0(@opentelemetry/core@2.9.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.9.0(@opentelemetry/api@1.9.1))(next@16.2.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(webpack@5.108.4(lightningcss@1.32.0))
+      '@stratxcel/platform':
+        specifier: file:./packages/stratxcel-platform
+        version: file:packages/stratxcel-platform(class-variance-authority@0.7.1)(clsx@2.1.1)(framer-motion@12.42.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(lucide-react@1.23.0(react@19.2.4))(next@16.2.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwind-merge@3.6.0)
       '@supabase/ssr':
         specifier: ^0.10.3
         version: 0.10.3(@supabase/supabase-js@2.110.0)
@@ -1100,6 +1103,18 @@ packages:
 
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
+
+  '@stratxcel/platform@file:packages/stratxcel-platform':
+    resolution: {directory: packages/stratxcel-platform, type: directory}
+    peerDependencies:
+      class-variance-authority: ^0.7.1
+      clsx: ^2.1.1
+      framer-motion: ^12.0.0
+      lucide-react: ^0.400.0
+      next: '>=15.0.0'
+      react: '>=18.0.0'
+      react-dom: '>=18.0.0'
+      tailwind-merge: ^3.0.0
 
   '@supabase/auth-js@2.110.0':
     resolution: {integrity: sha512-Mi288WCTp6wxMFCOu/UgzgHEXODjdl2uVTLqK11eanzGZaldU3RyP8Am+ZbNuVzFP+5+iOvppxzv7N5Ym84xTg==}
@@ -4510,6 +4525,17 @@ snapshots:
   '@standard-schema/spec@1.1.0': {}
 
   '@standard-schema/utils@0.3.0': {}
+
+  '@stratxcel/platform@file:packages/stratxcel-platform(class-variance-authority@0.7.1)(clsx@2.1.1)(framer-motion@12.42.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(lucide-react@1.23.0(react@19.2.4))(next@16.2.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(tailwind-merge@3.6.0)':
+    dependencies:
+      class-variance-authority: 0.7.1
+      clsx: 2.1.1
+      framer-motion: 12.42.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      lucide-react: 1.23.0(react@19.2.4)
+      next: 16.2.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+      tailwind-merge: 3.6.0
 
   '@supabase/auth-js@2.110.0':
     dependencies:

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { LayoutGrid } from "lucide-react";
 import { useHeaderScrolled } from "@/hooks/useHeaderScrolled";
-import { useIsMobile } from "@/hooks/useMediaQuery";
+import { useIsMobile } from "@/design-system/hooks/useMediaQuery";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
@@ -12,6 +12,7 @@ import { useTenant } from "@/providers/TenantProvider";
 import { ThemeToggleButton } from "@/components/navigation/ThemeToggleButton";
 import { IconBell, IconSearch } from "@/components/navigation/NavIcons";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
+import { isNotificationCenterV3Enabled } from "@/features/notifications/config";
 
 const SearchOverlay = dynamic(
   () =>
@@ -21,6 +22,10 @@ const SearchOverlay = dynamic(
   { ssr: false }
 );
 
+/**
+ * @deprecated RC1-004 — replaced by JDP-002 TopBar via AppShell.
+ * Retained for one-commit rollback. See docs/RC1-004-APPSHELL-INTEGRATION-REPORT.md
+ */
 export function MainHeader() {
   const { tenant, headerLocation } = useTenant();
   const { language, t } = useLanguage();
@@ -30,6 +35,7 @@ export function MainHeader() {
   const scrolled = useHeaderScrolled();
   const brandName =
     language !== "en" ? tenant.branding.nameHi : tenant.branding.nameEn;
+  const notificationsHref = isNotificationCenterV3Enabled() ? "/notifications" : "/live";
 
   return (
     <>
@@ -90,10 +96,10 @@ export function MainHeader() {
               <IconSearch />
             </button>
             <Link
-              href="/live"
+              href={notificationsHref}
               className="main-header__btn main-header__btn--bell tap-target tap-press"
               aria-label={t.profile.notifications}
-              onClick={() => startNavigation("/live")}
+              onClick={() => startNavigation(notificationsHref)}
             >
               <IconBell />
               <span className="main-header__badge" aria-hidden />

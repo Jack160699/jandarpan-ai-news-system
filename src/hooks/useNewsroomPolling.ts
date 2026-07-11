@@ -10,6 +10,7 @@ import type { LiveHomepageSnapshot } from "@/lib/realtime/types";
 
 const MAX_ATTEMPTS = 3;
 const RETRY_BASE_MS = 1_200;
+const DEV_POLL_LOGS = process.env.NODE_ENV !== "production";
 
 type UseNewsroomPollingOptions = {
   enabled?: boolean;
@@ -40,10 +41,10 @@ async function fetchLiveSnapshotWithRetry(
     });
 
     if (result.ok) {
-      if (attempt > 0) {
+      if (DEV_POLL_LOGS && attempt > 0) {
         console.log("[live-poll] recovered after", attempt, "retries");
       }
-      if (result.meta?.rateLimited) {
+      if (DEV_POLL_LOGS && result.meta?.rateLimited) {
         console.warn(
           "[live-poll] upstream rate limited — showing cached/wire content"
         );
@@ -58,19 +59,23 @@ async function fetchLiveSnapshotWithRetry(
     lastError = result.error;
     const retryable = result.retryable !== false;
 
-    console.warn("[live-poll] attempt failed", {
-      attempt: attempt + 1,
-      error: result.error,
-      code: result.code,
-      retryable,
-      meta: result.meta,
-    });
+    if (DEV_POLL_LOGS) {
+      console.warn("[live-poll] attempt failed", {
+        attempt: attempt + 1,
+        error: result.error,
+        code: result.code,
+        retryable,
+        meta: result.meta,
+      });
+    }
 
     if (!retryable || attempt >= MAX_ATTEMPTS - 1) break;
     await sleep(RETRY_BASE_MS * (attempt + 1));
   }
 
-  console.error("[live-poll] all attempts failed:", lastError);
+  if (DEV_POLL_LOGS) {
+    console.warn("[live-poll] all attempts failed:", lastError);
+  }
   return null;
 }
 

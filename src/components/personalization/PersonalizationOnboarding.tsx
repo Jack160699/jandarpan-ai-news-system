@@ -8,6 +8,7 @@ import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import { useHomepageLayout } from "@/hooks/useHomepageLayout";
 import { resetHomepageLayout } from "@/lib/personalization/homepage-layout";
+import { isOnboardingV3Enabled } from "@/features/onboarding-v3";
 
 export function PersonalizationOnboarding() {
   const { language } = useLanguage();
@@ -15,7 +16,7 @@ export function PersonalizationOnboarding() {
   const { layout, persist } = useHomepageLayout();
   const [dismissed, setDismissed] = useState(false);
 
-  if (layout.onboardingDone || dismissed) return null;
+  if (isOnboardingV3Enabled() || layout.onboardingDone || dismissed) return null;
 
   const finish = (selected: string[]) => {
     setInterests(selected);

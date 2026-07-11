@@ -42,7 +42,7 @@ export function StoryCinematicHero({
           fallbackSrc={fallbackSrc}
           priority
           sizes={sizes ?? "(max-width: 768px) 100vw, 72rem"}
-          alt=""
+          alt={imageCredit ? `${headline} — ${imageCredit}` : headline}
           aspectClassName="story-cinematic__image-wrap"
         />
         <div className="story-cinematic__shade" aria-hidden />

@@ -342,15 +342,28 @@ export async function enqueueTranslationsForPublishedArticle(
 export async function requeueDeadTranslationJobs(
   limit = 20
 ): Promise<number> {
-  const { runDeadLetterRemediation } = await import(
-    "@/lib/ops/dead-letter-remediation"
-  );
-  const result = await runDeadLetterRemediation({
-    dryRun: false,
-    limit,
-    jobTypes: ["translate_article", "translation_batch"],
-  });
-  return result.requeued;
+  const {
+    runDeadLetterRemediation,
+    reviveDeadWorkerJobs,
+    purgeSupersededDeadJobs,
+  } = await import("@/lib/ops/dead-letter-remediation");
+  const [dlq, queue, purged] = await Promise.all([
+    runDeadLetterRemediation({
+      dryRun: false,
+      limit,
+      jobTypes: ["translate_article", "translation_batch"],
+    }),
+    reviveDeadWorkerJobs({
+      dryRun: false,
+      limit,
+      jobTypes: ["translate_article", "translation_batch"],
+    }),
+    purgeSupersededDeadJobs({
+      dryRun: false,
+      jobTypes: ["translate_article", "translation_batch"],
+    }),
+  ]);
+  return dlq.requeued + queue.revived + purged.purged;
 }
 
 export async function findArticlesMissingTranslation(input: {

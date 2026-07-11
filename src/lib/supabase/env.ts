@@ -46,13 +46,16 @@ function logEnvCheckOnce(diag: SupabaseEnvDiagnostics): void {
     return;
   }
 
-  console.log("[SUPABASE_ENV_CHECK]", {
+  const hasIssues =
+    diag.warnings.length > 0 || !diag.hasUrl || !diag.hasAnon || !diag.urlValid;
+  if (!hasIssues) return;
+
+  console.warn("[SUPABASE_ENV_CHECK]", {
     hasUrl: diag.hasUrl,
     hasAnon: diag.hasAnon,
     hasServiceRole: diag.hasServiceRole,
     urlHostname: diag.urlHostname,
     urlValid: diag.urlValid,
-    anonKeyPrefix: diag.anonKeyPrefix,
     warnings: diag.warnings,
     phase: process.env.NEXT_PHASE ?? "runtime",
   });

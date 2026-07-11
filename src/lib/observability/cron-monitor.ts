@@ -5,6 +5,7 @@
 import { cacheGetJson, cacheSetJson } from "@/lib/infrastructure/cache";
 import { REGISTERED_CRON_JOBS } from "@/lib/infrastructure/cron/registered-jobs";
 import { opsLogger } from "@/lib/observability/logger";
+import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { WorkerResult } from "@/lib/infrastructure/workers/types";
 
 const CRON_STATE_KEY = "ops:cron:last-runs:v1";
@@ -38,6 +39,22 @@ export async function recordCronRun(record: CronRunRecord): Promise<void> {
   const state = (await cacheGetJson<CronState>(CRON_STATE_KEY)) ?? {};
   state[record.job] = record;
   await cacheSetJson(CRON_STATE_KEY, state, CRON_TTL_SEC);
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createAdminServerClient();
+      await supabase.from("ops_cron_runs").insert({
+        job: record.job,
+        ok: record.ok,
+        duration_ms: record.durationMs,
+        degraded: record.degraded ?? false,
+        workers: record.workers ?? null,
+        error: record.error ?? null,
+      });
+    } catch {
+      /* best-effort durability */
+    }
+  }
 
   opsLogger.info("heartbeat_recorded", {
     job: record.job,

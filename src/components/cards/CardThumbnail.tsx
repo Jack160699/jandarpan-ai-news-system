@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { MediaImage } from "@/components/media/MediaImage";
+import { JdsCardImage } from "@/design-system/components/JdsCardImage/JdsCardImage";
 import { normalizeMediaAspect, type ThumbAspect } from "@/lib/news/images/aspects";
 import type { ThumbOverlay } from "@/components/cards/types";
 
@@ -42,6 +42,9 @@ function overlayClass(overlay: ThumbOverlay): string | null {
   }
 }
 
+/**
+ * @deprecated Legacy premium card thumbnail — delegates image to design-system JdsCardImage.
+ */
 export function CardThumbnail({
   src,
   alt,
@@ -58,27 +61,23 @@ export function CardThumbnail({
   children,
 }: CardThumbnailProps) {
   const aspectNorm = normalizeMediaAspect(aspect);
-  const fillParent = aspectNorm === "fill";
+  const cropAspect = aspectNorm === "fill" ? "16:9" : aspectNorm;
   const scrim = overlayClass(overlay);
-  const useCardScrim = overlay !== "none";
 
   return (
     <div
       className={`pcard-thumb ${aspectClass(aspect)} ${className}`.trim()}
     >
       <div className="pcard-thumb__inner">
-        <MediaImage
+        <JdsCardImage
           src={src}
           alt={alt}
-          aspect={aspect}
           sizes={sizes}
           priority={priority}
           category={category}
           source={source}
-          fillParent={fillParent}
-          cinematic={!useCardScrim}
-          imageClassName={imageClassName}
-          className="pcard-thumb__media"
+          cropAspect={cropAspect}
+          className={`pcard-thumb__media ${imageClassName}`.trim()}
         />
         {scrim ? (
           <span className={`pcard-thumb__scrim ${scrim}`} aria-hidden />

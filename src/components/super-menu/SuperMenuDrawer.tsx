@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useModalA11y } from "@/design-system/hooks/useModalA11y";
 import { triggerHaptic } from "@/lib/mobile/haptics";
 import { DRAWER_MS } from "@/lib/navigation/transition-config";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
@@ -18,8 +19,6 @@ import { SuperMenuIplScores } from "./SuperMenuIplScores";
 import { SuperMenuSettings } from "./SuperMenuSettings";
 
 const SWIPE_CLOSE_PX = 72;
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** Minimal regional menu — compact fintech-style drawer */
 export function SuperMenuDrawer() {
@@ -52,33 +51,13 @@ export function SuperMenuDrawer() {
     return () => window.clearTimeout(t);
   }, [menuOpen, mounted]);
 
-  useEffect(() => {
-    if (!animOpen || !panelRef.current) return;
-    const panel = panelRef.current;
-    const closeBtn = panel.querySelector<HTMLElement>(".super-menu__close");
-    closeBtn?.focus();
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Tab") {
-        const nodes = Array.from(
-          panel.querySelectorAll<HTMLElement>(FOCUSABLE)
-        ).filter((el) => !el.closest("[aria-hidden='true']"));
-        if (nodes.length === 0) return;
-        const first = nodes[0];
-        const last = nodes[nodes.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    panel.addEventListener("keydown", onKeyDown);
-    return () => panel.removeEventListener("keydown", onKeyDown);
-  }, [animOpen]);
+  useModalA11y({
+    open: animOpen,
+    onClose: closeMenu,
+    panelRef,
+    inertSelector: ".app-shell__content, .jdp-shell__feed, .home-page",
+    initialFocusSelector: ".super-menu__close",
+  });
 
   const onNavigate = useCallback(
     (href: string) => {

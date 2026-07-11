@@ -8,6 +8,7 @@ import { useNavigation } from "@/providers/NavigationProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { ThemeToggleButton } from "@/components/navigation/ThemeToggleButton";
 import { IconBell, IconLive } from "@/components/navigation/NavIcons";
+import { isNotificationCenterV3Enabled } from "@/features/notifications/config";
 
 export function ProfileSettingsPanel() {
   const { language, setLanguage, t, languageOptions } = useLanguage();
@@ -15,6 +16,7 @@ export function ProfileSettingsPanel() {
   const { startNavigation } = useNavigation();
   const showHi = language !== "en";
   const activeDistrict = prefs.homeDistrict ?? "raipur";
+  const notificationsHref = isNotificationCenterV3Enabled() ? "/notifications" : "/live";
 
   return (
     <section className="profile-settings" aria-labelledby="profile-settings-heading">
@@ -53,9 +55,9 @@ export function ProfileSettingsPanel() {
 
       <div className="profile-settings__group">
         <Link
-          href="/live"
+          href={notificationsHref}
           className="profile-settings__link-row"
-          onClick={() => startNavigation("/live")}
+          onClick={() => startNavigation(notificationsHref)}
         >
           <span className="profile-settings__link-icon" aria-hidden>
             <IconBell />

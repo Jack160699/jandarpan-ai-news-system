@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { isMonetizationV3Enabled } from "@/features/monetization-v3/config";
+import { MembershipExperienceV3 } from "@/features/monetization-v3/MembershipExperienceV3";
 import { NewsletterSignup } from "@/components/monetization/NewsletterSignup";
 import type { ReaderPlan } from "@/lib/monetization/types";
 
@@ -11,6 +13,10 @@ export function MembershipPlansPage({
   plans,
   tenantName,
 }: MembershipPlansPageProps) {
+  if (isMonetizationV3Enabled()) {
+    return <MembershipExperienceV3 plans={plans} tenantName={tenantName} />;
+  }
+
   return (
     <article className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold mb-2">Membership · {tenantName}</h1>

@@ -5,6 +5,11 @@ import { SearchPanel } from "@/components/search/SearchPanel";
 import { SearchResultsList } from "@/components/search/SearchResultsList";
 import { SearchEmptyState } from "@/components/search/SearchEmptyState";
 import { SearchTrendingChips } from "@/components/search/SearchTrendingChips";
+import {
+  SearchExperienceV3,
+  SearchResults,
+  isSearchV3Enabled,
+} from "@/features/search-v3";
 import { Footer } from "@/sections/Footer";
 import { executeSearch } from "@/lib/search/search";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
@@ -111,6 +116,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const displayLanguage = await getServerReaderLanguage();
   const t = getDictionary(displayLanguage);
   const trending = getTrendingSearchesForLanguage(displayLanguage, 10);
+  const searchV3 = isSearchV3Enabled();
 
   const categoryShortcuts = [
     {
@@ -152,32 +158,56 @@ export default async function SearchPage({ searchParams }: PageProps) {
   return (
     <PageShell variant="news">
       <main id="main-content" className="search-page-root" role="main">
-        <div className="search-page">
+        <div className={searchV3 ? "search-v3-page" : "search-page"}>
           <Link href="/" className="search-page__back">
             {t.archive.backToEdition}
           </Link>
-          <h1 className="search-page__title mt-4">{t.search.title}</h1>
-          <p className="search-page__intro">{t.search.hint}</p>
+          <h1 className={searchV3 ? "search-v3-page__title mt-4" : "search-page__title mt-4"}>
+            {t.search.title}
+          </h1>
+          <p className={searchV3 ? "search-v3-page__intro" : "search-page__intro"}>
+            {t.search.hint}
+          </p>
 
-          <SearchPanel
-            initialQuery={q}
-            initialDistrict={district ?? null}
-            initialCategory={category ?? null}
-            initialTime={timeScope ?? "all"}
-            suppressResults={Boolean(serverResult && serverResult.hits.length > 0)}
-          />
+          {searchV3 ? (
+            <SearchExperienceV3
+              initialQuery={q}
+              initialDistrict={district ?? null}
+              initialCategory={category ?? null}
+              initialTime={timeScope ?? "all"}
+              suppressResults={Boolean(serverResult && serverResult.hits.length > 0)}
+            />
+          ) : (
+            <SearchPanel
+              initialQuery={q}
+              initialDistrict={district ?? null}
+              initialCategory={category ?? null}
+              initialTime={timeScope ?? "all"}
+              suppressResults={Boolean(serverResult && serverResult.hits.length > 0)}
+            />
+          )}
 
           {serverResult && serverResult.hits.length > 0 ? (
-            <>
-              <p className="search-meta search-meta--premium">
-                <span className="search-meta__count">{serverResult.total}</span>{" "}
-                stories · {serverResult.tookMs}ms
-                {serverResult.parsed.district
-                  ? ` · ${serverResult.parsed.district}`
-                  : ""}
-              </p>
-              <SearchResultsList hits={serverResult.hits} />
-            </>
+            searchV3 ? (
+              <SearchResults
+                hits={serverResult.hits}
+                total={serverResult.total}
+                tookMs={serverResult.tookMs}
+                districtLabel={serverResult.parsed.district}
+                listId="search-v3-server-results"
+              />
+            ) : (
+              <>
+                <p className="search-meta search-meta--premium">
+                  <span className="search-meta__count">{serverResult.total}</span>{" "}
+                  stories · {serverResult.tookMs}ms
+                  {serverResult.parsed.district
+                    ? ` · ${serverResult.parsed.district}`
+                    : ""}
+                </p>
+                <SearchResultsList hits={serverResult.hits} />
+              </>
+            )
           ) : serverResult && serverResult.hits.length === 0 ? (
             <SearchEmptyState
               trending={trending}
@@ -191,7 +221,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
             />
           ) : null}
 
-          {!q && !serverResult ? (
+          {!q && !serverResult && !searchV3 ? (
             <SearchTrendingChips
               items={trending}
               title={t.home.trending}

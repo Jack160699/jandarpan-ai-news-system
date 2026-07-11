@@ -18,6 +18,7 @@
 
 /* Feature surfaces (content preserved) */
 @import "./design-system.css";
+@import "../design-system/styles/index.css";
 @import "./media-system.css";
 @import "./cards-premium.css";
 @import "./card-system.css";

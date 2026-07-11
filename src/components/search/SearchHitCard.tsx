@@ -1,6 +1,4 @@
-import Link from "next/link";
-import Image from "next/image";
-import { IMAGE_BLUR } from "@/lib/image-placeholder";
+import { CompactCard } from "@/design-system/components/editorial/CompactCard";
 import type { SearchHit } from "@/lib/search/types";
 
 type SearchHitCardProps = {
@@ -9,7 +7,9 @@ type SearchHitCardProps = {
   priority?: boolean;
 };
 
-/** Shared search result row — reuses feed-news-card / card-system markup. */
+/**
+ * @deprecated Legacy search result row — internally renders design-system CompactCard.
+ */
 export function SearchHitCard({
   hit,
   onNavigate,
@@ -17,63 +17,20 @@ export function SearchHitCard({
 }: SearchHitCardProps) {
   return (
     <li className="search-results__item" role="option">
-      <article className="feed-news-card feed-news-card--compact search-feed-card">
-        <div className="feed-news-card__main">
-          <Link
-            href={`/story/${hit.slug}`}
-            className="feed-news-card__link tap-target search-feed-card__link"
-            onClick={onNavigate}
-          >
-            <div className="feed-news-card__media">
-              {hit.imageUrl ? (
-                <Image
-                  src={hit.imageUrl}
-                  alt=""
-                  fill
-                  sizes="88px"
-                  loading={priority ? undefined : "lazy"}
-                  priority={priority}
-                  placeholder="blur"
-                  blurDataURL={IMAGE_BLUR}
-                  className="object-cover"
-                />
-              ) : (
-                <div
-                  className="search-feed-card__media-fallback"
-                  aria-hidden
-                />
-              )}
-            </div>
-            <div className="feed-news-card__content">
-              <h3 className="feed-news-card__headline">{hit.headline}</h3>
-              {hit.summary ? (
-                <p className="feed-news-card__summary">{hit.summary}</p>
-              ) : null}
-              <div className="feed-news-card__meta">
-                <span className="feed-news-card__meta-category">
-                  {hit.section}
-                </span>
-                {hit.district ? (
-                  <>
-                    <span className="feed-news-card__meta-sep" aria-hidden>
-                      ·
-                    </span>
-                    <span>{hit.district}</span>
-                  </>
-                ) : null}
-                {hit.readingTime ? (
-                  <>
-                    <span className="feed-news-card__meta-sep" aria-hidden>
-                      ·
-                    </span>
-                    <span>{hit.readingTime}</span>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          </Link>
-        </div>
-      </article>
+      <CompactCard
+        className="feed-news-card feed-news-card--compact search-feed-card"
+        headline={hit.headline}
+        excerpt={hit.summary ?? undefined}
+        imageUrl={hit.imageUrl ?? undefined}
+        imageAlt={hit.headline}
+        imageSizes="88px"
+        category={hit.section}
+        district={hit.district ?? undefined}
+        readTime={hit.readingTime ?? undefined}
+        href={`/story/${hit.slug}`}
+        priority={priority}
+        onClick={onNavigate}
+      />
     </li>
   );
 }

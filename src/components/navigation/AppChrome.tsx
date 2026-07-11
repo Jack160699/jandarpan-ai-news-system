@@ -36,11 +36,19 @@ const HeadlinesMiniPlayer = dynamic(
   { ssr: false }
 );
 
+const OnboardingExperienceV3 = dynamic(
+  () =>
+    import("@/features/onboarding-v3").then((m) => ({
+      default: m.OnboardingExperienceV3,
+    })),
+  { ssr: false }
+);
+
 type AppChromeProps = {
   children: React.ReactNode;
 };
 
-const MINIMAL_CHROME_PREFIXES = ["/admin"];
+const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library"];
 
 function ShortsLanguageShell({ children }: AppChromeProps) {
   const { contentLocked } = useLanguage();
@@ -72,6 +80,7 @@ function AppChromeShell({ children }: AppChromeProps) {
       <SkipLink />
       <NavProgress />
       <LanguageGate />
+      <OnboardingExperienceV3 />
       <div className="app-shell__content">
         <div className="pl-hide-mobile">
           <div className="pl-container">

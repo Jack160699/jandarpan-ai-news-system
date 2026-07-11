@@ -4,6 +4,8 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { StoryCard } from "@/components/homepage/StoryCard";
+import { DistrictV3Page } from "@/features/district-v3";
+import { isDistrictV3Enabled } from "@/features/district-v3/config";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
 import { filterPoolByLanguage } from "@/lib/i18n/article-language";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
@@ -112,6 +114,25 @@ export default async function DistrictPage({ params }: PageProps) {
       { name: district.name, href: path },
     ]),
   ];
+
+  if (isDistrictV3Enabled()) {
+    return (
+      <PageShell variant="news">
+        <JsonLdScript data={jsonLd} />
+        <div className="dv3-route-root nr-root">
+          <DistrictV3Page
+            district={{
+              slug: district.slug,
+              name: district.name,
+              nameHi: district.nameHi,
+              priority: district.priority,
+            }}
+            articles={articles}
+          />
+        </div>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>

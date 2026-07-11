@@ -1,2 +1,10 @@
-export { useIsMobile, useMediaQuery } from "./useMediaQuery";
-export { useReducedMotion } from "./useReducedMotion";
+export {
+  useIsMobile,
+  useIsTabletUp,
+  useIsTablet,
+  useIsLaptopUp,
+  useIsDesktop,
+  useMediaQuery,
+  usePrefersHover,
+} from "@stratxcel/platform/hooks";
+export { useReducedMotion } from "@stratxcel/platform/hooks";

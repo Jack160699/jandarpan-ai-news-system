@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { isReelsV3Enabled } from "@/features/reels-v3/config";
+import { ReelsExperienceV3 } from "@/features/reels-v3";
 import { ReelsPage } from "@/features/reels/ReelsPage";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
@@ -51,6 +53,7 @@ export async function generateMetadata({
 }
 
 export default async function ShortsPage() {
+  const reelsV3 = isReelsV3Enabled();
   const displayLanguage = await getServerReaderLanguage();
   const shorts = await fetchShortsPool(32, displayLanguage);
 
@@ -80,7 +83,11 @@ export default async function ShortsPage() {
           </div>
         }
       >
-        <ReelsPage shorts={shorts} />
+        {reelsV3 ? (
+          <ReelsExperienceV3 shorts={shorts} />
+        ) : (
+          <ReelsPage shorts={shorts} />
+        )}
       </Suspense>
     </>
   );

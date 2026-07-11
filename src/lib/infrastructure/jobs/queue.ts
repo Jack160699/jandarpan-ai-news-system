@@ -365,6 +365,17 @@ export async function processJobBatch(
       const msg = err instanceof Error ? err.message : "job_exception";
       await failJob(job, msg, true);
       failed += 1;
+      const isDead = job.attempts + 1 >= job.max_attempts;
+      if (isDead) {
+        dead += 1;
+        const { captureOpsException } = await import("@/lib/observability/sentry");
+        await captureOpsException(err, {
+          worker: options?.workerId ?? "job_processor",
+          jobType: job.job_type,
+          jobId: job.id,
+          error: msg,
+        });
+      }
       await recordJobRun({
         workerId: options?.workerId ?? "job_processor",
         jobId: job.id,

@@ -28,6 +28,9 @@ function mapVariant(
   return "standard";
 }
 
+/**
+ * @deprecated Legacy homepage story card — delegates to FeedNewsCard (design-system primitives inside).
+ */
 export function StoryCard({
   article,
   variant,

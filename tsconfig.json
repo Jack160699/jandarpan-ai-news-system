@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@stratxcel/platform": [
+        "./packages/stratxcel-platform/index.ts"
+      ],
+      "@stratxcel/platform/*": [
+        "./packages/stratxcel-platform/*"
       ]
     }
   },

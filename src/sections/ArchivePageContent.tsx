@@ -1,5 +1,7 @@
 "use client";
 
+import { isProfileV3Enabled } from "@/features/profile-v3/config";
+import { ProfileExperienceV3 } from "@/features/profile-v3";
 import Link from "next/link";
 import { EditionLineage } from "@/components/institution";
 import { ProfileSettingsPanel } from "@/components/profile/ProfileSettingsPanel";
@@ -10,6 +12,10 @@ import { useLanguage } from "@/providers/LanguageProvider";
 
 export function ArchivePageContent() {
   const { t, language } = useLanguage();
+
+  if (isProfileV3Enabled()) {
+    return <ProfileExperienceV3 />;
+  }
 
   return (
     <main

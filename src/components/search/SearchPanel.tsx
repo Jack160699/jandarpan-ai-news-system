@@ -1,19 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
 import { SearchHitCard } from "@/components/search/SearchHitCard";
 import { SearchDismissLink } from "@/components/search/SearchDismissLink";
 import { useLanguage } from "@/providers/LanguageProvider";
-import {
-  addSearchHistory,
-  clearSearchHistory,
-  getSearchHistory,
-} from "@/lib/search/history";
-import type { SearchResult } from "@/lib/search/types";
+import { addSearchHistory } from "@/lib/search/history";
 import type { HomeSectionId } from "@/lib/homepage/types";
 import type { SearchTimeScope } from "@/lib/search/types";
+import { buildSearchUrl } from "@/features/search-v3/core/api";
+import { useSearchState } from "@/features/search-v3/core/SearchState";
+import { useSearchHistory } from "@/features/search-v3/core/SearchHistory";
+import {
+  LEGACY_FILTER_CATEGORIES,
+  LEGACY_FILTER_DISTRICTS,
+} from "@/features/search-v3/core/SearchFilters";
 
 type SearchPanelProps = {
   initialQuery?: string;
@@ -25,20 +27,6 @@ type SearchPanelProps = {
   suppressResults?: boolean;
   onNavigate?: () => void;
 };
-
-const DISTRICTS = [
-  { id: "raipur", label: "Raipur" },
-  { id: "bilaspur", label: "Bilaspur" },
-  { id: "bastar", label: "Bastar" },
-  { id: "chhattisgarh", label: "CG" },
-] as const;
-
-const CATEGORIES: { id: HomeSectionId; label: string }[] = [
-  { id: "india", label: "Politics" },
-  { id: "business", label: "Business" },
-  { id: "sports", label: "Sports" },
-  { id: "education", label: "Education" },
-];
 
 function SearchIcon() {
   return (
@@ -64,17 +52,17 @@ export function SearchPanel({
   const router = useRouter();
   const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState(initialQuery);
-  const [district, setDistrict] = useState<string | null>(initialDistrict);
-  const [category, setCategory] = useState<HomeSectionId | null>(initialCategory);
-  const [timeScope, setTimeScope] = useState<SearchTimeScope>(initialTime);
-  const [result, setResult] = useState<SearchResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [history, setHistory] = useState<string[]>(() =>
-    typeof window !== "undefined" ? getSearchHistory() : []
-  );
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { history, clear: clearHistory } = useSearchHistory();
+
+  const search = useSearchState({
+    initialQuery,
+    initialDistrict,
+    initialCategory,
+    initialTime,
+    compact,
+    enabled: !suppressResults,
+    skipIdleFetch: true,
+  });
 
   useEffect(() => {
     if (!autoFocus) return;
@@ -82,78 +70,26 @@ export function SearchPanel({
     return () => cancelAnimationFrame(id);
   }, [autoFocus]);
 
-  const runSearch = useCallback(
-    async (q: string) => {
-      if (!q.trim() && !district && !category) {
-        setResult(null);
-        setError(null);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams();
-        if (q.trim()) params.set("q", q.trim());
-        if (district) params.set("district", district);
-        if (category) params.set("category", category);
-        if (timeScope !== "all") params.set("time", timeScope);
-        params.set("limit", compact ? "6" : "15");
-
-        const res = await fetch(`/api/search?${params.toString()}`);
-        const json = (await res.json()) as SearchResult & { ok?: boolean };
-        if (json.ok !== false) {
-          setResult(json);
-        } else {
-          setError("Search unavailable. Try again.");
-        }
-      } catch {
-        setResult(null);
-        setError("Search unavailable. Check your connection.");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [district, category, timeScope, compact]
-  );
-
-  useEffect(() => {
-    if (suppressResults) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      runSearch(query);
-    }, 280);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [query, district, category, timeScope, runSearch, suppressResults]);
-
   const openFullSearch = () => {
-    const params = new URLSearchParams();
-    if (query.trim()) params.set("q", query.trim());
-    if (district) params.set("district", district);
-    if (category) params.set("category", category);
-    if (timeScope !== "all") params.set("time", timeScope);
-    if (query.trim()) addSearchHistory(query.trim());
+    const url = buildSearchUrl({
+      query: search.query,
+      district: search.district,
+      category: search.category,
+      timeScope: search.timeScope,
+    });
+    if (search.query.trim()) addSearchHistory(search.query.trim());
     onNavigate?.();
-    router.push(`/search?${params.toString()}`);
+    router.push(url);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) addSearchHistory(query.trim());
+    if (search.query.trim()) addSearchHistory(search.query.trim());
     openFullSearch();
   };
 
-  const clearQuery = () => {
-    setQuery("");
-    setResult(null);
-    setError(null);
-    inputRef.current?.focus();
-  };
-
   const onHistorySelect = (term: string) => {
-    setQuery(term);
+    search.setQuery(term);
     if (!compact) {
       addSearchHistory(term);
     }
@@ -168,8 +104,8 @@ export function SearchPanel({
             ref={inputRef}
             type="search"
             className="search-form__input search-form__input--premium"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={search.query}
+            onChange={(e) => search.setQuery(e.target.value)}
             placeholder={t.search.placeholder}
             aria-label={t.search.title}
             autoComplete="off"
@@ -177,14 +113,17 @@ export function SearchPanel({
             inputMode="search"
             autoCorrect="off"
             role="combobox"
-            aria-expanded={Boolean(result?.hits.length)}
+            aria-expanded={Boolean(search.result?.hits.length)}
             aria-controls="search-results-list"
           />
-          {query ? (
+          {search.query ? (
             <button
               type="button"
               className="search-form__clear search-form__clear--premium tap-target"
-              onClick={clearQuery}
+              onClick={() => {
+                search.clearQuery();
+                inputRef.current?.focus();
+              }}
               aria-label={t.search.clearHistory}
             >
               ×
@@ -197,27 +136,27 @@ export function SearchPanel({
           role="group"
           aria-label="Filters"
         >
-          {DISTRICTS.map((d) => (
+          {LEGACY_FILTER_DISTRICTS.map((d) => (
             <button
               key={d.id}
               type="button"
-              className={`search-chip search-chip--premium tap-target ${district === d.id ? "search-chip--active" : ""}`}
-              aria-pressed={district === d.id}
+              className={`search-chip search-chip--premium tap-target ${search.district === d.id ? "search-chip--active" : ""}`}
+              aria-pressed={search.district === d.id}
               onClick={() =>
-                setDistrict(district === d.id ? null : d.id)
+                search.setDistrict(search.district === d.id ? null : d.id)
               }
             >
               {d.label}
             </button>
           ))}
-          {CATEGORIES.map((c) => (
+          {LEGACY_FILTER_CATEGORIES.map((c) => (
             <button
               key={c.id}
               type="button"
-              className={`search-chip search-chip--premium tap-target ${category === c.id ? "search-chip--active" : ""}`}
-              aria-pressed={category === c.id}
+              className={`search-chip search-chip--premium tap-target ${search.category === c.id ? "search-chip--active" : ""}`}
+              aria-pressed={search.category === c.id}
               onClick={() =>
-                setCategory(category === c.id ? null : c.id)
+                search.setCategory(search.category === c.id ? null : c.id)
               }
             >
               {c.label}
@@ -225,10 +164,10 @@ export function SearchPanel({
           ))}
           <button
             type="button"
-            className={`search-chip search-chip--premium tap-target ${timeScope === "today" ? "search-chip--active" : ""}`}
-            aria-pressed={timeScope === "today"}
+            className={`search-chip search-chip--premium tap-target ${search.timeScope === "today" ? "search-chip--active" : ""}`}
+            aria-pressed={search.timeScope === "today"}
             onClick={() =>
-              setTimeScope(timeScope === "today" ? "all" : "today")
+              search.setTimeScope(search.timeScope === "today" ? "all" : "today")
             }
           >
             {t.common.today}
@@ -246,17 +185,14 @@ export function SearchPanel({
         ) : null}
       </form>
 
-      {history.length > 0 && !query && !loading ? (
+      {history.length > 0 && !search.query && !search.loading ? (
         <div className="search-history search-history--premium">
           <div className="search-history__head">
             <p className="search-history__label">{t.search.recentSearches}</p>
             <button
               type="button"
               className="search-history__clear search-history__clear--premium tap-target"
-              onClick={() => {
-                clearSearchHistory();
-                setHistory([]);
-              }}
+              onClick={clearHistory}
             >
               {t.search.clearHistory}
             </button>
@@ -277,7 +213,7 @@ export function SearchPanel({
         </div>
       ) : null}
 
-      {loading ? (
+      {search.loading ? (
         <div
           className="search-loading search-loading--premium"
           aria-live="polite"
@@ -295,16 +231,16 @@ export function SearchPanel({
         </div>
       ) : null}
 
-      {error ? (
+      {search.error ? (
         <p className="search-empty search-empty--premium" role="alert">
-          {error}
+          {search.error}
         </p>
       ) : null}
 
       {!suppressResults &&
-      result?.trending?.length &&
-      !result.hits.length &&
-      !query ? (
+      search.result?.trending?.length &&
+      !search.result.hits.length &&
+      !search.query ? (
         <section
           className="search-trending"
           aria-labelledby="search-overlay-trending-title"
@@ -319,7 +255,7 @@ export function SearchPanel({
             <p className="search-section-header__subtitle">{t.search.hint}</p>
           </header>
           <ul className="search-chip-list" role="list">
-            {result.trending.map((term) => (
+            {search.result.trending.map((term) => (
               <li key={term}>
                 <SearchDismissLink
                   href={`/search?q=${encodeURIComponent(term)}`}
@@ -334,7 +270,7 @@ export function SearchPanel({
         </section>
       ) : null}
 
-      {!suppressResults && result && result.hits.length > 0 ? (
+      {!suppressResults && search.result && search.result.hits.length > 0 ? (
         <div
           className={
             compact
@@ -347,17 +283,17 @@ export function SearchPanel({
             aria-live="polite"
             aria-atomic="true"
           >
-            <span className="search-meta__count">{result.total}</span>{" "}
-            {result.total === 1 ? "result" : "results"}
-            {result.parsed.district ? ` · ${result.parsed.district}` : ""}
-            {result.tookMs ? ` · ${result.tookMs}ms` : ""}
+            <span className="search-meta__count">{search.result.total}</span>{" "}
+            {search.result.total === 1 ? "result" : "results"}
+            {search.result.parsed.district ? ` · ${search.result.parsed.district}` : ""}
+            {search.result.tookMs ? ` · ${search.result.tookMs}ms` : ""}
           </p>
           <ul
             className="search-results search-results--premium"
             id="search-results-list"
             role="listbox"
           >
-            {result.hits.map((hit, index) => (
+            {search.result.hits.map((hit, index) => (
               <SearchHitCard
                 key={hit.id}
                 hit={hit}
@@ -370,10 +306,10 @@ export function SearchPanel({
       ) : null}
 
       {!suppressResults &&
-      result &&
-      !loading &&
-      query &&
-      result.hits.length === 0 ? (
+      search.result &&
+      !search.loading &&
+      search.query &&
+      search.result.hits.length === 0 ? (
         <p className="search-empty search-empty--premium">{t.search.noResults}</p>
       ) : null}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   DEFAULT_HOMEPAGE_ORDER,
   moveModule,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/personalization/homepage-layout";
 import type { HomepageModuleId } from "@/lib/personalization/types";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
+import { useModalA11y } from "@/design-system/hooks/useModalA11y";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useHomepageLayout } from "@/hooks/useHomepageLayout";
 
@@ -28,6 +29,16 @@ export function HomepageCustomizePanel() {
   const { language } = useLanguage();
   const { layout, persist } = useHomepageLayout();
   const [open, setOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const close = () => setOpen(false);
+
+  useModalA11y({
+    open,
+    onClose: close,
+    panelRef,
+    initialFocusSelector: ".hp-customize__close",
+  });
 
   if (!open) {
     return (
@@ -49,7 +60,13 @@ export function HomepageCustomizePanel() {
       aria-modal="true"
       aria-labelledby="hp-customize-title"
     >
-      <div className="hp-customize__sheet">
+      <button
+        type="button"
+        className="hp-customize__backdrop"
+        aria-label={pickBilingualLabel(language, "Close", "बंद करें")}
+        onClick={close}
+      />
+      <div ref={panelRef} className="hp-customize__sheet">
         <header className="hp-customize__head">
           <h2 id="hp-customize-title" className="hp-customize__title">
             {pickBilingualLabel(language, "Your homepage", "आपका होमपेज")}
@@ -57,7 +74,7 @@ export function HomepageCustomizePanel() {
           <button
             type="button"
             className="hp-customize__close tap-target"
-            onClick={() => setOpen(false)}
+            onClick={close}
             aria-label={pickBilingualLabel(language, "Close", "बंद करें")}
           >
             ×

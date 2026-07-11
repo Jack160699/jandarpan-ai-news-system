@@ -183,10 +183,20 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
+}
+
+.hp-customize__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
   background: rgb(0 0 0 / 0.35);
+  cursor: default;
 }
 
 .hp-customize__sheet {
+  position: relative;
+  z-index: 1;
   width: min(100%, 28rem);
   max-height: 80dvh;
   overflow: auto;

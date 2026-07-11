@@ -34,7 +34,7 @@
   --color-ink: #1a1a1a;
   --color-ink-secondary: #3a3834;
   --color-ink-muted: #5e5a55;
-  --color-ink-faint: #7a756e;
+  --color-ink-faint: #6b6660;
   --color-rule: #d8ccb8;
   --color-rule-strong: #c9bba3;
   --color-ticker-bg: #f0e9dc;
@@ -271,7 +271,7 @@ html[data-theme="dark"] {
   --color-ink: #ffffff;
   --color-ink-secondary: rgb(255 255 255 / 0.78);
   --color-ink-muted: rgb(255 255 255 / 0.62);
-  --color-ink-faint: rgb(255 255 255 / 0.42);
+  --color-ink-faint: rgb(255 255 255 / 0.55);
   --color-primary: var(--color-red);
   --color-primary-light: var(--color-red-light);
   --color-primary-dark: var(--color-red-deep);

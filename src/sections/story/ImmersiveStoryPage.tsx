@@ -12,7 +12,7 @@ import { StoryMobileShareBar } from "@/components/story/StoryMobileShareBar";
 import { ArticleCardActions } from "@/components/article/ArticleCardActions";
 import { StoryReaderShell } from "@/components/story/StoryReaderShell";
 import { AdSlot } from "@/components/monetization/AdSlot";
-import { SponsoredStoryBanner } from "@/components/monetization/SponsoredStoryBanner";
+import { SponsoredStoryContent } from "@/components/monetization/SponsoredStoryContent";
 import { ReaderAnalyticsTracker } from "@/components/analytics/ReaderAnalyticsTracker";
 import type { SponsoredStoryMeta } from "@/lib/monetization/types";
 import { StoryRelatedGrid } from "@/components/story/StoryRelatedGrid";
@@ -152,6 +152,108 @@ export function ImmersiveStoryPage(props: ImmersiveStoryPageProps) {
 
   const t = getDictionary(displayLanguage);
 
+  const storyMainContent = (
+    <>
+      <StoryCinematicHero
+        src={heroDisplay.src}
+        fallbackSrc={heroDisplay.fallbackSrc}
+        sizes={heroDisplay.sizes}
+        headline={headline}
+        categoryLabel={attribution.categoryLabel}
+        regionLabel={attribution.regionLabel}
+        attribution={attribution}
+        readTime={reader.readTime}
+        publishedAtIso={article.published_at}
+        publishedAtLabel={reader.publishedAtLabel}
+        isLive={isLive}
+        desk={attribution.desk}
+        imageCredit={heroDisplay.imageMeta?.source ?? null}
+      />
+
+      <div className="immersive-story__shell">
+        <ArticleCardActions
+          articleId={slug}
+          headline={headline}
+          summary={shareSummary}
+          slugOrPath={slug}
+          className="article-page__actions"
+          enableSpeedCycle
+        />
+      </div>
+
+      <div className="immersive-story__shell immersive-story__content">
+        <StoryTopicChips
+          tags={editorial.topicChips}
+          region={article.region}
+          category={attribution.categoryLabel}
+        />
+
+        <StoryEditorialIntelligence
+          vm={editorial}
+          sourceCount={attribution.sourceCount}
+          displayLanguage={displayLanguage}
+          omitConfidence={flags.omitEditorialConfidence}
+        />
+
+        {trust.hasLayer ? (
+          <StoryEditorialTrust
+            vm={trust}
+            displayLanguage={displayLanguage}
+          />
+        ) : null}
+
+        {knowledge.hasLayer ? (
+          <StoryKnowledgeContext vm={knowledge} />
+        ) : null}
+
+        {flags.showEventNavigator && eventViewModel ? (
+          <StoryEventNavigator
+            vm={eventViewModel}
+            displayLanguage={displayLanguage}
+            timeline={timeline.events}
+            timelineTitle={timeline.title}
+            showEventTimeline={timeline.source === "event"}
+          />
+        ) : null}
+
+        <StoryBody
+          sections={contentSections}
+          plainParagraphs={plainParagraphs}
+          plainBlocks={parsed.plainBlocks}
+        />
+
+        <AdSlot
+          slotId="story_in_article"
+          articleSlug={slug}
+          className="immersive-story__ad"
+        />
+
+        {timeline.source !== "event" ? (
+          <StoryTimeline events={timeline.events} title={timeline.title} />
+        ) : null}
+
+        <StoryRelatedGrid
+          articles={gridRelated}
+          language={displayLanguage}
+          title={t.story.relatedStories}
+          subtitle={relatedDiscoverySubtitle ?? t.story.trendingNow}
+        />
+
+        <StoryContinueReading
+          related={continueRelated}
+          hubLinks={internalLinks}
+          language={displayLanguage}
+          title={t.story.relatedStories}
+          subtitle={t.story.trendingNow}
+        />
+
+        <AdSlot slotId="story_footer" articleSlug={slug} />
+
+        <StoryFooterDisclaimer />
+      </div>
+    </>
+  );
+
   return (
     <>
       <LiveStoryJsonLd
@@ -183,108 +285,15 @@ export function ImmersiveStoryPage(props: ImmersiveStoryPageProps) {
               />
               <StoryCategoryNav links={categoryNav} />
               <StoryBreadcrumbs items={breadcrumbs} />
-              {sponsoredStory ? (
-                <SponsoredStoryBanner meta={sponsoredStory} />
-              ) : null}
             </div>
 
-            <StoryCinematicHero
-              src={heroDisplay.src}
-              fallbackSrc={heroDisplay.fallbackSrc}
-              sizes={heroDisplay.sizes}
-              headline={headline}
-              categoryLabel={attribution.categoryLabel}
-              regionLabel={attribution.regionLabel}
-              attribution={attribution}
-              readTime={reader.readTime}
-              publishedAtIso={article.published_at}
-              publishedAtLabel={reader.publishedAtLabel}
-              isLive={isLive}
-              desk={attribution.desk}
-              imageCredit={heroDisplay.imageMeta?.source ?? null}
-            />
-
-            <div className="immersive-story__shell">
-              <ArticleCardActions
-                articleId={slug}
-                headline={headline}
-                summary={shareSummary}
-                slugOrPath={slug}
-                className="article-page__actions"
-                enableSpeedCycle
-              />
-            </div>
-
-            <div className="immersive-story__shell immersive-story__content">
-              <StoryTopicChips
-                tags={editorial.topicChips}
-                region={article.region}
-                category={attribution.categoryLabel}
-              />
-
-              <StoryEditorialIntelligence
-                vm={editorial}
-                sourceCount={attribution.sourceCount}
-                displayLanguage={displayLanguage}
-                omitConfidence={flags.omitEditorialConfidence}
-              />
-
-              {trust.hasLayer ? (
-                <StoryEditorialTrust
-                  vm={trust}
-                  displayLanguage={displayLanguage}
-                />
-              ) : null}
-
-              {knowledge.hasLayer ? (
-                <StoryKnowledgeContext vm={knowledge} />
-              ) : null}
-
-              {flags.showEventNavigator && eventViewModel ? (
-                <StoryEventNavigator
-                  vm={eventViewModel}
-                  displayLanguage={displayLanguage}
-                  timeline={timeline.events}
-                  timelineTitle={timeline.title}
-                  showEventTimeline={timeline.source === "event"}
-                />
-              ) : null}
-
-              <StoryBody
-                sections={contentSections}
-                plainParagraphs={plainParagraphs}
-                plainBlocks={parsed.plainBlocks}
-              />
-
-              <AdSlot
-                slotId="story_in_article"
-                articleSlug={slug}
-                className="immersive-story__ad"
-              />
-
-              {timeline.source !== "event" ? (
-                <StoryTimeline events={timeline.events} title={timeline.title} />
-              ) : null}
-
-              <StoryRelatedGrid
-                articles={gridRelated}
-                language={displayLanguage}
-                title={t.story.relatedStories}
-                subtitle={relatedDiscoverySubtitle ?? t.story.trendingNow}
-              />
-
-              <StoryContinueReading
-                related={continueRelated}
-                hubLinks={internalLinks}
-                language={displayLanguage}
-                title={t.story.relatedStories}
-                subtitle={t.story.trendingNow}
-              />
-
-              <AdSlot slotId="story_footer" articleSlug={slug} />
-
-              <StoryFooterDisclaimer />
-            </div>
+            {sponsoredStory ? (
+              <SponsoredStoryContent meta={sponsoredStory}>
+                {storyMainContent}
+              </SponsoredStoryContent>
+            ) : (
+              storyMainContent
+            )}
           </div>
 
           <aside

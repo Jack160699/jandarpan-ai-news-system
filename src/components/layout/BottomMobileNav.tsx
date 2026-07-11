@@ -62,6 +62,10 @@ function DockIcon({
   );
 }
 
+/**
+ * @deprecated RC1-004 — replaced by JDP-002 BottomNavigation via AppShell.
+ * Retained for one-commit rollback. See docs/RC1-004-APPSHELL-INTEGRATION-REPORT.md
+ */
 export function BottomMobileNav() {
   const { pathname, hash, pendingPath, startNavigation, menuOpen, toggleMenu } =
     useNavigation();
