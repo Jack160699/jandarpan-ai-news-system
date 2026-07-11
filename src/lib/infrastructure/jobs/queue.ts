@@ -407,3 +407,70 @@ export async function countDeadLetters(): Promise<number> {
     .select("id", { count: "exact", head: true });
   return count ?? 0;
 }
+
+/** Reset a dead job back to pending without creating a duplicate row. */
+export async function reviveDeadJob(
+  jobType: JobType,
+  dedupeKey: string
+): Promise<string | null> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: active } = await supabase
+    .from("worker_jobs")
+    .select("id")
+    .eq("job_type", jobType)
+    .eq("dedupe_key", dedupeKey)
+    .in("status", ["pending", "claimed"])
+    .maybeSingle();
+
+  if (active?.id) return active.id;
+
+  const { data: dead } = await supabase
+    .from("worker_jobs")
+    .select("id")
+    .eq("job_type", jobType)
+    .eq("dedupe_key", dedupeKey)
+    .eq("status", "dead")
+    .maybeSingle();
+
+  if (!dead?.id) return null;
+
+  const { error } = await supabase
+    .from("worker_jobs")
+    .update({
+      status: "pending",
+      attempts: 0,
+      last_error: null,
+      claimed_at: null,
+      completed_at: null,
+      scheduled_at: now,
+      updated_at: now,
+    })
+    .eq("id", dead.id)
+    .eq("status", "dead");
+
+  if (error) {
+    console.warn("[worker-jobs] revive:", error.message);
+    return null;
+  }
+
+  return dead.id;
+}
+
+export async function purgeDeadLetterRows(ids: string[]): Promise<number> {
+  if (!ids.length) return 0;
+  const supabase = createAdminClient();
+  const unique = [...new Set(ids)];
+  const { count, error } = await supabase
+    .from("worker_dead_letters")
+    .delete({ count: "exact" })
+    .in("id", unique);
+
+  if (error) {
+    console.warn("[worker-jobs] purge dead letters:", error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+}
