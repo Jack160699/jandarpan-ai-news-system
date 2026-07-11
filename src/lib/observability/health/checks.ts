@@ -24,7 +24,7 @@ import type { HealthCheckResult, HealthStatus } from "@/lib/observability/types"
 
 function statusFrom(ok: boolean, degraded?: boolean): HealthStatus {
   if (ok && !degraded) return "healthy";
-  if (ok && degraded) return "degraded";
+  if (degraded) return "degraded";
   if (!ok) return "unhealthy";
   return "unknown";
 }
@@ -139,9 +139,36 @@ export async function checkCronWorkers(): Promise<HealthCheckResult> {
       }
     }
 
+    if (staleJobs.length > 0 && jobs.length > 0 && isSupabaseConfigured()) {
+      const supabase = createAdminServerClient();
+      const since = new Date(Date.now() - 86_400_000).toISOString();
+      const { data, error } = await supabase
+        .from("ingestion_logs")
+        .select("id,status,created_at")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const recentIngestion =
+        !error &&
+        Boolean(data) &&
+        data?.status !== "error" &&
+        data?.status !== "failed";
+
+      if (recentIngestion) {
+        return {
+          ok: true,
+          degraded: true,
+          message: `partial_cron_cache: stale ${staleJobs.join(", ")}`,
+          details: { recentJobs: jobs.slice(0, 5), staleJobs, lastIngestion: data },
+        };
+      }
+    }
+
     return {
       ok: jobs.length > 0 ? ok : false,
-      degraded: staleJobs.length > 0 && jobs.length > 0,
+      degraded: staleJobs.length > 0,
       message: staleJobs.length ? `stale: ${staleJobs.join(", ")}` : undefined,
       details: { recentJobs: jobs.slice(0, 5), staleJobs },
     };
