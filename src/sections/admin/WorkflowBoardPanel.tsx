@@ -20,6 +20,9 @@ import {
 } from "@/lib/editorial-workflow/types";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { AdminModal } from "@/components/admin-newsroom/ui/AdminModal";
+import { IntelligenceDeepLinkNav } from "@/components/admin-newsroom/IntelligenceDeepLinkNav";
+import { WORKFLOW_DIGEST_DEEP_LINKS } from "@/lib/admin/intelligence-deep-links";
+import { parseWorkflowDeskFilters } from "@/lib/admin/admin-desk-query";
 
 export function WorkflowBoardPanel() {
   const { role } = useAdminNewsroom();
@@ -36,6 +39,17 @@ export function WorkflowBoardPanel() {
     events: WorkflowBoardSnapshot["events"];
     comments: { id: string; author_email: string; body: string; created_at: string }[];
   } | null>(null);
+  const [focusStatus, setFocusStatus] = useState<WorkflowStatus | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const { status } = parseWorkflowDeskFilters(
+      new URLSearchParams(window.location.search)
+    );
+    if (status && WORKFLOW_STATUSES.includes(status as WorkflowStatus)) {
+      setFocusStatus(status as WorkflowStatus);
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -55,8 +69,36 @@ export function WorkflowBoardPanel() {
 
   useEffect(() => {
     refresh();
-    const id = setInterval(refresh, 20_000);
-    return () => clearInterval(id);
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(refresh, 20_000);
+    };
+
+    const stopPolling = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+        return;
+      }
+      refresh();
+      startPolling();
+    };
+
+    startPolling();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [refresh]);
 
   const loadDetail = useCallback(async (articleId: string) => {
@@ -208,12 +250,19 @@ export function WorkflowBoardPanel() {
             <strong>{board.analytics.total}</strong>
           </article>
         </div>
+        <IntelligenceDeepLinkNav
+          links={WORKFLOW_DIGEST_DEEP_LINKS}
+          label="Workflow deep links"
+        />
       </header>
 
       <div className="wf-layout">
         <div className="wf-kanban">
           {WORKFLOW_STATUSES.filter((s) => s !== "archived").map((status) => (
-            <section key={status} className="wf-column">
+            <section
+              key={status}
+              className={`wf-column${focusStatus === status ? " wf-column--focused" : ""}`}
+            >
               <header className="wf-column__head">
                 <h3>{WORKFLOW_LABELS[status]}</h3>
                 <span>{board.columns[status]?.length ?? 0}</span>

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/api-client";
+import type { EventViewModel } from "@/lib/events/event-view-model";
 import type { EditorArticleRecord } from "@/lib/editorial-editor/types";
 import { tracePerf } from "@/lib/observability/performance-monitor";
 import { queryKeys } from "@/lib/query/query-keys";
@@ -9,6 +10,7 @@ import { queryKeys } from "@/lib/query/query-keys";
 type ArticleResponse = {
   ok: boolean;
   article?: EditorArticleRecord;
+  eventViewModel?: EventViewModel | null;
   error?: string;
 };
 
@@ -27,7 +29,10 @@ async function fetchArticle(
   if (!result.data.ok || !result.data.article) {
     throw new Error(result.data.error ?? "article_not_found");
   }
-  return result.data.article;
+  return {
+    ...result.data.article,
+    eventViewModel: result.data.eventViewModel ?? null,
+  };
 }
 
 export function useEditorArticleQuery(articleId: string, enabled = true) {

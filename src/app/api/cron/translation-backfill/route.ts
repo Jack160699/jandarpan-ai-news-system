@@ -21,6 +21,10 @@ import {
   estimateTranslationPerformance,
   requeueDeadTranslationJobs,
 } from "@/lib/i18n/multilingual/translation-queue";
+import {
+  finalizeCronRun,
+  instrumentCronStart,
+} from "@/lib/observability/cron-instrumentation";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -35,93 +39,152 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleBackfill(request: NextRequest) {
-  const auth = await verifyCronRequest(request);
+  const { startedAt, requestId } = instrumentCronStart(
+    "translation-backfill",
+    request
+  );
+  const auth = await verifyCronRequest(request, { capability: "pipeline" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
 
   if (!isSupabaseConfigured()) {
+    await finalizeCronRun({
+      job: "translation-backfill",
+      startedAt,
+      requestId,
+      ok: false,
+      error: "supabase_not_configured",
+      errorCode: "supabase_not_configured",
+    });
     return NextResponse.json(
       { ok: false, error: "Supabase not configured" },
       { status: 500, headers: noStoreHeaders() }
     );
   }
 
-  const body = (await request.json().catch(() => ({}))) as {
-    enqueueLimit?: number;
-    processLimit?: number;
-    dryRun?: boolean;
-    forceProcess?: boolean;
-  };
+  try {
+    const body = (await request.json().catch(() => ({}))) as {
+      enqueueLimit?: number;
+      processLimit?: number;
+      dryRun?: boolean;
+      forceProcess?: boolean;
+    };
 
-  const enqueueLimit = Number(body.enqueueLimit ?? process.env.TRANSLATION_ENQUEUE_BATCH ?? 40);
-  const processLimit = Number(body.processLimit ?? process.env.TRANSLATION_PROCESS_BATCH ?? 8);
-  const dryRun = body.dryRun === true;
+    const enqueueLimit = Number(
+      body.enqueueLimit ?? process.env.TRANSLATION_ENQUEUE_BATCH ?? 40
+    );
+    const processLimit = Number(
+      body.processLimit ?? process.env.TRANSLATION_PROCESS_BATCH ?? 8
+    );
+    const dryRun = body.dryRun === true;
 
-  const trigger: TranslationBackfillTrigger = body.forceProcess
-    ? "manual_override"
-    : auth.vercelCron
-      ? "vercel_backup"
-      : "scheduled_cron";
+    const trigger: TranslationBackfillTrigger = body.forceProcess
+      ? "manual_override"
+      : auth.vercelCron
+        ? "vercel_backup"
+        : "scheduled_cron";
 
-  const processGate = shouldProcessTranslationBackfill(trigger);
+    const processGate = shouldProcessTranslationBackfill(trigger);
 
-  const coverageBefore = await auditTranslationCoverage();
-  const backlogBefore =
-    coverageBefore.hiMissingEn + coverageBefore.hiMissingCg + coverageBefore.enMissingHi;
+    const coverageBefore = await auditTranslationCoverage();
+    const backlogBefore =
+      coverageBefore.hiMissingEn +
+      coverageBefore.hiMissingCg +
+      coverageBefore.enMissingHi;
 
-  if (dryRun) {
-    const performance = await estimateTranslationPerformance(backlogBefore);
+    if (dryRun) {
+      const performance = await estimateTranslationPerformance(backlogBefore);
+      await finalizeCronRun({
+        job: "translation-backfill",
+        startedAt,
+        requestId,
+        ok: true,
+        degraded: true,
+        entityCount: backlogBefore,
+        metadata: { dryRun: true, trigger },
+      });
+      return NextResponse.json(
+        {
+          ok: true,
+          dryRun: true,
+          trigger,
+          processGate,
+          coverageBefore,
+          backlogBefore,
+          performance,
+        },
+        { headers: noStoreHeaders() }
+      );
+    }
+
+    const requeued = await requeueDeadTranslationJobs(25);
+    const enqueue = await enqueueMissingTranslationJobs({ limit: enqueueLimit });
+
+    let processed: Awaited<ReturnType<typeof processJobBatch>> | null = null;
+    if (processGate.allowed) {
+      processed = await processJobBatch(JOB_HANDLERS, {
+        limit: processLimit,
+        jobTypes: ["translate_article", "translation_batch"],
+        workerId: "translation_backfill",
+      });
+    }
+
+    const coverageAfter = await auditTranslationCoverage();
+    const backlogAfter = coverageAfter.backlogTotal;
+    const performance = await estimateTranslationPerformance(backlogAfter);
+    const entityCount = enqueue.enqueued + (processed?.processed ?? 0) + requeued;
+
+    await finalizeCronRun({
+      job: "translation-backfill",
+      startedAt,
+      requestId,
+      ok: true,
+      entityCount,
+      metadata: {
+        trigger,
+        enqueued: enqueue.enqueued,
+        processed: processed?.processed ?? 0,
+        requeued,
+        backlogAfter,
+      },
+    });
+
     return NextResponse.json(
       {
         ok: true,
-        dryRun: true,
+        dryRun: false,
         trigger,
         processGate,
         coverageBefore,
+        coverageAfter,
         backlogBefore,
-        performance,
+        backlogAfter,
+        pairs: {
+          hiToEn: coverageAfter.hiMissingEn,
+          hiToCg: coverageAfter.hiMissingCg,
+          enToHi: coverageAfter.enMissingHi,
+        },
+        requeued,
+        enqueued: enqueue.enqueued,
+        scanned: enqueue.scanned,
+        processed,
       },
       { headers: noStoreHeaders() }
     );
-  }
-
-  const requeued = await requeueDeadTranslationJobs(25);
-  const enqueue = await enqueueMissingTranslationJobs({ limit: enqueueLimit });
-
-  let processed: Awaited<ReturnType<typeof processJobBatch>> | null = null;
-  if (processGate.allowed) {
-    processed = await processJobBatch(JOB_HANDLERS, {
-      limit: processLimit,
-      jobTypes: ["translate_article", "translation_batch"],
-      workerId: "translation_backfill",
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "translation_backfill_failed";
+    await finalizeCronRun({
+      job: "translation-backfill",
+      startedAt,
+      requestId,
+      ok: false,
+      error: message,
+      err,
     });
+    return NextResponse.json(
+      { ok: false, error: message },
+      { status: 500, headers: noStoreHeaders() }
+    );
   }
-
-  const coverageAfter = await auditTranslationCoverage();
-  const backlogAfter = coverageAfter.backlogTotal;
-  const performance = await estimateTranslationPerformance(backlogAfter);
-
-  return NextResponse.json(
-    {
-      ok: true,
-      dryRun: false,
-      trigger,
-      processGate,
-      coverageBefore,
-      coverageAfter,
-      backlogBefore,
-      backlogAfter,
-      pairs: {
-        hiToEn: coverageAfter.hiMissingEn,
-        hiToCg: coverageAfter.hiMissingCg,
-        enToHi: coverageAfter.enMissingHi,
-      },
-      requeued,
-      enqueued: enqueue.enqueued,
-      scanned: enqueue.scanned,
-      processed,
-    },
-    { headers: noStoreHeaders() }
-  );
 }

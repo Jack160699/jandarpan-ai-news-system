@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { BrandedErrorFallback } from "@/components/errors/BrandedErrorFallback";
+import { captureOpsException } from "@/lib/observability/sentry";
 
 export default function Error({
   error,
@@ -12,6 +13,7 @@ export default function Error({
 }) {
   useEffect(() => {
     console.error("[app/error]", error);
+    void captureOpsException(error, { boundary: "app/error", digest: error.digest });
   }, [error]);
 
   return (

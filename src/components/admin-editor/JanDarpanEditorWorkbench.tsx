@@ -17,6 +17,8 @@ import {
   Monitor,
 } from "lucide-react";
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
+import { EditorialIntelligenceInspector } from "@/components/admin-newsroom/EditorialIntelligenceInspector";
+import { buildEditorialIntelligenceInspector } from "@/lib/admin/editorial-intelligence-inspector";
 import { CollaborationBar } from "@/components/collaboration/CollaborationBar";
 import type { EditorArticleRecord, EditorVersionSnapshot } from "@/lib/editorial-editor/types";
 import {
@@ -313,6 +315,10 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
     focusKeyword: seoMeta.focusKeyword,
   });
   const readability = readingEaseScore(bodyMarkdown);
+  const intelligenceInspector = useMemo(
+    () => (article ? buildEditorialIntelligenceInspector(article) : null),
+    [article]
+  );
   const keywords = suggestKeywords({
     headline: article?.headline ?? "",
     summary: article?.summary ?? "",
@@ -572,6 +578,10 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
         </main>
 
         <aside className="jd-editor-rail">
+          {intelligenceInspector?.hasContent ? (
+            <EditorialIntelligenceInspector vm={intelligenceInspector} />
+          ) : null}
+
           <section className="jd-editor-panel">
             <h3>Quality</h3>
             <div className="jd-editor-scores">

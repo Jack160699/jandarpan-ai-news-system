@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { BrandedErrorFallback } from "@/components/errors/BrandedErrorFallback";
+import { captureOpsException } from "@/lib/observability/sentry";
 
 export default function GlobalError({
   error,
@@ -12,6 +13,10 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("[global-error]", error);
+    void captureOpsException(error, {
+      boundary: "global-error",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

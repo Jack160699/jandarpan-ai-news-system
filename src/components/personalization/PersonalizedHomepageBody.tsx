@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useMemo, type CSSProperties, type ReactNode } from "react";
 import {
   HeroNewsCard,
@@ -20,6 +19,7 @@ import {
 import { useLiveNewsroom } from "@/providers/LiveNewsroomProvider";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useLocalizedFeed } from "@/hooks/useLocalizedFeed";
+import { HyperlocalFeeds } from "@/lib/lazy/hyperlocal-feeds";
 import { HyperlocalSkeleton } from "@/sections/homepage/HomepageSectionSkeletons";
 import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
 import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
@@ -32,14 +32,6 @@ import { RecommendedForYou } from "@/components/personalization/RecommendedForYo
 import { PersonalizationOnboarding } from "@/components/personalization/PersonalizationOnboarding";
 import { DistrictQuickSwitch } from "@/components/personalization/DistrictQuickSwitch";
 import { HomepageCustomizePanel } from "@/components/personalization/HomepageCustomizePanel";
-
-const HyperlocalFeeds = dynamic(
-  () =>
-    import("@/sections/homepage/HyperlocalFeeds").then((m) => ({
-      default: m.HyperlocalFeeds,
-    })),
-  { loading: () => <HyperlocalSkeleton /> }
-);
 
 type PersonalizedHomepageBodyProps = {
   feed: GeneratedHomepageFeed;

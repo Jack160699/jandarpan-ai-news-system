@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import { useMemo } from "react";
 import {
@@ -16,17 +15,10 @@ import { buildTickerHeadlines } from "@/lib/homepage/ticker-headlines";
 import {
   HyperlocalSkeleton,
 } from "@/sections/homepage/HomepageSectionSkeletons";
+import { HyperlocalFeeds } from "@/lib/lazy/hyperlocal-feeds";
 import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
 import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
 import { useLanguage } from "@/providers/LanguageProvider";
-
-const HyperlocalFeeds = dynamic(
-  () =>
-    import("@/sections/homepage/HyperlocalFeeds").then((m) => ({
-      default: m.HyperlocalFeeds,
-    })),
-  { loading: () => <HyperlocalSkeleton /> }
-);
 
 type HomepageViewProps = {
   feed: GeneratedHomepageFeed;

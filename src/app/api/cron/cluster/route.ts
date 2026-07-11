@@ -7,7 +7,10 @@ import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import { clusterRecentSignals } from "@/lib/newsroom";
-import { recordCronRun } from "@/lib/observability/cron-monitor";
+import {
+  finalizeCronRun,
+  instrumentCronStart,
+} from "@/lib/observability/cron-instrumentation";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
@@ -22,27 +25,20 @@ export async function POST(request: Request) {
 }
 
 async function handleCluster(request: Request) {
-  const startedAt = Date.now();
-  const auth = await verifyCronRequest(request);
+  const { startedAt, requestId } = instrumentCronStart("cluster", request);
+  const auth = await verifyCronRequest(request, { capability: "pipeline" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
-  console.log(
-    JSON.stringify({
-      tag: "[cron_triggered]",
-      job: "cluster",
-      path: new URL(request.url).pathname,
-      ts: new Date().toISOString(),
-    })
-  );
 
   if (!isSupabaseConfigured()) {
-    await recordCronRun({
+    await finalizeCronRun({
       job: "cluster",
+      startedAt,
+      requestId,
       ok: false,
-      startedAt: new Date(startedAt).toISOString(),
-      durationMs: Date.now() - startedAt,
       error: "supabase_not_configured",
+      errorCode: "supabase_not_configured",
     });
     return NextResponse.json(
       { ok: false, error: "Supabase not configured" },
@@ -50,23 +46,48 @@ async function handleCluster(request: Request) {
     );
   }
 
-  const result = await clusterRecentSignals(120);
-  await recordCronRun({
-    job: "cluster",
-    ok: !result.skipped,
-    startedAt: new Date(startedAt).toISOString(),
-    durationMs: Date.now() - startedAt,
-    degraded: Boolean(result.skipped),
-  });
+  try {
+    const result = await clusterRecentSignals(120);
+    const entityCount =
+      result.eventsCreated + result.signalsProcessed + result.duplicatesMerged;
 
-  return NextResponse.json(
-    {
+    await finalizeCronRun({
+      job: "cluster",
+      startedAt,
+      requestId,
       ok: !result.skipped,
-      skipped: result.skipped ?? false,
-      eventsCreated: result.eventsCreated,
-      signalsProcessed: result.signalsProcessed,
-      duplicatesMerged: result.duplicatesMerged,
-    },
-    { headers: noStoreHeaders() }
-  );
+      degraded: Boolean(result.skipped),
+      entityCount,
+      metadata: {
+        eventsCreated: result.eventsCreated,
+        signalsProcessed: result.signalsProcessed,
+        duplicatesMerged: result.duplicatesMerged,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        ok: !result.skipped,
+        skipped: result.skipped ?? false,
+        eventsCreated: result.eventsCreated,
+        signalsProcessed: result.signalsProcessed,
+        duplicatesMerged: result.duplicatesMerged,
+      },
+      { headers: noStoreHeaders() }
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "cluster_failed";
+    await finalizeCronRun({
+      job: "cluster",
+      startedAt,
+      requestId,
+      ok: false,
+      error: message,
+      err,
+    });
+    return NextResponse.json(
+      { ok: false, error: message },
+      { status: 500, headers: noStoreHeaders() }
+    );
+  }
 }

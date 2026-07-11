@@ -16,7 +16,7 @@ export const maxDuration = 300;
 
 async function handle(request: Request) {
   const startedAt = Date.now();
-  const auth = await verifyCronRequest(request);
+  const auth = await verifyCronRequest(request, { capability: "ops" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }

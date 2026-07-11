@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 async function handleOrchestrate(request: Request) {
   const startedAt = Date.now();
   const rawBody = await request.text();
-  const auth = await verifyCronRequest(request, { rawBody });
+  const auth = await verifyCronRequest(request, { rawBody, capability: "pipeline" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }

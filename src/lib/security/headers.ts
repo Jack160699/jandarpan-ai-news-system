@@ -5,9 +5,12 @@
 const SUPABASE_HOST = "*.supabase.co";
 
 export function buildContentSecurityPolicy(nonce?: string): string {
+  const isProd = process.env.NODE_ENV === "production";
   const scriptSrc = nonce
     ? `'self' 'nonce-${nonce}' 'strict-dynamic'`
-    : `'self' 'unsafe-inline' 'unsafe-eval'`;
+    : isProd
+      ? `'self' 'unsafe-inline'`
+      : `'self' 'unsafe-inline' 'unsafe-eval'`;
 
   return [
     "default-src 'self'",
@@ -34,6 +37,8 @@ export function securityHeaders(): Record<string, string> {
     "Permissions-Policy":
       "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
     "X-DNS-Prefetch-Control": "on",
+    "X-Permitted-Cross-Domain-Policies": "none",
+    "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Content-Security-Policy": buildContentSecurityPolicy(),
   };
 

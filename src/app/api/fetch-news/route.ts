@@ -46,7 +46,7 @@ async function handleFetchNews(request: Request) {
   const deadline = createExecutionDeadline();
   const userAgent = request.headers.get("user-agent")?.slice(0, 80) ?? "unknown";
 
-  const auth = await verifyCronRequest(request);
+  const auth = await verifyCronRequest(request, { capability: "ingest" });
   if (!auth.authorized) {
     logIngestAuthDenied({
       bearerReceived: !!auth.bearerToken,

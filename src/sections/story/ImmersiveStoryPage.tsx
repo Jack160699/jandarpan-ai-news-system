@@ -48,6 +48,7 @@ import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
 type ImmersiveStoryPageProps = {
   article: NewsArticleRow;
   related: NewsArticleRow[];
+  relatedDiscoverySubtitle?: string | null;
   intelligence?: StoryIntelligenceVm;
   editorialMeta?: EditorialMetadata | null;
   readingTime?: string | null;
@@ -91,6 +92,7 @@ export function ImmersiveStoryPage(props: ImmersiveStoryPageProps) {
   const {
     article,
     related,
+    relatedDiscoverySubtitle = null,
     editorialMeta,
     sponsoredStory = null,
     translationActive = false,
@@ -268,7 +270,7 @@ export function ImmersiveStoryPage(props: ImmersiveStoryPageProps) {
                 articles={gridRelated}
                 language={displayLanguage}
                 title={t.story.relatedStories}
-                subtitle={t.story.trendingNow}
+                subtitle={relatedDiscoverySubtitle ?? t.story.trendingNow}
               />
 
               <StoryContinueReading

@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  const auth = await verifyCronRequest(request);
+  const auth = await verifyCronRequest(request, { capability: "admin" });
   if (!auth.authorized) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }

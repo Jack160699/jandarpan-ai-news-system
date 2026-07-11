@@ -30,6 +30,10 @@ export function HomepageStackPortal({
     return () => stack.removeAttribute("data-has-ticker");
   }, [hasTicker]);
 
-  if (!slot) return null;
-  return createPortal(children, slot);
+  if (slot) {
+    return createPortal(children, slot);
+  }
+
+  /** SSR + pre-portal paint — keeps breaking/trending markup in crawlable HTML */
+  return <div className="homepage-stack-inline">{children}</div>;
 }

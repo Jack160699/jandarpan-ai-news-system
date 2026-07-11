@@ -22,6 +22,7 @@ import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { isSentryEnabled, sentryReadyState } from "@/lib/observability/sentry";
 import { getProductionEnvChecks } from "@/lib/infrastructure/production";
 import { getLaunchHealthWidgets } from "@/lib/ops/launch-health";
+import { getBuildInfo } from "@/lib/observability/build-info";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,6 +71,7 @@ export async function GET(request: Request) {
     },
     production: getProductionEnvChecks(),
     launchWidgets,
+    build: getBuildInfo(),
     timestamp: new Date().toISOString(),
   });
 }

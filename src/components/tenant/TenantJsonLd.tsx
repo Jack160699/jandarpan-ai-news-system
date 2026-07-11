@@ -23,6 +23,14 @@ export function TenantJsonLd({
     inLanguage: tenant.newsroom.enabledLanguages.map((l) =>
       l === "en" ? "en-IN" : "hi-IN"
     ),
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
     publisher: {
       "@type": "NewsMediaOrganization",
       name: organization.organizationName || branding.nameEn,

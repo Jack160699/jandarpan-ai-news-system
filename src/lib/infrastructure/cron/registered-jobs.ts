@@ -59,6 +59,12 @@ export const REGISTERED_CRON_JOBS = [
 
   "seo-autonomous",
 
+  "workers-health",
+
+  "cluster",
+
+  "revalidate",
+
 ] as const;
 
 

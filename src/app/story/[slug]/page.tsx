@@ -93,7 +93,7 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
       permanentRedirect(`/story/${generatedRow.slug}`);
     }
 
-    const [localized, related, eventViewModel] = await Promise.all([
+    const [localized, relatedResult, eventViewModel] = await Promise.all([
       resolveStoryArticleFields(generatedRow, readerLang),
       getStoryRelatedArticles(generatedRow.slug ?? slug, readerLang),
       generatedRow.event_id
@@ -138,7 +138,8 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
           <ImmersiveStoryPage
             article={liveArticle}
             sponsoredStory={sponsoredStory}
-            related={related}
+            related={relatedResult.articles}
+            relatedDiscoverySubtitle={relatedResult.discoverySubtitle}
             intelligence={intelligence}
             editorialMeta={generatedRow.editorial_metadata}
             generatedRow={generatedRow}

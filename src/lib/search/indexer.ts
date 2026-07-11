@@ -16,6 +16,11 @@ import {
 import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
 import { parseSearchQuery } from "@/lib/search/query-parser";
 import { expandFuzzyTokens } from "@/lib/search/fuzzy";
+import {
+  scoreHeadlineKnowledgeBoost,
+  scoreKnowledgeSearchBoost,
+} from "@/lib/search/knowledge-search";
+import { extractKnowledgeSignals } from "@/lib/story/story-entity-discovery";
 import type {
   ParsedSearchQuery,
   SearchDistrict,
@@ -33,6 +38,9 @@ export type SearchDocument = {
   excerpt: string;
   fullText: string;
   tags: string[];
+  entityNames: string[];
+  readerKeywords: string[];
+  districtLabel: string | null;
   section: HomeSectionId;
   district: SearchDistrict | null;
   language: string;
@@ -91,6 +99,9 @@ export function restoreSearchIndex(snapshot: SearchIndexSnapshot): SearchIndex {
   return {
     documents: (snapshot.documents ?? []).map((doc) => ({
       ...doc,
+      entityNames: doc.entityNames ?? [],
+      readerKeywords: doc.readerKeywords ?? [],
+      districtLabel: doc.districtLabel ?? null,
       vector: new Map(Object.entries(doc.vector ?? {})),
     })),
     inverted,
@@ -144,7 +155,12 @@ export function buildSearchIndex(
     if (!fields?.headline?.trim()) continue;
 
     const section = inferSection(row);
-    const fullText = `${fields.headline} ${fields.summary} ${fields.articleBody} ${row.tags.join(" ")}`;
+    const knowledge = extractKnowledgeSignals(row);
+    const knowledgeBlob = [
+      ...knowledge.entityNames,
+      ...knowledge.readerKeywords,
+    ].join(" ");
+    const fullText = `${fields.headline} ${fields.summary} ${fields.articleBody} ${row.tags.join(" ")} ${knowledgeBlob}`;
     const tokens = tokenizeForSimilarity(fullText);
 
     documents.push({
@@ -155,6 +171,9 @@ export function buildSearchIndex(
       excerpt: (fields.summary || fields.articleBody).slice(0, 220),
       fullText,
       tags: row.tags,
+      entityNames: knowledge.entityNames,
+      readerKeywords: knowledge.readerKeywords,
+      districtLabel: knowledge.districtLabel,
       section,
       district: inferDistrict(fullText, section),
       language: displayLanguage,
@@ -256,7 +275,9 @@ function collectCandidateIds(
 function scoreDocument(
   doc: SearchDocument,
   queryTerms: string[],
-  queryVector: SparseVector
+  queryVector: SparseVector,
+  rawQuery: string,
+  parsed: ParsedSearchQuery
 ): { score: number; reasons: string[] } {
   const reasons: string[] = [];
   let score = 0;
@@ -286,10 +307,24 @@ function scoreDocument(
   score += semantic * 32;
   if (semantic > 0.25) reasons.push("semantic_similarity");
 
-  if (doc.headline.toLowerCase().includes(queryTerms[0] ?? "")) {
-    score += 10;
-    reasons.push("headline_match");
-  }
+  const headlineBoost = scoreHeadlineKnowledgeBoost(
+    doc.headline,
+    rawQuery,
+    queryTerms
+  );
+  score += headlineBoost.boost;
+  reasons.push(...headlineBoost.reasons);
+
+  const knowledgeBoost = scoreKnowledgeSearchBoost(rawQuery, queryTerms, parsed, {
+    entityNames: doc.entityNames,
+    readerKeywords: doc.readerKeywords,
+    tags: doc.tags,
+    section: doc.section,
+    district: doc.district,
+    districtLabel: doc.districtLabel,
+  });
+  score += knowledgeBoost.boost;
+  reasons.push(...knowledgeBoost.reasons);
 
   score += doc.priorityScore * 0.22;
   if (doc.priorityScore > 70) reasons.push("editorial_priority");
@@ -327,7 +362,13 @@ export function searchIndex(
     if (!candidateIds.has(doc.id)) continue;
     if (!passesFilters(doc, parsed, filters)) continue;
 
-    const { score, reasons } = scoreDocument(doc, terms, queryVector);
+    const { score, reasons } = scoreDocument(
+      doc,
+      terms,
+      queryVector,
+      rawQuery,
+      parsed
+    );
     if (score < 4 && terms.length > 0) continue;
 
     scored.push({

@@ -52,12 +52,6 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.75,
     },
     {
-      url: `${SITE_URL}/archive`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.5,
-    },
-    {
       url: `${SITE_URL}/listen`,
       lastModified: now,
       changeFrequency: "daily",
@@ -68,6 +62,24 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "hourly",
       priority: 0.78,
+    },
+    {
+      url: `${SITE_URL}/live`,
+      lastModified: now,
+      changeFrequency: "always",
+      priority: 0.86,
+    },
+    {
+      url: `${SITE_URL}/news/national`,
+      lastModified: now,
+      changeFrequency: "hourly",
+      priority: 0.84,
+    },
+    {
+      url: `${SITE_URL}/news/international`,
+      lastModified: now,
+      changeFrequency: "hourly",
+      priority: 0.84,
     },
   ];
 
@@ -102,7 +114,12 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
 
   const hubPaths = new Set<string>();
   for (const cluster of SEO_HOMEPAGE_CLUSTERS) {
-    if (cluster.path.startsWith("/")) hubPaths.add(cluster.path);
+    if (
+      cluster.path.startsWith("/") &&
+      !cluster.path.startsWith("/search")
+    ) {
+      hubPaths.add(cluster.path);
+    }
     for (const link of cluster.links) {
       if (link.href.startsWith("/") && !link.href.startsWith("/search")) {
         hubPaths.add(link.href);

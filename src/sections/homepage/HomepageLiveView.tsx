@@ -1,7 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useMemo } from "react";
+import { PersonalizedHomepageBody } from "@/components/personalization/PersonalizedHomepageBody";
 import { HomepageStackBands } from "@/components/layout/HomepageStackBands";
 import { NewUpdatesBanner } from "@/components/live-newsroom/NewUpdatesBanner";
 import { HomeSectionErrorBoundary } from "@/components/errors/HomeSectionErrorBoundary";
@@ -16,14 +16,6 @@ import { useLanguage } from "@/providers/LanguageProvider";
 import { HomepageFooter } from "@/components/footer/HomepageFooter";
 import { HomepageSeoHub } from "@/sections/homepage/HomepageSeoHub";
 import { HomepageFeedFallback } from "@/sections/homepage/HomepageFeedFallback";
-
-const PersonalizedHomepageBody = dynamic(
-  () =>
-    import("@/components/personalization/PersonalizedHomepageBody").then(
-      (m) => ({ default: m.PersonalizedHomepageBody })
-    ),
-  { ssr: false, loading: () => null }
-);
 
 type HomepageLiveViewProps = {
   feed: GeneratedHomepageFeed;
@@ -45,17 +37,16 @@ export function HomepageLiveView({ feed: serverFeed }: HomepageLiveViewProps) {
     });
   }, [language, contentLocked, normalizedServer]);
 
-  if (contentLocked) {
-    return null;
-  }
-
   if (!normalizedServer || !hasValidHomeLead(normalizedServer)) {
     homeDebug("HomepageLiveView: empty feed");
     return <HomepageFeedFallback />;
   }
 
   return (
-    <LiveNewsroomProvider initialFeed={normalizedServer}>
+    <LiveNewsroomProvider
+      initialFeed={normalizedServer}
+      enabled={!contentLocked}
+    >
       <div className="home-page">
         <HomeSectionErrorBoundary name="stack-bands">
           <HomepageStackBands

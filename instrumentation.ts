@@ -1,10 +1,5 @@
 /**
- * Next.js instrumentation — Sentry + ops bootstrap
+ * Next.js instrumentation — delegates to src/instrumentation.ts
  */
 
-export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { initSentryServer } = await import("@/lib/observability/sentry");
-    await initSentryServer();
-  }
-}
+export { register } from "./src/instrumentation";

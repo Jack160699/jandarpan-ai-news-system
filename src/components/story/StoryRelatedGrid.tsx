@@ -22,6 +22,7 @@ export function StoryRelatedGrid({
     <section
       className="immersive-related immersive-related--premium immersive-related--editorial"
       aria-labelledby="story-related-title"
+      aria-describedby="story-related-subtitle"
     >
       <header className="story-section-header immersive-related__head">
         <h2
@@ -30,7 +31,10 @@ export function StoryRelatedGrid({
         >
           {title}
         </h2>
-        <p className="story-section-header__subtitle immersive-related__sub">
+        <p
+          id="story-related-subtitle"
+          className="story-section-header__subtitle immersive-related__sub"
+        >
           {subtitle}
         </p>
       </header>

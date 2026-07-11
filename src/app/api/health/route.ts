@@ -18,7 +18,11 @@ import {
 } from "@/lib/observability/health/checks";
 import { computeStabilityScore } from "@/lib/observability/stability-score";
 import { getMetricsDashboard } from "@/lib/observability/metrics";
-import { REQUEST_ID_HEADER, generateRequestId } from "@/lib/observability/request-id";
+import { getBuildInfo } from "@/lib/observability/build-info";
+import {
+  generateRequestId,
+  REQUEST_ID_HEADER,
+} from "@/lib/observability/request-id";
 
 export const runtime = "nodejs";
 
@@ -27,27 +31,19 @@ export async function GET(request: Request) {
     request.headers.get(REQUEST_ID_HEADER) ?? generateRequestId();
   const started = Date.now();
 
-  const [checks, metrics] = await Promise.all([
-    runAllHealthChecks(),
-    getMetricsDashboard(),
-  ]);
-
-  const status = aggregateHealthStatus(checks);
-  const healthy = status === "healthy" || status === "degraded";
-
-  const cronAuth = await verifyCronRequest(request);
+  const cronAuth = await verifyCronRequest(request, { capability: "ops" });
   const detailed = cronAuth.authorized || !isDeployedEnvironment();
 
   if (!detailed) {
     return NextResponse.json(
       {
-        ok: healthy,
+        ok: true,
         service: "jan-darpan-os",
-        status,
+        status: "healthy",
         timestamp: new Date().toISOString(),
       },
       {
-        status: status === "unhealthy" ? 503 : 200,
+        status: 200,
         headers: {
           ...edgeCacheHeaders({ sMaxAge: 15, private: true }),
           [REQUEST_ID_HEADER]: requestId,
@@ -56,6 +52,13 @@ export async function GET(request: Request) {
     );
   }
 
+  const [checks, metrics] = await Promise.all([
+    runAllHealthChecks(),
+    getMetricsDashboard(),
+  ]);
+
+  const status = aggregateHealthStatus(checks);
+  const healthy = status === "healthy" || status === "degraded";
   const productionEnv = getProductionEnvChecks();
   const stability = await computeStabilityScore({
     checks,
@@ -76,6 +79,7 @@ export async function GET(request: Request) {
         vercelEnv: process.env.VERCEL_ENV ?? null,
         productionEnvReady: productionEnv.ready,
         productionWarnings: productionEnv.warnings,
+        build: getBuildInfo(),
       },
       infrastructure: {
         redis: isRedisConfigured(),

@@ -2,15 +2,23 @@
  * Cron / worker route authentication
  *
  * Accepted credentials (any one):
- * - Authorization: Bearer <CRON_SECRET> (Vercel Cron, GitHub manual, QStash outbound)
- * - x-cron-secret: <CRON_SECRET>
+ * - Authorization: Bearer <secret> (Vercel Cron, GitHub manual, QStash outbound)
+ * - x-cron-secret: <secret>
  * - Upstash-Signature JWT (QStash primary scheduler)
+ *
+ * Secrets (least-privilege, backward compatible):
+ * - CRON_SECRET — master fallback (all capabilities)
+ * - CRON_API_SECRET — legacy master alias
+ * - CRON_INGEST_SECRET, CRON_PIPELINE_SECRET, CRON_OPS_SECRET, CRON_ADMIN_SECRET — scoped
+ * - ADMIN_SECRET — admin capability only (legacy)
  *
  * Vercel Cron (when CRON_SECRET is set) also sends x-vercel-cron: 1
  */
 
 import { Receiver } from "@upstash/qstash";
 import { isProductionDeployment } from "@/lib/infrastructure/production";
+
+export type CronCapability = "ingest" | "pipeline" | "ops" | "admin";
 
 export type CronAuthResult = {
   authorized: boolean;
@@ -19,11 +27,21 @@ export type CronAuthResult = {
   vercelCron: boolean;
   expectedSecretEnv: string | null;
   qstashVerified?: boolean;
+  capability?: CronCapability;
 };
 
 export type VerifyCronRequestOptions = {
   /** Raw request body — required when the route reads the body after auth (e.g. orchestrate). */
   rawBody?: string | null;
+  /** Optional capability scope — accepts master + scoped secret for that capability. */
+  capability?: CronCapability;
+};
+
+const CAPABILITY_ENV_KEYS: Record<CronCapability, string> = {
+  ingest: "CRON_INGEST_SECRET",
+  pipeline: "CRON_PIPELINE_SECRET",
+  ops: "CRON_OPS_SECRET",
+  admin: "CRON_ADMIN_SECRET",
 };
 
 function isDeployedEnvironment(): boolean {
@@ -43,7 +61,42 @@ export function parseBearerToken(authorization: string | null): string | null {
 function getCronSecret(): { secret: string | null; env: string | null } {
   const trimmed = process.env.CRON_SECRET?.trim();
   if (trimmed) return { secret: trimmed, env: "CRON_SECRET" };
+  const legacy = process.env.CRON_API_SECRET?.trim();
+  if (legacy) return { secret: legacy, env: "CRON_API_SECRET" };
   return { secret: null, env: null };
+}
+
+function collectAcceptedSecrets(capability?: CronCapability): string[] {
+  const secrets = new Set<string>();
+
+  const master = process.env.CRON_SECRET?.trim();
+  if (master) secrets.add(master);
+
+  const legacyApi = process.env.CRON_API_SECRET?.trim();
+  if (legacyApi) secrets.add(legacyApi);
+
+  if (capability) {
+    const scoped = process.env[CAPABILITY_ENV_KEYS[capability]]?.trim();
+    if (scoped) secrets.add(scoped);
+  }
+
+  if (capability === "admin") {
+    const adminSecret = process.env.ADMIN_SECRET?.trim();
+    if (adminSecret) secrets.add(adminSecret);
+  }
+
+  return [...secrets];
+}
+
+function matchesAcceptedSecret(
+  bearerToken: string | null,
+  cronHeader: string | null,
+  accepted: string[]
+): boolean {
+  if (!accepted.length) return false;
+  return accepted.some(
+    (secret) => bearerToken === secret || cronHeader === secret
+  );
 }
 
 /**
@@ -93,20 +146,25 @@ async function verifyQStashSignature(
   }
 }
 
-function verifyCronSecret(request: Request): CronAuthResult {
-  const { secret: cronSecret, env: expectedSecretEnv } = getCronSecret();
+function verifyCronSecret(
+  request: Request,
+  capability?: CronCapability
+): CronAuthResult {
+  const { env: expectedSecretEnv } = getCronSecret();
+  const acceptedSecrets = collectAcceptedSecrets(capability);
   const authHeader = request.headers.get("authorization");
   const bearerToken = parseBearerToken(authHeader);
   const cronHeader = request.headers.get("x-cron-secret")?.trim() ?? null;
   const vercelCron = request.headers.get("x-vercel-cron") === "1";
 
-  if (cronSecret && (bearerToken === cronSecret || cronHeader === cronSecret)) {
+  if (matchesAcceptedSecret(bearerToken, cronHeader, acceptedSecrets)) {
     return {
       authorized: true,
       bearerToken,
       cronHeader,
       vercelCron,
       expectedSecretEnv,
+      capability,
     };
   }
 
@@ -116,8 +174,9 @@ function verifyCronSecret(request: Request): CronAuthResult {
         tag: "[cron-auth]",
         event: "auth_failed",
         authHeader: redactAuthHeader(authHeader),
-        envLoaded: Boolean(cronSecret),
+        envLoaded: acceptedSecrets.length > 0,
         expectedSecretEnv,
+        capability: capability ?? null,
         bearerPresent: Boolean(bearerToken),
         cronHeaderPresent: Boolean(cronHeader),
         vercelCron,
@@ -136,12 +195,13 @@ function verifyCronSecret(request: Request): CronAuthResult {
       cronHeader,
       vercelCron,
       expectedSecretEnv,
+      capability,
     };
   }
 
-  if (process.env.NODE_ENV !== "production" && !cronSecret) {
+  if (process.env.NODE_ENV !== "production" && !acceptedSecrets.length) {
     console.warn(
-      "[cron-auth] CRON_SECRET not set — allowing unauthenticated cron in local dev only"
+      "[cron-auth] No cron secrets configured — allowing unauthenticated cron in local dev only"
     );
     return {
       authorized: true,
@@ -149,6 +209,7 @@ function verifyCronSecret(request: Request): CronAuthResult {
       cronHeader,
       vercelCron,
       expectedSecretEnv,
+      capability,
     };
   }
 
@@ -158,6 +219,7 @@ function verifyCronSecret(request: Request): CronAuthResult {
     cronHeader,
     vercelCron,
     expectedSecretEnv,
+    capability,
   };
 }
 
@@ -181,7 +243,8 @@ export async function verifyCronRequest(
   request: Request,
   options?: VerifyCronRequestOptions
 ): Promise<CronAuthResult> {
-  const syncResult = verifyCronSecret(request);
+  const capability = options?.capability;
+  const syncResult = verifyCronSecret(request, capability);
   if (syncResult.authorized) {
     return syncResult;
   }

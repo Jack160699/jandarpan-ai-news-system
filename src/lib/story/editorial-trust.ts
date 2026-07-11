@@ -53,7 +53,7 @@ function formatStatusLabel(status: string | null | undefined): string | null {
   return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 }
 
-function resolvePublishDecisionLabel(
+export function resolvePublishDecisionLabel(
   decision: string | null | undefined
 ): string | null {
   if (!decision?.trim()) return null;
@@ -63,7 +63,7 @@ function resolvePublishDecisionLabel(
   return null;
 }
 
-function resolveWorkflowReviewStatus(
+export function resolveWorkflowReviewStatus(
   generatedRow?: GeneratedArticleRow | null
 ): string | null {
   const workflow = (
@@ -140,7 +140,7 @@ function buildAiDisclosureLines(
   return [...new Set(lines)];
 }
 
-function resolveChangeHistorySummary(
+export function resolveEditorialChangeHistorySummary(
   editorialMeta: EditorialMetadata | null | undefined
 ): string | null {
   if (editorialMeta?.regenerated_at?.trim()) {
@@ -220,7 +220,7 @@ export function buildEditorialTrust(
     editorialVm,
     generatedRow
   );
-  const changeHistorySummary = resolveChangeHistorySummary(editorialMeta);
+  const changeHistorySummary = resolveEditorialChangeHistorySummary(editorialMeta);
   const verificationState = resolvePublishDecisionLabel(
     editorialMeta?.publish_decision
   );

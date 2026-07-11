@@ -54,6 +54,54 @@ function KnowledgeMetaLink({ item, label }: { item: KnowledgeNavLink; label: str
   );
 }
 
+function KnowledgeEventBridge({
+  eventContext,
+}: {
+  eventContext: NonNullable<StoryKnowledgeVm["eventContext"]>;
+}) {
+  return (
+    <section
+      className="story-knowledge__event"
+      aria-labelledby="story-knowledge-event-title"
+    >
+      <div className="story-event-intel__header story-knowledge__event-header">
+        <h3
+          id="story-knowledge-event-title"
+          className="story-editorial-intel__section-title story-event-intel__title"
+        >
+          In this ongoing event
+        </h3>
+        {eventContext.coverageStatus ? (
+          <span className="story-editorial-intel__badge story-event-intel__status">
+            {eventContext.coverageStatus}
+          </span>
+        ) : null}
+      </div>
+
+      <p className="story-event-intel__event-title">{eventContext.coverageTitle}</p>
+
+      {eventContext.contextLines.length ? (
+        <ul className="story-knowledge__event-lines">
+          {eventContext.contextLines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : null}
+
+      {eventContext.liveCoverageHref ? (
+        <p className="story-event-intel__secondary-cta">
+          <Link
+            href={eventContext.liveCoverageHref}
+            className="story-event-intel__link"
+          >
+            View live coverage
+          </Link>
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
 export function StoryKnowledgeContext({ vm }: StoryKnowledgeContextProps) {
   if (!vm.hasLayer) return null;
 
@@ -80,6 +128,10 @@ export function StoryKnowledgeContext({ vm }: StoryKnowledgeContextProps) {
             <KnowledgeMetaLink item={nav.district} label="District" />
           ) : null}
         </dl>
+      ) : null}
+
+      {vm.eventContext ? (
+        <KnowledgeEventBridge eventContext={vm.eventContext} />
       ) : null}
 
       <KnowledgeSection

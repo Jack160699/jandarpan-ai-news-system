@@ -5,7 +5,7 @@ import {
   getPlatformTopic,
   loadPlatformTopics,
 } from "@/lib/newsroom-platform/config/topics";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildHubPageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
 
@@ -20,13 +20,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { slug } = await params;
   const topic = await getPlatformTopic(slug);
   if (!topic) return { title: "Topic" };
-  return buildPageMetadata({
-    title: `${topic.titleEn} | Jan Darpan`,
+  return buildHubPageMetadata({
+    title: `${topic.titleEn} · Jan Darpan Chhattisgarh`,
     description: topic.descriptionEn,
     path: `/topics/${slug}`,
     keywords: topic.keywords,
     locale: "hi_IN",
-    ogType: "website",
   });
 }
 

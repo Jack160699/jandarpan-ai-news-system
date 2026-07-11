@@ -11,48 +11,92 @@ import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { BRAND } from "@/lib/brand";
-import { PRODUCTION_ROBOTS, SITE_URL } from "@/lib/seo";
+import {
+  NOINDEX_FOLLOW_ROBOTS,
+  PRODUCTION_ROBOTS,
+  SEARCH_PAGE_CANONICAL,
+} from "@/lib/seo";
 import type { SearchDistrict, SearchTimeScope } from "@/lib/search/types";
 import type { HomeSectionId } from "@/lib/homepage/types";
 
 export const revalidate = 60;
 
-type PageProps = {
-  searchParams: Promise<{
-    q?: string;
-    district?: string;
-    category?: string;
-    time?: string;
-  }>;
+type SearchParams = {
+  q?: string;
+  district?: string;
+  category?: string;
+  time?: string;
+  page?: string;
 };
+
+type PageProps = {
+  searchParams: Promise<SearchParams>;
+};
+
+const BASE_SEARCH_TITLE = `Search · ${BRAND.nameEn}`;
+const BASE_SEARCH_DESCRIPTION =
+  "Search Chhattisgarh and Raipur news in Hindi and English — politics, crime, business, sports, and regional updates.";
+
+function hasSearchFilters(params: SearchParams): boolean {
+  return Boolean(
+    params.q?.trim() ||
+      params.district?.trim() ||
+      params.category?.trim() ||
+      (params.time && params.time !== "all") ||
+      (params.page?.trim() && params.page !== "1")
+  );
+}
 
 export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
   const params = await searchParams;
   const q = params.q?.trim();
+  const filtered = hasSearchFilters(params);
+  const canonical = SEARCH_PAGE_CANONICAL;
 
-  if (!q) {
+  if (!filtered) {
     return {
-      title: `Search · ${BRAND.nameEn}`,
-      description:
-        "Search Chhattisgarh and Raipur news in Hindi and English — politics, crime, business, sports, and regional updates.",
-      alternates: { canonical: `${SITE_URL}/search` },
+      title: BASE_SEARCH_TITLE,
+      description: BASE_SEARCH_DESCRIPTION,
+      alternates: { canonical },
       robots: PRODUCTION_ROBOTS,
+      openGraph: {
+        title: BASE_SEARCH_TITLE,
+        description: BASE_SEARCH_DESCRIPTION,
+        url: canonical,
+        type: "website",
+      },
+      twitter: {
+        card: "summary",
+        title: BASE_SEARCH_TITLE,
+        description: BASE_SEARCH_DESCRIPTION,
+      },
     };
   }
 
-  const canonical = `${SITE_URL}/search?q=${encodeURIComponent(q)}`;
+  const title = q
+    ? `${q} · Search · ${BRAND.nameEn}`
+    : BASE_SEARCH_TITLE;
+  const description = q
+    ? `Search results for "${q}" on ${BRAND.nameEn} — Chhattisgarh regional news.`
+    : BASE_SEARCH_DESCRIPTION;
 
   return {
-    title: `${q} · Search · ${BRAND.nameEn}`,
-    description: `Search results for "${q}" on ${BRAND.nameEn} — Chhattisgarh regional news.`,
+    title,
+    description,
     alternates: { canonical },
-    robots: PRODUCTION_ROBOTS,
+    robots: NOINDEX_FOLLOW_ROBOTS,
     openGraph: {
-      title: `Search: ${q}`,
-      description: `Find stories about ${q} from ${BRAND.nameEn}.`,
+      title: q ? `Search: ${q}` : BASE_SEARCH_TITLE,
+      description,
       url: canonical,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: q ? `Search: ${q}` : BASE_SEARCH_TITLE,
+      description,
     },
   };
 }
@@ -164,23 +208,6 @@ export default async function SearchPage({ searchParams }: PageProps) {
         </div>
         <Footer />
       </main>
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            name: BRAND.nameEn,
-            url: SITE_URL,
-            potentialAction: {
-              "@type": "SearchAction",
-              target: `${SITE_URL}/search?q={search_term_string}`,
-              "query-input": "required name=search_term_string",
-            },
-          }),
-        }}
-      />
     </PageShell>
   );
 }

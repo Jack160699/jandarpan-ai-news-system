@@ -57,7 +57,6 @@
 @import "./listen-headlines.css";
 @import "./multilingual.css";
 @import "./monetization.css";
-@import "./admin-newsroom.css";
 
 /* Light paper texture — load last so body/shell backgrounds stay transparent */
 @import "./platform/newspaper-paper.css";

@@ -24,6 +24,10 @@ import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
+import { NewsroomHealthStrip } from "@/components/admin-newsroom/NewsroomHealthStrip";
+import { CoverageInsightsPanel } from "@/components/admin-newsroom/CoverageInsightsPanel";
+import { CoverageOpportunityPanel } from "@/components/admin-newsroom/CoverageOpportunityPanel";
+import { useEditorialIntelligenceSlices } from "@/hooks/use-editorial-intelligence-slices";
 import { QueueTable } from "@/components/admin-newsroom/ui/QueueTable";
 import { traceDashboardRender } from "@/lib/observability/dashboard-render-trace";
 
@@ -100,6 +104,8 @@ function MissionMetricCard({
 export function EditorialOverview() {
   const { data, loading, error } = useAdminNewsroom();
   const mounted = useHasMounted();
+  const { health: newsroomHealth, coverage: coverageInsights, opportunities: coverageOpportunities } =
+    useEditorialIntelligenceSlices(data ?? null);
 
   const generated = useMemo(
     () => (Array.isArray(data?.generatedArticles) ? data.generatedArticles : []),
@@ -310,6 +316,18 @@ export function EditorialOverview() {
   return (
     <>
       {error ? <p className="anr-error">{error}</p> : null}
+      <NewsroomHealthStrip
+        vm={newsroomHealth}
+        loading={loading && !data}
+      />
+      <CoverageInsightsPanel
+        vm={coverageInsights}
+        loading={loading && !data}
+      />
+      <CoverageOpportunityPanel
+        vm={coverageOpportunities}
+        loading={loading && !data}
+      />
       <div className="anr-kpis">
         <MissionMetricCard
           label="Live ingestion activity"

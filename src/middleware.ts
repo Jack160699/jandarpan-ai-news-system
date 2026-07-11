@@ -76,6 +76,7 @@ function redirectWithCookies(
 
 function isIngestionApiPath(pathname: string): boolean {
   if (pathname === "/api/health") return true;
+  if (pathname === "/api/health/live" || pathname === "/api/health/ready") return true;
   return (
     isCronPath(pathname) ||
     pathname === "/api/fetch-news" ||

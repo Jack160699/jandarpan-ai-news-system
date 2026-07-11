@@ -64,6 +64,20 @@ export function validateProductionEnv(): EnvIssue[] {
     });
   }
 
+  if (
+    isProd &&
+    process.env.CRON_SECRET?.trim() &&
+    !process.env.CRON_INGEST_SECRET?.trim() &&
+    !process.env.CRON_PIPELINE_SECRET?.trim()
+  ) {
+    issues.push({
+      key: "CRON_INGEST_SECRET",
+      severity: "warn",
+      message:
+        "Consider scoped cron secrets (CRON_INGEST_SECRET, CRON_PIPELINE_SECRET, CRON_OPS_SECRET, CRON_ADMIN_SECRET) to reduce blast radius of CRON_SECRET",
+    });
+  }
+
   if (!process.env.NEXT_PUBLIC_SITE_URL?.trim()) {
     issues.push({
       key: "NEXT_PUBLIC_SITE_URL",

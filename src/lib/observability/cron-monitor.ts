@@ -16,8 +16,11 @@ export type CronRunRecord = {
   startedAt: string;
   durationMs: number;
   degraded?: boolean;
+  entityCount?: number;
+  requestId?: string;
   workers?: WorkerResult[];
   error?: string;
+  metadata?: Record<string, unknown>;
 };
 
 type CronState = Record<string, CronRunRecord>;
@@ -40,9 +43,12 @@ export async function recordCronRun(record: CronRunRecord): Promise<void> {
     job: record.job,
     startedAt: record.startedAt,
     durationMs: record.durationMs,
+    duration_ms: record.durationMs,
     status: heartbeatStatus(record),
     ok: record.ok,
     degraded: record.degraded ?? false,
+    entity_count: record.entityCount,
+    request_id: record.requestId,
   });
 }
 

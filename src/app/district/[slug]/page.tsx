@@ -17,7 +17,8 @@ import {
 import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
 import {
   breadcrumbListJsonLd,
-  buildPageMetadata,
+  buildFacetedVariantMetadata,
+  buildHubPageMetadata,
   collectionPageJsonLd,
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
@@ -26,24 +27,40 @@ export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ section?: string }>;
 };
 
 export function generateStaticParams() {
   return getAllDistrictSlugs().map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const { section } = await searchParams;
   const district = getDistrict(slug);
   if (!district) return { title: "District not found" };
 
-  return buildPageMetadata({
-    title: `${district.name} News | Chhattisgarh Hyperlocal`,
-    description: `Latest AI-curated news from ${district.name}, Chhattisgarh.`,
-    path: `/district/${slug}`,
+  const basePath = `/district/${slug}`;
+  const baseTitle = `${district.name} News | Chhattisgarh Hyperlocal`;
+  const description = `Latest AI-curated news from ${district.name}, Chhattisgarh.`;
+
+  if (section?.trim()) {
+    return buildFacetedVariantMetadata({
+      baseTitle,
+      description,
+      basePath,
+    });
+  }
+
+  return buildHubPageMetadata({
+    title: baseTitle,
+    description,
+    path: basePath,
     keywords: [district.name, district.nameHi, "Chhattisgarh", "hyperlocal news"],
     locale: "hi_IN",
-    ogType: "website",
   });
 }
 

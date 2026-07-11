@@ -1,4 +1,5 @@
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import type { EventViewModel } from "@/lib/events/event-view-model";
 import type { JsonObject } from "@/types/json";
 
 export type EditorArticleRecord = {
@@ -14,9 +15,13 @@ export type EditorArticleRecord = {
   tags: string[] | null;
   published_at: string | null;
   editorial_status: string | null;
+  workflow_status?: string | null;
+  reviewed_at?: string | null;
+  event_id?: string | null;
   translations: JsonObject | null;
   editorial_metadata: JsonObject | null;
   created_at: string;
+  eventViewModel?: EventViewModel | null;
 };
 
 export type EditorVersionSnapshot = {

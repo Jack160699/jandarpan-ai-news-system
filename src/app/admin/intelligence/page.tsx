@@ -1,6 +1,17 @@
+import nextDynamic from "next/dynamic";
 import { AdminPageGate } from "@/components/admin-newsroom/AdminPageGate";
 import { AdminShell } from "@/components/admin-newsroom/AdminShell";
-import { IntelligenceCenterPanel } from "@/sections/admin/IntelligenceCenterPanel";
+import { AdminPanelLoading } from "@/components/admin-newsroom/AdminPanelLoading";
+
+const IntelligenceCenterExecutivePanel = nextDynamic(
+  () =>
+    import("@/sections/admin/IntelligenceCenterExecutivePanel").then((mod) => ({
+      default: mod.IntelligenceCenterExecutivePanel,
+    })),
+  {
+    loading: () => <AdminPanelLoading label="Loading intelligence center…" />,
+  }
+);
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +20,9 @@ export default function AdminIntelligencePage() {
     <AdminPageGate permission="analytics:read">
       <AdminShell
         title="Intelligence Center"
-        subtitle="Event clustering, vector search, misinfo scoring, live signals, and AI newsroom recommendations."
+        subtitle="Executive read-only overview of newsroom health, coverage insights, workflow status, and editorial opportunities."
       >
-        <IntelligenceCenterPanel />
+        <IntelligenceCenterExecutivePanel />
       </AdminShell>
     </AdminPageGate>
   );

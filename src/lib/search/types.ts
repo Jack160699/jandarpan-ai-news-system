@@ -45,6 +45,7 @@ export type SearchHit = {
   publishedAt: string;
   readingTime: string | null;
   score: number;
+  /** Internal ranking signals — not rendered in UI by default */
   matchReasons: string[];
 };
 

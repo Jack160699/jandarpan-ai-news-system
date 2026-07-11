@@ -28,6 +28,10 @@ import {
 } from "@/lib/infrastructure/workers/run-guard";
 import type { WorkerId } from "@/lib/infrastructure/workers/types";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
+import {
+  finalizeCronRun,
+  instrumentCronStart,
+} from "@/lib/observability/cron-instrumentation";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -79,50 +83,91 @@ function jsonCron(
 }
 
 export async function handleCronJobs(request: Request): Promise<NextResponse> {
-  const auth = await verifyCronRequest(request);
+  const { startedAt, requestId } = instrumentCronStart("cron_jobs", request);
+  const auth = await verifyCronRequest(request, { capability: "pipeline" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
 
   if (!isSupabaseConfigured()) {
+    await finalizeCronRun({
+      job: "cron_jobs",
+      startedAt,
+      requestId,
+      ok: false,
+      error: "supabase_not_configured",
+      errorCode: "supabase_not_configured",
+    });
     return jsonCron(
       {
         ok: false,
         worker: "cron_jobs",
         processed: 0,
         failed: 0,
-        duration_ms: 0,
+        duration_ms: Date.now() - startedAt,
         reason: "supabase_not_configured",
       },
       500
     );
   }
 
-  const payload = await runWorkerEndpoint("cron_jobs", 540, async () => {
-    const events = await deliverPendingEvents(20);
-    const batch = await processJobBatch(JOB_HANDLERS, {
-      limit: INFRA_CONFIG.workerJobBatch,
-      workerId: "cron_jobs",
+  try {
+    const payload = await runWorkerEndpoint("cron_jobs", 540, async () => {
+      const events = await deliverPendingEvents(20);
+      const batch = await processJobBatch(JOB_HANDLERS, {
+        limit: INFRA_CONFIG.workerJobBatch,
+        workerId: "cron_jobs",
+      });
+      const stats = await getQueueStats();
+
+      return {
+        ok: batch.failed === 0 && batch.dead === 0,
+        processed: batch.processed,
+        failed: batch.failed + batch.dead,
+        details: { events, batch, stats },
+      };
     });
-    const stats = await getQueueStats();
 
-    return {
-      ok: batch.failed === 0 && batch.dead === 0,
-      processed: batch.processed,
-      failed: batch.failed + batch.dead,
-      details: { events, batch, stats },
-    };
-  });
+    await finalizeCronRun({
+      job: "cron_jobs",
+      startedAt,
+      requestId,
+      ok: payload.ok,
+      entityCount: payload.processed,
+      metadata: { failed: payload.failed },
+    });
 
-  return jsonCron(toCronResponse("cron_jobs", payload));
+    return jsonCron(toCronResponse("cron_jobs", payload));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "cron_jobs_failed";
+    await finalizeCronRun({
+      job: "cron_jobs",
+      startedAt,
+      requestId,
+      ok: false,
+      error: message,
+      err,
+    });
+    return jsonCron(
+      {
+        ok: false,
+        worker: "cron_jobs",
+        processed: 0,
+        failed: 1,
+        duration_ms: Date.now() - startedAt,
+        reason: message,
+      },
+      500
+    );
+  }
 }
 
 export async function handleCronWorker(
   request: Request,
   workerSlug: string
 ): Promise<NextResponse> {
-  const startedAt = Date.now();
-  const auth = await verifyCronRequest(request);
+  const { startedAt, requestId } = instrumentCronStart(workerSlug, request);
+  const auth = await verifyCronRequest(request, { capability: "pipeline" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
@@ -150,6 +195,7 @@ export async function handleCronWorker(
       ok: false,
       startedAt: new Date(startedAt).toISOString(),
       durationMs,
+      requestId,
       error: "supabase_not_configured",
     });
     return jsonCron(
@@ -213,6 +259,8 @@ export async function handleCronWorker(
     startedAt: new Date(startedAt).toISOString(),
     durationMs: payload.duration_ms,
     degraded,
+    entityCount: payload.processed,
+    requestId,
     ...(payload.reason && !payload.ok ? { error: payload.reason } : {}),
   });
 
@@ -253,7 +301,8 @@ function evaluateCriticalHealth(input: {
 }
 
 export async function handleCronHealth(request: Request): Promise<NextResponse> {
-  const auth = await verifyCronRequest(request);
+  const { startedAt, requestId } = instrumentCronStart("workers-health", request);
+  const auth = await verifyCronRequest(request, { capability: "ops" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
@@ -283,6 +332,22 @@ export async function handleCronHealth(request: Request): Promise<NextResponse> 
       checkedAt: new Date().toISOString(),
     },
   };
+
+  await finalizeCronRun({
+    job: "workers-health",
+    startedAt,
+    requestId,
+    ok: !evaluation.critical,
+    degraded: evaluation.critical,
+    entityCount: health.length,
+    metadata: {
+      criticalReasons: evaluation.reasons,
+      deadLetters: stats.deadLetters,
+    },
+    ...(evaluation.critical
+      ? { error: evaluation.reasons.join(","), errorCode: "workers_critical" }
+      : {}),
+  });
 
   return jsonCron(body, evaluation.critical ? 503 : 200);
 }

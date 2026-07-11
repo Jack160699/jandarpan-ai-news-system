@@ -17,6 +17,7 @@ export function isCronPath(pathname: string): boolean {
 export function isProductionExemptPath(pathname: string): boolean {
   if (isCronPath(pathname)) return true;
   if (pathname === "/api/health") return true;
+  if (pathname === "/api/health/live" || pathname === "/api/health/ready") return true;
   if (pathname === "/robots.txt") return true;
   if (pathname === "/sitemap.xml" || pathname === "/news-sitemap.xml") return true;
   return false;

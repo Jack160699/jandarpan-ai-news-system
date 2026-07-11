@@ -3,14 +3,17 @@ import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import { publishScheduledForCurrentEdition } from "@/lib/newsroom/edition-scheduler";
-import { recordCronRun } from "@/lib/observability/cron-monitor";
+import {
+  finalizeCronRun,
+  instrumentCronStart,
+} from "@/lib/observability/cron-instrumentation";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 async function run(request: Request) {
-  const startedAt = Date.now();
-  const auth = await verifyCronRequest(request);
+  const { startedAt, requestId } = instrumentCronStart("edition-publish", request);
+  const auth = await verifyCronRequest(request, { capability: "pipeline" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
@@ -18,12 +21,18 @@ async function run(request: Request) {
   const result = await publishScheduledForCurrentEdition(new Date());
   const durationMs = Date.now() - startedAt;
 
-  await recordCronRun({
+  await finalizeCronRun({
     job: "edition-publish",
+    startedAt,
+    requestId,
     ok: result.ok,
-    startedAt: new Date(startedAt).toISOString(),
-    durationMs,
     degraded: Boolean(result.reason),
+    entityCount: result.published,
+    metadata: {
+      attempted: result.attempted,
+      slot: result.slot ?? null,
+      reason: result.reason ?? null,
+    },
     ...(result.ok ? {} : { error: result.errors[0] ?? "edition_publish_failed" }),
   });
 
@@ -50,4 +59,3 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return run(request);
 }
-

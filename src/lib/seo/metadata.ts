@@ -4,12 +4,17 @@
 
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/brand";
+import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
 import {
+  NOINDEX_FOLLOW_ROBOTS,
   PRODUCTION_ROBOTS,
   REGIONAL_KEYWORDS,
   SITE_NAME,
   SITE_URL,
 } from "@/lib/seo/constants";
+
+/** Default OG image for editorial hub pages */
+export const DEFAULT_HUB_OG_IMAGE = JAN_DARPAN_BRAND_ASSETS.og;
 
 export type PageMetadataInput = {
   title: string;
@@ -24,6 +29,8 @@ export type PageMetadataInput = {
   modifiedTime?: string | null;
   section?: string;
   noindex?: boolean;
+  /** Per-locale absolute or site-relative URLs — e.g. story pages with ?lang= */
+  languageUrls?: Record<string, string>;
   /** Article-only — Google News discovery */
   newsKeywords?: string[];
 };
@@ -52,9 +59,13 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
   const altLocales = input.alternateLocales ?? ["hi_IN", "en_IN"];
 
   const languages: Record<string, string> = {};
-  for (const loc of altLocales) {
-    const lang = loc.split("_")[0] ?? "hi";
-    languages[lang] = url;
+  if (input.languageUrls && Object.keys(input.languageUrls).length > 0) {
+    for (const [lang, langPath] of Object.entries(input.languageUrls)) {
+      languages[lang] = absoluteUrl(langPath);
+    }
+    languages["x-default"] = url;
+  } else {
+    languages["x-default"] = url;
   }
 
   const metadata: Metadata = {
@@ -93,6 +104,38 @@ export function buildPageMetadata(input: PageMetadataInput): Metadata {
   return metadata;
 }
 
+/**
+ * Reader utility / auth pages — crawlable but not indexed (noindex,follow).
+ * Canonical is always the clean path without transient query params.
+ */
+export function buildUtilityPageMetadata(input: {
+  title: string;
+  description: string;
+  path: string;
+}): Metadata {
+  const canonicalPath = input.path.startsWith("/") ? input.path : `/${input.path}`;
+  const url = absoluteUrl(canonicalPath);
+
+  return {
+    title: input.title,
+    description: input.description,
+    alternates: { canonical: url },
+    robots: NOINDEX_FOLLOW_ROBOTS,
+    openGraph: {
+      title: input.title,
+      description: input.description,
+      type: "website",
+      url,
+      siteName: SITE_NAME,
+    },
+    twitter: {
+      card: "summary",
+      title: input.title,
+      description: input.description,
+    },
+  };
+}
+
 export function buildHomeMetadata(): Metadata {
   return buildPageMetadata({
     title: `${BRAND.nameEn} — Chhattisgarh News`,
@@ -112,13 +155,25 @@ export function buildCategoryMetadata(input: {
   keywords: string[];
   ogImage?: string;
 }): Metadata {
-  return buildPageMetadata({
+  return buildHubPageMetadata({
     title: `${input.titleEn} · ${BRAND.nameEn}`,
     description: input.descriptionEn,
     path: input.path,
     keywords: input.keywords,
     locale: "hi_IN",
-    ogType: "website",
     ogImage: input.ogImage,
+  });
+}
+
+/**
+ * Editorial hub pages — canonical, OG/Twitter, x-default hreflang, default hub OG image.
+ */
+export function buildHubPageMetadata(
+  input: Omit<PageMetadataInput, "noindex" | "ogType">
+): Metadata {
+  return buildPageMetadata({
+    ...input,
+    ogImage: input.ogImage ?? DEFAULT_HUB_OG_IMAGE,
+    ogType: "website",
   });
 }

@@ -13,7 +13,7 @@ import {
   resolveLocalizedFieldsStrict,
 } from "@/lib/i18n/resolve-article";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
-import { pickRelatedStories } from "@/lib/news/related-stories";
+import { pickEntityAwareRelatedStories } from "@/lib/story/story-entity-discovery";
 import {
   fetchGeneratedArticlePool,
   getGeneratedArticleBySlug,
@@ -26,6 +26,11 @@ export const STORY_RELATED_POOL_LIMIT = 80;
 
 /** Related stories shown on immersive story pages. */
 export const STORY_RELATED_DISPLAY_LIMIT = 8;
+
+export type StoryRelatedArticlesResult = {
+  articles: NewsArticleRow[];
+  discoverySubtitle: string | null;
+};
 
 const STORY_CACHE_TAGS = [
   ISR_TAGS.homepage,
@@ -81,16 +86,18 @@ function mapPoolRowsToArticles(
 async function buildStoryRelatedArticlesUncached(
   sourceSlug: string,
   readerLang: NewsroomLanguage
-): Promise<NewsArticleRow[]> {
+): Promise<StoryRelatedArticlesResult> {
   const [sourceRow, pool] = await Promise.all([
     getCachedStoryArticleBySlugBuild(sourceSlug)(),
     getCachedStoryRelatedPool(),
   ]);
 
-  if (!sourceRow) return [];
+  if (!sourceRow) return { articles: [], discoverySubtitle: null };
 
   const sourceFields = resolveLocalizedFieldsStrict(sourceRow, readerLang);
-  if (!sourceFields?.headline?.trim()) return [];
+  if (!sourceFields?.headline?.trim()) {
+    return { articles: [], discoverySubtitle: null };
+  }
 
   const sourceArticle = applyLocalizedFieldsToNewsArticle(
     generatedToNewsArticle(sourceRow),
@@ -100,11 +107,15 @@ async function buildStoryRelatedArticlesUncached(
   const langPool = filterPoolByLanguage(pool, readerLang);
   const poolArticles = mapPoolRowsToArticles(langPool, readerLang);
 
-  return pickRelatedStories(
+  const { articles, discoverySubtitle } = pickEntityAwareRelatedStories(
     sourceArticle,
+    sourceRow,
+    langPool,
     poolArticles,
     STORY_RELATED_DISPLAY_LIMIT
   );
+
+  return { articles, discoverySubtitle };
 }
 
 function getCachedStoryRelatedArticlesBuild(
@@ -129,7 +140,7 @@ function getCachedStoryRelatedArticlesBuild(
 export async function getStoryRelatedArticles(
   sourceSlug: string,
   readerLang: NewsroomLanguage
-): Promise<NewsArticleRow[]> {
+): Promise<StoryRelatedArticlesResult> {
   return getCachedStoryRelatedArticlesBuild(sourceSlug, readerLang)();
 }
 

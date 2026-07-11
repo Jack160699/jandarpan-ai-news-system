@@ -46,10 +46,7 @@ function ShortsLanguageShell({ children }: AppChromeProps) {
   const { contentLocked } = useLanguage();
 
   return (
-    <div
-      className={cn(contentLocked && "app-shell--lang-locked")}
-      aria-hidden={contentLocked ? true : undefined}
-    >
+    <div className={cn(contentLocked && "app-shell--lang-locked")}>
       <LanguageGate />
       <div className="app-shell__content">{children}</div>
     </div>
@@ -70,7 +67,6 @@ function AppChromeShell({ children }: AppChromeProps) {
         contentLocked && "app-shell--lang-locked"
       )}
       data-hydrated="false"
-      aria-hidden={contentLocked ? true : undefined}
     >
       <AppHydration />
       <SkipLink />

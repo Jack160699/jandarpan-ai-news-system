@@ -15,6 +15,12 @@ import {
   buildStoryKnowledgeNav,
   type StoryKnowledgeNavVm,
 } from "@/lib/story/story-knowledge-navigation";
+import {
+  buildStoryKnowledgeEventContext,
+  type StoryKnowledgeEventContext,
+} from "@/lib/story/story-knowledge-event-bridge";
+
+export type { StoryKnowledgeEventContext };
 
 export type StoryKnowledgeVm = {
   entities: EditorialEntityV2[];
@@ -31,6 +37,7 @@ export type StoryKnowledgeVm = {
   districtSlug: string | null;
   category: string | null;
   nav: StoryKnowledgeNavVm;
+  eventContext: StoryKnowledgeEventContext | null;
   hasLayer: boolean;
 };
 
@@ -150,6 +157,17 @@ export function buildStoryKnowledge(
       category
   );
 
+  const eventContext = buildStoryKnowledgeEventContext({
+    eventViewModel,
+    hasKnowledgeLayer: hasLayer,
+    people,
+    organizations,
+    locations,
+    district,
+    districtSlug,
+    category,
+  });
+
   return {
     entities,
     people,
@@ -165,6 +183,7 @@ export function buildStoryKnowledge(
     districtSlug,
     category,
     nav,
+    eventContext,
     hasLayer,
   };
 }

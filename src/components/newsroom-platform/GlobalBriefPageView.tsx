@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { PageShell } from "@/components/layout/PageShell";
 import type { GlobalBriefSegment } from "@/lib/newsroom-platform/content/types";
@@ -6,9 +7,31 @@ import { platformArticlesToHomeArticles } from "@/lib/newsroom-platform/content/
 import { fetchGlobalBriefFeed } from "@/lib/newsroom-platform/feeds/global-brief";
 import { NationalNewsCard } from "@/components/home/NationalNewsCard";
 import { homeArticleToQuickUpdate } from "@/lib/homepage/quick-update";
+import { breadcrumbListJsonLd, collectionPageJsonLd } from "@/lib/seo";
+import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
 
 type GlobalBriefPageViewProps = {
   segment: GlobalBriefSegment;
+};
+
+const HUB_COPY: Record<
+  GlobalBriefSegment,
+  { title: string; description: string; path: string; breadcrumb: string }
+> = {
+  national: {
+    title: "National News",
+    description:
+      "India national headlines, policy updates, and developing stories from the Jan Darpan national desk.",
+    path: "/news/national",
+    breadcrumb: "National News",
+  },
+  international: {
+    title: "International News",
+    description:
+      "World news, global affairs, and international coverage curated for Chhattisgarh readers.",
+    path: "/news/international",
+    breadcrumb: "International News",
+  },
 };
 
 export async function GlobalBriefPageView({ segment }: GlobalBriefPageViewProps) {
@@ -18,11 +41,29 @@ export async function GlobalBriefPageView({ segment }: GlobalBriefPageViewProps)
     useMock: !isSupabaseConfigured(),
   });
   const articles = platformArticlesToHomeArticles(feed.items);
-  const title = segment === "national" ? "National News" : "International News";
+  const hub = HUB_COPY[segment];
+  const title = hub.title;
   const other = segment === "national" ? "international" : "national";
+
+  const jsonLd = [
+    collectionPageJsonLd({
+      name: hub.title,
+      description: hub.description,
+      path: hub.path,
+      items: articles.slice(0, 20).map((article) => ({
+        url: `/story/${article.slug}`,
+        name: article.headline,
+      })),
+    }),
+    breadcrumbListJsonLd([
+      buildHomeBreadcrumb(),
+      { name: hub.breadcrumb, href: hub.path },
+    ]),
+  ];
 
   return (
     <PageShell>
+      <JsonLdScript data={jsonLd} />
       <article className="nr-global-page pl-container py-6 pb-24">
         <p className="nr-global-page__kicker">Global Brief</p>
         <h1 className="nr-global-page__title">{title}</h1>
