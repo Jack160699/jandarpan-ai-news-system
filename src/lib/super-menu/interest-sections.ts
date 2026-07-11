@@ -2,11 +2,16 @@ import type { HomeSectionId } from "@/lib/homepage/types";
 
 const INTEREST_SECTION_MAP: Record<string, HomeSectionId[]> = {
   politics: ["india"],
+  national: ["india"],
+  international: ["world"],
   cricket: ["sports"],
+  sports: ["sports"],
   business: ["business"],
   "cg-news": ["chhattisgarh"],
   raipur: ["raipur"],
   education: ["education"],
+  crime: ["india"],
+  health: ["education", "india"],
   stocks: ["business", "india"],
   gold: ["business"],
   jobs: ["education", "india"],

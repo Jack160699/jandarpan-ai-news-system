@@ -60,5 +60,6 @@ export function generatedToNewsArticle(
     ai_summary: row.summary,
     ai_headline: row.headline,
     ai_processed_at: row.created_at,
+    event_id: row.event_id ?? null,
   };
 }

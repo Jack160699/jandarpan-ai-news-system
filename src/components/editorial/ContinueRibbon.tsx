@@ -29,39 +29,54 @@ export function ContinueRibbon() {
   if (!target || !visible) return null;
 
   const pct = Math.round(target.progress * 100);
+  const slug = target.href.replace(/^\/story\//, "");
+  const lastOpened = ctx?.memory.articles[slug]?.lastRead;
 
   return (
     <aside
       className="continue-ribbon is-visible thumb-zone"
       aria-label={t.ribbon.continue}
     >
-      <div className="continue-ribbon__inner flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p className="meta-label text-[var(--ink-faint)]">{t.ribbon.continue}</p>
-          <p className="mt-1 truncate font-[family-name:var(--font-display)] text-base tracking-tight">
-            {target.label}
-          </p>
+      <div className="continue-ribbon__card">
+        <div className="continue-ribbon__content">
+          <p className="continue-ribbon__label">{t.ribbon.continue}</p>
+          <p className="continue-ribbon__title">{target.label}</p>
+          {lastOpened ? (
+            <p className="continue-ribbon__meta">
+              {new Date(lastOpened).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+              })}
+            </p>
+          ) : null}
           <div
-            className="mt-2 h-px w-full max-w-[8rem] bg-[var(--rule)]"
-            role="presentation"
+            className="continue-ribbon__progress"
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={t.ribbon.continue}
           >
+            <span className="continue-ribbon__progress-pct" aria-hidden>
+              {pct}%
+            </span>
             <div
-              className="h-full bg-[var(--ink-primary)] transition-all duration-700"
+              className="continue-ribbon__progress-fill"
               style={{ width: `${pct}%` }}
             />
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="continue-ribbon__actions">
           <Link
             href={target.href}
-            className="meta-label border border-[var(--rule-strong)] px-4 py-2 transition-opacity hover:opacity-60 tap-target"
+            className="continue-ribbon__resume tap-target"
           >
             {t.ribbon.resume}
           </Link>
           <button
             type="button"
             onClick={() => setDismissed(true)}
-            className="meta-label text-[var(--ink-faint)] hover:opacity-60 tap-target"
+            className="continue-ribbon__dismiss tap-target"
             aria-label={t.ribbon.dismiss}
           >
             ×

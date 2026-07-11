@@ -184,17 +184,24 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
   });
 }
 
-export async function buildGoogleNewsEntries() {
+export async function buildGoogleNewsEntries(now = new Date()) {
   const { toGoogleNewsEntry } = await import("@/lib/seo/google-news");
-  const pool = await fetchGeneratedArticlePool(200);
+  const { fetchGoogleNewsArticlePool } = await import(
+    "@/lib/newsroom/generated/read"
+  );
+
+  const pool = await fetchGoogleNewsArticlePool(undefined, now);
   return pool
     .map((row) =>
-      toGoogleNewsEntry({
-        slug: row.slug,
-        headline: row.headline,
-        publishedAt: row.published_at,
-        language: row.language,
-      })
+      toGoogleNewsEntry(
+        {
+          slug: row.slug,
+          headline: row.headline,
+          publishedAt: row.published_at,
+          language: row.language,
+        },
+        now
+      )
     )
     .filter((e): e is NonNullable<typeof e> => Boolean(e));
 }

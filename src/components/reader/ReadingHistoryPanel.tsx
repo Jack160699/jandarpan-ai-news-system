@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { getContinueTarget } from "@/lib/reading-memory";
+import { getContinueTarget, getContinueTargets } from "@/lib/reading-memory";
 import { useEditorialIntelligenceOptional } from "@/providers/EditorialIntelligenceProvider";
 import { useLanguage } from "@/providers/LanguageProvider";
 
@@ -20,6 +20,7 @@ export function ReadingHistoryPanel() {
   if (!ctx) return null;
 
   const target = getContinueTarget(ctx.memory);
+  const continueList = getContinueTargets(ctx.memory, 3);
   const recent = Object.entries(ctx.memory.articles)
     .filter(([, data]) => data.lastRead)
     .sort((a, b) => b[1].lastRead - a[1].lastRead)
@@ -59,6 +60,24 @@ export function ReadingHistoryPanel() {
             />
           </div>
         </div>
+      ) : null}
+
+      {continueList.length > 1 ? (
+        <ul className="mt-4 space-y-2">
+          {continueList.slice(1).map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                className="text-sm font-medium hover:opacity-70"
+              >
+                {item.label}
+              </Link>
+              <span className="ml-2 text-xs text-[var(--ink-faint)]">
+                {Math.round(item.progress * 100)}%
+              </span>
+            </li>
+          ))}
+        </ul>
       ) : null}
 
       {recent.length > 0 ? (

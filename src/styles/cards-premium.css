@@ -1,6 +1,6 @@
 /**
- * Premium card system — news · video · live · reel · breaking
- * Thumbnail crops, overlay gradients, elevation, motion
+ * Premium card system — pcard / CardThumbnail (video, reel, breaking variants)
+ * Complements card-system.css (feed-news-card, hero-news-card, quick-update).
  */
 
 /* ══════════════════════════════════════════
@@ -78,12 +78,6 @@
   border-radius: inherit;
   width: 100%;
   height: 100%;
-}
-
-.nr-card__media .pcard-thumb--fill,
-.feed-card__media .pcard-thumb--fill {
-  position: absolute;
-  inset: 0;
 }
 
 /* Overlay gradients */
@@ -301,23 +295,6 @@
   border-radius: var(--ds-radius-xl);
 }
 
-/* Bridge: nr-card + pcard */
-.nr-card.pcard--news .nr-card__media {
-  border: 1px solid var(--ds-card-border);
-  box-shadow: var(--ds-card-shadow);
-  border-radius: var(--ds-radius-lg);
-}
-
-.nr-card.pcard--news .pcard-thumb {
-  border: none;
-  box-shadow: none;
-  border-radius: inherit;
-}
-
-.nr-card.pcard--news .pcard-thumb__img {
-  object-position: center 22%;
-}
-
 /* ══════════════════════════════════════════
    Video card
    ══════════════════════════════════════════ */
@@ -369,11 +346,6 @@
   border-style: solid;
   border-width: 7px 0 7px 12px;
   border-color: transparent transparent transparent #fff;
-}
-
-.feed-card.pcard--video .feed-card__media {
-  border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
-  overflow: hidden;
 }
 
 /* ══════════════════════════════════════════
@@ -465,39 +437,6 @@
 
 .pcard--breaking-hero .pcard__headline {
   font-size: var(--ds-text-2xl);
-}
-
-/* Feed card elevation bridge */
-.feed-card.pcard {
-  border-bottom: 1px solid var(--rule);
-}
-
-.feed-card.pcard--news-horizontal .feed-card__media {
-  border-radius: var(--ds-radius-md);
-  border: 1px solid var(--ds-card-border);
-  box-shadow: var(--ds-shadow-sm);
-  overflow: hidden;
-}
-
-.feed-card.pcard--news-horizontal .feed-card__media img,
-.feed-card.pcard--news-horizontal .pcard-thumb__img {
-  object-position: center 25%;
-}
-
-.feed-card.pcard--news-featured .feed-card__media {
-  border-radius: var(--ds-radius-lg);
-  border: 1px solid var(--ds-card-border);
-  box-shadow: var(--ds-card-shadow);
-  max-height: none;
-}
-
-.feed-card.pcard--news-featured .feed-card__media::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--ds-gradient-thumb-subtle);
-  pointer-events: none;
-  z-index: 1;
 }
 
 /* Stagger entrance */

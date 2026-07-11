@@ -19,8 +19,10 @@ import {
   recordArticleProgress,
   recordSectionVisit,
   toggleBookmark,
+  getRecentReadSlugs,
   type ReadingMemory,
 } from "@/lib/reading-memory";
+import { syncRecentReadsCookie } from "@/lib/personalization/cookies";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 type EditorialIntelligenceContextValue = {
@@ -99,7 +101,11 @@ export function EditorialIntelligenceProvider({ children }: Props) {
 
   const saveArticleProgress = useCallback(
     (slug: string, progress: number, scrollY: number, title: string) => {
-      setMemory((m) => recordArticleProgress(m, slug, progress, scrollY, title));
+      setMemory((m) => {
+        const next = recordArticleProgress(m, slug, progress, scrollY, title);
+        syncRecentReadsCookie(getRecentReadSlugs(next));
+        return next;
+      });
     },
     []
   );

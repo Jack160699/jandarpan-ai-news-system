@@ -1,4 +1,4 @@
-/** Canonical breakpoints — must match responsive-system.css */
+/** Canonical breakpoints — must match platform/tokens.css */
 export const RF_BREAKPOINTS = {
   mobileMax: 767,
   tablet: 768,

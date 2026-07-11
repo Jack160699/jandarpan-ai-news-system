@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { memo, useState } from "react";
 import { HorizontalLazyRail } from "@/components/homepage/HorizontalLazyRail";
+import { SectionHeader } from "@/components/homepage/SectionHeader";
 import { ShortPreviewCard } from "@/components/shorts/ShortPreviewCard";
 import { useLanguage } from "@/providers/LanguageProvider";
 import type { NewsShortCard } from "@/lib/news/shorts/types";
@@ -42,18 +42,19 @@ export function ShortsSection({ shorts }: ShortsSectionProps) {
   return (
     <section
       id="shorts"
-      className="shorts-section shorts-section--cinematic pl-scroll-target"
+      className="shorts-section shorts-section--cinematic hp-section hp-section--secondary pl-scroll-target"
       aria-labelledby="shorts-section-title"
     >
-      <header className="shorts-section__header pl-container">
-        <h2 id="shorts-section-title" className="shorts-section__title hi">
-          {t.shorts.title}
-          <span className="shorts-section__title-hi"> · रील्स</span>
-        </h2>
-        <Link href="/shorts" className="shorts-section__cta" prefetch={false}>
-          {t.shorts.watch} →
-        </Link>
-      </header>
+      <div className="pl-container">
+        <SectionHeader
+          id="shorts-section-title"
+          title={t.shorts.title}
+          titleHi="रील्स"
+          description={t.shorts.subtitle}
+          href="/shorts"
+          hrefLabel={t.common.seeAll}
+        />
+      </div>
       <HorizontalLazyRail
         items={featured}
         getKey={(short) => short.articleId}

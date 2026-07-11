@@ -46,6 +46,8 @@ export type FeedNewsCardProps = {
   isBreaking?: boolean;
   badge?: string;
   index?: number;
+  /** When > 0 with a summary, shows editorial AI chip */
+  aiConfidence?: number;
   /** Override default `/story/{slug}` link (e.g. live desk routes) */
   href?: string;
   sourceLabel?: string;
@@ -92,6 +94,7 @@ export function FeedNewsCard({
   isBreaking = false,
   badge,
   index = 0,
+  aiConfidence,
   href,
   sourceLabel,
   rhythm,
@@ -114,11 +117,13 @@ export function FeedNewsCard({
     rhythm === "emphasis"
       ? Boolean(summary)
       : showSummary;
+  const showAiChip =
+    Boolean(summary?.trim()) && typeof aiConfidence === "number" && aiConfidence > 0;
 
   return (
     <article
       className={`feed-news-card feed-news-card--${variant}${rhythm === "emphasis" ? " feed-news-card--emphasis" : ""}${!reduceMotion ? " feed-news-card--enter" : ""}`}
-      style={{ "--motion-i": index } as CSSProperties}
+      style={{ "--ncard-i": index, "--motion-i": index } as CSSProperties}
     >
       <div className="feed-news-card__main">
         <TrackedStoryLink
@@ -178,7 +183,17 @@ export function FeedNewsCard({
             </h3>
 
             {showSummaryResolved && summary ? (
-              <p className="feed-news-card__summary">{summary}</p>
+              <div className="feed-news-card__summary-row">
+                {showAiChip ? (
+                  <span
+                    className="hp-ai-chip"
+                    title={t.article.transparencyTitle}
+                  >
+                    {t.shorts.narrationShort}
+                  </span>
+                ) : null}
+                <p className="feed-news-card__summary">{summary}</p>
+              </div>
             ) : null}
 
             <div className="feed-news-card__meta">

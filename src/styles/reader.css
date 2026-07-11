@@ -150,21 +150,6 @@ html[data-font-scale="xl"] .immersive-summary__text {
   padding: 1.25rem;
 }
 
-.search-overlay input {
-  width: 100%;
-  border: none;
-  border-bottom: 2px solid var(--rule-strong);
-  background: transparent;
-  font-family: var(--font-body), serif;
-  font-size: 1.125rem;
-  padding: 0.5rem 0;
-  color: var(--ink-headline);
-}
-
-.search-overlay input::placeholder {
-  color: var(--ink-faint);
-}
-
 @media (max-width: 767px) {
   .continue-ribbon {
     bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0));

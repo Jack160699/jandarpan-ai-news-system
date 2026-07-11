@@ -11,21 +11,18 @@ import {
 } from "react";
 import type { User } from "@supabase/supabase-js";
 import { useSupabase } from "@/hooks/useSupabase";
-import { FEED_INTERESTS } from "@/lib/super-menu/config";
+import { FEED_INTERESTS, normalizeFeedInterests } from "@/lib/personalization/interests";
 import { loadPreferences, savePreferences } from "@/lib/reader-preferences";
-import { loadReadingMemory } from "@/lib/reading-memory";
+import { loadReadingMemory, getRecentReadSlugs } from "@/lib/reading-memory";
+import {
+  syncInterestsCookie,
+  syncRecentReadsCookie,
+} from "@/lib/personalization/cookies";
 
 const ACCOUNT_KEY = "cgb-reader-account";
 const STREAK_KEY = "cgb-reader-streak";
-const INTERESTS_COOKIE = "cgb-feed-interests";
 
-const DEFAULT_INTERESTS = ["cg-news", "politics", "business"];
-
-function syncInterestsCookie(ids: string[]) {
-  if (typeof document === "undefined") return;
-  const val = encodeURIComponent(JSON.stringify(ids));
-  document.cookie = `${INTERESTS_COOKIE}=${val};path=/;max-age=31536000;SameSite=Lax`;
-}
+const DEFAULT_INTERESTS = normalizeFeedInterests(undefined);
 
 type GuestProfile = {
   displayName: string;
@@ -122,11 +119,10 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
     try {
       const prefs = loadPreferences();
       setInterestsState(
-        prefs.feedInterests?.length
-          ? prefs.feedInterests
-          : DEFAULT_INTERESTS
+        normalizeFeedInterests(prefs.feedInterests)
       );
       setSavedCount(loadReadingMemory().bookmarks.length);
+      syncRecentReadsCookie(getRecentReadSlugs(loadReadingMemory()));
     } catch {
       /* ignore storage errors */
     }
@@ -154,17 +150,16 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
       const next = prev.includes(id)
         ? prev.filter((x) => x !== id)
         : [...prev, id].slice(0, 12);
-      savePreferences({ feedInterests: next });
-      syncInterestsCookie(next);
-      return next;
+      const normalized = normalizeFeedInterests(next);
+      savePreferences({ feedInterests: normalized });
+      syncInterestsCookie(normalized);
+      return normalized;
     });
   }, [mounted]);
 
   const setInterests = useCallback((ids: string[]) => {
     if (!mounted) return;
-    const next = ids
-      .filter((id) => FEED_INTERESTS.some((i) => i.id === id))
-      .slice(0, 12);
+    const next = normalizeFeedInterests(ids);
     setInterestsState(next);
     savePreferences({ feedInterests: next });
     syncInterestsCookie(next);

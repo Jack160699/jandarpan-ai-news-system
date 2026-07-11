@@ -43,6 +43,12 @@ import {
   assembleEditorialBody,
   type LlmEditorialSections,
 } from "@/lib/news/ai/editorial-body";
+import {
+  buildFallbackIntelligenceV2,
+  parseEditorialIntelligenceV2,
+  type EditorialIntelligenceV2,
+  type LlmEditorialIntelligenceFields,
+} from "@/lib/news/ai/editorial-intelligence-v2";
 import type {
   BatchEditorialResult,
   EditorialDraft,
@@ -70,7 +76,7 @@ export type {
 const EDITORIAL_TIMEOUT_MS = 28_000;
 const BATCH_RESCUE_COUNT = 2;
 
-type LlmEditorialResponse = {
+type LlmEditorialResponse = LlmEditorialIntelligenceFields & {
   headline?: string;
   summary?: string;
   sections?: LlmEditorialSections;
@@ -89,6 +95,7 @@ type PendingCandidate = {
   attributions: SourceAttribution[];
   repaired: boolean;
   usedFallback: boolean;
+  intelligenceV2: EditorialIntelligenceV2 | null;
 };
 
 function logEditorial(message: string, context?: Record<string, unknown>): void {
@@ -323,6 +330,7 @@ async function persistGeneratedArticle(input: {
   repaired: boolean;
   usedFallback: boolean;
   batchRescue?: boolean;
+  intelligenceV2?: EditorialIntelligenceV2 | null;
 }): Promise<EditorialGenerationResult> {
   const supabase = createAdminServerClient();
   const slug = optimizeSeoSlug(input.draft.headline, input.event.id);
@@ -466,6 +474,9 @@ async function persistGeneratedArticle(input: {
         region: input.event.region,
         urgencyScore: input.event.urgency_score,
       }),
+      ...(input.intelligenceV2
+        ? { intelligence_v2: input.intelligenceV2 }
+        : {}),
       image: {
         status: "queued",
         hero_url: hero_image_url,
@@ -561,10 +572,18 @@ async function prepareCandidate(
 
   let draft: EditorialDraft | null = null;
   let usedFallback = false;
+  let intelligenceV2: EditorialIntelligenceV2 | null = null;
+  const generatedAt = new Date().toISOString();
 
   try {
     const llmRaw = await callEditorialLlm(factPackText, language, event, signals.length);
-    draft = llmRaw ? parseLlmDraft(llmRaw, language) : null;
+    if (llmRaw) {
+      draft = parseLlmDraft(llmRaw, language);
+      intelligenceV2 = parseEditorialIntelligenceV2(llmRaw, {
+        tags: draft?.tags ?? (llmRaw.tags ?? []).map((t) => String(t)),
+        generatedAt,
+      });
+    }
   } catch (err) {
     logEditorial("llm_error", {
       eventId: event.id,
@@ -578,6 +597,10 @@ async function prepareCandidate(
     logEditorial("fallback_draft_used", { eventId: event.id });
   } else {
     draft = applyEditorialEnhancements(draft, event);
+  }
+
+  if (!intelligenceV2) {
+    intelligenceV2 = buildFallbackIntelligenceV2({ event, signals, draft });
   }
 
   let repaired = false;
@@ -646,6 +669,7 @@ async function prepareCandidate(
       attributions,
       repaired,
       usedFallback,
+      intelligenceV2,
     },
     skipped: false,
   };
@@ -810,6 +834,7 @@ export async function generateEditorialFromEvent(
     attributions: candidate.attributions,
     repaired: candidate.repaired,
     usedFallback: candidate.usedFallback,
+    intelligenceV2: candidate.intelligenceV2,
   });
   if (persisted.ok && persisted.article) {
     logArticleGenerationPhase("article_generation_completed", {
@@ -946,6 +971,7 @@ export async function generateEditorialsFromEvents(options?: {
         attributions: candidate.attributions,
         repaired: candidate.repaired,
         usedFallback: candidate.usedFallback,
+        intelligenceV2: candidate.intelligenceV2,
       });
 
       results.push({
@@ -1056,6 +1082,7 @@ export async function generateEditorialsFromEvents(options?: {
         repaired: candidate.repaired,
         usedFallback: candidate.usedFallback,
         batchRescue: true,
+        intelligenceV2: candidate.intelligenceV2,
       });
 
       if (saved.ok && saved.article) {

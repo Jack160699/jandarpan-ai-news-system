@@ -31,6 +31,11 @@ import {
   GitBranch,
   MessagesSquare,
   ServerCog,
+  TrendingUp,
+  LineChart,
+  Bot,
+  Wand2,
+  Cpu,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -46,6 +51,13 @@ import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
 const NAV = [
   { href: "/admin/editorial", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/intelligence", label: "Intelligence", icon: Brain },
+  { href: "/admin/ai-copilot", label: "AI Copilot", icon: Bot },
+  { href: "/admin/seo/competitors", label: "Competitors", icon: Search },
+  { href: "/admin/seo/intelligence", label: "SEO Intel", icon: BarChart3 },
+  { href: "/admin/seo/rankings", label: "SERP Rankings", icon: TrendingUp },
+  { href: "/admin/seo/search-console", label: "Search Console", icon: LineChart },
+  { href: "/admin/seo/execution", label: "SEO Execution", icon: Wand2 },
+  { href: "/admin/seo/autonomous", label: "Autonomous SEO", icon: Cpu },
   { href: "/admin/editor", label: "Editor", icon: PenLine },
   { href: "/admin/workflow", label: "Workflow", icon: GitBranch },
   { href: "/admin/collaboration", label: "Collaboration", icon: MessagesSquare },
@@ -56,6 +68,7 @@ const NAV = [
   { href: "/admin/sources", label: "Sources", icon: Radio },
   { href: "/admin/live-wire", label: "Live wire", icon: Activity },
   { href: "/admin/health", label: "Health", icon: HeartPulse },
+  { href: "/admin/system", label: "System", icon: ServerCog },
   { href: "/admin/executive", label: "AI CFO", icon: Landmark },
   { href: "/admin/ingestion", label: "Ingestion", icon: Database },
   { href: "/admin/images", label: "Images", icon: ImageIcon },

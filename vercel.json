@@ -24,6 +24,26 @@
     {
       "path": "/api/cron/cleanup",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/competitor-tracker",
+      "schedule": "0,30 * * * *"
+    },
+    {
+      "path": "/api/cron/seo-intelligence",
+      "schedule": "5,35 * * * *"
+    },
+    {
+      "path": "/api/cron/serp-tracker",
+      "schedule": "0 2,14 * * *"
+    },
+    {
+      "path": "/api/cron/gsc-intelligence",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/seo-autonomous",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

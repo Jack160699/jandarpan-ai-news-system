@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 import { HeadlinesListenPlayer } from "@/components/listen/HeadlinesListenPlayer";
 import { buildHeadlinePlaylist } from "@/lib/listen/build-playlist";
@@ -31,12 +32,12 @@ export function ListenPageClient({ shorts, autoPlay = false }: ListenPageClientP
           <p className="mt-2 text-sm text-[var(--ink-muted)]">
             Check back when today&apos;s edition is published, or browse live updates.
           </p>
-          <a
+          <Link
             href="/live"
             className="mt-6 inline-flex min-h-11 items-center rounded-full border border-[var(--rule-strong)] px-5 text-sm font-semibold tap-target"
           >
             Go to live desk
-          </a>
+          </Link>
         </div>
       ) : (
         <>

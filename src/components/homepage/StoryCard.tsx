@@ -66,6 +66,7 @@ export function StoryCard({
           ? t.home.fresh
           : undefined
       }
+      aiConfidence={article.aiConfidence}
       langHint={article.language === "hi" ? "hi-IN" : "auto"}
       surface={variant === "breaking" ? "breaking" : "homepage"}
       listPosition={rank}

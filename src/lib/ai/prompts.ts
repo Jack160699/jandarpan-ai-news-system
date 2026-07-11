@@ -133,7 +133,12 @@ export function buildEditorialPipelineSystemPrompt(input: {
     "  },",
     '  "seo_title": string (<=60 chars),',
     '  "seo_description": string (<=155 chars),',
-    '  "tags": string[] (4-8 lowercase tags)',
+    '  "tags": string[] (4-8 lowercase tags),',
+    '  "takeaways": string[] (OPTIONAL — 3-5 concise reader bullets from facts only; omit key if thin),',
+    '  "why_this_matters": string (OPTIONAL — one short paragraph on local significance; omit key if unclear),',
+    '  "entities": [{"name": string, "type": "person"|"organization"|"location"|"program"|"other"}] (OPTIONAL — key names from fact pack; omit key if none),',
+    '  "timeline": [{"label": string, "detail": string}] (OPTIONAL — only for clearly chronological stories; omit key if not applicable),',
+    '  "reader_keywords": string[] (OPTIONAL — 3-8 discovery keywords; may differ from tags; omit if redundant)',
     "}",
     "Rules:",
     "- Synthesize ONLY facts in the fact pack. Do NOT invent names, numbers, quotes, or outcomes.",
@@ -141,6 +146,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
     "- Never use visible template section headings inside section text (no ## सारांश, ## Background, etc.).",
     "- Write like a professional newsroom article — flowing paragraphs, not an AI report template.",
     "- If source material is thin, write a cautious short wire; omit empty optional sections entirely.",
+    "- Optional intelligence fields (takeaways, why_this_matters, entities, timeline, reader_keywords): include only when supported by the fact pack; omit the key entirely when not applicable — never send empty arrays.",
     "No fabricated quotes, no clickbait.",
   ]
     .filter(Boolean)

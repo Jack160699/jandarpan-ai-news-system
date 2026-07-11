@@ -271,8 +271,8 @@ html:not([data-theme="dark"]) .hero-news-card__headline {
 }
 
 .hero-news-card__meta-category {
-  color: var(--color-primary);
-  font-weight: 700;
+  color: var(--color-ink-muted);
+  font-weight: var(--weight-medium);
 }
 
 .hero-news-card__visual {
@@ -420,7 +420,7 @@ html:not([data-theme="dark"]) .hero-news-card__headline {
 
 /* News grid */
 .news-grid {
-  padding-block: var(--section-gap-lg);
+  padding-block: var(--space-4);
   border-top: 1px solid var(--color-rule);
 }
 
@@ -440,7 +440,7 @@ html:not([data-theme="dark"]) .hero-news-card__headline {
 .news-grid__layout {
   display: flex;
   flex-direction: column;
-  gap: var(--section-gap-md);
+  gap: var(--space-4);
 }
 
 .news-grid__lead {
@@ -453,7 +453,7 @@ html:not([data-theme="dark"]) .hero-news-card__headline {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--section-gap-md);
+  gap: var(--space-4);
 }
 
 @media (min-width: 1024px) {
@@ -560,13 +560,13 @@ html:not([data-theme="dark"]) .hero-news-card__headline {
 }
 
 .news-card__category {
-  color: var(--color-primary);
-  font-weight: 700;
+  color: var(--color-ink-muted);
+  font-weight: var(--weight-medium);
 }
 
 /* Shorts section */
 .shorts-section {
-  padding-block: var(--section-gap-lg);
+  padding-block: var(--space-4);
   border-top: 1px solid var(--color-rule);
 }
 
@@ -589,8 +589,8 @@ html:not([data-theme="dark"]) .hero-news-card__headline {
 .shorts-section__cta {
   flex-shrink: 0;
   font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-primary);
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-muted);
   text-decoration: none;
   transition: opacity var(--duration-fast) var(--ease-out);
 }
@@ -707,16 +707,7 @@ html:not([data-theme="dark"]) .hero-news-card__headline {
     var(--color-surface-muted) 100%
   );
   background-size: 200% 100%;
-  animation: pl-shimmer 1.4s ease-in-out infinite;
-}
-
-@keyframes pl-shimmer {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
+  animation: ds-skeleton-wave 1.4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

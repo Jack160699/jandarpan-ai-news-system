@@ -1,0 +1,434 @@
+/**
+ * Homepage UI polish — spacing, typography, color hierarchy
+ * Visual layer only; scoped to .home-page and global chrome ribbons.
+ */
+
+/* ── 8px rhythm overrides ── */
+.home-page {
+  --hp-gap: var(--space-2);
+  --hp-section: var(--space-4);
+  --hp-section-lg: var(--space-6);
+  --hp-card-pad: var(--space-4);
+}
+
+.home-page__content {
+  padding-block: var(--space-2) var(--hp-section);
+}
+
+@media (min-width: 1024px) {
+  .home-page__content {
+    padding-block: var(--space-3) var(--hp-section-lg);
+  }
+}
+
+.home-body,
+.home-feed-stack {
+  gap: var(--hp-section);
+}
+
+@media (min-width: 1024px) {
+  .home-body {
+    gap: var(--hp-section-lg);
+  }
+}
+
+.home-highlights-desk {
+  gap: var(--hp-section);
+}
+
+.home-highlights-desk .hp-lazy-section__content {
+  gap: var(--hp-section);
+}
+
+.hero-news-card--premium {
+  margin-bottom: var(--space-2);
+}
+
+/* ── Section titles — Bold ── */
+.home-page .news-grid__title,
+.home-page .shorts-section__title,
+.home-page .feed-section__title,
+.home-page #district-wire h2,
+.home-page #global-brief h2,
+.home-page .nr-section__title {
+  font-family: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
+  font-size: clamp(1.0625rem, 3.8vw, 1.25rem);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  color: var(--color-ink);
+}
+
+.home-page .news-grid__header,
+.home-page .shorts-section__header,
+.home-page .feed-section__header,
+.home-page .nr-section__header--daily {
+  margin-bottom: var(--space-3);
+}
+
+.home-page .nr-section__header-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.home-page .nr-section__title-hi,
+.home-page .feed-section__title-hi {
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-muted);
+}
+
+/* Section CTAs — neutral, not red */
+.home-page .shorts-section__cta,
+.home-page .nr-section__more,
+.home-page #district-wire a[href="/live"],
+.home-page #global-brief a[href="/live"] {
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-muted);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-page .shorts-section__cta:hover,
+  .home-page .nr-section__more:hover,
+  .home-page #district-wire a[href="/live"]:hover,
+  .home-page #global-brief a[href="/live"]:hover {
+    color: var(--color-ink-secondary);
+  }
+}
+
+/* ── Headlines — ExtraBold ── */
+.home-page .hero-news-card__headline--premium,
+.home-page .feed-news-card__headline {
+  font-weight: var(--weight-extrabold);
+}
+
+/* Descriptions — Regular */
+.home-page .hero-news-card__summary,
+.home-page .feed-news-card__summary {
+  font-weight: var(--weight-regular);
+}
+
+/* Metadata & captions — Medium */
+.home-page .hero-news-card__meta--premium,
+.home-page .feed-news-card__meta,
+.home-page .news-card__meta {
+  font-weight: var(--weight-medium);
+}
+
+/* Category labels — neutral gray (not red) */
+.home-page .hero-news-card__meta-category,
+.home-page .news-card__category,
+.home-page .feed-news-card__meta-category,
+.home-page .feed-news-card__rank {
+  color: var(--color-ink-muted);
+  font-weight: var(--weight-medium);
+}
+
+.home-page .feed-news-card__meta-source {
+  font-weight: var(--weight-medium);
+  color: var(--color-ink-secondary);
+}
+
+/* ── Color restraint: ticker headline pills (labels stay red via ticker-strips) ── */
+.breaking-ticker__pill,
+.breaking-ticker__pill--fresh {
+  color: var(--color-ink-secondary);
+  border-color: var(--color-rule);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .breaking-ticker__pill:hover {
+    color: var(--color-ink);
+    border-color: var(--color-rule-strong);
+  }
+}
+
+/* ── Local alerts strip (red accent allowed) ── */
+.local-strip {
+  padding-block: var(--space-2);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--card-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.local-strip__title {
+  margin: 0 0 var(--space-2);
+  padding-inline: var(--space-3);
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.local-strip__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.local-strip__row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--color-rule);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.local-strip__row:first-child {
+  border-top: none;
+}
+
+.local-strip__loc {
+  flex-shrink: 0;
+  font-family: var(--font-hindi), var(--font-ui), sans-serif;
+  font-size: 0.6875rem;
+  font-weight: var(--weight-bold);
+  color: var(--color-primary);
+}
+
+.local-strip__headline {
+  font-family: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
+  font-size: 0.8125rem;
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-snug);
+  color: var(--color-ink-secondary);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .local-strip__row:hover {
+    background: color-mix(in srgb, var(--color-ink) 3%, transparent);
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-body__aside .local-strip {
+    position: sticky;
+    top: var(--scroll-margin);
+  }
+}
+
+/* ── Continue ribbon — premium card ── */
+.continue-ribbon {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 55;
+  transform: translateY(100%);
+  transition: transform 0.32s var(--ease-out);
+  pointer-events: none;
+}
+
+.continue-ribbon.is-visible {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.continue-ribbon__card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--card-radius) var(--card-radius) 0 0;
+  box-shadow: var(--shadow-md);
+}
+
+.continue-ribbon__content {
+  min-width: 0;
+  flex: 1;
+}
+
+.continue-ribbon__label {
+  margin: 0;
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+  line-height: 1.3;
+}
+
+.continue-ribbon__title {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
+  font-size: 0.9375rem;
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.continue-ribbon__progress {
+  margin-top: var(--space-2);
+  height: 2px;
+  width: 100%;
+  max-width: 8rem;
+  background: var(--color-rule);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.continue-ribbon__progress-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: inherit;
+  transition: width 0.7s var(--ease-out);
+}
+
+.continue-ribbon__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.continue-ribbon__resume {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--btn-height-sm);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-rule-strong);
+  border-radius: var(--btn-radius);
+  background: var(--color-surface);
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-ink);
+  text-decoration: none;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .continue-ribbon__resume:hover {
+    background: var(--color-surface-muted);
+    border-color: var(--color-ink-faint);
+  }
+}
+
+.continue-ribbon__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--btn-height-sm);
+  height: var(--btn-height-sm);
+  padding: 0;
+  border: none;
+  border-radius: var(--btn-radius);
+  background: transparent;
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--color-ink-faint);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .continue-ribbon__dismiss:hover {
+    color: var(--color-ink-muted);
+  }
+}
+
+@media (max-width: 767px) {
+  .continue-ribbon {
+    bottom: var(--bottom-nav-height, 3.75rem);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .continue-ribbon__card {
+    margin-inline: var(--gutter);
+    border-radius: var(--card-radius);
+    margin-bottom: var(--space-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .continue-ribbon {
+    transition: none;
+  }
+
+  .continue-ribbon__progress-fill {
+    transition: none;
+  }
+}
+
+/* ── SEO hub — tighter footer zone ── */
+.seo-hub__kicker {
+  color: var(--color-ink-muted);
+  font-weight: var(--weight-medium);
+}
+
+.seo-hub__title {
+  font-weight: var(--weight-bold);
+  color: var(--color-ink);
+}
+
+.seo-hub__desc {
+  font-weight: var(--weight-regular);
+  color: var(--color-ink-muted);
+}
+
+.seo-hub__primary {
+  color: var(--color-ink-secondary);
+  font-weight: var(--weight-bold);
+}
+
+.seo-hub__link {
+  border-radius: var(--radius-full);
+  font-weight: var(--weight-medium);
+}
+
+/* ── Footer — compact bottom (see footer-premium.css for base) ── */
+/* ── Skeleton alignment ── */
+.pl-home-daily .pl-section-head {
+  padding: var(--space-2) var(--gutter) var(--space-1);
+}
+
+.pl-home-daily .pl-story-card {
+  padding: var(--space-2) var(--gutter);
+}
+
+.pl-home-daily .pl-rail {
+  padding: var(--space-1) var(--gutter) var(--space-3);
+  gap: var(--space-2);
+}
+
+.pl-home-daily .pl-chips {
+  padding: var(--space-2) var(--gutter);
+  gap: var(--space-2);
+}
+
+.pl-home-daily .pl-wire-list {
+  padding: 0 var(--gutter) var(--space-3);
+  gap: var(--space-2);
+}
+
+.pl-section-head__title {
+  height: 0.875rem;
+  width: 6.5rem;
+}

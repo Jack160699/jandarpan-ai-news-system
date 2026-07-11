@@ -59,10 +59,8 @@ export function labelForLink(
   return pickBilingualLabel(language, link.labelEn, link.labelHi);
 }
 
-/** Internal — reader prefs validation (not shown in menu UI) */
-export const FEED_INTERESTS: { id: string; labelEn: string; labelHi: string }[] = [
-  { id: "cg-news", labelEn: "CG News", labelHi: "छत्तीसगढ़" },
-  { id: "politics", labelEn: "Politics", labelHi: "राजनीति" },
-  { id: "business", labelEn: "Business", labelHi: "व्यापार" },
-  { id: "raipur", labelEn: "Raipur", labelHi: "रायपुर" },
-];
+export {
+  FEED_INTERESTS,
+  DEFAULT_FEED_INTERESTS as DEFAULT_INTERESTS,
+} from "@/lib/personalization/interests";
+export type { FeedInterest } from "@/lib/personalization/interests";

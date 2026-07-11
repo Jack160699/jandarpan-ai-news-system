@@ -1,23 +1,11 @@
 /**
- * Quick update cards — X / Inshorts style breaking snippets
+ * Quick update cards — wire list (tokens/typography in card-system.css)
  */
 
 .quick-update-feed {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--qu-border);
-  border-radius: 16px;
   overflow: hidden;
-  background: var(--qu-surface);
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.04) inset,
-    0 4px 20px rgb(0 0 0 / 0.12);
-}
-
-html:not([data-theme="dark"]) .quick-update-feed {
-  box-shadow:
-    0 1px 0 rgb(255 255 255 / 0.9) inset,
-    0 6px 24px rgb(42 32 18 / 0.05);
 }
 
 html[data-live-refresh] .quick-update-feed {
@@ -26,39 +14,17 @@ html[data-live-refresh] .quick-update-feed {
 
 @keyframes qu-feed-flash {
   0% {
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--qu-live) 28%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ncard-live) 28%, transparent);
   }
   100% {
-    box-shadow:
-      0 1px 0 rgb(255 255 255 / 0.04) inset,
-      0 4px 20px rgb(0 0 0 / 0.12);
+    box-shadow: var(--shadow-sm);
   }
 }
 
-/* Card */
+/* Card row */
 .quick-update {
-  --qu-surface: #161618;
-  --qu-surface-hover: #1e1e22;
-  --qu-border: rgb(255 255 255 / 0.08);
-  --qu-separator: rgb(255 255 255 / 0.06);
-  --qu-ink: #f4f4f5;
-  --qu-ink-muted: rgb(244 244 245 / 0.58);
-  --qu-ink-secondary: rgb(244 244 245 / 0.78);
-  --qu-live: #e63946;
-
   position: relative;
-  border-bottom: 1px solid var(--qu-separator);
-}
-
-html:not([data-theme="dark"]) .quick-update {
-  --qu-surface: #ffffff;
-  --qu-surface-hover: #faf9f7;
-  --qu-border: rgb(42 32 18 / 0.1);
-  --qu-separator: rgb(42 32 18 / 0.08);
-  --qu-ink: var(--color-ink);
-  --qu-ink-muted: var(--color-ink-muted);
-  --qu-ink-secondary: var(--color-ink-secondary);
-  --qu-live: #c1121f;
+  border-bottom: 1px solid var(--ncard-separator);
 }
 
 .quick-update:last-child {
@@ -68,39 +34,34 @@ html:not([data-theme="dark"]) .quick-update {
 .quick-update__link {
   display: flex;
   align-items: flex-start;
-  gap: 0.625rem;
-  min-height: 52px;
-  padding: 0.875rem 1rem;
+  gap: var(--space-3);
+  min-height: 3.25rem;
+  padding: var(--space-3) var(--ncard-pad);
   text-decoration: none;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: background 220ms var(--ease-out);
+  transition: background var(--ncard-duration) var(--ncard-ease);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .quick-update__link:hover {
-    background: var(--qu-surface-hover);
+    background: var(--ncard-surface-hover);
   }
-}
-
-.quick-update__link:active {
-  background: color-mix(in srgb, var(--qu-ink-muted) 8%, var(--qu-surface-hover));
 }
 
 .quick-update__accent {
   flex-shrink: 0;
   width: 3px;
   align-self: stretch;
-  min-height: 2.75rem;
-  border-radius: 999px;
-  background: var(--qu-border);
-  transition: background 280ms var(--ease-out);
+  min-height: 2.5rem;
+  border-radius: var(--radius-full);
+  background: var(--ncard-border);
+  transition: background var(--ncard-duration) var(--ncard-ease);
 }
 
 .quick-update--live .quick-update__accent,
 .quick-update--breaking .quick-update__accent {
-  background: var(--qu-live);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--qu-live) 45%, transparent);
+  background: var(--ncard-live);
 }
 
 .quick-update--live .quick-update__accent {
@@ -122,93 +83,19 @@ html:not([data-theme="dark"]) .quick-update {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: var(--space-1);
 }
 
-.quick-update__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.375rem;
-  line-height: 1.2;
-}
-
-.quick-update__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  font-family: var(--font-ui), system-ui, sans-serif;
+.quick-update__location {
   font-size: 0.6875rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  line-height: 1.2;
-}
-
-.quick-update__badge--live {
-  color: #fff;
-  background: var(--qu-live);
-}
-
-.quick-update__badge--breaking {
-  color: #fff;
-  background: color-mix(in srgb, var(--qu-live) 88%, #000);
-}
-
-.quick-update__live-dot {
-  width: 0.35rem;
-  height: 0.35rem;
-  border-radius: 50%;
-  background: currentColor;
-  animation: qu-live-dot 1.4s ease-in-out infinite;
-}
-
-@keyframes qu-live-dot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
+  color: var(--ncard-ink-muted);
 }
 
 .quick-update__time {
-  font-family: var(--font-ui), ui-monospace, monospace;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--qu-ink-muted);
-}
-
-.quick-update--breaking .quick-update__time {
-  color: color-mix(in srgb, var(--qu-live) 75%, var(--qu-ink-muted));
-}
-
-.quick-update__headline {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-family: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  line-height: 1.38;
-  letter-spacing: -0.015em;
-  color: var(--qu-ink);
-}
-
-.quick-update__line {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-family: var(--font-ui), system-ui, sans-serif;
-  font-size: 0.875rem;
-  font-weight: 450;
-  line-height: 1.48;
-  color: var(--qu-ink-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .quick-update__chevron {
@@ -216,17 +103,17 @@ html:not([data-theme="dark"]) .quick-update {
   width: 1.125rem;
   height: 1.125rem;
   margin-top: 0.125rem;
-  color: var(--qu-ink-muted);
-  opacity: 0.55;
+  color: var(--ncard-ink-muted);
+  opacity: 0.5;
   transition:
-    transform 220ms var(--ease-out),
-    opacity 220ms var(--ease-out);
+    transform var(--ncard-duration) var(--ncard-ease),
+    opacity var(--ncard-duration) var(--ncard-ease);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .quick-update__link:hover .quick-update__chevron {
     transform: translateX(2px);
-    opacity: 0.85;
+    opacity: 0.8;
   }
 }
 
@@ -236,7 +123,7 @@ html:not([data-theme="dark"]) .quick-update {
 
 @keyframes qu-incoming {
   0% {
-    background: color-mix(in srgb, var(--qu-live) 12%, transparent);
+    background: color-mix(in srgb, var(--ncard-live) 10%, transparent);
   }
   100% {
     background: transparent;
@@ -269,11 +156,11 @@ html:not([data-theme="dark"]) .quick-update {
 }
 
 .quick-update--rail {
-  border: 1px solid var(--qu-border);
-  border-radius: 14px;
+  border: 1px solid var(--ncard-border);
+  border-radius: var(--ncard-radius);
   overflow: hidden;
-  background: var(--qu-surface);
-  box-shadow: 0 2px 12px rgb(0 0 0 / 0.14);
+  background: var(--ncard-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .quick-update--rail .quick-update__link {
@@ -297,49 +184,31 @@ html:not([data-theme="dark"]) .quick-update {
   -webkit-line-clamp: 3;
 }
 
-/* Skeleton */
+/* Skeleton layout */
 .quick-update--skeleton {
   pointer-events: none;
-  padding: 0.875rem 1rem;
+  padding: var(--space-3) var(--ncard-pad);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-.quick-update__shimmer {
-  border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    var(--qu-surface-hover) 0%,
-    color-mix(in srgb, var(--qu-ink-muted) 12%, var(--qu-surface-hover)) 50%,
-    var(--qu-surface-hover) 100%
-  );
-  background-size: 200% 100%;
-  animation: qu-shimmer 1.3s ease-in-out infinite;
+  gap: var(--space-2);
 }
 
 .quick-update__shimmer--meta {
   height: 0.75rem;
   width: 40%;
+  border-radius: var(--space-1);
 }
 
 .quick-update__shimmer--title {
   height: 0.9375rem;
   width: 92%;
+  border-radius: var(--space-1);
 }
 
 .quick-update__shimmer--line {
   height: 0.8125rem;
   width: 72%;
-}
-
-@keyframes qu-shimmer {
-  0% {
-    background-position: 100% 0;
-  }
-  100% {
-    background-position: -100% 0;
-  }
+  border-radius: var(--space-1);
 }
 
 /* Wire section hooks */
@@ -350,8 +219,6 @@ html:not([data-theme="dark"]) .quick-update {
 
 @media (prefers-reduced-motion: reduce) {
   .quick-update--live .quick-update__accent,
-  .quick-update__live-dot,
-  .quick-update__shimmer,
   html[data-live-refresh] .quick-update-feed {
     animation: none;
   }

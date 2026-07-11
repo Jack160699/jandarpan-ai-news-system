@@ -185,6 +185,16 @@ export type EditorialMetadata = {
   translations?: import("@/lib/i18n/multilingual/types").ArticleTranslations;
   translations_updated_at?: string;
   shorts?: import("@/lib/news/shorts/types").NewsShortBundle;
+  intelligence_v1?: {
+    enrichedAt?: string;
+    deskSummary?: string;
+    fakeNewsRisk?: number;
+    duplicateClusterId?: string | null;
+    breakingScore?: number;
+    trendScore?: number;
+    checks_run?: string[];
+  };
+  intelligence_v2?: import("@/lib/news/ai/editorial-intelligence-v2").EditorialIntelligenceV2;
 };
 
 export type EditorialArticleStatus = "pending" | "approved" | "rejected";

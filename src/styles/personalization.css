@@ -1,0 +1,302 @@
+/**
+ * Personalization UI — onboarding, district switch, customize panel, recommended
+ */
+
+.hp-personalization-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+/* ── Onboarding ── */
+.hp-onboarding {
+  margin-bottom: var(--space-4);
+}
+
+.hp-onboarding__card {
+  padding: var(--space-4);
+  border-radius: var(--card-radius);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 22%, var(--color-rule));
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--color-primary) 6%, var(--color-surface)) 0%,
+    var(--color-surface) 100%
+  );
+}
+
+.hp-onboarding__kicker {
+  margin: 0;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
+.hp-onboarding__title {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.125rem, 4vw, 1.375rem);
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.hp-onboarding__subtitle {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-ink-muted);
+}
+
+.hp-onboarding__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: var(--space-3);
+}
+
+.hp-onboarding__chip {
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-rule);
+  background: var(--color-surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+.hp-onboarding__chip.is-active {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--color-rule));
+  background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  color: var(--color-primary);
+}
+
+.hp-onboarding__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.hp-onboarding__primary {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--btn-radius);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hp-onboarding__ghost {
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--color-ink-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── District quick switch ── */
+.hp-district-switch {
+  flex: 1;
+  min-width: min(100%, 16rem);
+}
+
+.hp-district-switch__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.hp-district-switch__label {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-ink-muted);
+}
+
+.hp-district-switch__link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.hp-district-switch__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.hp-district-switch__chip {
+  padding: 0.28rem 0.55rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-rule);
+  background: var(--color-surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+  cursor: pointer;
+}
+
+.hp-district-switch__chip.is-active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+}
+
+.hp-district-switch__chip.is-followed::after {
+  content: " ·";
+  opacity: 0.6;
+}
+
+/* ── Customize panel ── */
+.hp-customize-trigger {
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-rule);
+  background: var(--color-surface);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-ink-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hp-customize {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay, 100);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(0 0 0 / 0.35);
+}
+
+.hp-customize__sheet {
+  width: min(100%, 28rem);
+  max-height: 80dvh;
+  overflow: auto;
+  padding: var(--space-4);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.hp-customize__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.hp-customize__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.hp-customize__close {
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.hp-customize__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hp-customize__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.hp-customize__name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.hp-customize__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.hp-customize__btn {
+  padding: 0.2rem 0.45rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-rule);
+  background: var(--color-surface);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hp-customize__btn.is-active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.hp-customize__reset {
+  margin-top: var(--space-3);
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--btn-radius);
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── Recommended ── */
+.hp-recommended__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hp-recommended__reason {
+  margin: 0.25rem 0 0 2.5rem;
+  font-size: 0.6875rem;
+  color: var(--color-ink-muted);
+}
+
+.continue-ribbon__meta {
+  margin: 0.15rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--color-ink-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hp-onboarding__chip,
+  .hp-district-switch__chip,
+  .hp-customize-trigger {
+    transition: none;
+  }
+}

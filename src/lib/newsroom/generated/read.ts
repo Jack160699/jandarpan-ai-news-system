@@ -9,14 +9,21 @@ import {
   isPublicGeneratedArticle,
   PUBLIC_EDITORIAL_STATUSES,
 } from "@/lib/newsroom/publish-state";
+import {
+  getGoogleNewsCutoffIso,
+  GOOGLE_NEWS_SITEMAP_LIMIT,
+} from "@/lib/seo/google-news";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 const GENERATED_SELECT =
-  "id,event_id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,created_at";
+  "id,event_id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,geo_metadata,shorts_metadata,created_at";
 
 /** Homepage ranking uses headline/summary/metadata — omits heavy article_body payloads. */
 export const GENERATED_SELECT_HOMEPAGE =
   "id,event_id,slug,headline,summary,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,created_at";
+
+/** Google News sitemap — only fields required for news:news entries. */
+const GOOGLE_NEWS_SELECT = "slug,headline,published_at,language,editorial_status,workflow_status";
 
 export type GeneratedPoolSelect = "full" | "homepage";
 
@@ -157,6 +164,77 @@ export async function fetchGeneratedArticlePool(
     total: rows.length,
   });
   return publicRows as unknown as GeneratedArticleRow[];
+}
+
+export type GoogleNewsArticleRow = Pick<
+  GeneratedArticleRow,
+  "slug" | "headline" | "published_at" | "language"
+>;
+
+/**
+ * Published generated_articles from the last 48 hours — Google News sitemap source.
+ * Filters at the database layer instead of fetching a broad pool and discarding rows.
+ */
+export async function fetchGoogleNewsArticlePool(
+  limit = GOOGLE_NEWS_SITEMAP_LIMIT,
+  now = new Date()
+): Promise<GoogleNewsArticleRow[]> {
+  if (!isSupabaseConfigured()) {
+    warnLiveFeed("google_news_pool_skip", {
+      reason: "supabase_not_configured",
+      hint: "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on Vercel",
+    });
+    return [];
+  }
+
+  const supabase = createAnonServerClient();
+  const startedAt = Date.now();
+  const cutoffIso = getGoogleNewsCutoffIso(now);
+
+  const { data, error } = await supabase
+    .from("generated_articles")
+    .select(GOOGLE_NEWS_SELECT)
+    .not("published_at", "is", null)
+    .gte("published_at", cutoffIso)
+    .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(limit);
+
+  if (error) {
+    errorLiveFeed("google_news_pool_query_error", {
+      message: error.message,
+      code: error.code,
+      hint: error.hint,
+      cutoffIso,
+      durationMs: Date.now() - startedAt,
+    });
+    logNewsroom("generated", "fetch_google_news_pool_failed", {
+      error: error.message,
+      cutoffIso,
+    });
+    return [];
+  }
+
+  const rows = (data ?? []).filter(
+    (row) =>
+      isPublicGeneratedArticle(row) &&
+      Boolean(row.slug?.trim()) &&
+      Boolean(row.headline?.trim()) &&
+      Boolean(row.published_at)
+  );
+
+  logLiveFeed("google_news_pool", {
+    eligibleCount: rows.length,
+    cutoffIso,
+    durationMs: Date.now() - startedAt,
+  });
+
+  logNewsroom("generated", "fetch_google_news_pool", {
+    count: rows.length,
+    cutoffIso,
+  });
+
+  return rows as GoogleNewsArticleRow[];
 }
 
 export async function getGeneratedArticleBySlug(

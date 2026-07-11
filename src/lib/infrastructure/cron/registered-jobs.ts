@@ -49,6 +49,16 @@ export const REGISTERED_CRON_JOBS = [
 
   "cleanup",
 
+  "competitor-tracker",
+
+  "seo-intelligence",
+
+  "serp-tracker",
+
+  "gsc-intelligence",
+
+  "seo-autonomous",
+
 ] as const;
 
 

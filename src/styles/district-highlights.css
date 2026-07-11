@@ -3,10 +3,10 @@
 .home-highlights-desk {
   display: flex;
   flex-direction: column;
-  gap: var(--rhythm-section-lg, 1.35rem);
+  gap: var(--space-4, 1rem);
   width: 100%;
   min-width: 0;
-  padding-bottom: 0.25rem;
+  padding-bottom: 0;
 }
 
 .home-highlights-desk__block {
@@ -29,7 +29,7 @@
 
 #district-wire .quick-update-feed,
 .home-highlights-desk .quick-update-feed {
-  border-radius: 1rem;
+  border-radius: var(--card-radius);
 }
 
 .district-feed {
@@ -41,18 +41,18 @@
 }
 
 /* National cards — premium rounded */
-.national-highlights-feed .national-news-card,
-.home-highlights-desk .national-news-card {
-  border-radius: 1.75rem;
+.national-highlights-feed .quick-update-feed,
+.home-highlights-desk .quick-update-feed {
+  border-radius: var(--ncard-radius);
 }
 
-@media (max-width: 480px) {
-  .home-highlights-desk {
-    gap: 1.15rem;
+@media (max-width: 767px) {
+  .seo-hub {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-2));
   }
 
-  .seo-hub {
-    padding-bottom: calc(6rem + var(--safe-bottom));
+  .home-highlights-desk {
+    gap: var(--space-3);
   }
 }
 

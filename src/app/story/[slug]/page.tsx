@@ -16,7 +16,10 @@ import {
   getStoryRelatedArticles,
   getStoryStaticSlugs,
 } from "@/lib/story/get-story-data";
-import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { getEventViewModel } from "@/lib/events/event-view-model";
+import { parseStoryMarkdown } from "@/lib/news/story-markdown";
+import { storyBodyParagraphs } from "@/lib/news/story-utils";
+import { buildStoryIntelligence } from "@/lib/story/story-intelligence";
 import { fetchSponsoredStory } from "@/lib/monetization/fetch-payload";
 import {
   articleJsonLd,
@@ -90,9 +93,12 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
       permanentRedirect(`/story/${generatedRow.slug}`);
     }
 
-    const [localized, related] = await Promise.all([
+    const [localized, related, eventViewModel] = await Promise.all([
       resolveStoryArticleFields(generatedRow, readerLang),
       getStoryRelatedArticles(generatedRow.slug ?? slug, readerLang),
+      generatedRow.event_id
+        ? getEventViewModel(generatedRow.event_id)
+        : Promise.resolve(null),
     ]);
     if (!localized?.headline?.trim()) notFound();
 
@@ -101,29 +107,24 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
       localized
     );
 
-    let liveCoverage: {
-      slug: string;
-      headline?: string | null;
-      sourceCount?: number;
-    } | null = null;
+    const parsed = parseStoryMarkdown(liveArticle.content ?? "");
+    const plainParagraphs =
+      parsed.plainParagraphs.length > 0
+        ? parsed.plainParagraphs
+        : storyBodyParagraphs(liveArticle);
 
-    if (generatedRow.event_id && isSupabaseConfigured()) {
-      const supabase = createAdminServerClient();
-      const { data: ev } = await supabase
-        .from("news_events")
-        .select(
-          "coverage_slug,coverage_headline,is_live,source_count"
-        )
-        .eq("id", generatedRow.event_id)
-        .maybeSingle();
-      if (ev?.is_live && ev.coverage_slug) {
-        liveCoverage = {
-          slug: ev.coverage_slug,
-          headline: ev.coverage_headline,
-          sourceCount: ev.source_count ?? undefined,
-        };
-      }
-    }
+    const intelligence = buildStoryIntelligence({
+      article: liveArticle,
+      parsed: { ...parsed, plainParagraphs },
+      editorialMeta: generatedRow.editorial_metadata,
+      generatedRow,
+      eventViewModel,
+      tags: generatedRow.tags ?? [],
+      readingTime: localized.readingTime,
+      displayLanguage: readerLang,
+      translationActive:
+        localized.usedTranslation && !localized.usedSourceFallback,
+    });
 
     const tenant = await getTenantConfig();
     const sponsoredStory =
@@ -138,14 +139,9 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
             article={liveArticle}
             sponsoredStory={sponsoredStory}
             related={related}
+            intelligence={intelligence}
             editorialMeta={generatedRow.editorial_metadata}
-            readingTime={localized.readingTime}
-            liveCoverage={liveCoverage}
-            displayLanguage={readerLang}
-            translationActive={
-              localized.usedTranslation && !localized.usedSourceFallback
-            }
-            tags={generatedRow.tags ?? []}
+            generatedRow={generatedRow}
           />
         </main>
       </PageShell>

@@ -82,8 +82,8 @@ export function pickRelatedStories(
         return false;
       }
 
-      const sourceEvent = (source as { event_id?: string | null }).event_id;
-      const candidateEvent = (article as { event_id?: string | null }).event_id;
+      const sourceEvent = source.event_id;
+      const candidateEvent = article.event_id;
       if (
         sourceEvent &&
         candidateEvent &&

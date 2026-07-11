@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
 import { Bookmark } from "lucide-react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
 import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
@@ -26,19 +25,23 @@ type HeroNewsCardProps = {
   featuredShort?: NewsShortCard;
 };
 
+function hasAiSummary(article: HomeArticle): boolean {
+  return Boolean(article.summary?.trim()) && article.aiConfidence > 0;
+}
+
 export function HeroNewsCard({
   lead,
   topStories,
   featuredShort,
 }: HeroNewsCardProps) {
   const { t, language } = useLanguage();
-  const reduceMotion = useReducedMotion();
   const [saved, setSaved] = useState(false);
 
   const isLive = lead.isLive;
   const isBreaking = lead.ranking?.isBreaking ?? false;
   const showLiveBadge = isLive || isBreaking;
   const sourceLabel = pickDeskLabel(language, lead.desk);
+  const showAiChip = hasAiSummary(lead);
 
   useEffect(() => {
     const memory = loadReadingMemory();
@@ -58,20 +61,15 @@ export function HeroNewsCard({
     [lead.slug]
   );
 
-  const cardMotion = reduceMotion
-    ? {}
-    : {
-        initial: { opacity: 0, y: 12 },
-        animate: { opacity: 1, y: 0 },
-        transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const },
-      };
-
   return (
-    <motion.section
-      className="hero-news-card hero-news-card--premium pl-scroll-target"
+    <section
+      className="hero-news-card hero-news-card--premium hp-hero-enter pl-scroll-target"
       aria-labelledby="hero-lead-title"
-      {...cardMotion}
     >
+      <div className="hp-hero-kicker" aria-hidden={false}>
+        <span className="hp-hero-kicker__label">{t.home.topHeadlines}</span>
+      </div>
+
       <article className="hero-news-card__article hero-news-card__article--premium">
         <div className="hero-news-card__media-stack">
           <TrackedStoryLink
@@ -99,10 +97,7 @@ export function HeroNewsCard({
               {lead.categoryLabel}
             </span>
             {showLiveBadge ? (
-              <span
-                className="hero-news-card__live-badge"
-                role="status"
-              >
+              <span className="hero-news-card__live-badge" role="status">
                 <span className="hero-news-card__live-dot" aria-hidden />
                 {isLive ? t.common.live : t.common.breakingLabel}
               </span>
@@ -153,7 +148,17 @@ export function HeroNewsCard({
           </h2>
 
           {lead.summary ? (
-            <p className="hero-news-card__summary">{lead.summary}</p>
+            <div className="hero-news-card__summary-block">
+              {showAiChip ? (
+                <span
+                  className="hp-ai-chip"
+                  title={t.article.transparencyTitle}
+                >
+                  {t.shorts.narrationShort}
+                </span>
+              ) : null}
+              <p className="hero-news-card__summary">{lead.summary}</p>
+            </div>
           ) : null}
 
           <div className="hero-news-card__meta hero-news-card__meta--premium">
@@ -188,7 +193,7 @@ export function HeroNewsCard({
       {(topStories.length > 0 || featuredShort) ? (
         <aside
           className="hero-news-card__sidebar pl-hide-mobile"
-          aria-label="Top stories"
+          aria-label={t.home.topHeadlines}
         >
           {topStories.length > 0 ? (
             <div className="hero-news-card__rail">
@@ -233,6 +238,6 @@ export function HeroNewsCard({
           {featuredShort ? <BreakingHeroReel short={featuredShort} /> : null}
         </aside>
       ) : null}
-    </motion.section>
+    </section>
   );
 }

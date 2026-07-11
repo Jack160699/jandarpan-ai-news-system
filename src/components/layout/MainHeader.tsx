@@ -70,7 +70,7 @@ export function MainHeader() {
             {!isMobile ? (
               <button
                 type="button"
-                className="main-header__btn main-header__btn--menu tap-target"
+                className="main-header__btn main-header__btn--menu tap-target tap-press"
                 aria-label={t.nav.menu}
                 aria-expanded={menuOpen}
                 aria-haspopup="dialog"
@@ -79,19 +79,9 @@ export function MainHeader() {
                 <LayoutGrid size={20} strokeWidth={1.75} aria-hidden />
               </button>
             ) : null}
-            <ThemeToggleButton compact />
-            <Link
-              href="/live"
-              className="main-header__btn main-header__btn--bell tap-target"
-              aria-label={t.profile.notifications}
-              onClick={() => startNavigation("/live")}
-            >
-              <IconBell />
-              <span className="main-header__badge" aria-hidden />
-            </Link>
             <button
               type="button"
-              className="main-header__btn tap-target"
+              className="main-header__btn main-header__btn--search tap-target tap-press"
               aria-label={t.header.search}
               aria-haspopup="dialog"
               aria-expanded={searchOpen}
@@ -99,6 +89,16 @@ export function MainHeader() {
             >
               <IconSearch />
             </button>
+            <Link
+              href="/live"
+              className="main-header__btn main-header__btn--bell tap-target tap-press"
+              aria-label={t.profile.notifications}
+              onClick={() => startNavigation("/live")}
+            >
+              <IconBell />
+              <span className="main-header__badge" aria-hidden />
+            </Link>
+            <ThemeToggleButton compact />
           </div>
         </div>
       </header>

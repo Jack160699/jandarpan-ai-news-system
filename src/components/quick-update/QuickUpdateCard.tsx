@@ -1,9 +1,9 @@
 "use client";
 
 import { memo, type CSSProperties } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useLocaleFormat } from "@/lib/i18n/hooks";
 import type { QuickUpdateData } from "@/lib/homepage/quick-update";
 import { useLanguage } from "@/providers/LanguageProvider";
@@ -37,16 +37,9 @@ export const QuickUpdateCard = memo(function QuickUpdateCard({
   const showBreaking = isBreaking && !showLive;
 
   return (
-    <motion.article
-      className={`quick-update quick-update--${variant}${showLive ? " quick-update--live" : ""}${showBreaking ? " quick-update--breaking" : ""}${isIncoming ? " quick-update--incoming" : ""}`}
-      style={{ "--qu-i": index } as CSSProperties}
-      initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.34,
-        delay: Math.min(index * 0.04, 0.2),
-        ease: [0.22, 1, 0.36, 1],
-      }}
+    <article
+      className={`quick-update quick-update--${variant}${showLive ? " quick-update--live" : ""}${showBreaking ? " quick-update--breaking" : ""}${isIncoming ? " quick-update--incoming" : ""}${!reduceMotion ? " quick-update--enter" : ""}`}
+      style={{ "--ncard-i": index } as CSSProperties}
     >
       <TrackedStoryLink
         href={`/story/${slug}`}
@@ -79,7 +72,7 @@ export const QuickUpdateCard = memo(function QuickUpdateCard({
           </span>
 
           <span
-            className="quick-update__headline"
+            className="quick-update__headline hi"
             lang={language === "hi" ? "hi" : undefined}
           >
             {headline}
@@ -94,6 +87,6 @@ export const QuickUpdateCard = memo(function QuickUpdateCard({
           aria-hidden
         />
       </TrackedStoryLink>
-    </motion.article>
+    </article>
   );
 });

@@ -3,7 +3,7 @@
  */
 
 .site-footer.jd-footer {
-  margin-top: var(--rhythm-section, 1.25rem);
+  margin-top: var(--space-2, 0.5rem);
   border-top: 1px solid var(--rule, var(--color-rule));
   background: linear-gradient(
     180deg,
@@ -17,14 +17,14 @@
 .jd-footer__inner {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding-block: 0.875rem 0.5rem;
+  gap: var(--space-3);
+  padding-block: var(--space-4) var(--space-3);
 }
 
 @media (min-width: 768px) {
   .jd-footer__inner {
-    gap: 0.875rem;
-    padding-block: 1rem 1.25rem;
+    gap: var(--space-3);
+    padding-block: var(--space-4);
   }
 }
 

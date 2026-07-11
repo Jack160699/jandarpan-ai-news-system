@@ -7,6 +7,13 @@ import type { DashboardPermission, DashboardRole } from "@/lib/saas-auth/types";
 
 const ADMIN_ROUTE_PERMISSIONS: Record<string, DashboardPermission> = {
   "/admin/intelligence": "analytics:read",
+  "/admin/ai-copilot": "analytics:read",
+  "/admin/seo/competitors": "analytics:read",
+  "/admin/seo/intelligence": "analytics:read",
+  "/admin/seo/rankings": "analytics:read",
+  "/admin/seo/search-console": "analytics:read",
+  "/admin/seo/execution": "analytics:read",
+  "/admin/seo/autonomous": "analytics:read",
   "/admin/editorial": "content:read",
   "/admin/stories": "editorial:write",
   "/admin/editor": "editorial:write",
@@ -24,6 +31,7 @@ const ADMIN_ROUTE_PERMISSIONS: Record<string, DashboardPermission> = {
   "/admin/settings/organization": "editorial:write",
   "/admin/ingestion": "monitoring:read",
   "/admin/health": "monitoring:read",
+  "/admin/system": "monitoring:read",
   "/admin/executive": "monitoring:read",
   "/admin/billing": "billing:read",
   "/admin/team": "team:read",

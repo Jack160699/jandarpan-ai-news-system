@@ -2,6 +2,7 @@
 
 import { FeedNewsCard } from "@/components/feed/FeedNewsCard";
 import { FeedListWithNativeAds } from "@/components/monetization/FeedListWithNativeAds";
+import { SectionHeader } from "@/components/homepage/SectionHeader";
 import { feedRhythmLayout } from "@/lib/feed/rhythm";
 import type { HomeArticle } from "@/lib/homepage/types";
 import { useLanguage } from "@/providers/LanguageProvider";
@@ -19,18 +20,19 @@ export function NewsGrid({ id, title, articles, freshIds }: NewsGridProps) {
 
   const [top, ...rest] = articles;
   const feedId = id ?? "trending";
+  const headingId = id ? `${id}-title` : "trending-title";
 
   return (
     <section
       id={id}
-      className="news-grid news-grid--trending feed-section pl-scroll-target"
-      aria-labelledby={id ? `${id}-title` : undefined}
+      className="news-grid news-grid--trending feed-section hp-section hp-section--secondary pl-scroll-target"
+      aria-labelledby={headingId}
     >
-      <header className="news-grid__header">
-        <h2 id={id ? `${id}-title` : undefined} className="news-grid__title hi">
-          {title}
-        </h2>
-      </header>
+      <SectionHeader
+        id={headingId}
+        title={title}
+        description={t.home.wire}
+      />
       <div className="news-grid__layout">
         <div className="news-grid__lead">
           <FeedNewsCard
@@ -52,6 +54,7 @@ export function NewsGrid({ id, title, articles, freshIds }: NewsGridProps) {
             isLive={top.isLive}
             isBreaking={top.ranking.isBreaking}
             badge={freshIds?.has(top.id) ? t.home.fresh : undefined}
+            aiConfidence={top.aiConfidence}
             langHint={top.language === "hi" ? "hi-IN" : "auto"}
             index={0}
           />
@@ -82,6 +85,7 @@ export function NewsGrid({ id, title, articles, freshIds }: NewsGridProps) {
                     rank={index + 2}
                     isLive={article.isLive}
                     isBreaking={article.ranking.isBreaking}
+                    aiConfidence={article.aiConfidence}
                     langHint={article.language === "hi" ? "hi-IN" : "auto"}
                     listPosition={index + 2}
                     index={index + 1}

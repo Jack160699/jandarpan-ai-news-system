@@ -11,7 +11,7 @@
   --stack-live-h: var(--live-strip-height);
   --stack-ticker-h: var(--ticker-height);
 
-  --stack-chrome-h: var(--stack-header-h);
+  --stack-chrome-h: calc(var(--stack-header-h) + var(--stack-category-h));
   --stack-home-extra-h: calc(
     var(--stack-trending-h) + var(--stack-ticker-h)
   );
@@ -171,7 +171,7 @@
 
 @media (min-width: 1024px) {
   :root {
-    --stack-header-h: 4.5rem;
-    --stack-chrome-h: var(--stack-header-h);
+    --stack-header-h: 3.5rem;
+    --stack-chrome-h: calc(var(--stack-header-h) + var(--stack-category-h));
   }
 }

@@ -25,6 +25,8 @@ export type NewsArticleRow = {
   ai_summary: string | null;
   ai_headline: string | null;
   ai_processed_at: string | null;
+  /** Present on generated_articles mapped rows — used for related-story dedup */
+  event_id?: string | null;
 };
 
 export type NewsCategory =
