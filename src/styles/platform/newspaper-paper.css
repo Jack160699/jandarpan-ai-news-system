@@ -62,22 +62,13 @@ html:not([data-theme="dark"]) .app-sticky-stack {
 }
 
 /* ── Chrome — frosted paper ── */
-html:not([data-theme="dark"]) .main-header {
+html:not([data-theme="dark"]) .jdp-topbar {
   background: color-mix(in srgb, var(--color-surface) 92%, var(--paper-texture-tint));
   border-bottom-color: var(--color-rule-strong);
 }
 
-html:not([data-theme="dark"]) .main-header--mobile-premium {
-  background: color-mix(in srgb, var(--color-surface) 88%, var(--paper-texture-tint));
-}
-
-html:not([data-theme="dark"]) .main-header--mobile-premium.main-header--scrolled {
+html:not([data-theme="dark"]) .jdp-topbar--scrolled {
   background: color-mix(in srgb, var(--color-surface) 94%, var(--paper-texture-tint));
-}
-
-html:not([data-theme="dark"]) .category-navbar,
-html:not([data-theme="dark"]) .category-navbar--premium {
-  background: color-mix(in srgb, var(--color-surface) 90%, var(--paper-texture-tint));
 }
 
 html:not([data-theme="dark"]) .stack-band {
@@ -89,25 +80,8 @@ html:not([data-theme="dark"]) .breaking-ticker {
   background: color-mix(in srgb, var(--color-ticker-bg) 78%, transparent) !important;
 }
 
-html:not([data-theme="dark"]) .category-navbar__fade--start {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--color-surface) 96%, var(--paper-texture-tint)) 0%,
-    transparent 100%
-  );
-}
-
-html:not([data-theme="dark"]) .category-navbar__fade--end {
-  background: linear-gradient(
-    270deg,
-    color-mix(in srgb, var(--color-surface) 96%, var(--paper-texture-tint)) 0%,
-    transparent 100%
-  );
-}
-
-html:not([data-theme="dark"]) .bottom-mobile-nav {
-  background: color-mix(in srgb, var(--color-surface) 94%, var(--paper-texture-tint));
-  border-top-color: var(--color-rule-strong);
+html:not([data-theme="dark"]) .jdp-bottomnav__inner {
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--paper-texture-tint));
 }
 
 /* ── Elevated cards — solid for readability ── */

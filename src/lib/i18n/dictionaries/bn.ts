@@ -38,6 +38,7 @@ export const bn: Dictionary = {
     live: "লাইভ",
     saved: "সেভ",
     profile: "প্রোফাইল",
+    you: "আপনি",
     districts: "জেলা",
     search: "খোঁজ",
     menu: "মেনু",

@@ -1,44 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, LayoutGrid, MapPin, Search } from "lucide-react";
+import { MapPin, Search } from "lucide-react";
 import { cn } from "@/design-system/utils/cn";
 import { Avatar } from "@/design-system/components/Avatar";
-import { ThemeToggleButton } from "@/components/navigation/ThemeToggleButton";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
+import { usePlace } from "@/providers/PlaceProvider";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
-import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
-import { isNotificationCenterV3Enabled } from "@/features/notifications/config";
-import { useShell } from "../AppShell/ShellProvider";
+import { useHeaderCollapse } from "../hooks/useHeaderCollapse";
 import { useTopBarScrolled } from "../hooks/useTopBarScrolled";
 
 /**
- * Sticky top bar — 56px mobile, 64px desktop.
- * Blurred background, shadow only while scrolling.
+ * Global header — 56px rest / 44px collapsed on scroll-down, restores on
+ * scroll-up. Wordmark, place chip, search, avatar. No menu icon, no bell,
+ * no theme toggle (removed per Atlas Phase 1).
  */
 export function TopBar() {
   const { tenant } = useTenant();
   const { language, t } = useLanguage();
-  const { prefs } = useReaderPreferences();
+  const place = usePlace();
   const { displayName, avatarInitial } = useReaderAccount();
-  const { startNavigation, toggleMenu, menuOpen } = useNavigation();
-  const { openCommandPalette } = useShell();
+  const { startNavigation } = useNavigation();
   const scrolled = useTopBarScrolled();
+  const collapsed = useHeaderCollapse();
 
-  const district = prefs.homeDistrict ?? "raipur";
-  const districtLabel =
-    district.charAt(0).toUpperCase() + district.slice(1).replace(/-/g, " ");
   const brandName =
     language !== "en" ? tenant.branding.nameHi : tenant.branding.nameEn;
   const initials = avatarInitial || displayName.slice(0, 2);
-  const notificationsHref = isNotificationCenterV3Enabled() ? "/notifications" : "/live";
+  const hasNotification = false; // no live unread-notification signal exists yet
 
   return (
     <header
-      className={cn("jdp-topbar", scrolled && "jdp-topbar--scrolled")}
+      className={cn(
+        "jdp-topbar",
+        scrolled && "jdp-topbar--scrolled",
+        collapsed && "jdp-topbar--collapsed"
+      )}
       role="banner"
     >
       <div className="jdp-topbar__inner">
@@ -49,68 +49,39 @@ export function TopBar() {
           onClick={() => startNavigation("/")}
         >
           <TenantLogo variant="banner" showText={false} />
+          <span className="jdp-topbar__wordmark" aria-hidden={collapsed}>
+            {brandName}
+          </span>
         </Link>
 
         <Link
-          href={`/district/${district}`}
-          className="jdp-topbar__district"
-          onClick={() => startNavigation(`/district/${district}`)}
+          href="/places"
+          className="jdp-topbar__place jds-focus-ring"
+          onClick={() => startNavigation("/places")}
         >
           <MapPin size={14} aria-hidden />
-          {districtLabel}
+          <span>{place.shortName}</span>
         </Link>
 
-        <button
-          type="button"
-          className="jdp-topbar__search-trigger jds-focus-ring"
-          onClick={openCommandPalette}
-          aria-label={t.header.search}
-          aria-haspopup="dialog"
-        >
-          <Search size={16} aria-hidden />
-          <span>{t.header.search}</span>
-          <kbd className="jdp-topbar__kbd">⌘K</kbd>
-        </button>
-
         <div className="jdp-topbar__actions">
-          <button
-            type="button"
-            className="jdp-topbar__btn hidden lg:inline-flex"
-            aria-label={t.nav.menu}
-            aria-expanded={menuOpen}
-            aria-haspopup="dialog"
-            onClick={() => toggleMenu()}
-          >
-            <LayoutGrid size={20} strokeWidth={1.75} aria-hidden />
-          </button>
-          <button
-            type="button"
-            className="jdp-topbar__btn lg:hidden"
+          <Link
+            href="/search"
+            className="jdp-topbar__btn"
             aria-label={t.header.search}
-            onClick={openCommandPalette}
+            onClick={() => startNavigation("/search")}
           >
             <Search size={20} aria-hidden />
-          </button>
-          <Link
-            href={notificationsHref}
-            className="jdp-topbar__btn"
-            aria-label={t.profile.notifications}
-            onClick={() => startNavigation(notificationsHref)}
-          >
-            <Bell size={20} aria-hidden />
           </Link>
-          <ThemeToggleButton compact />
           <Link
-            href="/archive"
-            className="jdp-topbar__btn hidden sm:inline-flex"
-            aria-label="Profile"
-            onClick={() => startNavigation("/archive")}
+            href="/you"
+            className="jdp-topbar__avatar-link jds-focus-ring"
+            aria-label={displayName}
+            onClick={() => startNavigation("/you")}
           >
-            <Avatar
-              size="sm"
-              initials={initials}
-              alt={displayName}
-            />
+            <Avatar size="sm" initials={initials} alt={displayName} />
+            {hasNotification ? (
+              <span className="jdp-topbar__dot" aria-hidden />
+            ) : null}
           </Link>
         </div>
       </div>

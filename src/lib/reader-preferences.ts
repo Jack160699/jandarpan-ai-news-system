@@ -1,7 +1,9 @@
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 
 export type ReaderLanguage = NewsroomLanguage;
-export type ReaderTheme = "light" | "dark";
+export type ReaderTheme = "light" | "dark" | "hc-light" | "hc-dark" | "system";
+/** Theme actually painted on <html data-theme>, after resolving "system" */
+export type ResolvedTheme = "light" | "dark" | "hc-light" | "hc-dark";
 export type ReadingMode = "standard" | "comfort";
 export type FontScale = "sm" | "base" | "lg" | "xl";
 export type EditionChoice = "morning" | "afternoon" | "evening" | "late";
@@ -59,9 +61,20 @@ export function savePreferences(prefs: Partial<ReaderPreferences>) {
   applyPreferencesToDocument(next);
 }
 
+/** Resolve "system" against prefers-color-scheme + prefers-contrast: more */
+export function resolveTheme(theme: ReaderTheme): ResolvedTheme {
+  if (theme !== "system") return theme;
+  if (typeof window === "undefined") return "light";
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const highContrast = window.matchMedia("(prefers-contrast: more)").matches;
+  if (highContrast) return dark ? "hc-dark" : "hc-light";
+  return dark ? "dark" : "light";
+}
+
 export function applyPreferencesToDocument(prefs: ReaderPreferences) {
   const root = document.documentElement;
-  root.setAttribute("data-theme", prefs.theme);
+  root.setAttribute("data-theme", resolveTheme(prefs.theme));
+  root.setAttribute("data-theme-pref", prefs.theme);
   root.setAttribute("data-reading-mode", prefs.readingMode);
   root.setAttribute("data-font-scale", prefs.fontScale ?? "base");
   root.setAttribute("data-language", prefs.language);
@@ -89,6 +102,21 @@ export function applyPreferencesToDocument(prefs: ReaderPreferences) {
   );
 }
 
+/**
+ * <meta name="theme-color"> requires a literal color string — the browser
+ * chrome can't resolve CSS custom properties there. These values are kept
+ * in sync with --color-paper / --color-surface in styles/tokens.css by hand;
+ * this is the one sanctioned exception to "no hardcoded hex outside tokens.css".
+ */
 export function getThemeColor(theme: ReaderTheme): string {
-  return theme === "dark" ? "#121212" : "#ffffff";
+  switch (resolveTheme(theme)) {
+    case "dark":
+      return "#050505";
+    case "hc-dark":
+      return "#000000";
+    case "hc-light":
+      return "#ffffff";
+    default:
+      return "#f5f1e8";
+  }
 }

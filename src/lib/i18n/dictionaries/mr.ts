@@ -38,6 +38,7 @@ export const mr: Dictionary = {
     live: "लाइव्ह",
     saved: "सेव्ह",
     profile: "प्रोफाइल",
+    you: "तुम्ही",
     districts: "जिल्हे",
     search: "शोध",
     menu: "मेनू",

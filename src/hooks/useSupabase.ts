@@ -39,6 +39,11 @@ let snapshot: AuthSnapshot = {
   error: null,
 };
 
+/** Cached reference so the unconfigured getSnapshot below doesn't allocate
+ * a new object every call — useSyncExternalStore requires a stable
+ * reference when nothing changed, or it re-renders in an infinite loop. */
+const unconfiguredSnapshot: AuthSnapshot = { ...snapshot, loading: false };
+
 const listeners = new Set<() => void>();
 let initStarted = false;
 
@@ -125,14 +130,8 @@ export function useSupabase(): UseSupabaseState {
 
   const state = useSyncExternalStore(
     subscribe,
-    () => (configured ? getSnapshot() : { ...getSnapshot(), loading: false }),
-    () => ({
-      client: null,
-      user: null,
-      session: null,
-      loading: false,
-      error: null,
-    })
+    () => (configured ? getSnapshot() : unconfiguredSnapshot),
+    () => unconfiguredSnapshot
   );
 
   return {

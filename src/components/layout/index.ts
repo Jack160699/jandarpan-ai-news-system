@@ -1,9 +1,6 @@
 export { AppLayout } from "./AppLayout";
-export { BottomMobileNav } from "./BottomMobileNav";
 export { BreakingTicker } from "./BreakingTicker";
-export { CategoryNavbar } from "./CategoryNavbar";
 export { HeroNewsCard } from "./HeroNewsCard";
 export { HeroNewsCardSkeleton } from "./HeroNewsCardSkeleton";
-export { MainHeader } from "./MainHeader";
 export { NewsGrid } from "./NewsGrid";
 export { ShortsSection } from "./ShortsSection";

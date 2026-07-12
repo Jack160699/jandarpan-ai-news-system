@@ -39,6 +39,7 @@ export const ta: Dictionary = {
     live: "நேரலை",
     saved: "சேமி",
     profile: "சுயவிவரம்",
+    you: "நீங்கள்",
     districts: "மாவட்டம்",
     search: "தேடல்",
     menu: "மெனு",

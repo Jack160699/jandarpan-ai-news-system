@@ -31,14 +31,14 @@ src/layouts/
 
 ---
 
-## Integration (production — RC1-004)
+## Integration (production — Atlas Phase 1)
 
-`AppLayout` delegates to `AppShell`. Production reader chrome is JDP-002.
+`AppLayout` delegates to `AppShell`. Production reader chrome is the Atlas
+global app shell: Header / Content / ContextBar slot / BottomNav.
 
 ```tsx
 // src/components/layout/AppLayout.tsx — current production bridge
 import { AppShell } from "@/layouts";
-import { CategoryNavbar } from "./CategoryNavbar";
 import { HOME_STACK_SLOT_ID } from "@/lib/layout/stack-heights";
 
 export function AppLayout({ children }: { children: ReactNode }) {
@@ -47,7 +47,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <AppShell
-      categoryRail={/* CategoryNavbar in sticky layer */}
       homeStackSlot={/* #home-stack-slot on homepage */}
     >
       {children}
@@ -56,7 +55,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 }
 ```
 
-**Rollback:** revert `AppLayout.tsx` to restore `MainHeader` + `BottomMobileNav`.
+**Rollback:** restore `MainHeader` + `BottomMobileNav` + `CategoryNavbar`
+from git history (removed in Atlas Phase 1 as dead/deprecated chrome).
 
 **Preserved contracts:**
 - `.app-feed` — main content slot

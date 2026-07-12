@@ -23,24 +23,41 @@ export function saveScrollPosition(path: string, y?: number): void {
   }
 }
 
-export function restoreScrollPosition(path: string): void {
-  if (typeof window === "undefined" || !path) return;
+function readStoredPosition(path: string): number | null {
   try {
     const fromMemory = livePositions.get(path);
     const raw =
       fromMemory != null
         ? String(fromMemory)
         : sessionStorage.getItem(`${PREFIX}${path}`);
-    if (raw == null) return;
+    if (raw == null) return null;
     const y = Number.parseInt(raw, 10);
-    if (!Number.isFinite(y) || y <= 0) return;
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: y, left: 0, behavior: "instant" });
-      recordScrollPosition(path, y);
-    });
+    return Number.isFinite(y) && y > 0 ? y : null;
   } catch {
-    /* noop */
+    return null;
   }
+}
+
+export function restoreScrollPosition(path: string): void {
+  if (typeof window === "undefined" || !path) return;
+  const y = readStoredPosition(path);
+  if (y == null) return;
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: y, left: 0, behavior: "instant" });
+    recordScrollPosition(path, y);
+  });
+}
+
+/**
+ * Synchronous variant for use inside useLayoutEffect — applies the scroll
+ * position before the browser's next paint, no rAF hop, no flash.
+ */
+export function restoreScrollPositionSync(path: string): void {
+  if (typeof window === "undefined" || !path) return;
+  const y = readStoredPosition(path);
+  if (y == null) return;
+  window.scrollTo({ top: y, left: 0, behavior: "instant" });
+  recordScrollPosition(path, y);
 }
 
 export function clearScrollPosition(path: string): void {

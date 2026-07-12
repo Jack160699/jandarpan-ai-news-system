@@ -9,7 +9,7 @@ import { TopBar } from "../TopBar";
 import { DesktopSidebar } from "../DesktopSidebar";
 import { BottomNavigation } from "../BottomNavigation";
 import { CommandPalette } from "../CommandPalette";
-import { useScrollPosition } from "../hooks/useScrollPosition";
+import { isChromeHiddenRoute } from "../chrome-routes";
 import type { AppShellProps } from "../types";
 
 const SearchOverlay = dynamic(
@@ -36,36 +36,34 @@ const SuperMenuDrawer = dynamic(
  */
 export function AppShell({
   children,
-  categoryRail,
   homeStackSlot,
   hideBottomNav,
 }: AppShellProps) {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const isStory = pathname.startsWith("/story/");
-  const bottomHidden = hideBottomNav ?? isStory;
-
-  useScrollPosition(true);
+  const chromeHidden = isChromeHiddenRoute(pathname);
+  const bottomHidden = chromeHidden || (hideBottomNav ?? false);
 
   return (
     <ShellProvider>
       <div className={cn("jdp-shell", bottomHidden && "jdp-shell--no-bottom-nav")}>
         <div className="jdp-shell__sidebar-region">
-          <DesktopSidebar />
+          {chromeHidden ? null : <DesktopSidebar />}
         </div>
 
         <div className="jdp-shell__body">
-          <div
-            id={APP_STICKY_STACK_ID}
-            className="jdp-shell__sticky-stack app-sticky-stack"
-            data-stack-mode={isHome ? "home" : "chrome"}
-          >
-            <div className="app-sticky-stack__layer app-sticky-stack__layer--header">
-              <TopBar />
+          {chromeHidden ? null : (
+            <div
+              id={APP_STICKY_STACK_ID}
+              className="jdp-shell__sticky-stack app-sticky-stack"
+              data-stack-mode={isHome ? "home" : "chrome"}
+            >
+              <div className="app-sticky-stack__layer app-sticky-stack__layer--header">
+                <TopBar />
+              </div>
+              {homeStackSlot}
             </div>
-            {categoryRail}
-            {homeStackSlot}
-          </div>
+          )}
 
           <div className="jdp-shell__feed app-feed">{children}</div>
 

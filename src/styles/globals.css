@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "./platform/tokens.css";
+@import "./tokens.css";
 @import "./platform/primitives.css";
 @import "./platform/ticker-motion.css";
 @import "./accent-system.css";
@@ -42,7 +42,6 @@
 @import "./shorts-reel-card.css";
 @import "./feed-rhythm.css";
 @import "./mobile-feed-premium.css";
-@import "./mobile-dock-nav.css";
 @import "./premium-loading.css";
 @import "./production.css";
 @import "./homepage-polish.css";

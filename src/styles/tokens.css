@@ -108,6 +108,14 @@
   --strip-inner-gap: 0.375rem;
   --bottom-nav-height: 3.75rem;
 
+  /* ── Atlas app shell zones (Phase 1) ── */
+  --shell-header-height: 56px;
+  --shell-header-height-collapsed: 44px;
+  --shell-header-height-desktop: 64px;
+  --shell-bottomnav-height: 56px;
+  --shell-touch-target: 44px;
+  --shell-grid: 8px;
+
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
@@ -196,6 +204,10 @@
   --ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
   --motion-tap-scale: 0.97;
   --motion-hover-lift: -1px;
+
+  /* Atlas shell motion — one timing model for header/nav transitions */
+  --shell-ease: cubic-bezier(0.2, 0, 0, 1);
+  --shell-duration: 180ms;
 
   /* Typography roles */
   --type-display: var(--text-hero);
@@ -298,4 +310,44 @@ html[data-theme="dark"] {
   --shadow-lg: var(--shadow-hero);
   --glass-bg: color-mix(in srgb, var(--color-surface) 78%, transparent);
   --glass-border: color-mix(in srgb, var(--color-rule) 55%, transparent);
+}
+
+/* ── High contrast — light (prefers-contrast: more, light base) ── */
+html[data-theme="hc-light"] {
+  --color-paper: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f0f0f0;
+  --color-ink: #000000;
+  --color-ink-secondary: #000000;
+  --color-ink-muted: #1a1a1a;
+  --color-ink-faint: #2b2b2b;
+  --color-rule: #000000;
+  --color-rule-strong: #000000;
+  --color-primary: var(--color-red-dark);
+  --color-primary-dark: var(--color-red-darker);
+  --color-primary-soft: rgb(183 28 28 / 0.18);
+  --glass-bg: var(--color-surface);
+  --glass-border: var(--color-rule);
+  --shadow-card: none;
+  --shadow-card-hover: none;
+}
+
+/* ── High contrast — dark (prefers-contrast: more, dark base) ── */
+html[data-theme="hc-dark"] {
+  --color-paper: #000000;
+  --color-surface: #000000;
+  --color-surface-muted: #0d0d0d;
+  --color-ink: #ffffff;
+  --color-ink-secondary: #ffffff;
+  --color-ink-muted: #f2f2f2;
+  --color-ink-faint: #e0e0e0;
+  --color-rule: #ffffff;
+  --color-rule-strong: #ffffff;
+  --color-primary: var(--color-red-light);
+  --color-primary-dark: var(--color-red);
+  --color-primary-soft: rgb(255 77 77 / 0.22);
+  --glass-bg: var(--color-surface);
+  --glass-border: var(--color-rule);
+  --shadow-card: none;
+  --shadow-card-hover: none;
 }

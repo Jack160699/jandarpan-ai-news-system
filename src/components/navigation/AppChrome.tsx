@@ -11,7 +11,9 @@ import { cn } from "@/lib/cn";
 import { ArticleSpeechProvider } from "@/providers/ArticleSpeechProvider";
 import { EditorialIntelligenceProvider } from "@/providers/EditorialIntelligenceProvider";
 import { HeadlinesListenProvider } from "@/providers/HeadlinesListenProvider";
+import { LiveProvider } from "@/providers/LiveProvider";
 import { NavigationProvider } from "@/providers/NavigationProvider";
+import { PlaceProvider } from "@/providers/PlaceProvider";
 import { ReaderAccountProvider } from "@/providers/ReaderAccountProvider";
 import { NavProgress } from "./NavProgress";
 import { NativeTouchLayer } from "@/components/mobile/NativeTouchLayer";
@@ -116,9 +118,13 @@ export function AppChrome({ children }: AppChromeProps) {
           <ArticleSpeechProvider>
             <NavigationProvider>
               <ReaderAccountProvider>
-                <NativeTouchLayer>
-                  <ShortsLanguageShell>{children}</ShortsLanguageShell>
-                </NativeTouchLayer>
+                <PlaceProvider>
+                  <LiveProvider>
+                    <NativeTouchLayer>
+                      <ShortsLanguageShell>{children}</ShortsLanguageShell>
+                    </NativeTouchLayer>
+                  </LiveProvider>
+                </PlaceProvider>
               </ReaderAccountProvider>
             </NavigationProvider>
           </ArticleSpeechProvider>
@@ -133,9 +139,13 @@ export function AppChrome({ children }: AppChromeProps) {
         <ArticleSpeechProvider>
           <NavigationProvider>
             <ReaderAccountProvider>
-              <NativeTouchLayer>
-                <AppChromeShell>{children}</AppChromeShell>
-              </NativeTouchLayer>
+              <PlaceProvider>
+                <LiveProvider>
+                  <NativeTouchLayer>
+                    <AppChromeShell>{children}</AppChromeShell>
+                  </NativeTouchLayer>
+                </LiveProvider>
+              </PlaceProvider>
             </ReaderAccountProvider>
           </NavigationProvider>
         </ArticleSpeechProvider>

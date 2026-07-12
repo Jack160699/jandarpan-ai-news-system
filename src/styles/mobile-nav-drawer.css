@@ -213,26 +213,6 @@ html:not([data-theme="dark"]) .mobile-nav-drawer__item {
   box-shadow: var(--shadow-card);
 }
 
-.bottom-mobile-nav__item--menu {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-}
-
-.bottom-nav__item--menu {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-}
-
-.main-header__btn--menu {
-  color: var(--color-text-secondary);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .mobile-nav-drawer__backdrop,
   .mobile-nav-drawer__panel,

@@ -38,6 +38,7 @@ export const en: Dictionary = {
     live: "Live",
     saved: "Saved",
     profile: "Profile",
+    you: "You",
     districts: "Districts",
     search: "Search",
     menu: "Menu",

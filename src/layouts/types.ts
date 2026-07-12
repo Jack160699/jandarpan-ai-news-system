@@ -21,9 +21,7 @@ export type ShellContextValue = {
 
 export type AppShellProps = {
   children: ReactNode;
-  /** Optional category rail (e.g. existing CategoryNavbar) */
-  categoryRail?: ReactNode;
-  /** Homepage trending/ticker slot */
+  /** Homepage trending/ticker slot (portal target, not chrome) */
   homeStackSlot?: ReactNode;
   /** Hide bottom navigation (story reader mode) */
   hideBottomNav?: boolean;

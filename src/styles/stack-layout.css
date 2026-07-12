@@ -6,7 +6,8 @@
 :root {
   /* Layer heights — canonical names */
   --stack-header-h: var(--header-height);
-  --stack-category-h: var(--nav-height);
+  /* Category rail removed in Atlas Phase 1 — no layer occupies this space */
+  --stack-category-h: 0px;
   --stack-trending-h: var(--trending-height);
   --stack-live-h: var(--live-strip-height);
   --stack-ticker-h: var(--ticker-height);
@@ -56,16 +57,6 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-
-/* Disable nested sticky — layers stack inside one shell */
-.app-sticky-stack .main-header,
-.app-sticky-stack .main-header {
-  flex: 0 0 var(--stack-header-h);
-  height: var(--stack-header-h);
-  min-height: var(--stack-header-h);
-  max-height: var(--stack-header-h);
-  border-bottom: none;
 }
 
 /* Stack bands — homepage layers 3–5 */
@@ -155,13 +146,6 @@
     padding-top: 0;
     box-shadow: none;
     border-bottom: none;
-  }
-
-  .app-sticky-stack .main-header {
-    position: sticky;
-    top: var(--safe-top);
-    z-index: var(--z-header);
-    box-shadow: 0 1px 0 rgb(0 0 0 / 0.04);
   }
 
   .app-sticky-stack[data-stack-mode="home"] {

@@ -45,6 +45,12 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const prevPathnameRef = useRef(pathname);
 
   useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  }, []);
+
+  useEffect(() => {
     const onClickCapture = (event: MouseEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;

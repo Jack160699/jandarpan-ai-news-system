@@ -10,10 +10,8 @@ html {
 }
 
 body,
-.main-header,
-.category-navbar,
-.mobile-dock,
-.bottom-mobile-nav,
+.jdp-topbar,
+.jdp-bottomnav,
 .breaking-ticker,
 .profile-settings__group {
   transition:
@@ -58,48 +56,15 @@ html:not([data-theme="dark"]) .breaking-ticker--live .breaking-ticker__label {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
-/* ── Category nav — animated underline + active glow ── */
-.category-navbar__indicator {
-  background: linear-gradient(
-    90deg,
-    var(--color-red-deep) 0%,
-    var(--color-red) 50%,
-    var(--color-red-light) 100%
-  );
-  box-shadow: 0 0 10px color-mix(in srgb, var(--color-primary) 45%, transparent);
-}
-
-.category-navbar__tab.is-active {
-  color: var(--color-primary);
-}
-
-.category-navbar--premium .category-navbar__tab--live.is-active {
-  text-shadow: 0 0 16px var(--color-red-glow);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .category-navbar__tab:hover:not(.is-active) {
-    color: var(--color-ink-secondary);
-    background: var(--color-primary-soft);
-  }
-}
-
-/* ── Mobile dock active state ── */
-.mobile-dock__item.is-active {
-  color: var(--color-primary);
+/* ── Bottom-nav active state ── */
+.jdp-bottomnav__item--active {
   text-shadow: 0 0 16px color-mix(in srgb, var(--color-primary) 18%, transparent);
 }
 
-.mobile-dock__item--live.is-active {
-  color: var(--color-primary);
-}
-
-/* ── Notification dot ── */
-.main-header__badge {
-  background: var(--color-primary);
-  box-shadow:
-    0 0 0 2px var(--color-paper),
-    0 0 8px var(--color-red-glow);
+/* ── Notification / live dots ── */
+.jdp-topbar__dot,
+.jdp-bottomnav__badge {
+  box-shadow: 0 0 8px var(--color-red-glow);
   animation: accent-dot-pulse 2.2s ease-in-out infinite;
 }
 
@@ -123,11 +88,9 @@ html:not([data-theme="dark"]) .breaking-ticker--live .breaking-ticker__label {
 }
 
 /* ── Buttons & focus ── */
-.main-header__btn:focus-visible,
+.jdp-topbar__btn:focus-visible,
 .theme-toggle:focus-visible,
-.category-navbar__tab:focus-visible,
-.mobile-dock__item:focus-visible,
-.bottom-mobile-nav__item:focus-visible {
+.jdp-bottomnav__item:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--color-primary) 65%, transparent);
   outline-offset: 2px;
 }
@@ -170,16 +133,16 @@ html:not([data-theme="dark"]) .breaking-ticker--live .breaking-ticker__label {
 @media (prefers-reduced-motion: reduce) {
   html,
   body,
-  .main-header,
-  .category-navbar,
-  .bottom-mobile-nav,
+  .jdp-topbar,
+  .jdp-bottomnav,
   .breaking-ticker,
   .profile-settings__group {
     transition: none;
   }
 
   .breaking-ticker--live .breaking-ticker__label,
-  .main-header__badge {
+  .jdp-topbar__dot,
+  .jdp-bottomnav__badge {
     animation: none !important;
   }
 }

@@ -2,8 +2,7 @@
  * Listen to Today's Headlines — podcast-style audio UX
  */
 
-.has-hl-mini .mobile-dock__shell,
-.has-hl-mini .bottom-nav {
+.has-hl-mini .jdp-bottomnav__inner {
   margin-bottom: 3.5rem;
 }
 

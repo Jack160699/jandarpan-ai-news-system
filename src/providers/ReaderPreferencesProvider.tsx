@@ -11,6 +11,7 @@ import {
 import {
   applyPreferencesToDocument,
   DEFAULT_PREFERENCES,
+  getThemeColor,
   loadPreferences,
   savePreferences,
   type EditionChoice,
@@ -47,11 +48,11 @@ function readInitialPrefs(): ReaderPreferences {
   if (typeof window === "undefined") return DEFAULT_PREFERENCES;
   const loaded = loadPreferences();
   const langState = loadStoredLanguage();
-  const themeFromDom =
-    document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  const themePrefFromDom = document.documentElement.dataset
+    .themePref as ReaderTheme | undefined;
   return {
     ...loaded,
-    theme: themeFromDom,
+    theme: themePrefFromDom ?? loaded.theme,
     language: langState.language,
     languageChosen: langState.chosen,
   };
@@ -84,12 +85,22 @@ export function ReaderPreferencesProvider({
     if (!hydrated) return;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute(
-        "content",
-        prefs.theme === "dark" ? "#050505" : "#f5f1e8"
-      );
+      meta.setAttribute("content", getThemeColor(prefs.theme));
     }
   }, [prefs.theme, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated || prefs.theme !== "system") return;
+    const colorQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const contrastQuery = window.matchMedia("(prefers-contrast: more)");
+    const reapply = () => applyPreferencesToDocument(prefs);
+    colorQuery.addEventListener("change", reapply);
+    contrastQuery.addEventListener("change", reapply);
+    return () => {
+      colorQuery.removeEventListener("change", reapply);
+      contrastQuery.removeEventListener("change", reapply);
+    };
+  }, [hydrated, prefs]);
 
   useEffect(() => {
     if (!hydrated) return;

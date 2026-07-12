@@ -1,11 +1,12 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { isListRestorePath } from "@/lib/mobile/navigation-state";
 import {
   recordScrollPosition,
   restoreScrollPosition,
+  restoreScrollPositionSync,
   saveScrollPosition,
 } from "@/lib/mobile/scroll-retention";
 import { prefersReducedMotion } from "@/lib/navigation/transition-config";
@@ -39,6 +40,14 @@ export function ScrollRetention({ children }: ScrollRetentionProps) {
     const onPageHide = () => saveScrollPosition(pathname);
     window.addEventListener("pagehide", onPageHide);
     return () => window.removeEventListener("pagehide", onPageHide);
+  }, [pathname]);
+
+  /* First mount (fresh document load / hydration) — restore synchronously
+     before the browser paints, so there's no flash at scrollY 0. */
+  useLayoutEffect(() => {
+    if (mounted.current || !isListRestorePath(pathname)) return;
+    mounted.current = true;
+    restoreScrollPositionSync(pathname);
   }, [pathname]);
 
   useEffect(() => {

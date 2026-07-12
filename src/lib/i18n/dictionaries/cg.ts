@@ -38,6 +38,7 @@ export const cg: Dictionary = {
     live: "लाइव",
     saved: "सेव",
     profile: "प्रोफाइल",
+    you: "आप",
     districts: "जिला",
     search: "खोज",
     menu: "मेन्यू",

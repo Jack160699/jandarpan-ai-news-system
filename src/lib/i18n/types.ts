@@ -44,6 +44,7 @@ export type Dictionary = {
     live: string;
     saved: string;
     profile: string;
+    you: string;
     districts: string;
     search: string;
     menu: string;

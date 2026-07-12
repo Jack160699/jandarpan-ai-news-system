@@ -38,6 +38,7 @@ export const hi: Dictionary = {
     live: "लाइव",
     saved: "सेव",
     profile: "प्रोफाइल",
+    you: "आप",
     districts: "जिला",
     search: "खोज",
     menu: "मेन्यू",

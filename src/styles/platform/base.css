@@ -132,7 +132,6 @@ body {
 
 /* Momentum scrolling on iOS */
 .home-page,
-.category-navbar__scroll,
 .hero-news-card__mobile-rail,
 .shorts-section__rail {
   -webkit-overflow-scrolling: touch;
