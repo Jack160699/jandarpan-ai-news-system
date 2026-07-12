@@ -1,8 +1,8 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ArticleView } from "@/sections/ArticleView";
-import { ImmersiveStoryPage } from "@/sections/story/ImmersiveStoryPage";
 import { ArticleExperienceV3 } from "@/features/article-v3";
+import { AtlasStoryExperience } from "@/features/story-atlas";
 import { isArticleV3Enabled } from "@/features/article-v3/config";
 import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
@@ -174,7 +174,7 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     return (
       <PageShell variant="news">
         <main id="main-content" className="relative z-[2]" role="main">
-          <ImmersiveStoryPage
+          <AtlasStoryExperience
             article={liveArticle}
             sponsoredStory={sponsoredStory}
             related={relatedResult.articles}
@@ -182,6 +182,16 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
             intelligence={intelligence}
             editorialMeta={generatedRow.editorial_metadata}
             generatedRow={generatedRow}
+            contentSections={contentSections}
+            plainParagraphs={plainParagraphs}
+            plainBlocks={parsed.plainBlocks}
+            canonicalUrl={canonicalUrl}
+            slug={slugResolved}
+            headline={headline}
+            shareSummary={shareSummary}
+            translationActive={
+              localized.usedTranslation && !localized.usedSourceFallback
+            }
           />
         </main>
       </PageShell>
