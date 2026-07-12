@@ -49,7 +49,7 @@ export async function fetchSaasDashboard(
     supabase
       .from("generated_articles")
       .select(
-        "id, slug, headline, summary, editorial_status, homepage_pin, published_at, editorial_metadata, language, created_at, hero_image_url, event_id, tenant_id"
+        "id, slug, headline, summary, editorial_status, workflow_status, homepage_pin, published_at, editorial_metadata, language, created_at, hero_image_url, event_id, tenant_id, tags"
       )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
@@ -205,6 +205,29 @@ function filterArticlesToTenant(
   return scoped.map((row) => {
     const meta = (row.editorial_metadata ?? {}) as Record<string, unknown>;
     const breakdown = (meta.quality_breakdown ?? {}) as Record<string, number>;
+    const v2 = meta.intelligence_v2 as
+      | { entities?: Array<{ name?: string }>; reader_keywords?: string[] }
+      | undefined;
+    const regional = meta.regional as
+      | { primary_district?: string; district?: string }
+      | undefined;
+    const tags = Array.isArray(row.tags)
+      ? row.tags.filter(
+          (tag): tag is string => typeof tag === "string" && Boolean(tag.trim())
+        )
+      : [];
+    const entityNames = Array.isArray(v2?.entities)
+      ? v2.entities
+          .map((entity) => entity.name?.trim())
+          .filter((name): name is string => Boolean(name))
+      : [];
+    const readerKeywords = Array.isArray(v2?.reader_keywords)
+      ? v2.reader_keywords.filter(
+          (keyword): keyword is string =>
+            typeof keyword === "string" && Boolean(keyword.trim())
+        )
+      : [];
+
     return {
       id: row.id as string,
       slug: row.slug as string,
@@ -214,6 +237,8 @@ function filterArticlesToTenant(
         | "pending"
         | "approved"
         | "rejected",
+      workflow_status:
+        typeof row.workflow_status === "string" ? row.workflow_status : null,
       homepage_pin: Boolean(row.homepage_pin),
       is_breaking: Boolean(meta.is_breaking),
       is_featured: Boolean(meta.is_featured) || Boolean(row.homepage_pin),
@@ -229,6 +254,19 @@ function filterArticlesToTenant(
       created_at: row.created_at as string,
       source_attribution: [],
       hero_image_url: (row.hero_image_url as string) ?? null,
+      tags,
+      publish_decision:
+        typeof meta.publish_decision === "string" ? meta.publish_decision : null,
+      used_fallback: Boolean(meta.used_fallback),
+      repaired: Boolean(meta.repaired),
+      has_intelligence_v2: Boolean(meta.intelligence_v2),
+      entity_names: entityNames,
+      reader_keywords: readerKeywords,
+      district:
+        regional?.primary_district?.trim() ||
+        regional?.district?.trim() ||
+        null,
+      category_label: tags[0]?.trim() || null,
     };
   });
 }

@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const auth = await verifyCronRequest(request);
+  const auth = await verifyCronRequest(request, { capability: "admin" });
 
   if (!auth.authorized) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });

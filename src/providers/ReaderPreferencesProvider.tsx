@@ -19,6 +19,7 @@ import {
   type ReaderTheme,
   type ReadingMode,
 } from "@/lib/reader-preferences";
+import { syncDistrictCookie } from "@/lib/personalization/cookies";
 import {
   LANGUAGE_STORAGE_KEY,
   loadStoredLanguage,
@@ -75,6 +76,7 @@ export function ReaderPreferencesProvider({
     };
     setPrefs(merged);
     applyPreferencesToDocument(merged);
+    syncDistrictCookie(merged.homeDistrict);
     setHydrated(true);
   }, []);
 
@@ -105,6 +107,9 @@ export function ReaderPreferencesProvider({
     setPrefs((prev) => {
       const next = { ...prev, ...partial };
       savePreferences(next);
+      if ("homeDistrict" in partial) {
+        syncDistrictCookie(next.homeDistrict);
+      }
       return next;
     });
   }, []);

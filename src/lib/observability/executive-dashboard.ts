@@ -580,7 +580,7 @@ async function buildLanguageAnalytics(rows: UsageRow[], rate: number) {
 
   let otherSpend = 0;
   let otherTokens = 0;
-  let otherArticles = new Set<string>();
+  const otherArticles = new Set<string>();
   let otherSaved = 0;
   for (const [lang, g] of groups) {
     if (known.includes(lang)) continue;

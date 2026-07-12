@@ -5,11 +5,11 @@
 
 :root {
   --rhythm-gutter: 1rem;
-  --rhythm-section: 1.25rem;
+  --rhythm-section: 1rem;
   --rhythm-section-lg: 1.5rem;
   --rhythm-card-pad: 1rem;
-  --rhythm-card-gap: 1.25rem;
-  --rhythm-stack: 0.75rem;
+  --rhythm-card-gap: 1rem;
+  --rhythm-stack: 0.5rem;
   --rhythm-touch: 2.75rem;
 
   /* Feed typography scale */

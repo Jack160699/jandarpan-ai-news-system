@@ -8,6 +8,7 @@ import {
   getActiveCronSecret,
   type CronAuthResult,
 } from "@/lib/infrastructure/auth/cron-auth";
+import { isProductionDeployment } from "@/lib/infrastructure/production";
 
 export function cronAuthFailureResponse(
   auth: CronAuthResult
@@ -17,8 +18,11 @@ export function cronAuthFailureResponse(
 
   if (!cronSecret) {
     return NextResponse.json(
-      { ok: false, error: "CRON_SECRET not configured" },
-      { status: 503, headers }
+      {
+        ok: false,
+        error: isProductionDeployment() ? "Unauthorized" : "CRON_SECRET not configured",
+      },
+      { status: isProductionDeployment() ? 401 : 503, headers }
     );
   }
 

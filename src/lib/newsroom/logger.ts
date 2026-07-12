@@ -4,6 +4,57 @@
 
 export type NewsroomLogContext = Record<string, unknown>;
 
+function toLogString(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function serializeErrorForLog(error: unknown): Record<string, unknown> {
+  if (error instanceof Error) {
+    const extra = error as Error & {
+      code?: unknown;
+      details?: unknown;
+      hint?: unknown;
+    };
+    return {
+      error: extra.name,
+      message: extra.message,
+      details: toLogString(extra.details),
+      hint: toLogString(extra.hint),
+      code: extra.code ?? null,
+      stack: extra.stack ?? null,
+    };
+  }
+
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    return {
+      error: toLogString(record.name ?? record.error) ?? record.constructor?.name ?? "object",
+      message: toLogString(record.message),
+      details: toLogString(record.details),
+      hint: toLogString(record.hint),
+      code: record.code ?? null,
+      stack: typeof record.stack === "string" ? record.stack : null,
+    };
+  }
+
+  const text = String(error);
+  return {
+    error: text,
+    message: text,
+    details: null,
+    hint: null,
+    code: null,
+    stack: null,
+  };
+}
+
 export function logNewsroom(
   stage:
     | "signals"
@@ -40,10 +91,7 @@ export function logNewsroomError(
   error: unknown,
   context?: NewsroomLogContext
 ): void {
-  const err =
-    error instanceof Error
-      ? { name: error.name, message: error.message, cause: String(error.cause ?? "") }
-      : { message: String(error) };
+  const err = serializeErrorForLog(error);
 
   console.error(
     `[newsroom:${stage}]`,

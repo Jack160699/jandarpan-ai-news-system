@@ -146,6 +146,28 @@ export const OperationsTab = memo(function OperationsTab({ d }: { d: ExecutiveDa
         </div>
       </div>
 
+      <SectionHead title="Editorial editions" subtitle="Publish windows (IST)" />
+      <div className="ecfo__summary-row">
+        <div className="ecfo__summary-card">
+          <span>Current edition</span>
+          <strong className="ecfo__summary-value">See Overview</strong>
+        </div>
+        <div className="ecfo__summary-card">
+          <span>Next edition</span>
+          <strong className="ecfo__summary-value">See Overview</strong>
+        </div>
+        <div className="ecfo__summary-card">
+          <span>Breaking queue</span>
+          <strong className="ecfo__summary-value">—</strong>
+          <small>Immediate override pipeline</small>
+        </div>
+        <div className="ecfo__summary-card">
+          <span>Ready queue</span>
+          <strong className="ecfo__summary-value">—</strong>
+          <small>Scheduled-for-publish backlog</small>
+        </div>
+      </div>
+
       <SectionHead title="Queue Status" subtitle={`${queue.emoji} ${queue.label}`} />
       <div className="ecfo__summary-row">
         <div className="ecfo__summary-card">

@@ -1,125 +1,70 @@
-import Link from "next/link";
-import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
-import { categoryLabel } from "@/lib/live-news-display";
-import { resolveCardImage } from "@/lib/news/images/display";
-import { isArticleLive } from "@/lib/news/home-ranking";
-import { resolveArticleProvider } from "@/lib/news/article-provider";
-import { resolveStorySlug } from "@/lib/news/related-stories";
-import { estimateReadTime } from "@/lib/news/story-utils";
-import { mapProviderToDesk } from "@/lib/newsroom/desk-branding";
-import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
+import { StoryFeedCard } from "@/components/story/StoryFeedCard";
+import { mapNewsArticleToStoryFeedCard } from "@/lib/news/story-feed-card";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import type { NewsArticleRow } from "@/lib/types/news-article";
 
 type StoryRelatedGridProps = {
   articles: NewsArticleRow[];
+  language: NewsroomLanguage;
+  title: string;
+  subtitle: string;
 };
 
-export function StoryRelatedGrid({ articles }: StoryRelatedGridProps) {
+export function StoryRelatedGrid({
+  articles,
+  language,
+  title,
+  subtitle,
+}: StoryRelatedGridProps) {
   if (!articles.length) return null;
 
   return (
     <section
-      className="immersive-related immersive-related--premium"
+      className="immersive-related immersive-related--premium immersive-related--editorial"
       aria-labelledby="story-related-title"
+      aria-describedby="story-related-subtitle"
     >
-      <header className="immersive-related__head">
-        <h2 id="story-related-title" className="immersive-related__title">
-          Related stories
+      <header className="story-section-header immersive-related__head">
+        <h2
+          id="story-related-title"
+          className="story-section-header__title immersive-related__title"
+        >
+          {title}
         </h2>
-        <p className="immersive-related__sub">संबंधित खबरें</p>
+        <p
+          id="story-related-subtitle"
+          className="story-section-header__subtitle immersive-related__sub"
+        >
+          {subtitle}
+        </p>
       </header>
 
       <div
         className="immersive-related__rail"
         role="list"
-        aria-label="Related stories carousel"
+        aria-label={title}
       >
-        {articles.map((article) => {
-          const slug = resolveStorySlug(article);
-          const image = resolveCardImage(
-            {
-              imageUrl: article.image_url,
-              category: article.category,
-              source: article.source,
-              articleUrl: article.article_url,
-            },
-            480
-          );
-          const readTime = estimateReadTime(
-            `${article.title} ${article.content ?? article.description ?? ""}`
-          );
-          const live = isArticleLive(article.published_at);
-
-          return (
-            <Link
-              key={article.id}
-              href={`/story/${slug}`}
-              className="immersive-related__card immersive-related__card--premium"
-              role="listitem"
-            >
-              <div className="immersive-related__visual">
-                <HomeArticleImage
-                  src={image}
-                  alt=""
-                  sizes="(max-width:640px) 72vw, 280px"
-                />
-                {live ? (
-                  <span className="immersive-related__live">Live</span>
-                ) : null}
-              </div>
-              <div className="immersive-related__body">
-                <span className="immersive-related__cat">
-                  {categoryLabel(article.category as NewsCategory)}
-                </span>
-                <p className="immersive-related__headline">
-                  {article.ai_headline ?? article.title}
-                </p>
-                <p className="immersive-related__meta">
-                  {mapProviderToDesk(resolveArticleProvider(article)).name} ·{" "}
-                  {readTime}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+        {articles.map((article, index) => (
+          <div key={article.id} role="listitem">
+            <StoryFeedCard
+              card={mapNewsArticleToStoryFeedCard(article, language, 480)}
+              variant="rail"
+              imageSizes="(max-width:640px) 72vw, 280px"
+              priority={index === 0}
+            />
+          </div>
+        ))}
       </div>
 
       <div className="immersive-related__grid immersive-related__grid--desktop">
-        {articles.slice(0, 6).map((article) => {
-          const slug = resolveStorySlug(article);
-          const image = resolveCardImage(
-            {
-              imageUrl: article.image_url,
-              category: article.category,
-              source: article.source,
-              articleUrl: article.article_url,
-            },
-            320
-          );
-          const readTime = estimateReadTime(
-            `${article.title} ${article.content ?? article.description ?? ""}`
-          );
-
-          return (
-            <Link
-              key={`desk-${article.id}`}
-              href={`/story/${slug}`}
-              className="immersive-related__card immersive-related__card--row"
-            >
-              <div className="immersive-related__thumb">
-                <HomeArticleImage src={image} alt="" sizes="88px" />
-              </div>
-              <div>
-                <p className="immersive-related__headline">
-                  {article.ai_headline ?? article.title}
-                </p>
-                <p className="immersive-related__meta">
-                  {categoryLabel(article.category as NewsCategory)} ·{" "}
-                  {readTime}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+        {articles.slice(0, 6).map((article) => (
+          <StoryFeedCard
+            key={`desk-${article.id}`}
+            card={mapNewsArticleToStoryFeedCard(article, language, 320)}
+            variant="row"
+            imageSizes="88px"
+          />
+        ))}
       </div>
     </section>
   );

@@ -27,7 +27,7 @@ export function SponsoredStoryBanner({ meta }: SponsoredStoryBannerProps) {
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={meta.sponsorLogoUrl}
-          alt=""
+          alt={meta.sponsorName}
           width={72}
           height={24}
           style={{ objectFit: "contain" }}

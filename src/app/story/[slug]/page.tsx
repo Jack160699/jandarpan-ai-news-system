@@ -2,24 +2,26 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { ArticleView } from "@/sections/ArticleView";
 import { ImmersiveStoryPage } from "@/sections/story/ImmersiveStoryPage";
+import { ArticleExperienceV3 } from "@/features/article-v3";
+import { isArticleV3Enabled } from "@/features/article-v3/config";
 import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
 import {
   applyLocalizedFieldsToNewsArticle,
-  resolveLocalizedFieldsStrict,
   resolveStoryArticleFields,
 } from "@/lib/i18n/resolve-article";
-import { filterPoolByLanguage } from "@/lib/i18n/article-language";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { buildLocalizedStoryMetadata } from "@/lib/i18n/multilingual/seo";
 import { isNewsroomLanguage } from "@/lib/i18n/languages";
-import { pickRelatedStories } from "@/lib/news/related-stories";
 import {
-  fetchGeneratedArticlePool,
-  getGeneratedArticleBySlug,
-  getGeneratedArticleSlugs,
-} from "@/lib/newsroom/generated/read";
-import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+  getStoryArticleBySlug,
+  getStoryRelatedArticles,
+  getStoryStaticSlugs,
+} from "@/lib/story/get-story-data";
+import { getEventViewModel } from "@/lib/events/event-view-model";
+import { parseStoryMarkdown } from "@/lib/news/story-markdown";
+import { storyBodyParagraphs } from "@/lib/news/story-utils";
+import { buildStoryIntelligence } from "@/lib/story/story-intelligence";
 import { fetchSponsoredStory } from "@/lib/monetization/fetch-payload";
 import {
   articleJsonLd,
@@ -27,6 +29,9 @@ import {
   shouldRedirectToCanonicalSlug,
 } from "@/lib/seo";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { resolveStorySlug } from "@/lib/news/related-stories";
+import { bodySections } from "@/lib/news/story-markdown";
+import { SITE_URL } from "@/lib/seo/constants";
 
 export const revalidate = 60;
 
@@ -37,7 +42,7 @@ type PageProps = {
 
 export async function generateStaticParams() {
   try {
-    const generated = await getGeneratedArticleSlugs(200);
+    const generated = await getStoryStaticSlugs(200);
     if (generated.length) {
       return generated.map((slug) => ({ slug }));
     }
@@ -52,7 +57,7 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
   const { lang: langParam } = await searchParams;
   const displayLang = isNewsroomLanguage(langParam) ? langParam : undefined;
 
-  const generated = await getGeneratedArticleBySlug(slug);
+  const generated = await getStoryArticleBySlug(slug);
   if (generated) {
     const article = generatedToNewsArticle(generated);
     const ogImage =
@@ -83,7 +88,7 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     ? langParam
     : await getServerReaderLanguage();
 
-  const generatedRow = await getGeneratedArticleBySlug(slug);
+  const generatedRow = await getStoryArticleBySlug(slug);
 
   if (generatedRow) {
     if (
@@ -93,52 +98,38 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
       permanentRedirect(`/story/${generatedRow.slug}`);
     }
 
-    const poolRows = filterPoolByLanguage(
-      await fetchGeneratedArticlePool(80),
-      readerLang
-    );
-    const localized = await resolveStoryArticleFields(generatedRow, readerLang);
+    const [localized, relatedResult, eventViewModel] = await Promise.all([
+      resolveStoryArticleFields(generatedRow, readerLang),
+      getStoryRelatedArticles(generatedRow.slug ?? slug, readerLang),
+      generatedRow.event_id
+        ? getEventViewModel(generatedRow.event_id)
+        : Promise.resolve(null),
+    ]);
     if (!localized?.headline?.trim()) notFound();
 
     const liveArticle = applyLocalizedFieldsToNewsArticle(
       generatedToNewsArticle(generatedRow),
       localized
     );
-    const poolArticles = poolRows
-      .map((r) => {
-        const fields = resolveLocalizedFieldsStrict(r, readerLang);
-        if (!fields?.headline?.trim()) return null;
-        return applyLocalizedFieldsToNewsArticle(
-          generatedToNewsArticle(r),
-          fields
-        );
-      })
-      .filter((a): a is NonNullable<typeof a> => a !== null);
-    const related = pickRelatedStories(liveArticle, poolArticles, 8);
 
-    let liveCoverage: {
-      slug: string;
-      headline?: string | null;
-      sourceCount?: number;
-    } | null = null;
+    const parsed = parseStoryMarkdown(liveArticle.content ?? "");
+    const plainParagraphs =
+      parsed.plainParagraphs.length > 0
+        ? parsed.plainParagraphs
+        : storyBodyParagraphs(liveArticle);
 
-    if (generatedRow.event_id && isSupabaseConfigured()) {
-      const supabase = createAdminServerClient();
-      const { data: ev } = await supabase
-        .from("news_events")
-        .select(
-          "coverage_slug,coverage_headline,is_live,source_count"
-        )
-        .eq("id", generatedRow.event_id)
-        .maybeSingle();
-      if (ev?.is_live && ev.coverage_slug) {
-        liveCoverage = {
-          slug: ev.coverage_slug,
-          headline: ev.coverage_headline,
-          sourceCount: ev.source_count ?? undefined,
-        };
-      }
-    }
+    const intelligence = buildStoryIntelligence({
+      article: liveArticle,
+      parsed: { ...parsed, plainParagraphs },
+      editorialMeta: generatedRow.editorial_metadata,
+      generatedRow,
+      eventViewModel,
+      tags: generatedRow.tags ?? [],
+      readingTime: localized.readingTime,
+      displayLanguage: readerLang,
+      translationActive:
+        localized.usedTranslation && !localized.usedSourceFallback,
+    });
 
     const tenant = await getTenantConfig();
     const sponsoredStory =
@@ -146,21 +137,51 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
         ? await fetchSponsoredStory(tenant.id, generatedRow.slug)
         : null;
 
+    const articleV3 = isArticleV3Enabled();
+    const slugResolved = resolveStorySlug(liveArticle);
+    const canonicalUrl = `${SITE_URL}/story/${slugResolved}`;
+    const headline = liveArticle.ai_headline?.trim() || liveArticle.title;
+    const aiSummary = liveArticle.ai_summary?.trim() || null;
+    const shareSummary = aiSummary ?? plainParagraphs.slice(0, 2).join(" ");
+    const contentSections = bodySections(parsed.sections);
+
+    if (articleV3) {
+      return (
+        <PageShell variant="news">
+          <ArticleExperienceV3
+            article={liveArticle}
+            sponsoredStory={sponsoredStory}
+            related={relatedResult.articles}
+            relatedDiscoverySubtitle={relatedResult.discoverySubtitle}
+            intelligence={intelligence}
+            editorialMeta={generatedRow.editorial_metadata}
+            generatedRow={generatedRow}
+            contentSections={contentSections}
+            plainParagraphs={plainParagraphs}
+            plainBlocks={parsed.plainBlocks}
+            canonicalUrl={canonicalUrl}
+            slug={slugResolved}
+            headline={headline}
+            shareSummary={shareSummary}
+            translationActive={
+              localized.usedTranslation && !localized.usedSourceFallback
+            }
+          />
+        </PageShell>
+      );
+    }
+
     return (
       <PageShell variant="news">
         <main id="main-content" className="relative z-[2]" role="main">
           <ImmersiveStoryPage
             article={liveArticle}
             sponsoredStory={sponsoredStory}
-            related={related}
+            related={relatedResult.articles}
+            relatedDiscoverySubtitle={relatedResult.discoverySubtitle}
+            intelligence={intelligence}
             editorialMeta={generatedRow.editorial_metadata}
-            readingTime={localized.readingTime}
-            liveCoverage={liveCoverage}
-            displayLanguage={readerLang}
-            translationActive={
-              localized.usedTranslation && !localized.usedSourceFallback
-            }
-            tags={generatedRow.tags ?? []}
+            generatedRow={generatedRow}
           />
         </main>
       </PageShell>
@@ -179,6 +200,8 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
         }}
       />
       <main
+        id="main-content"
+        role="main"
         data-narrative-root
         className="home-news-flow mobile-comfort thumb-zone relative z-[2]"
       >

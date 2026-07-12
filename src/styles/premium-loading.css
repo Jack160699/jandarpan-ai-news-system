@@ -16,6 +16,90 @@
   --pl-shimmer-highlight: color-mix(in srgb, var(--paper-elevated) 55%, var(--ink-faint) 12%);
 }
 
+/* ── Legacy breaking crawl + feed skeleton utilities (from loading.css) ── */
+.breaking-ticker__text {
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.95);
+}
+
+.breaking-ticker:not(.breaking-ticker--live) .breaking-ticker__track {
+  animation: breaking-scroll 32s linear infinite;
+}
+
+@keyframes breaking-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--paper-muted) 0%,
+    color-mix(in srgb, var(--paper-muted) 65%, var(--paper-elevated)) 50%,
+    var(--paper-muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: ds-skeleton-wave 1.6s var(--ds-ease) infinite;
+  border-radius: var(--ds-radius-sm);
+}
+
+.skeleton-card {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.skeleton-card__thumb {
+  width: 5.75rem;
+  height: 4.25rem;
+  flex-shrink: 0;
+}
+
+.skeleton-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.125rem;
+}
+
+.skeleton-line {
+  height: 0.625rem;
+  border-radius: 2px;
+}
+
+.skeleton-line--short {
+  width: 35%;
+}
+
+.skeleton-line--title {
+  height: 0.875rem;
+  width: 92%;
+}
+
+.skeleton-line--title-2 {
+  width: 72%;
+}
+
+.skeleton-hero {
+  aspect-ratio: 16 / 9;
+  max-height: 220px;
+  width: 100%;
+  margin-bottom: 0.75rem;
+}
+
+.feed-skeleton-list {
+  padding-block: 0.25rem;
+}
+
 /* ── Base shimmer block ── */
 .pl-shimmer,
 .pl-shimmer-block {
@@ -113,7 +197,7 @@
 
 /* ── Masthead ── */
 .pl-masthead {
-  padding: 0.4rem var(--mobile-pad-x, 1rem) 0.35rem;
+  padding: var(--space-2) var(--gutter) var(--space-1);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -219,7 +303,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem var(--mobile-pad-x, 1rem) 0.35rem;
+  padding: var(--space-2) var(--gutter) var(--space-1);
 }
 
 .pl-section-head__kicker {
@@ -454,6 +538,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .breaking-ticker:not(.breaking-ticker--live) .breaking-ticker__track {
+    animation: none;
+  }
+
+  .skeleton {
+    animation: none;
+    background: var(--paper-muted);
+  }
+
   .pl-shimmer::after,
   .pl-shimmer-block::after,
   .ds-skeleton::after {

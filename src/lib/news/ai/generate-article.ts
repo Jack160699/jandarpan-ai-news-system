@@ -11,7 +11,6 @@ import { requestChatCompletion } from "@/lib/ai/providers";
 import { createAdminServerClient } from "@/lib/supabase";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
-import { buildNewsShortForArticle } from "@/lib/news/shorts/build-short";
 import { geoFromRecord, mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
 import { optimizeSeoSlug } from "@/lib/seo/slug-optimize";
@@ -33,6 +32,7 @@ import {
   type EditorialQualityReport,
   type SourceAttribution,
 } from "@/lib/news/ai/editorial-guards";
+import { buildPublicPublishPatch } from "@/lib/newsroom/publish-state";
 import {
   applyEditorialEnhancements,
   buildFallbackDraftFromFactPack,
@@ -43,6 +43,12 @@ import {
   assembleEditorialBody,
   type LlmEditorialSections,
 } from "@/lib/news/ai/editorial-body";
+import {
+  buildFallbackIntelligenceV2,
+  parseEditorialIntelligenceV2,
+  type EditorialIntelligenceV2,
+  type LlmEditorialIntelligenceFields,
+} from "@/lib/news/ai/editorial-intelligence-v2";
 import type {
   BatchEditorialResult,
   EditorialDraft,
@@ -50,7 +56,9 @@ import type {
   SupportedEditorialLanguage,
 } from "@/lib/news/ai/editorial-types";
 import { logNewsroom } from "@/lib/newsroom/logger";
+import { EDITORIAL_CAPACITY } from "@/lib/newsroom/editorial-capacity";
 import { asJson } from "@/types/json";
+import { resolveEditorialTierPlan } from "@/lib/newsroom/ai-cost-tiers";
 import type {
   GeneratedArticleInsert,
   GeneratedArticleRow,
@@ -68,7 +76,7 @@ export type {
 const EDITORIAL_TIMEOUT_MS = 28_000;
 const BATCH_RESCUE_COUNT = 2;
 
-type LlmEditorialResponse = {
+type LlmEditorialResponse = LlmEditorialIntelligenceFields & {
   headline?: string;
   summary?: string;
   sections?: LlmEditorialSections;
@@ -87,6 +95,7 @@ type PendingCandidate = {
   attributions: SourceAttribution[];
   repaired: boolean;
   usedFallback: boolean;
+  intelligenceV2: EditorialIntelligenceV2 | null;
 };
 
 function logEditorial(message: string, context?: Record<string, unknown>): void {
@@ -321,6 +330,7 @@ async function persistGeneratedArticle(input: {
   repaired: boolean;
   usedFallback: boolean;
   batchRescue?: boolean;
+  intelligenceV2?: EditorialIntelligenceV2 | null;
 }): Promise<EditorialGenerationResult> {
   const supabase = createAdminServerClient();
   const slug = optimizeSeoSlug(input.draft.headline, input.event.id);
@@ -358,12 +368,48 @@ async function persistGeneratedArticle(input: {
     geo,
   });
 
-  // Auto-publish gate: when NEWSROOM_AUTO_PUBLISH=true, articles that pass the
-  // editorial quality checks go straight to the public homepage instead of
-  // waiting in the human-approval workflow. Reaching persist already means
-  // quality.publish_allowed === true, so these are quality-passed stories.
+  // Auto-publish flag now means "auto-schedule for the next edition publish window".
+  // Publication is performed by the edition scheduler only (not by continuous crons).
   const autoPublish = process.env.NEWSROOM_AUTO_PUBLISH === "true";
-  const publishNow = autoPublish ? new Date().toISOString() : null;
+
+  const urgency = Number(input.event.urgency_score ?? 0);
+  const aiConfidence = Number(input.quality.ai_confidence ?? 0);
+  const trustedSources = Math.max(
+    Number(input.event.source_count ?? 0),
+    new Set(
+      (input.attributions ?? [])
+        .map((a) => (a.source ?? "").trim())
+        .filter(Boolean)
+    ).size,
+    input.signals.length
+  );
+
+  const breakingOverride =
+    EDITORIAL_CAPACITY.breakingUnlimited &&
+    urgency >= 95 &&
+    aiConfidence >= 0.9 &&
+    trustedSources >= 3;
+
+  const breakingPatch = breakingOverride ? buildPublicPublishPatch(new Date()) : null;
+
+  const tierPlan = resolveEditorialTierPlan({
+    event: input.event,
+    quality: input.quality,
+    attributions: input.attributions,
+    signalCount: input.signals.length,
+    breakingOverride,
+  });
+
+  if (tierPlan.tier === 4) {
+    return {
+      ok: false,
+      article: null,
+      draft: input.draft,
+      quality: input.quality,
+      skipped: false,
+      reason: `tier4_reject:${tierPlan.reason}`,
+    };
+  }
 
   const row: GeneratedArticleInsert = {
     tenant_id: getPipelineTenantId(),
@@ -382,10 +428,10 @@ async function persistGeneratedArticle(input: {
       : input.event.category
         ? [input.event.category]
         : [],
-    editorial_status: autoPublish ? "approved" : "pending",
-    published_at: publishNow,
-    workflow_status: autoPublish ? "published" : "draft",
-    reviewed_at: publishNow,
+    editorial_status: breakingPatch?.editorial_status ?? "pending",
+    published_at: breakingPatch?.published_at ?? null,
+    workflow_status: breakingPatch?.workflow_status ?? (autoPublish ? "scheduled" : "draft"),
+    reviewed_at: breakingPatch?.reviewed_at ?? null,
     geo_metadata: geo,
     editorial_metadata: {
       ai_confidence: input.quality.ai_confidence,
@@ -397,6 +443,18 @@ async function persistGeneratedArticle(input: {
       used_fallback: input.usedFallback,
       batch_rescue: input.batchRescue ?? false,
       generated_at: new Date().toISOString(),
+      breaking_override: breakingOverride,
+      trusted_sources: trustedSources,
+      cost_tier: tierPlan.tier,
+      cost_plan: {
+        tier: tierPlan.tier,
+        reason: tierPlan.reason,
+        generateImage: tierPlan.generateImage,
+        generateTranslation: tierPlan.generateTranslation,
+        generateEmbedding: tierPlan.generateEmbedding,
+        generateShorts: tierPlan.generateShorts,
+        signals: tierPlan.signals,
+      },
       model:
         process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
         process.env.OPENAI_MODEL?.trim() ||
@@ -416,6 +474,9 @@ async function persistGeneratedArticle(input: {
         region: input.event.region,
         urgencyScore: input.event.urgency_score,
       }),
+      ...(input.intelligenceV2
+        ? { intelligence_v2: input.intelligenceV2 }
+        : {}),
       image: {
         status: "queued",
         hero_url: hero_image_url,
@@ -475,25 +536,8 @@ async function persistGeneratedArticle(input: {
     quality_breakdown: input.quality.quality_breakdown,
   });
 
-  await queueEditorialImageForArticle(inserted.id);
-
-  if (publishNow && process.env.OPENAI_API_KEY?.trim()) {
-    const { enqueueTranslationsForPublishedArticle } = await import(
-      "@/lib/i18n/multilingual/translation-queue"
-    );
-    void enqueueTranslationsForPublishedArticle(
-      inserted.id,
-      inserted.tenant_id ?? getPipelineTenantId()
-    ).catch(() => undefined);
-  }
-
-  if (
-    process.env.NEWSROOM_AUTO_SHORTS === "true" &&
-    process.env.OPENAI_API_KEY?.trim()
-  ) {
-    void buildNewsShortForArticle(inserted as unknown as GeneratedArticleRow).catch(
-      () => undefined
-    );
+  if (tierPlan.generateImage) {
+    await queueEditorialImageForArticle(inserted.id);
   }
 
   return {
@@ -528,10 +572,18 @@ async function prepareCandidate(
 
   let draft: EditorialDraft | null = null;
   let usedFallback = false;
+  let intelligenceV2: EditorialIntelligenceV2 | null = null;
+  const generatedAt = new Date().toISOString();
 
   try {
     const llmRaw = await callEditorialLlm(factPackText, language, event, signals.length);
-    draft = llmRaw ? parseLlmDraft(llmRaw, language) : null;
+    if (llmRaw) {
+      draft = parseLlmDraft(llmRaw, language);
+      intelligenceV2 = parseEditorialIntelligenceV2(llmRaw, {
+        tags: draft?.tags ?? (llmRaw.tags ?? []).map((t) => String(t)),
+        generatedAt,
+      });
+    }
   } catch (err) {
     logEditorial("llm_error", {
       eventId: event.id,
@@ -545,6 +597,10 @@ async function prepareCandidate(
     logEditorial("fallback_draft_used", { eventId: event.id });
   } else {
     draft = applyEditorialEnhancements(draft, event);
+  }
+
+  if (!intelligenceV2) {
+    intelligenceV2 = buildFallbackIntelligenceV2({ event, signals, draft });
   }
 
   let repaired = false;
@@ -613,6 +669,7 @@ async function prepareCandidate(
       attributions,
       repaired,
       usedFallback,
+      intelligenceV2,
     },
     skipped: false,
   };
@@ -777,6 +834,7 @@ export async function generateEditorialFromEvent(
     attributions: candidate.attributions,
     repaired: candidate.repaired,
     usedFallback: candidate.usedFallback,
+    intelligenceV2: candidate.intelligenceV2,
   });
   if (persisted.ok && persisted.article) {
     logArticleGenerationPhase("article_generation_completed", {
@@ -913,6 +971,7 @@ export async function generateEditorialsFromEvents(options?: {
         attributions: candidate.attributions,
         repaired: candidate.repaired,
         usedFallback: candidate.usedFallback,
+        intelligenceV2: candidate.intelligenceV2,
       });
 
       results.push({
@@ -1023,6 +1082,7 @@ export async function generateEditorialsFromEvents(options?: {
         repaired: candidate.repaired,
         usedFallback: candidate.usedFallback,
         batchRescue: true,
+        intelligenceV2: candidate.intelligenceV2,
       });
 
       if (saved.ok && saved.article) {

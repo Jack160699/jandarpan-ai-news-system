@@ -20,7 +20,7 @@ import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const VALID_WORKERS = new Set<WorkerId>([
   ...INTELLIGENCE_PIPELINE,
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 async function handleOrchestrate(request: Request) {
   const startedAt = Date.now();
   const rawBody = await request.text();
-  const auth = await verifyCronRequest(request, { rawBody });
+  const auth = await verifyCronRequest(request, { rawBody, capability: "pipeline" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }

@@ -9,6 +9,13 @@ import {
 export type AdminNavHref =
   | "/admin/editorial"
   | "/admin/intelligence"
+  | "/admin/ai-copilot"
+  | "/admin/seo/competitors"
+  | "/admin/seo/intelligence"
+  | "/admin/seo/rankings"
+  | "/admin/seo/search-console"
+  | "/admin/seo/execution"
+  | "/admin/seo/autonomous"
   | "/admin/editor"
   | "/admin/workflow"
   | "/admin/collaboration"
@@ -19,6 +26,7 @@ export type AdminNavHref =
   | "/admin/sources"
   | "/admin/live-wire"
   | "/admin/health"
+  | "/admin/system"
   | "/admin/executive"
   | "/admin/ingestion"
   | "/admin/images"
@@ -56,7 +64,9 @@ export function isAdminNavItemVisible(
       return canAccessBilling(ctx);
     }
   }
-  if (!hasResolvedRole(ctx)) return false;
+  if (!hasResolvedRole(ctx)) {
+    return !isPrivilegedAdminNavHref(href);
+  }
   return canAccessAdminRoute(ctx.role!, href);
 }
 

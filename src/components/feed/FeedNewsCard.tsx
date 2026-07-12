@@ -3,13 +3,14 @@
 import { type CSSProperties } from "react";
 import { TrackedStoryLink } from "@/components/analytics/TrackedStoryLink";
 import { HeroCardActions } from "@/components/layout/HeroCardActions";
-import { MediaImage } from "@/components/media/MediaImage";
+import { JdsCardImage } from "@/design-system/components/JdsCardImage/JdsCardImage";
+import { EditorialBadges } from "@/design-system/components/editorial/EditorialBadges";
+import { ArticleMeta } from "@/design-system/components/ArticleMeta";
 import {
   IMG_CARD_COMPACT,
-  IMG_CARD_EDITORIAL,
   IMG_CARD_FEED,
   IMG_CARD_LEAD,
-} from "@/lib/images/homepage-sizes";
+} from "@/design-system/components/editorial/image-sizes";
 import type { AnalyticsSurface } from "@/lib/analytics/types";
 import { useLocaleFormat } from "@/lib/i18n/hooks";
 import {
@@ -46,6 +47,8 @@ export type FeedNewsCardProps = {
   isBreaking?: boolean;
   badge?: string;
   index?: number;
+  /** When > 0 with a summary, shows editorial AI chip */
+  aiConfidence?: number;
   /** Override default `/story/{slug}` link (e.g. live desk routes) */
   href?: string;
   sourceLabel?: string;
@@ -68,6 +71,10 @@ function imageCrop(variant: FeedNewsCardVariant): "16:9" | "4:3" {
   return variant === "lead" ? "16:9" : "4:3";
 }
 
+/**
+ * @deprecated Legacy feed card shell — renders design-system image, meta, and badge primitives.
+ * Migrate callers to EditorialCard / CompactCard from @/design-system.
+ */
 export function FeedNewsCard({
   articleId,
   slug,
@@ -92,6 +99,7 @@ export function FeedNewsCard({
   isBreaking = false,
   badge,
   index = 0,
+  aiConfidence,
   href,
   sourceLabel,
   rhythm,
@@ -114,11 +122,13 @@ export function FeedNewsCard({
     rhythm === "emphasis"
       ? Boolean(summary)
       : showSummary;
+  const showAiChip =
+    Boolean(summary?.trim()) && typeof aiConfidence === "number" && aiConfidence > 0;
 
   return (
     <article
       className={`feed-news-card feed-news-card--${variant}${rhythm === "emphasis" ? " feed-news-card--emphasis" : ""}${!reduceMotion ? " feed-news-card--enter" : ""}`}
-      style={{ "--motion-i": index } as CSSProperties}
+      style={{ "--ncard-i": index, "--motion-i": index } as CSSProperties}
     >
       <div className="feed-news-card__main">
         <TrackedStoryLink
@@ -133,33 +143,23 @@ export function FeedNewsCard({
         >
           {hasImage ? (
             <div className="feed-news-card__media">
-              <MediaImage
+              <JdsCardImage
                 src={imageUrl}
-                alt=""
+                alt={headline}
                 sizes={imageSizes(variant)}
                 category={imageCategory ?? section}
-                aspect="fill"
                 cropAspect={imageCrop(variant)}
                 priority={priority}
-                fillParent
-                hoverZoom
-                cinematic={false}
-                subtleScrim
-                imageClassName="feed-news-card__img"
+                className="feed-news-card__img"
               />
-              {badge ? (
-                <span className="feed-news-card__badge">{badge}</span>
-              ) : null}
-              {isLive ? (
-                <span className="feed-news-card__live" role="status">
-                  <span className="feed-news-card__live-dot" aria-hidden />
-                  {t.common.live}
-                </span>
-              ) : isBreaking ? (
-                <span className="feed-news-card__breaking">
-                  {t.common.breakingLabel}
-                </span>
-              ) : null}
+              <EditorialBadges
+                variant="feed"
+                badge={badge}
+                isLive={isLive}
+                isBreaking={isBreaking}
+                liveLabel={t.common.live}
+                breakingLabel={t.common.breakingLabel}
+              />
             </div>
           ) : null}
 
@@ -178,42 +178,27 @@ export function FeedNewsCard({
             </h3>
 
             {showSummaryResolved && summary ? (
-              <p className="feed-news-card__summary">{summary}</p>
+              <div className="feed-news-card__summary-row">
+                {showAiChip ? (
+                  <span
+                    className="hp-ai-chip"
+                    title={t.article.transparencyTitle}
+                  >
+                    {t.shorts.narrationShort}
+                  </span>
+                ) : null}
+                <p className="feed-news-card__summary">{summary}</p>
+              </div>
             ) : null}
 
-            <div className="feed-news-card__meta">
-              {timeLabel ? (
-                <time dateTime={publishedAt}>{timeLabel}</time>
-              ) : null}
-              {categoryLabel ? (
-                <>
-                  <span className="feed-news-card__meta-sep" aria-hidden>
-                    ·
-                  </span>
-                  <span className="feed-news-card__meta-category">
-                    {categoryLabel}
-                  </span>
-                </>
-              ) : null}
-              {readingTime ? (
-                <>
-                  <span className="feed-news-card__meta-sep" aria-hidden>
-                    ·
-                  </span>
-                  <span>{readingTime}</span>
-                </>
-              ) : null}
-              {sourceLabel ? (
-                <>
-                  <span className="feed-news-card__meta-sep" aria-hidden>
-                    ·
-                  </span>
-                  <span className="feed-news-card__meta-source">
-                    {sourceLabel}
-                  </span>
-                </>
-              ) : null}
-            </div>
+            <ArticleMeta
+              variant="feed"
+              publishedAt={timeLabel ?? undefined}
+              publishedAtIso={publishedAt}
+              category={categoryLabel}
+              readTime={readingTime}
+              source={sourceLabel}
+            />
           </div>
         </TrackedStoryLink>
 

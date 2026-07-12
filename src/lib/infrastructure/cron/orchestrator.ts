@@ -102,7 +102,7 @@ export async function runCronOrchestration(
   options: OrchestrateOptions
 ): Promise<OrchestrateResult> {
   const started = Date.now();
-  const deadline = createExecutionDeadline(INFRA_CONFIG.ingestBudgetMs);
+  const deadline = createExecutionDeadline(INFRA_CONFIG.orchestrateBudgetMs);
   const workerIds = options.workers ?? DEFAULT_PIPELINE;
   const results: WorkerResult[] = [];
   let degraded = false;

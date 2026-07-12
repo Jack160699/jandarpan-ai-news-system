@@ -1,0 +1,141 @@
+/**
+ * JDP-001 — CSS custom properties for the design system
+ *
+ * Import via: import "@/design-system/theme/variables.css"
+ * Scoped to .jds-root or html — uses data-jds-theme and data-theme for dark mode.
+ */
+@import "../design-system/styles/components.css";
+
+/* ── Base token injection (light) ── */
+:root,
+.jds-root,
+html[data-theme="light"] {
+  /* Spacing */
+  --jds-space-xs: 4px;
+  --jds-space-sm: 8px;
+  --jds-space-md: 12px;
+  --jds-space-lg: 16px;
+  --jds-space-xl: 24px;
+  --jds-space-2xl: 32px;
+  --jds-space-3xl: 48px;
+  --jds-space-4xl: 64px;
+  --jds-space-5xl: 96px;
+
+  /* Radius */
+  --jds-radius-xs: 4px;
+  --jds-radius-sm: 8px;
+  --jds-radius-md: 12px;
+  --jds-radius-lg: 16px;
+  --jds-radius-xl: 20px;
+  --jds-radius-full: 999px;
+
+  /* Durations */
+  --jds-duration-instant: 100ms;
+  --jds-duration-fast: 160ms;
+  --jds-duration-normal: 240ms;
+  --jds-duration-slow: 420ms;
+  --jds-duration-slower: 600ms;
+
+  /* Easing */
+  --jds-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --jds-ease-snappy: cubic-bezier(0.33, 1, 0.68, 1);
+  --jds-ease-spring: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --jds-transition-fast: all 160ms cubic-bezier(0.33, 1, 0.68, 1);
+  --jds-transition-normal: all 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  --jds-motion-tap-scale: 0.97;
+  --jds-motion-hover-lift: -1px;
+
+  /* Typography */
+  --jds-font-display: var(--font-display), Georgia, "Times New Roman", serif;
+  --jds-font-body: var(--font-body), Georgia, serif;
+  --jds-font-ui: var(--font-ui), system-ui, sans-serif;
+  --jds-font-meta: var(--font-meta), ui-monospace, monospace;
+  --jds-text-display: clamp(2.5rem, 6vw, 4rem);
+  --jds-text-hero: clamp(2.125rem, 7vw, 3rem);
+  --jds-text-h1: clamp(1.75rem, 4vw, 2.25rem);
+  --jds-text-h2: clamp(1.5rem, 3vw, 1.875rem);
+  --jds-text-h3: clamp(1.25rem, 2.5vw, 1.5rem);
+  --jds-text-title: 1.3125rem;
+  --jds-text-body: 1.1875rem;
+  --jds-text-caption: 0.875rem;
+  --jds-text-meta: 0.8125rem;
+  --jds-text-label: 0.8125rem;
+  --jds-text-button: 1rem;
+
+  /* Elevation */
+  --jds-elevation-none: none;
+  --jds-elevation-sm: 0 1px 2px rgb(42 32 18 / 0.06), 0 1px 3px rgb(42 32 18 / 0.04);
+  --jds-elevation-md: 0 4px 12px rgb(42 32 18 / 0.08), 0 2px 4px rgb(42 32 18 / 0.04);
+  --jds-elevation-lg: 0 8px 24px rgb(42 32 18 / 0.1), 0 4px 8px rgb(42 32 18 / 0.05);
+  --jds-elevation-xl: 0 16px 48px rgb(42 32 18 / 0.12), 0 8px 16px rgb(42 32 18 / 0.06);
+
+  /* Semantic colors — light */
+  --jds-color-background-primary: #f5f1e8;
+  --jds-color-background-secondary: #efe7da;
+  --jds-color-surface-primary: #fffdf8;
+  --jds-color-surface-secondary: #efe7da;
+  --jds-color-surface-elevated: #fffdf8;
+  --jds-color-text-primary: #1a1a1a;
+  --jds-color-text-secondary: #3a3834;
+  --jds-color-text-tertiary: #5e5a55;
+  --jds-color-text-inverse: #ffffff;
+  --jds-color-border-subtle: #d8ccb8;
+  --jds-color-border-default: #d8ccb8;
+  --jds-color-border-strong: #c9bba3;
+  --jds-color-brand-primary: #ff2b2b;
+  --jds-color-brand-secondary: #e50914;
+  --jds-color-success: #059669;
+  --jds-color-warning: #d97706;
+  --jds-color-danger: #e11d48;
+  --jds-color-info: #0284c7;
+  --jds-color-breaking: #ff2b2b;
+  --jds-color-ai: #7c3aed;
+  --jds-color-government: #4f46e5;
+  --jds-color-weather: #0d9488;
+  --jds-color-sports: #ea580c;
+  --jds-color-business: #64748b;
+  --jds-color-politics: #b71c1c;
+
+  /* Focus ring */
+  --jds-focus-ring: 0 0 0 2px var(--jds-color-surface-primary),
+    0 0 0 4px var(--jds-color-brand-primary);
+}
+
+/* ── Dark mode ── */
+html[data-jds-theme="dark"],
+html[data-theme="dark"],
+.jds-root[data-theme="dark"] {
+  --jds-elevation-sm: 0 2px 8px rgb(0 0 0 / 0.4);
+  --jds-elevation-md: 0 4px 16px rgb(0 0 0 / 0.5);
+  --jds-elevation-lg: 0 8px 28px rgb(0 0 0 / 0.55);
+  --jds-elevation-xl: 0 16px 48px rgb(0 0 0 / 0.65);
+
+  --jds-color-background-primary: #050505;
+  --jds-color-background-secondary: #111111;
+  --jds-color-surface-primary: #0b0b0b;
+  --jds-color-surface-secondary: #111111;
+  --jds-color-surface-elevated: #141414;
+  --jds-color-text-primary: #ffffff;
+  --jds-color-text-secondary: rgb(255 255 255 / 0.78);
+  --jds-color-text-tertiary: rgb(255 255 255 / 0.62);
+  --jds-color-text-inverse: #050505;
+  --jds-color-border-subtle: rgb(255 255 255 / 0.06);
+  --jds-color-border-default: rgb(255 255 255 / 0.08);
+  --jds-color-border-strong: rgb(255 255 255 / 0.12);
+  --jds-color-brand-primary: #ff2b2b;
+  --jds-color-brand-secondary: #ff4d4d;
+  --jds-color-success: #34d399;
+  --jds-color-warning: #fbbf24;
+  --jds-color-danger: #fb7185;
+  --jds-color-info: #38bdf8;
+  --jds-color-breaking: #ff2b2b;
+  --jds-color-ai: #a78bfa;
+  --jds-color-government: #818cf8;
+  --jds-color-weather: #2dd4bf;
+  --jds-color-sports: #fb923c;
+  --jds-color-business: #94a3b8;
+  --jds-color-politics: #ff4d4d;
+
+  --jds-focus-ring: 0 0 0 2px var(--jds-color-surface-primary),
+    0 0 0 4px var(--jds-color-brand-primary);
+}

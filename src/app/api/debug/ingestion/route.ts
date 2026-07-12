@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
+import { rejectProductionDebugRequest } from "@/lib/security/production-route-guard";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import { createAdminClient } from "@/lib/supabase";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -10,7 +11,10 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(request: Request) {
-  const auth = await verifyCronRequest(request);
+  const blocked = rejectProductionDebugRequest();
+  if (blocked) return blocked;
+
+  const auth = await verifyCronRequest(request, { capability: "ops" });
   if (!auth.authorized) return cronAuthFailureResponse(auth);
 
   if (!isSupabaseConfigured()) {

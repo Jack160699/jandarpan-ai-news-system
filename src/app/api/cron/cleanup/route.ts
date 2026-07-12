@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
 async function handleCleanup(request: Request) {
   const startedAt = Date.now();
-  const auth = await verifyCronRequest(request);
+  const auth = await verifyCronRequest(request, { capability: "pipeline" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }

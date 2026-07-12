@@ -6,6 +6,7 @@ import { deliverPendingEvents } from "@/lib/infrastructure/events/event-bus";
 import { JOB_HANDLERS } from "@/lib/infrastructure/jobs/handlers";
 import { processJobBatch, countPendingJobs } from "@/lib/infrastructure/jobs/queue";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { buildQueueHealthSnapshot } from "@/lib/infrastructure/queue/health-manager";
 import {
   completeWorkerResult,
   partialWorkerResult,
@@ -21,11 +22,14 @@ async function runJobProcessor(ctx: WorkerContext): Promise<WorkerResult> {
     return skippedWorkerResult("job_processor", started, ctx.deadline, "deadline_precheck", pending);
   }
 
+  const health = await buildQueueHealthSnapshot().catch(() => null);
+
   const eventDelivery = await deliverPendingEvents(15);
   const batch = await processJobBatch(JOB_HANDLERS, {
     limit: INFRA_CONFIG.workerJobBatch,
     workerId: "job_processor",
     deadline: ctx.deadline,
+    oldestFirst: health?.oldestFirst ?? false,
   });
   const pending = await countPendingJobs();
 

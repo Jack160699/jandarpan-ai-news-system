@@ -2,8 +2,11 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getGeneratedArticleBySlug } from "@/lib/newsroom/generated/read";
 import { bundleFromRow } from "@/lib/news/shorts/build-short";
+import { NOINDEX_FOLLOW_ROBOTS, SITE_URL } from "@/lib/seo";
 
 export const revalidate = 60;
+
+const SHORTS_CANONICAL = `${SITE_URL}/shorts`;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -19,11 +22,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${row.headline} · 60s Reel`,
     description,
-    alternates: { canonical: `/shorts/${slug}` },
+    alternates: { canonical: SHORTS_CANONICAL },
+    robots: NOINDEX_FOLLOW_ROBOTS,
     openGraph: {
       title: row.headline,
       description,
       type: "article",
+      url: SHORTS_CANONICAL,
       images: row.hero_image_url ? [{ url: row.hero_image_url }] : undefined,
     },
   };

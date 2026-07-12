@@ -600,7 +600,7 @@ export function composeHomepageSlots(
     allowClusterRepresentativeOnly: true,
   });
 
-  let reelsArticleIds = reelsFromFresh.map((a) => a.id);
+  const reelsArticleIds = reelsFromFresh.map((a) => a.id);
 
   if (reelsArticleIds.length < 6) {
     const reelsWithOverlap = pickUniqueArticles({

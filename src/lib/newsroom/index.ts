@@ -24,6 +24,32 @@ export {
   getEvolvingCoverageBySlug,
   getLiveCoverageSlugs,
 } from "@/lib/news/coverage/read";
+export {
+  fetchEventCoverageBundle,
+  fetchEventCoverageBundleById,
+  fetchEventRowById,
+  fetchEventRowByCoverageSlug,
+  type EventCoverageBundle,
+} from "@/lib/news/coverage/fetch-event-bundle";
+export {
+  buildEventViewModel,
+  getEventViewModel,
+  getEventViewModelFromBundle,
+  type EventViewModel,
+  type EventLatestUpdate,
+  type EventSourceAttribution,
+  type EventRelatedMetadata,
+  type EventCoverageStatistics,
+} from "@/lib/events/event-view-model";
+export {
+  hasMeaningfulEventCoverage,
+  resolveStoryTimelineEvents,
+  coverageTimelineToStoryEvents,
+  formatEventStatusLabel,
+  formatUpdateTypeLabel,
+  formatClusterConfidenceLabel,
+  buildEventProgressLines,
+} from "@/lib/events/event-story-adapter";
 export { computeClusterConfidence } from "@/lib/news/coverage/confidence";
 export {
   clusterSignalsIntoEvents,

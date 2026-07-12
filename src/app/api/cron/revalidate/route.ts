@@ -7,7 +7,10 @@ import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
-import { recordCronRun } from "@/lib/observability/cron-monitor";
+import {
+  finalizeCronRun,
+  instrumentCronStart,
+} from "@/lib/observability/cron-instrumentation";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -21,36 +24,29 @@ export async function POST(request: Request) {
 }
 
 async function handleRevalidate(request: Request) {
-  const startedAt = Date.now();
-  const auth = await verifyCronRequest(request);
+  const { startedAt, requestId } = instrumentCronStart("revalidate", request);
+  const auth = await verifyCronRequest(request, { capability: "pipeline" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
   }
-  console.log(
-    JSON.stringify({
-      tag: "[cron_triggered]",
-      job: "revalidate",
-      path: new URL(request.url).pathname,
-      ts: new Date().toISOString(),
-    })
-  );
 
   try {
     await revalidateNewsroomCaches();
-    await recordCronRun({
+    await finalizeCronRun({
       job: "revalidate",
+      startedAt,
+      requestId,
       ok: true,
-      startedAt: new Date(startedAt).toISOString(),
-      durationMs: Date.now() - startedAt,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "revalidate_failed";
-    await recordCronRun({
+    await finalizeCronRun({
       job: "revalidate",
+      startedAt,
+      requestId,
       ok: false,
-      startedAt: new Date(startedAt).toISOString(),
-      durationMs: Date.now() - startedAt,
       error: message,
+      err,
     });
     return NextResponse.json(
       { ok: false, revalidated: false, error: message },

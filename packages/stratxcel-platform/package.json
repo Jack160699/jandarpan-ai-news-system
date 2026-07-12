@@ -1,0 +1,44 @@
+{
+  "name": "@stratxcel/platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stratxcel reusable platform — design system, app shell, motion, and UI primitives",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./tokens": "./tokens/index.ts",
+    "./theme": "./theme/index.ts",
+    "./theme/variables.css": "./theme/variables.css",
+    "./utils": "./utils/index.ts",
+    "./hooks": "./hooks/index.ts",
+    "./motion": "./motion/index.ts",
+    "./ui": "./ui/index.ts",
+    "./ui/*": "./ui/*/index.ts",
+    "./layouts": "./layouts/index.ts",
+    "./app-shell": "./app-shell/index.ts",
+    "./search": "./search/index.ts",
+    "./accessibility": "./accessibility/index.ts",
+    "./design-system": "./design-system/index.ts",
+    "./design-system/styles/*": "./design-system/styles/*"
+  },
+  "peerDependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.0.0",
+    "lucide-react": "^0.400.0",
+    "next": ">=15.0.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "tailwind-merge": "^3.0.0"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.6.0"
+  }
+}

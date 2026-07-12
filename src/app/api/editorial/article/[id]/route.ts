@@ -9,7 +9,10 @@ import {
   traceSchemaMismatch,
 } from "@/lib/observability/schema-mismatch-trace";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { getEventViewModel } from "@/lib/events/event-view-model";
+import type { EditorialMetadata } from "@/lib/types/newsroom";
 import { asJson, asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
+import { clientSafeErrorMessage } from "@/lib/security/safe-api-error";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -39,9 +42,9 @@ export async function GET(request: Request, context: RouteContext) {
   const supabase = createAdminServerClient();
 
   const selectWithTranslations =
-    "id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,language,tags,published_at,editorial_status,translations,editorial_metadata,created_at";
+    "id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,language,tags,published_at,editorial_status,workflow_status,reviewed_at,event_id,translations,editorial_metadata,created_at";
   const selectWithoutTranslations =
-    "id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,language,tags,published_at,editorial_status,editorial_metadata,created_at";
+    "id,slug,headline,summary,article_body,hero_image_url,seo_title,seo_description,language,tags,published_at,editorial_status,workflow_status,reviewed_at,event_id,editorial_metadata,created_at";
 
   let { data, error } = await supabase
     .from("generated_articles")
@@ -79,7 +82,22 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
-  return NextResponse.json({ ok: true, article: data });
+  const row = data as Record<string, unknown>;
+  const meta = (row.editorial_metadata ?? {}) as EditorialMetadata;
+  const resolvedEventId =
+    (typeof row.event_id === "string" && row.event_id.trim()
+      ? row.event_id.trim()
+      : null) ?? (meta.event_id?.trim() || null);
+
+  const eventViewModel = resolvedEventId
+    ? await getEventViewModel(resolvedEventId)
+    : null;
+
+  return NextResponse.json({
+    ok: true,
+    article: { ...data, event_id: resolvedEventId },
+    eventViewModel,
+  });
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
@@ -217,7 +235,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: clientSafeErrorMessage(error) },
+      { status: 500 }
+    );
   }
 
   await logEditorialAudit({

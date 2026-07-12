@@ -5,6 +5,7 @@
 
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
 import { logNewsroom } from "@/lib/newsroom/logger";
+import { EDITORIAL_LIMITS } from "@/lib/newsroom/editorial-capacity";
 
 export type GenerateArticlesResult = {
   published: number;
@@ -22,7 +23,7 @@ export function isGeneratedArticlesHomepageEnabled(): boolean {
  * Gated by NEWSROOM_GENERATE_ARTICLES=true — does not auto-enable homepage cutover.
  */
 export async function publishGeneratedFromEvents(
-  limit = 8
+  limit = EDITORIAL_LIMITS.legacyPublishFromEventsDefaultLimit
 ): Promise<GenerateArticlesResult> {
   if (process.env.NEWSROOM_GENERATE_ARTICLES !== "true") {
     logNewsroom("generated", "generation_disabled", {

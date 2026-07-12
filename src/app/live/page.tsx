@@ -1,22 +1,38 @@
-import type { Metadata } from "next";
 import { PageShell } from "@/components/layout/PageShell";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
+import { LiveV3Page } from "@/features/live-v3";
+import { isLiveV3Enabled } from "@/features/live-v3/config";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { BRAND } from "@/lib/brand";
-import { PRODUCTION_ROBOTS, SITE_URL, webPageJsonLd } from "@/lib/seo";
+import {
+  breadcrumbListJsonLd,
+  buildHubPageMetadata,
+  collectionPageJsonLd,
+} from "@/lib/seo";
+import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
 import { Footer } from "@/sections/Footer";
 import { HomepageEmpty } from "@/sections/homepage";
 import { LiveDeskLiveView } from "@/sections/live/LiveDeskLiveView";
 
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: `Live Desk · ${BRAND.nameEn}`,
-  description:
-    "Breaking and live wire updates from Chhattisgarh — developing stories as they happen.",
-  alternates: { canonical: `${SITE_URL}/live` },
-  robots: PRODUCTION_ROBOTS,
-};
+const BASE_TITLE = `Live Desk · ${BRAND.nameEn}`;
+const BASE_DESCRIPTION =
+  "Breaking and live wire updates from Chhattisgarh — developing stories as they happen.";
+const BASE_PATH = "/live";
+
+export const metadata = buildHubPageMetadata({
+  title: BASE_TITLE,
+  description: BASE_DESCRIPTION,
+  path: BASE_PATH,
+  keywords: [
+    "live news",
+    "breaking news",
+    "Chhattisgarh live wire",
+    "developing stories",
+    "Jan Darpan live desk",
+  ],
+});
 
 export default async function LivePage() {
   const feed = await getCachedGeneratedHomepageFeed();
@@ -32,11 +48,34 @@ export default async function LivePage() {
     );
   }
 
-  const jsonLd = webPageJsonLd(
-    "Live Desk",
-    "Live breaking wire from Jan Darpan Chhattisgarh.",
-    "/live"
-  );
+  const liveArticles = [...feed.breakingTicker, ...feed.liveWire].slice(0, 20);
+  const jsonLd = [
+    collectionPageJsonLd({
+      name: "Live Desk",
+      description: BASE_DESCRIPTION,
+      path: BASE_PATH,
+      items: liveArticles.map((article) => ({
+        url: `/story/${article.slug}`,
+        name: article.headline,
+      })),
+    }),
+    breadcrumbListJsonLd([
+      buildHomeBreadcrumb(),
+      { name: "Live Desk", href: BASE_PATH },
+    ]),
+  ];
+
+  if (isLiveV3Enabled()) {
+    return (
+      <PageShell variant="news">
+        <JsonLdScript data={jsonLd} />
+        <main id="main-content" className="live-page lv3-route-root nr-root" role="main">
+          <LiveV3Page feed={feed} />
+        </main>
+        <Footer />
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell variant="news">

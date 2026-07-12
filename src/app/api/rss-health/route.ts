@@ -9,7 +9,7 @@ import { getRssHealthDashboard } from "@/lib/news/rss-health";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const auth = await verifyCronRequest(request);
+  const auth = await verifyCronRequest(request, { capability: "ingest" });
   if (!auth.authorized) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }

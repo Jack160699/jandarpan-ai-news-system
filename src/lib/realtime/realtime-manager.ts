@@ -42,7 +42,7 @@ class RealtimeManager {
       ? `${options.namespace}:${channelName}`
       : channelName;
 
-    let entry = this.channels.get(key);
+    const entry = this.channels.get(key);
     if (entry) {
       entry.refs += 1;
       tracePerf("REALTIME", "channel_ref_increment", { key, refs: entry.refs });

@@ -1,0 +1,649 @@
+/**
+ * JDP-002 — Application shell styles
+ * Uses JDS semantic tokens only — no hardcoded spacing or colors.
+ */
+
+/* ── Shell root ── */
+.jdp-shell {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--jds-color-background-primary);
+  color: var(--jds-color-text-primary);
+}
+
+.jdp-shell__sidebar-region {
+  display: none;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .jdp-shell__sidebar-region {
+    display: block;
+  }
+}
+
+.jdp-shell__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100dvh;
+}
+
+.jdp-shell__sticky-stack {
+  position: sticky;
+  top: 0;
+  z-index: var(--jds-z-header, 100);
+}
+
+/* Top bar inside unified sticky stack — no nested sticky */
+.jdp-shell__sticky-stack .jdp-topbar {
+  position: relative;
+  top: auto;
+}
+
+/* ── Top bar ── */
+.jdp-topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--jds-z-header, 100);
+  height: var(--jdp-topbar-height, 56px);
+  border-bottom: 1px solid transparent;
+  background: color-mix(in srgb, var(--jds-color-surface-primary) 82%, transparent);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  transition:
+    box-shadow var(--jds-duration-fast, 160ms) var(--jds-ease-standard),
+    border-color var(--jds-duration-fast, 160ms) var(--jds-ease-standard);
+}
+
+@media (min-width: 1024px) {
+  .jdp-topbar {
+    height: 64px;
+  }
+}
+
+.jdp-topbar--scrolled {
+  border-bottom-color: var(--jds-color-border-subtle);
+  box-shadow: var(--jds-elevation-sm);
+}
+
+.jdp-topbar__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--jds-space-md);
+  height: 100%;
+  padding-inline: var(--jds-space-lg);
+  max-width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .jdp-topbar__inner {
+    padding-inline: var(--jds-space-xl);
+    gap: var(--jds-space-lg);
+  }
+}
+
+.jdp-topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--jds-space-md);
+  flex-shrink: 0;
+  text-decoration: none;
+  color: inherit;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.jdp-topbar__district {
+  display: none;
+  align-items: center;
+  gap: var(--jds-space-xs);
+  padding: var(--jds-space-xs) var(--jds-space-md);
+  border-radius: var(--jds-radius-full);
+  border: 1px solid var(--jds-color-border-subtle);
+  background: var(--jds-color-surface-secondary);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-caption);
+  font-weight: 500;
+  color: var(--jds-color-text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .jdp-topbar__district {
+    display: inline-flex;
+  }
+}
+
+.jdp-topbar__district:hover {
+  border-color: var(--jds-color-border-default);
+  color: var(--jds-color-text-primary);
+}
+
+.jdp-topbar__search-trigger {
+  display: none;
+  flex: 1;
+  max-width: 28rem;
+  align-items: center;
+  gap: var(--jds-space-sm);
+  padding: var(--jds-space-sm) var(--jds-space-lg);
+  border-radius: var(--jds-radius-full);
+  border: 1px solid var(--jds-color-border-subtle);
+  background: var(--jds-color-surface-secondary);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-caption);
+  color: var(--jds-color-text-tertiary);
+  cursor: pointer;
+  text-align: left;
+}
+
+@media (min-width: 1024px) {
+  .jdp-topbar__search-trigger {
+    display: flex;
+  }
+}
+
+.jdp-topbar__search-trigger:hover {
+  border-color: var(--jds-color-border-default);
+}
+
+.jdp-topbar__kbd {
+  margin-left: auto;
+  padding: 2px var(--jds-space-xs);
+  border-radius: var(--jds-radius-xs);
+  border: 1px solid var(--jds-color-border-subtle);
+  font-family: var(--jds-font-meta);
+  font-size: 0.6875rem;
+  color: var(--jds-color-text-tertiary);
+}
+
+.jdp-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--jds-space-xs);
+  margin-left: auto;
+}
+
+@media (min-width: 1024px) {
+  .jdp-topbar__actions {
+    margin-left: 0;
+  }
+}
+
+.jdp-topbar__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--jds-space-sm);
+  border: none;
+  border-radius: var(--jds-radius-sm);
+  background: transparent;
+  color: var(--jds-color-text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+  transition: var(--jds-transition-fast);
+}
+
+.jdp-topbar__btn:hover {
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 8%, transparent);
+  color: var(--jds-color-text-primary);
+}
+
+.jdp-topbar__btn:focus-visible {
+  box-shadow: var(--jds-focus-ring);
+  outline: none;
+}
+
+/* ── Desktop sidebar ── */
+.jdp-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--jds-color-border-subtle);
+  background: var(--jds-color-surface-primary);
+  overflow: hidden;
+  transition: width var(--jds-duration-normal, 240ms) var(--jds-ease-standard);
+}
+
+.jdp-sidebar--collapsed {
+  width: 72px;
+}
+
+.jdp-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--jds-space-lg);
+  border-bottom: 1px solid var(--jds-color-border-subtle);
+  min-height: 64px;
+}
+
+.jdp-sidebar__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+  border: none;
+  border-radius: var(--jds-radius-sm);
+  background: transparent;
+  color: var(--jds-color-text-secondary);
+  cursor: pointer;
+}
+
+.jdp-sidebar__toggle:focus-visible {
+  box-shadow: var(--jds-focus-ring);
+  outline: none;
+}
+
+.jdp-sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--jds-space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-xs);
+}
+
+.jdp-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: var(--jds-space-md);
+  padding: var(--jds-space-sm) var(--jds-space-md);
+  border-radius: var(--jds-radius-sm);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-caption);
+  font-weight: 500;
+  color: var(--jds-color-text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.jdp-sidebar__link:hover {
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 6%, transparent);
+  color: var(--jds-color-text-primary);
+}
+
+.jdp-sidebar__link--active {
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 10%, transparent);
+  color: var(--jds-color-brand-primary);
+  font-weight: 600;
+}
+
+.jdp-sidebar__resize {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background var(--jds-duration-fast);
+  flex-shrink: 0;
+}
+
+.jdp-sidebar__resize:hover,
+.jdp-sidebar__resize--active {
+  background: var(--jds-color-brand-primary);
+}
+
+.jdp-sidebar--collapsed .jdp-sidebar__label {
+  display: none;
+}
+
+/* ── Bottom navigation ── */
+.jdp-bottomnav {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: var(--jds-z-sticky, 90);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  transform: translateY(0);
+  transition: transform var(--jds-duration-normal, 240ms) var(--jds-ease-standard);
+}
+
+.jdp-bottomnav--hidden {
+  transform: translateY(calc(100% + env(safe-area-inset-bottom, 0px)));
+}
+
+.jdp-bottomnav__inner {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  height: 56px;
+  margin: 0 var(--jds-space-md) var(--jds-space-sm);
+  padding: var(--jds-space-xs);
+  border-radius: var(--jds-radius-xl);
+  border: 1px solid var(--jds-color-border-subtle);
+  background: color-mix(in srgb, var(--jds-color-surface-primary) 90%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--jds-elevation-md);
+}
+
+.jdp-bottomnav__item {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: var(--jds-color-text-tertiary);
+  font-family: var(--jds-font-ui);
+  font-size: 0.625rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.jdp-bottomnav__item--active {
+  color: var(--jds-color-brand-primary);
+}
+
+.jdp-bottomnav__item:focus-visible {
+  box-shadow: var(--jds-focus-ring);
+  outline: none;
+}
+
+.jdp-bottomnav__indicator {
+  position: absolute;
+  top: 2px;
+  width: 20px;
+  height: 3px;
+  border-radius: var(--jds-radius-full);
+  background: var(--jds-color-brand-primary);
+  transition:
+    left var(--jds-duration-normal, 240ms) var(--jds-ease-spring),
+    opacity var(--jds-duration-fast, 160ms);
+}
+
+.jdp-bottomnav__icon {
+  width: 22px;
+  height: 22px;
+}
+
+@media (min-width: 1024px) {
+  .jdp-bottomnav {
+    display: none;
+  }
+}
+
+/* ── Containers ── */
+.jdp-page {
+  flex: 1;
+  width: 100%;
+}
+
+.jdp-content {
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: var(--jds-space-lg);
+}
+
+@media (min-width: 768px) {
+  .jdp-content {
+    padding-inline: var(--jds-space-xl);
+  }
+}
+
+.jdp-content--article { max-width: 760px; }
+.jdp-content--homepage { max-width: 1280px; }
+.jdp-content--dashboard { max-width: 1440px; }
+.jdp-content--default { max-width: 1280px; }
+
+/* ── Responsive grid ── */
+.jdp-grid {
+  display: grid;
+  gap: var(--jds-space-lg);
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 480px) {
+  .jdp-grid--2 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 768px) {
+  .jdp-grid--3 { grid-template-columns: repeat(3, 1fr); }
+  .jdp-grid--4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .jdp-grid--4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ── Safe area ── */
+.jdp-safe-area {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.jdp-safe-area--top { padding-top: env(safe-area-inset-top, 0px); }
+.jdp-safe-area--bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* ── Scroll area ── */
+.jdp-scroll {
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.jdp-scroll--smooth {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jdp-scroll--smooth {
+    scroll-behavior: auto;
+  }
+  .jdp-bottomnav,
+  .jdp-sidebar {
+    transition: none !important;
+  }
+}
+
+/* ── Main feed slot (backward compat with .app-feed) ── */
+.jdp-shell__feed {
+  flex: 1;
+  padding-bottom: calc(56px + var(--jds-space-lg) + env(safe-area-inset-bottom, 0px));
+}
+
+/* Shell owns bottom padding — override legacy .has-bottom-nav double-padding */
+.has-bottom-nav .jdp-shell__feed.app-feed {
+  padding-bottom: calc(56px + var(--jds-space-lg) + env(safe-area-inset-bottom, 0px));
+}
+
+.jdp-shell--no-bottom-nav .jdp-shell__feed,
+.app-shell--story .jdp-shell__feed {
+  padding-bottom: 0;
+}
+
+@media (min-width: 1024px) {
+  .jdp-shell__feed,
+  .has-bottom-nav .jdp-shell__feed.app-feed {
+    padding-bottom: 0;
+  }
+}
+
+/* ── Command palette ── */
+.jdp-cmd {
+  position: fixed;
+  inset: 0;
+  z-index: var(--jds-z-modal, 300);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(var(--jds-space-3xl), 10vh) var(--jds-space-lg) var(--jds-space-lg);
+}
+
+.jdp-cmd__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: color-mix(in srgb, var(--jds-color-background-primary) 60%, transparent);
+  backdrop-filter: blur(4px);
+  cursor: default;
+}
+
+.jdp-cmd__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 36rem;
+  border-radius: var(--jds-radius-lg);
+  border: 1px solid var(--jds-color-border-default);
+  background: var(--jds-color-surface-elevated);
+  box-shadow: var(--jds-elevation-xl);
+  overflow: hidden;
+}
+
+.jdp-cmd__input {
+  width: 100%;
+  padding: var(--jds-space-lg);
+  border: none;
+  border-bottom: 1px solid var(--jds-color-border-subtle);
+  background: transparent;
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-body);
+  color: var(--jds-color-text-primary);
+  outline: none;
+}
+
+.jdp-cmd__list {
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: var(--jds-space-sm);
+}
+
+.jdp-cmd__group-label {
+  padding: var(--jds-space-sm) var(--jds-space-md);
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  color: var(--jds-color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.jdp-cmd__item {
+  display: flex;
+  align-items: center;
+  gap: var(--jds-space-md);
+  width: 100%;
+  padding: var(--jds-space-sm) var(--jds-space-md);
+  border: none;
+  border-radius: var(--jds-radius-sm);
+  background: transparent;
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-caption);
+  color: var(--jds-color-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.jdp-cmd__item--active,
+.jdp-cmd__item:hover {
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 8%, transparent);
+}
+
+.jdp-cmd__item:focus-visible {
+  box-shadow: var(--jds-focus-ring);
+  outline: none;
+}
+
+.jdp-cmd__meta {
+  margin-left: auto;
+  font-size: var(--jds-text-meta);
+  color: var(--jds-color-text-tertiary);
+}
+
+/* ── Search overlay (mobile sheet) ── */
+.jdp-search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--jds-z-overlay, 200);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.jdp-search-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: color-mix(in srgb, var(--jds-color-background-primary) 50%, transparent);
+  cursor: default;
+}
+
+.jdp-search-overlay__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-height: 90dvh;
+  padding: var(--jds-space-lg);
+  border-radius: var(--jds-radius-xl) var(--jds-radius-xl) 0 0;
+  background: var(--jds-color-surface-elevated);
+  box-shadow: var(--jds-elevation-xl);
+  overflow-y: auto;
+}
+
+@media (min-width: 768px) {
+  .jdp-search-overlay {
+    justify-content: center;
+    align-items: center;
+    padding: var(--jds-space-xl);
+  }
+
+  .jdp-search-overlay__panel {
+    max-width: 32rem;
+    border-radius: var(--jds-radius-lg);
+    max-height: 80dvh;
+  }
+}
+
+/* ── Quick actions FAB ── */
+.jdp-quick-actions {
+  position: fixed;
+  right: var(--jds-space-lg);
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  z-index: var(--jds-z-raised, 10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-sm);
+}
+
+@media (min-width: 1024px) {
+  .jdp-quick-actions {
+    bottom: var(--jds-space-xl);
+  }
+}
+
+.jdp-quick-actions__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: var(--jds-radius-full);
+  background: var(--jds-color-brand-primary);
+  color: var(--jds-color-text-inverse);
+  box-shadow: var(--jds-elevation-md);
+  cursor: pointer;
+}
+
+.jdp-quick-actions__btn:focus-visible {
+  box-shadow: var(--jds-focus-ring);
+  outline: none;
+}

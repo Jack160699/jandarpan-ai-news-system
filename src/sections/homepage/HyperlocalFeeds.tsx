@@ -16,13 +16,14 @@ export function HyperlocalFeeds({ feeds }: HyperlocalFeedsProps) {
   return (
     <section
       id="local"
-      className="nr-section nr-section--hyperlocal scroll-mt-24"
+      className="nr-section nr-section--hyperlocal hp-section hp-section--tertiary scroll-mt-24"
       aria-labelledby="hyperlocal-heading"
     >
       <div className="nr-wrap">
         <SectionHeader
           id="hyperlocal-heading"
           title={t.home.hyperlocal}
+          description={t.home.cityUpdates}
         />
 
         <ul className="nr-hyperlocal__grid nr-hyperlocal__grid--daily" role="list">

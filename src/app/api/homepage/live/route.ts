@@ -4,8 +4,8 @@ import { buildLiveHomepageSnapshot } from "@/lib/realtime/build-snapshot";
 import { REALTIME_CONFIG } from "@/lib/realtime/config";
 import { errorLiveFeed } from "@/lib/news/live-feed/logger";
 
+/** Request-scoped (cookies for language); snapshot TTL is in unstable_cache */
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 export async function GET() {
   const startedAt = Date.now();

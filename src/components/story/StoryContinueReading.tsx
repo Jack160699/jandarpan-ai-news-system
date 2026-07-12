@@ -1,80 +1,57 @@
-"use client";
-
 import Link from "next/link";
-import { HomeArticleImage } from "@/components/homepage/HomeArticleImage";
+import { StoryFeedCard } from "@/components/story/StoryFeedCard";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
-import { displayCategoryLabel } from "@/lib/news/category-display";
-import { resolveCardImage } from "@/lib/news/images/display";
-import { resolveStorySlug } from "@/lib/news/related-stories";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { mapNewsArticleToStoryFeedCard } from "@/lib/news/story-feed-card";
 import type { InternalLink } from "@/lib/seo/internal-links";
-import type { NewsArticleRow, NewsCategory } from "@/lib/types/news-article";
-import { useLanguage } from "@/providers/LanguageProvider";
+import type { NewsArticleRow } from "@/lib/types/news-article";
 
 type StoryContinueReadingProps = {
   related: NewsArticleRow[];
   hubLinks: InternalLink[];
+  language: NewsroomLanguage;
+  title: string;
+  subtitle: string;
 };
 
 export function StoryContinueReading({
   related,
   hubLinks,
+  language,
+  title,
+  subtitle,
 }: StoryContinueReadingProps) {
-  const { language, t } = useLanguage();
   const cards = related.slice(0, 4);
   const hubs = hubLinks.slice(0, 4);
 
   if (!cards.length && !hubs.length) return null;
 
   return (
-    <section
-      className="story-continue"
-      aria-labelledby="story-continue-title"
-    >
-      <header className="story-continue__head">
-        <h2 id="story-continue-title" className="story-continue__title">
-          {t.story.relatedStories}
+    <section className="story-continue" aria-labelledby="story-continue-title">
+      <header className="story-section-header story-continue__head">
+        <h2
+          id="story-continue-title"
+          className="story-section-header__title story-continue__title"
+        >
+          {title}
         </h2>
+        <p className="story-section-header__subtitle story-continue__sub">
+          {subtitle}
+        </p>
       </header>
 
       {cards.length > 0 ? (
         <div className="story-continue__grid" role="list">
-          {cards.map((article) => {
-            const slug = resolveStorySlug(article);
-            const image = resolveCardImage(
-              {
-                imageUrl: article.image_url,
-                category: article.category,
-                source: article.source,
-                articleUrl: article.article_url,
-              },
-              480
-            );
-
-            return (
-              <Link
-                key={article.id}
-                href={`/story/${slug}`}
-                className="story-continue__card"
-                role="listitem"
-              >
-                <div className="story-continue__visual">
-                  <HomeArticleImage src={image} alt="" sizes="(max-width:640px) 80vw, 320px" />
-                  <div className="story-continue__visual-shade" aria-hidden />
-                </div>
-                <div className="story-continue__body">
-                  <span className="story-continue__cat">
-                    {displayCategoryLabel(
-                      article.category as NewsCategory,
-                      language
-                    )}
-                  </span>
-                  <h3 className="story-continue__headline">
-                    {article.ai_headline ?? article.title}
-                  </h3>
-                </div>
-              </Link>
-            );
-          })}
+          {cards.map((article, index) => (
+            <div key={article.id} role="listitem">
+              <StoryFeedCard
+                card={mapNewsArticleToStoryFeedCard(article, language, 480)}
+                variant="grid"
+                imageSizes="(max-width:640px) 80vw, 320px"
+                priority={index === 0}
+              />
+            </div>
+          ))}
         </div>
       ) : null}
 

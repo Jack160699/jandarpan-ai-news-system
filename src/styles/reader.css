@@ -136,33 +136,28 @@ html[data-font-scale="xl"] .immersive-summary__text {
   position: fixed;
   inset: 0;
   z-index: 180;
-  background: color-mix(in srgb, var(--ink-headline) 35%, transparent);
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: max(4rem, 10vh) 1rem 1rem;
 }
 
+.search-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  background: color-mix(in srgb, var(--ink-headline) 35%, transparent);
+  cursor: default;
+}
+
 .search-overlay__panel {
+  position: relative;
+  z-index: 1;
   width: min(100%, 32rem);
   background: var(--paper-elevated);
   border: 1px solid var(--rule);
   padding: 1.25rem;
-}
-
-.search-overlay input {
-  width: 100%;
-  border: none;
-  border-bottom: 2px solid var(--rule-strong);
-  background: transparent;
-  font-family: var(--font-body), serif;
-  font-size: 1.125rem;
-  padding: 0.5rem 0;
-  color: var(--ink-headline);
-}
-
-.search-overlay input::placeholder {
-  color: var(--ink-faint);
 }
 
 @media (max-width: 767px) {

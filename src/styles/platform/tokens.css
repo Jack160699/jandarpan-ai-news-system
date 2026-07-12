@@ -34,7 +34,7 @@
   --color-ink: #1a1a1a;
   --color-ink-secondary: #3a3834;
   --color-ink-muted: #5e5a55;
-  --color-ink-faint: #7a756e;
+  --color-ink-faint: #6b6660;
   --color-rule: #d8ccb8;
   --color-rule-strong: #c9bba3;
   --color-ticker-bg: #f0e9dc;
@@ -89,19 +89,19 @@
   --gutter-tablet: 1.125rem;
   --gutter-desktop: 1.25rem;
   --gutter: var(--gutter-mobile);
-  --section-gap: 1.25rem;
-  --section-gap-md: 1.25rem;
+  --section-gap: 1rem;
+  --section-gap-md: 1rem;
   --section-gap-lg: 1.5rem;
 
-  --header-height: 3.75rem;
-  --nav-height: 0px;
-  --ticker-height: 2.375rem;
-  --trending-height: 2.375rem;
-  --live-strip-height: 2.375rem;
+  --header-height: 2.75rem;
+  --nav-height: 2.5rem;
+  --ticker-height: 2rem;
+  --trending-height: 2rem;
+  --live-strip-height: 2rem;
 
   /* Unified ticker strip badges (LIVE + Trend) */
-  --strip-band-height: 2.375rem;
-  --strip-badge-height: 2.125rem;
+  --strip-band-height: 2rem;
+  --strip-badge-height: 1.625rem;
   --strip-badge-padding-x: 0.5rem;
   --strip-badge-font-size: 0.8125rem;
   --strip-badge-font-weight: 700;
@@ -176,7 +176,7 @@
   --shadow-xl: 0 16px 48px rgb(42 32 18 / 0.12), 0 8px 16px rgb(42 32 18 / 0.06);
   --shadow-card: var(--shadow-sm);
   --shadow-card-hover: var(--shadow-md);
-  --shadow-hero: var(--shadow-lg);
+  --shadow-hero: var(--shadow-md);
   --elevation-0: none;
   --elevation-1: var(--shadow-sm);
   --elevation-2: var(--shadow-md);
@@ -217,7 +217,7 @@
   --color-text-secondary: var(--color-ink-secondary);
 
   /* Interactive primitives */
-  --btn-radius: var(--radius-md);
+  --btn-radius: var(--radius-lg);
   --btn-height: 2.75rem;
   --btn-height-sm: 2.25rem;
   --btn-pad-x: var(--space-4);
@@ -228,7 +228,7 @@
   --card-radius: var(--radius-xl);
   --card-pad: var(--space-4);
   --card-border: 1px solid var(--color-rule);
-  --input-radius: var(--radius-md);
+  --input-radius: var(--radius-lg);
   --input-pad-x: var(--space-4);
   --input-pad-y: var(--space-3);
 
@@ -245,8 +245,8 @@
 @media (min-width: 768px) {
   :root {
     --gutter: var(--gutter-tablet);
-    --section-gap: 1.25rem;
-    --section-gap-md: 1.25rem;
+    --section-gap: 1rem;
+    --section-gap-md: 1rem;
     --section-gap-lg: 1.5rem;
     --main-pad-bottom: 0;
   }
@@ -255,7 +255,8 @@
 @media (min-width: 1024px) {
   :root {
     --gutter: var(--gutter-desktop);
-    --header-height: 4.5rem;
+    --header-height: 3.5rem;
+    --nav-height: 2.625rem;
     --sticky-nav: calc(var(--safe-top) + var(--header-height));
     --section-gap-lg: 1.5rem;
     --text-hero: var(--text-hero-desktop);
@@ -270,7 +271,7 @@ html[data-theme="dark"] {
   --color-ink: #ffffff;
   --color-ink-secondary: rgb(255 255 255 / 0.78);
   --color-ink-muted: rgb(255 255 255 / 0.62);
-  --color-ink-faint: rgb(255 255 255 / 0.42);
+  --color-ink-faint: rgb(255 255 255 / 0.55);
   --color-primary: var(--color-red);
   --color-primary-light: var(--color-red-light);
   --color-primary-dark: var(--color-red-deep);

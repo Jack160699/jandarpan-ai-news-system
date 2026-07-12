@@ -4,6 +4,8 @@ import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { StoryCard } from "@/components/homepage/StoryCard";
+import { DistrictV3Page } from "@/features/district-v3";
+import { isDistrictV3Enabled } from "@/features/district-v3/config";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
 import { filterPoolByLanguage } from "@/lib/i18n/article-language";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
@@ -17,7 +19,8 @@ import {
 import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
 import {
   breadcrumbListJsonLd,
-  buildPageMetadata,
+  buildFacetedVariantMetadata,
+  buildHubPageMetadata,
   collectionPageJsonLd,
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
@@ -26,24 +29,40 @@ export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ section?: string }>;
 };
 
 export function generateStaticParams() {
   return getAllDistrictSlugs().map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
+  const { section } = await searchParams;
   const district = getDistrict(slug);
   if (!district) return { title: "District not found" };
 
-  return buildPageMetadata({
-    title: `${district.name} News | Chhattisgarh Hyperlocal`,
-    description: `Latest AI-curated news from ${district.name}, Chhattisgarh.`,
-    path: `/district/${slug}`,
+  const basePath = `/district/${slug}`;
+  const baseTitle = `${district.name} News | Chhattisgarh Hyperlocal`;
+  const description = `Latest AI-curated news from ${district.name}, Chhattisgarh.`;
+
+  if (section?.trim()) {
+    return buildFacetedVariantMetadata({
+      baseTitle,
+      description,
+      basePath,
+    });
+  }
+
+  return buildHubPageMetadata({
+    title: baseTitle,
+    description,
+    path: basePath,
     keywords: [district.name, district.nameHi, "Chhattisgarh", "hyperlocal news"],
     locale: "hi_IN",
-    ogType: "website",
   });
 }
 
@@ -95,6 +114,25 @@ export default async function DistrictPage({ params }: PageProps) {
       { name: district.name, href: path },
     ]),
   ];
+
+  if (isDistrictV3Enabled()) {
+    return (
+      <PageShell variant="news">
+        <JsonLdScript data={jsonLd} />
+        <div className="dv3-route-root nr-root">
+          <DistrictV3Page
+            district={{
+              slug: district.slug,
+              name: district.name,
+              nameHi: district.nameHi,
+              priority: district.priority,
+            }}
+            articles={articles}
+          />
+        </div>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>

@@ -33,6 +33,14 @@ export {
 export type { RegisteredCronJobId } from "@/lib/observability/cron-monitor";
 export { monitorWorkerResult } from "@/lib/observability/worker-monitor";
 export { withObservability } from "@/lib/observability/api-handler";
+export { logOpsEvent, logCronTriggered } from "@/lib/observability/ops-event";
+export {
+  finalizeCronRun,
+  instrumentCronStart,
+  resolveCronRequestId,
+} from "@/lib/observability/cron-instrumentation";
+export { getBuildInfo } from "@/lib/observability/build-info";
+export { runStartupInfraChecks } from "@/lib/observability/startup-checks";
 export {
   runAllHealthChecks,
   aggregateHealthStatus,

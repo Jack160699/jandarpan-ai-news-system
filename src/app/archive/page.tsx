@@ -2,44 +2,18 @@ import { PageShell } from "@/components/layout/PageShell";
 import { ArchivePageContent } from "@/sections/ArchivePageContent";
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/brand";
-import { PRODUCTION_ROBOTS, SITE_URL, webPageJsonLd } from "@/lib/seo";
+import { buildUtilityPageMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
-  title: "Profile",
+export const metadata: Metadata = buildUtilityPageMetadata({
+  title: `Your Profile · ${BRAND.nameEn}`,
   description:
-    "Your profile, preferences, and saved stories from Jan Darpan Chhattisgarh.",
-  alternates: { canonical: "/archive" },
-  robots: PRODUCTION_ROBOTS,
-  openGraph: {
-    title: `Profile · ${BRAND.nameEn}`,
-    description:
-      "Preferences, alerts, and bookmarked Chhattisgarh news stories.",
-    type: "website",
-    url: `${SITE_URL}/archive`,
-    locale: "hi_IN",
-    siteName: BRAND.nameEn,
-  },
-  twitter: {
-    card: "summary",
-    title: `Profile · ${BRAND.nameEn}`,
-    description:
-      "Preferences, alerts, and bookmarked Chhattisgarh news stories.",
-  },
-};
+    "Reader preferences, saved stories, and reading history on this device — not a public news archive.",
+  path: "/archive",
+});
 
 export default function ArchivePage() {
-  const jsonLd = webPageJsonLd(
-    "Profile",
-    "Your preferences, alerts, and saved stories from Jan Darpan Chhattisgarh.",
-    "/archive"
-  );
-
   return (
     <PageShell variant="news">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
       <ArchivePageContent />
     </PageShell>
   );

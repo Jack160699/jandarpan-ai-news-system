@@ -15,7 +15,6 @@ import { getServerLanguageChosen, getServerReaderLanguage } from "@/lib/i18n/ser
 import { fetchOrganizationSettings } from "@/lib/organization/settings";
 import { getTenantConfig, stripTenantForClient } from "@/lib/tenant/resolve";
 import "@/styles/globals.css";
-import "@/styles/monetization.css";
 
 const GOOGLE_SITE_VERIFICATION =
   "oqiFouZAWNqKNdef92A7wMcF-xaLQO9d-YnT-dNIpm4";

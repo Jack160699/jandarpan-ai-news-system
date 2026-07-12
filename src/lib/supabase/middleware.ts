@@ -1,5 +1,8 @@
 /**
  * Supabase session refresh for Next.js middleware (Edge-compatible).
+ *
+ * Call only when {@link requiresMiddlewareSupabaseAuth} is true — public
+ * reader traffic must not invoke auth.getUser().
  */
 
 import { createServerClient } from "@supabase/ssr";

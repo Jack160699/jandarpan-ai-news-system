@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { BrandedErrorFallback } from "@/components/errors/BrandedErrorFallback";
+import { captureOpsException } from "@/lib/observability/sentry";
 
 type AdminErrorProps = {
   error: Error & { digest?: string };
@@ -8,6 +10,14 @@ type AdminErrorProps = {
 };
 
 export default function AdminError({ error, reset }: AdminErrorProps) {
+  useEffect(() => {
+    console.error("[admin/error]", error);
+    void captureOpsException(error, {
+      boundary: "admin/error",
+      digest: error.digest,
+    });
+  }, [error]);
+
   return (
     <BrandedErrorFallback
       title="Newsroom panel error"

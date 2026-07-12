@@ -16,6 +16,7 @@ type StoryCinematicHeroProps = {
   publishedAtLabel?: string | null;
   isLive?: boolean;
   desk: NewsDeskLabel;
+  imageCredit?: string | null;
 };
 
 export function StoryCinematicHero({
@@ -31,6 +32,7 @@ export function StoryCinematicHero({
   publishedAtLabel,
   isLive = false,
   desk,
+  imageCredit,
 }: StoryCinematicHeroProps) {
   return (
     <header className="story-cinematic" aria-labelledby="story-cinematic-title">
@@ -40,11 +42,14 @@ export function StoryCinematicHero({
           fallbackSrc={fallbackSrc}
           priority
           sizes={sizes ?? "(max-width: 768px) 100vw, 72rem"}
-          alt=""
+          alt={imageCredit ? `${headline} — ${imageCredit}` : headline}
           aspectClassName="story-cinematic__image-wrap"
         />
         <div className="story-cinematic__shade" aria-hidden />
         <div className="story-cinematic__grain" aria-hidden />
+        {imageCredit ? (
+          <p className="story-cinematic__caption">{imageCredit}</p>
+        ) : null}
       </div>
 
       <div className="story-cinematic__overlay">

@@ -116,6 +116,31 @@ export function toggleBookmark(memory: ReadingMemory, slug: string): ReadingMemo
   return next;
 }
 
+export function getRecentReadSlugs(
+  memory: ReadingMemory,
+  limit = 8
+): string[] {
+  return Object.entries(memory.articles)
+    .sort((a, b) => b[1].lastRead - a[1].lastRead)
+    .slice(0, limit)
+    .map(([slug]) => slug);
+}
+
+export function getContinueTargets(
+  memory: ReadingMemory,
+  limit = 3
+): Array<{ href: string; label: string; progress: number }> {
+  return Object.entries(memory.articles)
+    .filter(([, v]) => v.progress > 0.04 && v.progress < 0.98)
+    .sort((a, b) => b[1].lastRead - a[1].lastRead)
+    .slice(0, limit)
+    .map(([slug, data]) => ({
+      href: `/story/${slug}`,
+      label: data.title,
+      progress: data.progress,
+    }));
+}
+
 export function getContinueTarget(memory: ReadingMemory): {
   href: string;
   label: string;

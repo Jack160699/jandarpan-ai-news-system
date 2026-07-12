@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
-  const auth = await verifyCronRequest(request);
+  const auth = await verifyCronRequest(request, { capability: "pipeline" });
   if (!auth.authorized) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }

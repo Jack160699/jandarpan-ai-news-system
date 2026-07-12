@@ -342,36 +342,28 @@ export async function enqueueTranslationsForPublishedArticle(
 export async function requeueDeadTranslationJobs(
   limit = 20
 ): Promise<number> {
-  const supabase = createAdminServerClient();
-  const { data: deadLetters } = await supabase
-    .from("worker_dead_letters")
-    .select("job_type, payload, tenant_id")
-    .in("job_type", ["translate_article", "translation_batch"])
-    .order("created_at", { ascending: true })
-    .limit(limit);
-
-  if (!deadLetters?.length) return 0;
-
-  let requeued = 0;
-  for (const dl of deadLetters) {
-    if (dl.job_type === "translate_article") {
-      const payload = dl.payload as { articleId?: string; targetLanguage?: string };
-      const articleId = String(payload.articleId ?? "").trim();
-      const target = payload.targetLanguage as NewsroomLanguage | undefined;
-      if (!articleId || !target) continue;
-      const id = await enqueueArticleTranslation(
-        { id: articleId, tenant_id: dl.tenant_id },
-        target,
-        { priority: 7 }
-      );
-      if (id) requeued += 1;
-    } else if (dl.job_type === "translation_batch") {
-      const id = await scheduleTranslationBatchJob(dl.tenant_id);
-      if (id) requeued += 1;
-    }
-  }
-
-  return requeued;
+  const {
+    runDeadLetterRemediation,
+    reviveDeadWorkerJobs,
+    purgeSupersededDeadJobs,
+  } = await import("@/lib/ops/dead-letter-remediation");
+  const [dlq, queue, purged] = await Promise.all([
+    runDeadLetterRemediation({
+      dryRun: false,
+      limit,
+      jobTypes: ["translate_article", "translation_batch"],
+    }),
+    reviveDeadWorkerJobs({
+      dryRun: false,
+      limit,
+      jobTypes: ["translate_article", "translation_batch"],
+    }),
+    purgeSupersededDeadJobs({
+      dryRun: false,
+      jobTypes: ["translate_article", "translation_batch"],
+    }),
+  ]);
+  return dlq.requeued + queue.revived + purged.purged;
 }
 
 export async function findArticlesMissingTranslation(input: {

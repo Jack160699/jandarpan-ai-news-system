@@ -5,9 +5,11 @@ import { CATEGORY_SEO } from "@/lib/seo/categories";
 export const REQUIRED_SITEMAP_PATHS: string[] = [
   "/",
   "/search",
-  "/archive",
   "/listen",
   "/shorts",
+  "/live",
+  "/news/national",
+  "/news/international",
   "/about",
   "/contact",
   "/editorial-policy",

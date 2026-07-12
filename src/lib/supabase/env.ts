@@ -30,17 +30,34 @@ export type SupabaseEnvDiagnostics = {
   warnings: string[];
 };
 
+function isNextBuildPhase(): boolean {
+  const phase = process.env.NEXT_PHASE;
+  return phase === "phase-production-build" || phase === "phase-export";
+}
+
 function logEnvCheckOnce(diag: SupabaseEnvDiagnostics): void {
   if (envCheckLogged) return;
   envCheckLogged = true;
-  console.log("[SUPABASE_ENV_CHECK]", {
+
+  // Local/CI `next build` workers often run without .env.local — env is absent
+  // by design here, not a production misconfiguration. Vercel injects
+  // .env.production during build (verified in deployment logs).
+  if (isNextBuildPhase() && !diag.hasUrl && !diag.hasAnon && !diag.hasServiceRole) {
+    return;
+  }
+
+  const hasIssues =
+    diag.warnings.length > 0 || !diag.hasUrl || !diag.hasAnon || !diag.urlValid;
+  if (!hasIssues) return;
+
+  console.warn("[SUPABASE_ENV_CHECK]", {
     hasUrl: diag.hasUrl,
     hasAnon: diag.hasAnon,
     hasServiceRole: diag.hasServiceRole,
     urlHostname: diag.urlHostname,
     urlValid: diag.urlValid,
-    anonKeyPrefix: diag.anonKeyPrefix,
     warnings: diag.warnings,
+    phase: process.env.NEXT_PHASE ?? "runtime",
   });
 }
 

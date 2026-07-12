@@ -27,15 +27,15 @@ async function loadSearchIndexUncached(
   return snapshotSearchIndex(buildSearchIndex(rows, displayLanguage));
 }
 
-/** ISR cache key: news-search-index-v3 + displayLanguage (hi | en) */
+/** ISR cache key: news-search-index-v4 + displayLanguage (hi | en) */
 export function getSearchIndexCacheKey(displayLanguage: NewsroomLanguage): string {
-  return `news-search-index-v3:${displayLanguage}`;
+  return `news-search-index-v4:${displayLanguage}`;
 }
 
 export async function getSearchIndex(displayLanguage: NewsroomLanguage) {
   const cached = unstable_cache(
     () => loadSearchIndexUncached(displayLanguage),
-    ["news-search-index-v3", displayLanguage],
+    ["news-search-index-v4", displayLanguage],
     {
       revalidate: 120,
       tags: [INDEX_CACHE_TAG, `${INDEX_CACHE_TAG}:${displayLanguage}`],

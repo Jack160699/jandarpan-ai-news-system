@@ -5,6 +5,7 @@
 import { cacheGetJson, cacheSetJson } from "@/lib/infrastructure/cache";
 import { REGISTERED_CRON_JOBS } from "@/lib/infrastructure/cron/registered-jobs";
 import { opsLogger } from "@/lib/observability/logger";
+import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { WorkerResult } from "@/lib/infrastructure/workers/types";
 
 const CRON_STATE_KEY = "ops:cron:last-runs:v1";
@@ -16,8 +17,11 @@ export type CronRunRecord = {
   startedAt: string;
   durationMs: number;
   degraded?: boolean;
+  entityCount?: number;
+  requestId?: string;
   workers?: WorkerResult[];
   error?: string;
+  metadata?: Record<string, unknown>;
 };
 
 type CronState = Record<string, CronRunRecord>;
@@ -36,13 +40,32 @@ export async function recordCronRun(record: CronRunRecord): Promise<void> {
   state[record.job] = record;
   await cacheSetJson(CRON_STATE_KEY, state, CRON_TTL_SEC);
 
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createAdminServerClient();
+      await supabase.from("ops_cron_runs").insert({
+        job: record.job,
+        ok: record.ok,
+        duration_ms: record.durationMs,
+        degraded: record.degraded ?? false,
+        workers: record.workers ?? null,
+        error: record.error ?? null,
+      });
+    } catch {
+      /* best-effort durability */
+    }
+  }
+
   opsLogger.info("heartbeat_recorded", {
     job: record.job,
     startedAt: record.startedAt,
     durationMs: record.durationMs,
+    duration_ms: record.durationMs,
     status: heartbeatStatus(record),
     ok: record.ok,
     degraded: record.degraded ?? false,
+    entity_count: record.entityCount,
+    request_id: record.requestId,
   });
 }
 

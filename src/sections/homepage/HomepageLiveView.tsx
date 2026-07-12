@@ -1,15 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, type CSSProperties } from "react";
-import {
-  HeroNewsCard,
-  NewsGrid,
-  ShortsSection,
-} from "@/components/layout";
+import { useEffect, useMemo } from "react";
+import { PersonalizedHomepageBody } from "@/components/personalization/PersonalizedHomepageBody";
 import { HomepageStackBands } from "@/components/layout/HomepageStackBands";
-import { LazyHomeSection } from "@/components/homepage/LazyHomeSection";
-import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
 import { NewUpdatesBanner } from "@/components/live-newsroom/NewUpdatesBanner";
 import { HomeSectionErrorBoundary } from "@/components/errors/HomeSectionErrorBoundary";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
@@ -17,26 +11,20 @@ import {
   hasValidHomeLead,
   homeDebug,
   normalizeHomepageFeed,
-  safeArticleRanking,
 } from "@/lib/homepage/feed-safety";
-import { LiveNewsroomProvider, useLiveNewsroom } from "@/providers/LiveNewsroomProvider";
+import { isHomeV3Enabled } from "@/lib/homepage/config";
+import { LiveNewsroomProvider } from "@/providers/LiveNewsroomProvider";
 import { useLanguage } from "@/providers/LanguageProvider";
-import {
-  HyperlocalSkeleton,
-} from "@/sections/homepage/HomepageSectionSkeletons";
-import { HomeDeskSplit } from "@/components/home/HomeDeskSplit";
-import { HighlightsDeskSkeleton } from "@/components/home/HighlightsDeskSkeleton";
 import { HomepageFooter } from "@/components/footer/HomepageFooter";
 import { HomepageSeoHub } from "@/sections/homepage/HomepageSeoHub";
-import { useLocalizedFeed } from "@/hooks/useLocalizedFeed";
 import { HomepageFeedFallback } from "@/sections/homepage/HomepageFeedFallback";
 
-const HyperlocalFeeds = dynamic(
+const HomeExperienceV3 = dynamic(
   () =>
-    import("@/sections/homepage/HyperlocalFeeds").then((m) => ({
-      default: m.HyperlocalFeeds,
+    import("@/sections/homepage/v3/HomeExperienceV3").then((m) => ({
+      default: m.HomeExperienceV3,
     })),
-  { loading: () => <HyperlocalSkeleton /> }
+  { loading: () => null }
 );
 
 type HomepageLiveViewProps = {
@@ -50,146 +38,54 @@ export function HomepageLiveView({ feed: serverFeed }: HomepageLiveViewProps) {
     () => normalizeHomepageFeed(serverFeed),
     [serverFeed]
   );
-  const feed = useLocalizedFeed(normalizedServer) ?? normalizedServer;
 
   useEffect(() => {
     homeDebug("HomepageLiveView", {
       language,
       contentLocked,
-      hasLead: hasValidHomeLead(feed),
+      hasLead: hasValidHomeLead(normalizedServer),
     });
-  }, [language, contentLocked, feed]);
+  }, [language, contentLocked, normalizedServer]);
 
-  if (contentLocked) {
-    return null;
-  }
-
-  if (!feed || !hasValidHomeLead(feed)) {
+  if (!normalizedServer || !hasValidHomeLead(normalizedServer)) {
     homeDebug("HomepageLiveView: empty feed");
     return <HomepageFeedFallback />;
   }
 
-  return (
-    <LiveNewsroomProvider initialFeed={feed}>
-      <HomepageLiveContent
-        trendingTopics={feed.footerIntelligence?.trendingSearches ?? []}
-      />
-    </LiveNewsroomProvider>
-  );
-}
-
-type HomepageLiveContentProps = {
-  trendingTopics: string[];
-};
-
-function HomepageLiveContent({ trendingTopics }: HomepageLiveContentProps) {
-  const { feed: liveFeed, freshIds } = useLiveNewsroom();
-  const { t } = useLanguage();
-  const localized = useLocalizedFeed(liveFeed);
-  const feed = localized ?? normalizeHomepageFeed(liveFeed);
-
-  if (!feed || !hasValidHomeLead(feed)) {
-    return <HomepageFeedFallback />;
-  }
-
-  const lead = feed.editorsPicks.lead;
-  const supporting = feed.editorsPicks.supporting ?? [];
-
-  const topStories = supporting
-    .filter(
-      (a, i, arr) =>
-        a?.id &&
-        a.id !== lead.id &&
-        a.headline?.trim() &&
-        arr.findIndex((x) => x?.id === a.id) === i
-    )
-    .slice(0, 4);
-
-  const heroLead = lead;
-
-  if (!heroLead?.headline?.trim()) {
-    return <HomepageFeedFallback />;
-  }
-
-  const heroSafe = {
-    ...heroLead,
-    ranking: safeArticleRanking(heroLead),
-  };
+  const homeV3 = isHomeV3Enabled();
 
   return (
-    <div className="home-page">
-      <HomeSectionErrorBoundary name="stack-bands">
-        <HomepageStackBands trendingTopics={trendingTopics ?? []} />
-      </HomeSectionErrorBoundary>
+    <LiveNewsroomProvider
+      initialFeed={normalizedServer}
+      enabled={!contentLocked}
+    >
+      <div className="home-page">
+        {!homeV3 ? (
+          <HomeSectionErrorBoundary name="stack-bands">
+            <HomepageStackBands
+              trendingTopics={
+                normalizedServer.footerIntelligence?.trendingSearches ?? []
+              }
+            />
+          </HomeSectionErrorBoundary>
+        ) : null}
 
-      <NewUpdatesBanner />
+        <NewUpdatesBanner />
 
-      <div className="home-page__content pl-container">
-        <HomeSectionErrorBoundary name="hero">
-          <HeroNewsCard
-            lead={heroSafe}
-            topStories={topStories}
-            featuredShort={feed.newsShorts?.[0]}
-          />
+        <div className="home-page__content pl-container">
+          {homeV3 ? (
+            <HomeExperienceV3 feed={normalizedServer} />
+          ) : (
+            <PersonalizedHomepageBody feed={normalizedServer} />
+          )}
+        </div>
+
+        <HomeSectionErrorBoundary name="explore-topics">
+          <HomepageSeoHub />
         </HomeSectionErrorBoundary>
 
-        <div className="home-body">
-          <div className="home-body__main home-feed-stack">
-            <HomeSectionErrorBoundary name="highlights-desk">
-              <LazyHomeSection
-                id="highlights-desk"
-                minHeight="0"
-                className="home-highlights-desk-lazy"
-                fallback={<HighlightsDeskSkeleton />}
-                style={{ "--stagger": 2 } as CSSProperties}
-              >
-                <HomeDeskSplit feed={feed} freshIds={freshIds} />
-              </LazyHomeSection>
-            </HomeSectionErrorBoundary>
-
-            {(feed.newsShorts?.length ?? 0) > 0 ? (
-              <HomeSectionErrorBoundary name="shorts">
-                <ShortsSection shorts={feed.newsShorts} />
-              </HomeSectionErrorBoundary>
-            ) : null}
-
-            {(feed.trending?.length ?? 0) > 0 ? (
-              <HomeSectionErrorBoundary name="trending">
-                <NewsGrid
-                  id="trending"
-                  title={t.home.trending}
-                  articles={feed.trending.slice(0, 6)}
-                  freshIds={freshIds}
-                />
-              </HomeSectionErrorBoundary>
-            ) : null}
-
-            {(feed.hyperlocalFeeds?.length ?? 0) > 0 ? (
-              <HomeSectionErrorBoundary name="hyperlocal">
-                <LazyHomeSection
-                  minHeight="160px"
-                  fallback={<HyperlocalSkeleton />}
-                  style={{ "--stagger": 5 } as CSSProperties}
-                >
-                  <HyperlocalFeeds feeds={feed.hyperlocalFeeds.slice(0, 4)} />
-                </LazyHomeSection>
-              </HomeSectionErrorBoundary>
-            ) : null}
-          </div>
-
-          <aside className="home-body__aside" aria-label="Local desk">
-            <HomeSectionErrorBoundary name="local-alerts">
-              <LocalBreakingAlerts alerts={feed.localBreakingAlerts ?? []} />
-            </HomeSectionErrorBoundary>
-          </aside>
-        </div>
+        <HomepageFooter />
       </div>
-
-      <HomeSectionErrorBoundary name="explore-topics">
-        <HomepageSeoHub />
-      </HomeSectionErrorBoundary>
-
-      <HomepageFooter />
-    </div>
+    </LiveNewsroomProvider>
   );
 }

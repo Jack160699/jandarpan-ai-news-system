@@ -8,3 +8,4 @@ export * from "@/lib/seo/slug-optimize";
 export * from "@/lib/seo/json-ld";
 export * from "@/lib/seo/google-news";
 export * from "@/lib/seo/sitemap-data";
+export * from "@/lib/seo/pagination";

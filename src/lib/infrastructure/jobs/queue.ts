@@ -134,7 +134,8 @@ export async function enqueueJobs(
 
 export async function claimJobBatch(
   limit = DEFAULT_BATCH,
-  jobTypes?: JobType[]
+  jobTypes?: JobType[],
+  options?: { oldestFirst?: boolean }
 ): Promise<WorkerJobRow[]> {
   await reclaimStaleClaimedJobs();
 
@@ -146,8 +147,14 @@ export async function claimJobBatch(
     .select("*")
     .eq("status", "pending")
     .lte("scheduled_at", now)
-    .order("priority", { ascending: false })
-    .order("scheduled_at", { ascending: true })
+    .order("scheduled_at", { ascending: true });
+
+  if (!options?.oldestFirst) {
+    // Normal mode: honor priority, but keep FIFO inside priority bands.
+    query = query.order("priority", { ascending: false });
+  }
+
+  query = query
     .limit(limit);
 
   if (jobTypes?.length) {
@@ -246,6 +253,19 @@ async function isJobTimedOut(job: WorkerJobRow): Promise<boolean> {
   return elapsed > job.timeout_ms;
 }
 
+function resolveJobRaceTimeoutMs(
+  job: WorkerJobRow,
+  deadline?: ExecutionDeadline
+): number {
+  const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;
+  if (deadline) {
+    const budget = deadline.remainingMs() - reserveMs;
+    if (budget <= 0) return 1;
+    return Math.min(job.timeout_ms, budget);
+  }
+  return job.timeout_ms;
+}
+
 export async function processJobBatch(
   handlers: Map<JobType, JobHandler>,
   options?: {
@@ -253,6 +273,7 @@ export async function processJobBatch(
     jobTypes?: JobType[];
     workerId?: string;
     deadline?: ExecutionDeadline;
+    oldestFirst?: boolean;
   }
 ): Promise<{
   processed: number;
@@ -262,7 +283,9 @@ export async function processJobBatch(
   partial?: boolean;
   released?: number;
 }> {
-  const jobs = await claimJobBatch(options?.limit, options?.jobTypes);
+  const jobs = await claimJobBatch(options?.limit, options?.jobTypes, {
+    oldestFirst: options?.oldestFirst,
+  });
   const deadline = options?.deadline;
   const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;
   let completed = 0;
@@ -297,12 +320,13 @@ export async function processJobBatch(
     }
 
     try {
+      const raceTimeoutMs = resolveJobRaceTimeoutMs(job, deadline);
       const result: JobHandlerResult = await Promise.race([
         handler(job),
         new Promise<JobHandlerResult>((_, reject) =>
           setTimeout(
             () => reject(new Error("job_timeout")),
-            job.timeout_ms
+            raceTimeoutMs
           )
         ),
       ]);
@@ -341,6 +365,17 @@ export async function processJobBatch(
       const msg = err instanceof Error ? err.message : "job_exception";
       await failJob(job, msg, true);
       failed += 1;
+      const isDead = job.attempts + 1 >= job.max_attempts;
+      if (isDead) {
+        dead += 1;
+        const { captureOpsException } = await import("@/lib/observability/sentry");
+        await captureOpsException(err, {
+          worker: options?.workerId ?? "job_processor",
+          jobType: job.job_type,
+          jobId: job.id,
+          error: msg,
+        });
+      }
       await recordJobRun({
         workerId: options?.workerId ?? "job_processor",
         jobId: job.id,
@@ -381,5 +416,72 @@ export async function countDeadLetters(): Promise<number> {
   const { count } = await supabase
     .from("worker_dead_letters")
     .select("id", { count: "exact", head: true });
+  return count ?? 0;
+}
+
+/** Reset a dead job back to pending without creating a duplicate row. */
+export async function reviveDeadJob(
+  jobType: JobType,
+  dedupeKey: string
+): Promise<string | null> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: active } = await supabase
+    .from("worker_jobs")
+    .select("id")
+    .eq("job_type", jobType)
+    .eq("dedupe_key", dedupeKey)
+    .in("status", ["pending", "claimed"])
+    .maybeSingle();
+
+  if (active?.id) return active.id;
+
+  const { data: dead } = await supabase
+    .from("worker_jobs")
+    .select("id")
+    .eq("job_type", jobType)
+    .eq("dedupe_key", dedupeKey)
+    .eq("status", "dead")
+    .maybeSingle();
+
+  if (!dead?.id) return null;
+
+  const { error } = await supabase
+    .from("worker_jobs")
+    .update({
+      status: "pending",
+      attempts: 0,
+      last_error: null,
+      claimed_at: null,
+      completed_at: null,
+      scheduled_at: now,
+      updated_at: now,
+    })
+    .eq("id", dead.id)
+    .eq("status", "dead");
+
+  if (error) {
+    console.warn("[worker-jobs] revive:", error.message);
+    return null;
+  }
+
+  return dead.id;
+}
+
+export async function purgeDeadLetterRows(ids: string[]): Promise<number> {
+  if (!ids.length) return 0;
+  const supabase = createAdminClient();
+  const unique = [...new Set(ids)];
+  const { count, error } = await supabase
+    .from("worker_dead_letters")
+    .delete({ count: "exact" })
+    .in("id", unique);
+
+  if (error) {
+    console.warn("[worker-jobs] purge dead letters:", error.message);
+    return 0;
+  }
+
   return count ?? 0;
 }

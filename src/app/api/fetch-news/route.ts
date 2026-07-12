@@ -26,9 +26,10 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import { pipelineLog } from "@/lib/observability/production-log";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { trackOpsError } from "@/lib/observability/errors";
+import { buildQueueHealthSnapshot } from "@/lib/infrastructure/queue/health-manager";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -45,7 +46,7 @@ async function handleFetchNews(request: Request) {
   const deadline = createExecutionDeadline();
   const userAgent = request.headers.get("user-agent")?.slice(0, 80) ?? "unknown";
 
-  const auth = await verifyCronRequest(request);
+  const auth = await verifyCronRequest(request, { capability: "ingest" });
   if (!auth.authorized) {
     logIngestAuthDenied({
       bearerReceived: !!auth.bearerToken,
@@ -94,6 +95,20 @@ async function handleFetchNews(request: Request) {
   });
 
   const lockResult = await runWorkerEndpoint("fetch-news", 1700, async () => {
+    const health = await buildQueueHealthSnapshot().catch(() => null);
+    if (health?.pauseIngestion) {
+      return {
+        ok: true,
+        processed: 0,
+        failed: 0,
+        details: {
+          skipped: true,
+          reason: "queue_backpressure",
+          queueHealth: health,
+        },
+      };
+    }
+
     logIngestionAnalytics({ event: "worker_start", worker: "ingest" });
 
     const result = await runScalableIngestion(deadline);
@@ -102,13 +117,6 @@ async function handleFetchNews(request: Request) {
 
     if (result.inserted > 0) {
       await revalidateNewsroomCaches();
-    }
-
-    const { refreshSnapshotFromDatabase } = await import(
-      "@/lib/news/live-feed/resolve-pool"
-    );
-    if (result.inserted > 0 || result.signalsInserted > 0) {
-      await refreshSnapshotFromDatabase(120).catch(() => null);
     }
 
     return {

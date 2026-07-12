@@ -9,13 +9,24 @@ import type { TenantMonetizationSettings } from "@/lib/monetization/types";
 function resolveTenantSiteUrl(value: string): string {
   const trimmed = value.replace(/\/$/, "");
   if (
+    !trimmed ||
     trimmed.includes("vercel.app") ||
     trimmed.includes("localhost") ||
     trimmed.includes("127.0.0.1")
   ) {
     return resolveCanonicalSiteUrl();
   }
-  return trimmed;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return trimmed;
+    }
+  } catch {
+    // fall through to canonical default
+  }
+
+  return resolveCanonicalSiteUrl();
 }
 
 export function normalizeTenantConfig(

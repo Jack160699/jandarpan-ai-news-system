@@ -4,7 +4,7 @@
 
 import { getAiProviderHealthSummary } from "@/lib/ai/providers";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
-import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
+import { isRedisConfigured, redisPing } from "@/lib/infrastructure/cache/redis";
 import { getCronMonitorState } from "@/lib/observability/cron-monitor";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
 import { countPendingEditorialImages } from "@/lib/news/ai/generate-editorial-image";
@@ -24,7 +24,7 @@ import type { HealthCheckResult, HealthStatus } from "@/lib/observability/types"
 
 function statusFrom(ok: boolean, degraded?: boolean): HealthStatus {
   if (ok && !degraded) return "healthy";
-  if (ok && degraded) return "degraded";
+  if (degraded) return "degraded";
   if (!ok) return "unhealthy";
   return "unknown";
 }
@@ -111,9 +111,64 @@ export async function checkCronWorkers(): Promise<HealthCheckResult> {
   return timed("cron_workers", "Cron workers", async () => {
     const { jobs, staleJobs } = await getCronMonitorState();
     const ok = staleJobs.length === 0;
+
+    if (jobs.length === 0 && isSupabaseConfigured()) {
+      const supabase = createAdminServerClient();
+      const since = new Date(Date.now() - 86_400_000).toISOString();
+      const { data, error } = await supabase
+        .from("ingestion_logs")
+        .select("id,status,created_at")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const lastOk =
+        !error &&
+        Boolean(data) &&
+        data?.status !== "error" &&
+        data?.status !== "failed";
+
+      if (lastOk) {
+        return {
+          ok: true,
+          degraded: true,
+          message: "cron_cache_miss_ingestion_fallback",
+          details: { lastIngestion: data, staleJobs },
+        };
+      }
+    }
+
+    if (staleJobs.length > 0 && jobs.length > 0 && isSupabaseConfigured()) {
+      const supabase = createAdminServerClient();
+      const since = new Date(Date.now() - 86_400_000).toISOString();
+      const { data, error } = await supabase
+        .from("ingestion_logs")
+        .select("id,status,created_at")
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const recentIngestion =
+        !error &&
+        Boolean(data) &&
+        data?.status !== "error" &&
+        data?.status !== "failed";
+
+      if (recentIngestion) {
+        return {
+          ok: true,
+          degraded: true,
+          message: `partial_cron_cache: stale ${staleJobs.join(", ")}`,
+          details: { recentJobs: jobs.slice(0, 5), staleJobs, lastIngestion: data },
+        };
+      }
+    }
+
     return {
       ok: jobs.length > 0 ? ok : false,
-      degraded: staleJobs.length > 0 && jobs.length > 0,
+      degraded: staleJobs.length > 0,
       message: staleJobs.length ? `stale: ${staleJobs.join(", ")}` : undefined,
       details: { recentJobs: jobs.slice(0, 5), staleJobs },
     };
@@ -277,12 +332,26 @@ export async function checkIngestion(): Promise<HealthCheckResult> {
 export async function checkRedisCache(): Promise<HealthCheckResult> {
   return timed("redis", "Upstash Redis", async () => {
     const configured = isRedisConfigured();
+    if (!configured) {
+      return {
+        ok: true,
+        degraded: true,
+        message: "redis_not_configured",
+        details: {
+          enabled: INFRA_CONFIG.redisEnabled,
+          homepageCacheSeconds: INFRA_CONFIG.homepageCacheSeconds,
+        },
+      };
+    }
+
+    const ping = await redisPing();
     return {
-      ok: configured || process.env.NODE_ENV !== "production",
-      degraded: !configured,
-      message: configured ? undefined : "redis_not_configured",
+      ok: ping.reachable,
+      degraded: !ping.reachable,
+      message: ping.reachable ? undefined : "redis_unreachable",
       details: {
         enabled: INFRA_CONFIG.redisEnabled,
+        latencyMs: ping.latencyMs,
         homepageCacheSeconds: INFRA_CONFIG.homepageCacheSeconds,
       },
     };

@@ -24,9 +24,12 @@
     "ops:queue-cleanup": "npx tsx scripts/queue-cleanup-phase4.ts --execute",
     "ops:queue-reset": "npx tsx scripts/production-queue-reset.ts --execute",
     "ops:queue-reset-audit": "npx tsx scripts/production-queue-reset.ts --audit",
+    "ops:dead-letters": "npx tsx scripts/dead-letter-remediation.ts --execute",
+    "ops:dead-letters-audit": "npx tsx scripts/dead-letter-remediation.ts --dry-run",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {
+    "@stratxcel/platform": "file:./packages/stratxcel-platform",
     "@sentry/nextjs": "^10.53.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.1",

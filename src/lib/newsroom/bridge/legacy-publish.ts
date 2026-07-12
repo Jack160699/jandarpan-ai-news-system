@@ -5,7 +5,7 @@
 
 import { createAdminServerClient } from "@/lib/supabase";
 import { enqueueArticlesForAi, isAiQueueEnabled } from "@/lib/news/ai/queue";
-import { titleHash, urlHash } from "@/lib/news/normalize";
+import { titleHash, urlHash, canonicalArticleUrl } from "@/lib/news/normalize";
 import { assignSlugsToRows } from "@/lib/news/slug";
 import { logNewsroom, logNewsroomError } from "@/lib/newsroom/logger";
 import type { NormalizedArticle } from "@/lib/news/types";
@@ -15,6 +15,7 @@ import {
   logIngestTrace,
   summarizeInsertRows,
 } from "@/lib/news/pipeline/ingest-trace";
+import { dedupeRowsByConflictKey } from "@/lib/news/pipeline/batch-dedupe";
 
 const BATCH_SIZE = 40;
 
@@ -75,20 +76,68 @@ export async function publishToLegacyArticles(
   );
 
   const rows = articles.map((article, i) =>
-    toLegacyRow({ ...article, slug: slugged[i].slug })
+    toLegacyRow({
+      ...article,
+      article_url: canonicalArticleUrl(article.article_url),
+      slug: slugged[i].slug,
+    })
   );
+
+  const preBatchDedupe = dedupeRowsByConflictKey(
+    rows as Record<string, unknown>[],
+    {
+      key: "article_url",
+      canonicalize: canonicalArticleUrl,
+    }
+  );
+  const dedupedRows = preBatchDedupe.rows as NewsArticleInsert[];
+
+  if (preBatchDedupe.duplicateCount > 0) {
+    logIngestTrace("legacy_batch_deduped", {
+      conflictKey: preBatchDedupe.conflictKey,
+      duplicateCount: preBatchDedupe.duplicateCount,
+      inputRows: rows.length,
+      outputRows: dedupedRows.length,
+      sampleDuplicateKeys: preBatchDedupe.duplicateKeys,
+    });
+    logNewsroom("bridge", "legacy_batch_deduped", {
+      duplicateCount: preBatchDedupe.duplicateCount,
+      inputRows: rows.length,
+      outputRows: dedupedRows.length,
+    });
+    result.skippedDuplicates += preBatchDedupe.duplicateCount;
+  }
 
   const supabase = createAdminServerClient();
 
   logIngestTrace("legacy_publish_start", {
-    rowCount: rows.length,
+    rowCount: dedupedRows.length,
     legacyBridgeEnabled: true,
-    samplePayload: summarizeInsertRows(rows as Record<string, unknown>[]),
+    samplePayload: summarizeInsertRows(dedupedRows as Record<string, unknown>[]),
   });
 
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < dedupedRows.length; i += BATCH_SIZE) {
+    const rawBatch = dedupedRows.slice(i, i + BATCH_SIZE);
     const batchIndex = Math.floor(i / BATCH_SIZE);
+
+    const batchDedupe = dedupeRowsByConflictKey(
+      rawBatch as Record<string, unknown>[],
+      {
+        key: "article_url",
+        canonicalize: canonicalArticleUrl,
+      }
+    );
+    const batch = batchDedupe.rows as NewsArticleInsert[];
+
+    if (batchDedupe.duplicateCount > 0) {
+      logIngestTrace("legacy_upsert_batch_deduped", {
+        batchIndex,
+        duplicateCount: batchDedupe.duplicateCount,
+        inputRows: rawBatch.length,
+        outputRows: batch.length,
+        sampleDuplicateKeys: batchDedupe.duplicateKeys,
+      });
+    }
 
     logIngestTrace("legacy_upsert_attempt", {
       batchIndex,

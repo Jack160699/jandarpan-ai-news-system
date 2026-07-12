@@ -58,7 +58,7 @@ export default function LoginPage() {
   if (isLoggedIn) {
     return (
       <PageShell>
-        <main className="pl-container mx-auto max-w-md py-10 pb-24">
+        <main id="main-content" role="main" className="pl-container mx-auto max-w-md py-10 pb-24">
           <h1 className="text-2xl font-bold">{title}</h1>
           <p className="mt-2 text-stone-600 dark:text-stone-300">
             {pickBilingualLabel(language, "Signed in as", "लॉगिन:")} {displayName}
@@ -73,7 +73,7 @@ export default function LoginPage() {
 
   return (
     <PageShell>
-      <main className="pl-container mx-auto max-w-md py-10 pb-24">
+      <main id="main-content" role="main" className="pl-container mx-auto max-w-md py-10 pb-24">
         <Link
           href="/"
           className="mb-6 inline-flex text-sm font-semibold text-[#a01830] no-underline"

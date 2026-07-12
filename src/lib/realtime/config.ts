@@ -1,10 +1,17 @@
 /** Live newsroom polling — calm, throttled defaults */
 
 export const REALTIME_CONFIG = {
-  /** Poll interval bounds (ms) */
-  pollMinMs: 60_000,
-  pollMaxMs: 120_000,
-  pollDefaultMs: 90_000,
+  /** Interval poll bounds when realtime is unavailable (ms) */
+  pollMinMs: 120_000,
+  pollMaxMs: 180_000,
+  pollDefaultMs: 150_000,
+
+  /** Longer fallback interval when Supabase realtime is subscribed */
+  pollRealtimeMinMs: 180_000,
+  pollRealtimeMaxMs: 300_000,
+
+  /** Client-side reuse window — aligns with server homepage cache (~60s) */
+  clientSnapshotTtlMs: 55_000,
 
   /** Debounce burst triggers (realtime / rapid polls) */
   debounceMs: 2_500,
@@ -16,13 +23,13 @@ export const REALTIME_CONFIG = {
   bannerTrendingThreshold: 3,
 
   /** API cache hint for clients */
-  clientCacheMaxAgeSec: 15,
+  clientCacheMaxAgeSec: 60,
 } as const;
 
 /** Jittered interval in [min, max] */
 export function jitteredPollMs(
-  min = REALTIME_CONFIG.pollMinMs,
-  max = REALTIME_CONFIG.pollMaxMs
+  min: number = REALTIME_CONFIG.pollMinMs,
+  max: number = REALTIME_CONFIG.pollMaxMs
 ): number {
   return min + Math.floor(Math.random() * (max - min + 1));
 }

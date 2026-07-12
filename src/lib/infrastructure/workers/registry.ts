@@ -31,6 +31,7 @@ import {
   processEditorialImageQueue,
 } from "@/lib/news/ai/generate-editorial-image";
 import { runScalableIngestion } from "@/lib/news/pipeline/scalable-ingest";
+import { buildQueueHealthSnapshot } from "@/lib/infrastructure/queue/health-manager";
 import { INTELLIGENCE_WORKERS } from "@/lib/infrastructure/workers/intelligence-workers";
 import type { QueueWorker, WorkerContext, WorkerResult } from "@/lib/infrastructure/workers/types";
 
@@ -38,6 +39,24 @@ async function runIngestWorker(ctx: WorkerContext): Promise<WorkerResult> {
   const started = Date.now();
   if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
     return skippedWorkerResult("ingest", started, ctx.deadline, "deadline_precheck");
+  }
+
+  const health = await buildQueueHealthSnapshot().catch(() => null);
+  if (health?.pauseIngestion) {
+    const skipped = skippedWorkerResult(
+      "ingest",
+      started,
+      ctx.deadline,
+      "queue_backpressure",
+      0
+    );
+    return {
+      ...skipped,
+      metadata: {
+        ...(skipped.metadata ?? {}),
+        queueHealth: health,
+      },
+    };
   }
 
   const result = await runScalableIngestion(ctx.deadline);
@@ -78,7 +97,7 @@ async function runAiWorker(ctx: WorkerContext): Promise<WorkerResult> {
   let partial = false;
   const errors: string[] = [];
   let loops = 0;
-  const maxLoops = 8;
+  const maxLoops = 5;
 
   while (loops < maxLoops) {
     loops++;

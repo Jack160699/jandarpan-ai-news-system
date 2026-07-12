@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
-import { LaunchHealthWidgets } from "@/components/admin-newsroom/LaunchHealthWidgets";
+import type { LaunchHealthWidget } from "@/lib/ops/launch-health";
+import { LaunchHealthSummaryStrip } from "@/components/admin-newsroom/LaunchHealthSummaryStrip";
+import { NewsroomHealthPanel } from "@/components/admin-newsroom/NewsroomHealthStrip";
 
 type HealthPayload = {
   ok: boolean;
@@ -208,6 +210,7 @@ type HealthPayload = {
     };
     totalRequests: number;
   };
+  launchWidgets?: LaunchHealthWidget[];
 };
 
 const STATUS_CLASS: Record<string, string> = {
@@ -275,7 +278,8 @@ export function HealthOperationsPanel() {
 
   return (
     <div className="anr-health-ops">
-      <LaunchHealthWidgets />
+      <LaunchHealthSummaryStrip widgets={data.launchWidgets ?? []} />
+      <NewsroomHealthPanel />
       <div className="anr-health-ops__toolbar">
         <p className="anr-meta">
           Status: <strong>{data.status}</strong> · Grade{" "}

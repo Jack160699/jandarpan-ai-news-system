@@ -5,7 +5,7 @@
 
 import { fetchJson } from "@/lib/news/http";
 import { normalizeImageUrl, pickBestImageCandidate } from "@/lib/news/images/extract";
-import { isValidHttpUrl, parsePublishedAt } from "@/lib/news/normalize";
+import { dedupeArticles, isValidHttpUrl, parsePublishedAt } from "@/lib/news/normalize";
 import {
   normalizeNewsEncoding,
   safeParsePublishedAt,
@@ -13,6 +13,12 @@ import {
 import type { NormalizedArticle, ProviderFetchResult } from "@/lib/news/types";
 
 const GNEWS_BASE = "https://gnews.io/api/v4/top-headlines";
+const GNEWS_CATEGORY_BATCH_SIZE = 1;
+const GNEWS_CATEGORY_DELAY_MS = 600;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export const GNEWS_CATEGORIES = [
   "business",
@@ -99,7 +105,7 @@ export async function fetchGNewsCategory(
   try {
     const { data } = await fetchJson<GNewsResponse>(
       `${GNEWS_BASE}?${params.toString()}`,
-      { timeoutMs: 18_000, retries: 2, provider: "gnews" }
+      { timeoutMs: 18_000, retries: 1, provider: "gnews" }
     );
 
     if (data.errors?.length) {
@@ -139,20 +145,39 @@ export async function fetchGNewsAll(): Promise<ProviderFetchResult> {
     };
   }
 
-  const settled = await Promise.allSettled(
-    GNEWS_CATEGORIES.map(async (category) => {
-      const result = await fetchGNewsCategory(category);
-      return { category, ...result };
-    })
-  );
+  const results: Array<{
+    category: GNewsCategory;
+    articles: NormalizedArticle[];
+    error?: string;
+  }> = [];
 
-  const results = settled.map((entry, i) => {
-    const category = GNEWS_CATEGORIES[i];
-    if (entry.status === "fulfilled") return entry.value;
-    const msg =
-      entry.reason instanceof Error ? entry.reason.message : "category failed";
-    return { category, articles: [] as NormalizedArticle[], error: msg };
-  });
+  for (let i = 0; i < GNEWS_CATEGORIES.length; i += GNEWS_CATEGORY_BATCH_SIZE) {
+    const chunk = GNEWS_CATEGORIES.slice(i, i + GNEWS_CATEGORY_BATCH_SIZE);
+    const settled = await Promise.allSettled(
+      chunk.map(async (category) => {
+        const result = await fetchGNewsCategory(category);
+        return { category, ...result };
+      })
+    );
+
+    for (let j = 0; j < settled.length; j++) {
+      const category = chunk[j];
+      const entry = settled[j];
+      if (entry.status === "fulfilled") {
+        results.push(entry.value);
+      } else {
+        const msg =
+          entry.reason instanceof Error
+            ? entry.reason.message
+            : "category failed";
+        results.push({ category, articles: [], error: msg });
+      }
+    }
+
+    if (i + GNEWS_CATEGORY_BATCH_SIZE < GNEWS_CATEGORIES.length) {
+      await sleep(GNEWS_CATEGORY_DELAY_MS);
+    }
+  }
 
   const articles: NormalizedArticle[] = [];
   const errors: string[] = [];
@@ -164,12 +189,17 @@ export async function fetchGNewsAll(): Promise<ProviderFetchResult> {
     articles.push(...r.articles);
   }
 
+  const { unique, skipped } = dedupeArticles(articles, { fuzzy: true });
+  if (skipped > 0) {
+    console.log(`[gnews] deduped ${skipped} duplicate articles across categories`);
+  }
+
   return {
     provider: "gnews",
     label: "GNews (India)",
-    articles,
+    articles: unique,
     fetched,
-    valid: articles.length,
+    valid: unique.length,
     errors,
     durationMs: Date.now() - startedAt,
   };

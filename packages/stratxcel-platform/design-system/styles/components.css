@@ -1,0 +1,970 @@
+/**
+ * JDP-001 — Component styles
+ * All classes prefixed with jds- to avoid collisions with production CSS.
+ * Colors reference semantic CSS custom properties only.
+ */
+
+/* ── Shared primitives ── */
+.jds-focus-ring:focus {
+  outline: none;
+}
+
+.jds-focus-ring:focus-visible {
+  box-shadow: var(--jds-focus-ring);
+}
+
+.jds-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.jds-interactive {
+  transition: var(--jds-transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.jds-interactive:disabled,
+.jds-interactive[aria-disabled="true"] {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .jds-interactive--hoverable:hover:not(:disabled):not([aria-disabled="true"]) {
+    transform: translateY(var(--jds-motion-hover-lift));
+  }
+}
+
+.jds-interactive:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(var(--jds-motion-tap-scale));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jds-interactive,
+  .jds-interactive:active,
+  .jds-skeleton,
+  .jds-loading__spinner {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* ── Button ── */
+.jds-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jds-space-sm);
+  min-height: 2.25rem;
+  padding: var(--jds-space-sm) var(--jds-space-lg);
+  border-radius: var(--jds-radius-md);
+  border: 1px solid transparent;
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-button);
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jds-button--sm {
+  min-height: 2rem;
+  padding: var(--jds-space-xs) var(--jds-space-md);
+  font-size: var(--jds-text-caption);
+}
+
+.jds-button--lg {
+  min-height: 2.75rem;
+  padding: var(--jds-space-md) var(--jds-space-2xl);
+  font-size: var(--jds-text-body);
+}
+
+.jds-button--primary {
+  background: var(--jds-color-brand-primary);
+  color: var(--jds-color-text-inverse);
+  box-shadow: var(--jds-elevation-sm);
+}
+
+.jds-button--primary:hover:not(:disabled) {
+  background: var(--jds-color-brand-secondary);
+  box-shadow: var(--jds-elevation-md);
+}
+
+.jds-button--secondary {
+  background: var(--jds-color-surface-secondary);
+  color: var(--jds-color-text-primary);
+  border-color: var(--jds-color-border-default);
+}
+
+.jds-button--secondary:hover:not(:disabled) {
+  border-color: var(--jds-color-border-strong);
+}
+
+.jds-button--outline {
+  background: transparent;
+  color: var(--jds-color-text-primary);
+  border-color: var(--jds-color-border-strong);
+}
+
+.jds-button--outline:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 8%, transparent);
+}
+
+.jds-button--ghost {
+  background: transparent;
+  color: var(--jds-color-text-secondary);
+}
+
+.jds-button--ghost:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 8%, transparent);
+  color: var(--jds-color-text-primary);
+}
+
+.jds-button--danger {
+  background: var(--jds-color-danger);
+  color: var(--jds-color-text-inverse);
+}
+
+.jds-button--loading {
+  position: relative;
+  color: transparent;
+}
+
+.jds-button__spinner {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: jds-spin 0.6s linear infinite;
+  color: var(--jds-color-text-inverse);
+}
+
+/* ── Card ── */
+.jds-card {
+  background: var(--jds-color-surface-primary);
+  border: 1px solid var(--jds-color-border-subtle);
+  border-radius: var(--jds-radius-lg);
+  box-shadow: var(--jds-elevation-sm);
+  overflow: hidden;
+}
+
+.jds-card--elevated {
+  background: var(--jds-color-surface-elevated);
+  box-shadow: var(--jds-elevation-md);
+}
+
+.jds-card--interactive {
+  cursor: pointer;
+  transition: var(--jds-transition-normal);
+}
+
+.jds-card--interactive:hover {
+  border-color: color-mix(in srgb, var(--jds-color-brand-primary) 18%, var(--jds-color-border-subtle));
+  box-shadow: var(--jds-elevation-md);
+}
+
+.jds-card__header {
+  padding: var(--jds-space-lg);
+  border-bottom: 1px solid var(--jds-color-border-subtle);
+}
+
+.jds-card__body {
+  padding: var(--jds-space-lg);
+}
+
+.jds-card__footer {
+  padding: var(--jds-space-lg);
+  border-top: 1px solid var(--jds-color-border-subtle);
+}
+
+/* ── NewsCard ── */
+.jds-news-card {
+  display: grid;
+  gap: var(--jds-space-md);
+  background: var(--jds-color-surface-primary);
+  border: 1px solid var(--jds-color-border-subtle);
+  border-radius: var(--jds-radius-md);
+  overflow: hidden;
+  transition: var(--jds-transition-normal);
+}
+
+.jds-news-card--horizontal {
+  grid-template-columns: 120px 1fr;
+}
+
+@media (min-width: 768px) {
+  .jds-news-card--horizontal {
+    grid-template-columns: 160px 1fr;
+  }
+}
+
+.jds-news-card--interactive:hover {
+  border-color: color-mix(in srgb, var(--jds-color-brand-primary) 18%, var(--jds-color-border-subtle));
+  box-shadow: var(--jds-elevation-md);
+}
+
+.jds-news-card__media {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: var(--jds-color-surface-secondary);
+  overflow: hidden;
+}
+
+.jds-news-card--horizontal .jds-news-card__media {
+  aspect-ratio: auto;
+  min-height: 100%;
+}
+
+.jds-news-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jds-news-card__content {
+  padding: var(--jds-space-md) var(--jds-space-lg) var(--jds-space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-sm);
+}
+
+.jds-news-card__headline {
+  font-family: var(--jds-font-display);
+  font-size: var(--jds-text-title);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--jds-color-text-primary);
+  margin: 0;
+}
+
+.jds-news-card__summary {
+  font-family: var(--jds-font-body);
+  font-size: var(--jds-text-caption);
+  line-height: 1.5;
+  color: var(--jds-color-text-secondary);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.jds-news-card--compact {
+  grid-template-columns: 88px 1fr;
+}
+
+.jds-news-card--featured .jds-news-card__media {
+  aspect-ratio: 16 / 9;
+}
+
+.jds-news-card--summary {
+  grid-template-columns: 1fr;
+}
+
+.jds-news-card--summary .jds-news-card__media {
+  display: none;
+}
+
+/* ── Editorial card image ── */
+.jds-card-image {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.jds-card-image__skeleton {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.jds-card-image__img {
+  object-fit: cover;
+}
+
+.jds-card-image__img--loading {
+  opacity: 0;
+}
+
+.jds-card-image__img--loaded {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.jds-card-image--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--jds-color-surface-secondary);
+  color: var(--jds-color-text-tertiary);
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  font-weight: 600;
+}
+
+/* ── Editorial badges ── */
+.jds-editorial-badges--media {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.jds-editorial-badges__live,
+.jds-editorial-badges__breaking,
+.jds-editorial-badges__custom {
+  position: absolute;
+  top: var(--jds-space-sm);
+  left: var(--jds-space-sm);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-meta);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.jds-editorial-badges__live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jds-space-xs);
+  color: var(--jds-color-breaking);
+}
+
+.jds-editorial-badges__live-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+  animation: jds-pulse 1.4s ease-in-out infinite;
+}
+
+.jds-editorial-badges__breaking {
+  color: var(--jds-color-breaking);
+}
+
+.jds-editorial-badges--content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--jds-space-sm);
+}
+
+.jds-editorial-badges__rank {
+  font-family: var(--jds-font-display);
+  font-size: var(--jds-text-h3);
+  font-weight: 700;
+  color: var(--jds-color-text-tertiary);
+  line-height: 1;
+}
+
+.jds-editorial-badges__ai {
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-meta);
+  font-weight: 600;
+  color: var(--jds-color-ai);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.jds-article-meta__category {
+  text-transform: none;
+}
+
+.jds-article-meta__source {
+  text-transform: none;
+}
+
+.jds-article-meta__confidence {
+  color: var(--jds-color-ai);
+}
+
+/* ── Editorial skeleton ── */
+.jds-editorial-skeleton {
+  display: grid;
+  gap: var(--jds-space-md);
+  background: var(--jds-color-surface-primary);
+  border: 1px solid var(--jds-color-border-subtle);
+  border-radius: var(--jds-radius-md);
+  overflow: hidden;
+  padding: var(--jds-space-md);
+}
+
+.jds-editorial-skeleton--hero {
+  min-height: 280px;
+  border-radius: var(--jds-radius-xl);
+}
+
+.jds-editorial-skeleton__main {
+  display: grid;
+  gap: var(--jds-space-md);
+}
+
+.jds-editorial-skeleton--horizontal .jds-editorial-skeleton__main,
+.jds-editorial-skeleton--compact .jds-editorial-skeleton__main {
+  grid-template-columns: 88px 1fr;
+}
+
+.jds-editorial-skeleton__title-short {
+  width: 55%;
+}
+
+.jds-editorial-skeleton__summary {
+  width: 90%;
+}
+
+.jds-editorial-skeleton__meta {
+  width: 40%;
+  height: 0.75rem;
+}
+
+.jds-editorial-skeleton__actions {
+  display: flex;
+  gap: var(--jds-space-sm);
+}
+
+.jds-editorial-skeleton__action {
+  width: 2rem;
+  height: 2rem;
+}
+
+@keyframes jds-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ── HeroCard ── */
+.jds-hero-card {
+  position: relative;
+  border-radius: var(--jds-radius-xl);
+  overflow: hidden;
+  background: var(--jds-color-surface-elevated);
+  box-shadow: var(--jds-elevation-lg);
+  min-height: 280px;
+}
+
+@media (min-width: 768px) {
+  .jds-hero-card {
+    min-height: 360px;
+  }
+}
+
+.jds-hero-card__media {
+  position: absolute;
+  inset: 0;
+}
+
+.jds-hero-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jds-hero-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.85) 0%,
+    rgb(0 0 0 / 0.4) 45%,
+    rgb(0 0 0 / 0.1) 100%
+  );
+}
+
+.jds-hero-card__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--jds-space-md);
+  min-height: inherit;
+  padding: var(--jds-space-xl);
+}
+
+.jds-hero-card__headline {
+  font-family: var(--jds-font-display);
+  font-size: var(--jds-text-hero);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--jds-color-text-inverse);
+  margin: 0;
+}
+
+.jds-hero-card__summary {
+  font-family: var(--jds-font-body);
+  font-size: var(--jds-text-body);
+  line-height: 1.5;
+  color: rgb(255 255 255 / 0.85);
+  margin: 0;
+  max-width: 60ch;
+}
+
+/* ── SectionHeader ── */
+.jds-section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--jds-space-lg);
+  padding-block: var(--jds-space-md);
+  border-bottom: 2px solid var(--jds-color-brand-primary);
+  margin-bottom: var(--jds-space-lg);
+}
+
+.jds-section-header__kicker {
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jds-color-text-tertiary);
+  margin: 0 0 var(--jds-space-xs);
+}
+
+.jds-section-header__title {
+  font-family: var(--jds-font-display);
+  font-size: var(--jds-text-h2);
+  font-weight: 700;
+  color: var(--jds-color-text-primary);
+  margin: 0;
+}
+
+.jds-section-header__action {
+  flex-shrink: 0;
+}
+
+/* ── Badge ── */
+.jds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jds-space-xs);
+  padding: 2px var(--jds-space-sm);
+  border-radius: var(--jds-radius-full);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-meta);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.jds-badge--default {
+  background: var(--jds-color-surface-secondary);
+  color: var(--jds-color-text-secondary);
+}
+
+.jds-badge--brand {
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 12%, transparent);
+  color: var(--jds-color-brand-primary);
+}
+
+.jds-badge--breaking {
+  background: color-mix(in srgb, var(--jds-color-breaking) 15%, transparent);
+  color: var(--jds-color-breaking);
+}
+
+.jds-badge--success {
+  background: color-mix(in srgb, var(--jds-color-success) 15%, transparent);
+  color: var(--jds-color-success);
+}
+
+.jds-badge--warning {
+  background: color-mix(in srgb, var(--jds-color-warning) 15%, transparent);
+  color: var(--jds-color-warning);
+}
+
+.jds-badge--danger {
+  background: color-mix(in srgb, var(--jds-color-danger) 15%, transparent);
+  color: var(--jds-color-danger);
+}
+
+.jds-badge--ai {
+  background: color-mix(in srgb, var(--jds-color-ai) 15%, transparent);
+  color: var(--jds-color-ai);
+}
+
+/* ── Chip ── */
+.jds-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jds-space-xs);
+  padding: var(--jds-space-xs) var(--jds-space-md);
+  border-radius: var(--jds-radius-full);
+  border: 1px solid var(--jds-color-border-default);
+  background: var(--jds-color-surface-primary);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-caption);
+  font-weight: 500;
+  color: var(--jds-color-text-secondary);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.jds-chip:hover:not(:disabled) {
+  border-color: var(--jds-color-brand-primary);
+  color: var(--jds-color-text-primary);
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 6%, transparent);
+}
+
+.jds-chip--selected {
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 12%, transparent);
+  border-color: var(--jds-color-brand-primary);
+  color: var(--jds-color-brand-primary);
+}
+
+.jds-chip--politics { border-color: color-mix(in srgb, var(--jds-color-politics) 30%, transparent); color: var(--jds-color-politics); }
+.jds-chip--sports { border-color: color-mix(in srgb, var(--jds-color-sports) 30%, transparent); color: var(--jds-color-sports); }
+.jds-chip--business { border-color: color-mix(in srgb, var(--jds-color-business) 30%, transparent); color: var(--jds-color-business); }
+.jds-chip--weather { border-color: color-mix(in srgb, var(--jds-color-weather) 30%, transparent); color: var(--jds-color-weather); }
+.jds-chip--government { border-color: color-mix(in srgb, var(--jds-color-government) 30%, transparent); color: var(--jds-color-government); }
+
+/* ── Input ── */
+.jds-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-xs);
+}
+
+.jds-input-label {
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-label);
+  font-weight: 600;
+  color: var(--jds-color-text-secondary);
+}
+
+.jds-input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--jds-space-md) var(--jds-space-lg);
+  border-radius: var(--jds-radius-md);
+  border: 1px solid var(--jds-color-border-default);
+  background: var(--jds-color-surface-primary);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-body);
+  color: var(--jds-color-text-primary);
+}
+
+.jds-input::placeholder {
+  color: var(--jds-color-text-tertiary);
+}
+
+.jds-input:hover:not(:disabled) {
+  border-color: var(--jds-color-border-strong);
+}
+
+.jds-input--error {
+  border-color: var(--jds-color-danger);
+}
+
+.jds-input-hint {
+  font-size: var(--jds-text-caption);
+  color: var(--jds-color-text-tertiary);
+}
+
+.jds-input-hint--error {
+  color: var(--jds-color-danger);
+}
+
+/* ── Search ── */
+.jds-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.jds-search__icon {
+  position: absolute;
+  left: var(--jds-space-lg);
+  color: var(--jds-color-text-tertiary);
+  pointer-events: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.jds-search__input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--jds-space-md) var(--jds-space-lg) var(--jds-space-md) 2.75rem;
+  border-radius: var(--jds-radius-full);
+  border: 1px solid var(--jds-color-border-default);
+  background: var(--jds-color-surface-primary);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-body);
+  color: var(--jds-color-text-primary);
+}
+
+.jds-search__input::placeholder {
+  color: var(--jds-color-text-tertiary);
+}
+
+.jds-search__clear {
+  position: absolute;
+  right: var(--jds-space-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: var(--jds-radius-full);
+  background: transparent;
+  color: var(--jds-color-text-tertiary);
+  cursor: pointer;
+}
+
+.jds-search__clear:hover {
+  background: var(--jds-color-surface-secondary);
+  color: var(--jds-color-text-primary);
+}
+
+/* ── Navigation ── */
+.jds-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--jds-space-xs);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.jds-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.jds-nav__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jds-space-xs);
+  padding: var(--jds-space-sm) var(--jds-space-md);
+  border-radius: var(--jds-radius-sm);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-caption);
+  font-weight: 500;
+  color: var(--jds-color-text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.jds-nav__item:hover {
+  color: var(--jds-color-text-primary);
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 6%, transparent);
+}
+
+.jds-nav__item--active {
+  color: var(--jds-color-brand-primary);
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 10%, transparent);
+  font-weight: 600;
+}
+
+/* ── Avatar ── */
+.jds-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--jds-radius-full);
+  background: var(--jds-color-surface-secondary);
+  color: var(--jds-color-text-secondary);
+  font-family: var(--jds-font-ui);
+  font-weight: 600;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.jds-avatar--sm { width: 2rem; height: 2rem; font-size: 0.75rem; }
+.jds-avatar--md { width: 2.5rem; height: 2.5rem; font-size: 0.875rem; }
+.jds-avatar--lg { width: 3rem; height: 3rem; font-size: 1rem; }
+
+.jds-avatar__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── ArticleMeta ── */
+.jds-article-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--jds-space-sm);
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  color: var(--jds-color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.jds-article-meta__sep {
+  opacity: 0.5;
+}
+
+/* ── AISummary ── */
+.jds-ai-summary {
+  padding: var(--jds-space-lg);
+  border-radius: var(--jds-radius-md);
+  border: 1px solid color-mix(in srgb, var(--jds-color-ai) 25%, transparent);
+  background: color-mix(in srgb, var(--jds-color-ai) 6%, var(--jds-color-surface-primary));
+}
+
+.jds-ai-summary__header {
+  display: flex;
+  align-items: center;
+  gap: var(--jds-space-sm);
+  margin-bottom: var(--jds-space-sm);
+}
+
+.jds-ai-summary__label {
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-label);
+  font-weight: 600;
+  color: var(--jds-color-ai);
+}
+
+.jds-ai-summary__body {
+  font-family: var(--jds-font-body);
+  font-size: var(--jds-text-caption);
+  line-height: 1.55;
+  color: var(--jds-color-text-secondary);
+  margin: 0;
+}
+
+/* ── Loading ── */
+.jds-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jds-space-sm);
+  color: var(--jds-color-text-tertiary);
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-caption);
+}
+
+.jds-loading__spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--jds-color-border-default);
+  border-top-color: var(--jds-color-brand-primary);
+  border-radius: 50%;
+  animation: jds-spin 0.7s linear infinite;
+}
+
+.jds-loading--overlay {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--jds-color-surface-primary) 80%, transparent);
+  z-index: 10;
+}
+
+@keyframes jds-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Skeleton ── */
+.jds-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--jds-color-surface-secondary) 0%,
+    color-mix(in srgb, var(--jds-color-surface-secondary) 60%, var(--jds-color-text-tertiary)) 50%,
+    var(--jds-color-surface-secondary) 100%
+  );
+  background-size: 200% 100%;
+  animation: jds-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--jds-radius-sm);
+}
+
+.jds-skeleton--text { height: 1em; width: 100%; }
+.jds-skeleton--title { height: 1.5em; width: 70%; }
+.jds-skeleton--avatar { width: 2.5rem; height: 2.5rem; border-radius: var(--jds-radius-full); }
+.jds-skeleton--media { aspect-ratio: 16 / 10; width: 100%; }
+
+@keyframes jds-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── EmptyState ── */
+.jds-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--jds-space-3xl) var(--jds-space-lg);
+  gap: var(--jds-space-md);
+}
+
+.jds-empty__icon {
+  font-size: 2rem;
+  color: var(--jds-color-text-tertiary);
+  line-height: 1;
+}
+
+.jds-empty__title {
+  font-family: var(--jds-font-display);
+  font-size: var(--jds-text-h3);
+  font-weight: 600;
+  color: var(--jds-color-text-primary);
+  margin: 0;
+}
+
+.jds-empty__description {
+  font-family: var(--jds-font-body);
+  font-size: var(--jds-text-caption);
+  color: var(--jds-color-text-secondary);
+  max-width: 40ch;
+  margin: 0;
+}
+
+/* ── ErrorState ── */
+.jds-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--jds-space-3xl) var(--jds-space-lg);
+  gap: var(--jds-space-md);
+  border: 1px solid color-mix(in srgb, var(--jds-color-danger) 25%, transparent);
+  border-radius: var(--jds-radius-lg);
+  background: color-mix(in srgb, var(--jds-color-danger) 5%, var(--jds-color-surface-primary));
+}
+
+.jds-error__icon {
+  color: var(--jds-color-danger);
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.jds-error__title {
+  font-family: var(--jds-font-display);
+  font-size: var(--jds-text-h3);
+  font-weight: 600;
+  color: var(--jds-color-text-primary);
+  margin: 0;
+}
+
+.jds-error__description {
+  font-family: var(--jds-font-body);
+  font-size: var(--jds-text-caption);
+  color: var(--jds-color-text-secondary);
+  max-width: 40ch;
+  margin: 0;
+}
+
+.jds-error__actions {
+  display: flex;
+  gap: var(--jds-space-md);
+  margin-top: var(--jds-space-sm);
+}

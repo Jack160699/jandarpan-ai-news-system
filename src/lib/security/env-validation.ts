@@ -6,6 +6,22 @@ import { isProductionDeployment } from "@/lib/infrastructure/production";
 
 type EnvIssue = { key: string; severity: "error" | "warn"; message: string };
 
+/** Production-required keys with actionable startup messages. */
+const REQUIRED_PRODUCTION_ENV_MESSAGES: Record<string, string> = {
+  NEXT_PUBLIC_SUPABASE_URL:
+    "Missing NEXT_PUBLIC_SUPABASE_URL — set Supabase Project URL in Vercel (Dashboard → Settings → API)",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY:
+    "Missing NEXT_PUBLIC_SUPABASE_ANON_KEY — use the publishable/anon key from Supabase Dashboard → API Keys",
+  SUPABASE_SERVICE_ROLE_KEY:
+    "Missing SUPABASE_SERVICE_ROLE_KEY — server-only secret; never expose to the browser",
+  CRON_SECRET:
+    "Missing CRON_SECRET — generate with `openssl rand -hex 32`; required for Vercel cron and QStash auth",
+  NEWSROOM_SUPER_ADMIN_EMAILS:
+    "Missing NEWSROOM_SUPER_ADMIN_EMAILS — comma-separated super-admin emails for RBAC bootstrap",
+  NEXT_PUBLIC_SITE_URL:
+    "Missing NEXT_PUBLIC_SITE_URL — canonical domain for SEO, sitemaps, Open Graph URLs, and invite links",
+};
+
 const SECRET_PATTERNS = [
   /^sk_live_/i,
   /^sk_test_/i,
@@ -18,20 +34,16 @@ export function validateProductionEnv(): EnvIssue[] {
 
   if (!isProd) return issues;
 
-  const required = [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "CRON_SECRET",
-    "NEWSROOM_SUPER_ADMIN_EMAILS",
-  ];
+  const required = Object.keys(REQUIRED_PRODUCTION_ENV_MESSAGES);
 
   for (const key of required) {
     if (!process.env[key]?.trim()) {
       issues.push({
         key,
         severity: "error",
-        message: `Missing required production env: ${key}`,
+        message:
+          REQUIRED_PRODUCTION_ENV_MESSAGES[key] ??
+          `Missing required production env: ${key}`,
       });
     }
   }
@@ -64,12 +76,17 @@ export function validateProductionEnv(): EnvIssue[] {
     });
   }
 
-  if (!process.env.NEXT_PUBLIC_SITE_URL?.trim()) {
+  if (
+    isProd &&
+    process.env.CRON_SECRET?.trim() &&
+    !process.env.CRON_INGEST_SECRET?.trim() &&
+    !process.env.CRON_PIPELINE_SECRET?.trim()
+  ) {
     issues.push({
-      key: "NEXT_PUBLIC_SITE_URL",
+      key: "CRON_INGEST_SECRET",
       severity: "warn",
       message:
-        "NEXT_PUBLIC_SITE_URL is not set — canonical URLs and production readiness score will be degraded",
+        "Consider scoped cron secrets (CRON_INGEST_SECRET, CRON_PIPELINE_SECRET, CRON_OPS_SECRET, CRON_ADMIN_SECRET) to reduce blast radius of CRON_SECRET",
     });
   }
 
@@ -87,6 +104,18 @@ export function validateProductionEnv(): EnvIssue[] {
       key: "AI_LOCAL_ENRICH_ENABLED",
       severity: "warn",
       message: "Set AI_LOCAL_ENRICH_ENABLED=false in production to avoid mock AI enrichment",
+    });
+  }
+
+  const hasRedis =
+    Boolean(process.env.UPSTASH_REDIS_REST_URL?.trim()) &&
+    Boolean(process.env.UPSTASH_REDIS_REST_TOKEN?.trim());
+  if (!hasRedis) {
+    issues.push({
+      key: "UPSTASH_REDIS_REST_URL",
+      severity: "warn",
+      message:
+        "Upstash Redis not configured — rate limits and distributed cache fall back to per-instance memory (not safe at scale)",
     });
   }
 

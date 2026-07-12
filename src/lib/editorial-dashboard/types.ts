@@ -62,6 +62,7 @@ export type DashboardGeneratedArticle = {
   headline: string;
   summary: string | null;
   editorial_status: EditorialArticleStatus;
+  workflow_status: string | null;
   homepage_pin: boolean;
   is_breaking: boolean;
   is_featured: boolean;
@@ -77,6 +78,15 @@ export type DashboardGeneratedArticle = {
   created_at: string;
   source_attribution: DashboardSourceAttribution[];
   hero_image_url: string | null;
+  tags: string[];
+  publish_decision: string | null;
+  used_fallback: boolean;
+  repaired: boolean;
+  has_intelligence_v2: boolean;
+  entity_names: string[];
+  reader_keywords: string[];
+  district: string | null;
+  category_label: string | null;
 };
 
 export type DashboardImageQueueItem = {
@@ -121,6 +131,10 @@ export type EditorialDashboardSnapshot = {
     approved: number;
     aiQueuePending: number;
     imageQueuePending: number;
+    publishedToday: number;
+    fallbackArticles: number;
+    repairedArticles: number;
+    eventLinkedArticles: number;
   };
   ingestion: {
     lastRun: DashboardIngestionLog | null;

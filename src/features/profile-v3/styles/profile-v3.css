@@ -1,0 +1,855 @@
+/**
+ * JDP-014 — Profile Experience V3
+ */
+
+.pv3-page {
+  padding-block: var(--space-6, 1.5rem) var(--space-16, 4rem);
+}
+
+.pv3-hero {
+  margin-bottom: var(--space-8, 2rem);
+}
+
+.pv3-hero__back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font-size: 0.875rem;
+  font-weight: var(--weight-semibold, 600);
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+.pv3-hero__back:hover {
+  color: var(--ink-primary);
+}
+
+.pv3-hero__title {
+  margin-top: var(--space-4, 1rem);
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  max-width: 16ch;
+}
+
+.pv3-hero__subtitle {
+  margin-top: var(--space-3, 0.75rem);
+  max-width: 42rem;
+  color: var(--ink-muted);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.pv3-hero__lineage {
+  margin-top: var(--space-4, 1rem);
+}
+
+/* ── Layout ── */
+.pv3-layout {
+  display: grid;
+  gap: var(--space-6, 1.5rem);
+}
+
+@media (min-width: 960px) {
+  .pv3-layout {
+    grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-8, 2rem);
+  }
+
+  .pv3-layout__nav {
+    position: sticky;
+    top: calc(var(--topbar-height, 3.5rem) + var(--space-4, 1rem));
+  }
+}
+
+.pv3-layout__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8, 2rem);
+  min-width: 0;
+}
+
+/* ── Nav ── */
+.pv3-nav__list {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.pv3-nav__list::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .pv3-nav__list {
+    flex-direction: column;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+}
+
+.pv3-nav__item {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.pv3-nav__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 var(--space-3, 0.75rem);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: var(--weight-semibold, 600);
+  color: var(--ink-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+@media (min-width: 960px) {
+  .pv3-nav__link {
+    width: 100%;
+    border-radius: var(--card-radius, 0.75rem);
+    justify-content: flex-start;
+  }
+}
+
+.pv3-nav__link:hover {
+  color: var(--ink-primary);
+  background: color-mix(in srgb, var(--ink-headline) 4%, transparent);
+}
+
+.pv3-nav__link.is-active {
+  color: var(--jds-color-brand-primary, var(--accent));
+  background: color-mix(in srgb, var(--jds-color-brand-primary, var(--accent)) 10%, transparent);
+  border-color: color-mix(in srgb, var(--jds-color-brand-primary, var(--accent)) 20%, transparent);
+}
+
+/* ── Sections ── */
+.pv3-section__header {
+  margin-bottom: var(--space-3, 0.75rem);
+}
+
+.pv3-section__description {
+  margin: 0 0 var(--space-4, 1rem);
+  max-width: 42rem;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.pv3-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+}
+
+.pv3-section-icon {
+  color: var(--ink-faint);
+}
+
+/* ── Dashboard ── */
+.pv3-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 1.25rem);
+}
+
+.pv3-dashboard__identity {
+  display: flex;
+  gap: var(--space-4, 1rem);
+  align-items: center;
+}
+
+.pv3-dashboard__meta {
+  min-width: 0;
+}
+
+.pv3-dashboard__name {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  line-height: 1.2;
+}
+
+.pv3-dashboard__email {
+  margin-top: 2px;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+}
+
+.pv3-dashboard__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+  margin-top: var(--space-2, 0.5rem);
+}
+
+.pv3-dashboard__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+.pv3-dashboard__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3, 0.75rem);
+}
+
+@media (min-width: 640px) {
+  .pv3-dashboard__stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.pv3-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3, 0.75rem);
+  border-radius: var(--card-radius, 0.75rem);
+  background: color-mix(in srgb, var(--ink-headline) 3%, transparent);
+}
+
+.pv3-stat__icon {
+  color: var(--jds-color-brand-primary, var(--accent));
+}
+
+.pv3-stat__value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.pv3-stat__label {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+.pv3-dashboard__continue {
+  padding: var(--space-4, 1rem);
+  border-radius: var(--card-radius, 0.75rem);
+  border: 1px solid color-mix(in srgb, var(--ink-headline) 8%, var(--rule));
+}
+
+.pv3-dashboard__continue-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+}
+
+.pv3-dashboard__continue-link {
+  display: block;
+  margin-top: var(--space-2, 0.5rem);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1.3;
+  text-decoration: none;
+  color: var(--ink-primary);
+}
+
+.pv3-dashboard__continue-link:hover {
+  opacity: 0.8;
+}
+
+/* ── Progress ── */
+.pv3-progress {
+  margin-top: var(--space-3, 0.75rem);
+  height: 4px;
+  width: 100%;
+  max-width: 20rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--rule);
+}
+
+.pv3-progress__bar {
+  height: 100%;
+  background: var(--ink-primary);
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+
+/* ── History / Saved ── */
+.pv3-history__featured {
+  padding: var(--space-4, 1rem);
+  border-radius: var(--card-radius, 0.75rem);
+  border: 1px solid var(--rule);
+}
+
+.pv3-history__kicker {
+  font-size: 0.6875rem;
+  font-weight: var(--weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-muted);
+}
+
+.pv3-history__title {
+  display: block;
+  margin-top: var(--space-2, 0.5rem);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1.3;
+  text-decoration: none;
+  color: var(--ink-primary);
+}
+
+.pv3-history__quick,
+.pv3-history__list,
+.pv3-saved {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pv3-history__quick {
+  margin-top: var(--space-4, 1rem);
+}
+
+.pv3-history__quick li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3, 0.75rem);
+  padding-block: var(--space-2, 0.5rem);
+}
+
+.pv3-history__quick-link,
+.pv3-history__link,
+.pv3-saved__title {
+  font-weight: var(--weight-semibold, 600);
+  text-decoration: none;
+  color: var(--ink-primary);
+}
+
+.pv3-history__quick-link:hover,
+.pv3-history__link:hover,
+.pv3-saved__title:hover {
+  opacity: 0.75;
+}
+
+.pv3-history__pct,
+.pv3-history__meta,
+.pv3-saved__meta {
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
+.pv3-history__list {
+  margin-top: var(--space-4, 1rem);
+  border-top: 1px solid var(--rule);
+}
+
+.pv3-history__item,
+.pv3-saved__item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4, 1rem);
+  padding-block: var(--space-3, 0.75rem);
+  border-bottom: 1px solid var(--rule);
+}
+
+.pv3-saved__remove {
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  padding: 0 var(--space-2, 0.5rem);
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Streak ── */
+.pv3-streak {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-4, 1rem);
+}
+
+.pv3-streak__flame {
+  color: #f97316;
+}
+
+.pv3-streak__count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2, 0.5rem);
+}
+
+.pv3-streak__number {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.pv3-streak__unit {
+  font-size: 1rem;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pv3-streak__message {
+  max-width: 24rem;
+  color: var(--ink-muted);
+  font-size: 0.9375rem;
+}
+
+.pv3-streak__dots {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+  margin-top: var(--space-2, 0.5rem);
+}
+
+.pv3-streak__dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 999px;
+  background: var(--rule);
+}
+
+.pv3-streak__dot.is-filled {
+  background: #f97316;
+}
+
+/* ── Chips / Districts ── */
+.pv3-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+.pv3-chips__icon {
+  margin-right: 2px;
+}
+
+.pv3-districts__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.pv3-districts__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-3, 0.75rem);
+  border-radius: var(--card-radius, 0.75rem);
+  border: 1px solid var(--rule);
+}
+
+.pv3-districts__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-weight: var(--weight-semibold, 600);
+  text-decoration: none;
+  color: var(--ink-primary);
+}
+
+.pv3-districts__home {
+  font-size: 0.625rem;
+  font-weight: var(--weight-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--jds-color-brand-primary, var(--accent)) 12%, transparent);
+  color: var(--jds-color-brand-primary, var(--accent));
+}
+
+.pv3-districts__unfollow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  color: #d97706;
+  cursor: pointer;
+}
+
+.pv3-districts__add {
+  margin-top: var(--space-4, 1rem);
+  padding-top: var(--space-4, 1rem);
+  border-top: 1px solid var(--rule);
+}
+
+.pv3-districts__add-label {
+  margin-bottom: var(--space-3, 0.75rem);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-semibold, 600);
+  color: var(--ink-muted);
+}
+
+/* ── Settings ── */
+.pv3-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+}
+
+.pv3-toggle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4, 1rem);
+  padding-bottom: var(--space-4, 1rem);
+  border-bottom: 1px solid var(--rule);
+}
+
+.pv3-toggle:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.pv3-toggle__label {
+  display: block;
+  font-weight: var(--weight-semibold, 600);
+  cursor: pointer;
+}
+
+.pv3-toggle__hint {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  line-height: 1.4;
+}
+
+.pv3-toggle__switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 3rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--rule-strong, var(--rule));
+  background: var(--rule);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.pv3-toggle__switch.is-on {
+  background: var(--jds-color-brand-primary, var(--accent));
+  border-color: transparent;
+}
+
+.pv3-toggle__switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pv3-toggle__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+  transition: transform 0.15s ease;
+}
+
+.pv3-toggle__switch.is-on .pv3-toggle__thumb {
+  transform: translateX(1.25rem);
+}
+
+.pv3-settings__links,
+.pv3-settings__link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3, 0.75rem);
+}
+
+.pv3-settings__link {
+  font-size: 0.875rem;
+  font-weight: var(--weight-semibold, 600);
+  color: var(--jds-color-brand-primary, var(--accent));
+  text-decoration: none;
+}
+
+.pv3-settings__link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pv3-settings__note {
+  font-size: 0.8125rem;
+  color: var(--ink-faint);
+  line-height: 1.45;
+}
+
+/* ── Language ── */
+.pv3-lang-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2, 0.5rem);
+}
+
+@media (min-width: 640px) {
+  .pv3-lang-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.pv3-lang-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 3.25rem;
+  padding: var(--space-3, 0.75rem);
+  border-radius: var(--card-radius, 0.75rem);
+  border: 1px solid var(--rule);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pv3-lang-btn:hover {
+  border-color: color-mix(in srgb, var(--ink-headline) 16%, var(--rule));
+}
+
+.pv3-lang-btn.is-active {
+  border-color: var(--jds-color-brand-primary, var(--accent));
+  background: color-mix(in srgb, var(--jds-color-brand-primary, var(--accent)) 8%, transparent);
+}
+
+.pv3-lang-btn__native {
+  font-size: 1rem;
+  font-weight: var(--weight-semibold, 600);
+}
+
+.pv3-lang-btn__label {
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+}
+
+/* ── Appearance ── */
+.pv3-appearance-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4, 1rem);
+  padding-bottom: var(--space-4, 1rem);
+  border-bottom: 1px solid var(--rule);
+}
+
+.pv3-appearance-row__label {
+  display: block;
+  font-weight: var(--weight-semibold, 600);
+}
+
+.pv3-appearance-row__hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.pv3-appearance-row__action {
+  flex-shrink: 0;
+  min-height: 2.5rem;
+  padding: 0 var(--space-3, 0.75rem);
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: var(--weight-semibold, 600);
+  cursor: pointer;
+}
+
+.pv3-appearance-group {
+  margin-top: var(--space-4, 1rem);
+  padding-top: var(--space-4, 1rem);
+  border-top: 1px solid var(--rule);
+}
+
+.pv3-appearance-group__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  margin-bottom: var(--space-3, 0.75rem);
+  font-size: 0.875rem;
+  font-weight: var(--weight-semibold, 600);
+}
+
+.pv3-appearance-group__hint {
+  margin: -0.25rem 0 var(--space-3, 0.75rem);
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+}
+
+.pv3-segment {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+.pv3-segment__btn,
+.pv3-region-btn {
+  min-height: 2.5rem;
+  padding: 0 var(--space-3, 0.75rem);
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: var(--weight-semibold, 600);
+  cursor: pointer;
+}
+
+.pv3-segment__btn.is-active,
+.pv3-region-btn.is-active {
+  border-color: var(--jds-color-brand-primary, var(--accent));
+  background: color-mix(in srgb, var(--jds-color-brand-primary, var(--accent)) 10%, transparent);
+  color: var(--jds-color-brand-primary, var(--accent));
+}
+
+.pv3-region-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+}
+
+/* ── Skeleton ── */
+.pv3-skeleton__hero {
+  margin-bottom: var(--space-8, 2rem);
+}
+
+.pv3-skeleton__back {
+  width: 8rem;
+  height: 1rem;
+}
+
+.pv3-skeleton__title {
+  width: min(14rem, 60%);
+  height: 2.5rem;
+  margin-top: var(--space-4, 1rem);
+}
+
+.pv3-skeleton__subtitle {
+  width: min(24rem, 90%);
+  height: 1rem;
+  margin-top: var(--space-3, 0.75rem);
+}
+
+.pv3-skeleton__layout {
+  display: grid;
+  gap: var(--space-6, 1.5rem);
+}
+
+@media (min-width: 960px) {
+  .pv3-skeleton__layout {
+    grid-template-columns: 12rem 1fr;
+  }
+}
+
+.pv3-skeleton__nav {
+  display: flex;
+  gap: var(--space-2, 0.5rem);
+  overflow: hidden;
+}
+
+@media (min-width: 960px) {
+  .pv3-skeleton__nav {
+    flex-direction: column;
+  }
+}
+
+.pv3-skeleton__nav-item {
+  width: 6rem;
+  height: 2rem;
+  flex-shrink: 0;
+}
+
+@media (min-width: 960px) {
+  .pv3-skeleton__nav-item {
+    width: 100%;
+  }
+}
+
+.pv3-skeleton__sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6, 1.5rem);
+}
+
+.pv3-skeleton__card {
+  display: flex;
+  gap: var(--space-4, 1rem);
+  padding: var(--space-5, 1.25rem);
+  border-radius: var(--card-radius, 0.75rem);
+  border: 1px solid var(--rule);
+}
+
+.pv3-skeleton__card--block {
+  flex-direction: column;
+}
+
+.pv3-skeleton__card-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.pv3-skeleton__short {
+  width: 55%;
+}
+
+.pv3-skeleton__section-title {
+  width: 40%;
+  height: 1.25rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv3-nav__link,
+  .pv3-progress__bar,
+  .pv3-toggle__switch,
+  .pv3-toggle__thumb,
+  .pv3-lang-btn {
+    transition: none;
+  }
+}

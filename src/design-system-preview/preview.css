@@ -1,0 +1,414 @@
+/**
+ * JDP-011 — Design System Preview styles
+ * Scoped to .jds-preview — does not affect production surfaces.
+ */
+
+.jds-preview {
+  --jds-preview-sidebar-width: 240px;
+  --jds-preview-header-height: 56px;
+  min-height: 100vh;
+  background: var(--jds-color-background-primary);
+  color: var(--jds-color-text-primary);
+  font-family: var(--jds-font-ui);
+}
+
+.jds-preview__header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jds-space-lg);
+  height: var(--jds-preview-header-height);
+  padding: 0 var(--jds-space-xl);
+  border-bottom: 1px solid var(--jds-color-border-subtle);
+  background: var(--jds-color-surface-primary);
+}
+
+.jds-preview__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jds-preview__brand-tag {
+  font-family: var(--jds-font-meta);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jds-color-brand-primary);
+}
+
+.jds-preview__brand-title {
+  font-family: var(--jds-font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.jds-preview__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--jds-space-sm);
+}
+
+.jds-preview__layout {
+  display: grid;
+  grid-template-columns: var(--jds-preview-sidebar-width) 1fr;
+  min-height: calc(100vh - var(--jds-preview-header-height));
+}
+
+.jds-preview__sidebar {
+  position: sticky;
+  top: var(--jds-preview-header-height);
+  align-self: start;
+  max-height: calc(100vh - var(--jds-preview-header-height));
+  overflow-y: auto;
+  padding: var(--jds-space-xl) var(--jds-space-lg);
+  border-right: 1px solid var(--jds-color-border-subtle);
+  background: var(--jds-color-surface-secondary);
+}
+
+.jds-preview__nav-group {
+  margin-bottom: var(--jds-space-xl);
+}
+
+.jds-preview__nav-label {
+  display: block;
+  margin-bottom: var(--jds-space-sm);
+  font-family: var(--jds-font-meta);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jds-color-text-tertiary);
+}
+
+.jds-preview__nav-link {
+  display: block;
+  padding: var(--jds-space-sm) var(--jds-space-md);
+  border-radius: var(--jds-radius-sm);
+  font-size: 0.875rem;
+  color: var(--jds-color-text-secondary);
+  text-decoration: none;
+  transition: var(--jds-transition-fast);
+}
+
+.jds-preview__nav-link:hover {
+  background: var(--jds-color-surface-primary);
+  color: var(--jds-color-text-primary);
+}
+
+.jds-preview__nav-link--active {
+  background: var(--jds-color-surface-primary);
+  color: var(--jds-color-brand-primary);
+  font-weight: 600;
+}
+
+.jds-preview__main {
+  padding: var(--jds-space-2xl);
+  max-width: 1200px;
+}
+
+.jds-preview__section {
+  scroll-margin-top: calc(var(--jds-preview-header-height) + var(--jds-space-lg));
+  margin-bottom: var(--jds-space-4xl);
+}
+
+.jds-preview__section-header {
+  margin-bottom: var(--jds-space-xl);
+  padding-bottom: var(--jds-space-md);
+  border-bottom: 1px solid var(--jds-color-border-subtle);
+}
+
+.jds-preview__section-title {
+  font-family: var(--jds-font-display);
+  font-size: var(--jds-text-h2);
+  font-weight: 700;
+  line-height: 1.32;
+}
+
+.jds-preview__section-desc {
+  margin-top: var(--jds-space-sm);
+  font-size: var(--jds-text-caption);
+  color: var(--jds-color-text-secondary);
+  max-width: 60ch;
+}
+
+.jds-preview__panel {
+  padding: var(--jds-space-xl);
+  border: 1px solid var(--jds-color-border-subtle);
+  border-radius: var(--jds-radius-md);
+  background: var(--jds-color-surface-primary);
+}
+
+.jds-preview__panel + .jds-preview__panel {
+  margin-top: var(--jds-space-lg);
+}
+
+.jds-preview__panel-label {
+  margin-bottom: var(--jds-space-md);
+  font-family: var(--jds-font-meta);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--jds-color-text-tertiary);
+}
+
+.jds-preview__grid {
+  display: grid;
+  gap: var(--jds-space-lg);
+}
+
+.jds-preview__grid--2 {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.jds-preview__grid--3 {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.jds-preview__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--jds-space-md);
+}
+
+.jds-preview__swatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-sm);
+}
+
+.jds-preview__swatch-color {
+  height: 64px;
+  border-radius: var(--jds-radius-sm);
+  border: 1px solid var(--jds-color-border-subtle);
+}
+
+.jds-preview__swatch-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.jds-preview__swatch-value {
+  font-family: var(--jds-font-meta);
+  font-size: 0.6875rem;
+  color: var(--jds-color-text-tertiary);
+}
+
+.jds-preview__spacing-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--jds-space-lg);
+}
+
+.jds-preview__spacing-block {
+  background: var(--jds-color-brand-primary);
+  border-radius: 2px;
+  opacity: 0.85;
+}
+
+.jds-preview__spacing-label {
+  min-width: 72px;
+  font-family: var(--jds-font-meta);
+  font-size: 0.75rem;
+}
+
+.jds-preview__type-sample {
+  padding: var(--jds-space-md) 0;
+  border-bottom: 1px solid var(--jds-color-border-subtle);
+}
+
+.jds-preview__type-sample:last-child {
+  border-bottom: none;
+}
+
+.jds-preview__type-meta {
+  margin-top: var(--jds-space-xs);
+  font-family: var(--jds-font-meta);
+  font-size: 0.6875rem;
+  color: var(--jds-color-text-tertiary);
+}
+
+.jds-preview__theme-toggle {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--jds-radius-full);
+  border: 1px solid var(--jds-color-border-default);
+  background: var(--jds-color-surface-secondary);
+}
+
+.jds-preview__theme-btn {
+  padding: var(--jds-space-sm) var(--jds-space-md);
+  border: none;
+  border-radius: var(--jds-radius-full);
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--jds-color-text-secondary);
+  cursor: pointer;
+  transition: var(--jds-transition-fast);
+}
+
+.jds-preview__theme-btn--active {
+  background: var(--jds-color-surface-primary);
+  color: var(--jds-color-text-primary);
+  box-shadow: var(--jds-elevation-sm);
+}
+
+.jds-preview__viewport-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--jds-radius-sm);
+  border: 1px solid var(--jds-color-border-default);
+  background: var(--jds-color-surface-secondary);
+}
+
+.jds-preview__viewport-btn {
+  padding: var(--jds-space-xs) var(--jds-space-sm);
+  border: none;
+  border-radius: calc(var(--jds-radius-sm) - 2px);
+  background: transparent;
+  font-size: 0.75rem;
+  color: var(--jds-color-text-secondary);
+  cursor: pointer;
+}
+
+.jds-preview__viewport-btn--active {
+  background: var(--jds-color-surface-primary);
+  color: var(--jds-color-text-primary);
+  font-weight: 600;
+}
+
+.jds-preview__viewport-frame {
+  margin-top: var(--jds-space-lg);
+  border: 1px dashed var(--jds-color-border-default);
+  border-radius: var(--jds-radius-md);
+  overflow: hidden;
+  transition: max-width var(--jds-duration-normal) var(--jds-ease-standard);
+}
+
+.jds-preview__viewport-frame--mobile {
+  max-width: 375px;
+}
+
+.jds-preview__viewport-frame--tablet {
+  max-width: 768px;
+}
+
+.jds-preview__viewport-frame--desktop {
+  max-width: 100%;
+}
+
+.jds-preview__viewport-inner {
+  padding: var(--jds-space-lg);
+  background: var(--jds-color-background-primary);
+}
+
+.jds-preview__motion-demo {
+  padding: var(--jds-space-xl);
+  border-radius: var(--jds-radius-md);
+  background: var(--jds-color-surface-secondary);
+  text-align: center;
+}
+
+.jds-preview__a11y-list {
+  display: grid;
+  gap: var(--jds-space-md);
+}
+
+.jds-preview__a11y-item {
+  padding: var(--jds-space-md);
+  border-left: 3px solid var(--jds-color-brand-primary);
+  background: var(--jds-color-surface-secondary);
+  border-radius: 0 var(--jds-radius-sm) var(--jds-radius-sm) 0;
+}
+
+.jds-preview__a11y-item strong {
+  display: block;
+  margin-bottom: var(--jds-space-xs);
+  font-size: 0.875rem;
+}
+
+.jds-preview__a11y-item p {
+  font-size: 0.8125rem;
+  color: var(--jds-color-text-secondary);
+  margin: 0;
+}
+
+.jds-preview__badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--jds-space-sm);
+}
+
+.jds-preview__component-card {
+  padding: var(--jds-space-lg);
+  border: 1px solid var(--jds-color-border-subtle);
+  border-radius: var(--jds-radius-md);
+  background: var(--jds-color-surface-primary);
+}
+
+.jds-preview__component-name {
+  margin-bottom: var(--jds-space-md);
+  font-family: var(--jds-font-meta);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--jds-color-text-tertiary);
+}
+
+.jds-preview__notice {
+  margin-bottom: var(--jds-space-xl);
+  padding: var(--jds-space-md) var(--jds-space-lg);
+  border-radius: var(--jds-radius-sm);
+  border: 1px solid var(--jds-color-info);
+  background: color-mix(in srgb, var(--jds-color-info) 8%, transparent);
+  font-size: 0.875rem;
+  color: var(--jds-color-text-secondary);
+}
+
+@media (max-width: 767px) {
+  .jds-preview__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .jds-preview__sidebar {
+    position: static;
+    max-height: none;
+    border-right: none;
+    border-bottom: 1px solid var(--jds-color-border-subtle);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--jds-space-sm);
+    padding: var(--jds-space-md);
+  }
+
+  .jds-preview__nav-group {
+    margin-bottom: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--jds-space-xs);
+    align-items: center;
+  }
+
+  .jds-preview__nav-label {
+    margin-bottom: 0;
+    margin-right: var(--jds-space-sm);
+  }
+
+  .jds-preview__main {
+    padding: var(--jds-space-lg);
+  }
+
+  .jds-preview__header {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    padding: var(--jds-space-md) var(--jds-space-lg);
+  }
+}

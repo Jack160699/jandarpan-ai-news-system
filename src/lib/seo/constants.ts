@@ -49,4 +49,19 @@ export const NOINDEX_ROBOTS = {
   googleBot: { index: false, follow: false },
 } as const;
 
+/** Faceted / query search URLs — crawlable but not indexed */
+export const NOINDEX_FOLLOW_ROBOTS = {
+  index: false,
+  follow: true,
+  googleBot: {
+    index: false,
+    follow: true,
+    "max-video-preview": -1,
+    "max-image-preview": "large" as const,
+    "max-snippet": -1,
+  },
+} as const;
+
+export const SEARCH_PAGE_CANONICAL = `${SITE_URL}/search`;
+
 export const PUBLISHER_LOGO_URL = `${SITE_URL}${JAN_DARPAN_BRAND_ASSETS.mark}`;

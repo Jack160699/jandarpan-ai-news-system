@@ -55,7 +55,7 @@ export async function fetchEditorialDashboard(
     supabase
       .from("generated_articles")
       .select(
-        "id, slug, headline, summary, editorial_status, homepage_pin, published_at, editorial_metadata, language, created_at, hero_image_url, event_id"
+        "id, slug, headline, summary, editorial_status, workflow_status, homepage_pin, published_at, editorial_metadata, language, tags, created_at, hero_image_url, event_id"
       )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
@@ -108,6 +108,27 @@ export async function fetchEditorialDashboard(
     const attribution =
       (meta.source_attribution as DashboardGeneratedArticle["source_attribution"]) ??
       [];
+    const v2 = meta.intelligence_v2 as
+      | { entities?: Array<{ name?: string }>; reader_keywords?: string[] }
+      | undefined;
+    const regional = meta.regional as
+      | { primary_district?: string; district?: string }
+      | undefined;
+    const tags = Array.isArray(row.tags)
+      ? row.tags.filter((tag): tag is string => typeof tag === "string" && Boolean(tag.trim()))
+      : [];
+    const entityNames = Array.isArray(v2?.entities)
+      ? v2.entities
+          .map((entity) => entity.name?.trim())
+          .filter((name): name is string => Boolean(name))
+      : [];
+    const readerKeywords = Array.isArray(v2?.reader_keywords)
+      ? v2.reader_keywords.filter(
+          (keyword): keyword is string =>
+            typeof keyword === "string" && Boolean(keyword.trim())
+        )
+      : [];
+
     return {
       id: row.id,
       slug: row.slug,
@@ -117,6 +138,8 @@ export async function fetchEditorialDashboard(
         | "pending"
         | "approved"
         | "rejected",
+      workflow_status:
+        typeof row.workflow_status === "string" ? row.workflow_status : null,
       homepage_pin: row.homepage_pin ?? false,
       is_breaking: Boolean(meta.is_breaking),
       is_featured: Boolean(meta.is_featured) || Boolean(row.homepage_pin),
@@ -132,6 +155,19 @@ export async function fetchEditorialDashboard(
       created_at: row.created_at,
       source_attribution: attribution,
       hero_image_url: (row as { hero_image_url?: string }).hero_image_url ?? null,
+      tags,
+      publish_decision:
+        typeof meta.publish_decision === "string" ? meta.publish_decision : null,
+      used_fallback: Boolean(meta.used_fallback),
+      repaired: Boolean(meta.repaired),
+      has_intelligence_v2: Boolean(meta.intelligence_v2),
+      entity_names: entityNames,
+      reader_keywords: readerKeywords,
+      district:
+        regional?.primary_district?.trim() ||
+        regional?.district?.trim() ||
+        null,
+      category_label: tags[0]?.trim() || null,
     };
   });
 
@@ -204,6 +240,33 @@ export async function fetchEditorialDashboard(
     (q) => q.status === "pending"
   ).length;
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  let fallbackArticles = 0;
+  let repairedArticles = 0;
+  let eventLinkedArticles = 0;
+  let publishedToday = 0;
+
+  for (const article of generatedArticles) {
+    if (article.event_id) eventLinkedArticles += 1;
+    if (
+      article.published_at &&
+      new Date(article.published_at) >= todayStart
+    ) {
+      publishedToday += 1;
+    }
+  }
+
+  for (const row of articlesRes.data ?? []) {
+    const meta = (row.editorial_metadata ?? {}) as {
+      used_fallback?: boolean;
+      repaired?: boolean;
+    };
+    if (meta.used_fallback) fallbackArticles += 1;
+    if (meta.repaired) repairedArticles += 1;
+  }
+
   const topRanked = [...generatedArticles]
     .filter((a) => a.editorial_status === "approved")
     .sort((a, b) => (b.ai_confidence ?? 0) - (a.ai_confidence ?? 0))
@@ -230,6 +293,10 @@ export async function fetchEditorialDashboard(
       approved,
       aiQueuePending: aiPending,
       imageQueuePending: imagePending,
+      publishedToday,
+      fallbackArticles,
+      repairedArticles,
+      eventLinkedArticles,
     },
     ingestion: {
       lastRun: logs[0] ?? null,

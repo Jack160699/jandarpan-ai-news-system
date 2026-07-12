@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { persistMonetizationEvent } from "@/lib/monetization/analytics";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { clientSafeErrorMessage } from "@/lib/security/safe-api-error";
 import { checkPublicApiRateLimit } from "@/lib/security/public-rate-limit";
 import { asJsonObject } from "@/types/json";
 
@@ -93,7 +94,10 @@ export async function POST(request: Request) {
   );
 
   if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: clientSafeErrorMessage(error) },
+      { status: 500 }
+    );
   }
 
   await persistMonetizationEvent({

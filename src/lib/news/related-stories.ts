@@ -61,13 +61,19 @@ export function scoreRelatedness(
 export function pickRelatedStories(
   source: NewsArticleRow,
   pool: NewsArticleRow[],
-  limit = 6
+  limit = 6,
+  knowledgeBoost?: (source: NewsArticleRow, candidate: NewsArticleRow) => number
 ): NewsArticleRow[] {
   const seenTitles = new Set<string>();
   const sourceNorm = normalizeTitle(source.title ?? "");
 
   return pool
-    .map((c) => ({ article: c, score: scoreRelatedness(source, c) }))
+    .map((c) => ({
+      article: c,
+      score:
+        scoreRelatedness(source, c) +
+        (knowledgeBoost ? knowledgeBoost(source, c) : 0),
+    }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .filter(({ article }) => {
@@ -82,8 +88,8 @@ export function pickRelatedStories(
         return false;
       }
 
-      const sourceEvent = (source as { event_id?: string | null }).event_id;
-      const candidateEvent = (article as { event_id?: string | null }).event_id;
+      const sourceEvent = source.event_id;
+      const candidateEvent = article.event_id;
       if (
         sourceEvent &&
         candidateEvent &&

@@ -1,15 +1,21 @@
+import { unstable_cache } from "next/cache";
 import { buildGeneratedHomepageFeed } from "@/lib/homepage/generated-feed";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { ISR_TAGS } from "@/lib/infrastructure/cache/isr";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { resolveLiveArticlePool } from "@/lib/news/live-feed";
 import { logLiveFeed } from "@/lib/news/live-feed/logger";
-import { buildTenantRegionalPersonalization } from "@/lib/tenant/personalization";
-import { getTenantConfig } from "@/lib/tenant/resolve";
-import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { snapshotFromFeed } from "@/lib/realtime/snapshot-utils";
 import type { LiveHomepageSnapshot } from "@/lib/realtime/types";
+import { buildTenantRegionalPersonalization } from "@/lib/tenant/personalization";
+import { getTenantConfig } from "@/lib/tenant/resolve";
+import type { TenantConfig } from "@/lib/tenant/types";
 
-/** Server: build live polling snapshot from resolved article pool */
-export async function buildLiveHomepageSnapshot(): Promise<{
+const LIVE_POOL_LIMIT = 120;
+
+export type LiveHomepageSnapshotResult = {
   snapshot: LiveHomepageSnapshot | null;
   meta: {
     source: string;
@@ -19,12 +25,16 @@ export async function buildLiveHomepageSnapshot(): Promise<{
     ingestFirstSkippedWire: boolean;
     qualityRanked: boolean;
   };
-}> {
-  const [tenant, displayLanguage, { rows: pool, diagnostics }] = await Promise.all([
-    getTenantConfig(),
-    getServerReaderLanguage(),
-    resolveLiveArticlePool(120),
-  ]);
+};
+
+async function buildLiveHomepageSnapshotUncached(
+  tenant: TenantConfig,
+  displayLanguage: NewsroomLanguage
+): Promise<LiveHomepageSnapshotResult> {
+  const { rows: pool, diagnostics } = await resolveLiveArticlePool(
+    LIVE_POOL_LIMIT,
+    { select: "homepage" }
+  );
 
   logLiveFeed("live_snapshot", {
     source: diagnostics.source,
@@ -70,4 +80,34 @@ export async function buildLiveHomepageSnapshot(): Promise<{
       qualityRanked: diagnostics.qualityRanked,
     },
   };
+}
+
+function getCachedLiveHomepageSnapshot(
+  tenant: TenantConfig,
+  displayLanguage: NewsroomLanguage
+) {
+  return unstable_cache(
+    async (): Promise<LiveHomepageSnapshotResult> => {
+      return buildLiveHomepageSnapshotUncached(tenant, displayLanguage);
+    },
+    ["live-homepage-snapshot-v1", tenant.slug, displayLanguage],
+    {
+      revalidate: INFRA_CONFIG.homepageCacheSeconds,
+      tags: [
+        ISR_TAGS.homepage,
+        ISR_TAGS.homepageFeed,
+        `tenant:${tenant.slug}`,
+        `lang:${displayLanguage}`,
+      ],
+    }
+  );
+}
+
+/** Server: build live polling snapshot from resolved article pool */
+export async function buildLiveHomepageSnapshot(): Promise<LiveHomepageSnapshotResult> {
+  const tenant = await getTenantConfig();
+  const displayLanguage = await getServerReaderLanguage(
+    tenant.newsroom.defaultLanguage
+  );
+  return getCachedLiveHomepageSnapshot(tenant, displayLanguage)();
 }

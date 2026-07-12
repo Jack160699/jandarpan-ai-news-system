@@ -162,8 +162,9 @@ export async function buildNewsroomIntelligenceSnapshot(
       retryQuery = retryQuery.eq("tenant_id", tenantId);
     }
     const retry = await retryQuery;
-    (articlesRes as any).data = retry.data;
-    (articlesRes as any).error = retry.error;
+    const mutableArticlesRes = articlesRes as { data: unknown; error: unknown };
+    mutableArticlesRes.data = retry.data;
+    mutableArticlesRes.error = retry.error;
   }
 
   const articles = (articlesRes.data ?? []) as unknown as GeneratedArticleRow[];

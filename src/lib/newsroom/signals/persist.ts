@@ -4,6 +4,7 @@
 
 import { createAdminServerClient } from "@/lib/supabase";
 import { tagGeoFromContent } from "@/lib/regional/geo-tagging";
+import { canonicalArticleUrl } from "@/lib/news/normalize";
 import { logNewsroom, logNewsroomError } from "@/lib/newsroom/logger";
 import type { NormalizedArticle } from "@/lib/news/types";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
@@ -14,6 +15,7 @@ import {
   logIngestTrace,
   summarizeInsertRows,
 } from "@/lib/news/pipeline/ingest-trace";
+import { dedupeRowsByConflictKey } from "@/lib/news/pipeline/batch-dedupe";
 
 const BATCH_SIZE = 40;
 
@@ -76,18 +78,65 @@ export async function persistNewsSignals(
   if (!articles.length) return result;
 
   const supabase = createAdminServerClient();
-  const rows = articles.map((a) => normalizedToSignal(a, { ...meta, provider }));
+  const rows = articles.map((a) =>
+    normalizedToSignal(
+      { ...a, article_url: canonicalArticleUrl(a.article_url) },
+      { ...meta, provider }
+    )
+  );
+
+  const preBatchDedupe = dedupeRowsByConflictKey(
+    rows as Record<string, unknown>[],
+    {
+      key: "article_url",
+      canonicalize: canonicalArticleUrl,
+    }
+  );
+  const dedupedRows = preBatchDedupe.rows as NewsSignalInsert[];
+
+  if (preBatchDedupe.duplicateCount > 0) {
+    logIngestTrace("signals_batch_deduped", {
+      provider,
+      conflictKey: preBatchDedupe.conflictKey,
+      duplicateCount: preBatchDedupe.duplicateCount,
+      inputRows: rows.length,
+      outputRows: dedupedRows.length,
+      sampleDuplicateKeys: preBatchDedupe.duplicateKeys,
+    });
+    result.skippedDuplicates += preBatchDedupe.duplicateCount;
+  }
 
   logIngestTrace("signals_persist_start", {
     provider,
-    rowCount: rows.length,
-    tenantId: rows[0]?.tenant_id ?? null,
-    samplePayload: summarizeInsertRows(rows as Record<string, unknown>[]),
+    rowCount: dedupedRows.length,
+    tenantId: dedupedRows[0]?.tenant_id ?? null,
+    samplePayload: summarizeInsertRows(dedupedRows as Record<string, unknown>[]),
   });
 
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < dedupedRows.length; i += BATCH_SIZE) {
+    const rawBatch = dedupedRows.slice(i, i + BATCH_SIZE);
     const batchIndex = Math.floor(i / BATCH_SIZE);
+
+    const batchDedupe = dedupeRowsByConflictKey(
+      rawBatch as Record<string, unknown>[],
+      {
+        key: "article_url",
+        canonicalize: canonicalArticleUrl,
+      }
+    );
+    const batch = batchDedupe.rows as NewsSignalInsert[];
+
+    if (batchDedupe.duplicateCount > 0) {
+      logIngestTrace("signals_upsert_batch_deduped", {
+        provider,
+        batchIndex,
+        duplicateCount: batchDedupe.duplicateCount,
+        inputRows: rawBatch.length,
+        outputRows: batch.length,
+        sampleDuplicateKeys: batchDedupe.duplicateKeys,
+      });
+      result.skippedDuplicates += batchDedupe.duplicateCount;
+    }
 
     logIngestTrace("signals_upsert_attempt", {
       provider,

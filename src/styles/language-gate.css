@@ -3,9 +3,10 @@
  */
 
 html[data-lang-gate="locked"] .app-shell__content {
-  visibility: hidden;
   pointer-events: none;
   user-select: none;
+  filter: blur(var(--glass-blur)) saturate(0.8);
+  opacity: 0.28;
 }
 
 html[data-lang-gate="locked"] .lang-gate {

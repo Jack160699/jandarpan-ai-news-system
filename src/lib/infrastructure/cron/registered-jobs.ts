@@ -41,11 +41,29 @@ export const REGISTERED_CRON_JOBS = [
 
   "orchestrate",
 
+  "edition-publish",
+
   "editorial_generate",
 
   "translation-backfill",
 
   "cleanup",
+
+  "competitor-tracker",
+
+  "seo-intelligence",
+
+  "serp-tracker",
+
+  "gsc-intelligence",
+
+  "seo-autonomous",
+
+  "workers-health",
+
+  "cluster",
+
+  "revalidate",
 
 ] as const;
 

@@ -1,23 +1,37 @@
-/** Canonical breakpoints — must match responsive-system.css */
+/**
+ * @deprecated Import from `@/design-system/tokens/breakpoints` instead.
+ * Re-exported for backward compatibility during migration.
+ */
+import {
+  md,
+  lg,
+  xl,
+  breakpointQueries,
+  breakpointsPx,
+} from "@/design-system/tokens/breakpoints";
+
 export const RF_BREAKPOINTS = {
-  mobileMax: 767,
-  tablet: 768,
-  laptop: 1024,
-  desktop: 1440,
+  mobileMax: md - 1,
+  tablet: md,
+  laptop: lg,
+  desktop: lg,
 } as const;
 
 export type RfBreakpoint = keyof typeof RF_BREAKPOINTS;
 
-/** Media query strings aligned to CSS */
+/** @deprecated Use `breakpointQueries` from `@/design-system/tokens/breakpoints` */
 export const RF_MEDIA = {
-  mobile: `(max-width: ${RF_BREAKPOINTS.mobileMax}px)`,
-  tablet: `(min-width: ${RF_BREAKPOINTS.tablet}px)`,
-  tabletOnly: `(min-width: ${RF_BREAKPOINTS.tablet}px) and (max-width: ${RF_BREAKPOINTS.laptop - 1}px)`,
-  laptop: `(min-width: ${RF_BREAKPOINTS.laptop}px)`,
-  laptopOnly: `(min-width: ${RF_BREAKPOINTS.laptop}px) and (max-width: ${RF_BREAKPOINTS.desktop - 1}px)`,
-  desktop: `(min-width: ${RF_BREAKPOINTS.desktop}px)`,
+  mobile: breakpointQueries.mobile,
+  tablet: breakpointQueries.tablet,
+  tabletOnly: breakpointQueries.tabletOnly,
+  laptop: breakpointQueries.lg,
+  laptopOnly: `(min-width: ${lg}px) and (max-width: ${xl - 1}px)`,
+  desktop: breakpointQueries.desktop,
 } as const;
 
-/** Preferred canonical names (mirror --rs-bp-* in CSS) */
+/** @deprecated Use `breakpointsPx` from `@/design-system/tokens/breakpoints` */
 export const RS_BREAKPOINTS = RF_BREAKPOINTS;
+/** @deprecated Use `breakpointQueries` from `@/design-system/tokens/breakpoints` */
 export const RS_MEDIA = RF_MEDIA;
+
+export { breakpointsPx, breakpointQueries };

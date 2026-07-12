@@ -71,3 +71,23 @@ export async function redisDel(key: string): Promise<void> {
 export function isRedisConfigured(): boolean {
   return INFRA_CONFIG.redisEnabled;
 }
+
+/** Lightweight connectivity probe for health/readiness checks. */
+export async function redisPing(): Promise<{
+  configured: boolean;
+  reachable: boolean;
+  latencyMs?: number;
+}> {
+  if (!isRedisConfigured()) {
+    return { configured: false, reachable: false };
+  }
+
+  const started = Date.now();
+  const probeKey = "ops:health:ping";
+  const ok = await redisSet(probeKey, "1", 30);
+  return {
+    configured: true,
+    reachable: ok,
+    latencyMs: Date.now() - started,
+  };
+}

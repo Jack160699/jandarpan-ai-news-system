@@ -12,6 +12,7 @@ import type { EvolvingCoverageBundle } from "@/lib/news/coverage/read";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
 import { SITE_URL } from "@/lib/seo/constants";
 import { buildPageMetadata } from "@/lib/seo/metadata";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Metadata } from "next";
 
 type EvolvingStoryPageProps = {
@@ -56,6 +57,8 @@ export function EvolvingStoryPage({ bundle }: EvolvingStoryPageProps) {
     },
     { name: headline.slice(0, 80), href: `/live/${event.coverage_slug}` },
   ];
+
+  const t = getDictionary("hi");
 
   const heroDisplay = article
     ? buildEditorialHeroDisplay({
@@ -108,7 +111,12 @@ export function EvolvingStoryPage({ bundle }: EvolvingStoryPageProps) {
           ) : null}
 
           {event.event_summary ? (
-            <StorySummaryBox summary={event.event_summary} />
+            <StorySummaryBox
+              summary={event.event_summary}
+              title={t.story.keyPoints}
+              aiLabel={t.shorts.narrationShort}
+              transparencyTitle={t.article.transparencyTitle}
+            />
           ) : null}
 
           <LiveUpdateFeed blocks={liveBlocks} />

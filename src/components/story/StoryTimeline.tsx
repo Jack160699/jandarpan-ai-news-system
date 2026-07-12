@@ -2,15 +2,16 @@ import type { StoryTimelineEvent } from "@/lib/news/story-markdown";
 
 type StoryTimelineProps = {
   events: StoryTimelineEvent[];
+  title?: string;
 };
 
-export function StoryTimeline({ events }: StoryTimelineProps) {
+export function StoryTimeline({ events, title = "Key events" }: StoryTimelineProps) {
   if (!events.length) return null;
 
   return (
     <section className="immersive-timeline" aria-labelledby="story-timeline-title">
       <h2 id="story-timeline-title" className="immersive-timeline__title">
-        Key events
+        {title}
       </h2>
       <ol className="immersive-timeline__list">
         {events.map((event) => (

@@ -5,7 +5,7 @@
 
 import { fetchJson } from "@/lib/news/http";
 import { normalizeImageUrl, pickBestImageCandidate } from "@/lib/news/images/extract";
-import { isValidHttpUrl, parsePublishedAt } from "@/lib/news/normalize";
+import { dedupeArticles, isValidHttpUrl, parsePublishedAt } from "@/lib/news/normalize";
 import {
   normalizeNewsEncoding,
   safeParsePublishedAt,
@@ -163,12 +163,17 @@ export async function fetchNewsDataAll(): Promise<ProviderFetchResult> {
     articles.push(...r.articles);
   }
 
+  const { unique, skipped } = dedupeArticles(articles, { fuzzy: true });
+  if (skipped > 0) {
+    console.log(`[newsdata] deduped ${skipped} duplicate articles across queries`);
+  }
+
   return {
     provider: "newsdata",
     label: "NewsData.io (India + Global)",
-    articles,
+    articles: unique,
     fetched,
-    valid: articles.length,
+    valid: unique.length,
     errors,
     durationMs: Date.now() - startedAt,
   };

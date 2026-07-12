@@ -21,6 +21,7 @@ import { QueueTable } from "@/components/admin-newsroom/ui/QueueTable";
 import { StatusBadge } from "@/components/admin-newsroom/ui/StatusBadge";
 import { useClientNow } from "@/hooks/useClientNow";
 import { useStoriesDesk } from "@/hooks/useStoriesDesk";
+import { parseAdminDeskFilters } from "@/lib/admin/admin-desk-query";
 import type { DashboardGeneratedArticle } from "@/lib/editorial-dashboard/types";
 
 type StoriesTableProps = {
@@ -37,11 +38,27 @@ export function StoriesTable({ articles: articlesProp }: StoriesTableProps) {
   const [topicFilter, setTopicFilter] = useState<string>("all");
   const [languageFilter, setLanguageFilter] = useState<string>("all");
   const [breakingFilter, setBreakingFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [eventFilter, setEventFilter] = useState<string>("all");
+  const [tagFilter, setTagFilter] = useState<string>("all");
   const [confMin, setConfMin] = useState(0);
   const [confMax, setConfMax] = useState(100);
   const [query, setQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const filters = parseAdminDeskFilters(new URLSearchParams(window.location.search));
+    if (filters.status?.trim()) setStatusFilter(filters.status.trim());
+    if (filters.district?.trim()) setDistrictFilter(filters.district.trim());
+    if (filters.category?.trim()) setCategoryFilter(filters.category.trim());
+    if (filters.event?.trim()) setEventFilter(filters.event.trim());
+    if (filters.tag?.trim()) setTagFilter(filters.tag.trim());
+    if (filters.q?.trim()) setQuery(filters.q.trim());
+    if (filters.breaking === true) setBreakingFilter("breaking");
+    if (filters.breaking === false) setBreakingFilter("non_breaking");
+  }, []);
 
   const selectedStory = useMemo(
     () => articles.find((a) => a.id === activeId) ?? null,
@@ -116,10 +133,37 @@ export function StoriesTable({ articles: articlesProp }: StoriesTableProps) {
       }
       if ((a.ai_confidence ?? 0) < confMin / 100) return false;
       if ((a.ai_confidence ?? 1) > confMax / 100) return false;
-      const district = a.source_attribution[0]?.source ?? "General";
+      const district =
+        a.district?.trim() ||
+        a.source_attribution[0]?.source?.trim() ||
+        "General";
       const source = a.source_attribution[0]?.provider ?? "Unknown";
       const topic = a.headline.toLowerCase();
+      const category = a.category_label ?? a.tags[0] ?? "";
+      const tags = a.tags.map((tag) => tag.toLowerCase());
+      const eventKey = a.event_id ?? "";
       if (districtFilter !== "all" && district !== districtFilter) return false;
+      if (categoryFilter !== "all" && category !== categoryFilter) return false;
+      if (
+        eventFilter !== "all" &&
+        eventKey !== eventFilter &&
+        !eventKey.toLowerCase().includes(eventFilter.toLowerCase()) &&
+        !a.headline.toLowerCase().includes(eventFilter.toLowerCase())
+      ) {
+        return false;
+      }
+      if (
+        tagFilter !== "all" &&
+        !tags.includes(tagFilter.toLowerCase()) &&
+        !a.entity_names.some(
+          (entity) => entity.toLowerCase() === tagFilter.toLowerCase()
+        ) &&
+        !a.reader_keywords.some(
+          (keyword) => keyword.toLowerCase() === tagFilter.toLowerCase()
+        )
+      ) {
+        return false;
+      }
       if (sourceFilter !== "all" && source !== sourceFilter) return false;
       if (topicFilter !== "all" && !topic.includes(topicFilter)) return false;
       if (languageFilter !== "all" && (a.language ?? "unknown") !== languageFilter) return false;
@@ -143,6 +187,9 @@ export function StoriesTable({ articles: articlesProp }: StoriesTableProps) {
     confMax,
     query,
     districtFilter,
+    categoryFilter,
+    eventFilter,
+    tagFilter,
     sourceFilter,
     topicFilter,
     languageFilter,
