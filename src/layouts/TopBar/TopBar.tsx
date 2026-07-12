@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MapPin, Search } from "lucide-react";
 import { cn } from "@/design-system/utils/cn";
 import { Avatar } from "@/design-system/components/Avatar";
@@ -19,6 +20,8 @@ import { useTopBarScrolled } from "../hooks/useTopBarScrolled";
  * no theme toggle (removed per Atlas Phase 1).
  */
 export function TopBar() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
   const { tenant } = useTenant();
   const { language, t } = useLanguage();
   const place = usePlace();
@@ -54,14 +57,16 @@ export function TopBar() {
           </span>
         </Link>
 
-        <Link
-          href="/places"
-          className="jdp-topbar__place jds-focus-ring"
-          onClick={() => startNavigation("/places")}
-        >
-          <MapPin size={14} aria-hidden />
-          <span>{place.shortName}</span>
-        </Link>
+        {!isHome ? (
+          <Link
+            href="/places"
+            className="jdp-topbar__place jds-focus-ring"
+            onClick={() => startNavigation("/places")}
+          >
+            <MapPin size={14} aria-hidden />
+            <span>{place.shortName}</span>
+          </Link>
+        ) : null}
 
         <div className="jdp-topbar__actions">
           <Link

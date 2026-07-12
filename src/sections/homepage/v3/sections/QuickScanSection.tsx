@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { SectionHeader } from "@/design-system/components/SectionHeader";
-import { formatHomeTime } from "@/lib/homepage/format";
+import { JdsCardImage } from "@/design-system/components/JdsCardImage/JdsCardImage";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import type { HomeArticle } from "@/lib/homepage/types";
+
+const SCAN_IMAGE_SIZES = "(max-width: 430px) 42vw, (max-width: 480px) 40vw, 200px";
 
 type QuickScanSectionProps = {
   stories: HomeArticle[];
@@ -18,35 +19,32 @@ export function QuickScanSection({ stories }: QuickScanSectionProps) {
 
   return (
     <section
-      className="home-v31__section home-v31__enter"
-      aria-labelledby="home-v31-scan-title"
+      className="home-v31__section home-v31__enter atlas-scan"
+      aria-labelledby="home-atlas-scan-title"
     >
-      <SectionHeader
-        title={pickBilingualLabel(language, "Quick Scan", "तेज़ पढ़ें")}
-        kicker={pickBilingualLabel(language, "Headlines", "शीर्षक")}
-      />
-      <h2 id="home-v31-scan-title" className="sr-only">
-        Quick Scan
+      <h2 id="home-atlas-scan-title" className="atlas-scan__label">
+        {pickBilingualLabel(language, "Quick Scan", "तेज़ पढ़ें")}
       </h2>
 
-      <div className="home-v31-scan-rail" role="list">
+      <div className="atlas-scan-rail" role="list">
         {stories.map((story) => (
           <Link
             key={story.id}
             href={`/story/${story.slug}`}
-            className="home-v31-scan-card tap-target"
+            className="atlas-scan-card tap-target"
             role="listitem"
           >
-            {story.categoryLabel ? (
-              <span className="home-v31-scan-card__category">
-                {story.categoryLabel}
-              </span>
-            ) : null}
-            <span className="home-v31-scan-card__headline">{story.headline}</span>
-            <span className="home-v31-scan-card__meta">
-              {formatHomeTime(story.publishedAt, language)}
-              {story.readingTime ? ` · ${story.readingTime}` : ""}
-            </span>
+            <div className="atlas-scan-card__media">
+              <JdsCardImage
+                src={story.imageUrl || story.ogImageUrl}
+                alt={story.headline}
+                category={story.categoryLabel ?? story.section ?? "news"}
+                cropAspect="16:9"
+                sizes={SCAN_IMAGE_SIZES}
+                className="atlas-scan-card__image"
+              />
+            </div>
+            <span className="atlas-scan-card__headline">{story.headline}</span>
           </Link>
         ))}
       </div>

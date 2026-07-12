@@ -1,0 +1,263 @@
+/**
+ * Atlas Phase 2A — first viewport (Local Pulse → Hero → Quick Scan)
+ * Mobile-first: 390 / 412 / 430px. 16px outer padding, 20–24px vertical rhythm.
+ */
+
+.home-atlas-2a {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-inline: calc(-1 * (var(--gutter, 1rem) + var(--jds-space-lg, 16px)));
+  padding-inline: var(--jds-space-lg);
+  width: calc(100% + 2 * (var(--gutter, 1rem) + var(--jds-space-lg, 16px)));
+  max-width: 100vw;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .home-atlas-2a {
+    margin-inline: calc(-1 * var(--jds-space-lg));
+    width: calc(100% + 2 * var(--jds-space-lg));
+  }
+}
+
+/* ── Local Pulse ───────────────────────────────────────── */
+
+.atlas-pulse__brand {
+  margin: 0;
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jds-color-brand-primary);
+}
+
+.atlas-pulse__row {
+  display: flex;
+  align-items: center;
+  gap: var(--jds-space-sm);
+  flex-wrap: wrap;
+}
+
+.atlas-pulse__place {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--jds-space-xs);
+  margin: 0;
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-caption);
+  font-weight: 700;
+  color: var(--jds-color-text-primary);
+}
+
+.atlas-pulse__place-icon {
+  color: var(--jds-color-brand-primary);
+  flex-shrink: 0;
+}
+
+.atlas-pulse__date {
+  margin-left: auto;
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  color: var(--jds-color-text-tertiary);
+  white-space: nowrap;
+}
+
+.home-atlas-2a .hp-district-switch {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.home-atlas-2a .hp-district-switch__head {
+  display: none;
+}
+
+.home-atlas-2a .hp-district-switch__chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--jds-space-sm);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--jds-space-lg);
+  margin-inline: calc(-1 * var(--jds-space-lg));
+  padding-inline: var(--jds-space-lg);
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.home-atlas-2a .hp-district-switch__chips::-webkit-scrollbar {
+  display: none;
+}
+
+.home-atlas-2a .hp-district-switch__chip {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  min-height: 36px;
+  padding: var(--jds-space-xs) var(--jds-space-md);
+}
+
+.home-atlas-2a .local-strip {
+  margin: 0;
+  padding: var(--jds-space-md);
+  border-radius: var(--jds-radius-md);
+  background: color-mix(in srgb, var(--jds-color-breaking) 6%, var(--jds-color-surface-primary));
+  border: 1px solid color-mix(in srgb, var(--jds-color-breaking) 12%, transparent);
+}
+
+.home-atlas-2a .local-strip__title {
+  font-size: var(--jds-text-meta);
+  margin-bottom: var(--jds-space-sm);
+}
+
+/* ── Atlas Hero ────────────────────────────────────────── */
+
+.atlas-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-lg);
+  text-decoration: none;
+  color: inherit;
+}
+
+.atlas-hero__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--jds-color-surface-secondary);
+}
+
+.atlas-hero__image {
+  border-radius: 24px;
+}
+
+.atlas-hero__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-sm);
+}
+
+.atlas-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--jds-space-sm);
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  color: var(--jds-color-text-tertiary);
+}
+
+.atlas-hero__category {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--jds-color-text-secondary);
+}
+
+.atlas-hero__meta > * + *::before {
+  content: "·";
+  margin-right: var(--jds-space-sm);
+  color: var(--jds-color-text-tertiary);
+  font-weight: 400;
+}
+
+.atlas-hero__headline {
+  margin: 0;
+  font-family: var(--jds-font-display);
+  font-size: clamp(1.625rem, 6.5vw, 2.125rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--jds-color-text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.atlas-hero__summary {
+  margin: 0;
+  font-family: var(--jds-font-body);
+  font-size: var(--jds-text-body);
+  line-height: 1.45;
+  color: var(--jds-color-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Quick Scan ────────────────────────────────────────── */
+
+.atlas-scan__label {
+  margin: 0;
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jds-color-text-tertiary);
+}
+
+.atlas-scan-rail {
+  display: flex;
+  gap: var(--jds-space-md);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--jds-space-lg);
+  margin-inline: calc(-1 * var(--jds-space-lg));
+  padding-inline: var(--jds-space-lg);
+  padding-bottom: var(--jds-space-sm);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.atlas-scan-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.atlas-scan-card {
+  flex: 0 0 min(260px, 72vw);
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-sm);
+  text-decoration: none;
+  color: inherit;
+}
+
+@media (min-width: 390px) {
+  .atlas-scan-card {
+    flex-basis: min(272px, 70vw);
+  }
+}
+
+.atlas-scan-card__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--jds-radius-lg);
+  overflow: hidden;
+  background: var(--jds-color-surface-secondary);
+}
+
+.atlas-scan-card__image {
+  border-radius: var(--jds-radius-lg);
+}
+
+.atlas-scan-card__headline {
+  font-family: var(--jds-font-ui);
+  font-size: var(--jds-text-caption);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--jds-color-text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

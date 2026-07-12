@@ -27,6 +27,7 @@ import {
   SectionBlockSkeleton,
 } from "./skeletons";
 import "./styles/home-v31.css";
+import "./styles/home-atlas-2a.css";
 
 export type HomeExperienceV3Props = {
   feed: GeneratedHomepageFeed;
@@ -54,25 +55,26 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
 
   return (
     <PageContainer width="homepage" className="home-v31">
-      <HomeSectionErrorBoundary name="v31-local-pulse">
-        <LocalPulseSection
-          districtName={data.districtName}
-          districtNameHi={data.districtNameHi}
-          localAlerts={data.localAlerts}
-          topDistrictStory={data.topDistrictStory}
-        />
-      </HomeSectionErrorBoundary>
+      <div className="home-atlas-2a">
+        <HomeSectionErrorBoundary name="v31-local-pulse">
+          <LocalPulseSection
+            districtName={data.districtName}
+            districtNameHi={data.districtNameHi}
+            localAlerts={data.localAlerts}
+          />
+        </HomeSectionErrorBoundary>
 
-      <HomeSectionErrorBoundary name="v31-lead">
-        <LeadStorySection story={data.leadStory} aiInsight={data.aiInsight} />
-      </HomeSectionErrorBoundary>
+        <HomeSectionErrorBoundary name="v31-lead">
+          <LeadStorySection story={data.leadStory} />
+        </HomeSectionErrorBoundary>
+
+        <HomeSectionErrorBoundary name="v31-quick-scan">
+          <QuickScanSection stories={data.quickScan} />
+        </HomeSectionErrorBoundary>
+      </div>
 
       <HomeSectionErrorBoundary name="v31-ad-leaderboard">
         <AdSlot slotId="home_leaderboard" className="home-v31-ad" />
-      </HomeSectionErrorBoundary>
-
-      <HomeSectionErrorBoundary name="v31-quick-scan">
-        <QuickScanSection stories={data.quickScan} />
       </HomeSectionErrorBoundary>
 
       <HomeSectionErrorBoundary name="v31-story-feed">

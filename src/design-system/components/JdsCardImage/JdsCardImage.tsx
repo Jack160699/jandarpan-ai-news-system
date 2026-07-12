@@ -40,7 +40,7 @@ function tierUrl(
     case 2:
       return media.placeholderUrl;
     default:
-      return "";
+      return media.placeholderUrl || media.fallbackUrl || media.optimizedUrl;
   }
 }
 
@@ -69,9 +69,10 @@ export function JdsCardImage({
   const width = widthFromSizes(sizes);
 
   const media = useMemo(() => {
-    if (category) {
+    const resolvedCategory = category?.trim() || "news";
+    if (category || src?.trim()) {
       return resolveMedia(
-        { imageUrl: src, category, source, articleUrl },
+        { imageUrl: src, category: resolvedCategory, source, articleUrl },
         crop
       );
     }
@@ -92,7 +93,7 @@ export function JdsCardImage({
   }, [src, category, source, articleUrl, crop, width, priority]);
 
   const displaySrc = media ? tierUrl(media, tier) : "";
-  const showImage = Boolean(displaySrc) && tier < 3;
+  const showImage = Boolean(media && displaySrc);
   const blurData = blurForCategory(category);
 
   useEffect(() => {
@@ -133,18 +134,18 @@ export function JdsCardImage({
     return (
       <div className={cn("jds-card-image jds-card-image--fallback", className)} aria-hidden>
         <span className="jds-card-image__fallback-mark">
-          {category ? category.slice(0, 2).toUpperCase() : "JD"}
+          {(category ?? "news").slice(0, 2).toUpperCase()}
         </span>
       </div>
     );
   }
 
-  if (tier >= 3 || useNativeFallback) {
+  if (useNativeFallback) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         className={cn("jds-card-image", className)}
-        src={media?.url ?? src ?? ""}
+        src={displaySrc || media?.url || src || ""}
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
