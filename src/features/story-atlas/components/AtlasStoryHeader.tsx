@@ -13,6 +13,7 @@ type AtlasStoryHeaderProps = {
   title: string;
   url: string;
   progress: number;
+  hasThread?: boolean;
 };
 
 export const AtlasStoryHeader = memo(function AtlasStoryHeader({
@@ -20,6 +21,7 @@ export const AtlasStoryHeader = memo(function AtlasStoryHeader({
   title,
   url,
   progress,
+  hasThread = false,
 }: AtlasStoryHeaderProps) {
   const { language, t } = useLanguage();
   const goBack = useStoryBack();
@@ -56,7 +58,16 @@ export const AtlasStoryHeader = memo(function AtlasStoryHeader({
   }, [title, url]);
 
   const backLabel = pickBilingualLabel(language, "Back", "वापस");
-  const bookmarkLabel = saved ? t.article.bookmarked : t.article.bookmark;
+  const followingLabel = pickBilingualLabel(
+    language,
+    "Following this story",
+    "इस कहानी को फॉलो कर रहे हैं"
+  );
+  const bookmarkLabel = saved
+    ? hasThread
+      ? followingLabel
+      : t.article.bookmarked
+    : t.article.bookmark;
   const shareLabel = pickBilingualLabel(language, "Share", "शेयर");
 
   return (

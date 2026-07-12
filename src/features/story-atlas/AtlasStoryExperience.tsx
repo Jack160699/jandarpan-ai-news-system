@@ -10,8 +10,9 @@ import { AtlasStoryHero } from "./components/AtlasStoryHero";
 import { AtlasStoryIntro } from "./components/AtlasStoryIntro";
 import { AtlasStoryFactSections } from "./components/AtlasStoryFactSections";
 import { AtlasStoryBody } from "./components/AtlasStoryBody";
-import { AtlasStoryThread } from "./components/AtlasStoryThread";
+import { AtlasThreadTimeline } from "./components/AtlasThreadTimeline";
 import { AtlasStoryShareBar } from "./components/AtlasStoryShareBar";
+import { buildThreadTimeline } from "./lib/build-thread-timeline";
 import { AtlasStoryNext } from "./components/AtlasStoryNext";
 import type { AtlasStoryExperienceProps } from "./types";
 import "./styles/story-atlas.css";
@@ -58,6 +59,19 @@ export function AtlasStoryExperience({
   const deskLabel =
     displayLanguage === "hi" ? attribution.desk.nameHi : attribution.desk.name;
 
+  const threadVm = buildThreadTimeline({
+    eventViewModel: eventViewModel ?? null,
+    storyTimelineEvents: timeline.events,
+    currentSlug: slug,
+    currentHeadline: headline,
+    currentImage: heroDisplay.src || article.image_url,
+    currentPublishedAt: article.published_at,
+    liveHref: flags.liveHref || null,
+    isArticleLive: isLive,
+    language: displayLanguage,
+    intelligence,
+  });
+
   const storyContent = (
     <div className="atlas-story">
       <div className="atlas-story__inner">
@@ -91,13 +105,17 @@ export function AtlasStoryExperience({
           plainBlocks={plainBlocks}
         />
 
-        <AtlasStoryThread
+        <AtlasThreadTimeline
           language={displayLanguage}
           eventViewModel={eventViewModel}
-          timelineEvents={
-            timeline.events.length > 0 ? timeline.events : undefined
-          }
+          storyTimelineEvents={timeline.events}
           liveHref={flags.liveHref || null}
+          currentSlug={slug}
+          currentHeadline={headline}
+          currentImage={heroDisplay.src || article.image_url}
+          currentPublishedAt={article.published_at}
+          isArticleLive={isLive}
+          intelligence={intelligence}
         />
 
         <AtlasStoryShareBar
@@ -127,7 +145,12 @@ export function AtlasStoryExperience({
         data-translation={pageTranslationActive ? "1" : "0"}
         lang={displayLanguage}
       >
-        <AtlasStoryReadingChrome slug={slug} title={headline} url={canonicalUrl}>
+        <AtlasStoryReadingChrome
+          slug={slug}
+          title={headline}
+          url={canonicalUrl}
+          hasThread={threadVm.hasThread}
+        >
           {sponsoredStory ? (
             <SponsoredStoryContent meta={sponsoredStory}>
               {storyContent}

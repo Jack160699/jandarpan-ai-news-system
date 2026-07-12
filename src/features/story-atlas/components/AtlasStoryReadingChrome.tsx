@@ -8,6 +8,7 @@ type AtlasStoryReadingChromeProps = {
   slug: string;
   title: string;
   url: string;
+  hasThread?: boolean;
   children: ReactNode;
 };
 
@@ -15,6 +16,7 @@ export const AtlasStoryReadingChrome = memo(function AtlasStoryReadingChrome({
   slug,
   title,
   url,
+  hasThread = false,
   children,
 }: AtlasStoryReadingChromeProps) {
   const [progress, setProgress] = useState(0);
@@ -25,7 +27,13 @@ export const AtlasStoryReadingChrome = memo(function AtlasStoryReadingChrome({
   return (
     <>
       <AtlasReadingProgress onProgress={onProgress} />
-      <AtlasStoryHeader slug={slug} title={title} url={url} progress={progress} />
+      <AtlasStoryHeader
+        slug={slug}
+        title={title}
+        url={url}
+        progress={progress}
+        hasThread={hasThread}
+      />
       <div data-reading="story-atlas">{children}</div>
     </>
   );
