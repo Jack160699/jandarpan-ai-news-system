@@ -14,20 +14,16 @@ import { LazyV3Section } from "./components/LazyV3Section";
 import { LocalPulseSection } from "./sections/LocalPulseSection";
 import { LeadStorySection } from "./sections/LeadStorySection";
 import { QuickScanSection } from "./sections/QuickScanSection";
-import { StoryFeedSection } from "./sections/StoryFeedSection";
-import { NearYouSection } from "./sections/NearYouSection";
-import { LiveWireSection } from "./sections/LiveWireSection";
+import { AtlasEditorialFeedSection } from "./sections/AtlasEditorialFeedSection";
 import { ContinueReadingSection } from "./sections/ContinueReadingSection";
-import { ForYouSection } from "./sections/ForYouSection";
 import { DiscoverStripSection } from "./sections/DiscoverStripSection";
 import {
   FeedSkeleton,
-  LiveRailSkeleton,
   QuickScanSkeleton,
-  SectionBlockSkeleton,
 } from "./skeletons";
 import "./styles/home-v31.css";
 import "./styles/home-atlas-2a.css";
+import "./styles/home-atlas-2b.css";
 
 export type HomeExperienceV3Props = {
   feed: GeneratedHomepageFeed;
@@ -77,71 +73,41 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
         <AdSlot slotId="home_leaderboard" className="home-v31-ad" />
       </HomeSectionErrorBoundary>
 
-      <HomeSectionErrorBoundary name="v31-story-feed">
-        <LazyV3Section
-          id="home-v31-feed"
-          fallback={<FeedSkeleton />}
-          minHeight="480px"
-        >
-          <StoryFeedSection stories={data.storyFeed} />
-        </LazyV3Section>
-      </HomeSectionErrorBoundary>
+      <div className="home-atlas-2b">
+        <HomeSectionErrorBoundary name="v31-editorial-feed">
+          <LazyV3Section
+            id="home-atlas-feed"
+            fallback={<FeedSkeleton />}
+            minHeight="480px"
+          >
+            <AtlasEditorialFeedSection
+              storyFeed={data.storyFeed}
+              districtNews={data.districtNews}
+              liveUpdates={data.liveUpdates}
+              recommended={data.recommended}
+              trendingFallback={data.trendingFallback}
+            />
+          </LazyV3Section>
+        </HomeSectionErrorBoundary>
 
-      <HomeSectionErrorBoundary name="v31-ad-mid">
-        <AdSlot slotId="home_mid_feed" className="home-v31-ad" />
-      </HomeSectionErrorBoundary>
+        <HomeSectionErrorBoundary name="v31-ad-mid">
+          <AdSlot slotId="home_mid_feed" className="home-v31-ad" />
+        </HomeSectionErrorBoundary>
 
-      <HomeSectionErrorBoundary name="v31-near-you">
-        <LazyV3Section
-          id="home-v31-near"
-          fallback={<SectionBlockSkeleton />}
-          minHeight="320px"
-        >
-          <NearYouSection
-            districtSlug={data.districtSlug}
-            districtName={data.districtName}
-            districtNameHi={data.districtNameHi}
-            districtNews={data.districtNews}
-          />
-        </LazyV3Section>
-      </HomeSectionErrorBoundary>
+        <HomeSectionErrorBoundary name="v31-continue">
+          <ContinueReadingSection />
+        </HomeSectionErrorBoundary>
 
-      <HomeSectionErrorBoundary name="v31-live">
-        <LazyV3Section
-          id="home-v31-live"
-          fallback={<LiveRailSkeleton />}
-          minHeight="140px"
-        >
-          <LiveWireSection updates={data.liveUpdates} />
-        </LazyV3Section>
-      </HomeSectionErrorBoundary>
-
-      <HomeSectionErrorBoundary name="v31-continue">
-        <ContinueReadingSection />
-      </HomeSectionErrorBoundary>
-
-      <HomeSectionErrorBoundary name="v31-for-you">
-        <LazyV3Section
-          id="home-v31-foryou"
-          fallback={<SectionBlockSkeleton />}
-          minHeight="280px"
-        >
-          <ForYouSection
-            recommended={data.recommended}
-            trendingFallback={data.trendingFallback}
-          />
-        </LazyV3Section>
-      </HomeSectionErrorBoundary>
-
-      <HomeSectionErrorBoundary name="v31-discover">
-        <LazyV3Section
-          id="home-v31-discover"
-          fallback={<QuickScanSkeleton />}
-          minHeight="72px"
-        >
-          <DiscoverStripSection listenArticleIds={data.listenArticleIds} />
-        </LazyV3Section>
-      </HomeSectionErrorBoundary>
+        <HomeSectionErrorBoundary name="v31-discover">
+          <LazyV3Section
+            id="home-v31-discover"
+            fallback={<QuickScanSkeleton />}
+            minHeight="72px"
+          >
+            <DiscoverStripSection listenArticleIds={data.listenArticleIds} />
+          </LazyV3Section>
+        </HomeSectionErrorBoundary>
+      </div>
     </PageContainer>
   );
 }
