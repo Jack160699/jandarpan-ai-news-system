@@ -39,7 +39,7 @@ export type BuildThreadTimelineInput = {
   language: NewsroomLanguage;
   intelligence: Pick<
     StoryIntelligenceVm,
-    "trust" | "attribution" | "reader" | "knowledge"
+    "trust" | "attribution" | "reader" | "knowledge" | "editorial"
   >;
 };
 

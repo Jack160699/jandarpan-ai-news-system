@@ -2,7 +2,6 @@ import { ArticleMemoryTracker } from "@/components/editorial/ArticleMemoryTracke
 import { LiveStoryJsonLd } from "@/components/seo/LiveStoryJsonLd";
 import { ReaderAnalyticsTracker } from "@/components/analytics/ReaderAnalyticsTracker";
 import { SponsoredStoryContent } from "@/components/monetization/SponsoredStoryContent";
-import { isArticleLive } from "@/lib/news/home-ranking";
 import { buildEditorialHeroDisplay } from "@/lib/news/images/editorial-hero-display";
 import type { NewsCategory } from "@/lib/types/news-article";
 import { AtlasStoryReadingChrome } from "./components/AtlasStoryReadingChrome";
@@ -54,7 +53,11 @@ export function AtlasStoryExperience({
     imageMeta: editorialMeta?.image,
   });
 
-  const isLive = isArticleLive(article.published_at);
+  const isLive = Boolean(
+    editorialMeta?.is_breaking ||
+      editorialMeta?.breaking_override ||
+      eventViewModel?.is_live
+  );
   const nextArticle = related[0] ?? null;
   const deskLabel =
     displayLanguage === "hi" ? attribution.desk.nameHi : attribution.desk.name;

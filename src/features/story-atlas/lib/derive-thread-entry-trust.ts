@@ -33,7 +33,7 @@ export function deriveThreadEntryTrust({
   return {
     showLive: isLive,
     showBreaking: isBreaking && !isLive,
-    verified: (confidence ?? 0) >= 0.75,
+    verified: false,
     sourceLine: sourceLine?.trim() || null,
     timeLabel,
   };

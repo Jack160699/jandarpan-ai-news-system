@@ -108,7 +108,16 @@ export function toHomeArticle(
   const attributionCount = Array.isArray(meta.source_attribution)
     ? meta.source_attribution.length
     : 0;
-  const sourceCount = (meta.source_count ?? attributionCount) || 1;
+  const rawSourceCount = meta.source_count ?? attributionCount;
+  const sourceCount = rawSourceCount > 0 ? rawSourceCount : attributionCount;
+  const hasOfficialSource = Array.isArray(meta.source_attribution)
+    ? meta.source_attribution.some((entry) =>
+        /\.(gov|nic)\./i.test(entry.article_url ?? "") ||
+        /\b(gov|government|official|nic|ministry|प्रशासन|सरकार)\b/i.test(
+          entry.source ?? ""
+        )
+      )
+    : false;
 
   return {
     id: row.id,
@@ -134,7 +143,11 @@ export function toHomeArticle(
     language: localized.language,
     tags: row.tags ?? [],
     aiConfidence: confidence,
-    sourceCount: Math.max(1, sourceCount),
+    sourceCount,
+    editorialStatus: row.editorial_status ?? null,
+    publishDecision: meta.publish_decision ?? null,
+    aiGenerated: Boolean(meta.model),
+    hasOfficialSource,
     categoryLabel: getSectionLabel(section, dict, displayLanguage),
     desk: resolveEditorialDesk(
       section,

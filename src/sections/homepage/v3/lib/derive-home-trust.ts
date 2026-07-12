@@ -27,29 +27,22 @@ export type DeriveHomeTrustOptions = {
 };
 
 function isHumanReviewed(article: HomeArticle): boolean {
-  if (article.sourceCount >= 2 && article.aiConfidence >= 0.82) return true;
-  return article.ranking?.reasons?.some((reason) =>
-    /trusted|multi.?source|reviewed/i.test(reason)
-  ) ?? false;
+  return article.editorialStatus === "approved";
 }
 
-function isVerified(article: HomeArticle, humanReviewed: boolean): boolean {
-  if (humanReviewed) return false;
-  if (article.aiConfidence >= 0.75) return true;
-  return article.sourceCount >= 3;
+function isVerified(article: HomeArticle): boolean {
+  if (article.hasOfficialSource) return true;
+  const decision = article.publishDecision?.trim().toLowerCase();
+  return decision === "publish";
 }
 
 function isAiReviewed(article: HomeArticle, humanReviewed: boolean): boolean {
   if (humanReviewed) return false;
-  return article.aiConfidence >= 0.55 && article.aiConfidence < 0.75;
+  return Boolean(article.aiGenerated);
 }
 
 function isLiveArticle(article: HomeArticle): boolean {
-  return (
-    article.isLive ||
-    Boolean(article.ranking?.isBreaking) ||
-    article.urgency === "high"
-  );
+  return Boolean(article.ranking?.isBreaking);
 }
 
 function resolveDistrictLabel(
@@ -57,9 +50,6 @@ function resolveDistrictLabel(
   districtLabel?: string
 ): string | null {
   if (districtLabel?.trim()) return districtLabel.trim();
-  if (article.section === "raipur" || article.section === "chhattisgarh") {
-    return article.categoryLabel?.trim() || null;
-  }
   return null;
 }
 
@@ -71,7 +61,7 @@ function collectCandidates(
   const humanReviewed = isHumanReviewed(article);
 
   if (humanReviewed) candidates.push({ kind: "human-reviewed" });
-  if (isVerified(article, humanReviewed)) candidates.push({ kind: "verified" });
+  if (isVerified(article)) candidates.push({ kind: "verified" });
   if (isAiReviewed(article, humanReviewed)) candidates.push({ kind: "ai-reviewed" });
 
   if (!options?.suppressLive && isLiveArticle(article)) {

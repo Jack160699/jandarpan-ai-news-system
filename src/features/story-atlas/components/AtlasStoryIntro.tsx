@@ -16,7 +16,7 @@ type AtlasStoryIntroProps = {
   readTime: string;
   intelligence: Pick<
     StoryIntelligenceVm,
-    "trust" | "attribution" | "reader" | "knowledge"
+    "trust" | "attribution" | "reader" | "knowledge" | "editorial"
   >;
   language: NewsroomLanguage;
   isLive: boolean;

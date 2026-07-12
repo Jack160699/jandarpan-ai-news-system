@@ -26,7 +26,7 @@ type AtlasThreadTimelineProps = {
   isArticleLive: boolean;
   intelligence: Pick<
     StoryIntelligenceVm,
-    "trust" | "attribution" | "reader" | "knowledge"
+    "trust" | "attribution" | "reader" | "knowledge" | "editorial"
   >;
 };
 

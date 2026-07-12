@@ -24,7 +24,7 @@ const MAX_ITEMS = 3;
 type DeriveStoryTrustInput = {
   intelligence: Pick<
     StoryIntelligenceVm,
-    "trust" | "attribution" | "reader" | "knowledge"
+    "trust" | "attribution" | "reader" | "knowledge" | "editorial"
   >;
   isLive: boolean;
   suppressLive?: boolean;
@@ -35,24 +35,19 @@ export function deriveStoryTrustSignals({
   isLive,
   suppressLive = false,
 }: DeriveStoryTrustInput): StoryTrustSignal[] {
-  const { trust, attribution, reader, knowledge } = intelligence;
+  const { trust, attribution, reader, knowledge, editorial } = intelligence;
   const candidates: StoryTrustSignal[] = [];
 
-  const humanReviewed =
-    trust.reviewStatus?.toLowerCase().includes("review") ||
-    trust.aiDisclosureLines.some((line) => /reviewed|workflow/i.test(line)) ||
-    trust.badges.some((badge) => /reviewed|editorial/i.test(badge.label));
+  const humanReviewed = editorial.flags.humanReviewed;
 
   if (humanReviewed) candidates.push({ kind: "human-reviewed" });
 
-  if (trust.trustLevel || trust.verificationState) {
+  if (trust.verificationState || editorial.officialSource) {
     candidates.push({ kind: "verified" });
   }
 
   const aiReviewed =
-    trust.aiDisclosureLines.length > 0 &&
-    !humanReviewed &&
-    !trust.trustLevel;
+    editorial.flags.aiGenerated && !humanReviewed;
   if (aiReviewed) candidates.push({ kind: "ai-reviewed" });
 
   if (!suppressLive && isLive) {

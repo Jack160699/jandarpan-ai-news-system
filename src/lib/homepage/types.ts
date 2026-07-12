@@ -44,6 +44,11 @@ export type HomeArticle = {
   tags: string[];
   aiConfidence: number;
   sourceCount: number;
+  /** Editorial workflow — used for honest trust badges only */
+  editorialStatus?: string | null;
+  publishDecision?: string | null;
+  aiGenerated?: boolean;
+  hasOfficialSource?: boolean;
   categoryLabel: string;
   desk: NewsDeskLabel;
   /** @deprecated Language filtering happens before feed assembly */
