@@ -1,17 +1,18 @@
 "use client";
 
 import { memo } from "react";
-import { formatHomeTime } from "@/lib/homepage/format";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import type { EditorialFeedItem as EditorialFeedItemType } from "../../lib/editorial-feed-rhythm";
 import { FeedLeadCard } from "./FeedLeadCard";
 import { FeedStandardCard } from "./FeedStandardCard";
 import { FeedCompactCard } from "./FeedCompactCard";
 import { FeedLiveCard } from "./FeedLiveCard";
+import { formatHomeTime } from "@/lib/homepage/format";
 
 type EditorialFeedItemProps = {
   item: EditorialFeedItemType;
   language: NewsroomLanguage;
+  districtLabel?: string;
   liveLabel: string;
   updatesLabel: string;
   priorityImage?: boolean;
@@ -21,6 +22,7 @@ type EditorialFeedItemProps = {
 export const EditorialFeedItem = memo(function EditorialFeedItem({
   item,
   language,
+  districtLabel,
   liveLabel,
   updatesLabel,
   priorityImage = false,
@@ -41,8 +43,9 @@ export const EditorialFeedItem = memo(function EditorialFeedItem({
           imageUrl={imageUrl}
           imageAlt={article.headline}
           category={category}
-          publishedAt={publishedAt}
-          readingTime={article.readingTime}
+          article={article}
+          language={language}
+          districtLabel={districtLabel}
           href={href}
           priority={priorityImage}
         />
@@ -54,8 +57,9 @@ export const EditorialFeedItem = memo(function EditorialFeedItem({
           imageUrl={imageUrl}
           imageAlt={article.headline}
           category={category}
-          publishedAt={publishedAt}
-          readingTime={article.readingTime}
+          article={article}
+          language={language}
+          districtLabel={districtLabel}
           href={href}
         />
       );
@@ -64,7 +68,9 @@ export const EditorialFeedItem = memo(function EditorialFeedItem({
         <FeedCompactCard
           headline={article.headline}
           category={category}
-          publishedAt={publishedAt}
+          article={article}
+          language={language}
+          districtLabel={districtLabel}
           href={href}
           showDivider={showCompactDivider}
         />
@@ -75,6 +81,9 @@ export const EditorialFeedItem = memo(function EditorialFeedItem({
           headline={article.headline}
           publishedAt={publishedAt}
           updateCount={updateCount ?? 1}
+          article={article}
+          language={language}
+          districtLabel={districtLabel}
           href={href}
           liveLabel={liveLabel}
           updatesLabel={updatesLabel}

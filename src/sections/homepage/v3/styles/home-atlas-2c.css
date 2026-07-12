@@ -1,0 +1,130 @@
+/**
+ * Atlas Phase 2C — compact trust layer on story cards
+ */
+
+.atlas-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-xs);
+}
+
+.atlas-card-meta__category {
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--jds-color-text-secondary);
+}
+
+.atlas-trust {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jds-space-xs);
+}
+
+.atlas-trust__items {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--jds-space-sm);
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  color: var(--jds-color-text-tertiary);
+}
+
+.atlas-trust__item {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  line-height: 1.3;
+}
+
+.atlas-trust__item--human-reviewed,
+.atlas-trust__item--verified,
+.atlas-trust__item--ai-reviewed {
+  padding: 1px var(--jds-space-sm);
+  border-radius: var(--jds-radius-full);
+  border: 1px solid var(--jds-color-border-subtle);
+  background: var(--jds-color-surface-secondary);
+  font-weight: 600;
+  color: var(--jds-color-text-secondary);
+}
+
+.atlas-trust__item--verified {
+  color: var(--jds-color-brand-primary);
+  border-color: color-mix(in srgb, var(--jds-color-brand-primary) 20%, var(--jds-color-border-subtle));
+}
+
+.atlas-trust__item--source-count,
+.atlas-trust__item--updated,
+.atlas-trust__item--district {
+  font-weight: 500;
+  color: var(--jds-color-text-tertiary);
+}
+
+.atlas-trust__read {
+  font-weight: 500;
+  color: var(--jds-color-text-tertiary);
+}
+
+.atlas-trust__items > :not(:first-child).atlas-trust__read::before,
+.atlas-trust__items > span + .atlas-trust__read::before {
+  content: "·";
+  margin-right: var(--jds-space-sm);
+  color: var(--jds-color-text-tertiary);
+}
+
+.atlas-trust .hp-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  padding: 1px var(--jds-space-sm);
+  border-radius: var(--jds-radius-full);
+  background: var(--jds-color-breaking);
+  color: var(--jds-color-text-inverse);
+  font-family: var(--jds-font-meta);
+  font-size: var(--jds-text-meta);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.atlas-trust .hp-live__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.9;
+  animation: none;
+}
+
+.atlas-scan-card__trust {
+  margin-top: var(--jds-space-xs);
+}
+
+.atlas-feed-live__trust {
+  margin-top: var(--jds-space-xs);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .atlas-trust--enter {
+    animation: atlas-trust-enter 120ms var(--jds-ease-standard, ease) forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-trust--enter {
+    animation: none;
+  }
+}
+
+@keyframes atlas-trust-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

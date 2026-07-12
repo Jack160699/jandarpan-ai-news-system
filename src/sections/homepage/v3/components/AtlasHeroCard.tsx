@@ -5,6 +5,9 @@ import { JdsCardImage } from "@/design-system/components/JdsCardImage/JdsCardIma
 import { IMG_HERO_LEAD } from "@/design-system/components/editorial/image-sizes";
 import { focusRingClass } from "@/design-system/utils/aria";
 import { cn } from "@/design-system/utils/cn";
+import type { HomeArticle } from "@/lib/homepage/types";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { AtlasCardMeta } from "./AtlasCardMeta";
 
 export type AtlasHeroCardProps = {
   headline: string;
@@ -12,8 +15,9 @@ export type AtlasHeroCardProps = {
   imageUrl?: string | null;
   imageAlt?: string;
   category?: string;
-  publishedAt?: string;
-  readingTime?: string;
+  article: HomeArticle;
+  language: NewsroomLanguage;
+  districtLabel?: string;
   href: string;
   priority?: boolean;
   className?: string;
@@ -29,8 +33,9 @@ export function AtlasHeroCard({
   imageUrl,
   imageAlt,
   category,
-  publishedAt,
-  readingTime,
+  article,
+  language,
+  districtLabel,
   href,
   priority = true,
   className,
@@ -55,17 +60,12 @@ export function AtlasHeroCard({
       </div>
 
       <div className="atlas-hero__body">
-        <div className="atlas-hero__meta">
-          {category ? (
-            <span className="atlas-hero__category">{category}</span>
-          ) : null}
-          {publishedAt ? (
-            <time className="atlas-hero__time">{publishedAt}</time>
-          ) : null}
-          {readingTime ? (
-            <span className="atlas-hero__read">{readingTime}</span>
-          ) : null}
-        </div>
+        <AtlasCardMeta
+          article={article}
+          language={language}
+          category={category}
+          districtLabel={districtLabel}
+        />
 
         <h2 className="atlas-hero__headline">{headline}</h2>
 

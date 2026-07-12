@@ -1,16 +1,16 @@
 "use client";
 
 import { AtlasHeroCard } from "../components/AtlasHeroCard";
-import { formatHomeTime } from "@/lib/homepage/format";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import type { HomeArticle } from "@/lib/homepage/types";
 
 type LeadStorySectionProps = {
   story: HomeArticle & { isBreaking?: boolean };
+  districtLabel?: string;
 };
 
-export function LeadStorySection({ story }: LeadStorySectionProps) {
+export function LeadStorySection({ story, districtLabel }: LeadStorySectionProps) {
   const { language } = useLanguage();
   const isBreaking = story.isBreaking || story.ranking?.isBreaking;
 
@@ -24,13 +24,14 @@ export function LeadStorySection({ story }: LeadStorySectionProps) {
         summary={story.summary}
         imageUrl={story.imageUrl || story.ogImageUrl}
         imageAlt={story.headline}
+        article={story}
+        language={language}
+        districtLabel={districtLabel}
         category={
           isBreaking
             ? pickBilingualLabel(language, "Breaking", "ताज़ा")
             : story.categoryLabel
         }
-        publishedAt={formatHomeTime(story.publishedAt, language)}
-        readingTime={story.readingTime}
         href={`/story/${story.slug}`}
         priority
       />

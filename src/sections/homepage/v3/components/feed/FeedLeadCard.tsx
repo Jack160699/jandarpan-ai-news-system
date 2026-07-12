@@ -6,6 +6,9 @@ import { JdsCardImage } from "@/design-system/components/JdsCardImage/JdsCardIma
 import { IMG_CARD_LEAD } from "@/design-system/components/editorial/image-sizes";
 import { focusRingClass } from "@/design-system/utils/aria";
 import { cn } from "@/design-system/utils/cn";
+import type { HomeArticle } from "@/lib/homepage/types";
+import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { AtlasCardMeta } from "../AtlasCardMeta";
 
 export type FeedLeadCardProps = {
   headline: string;
@@ -13,8 +16,9 @@ export type FeedLeadCardProps = {
   imageUrl?: string | null;
   imageAlt?: string;
   category?: string;
-  publishedAt?: string;
-  readingTime?: string;
+  article: HomeArticle;
+  language: NewsroomLanguage;
+  districtLabel?: string;
   href: string;
   priority?: boolean;
 };
@@ -25,8 +29,9 @@ export const FeedLeadCard = memo(function FeedLeadCard({
   imageUrl,
   imageAlt,
   category,
-  publishedAt,
-  readingTime,
+  article,
+  language,
+  districtLabel,
   href,
   priority = false,
 }: FeedLeadCardProps) {
@@ -56,17 +61,12 @@ export const FeedLeadCard = memo(function FeedLeadCard({
       </div>
 
       <div className="atlas-feed-lead__body">
-        <div className="atlas-feed-lead__meta">
-          {category ? (
-            <span className="atlas-feed-lead__category">{category}</span>
-          ) : null}
-          {publishedAt ? (
-            <time className="atlas-feed-lead__time">{publishedAt}</time>
-          ) : null}
-          {readingTime ? (
-            <span className="atlas-feed-lead__read">{readingTime}</span>
-          ) : null}
-        </div>
+        <AtlasCardMeta
+          article={article}
+          language={language}
+          category={category}
+          districtLabel={districtLabel}
+        />
 
         <h3 className="atlas-feed-lead__headline">{headline}</h3>
 

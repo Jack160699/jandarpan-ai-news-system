@@ -13,6 +13,7 @@ type AtlasEditorialFeedSectionProps = {
   liveUpdates: HomeArticle[];
   recommended: RecommendedArticle[];
   trendingFallback: HomeArticle[];
+  districtLabel?: string;
 };
 
 /**
@@ -24,6 +25,7 @@ export function AtlasEditorialFeedSection({
   liveUpdates,
   recommended,
   trendingFallback,
+  districtLabel,
 }: AtlasEditorialFeedSectionProps) {
   const { language } = useLanguage();
   const items = useEditorialFeed({
@@ -53,15 +55,16 @@ export function AtlasEditorialFeedSection({
 
       <div className="atlas-feed" role="feed" aria-busy="false">
         {items.map((item, index) => (
-          <EditorialFeedItem
-            key={item.article.id}
-            item={item}
-            language={language}
-            liveLabel={liveLabel}
-            updatesLabel={updatesLabel}
-            priorityImage={item.layout === "lead" && index === firstLeadIndex}
-            showCompactDivider={index > 0}
-          />
+            <EditorialFeedItem
+              key={item.article.id}
+              item={item}
+              language={language}
+              districtLabel={districtLabel}
+              liveLabel={liveLabel}
+              updatesLabel={updatesLabel}
+              priorityImage={item.layout === "lead" && index === firstLeadIndex}
+              showCompactDivider={index > 0}
+            />
         ))}
       </div>
     </section>

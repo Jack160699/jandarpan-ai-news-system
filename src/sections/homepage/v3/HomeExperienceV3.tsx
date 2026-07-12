@@ -8,6 +8,8 @@ import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useEditorialIntelligenceOptional } from "@/providers/EditorialIntelligenceProvider";
 import { getRecentReadSlugs } from "@/lib/reading-memory";
+import { pickBilingualLabel } from "@/lib/i18n/pick-label";
+import { useLanguage } from "@/providers/LanguageProvider";
 import { useHomepageLayout } from "@/hooks/useHomepageLayout";
 import { useHomeV3Data } from "./hooks/useHomeV3Data";
 import { LazyV3Section } from "./components/LazyV3Section";
@@ -24,6 +26,7 @@ import {
 import "./styles/home-v31.css";
 import "./styles/home-atlas-2a.css";
 import "./styles/home-atlas-2b.css";
+import "./styles/home-atlas-2c.css";
 
 export type HomeExperienceV3Props = {
   feed: GeneratedHomepageFeed;
@@ -36,6 +39,7 @@ export type HomeExperienceV3Props = {
  * Local Pulse → Lead → Quick Scan → Feed → Near You → Live → Continue → For You → Discover
  */
 export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
+  const { language } = useLanguage();
   const { interests } = useReaderAccount();
   const { prefs } = useReaderPreferences();
   const { layout } = useHomepageLayout();
@@ -49,6 +53,12 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
     recentReadSlugs: editorial ? getRecentReadSlugs(editorial.memory) : [],
   });
 
+  const districtLabel = pickBilingualLabel(
+    language,
+    data.districtName,
+    data.districtNameHi
+  );
+
   return (
     <PageContainer width="homepage" className="home-v31">
       <div className="home-atlas-2a">
@@ -61,11 +71,11 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
         </HomeSectionErrorBoundary>
 
         <HomeSectionErrorBoundary name="v31-lead">
-          <LeadStorySection story={data.leadStory} />
+          <LeadStorySection story={data.leadStory} districtLabel={districtLabel} />
         </HomeSectionErrorBoundary>
 
         <HomeSectionErrorBoundary name="v31-quick-scan">
-          <QuickScanSection stories={data.quickScan} />
+          <QuickScanSection stories={data.quickScan} districtLabel={districtLabel} />
         </HomeSectionErrorBoundary>
       </div>
 
@@ -86,6 +96,7 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
               liveUpdates={data.liveUpdates}
               recommended={data.recommended}
               trendingFallback={data.trendingFallback}
+              districtLabel={districtLabel}
             />
           </LazyV3Section>
         </HomeSectionErrorBoundary>

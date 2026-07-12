@@ -5,14 +5,19 @@ import { JdsCardImage } from "@/design-system/components/JdsCardImage/JdsCardIma
 import { useLanguage } from "@/providers/LanguageProvider";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import type { HomeArticle } from "@/lib/homepage/types";
+import { AtlasTrustRow } from "../components/AtlasTrustRow";
 
 const SCAN_IMAGE_SIZES = "(max-width: 430px) 42vw, (max-width: 480px) 40vw, 200px";
 
 type QuickScanSectionProps = {
   stories: HomeArticle[];
+  districtLabel?: string;
 };
 
-export function QuickScanSection({ stories }: QuickScanSectionProps) {
+export function QuickScanSection({
+  stories,
+  districtLabel,
+}: QuickScanSectionProps) {
   const { language } = useLanguage();
 
   if (stories.length < 2) return null;
@@ -45,6 +50,12 @@ export function QuickScanSection({ stories }: QuickScanSectionProps) {
               />
             </div>
             <span className="atlas-scan-card__headline">{story.headline}</span>
+            <AtlasTrustRow
+              article={story}
+              language={language}
+              districtLabel={districtLabel}
+              className="atlas-scan-card__trust"
+            />
           </Link>
         ))}
       </div>
