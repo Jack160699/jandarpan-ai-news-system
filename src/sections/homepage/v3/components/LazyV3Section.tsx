@@ -54,7 +54,7 @@ export function LazyV3Section({
     <div
       ref={ref}
       id={id}
-      className={`home-v3-lazy ${className}`.trim()}
+      className={`home-v31-lazy ${className}`.trim()}
       style={{ minHeight: show ? undefined : minHeight }}
       aria-busy={show ? undefined : true}
     >
