@@ -99,14 +99,13 @@ function isFreshWireSource(source: LivePoolDiagnostics["source"]): boolean {
 }
 
 function getCachedHomepageFeedBuild(
-  tenantSlug: string,
+  tenant: TenantConfig,
   displayLanguage: NewsroomLanguage,
   prefSignature: string,
   readerPrefs: ReaderPersonalizationPrefs
 ) {
   return unstable_cache(
     async (): Promise<HomepageFeedBuild> => {
-      const tenant = await getTenantConfig();
       const { rows: pool, diagnostics } = await resolveLiveArticlePool(
         HOMEPAGE_POOL_LIMIT,
         { select: "homepage" }
@@ -132,13 +131,13 @@ function getCachedHomepageFeedBuild(
         freshWire: isFreshWireSource(diagnostics.source),
       };
     },
-    ["homepage-generated-feed-v10", tenantSlug, displayLanguage, prefSignature],
+    ["homepage-generated-feed-v10", tenant.slug, displayLanguage, prefSignature],
     {
       revalidate: INFRA_CONFIG.homepageCacheSeconds,
       tags: [
         ISR_TAGS.homepage,
         ISR_TAGS.homepageFeed,
-        `tenant:${tenantSlug}`,
+        `tenant:${tenant.slug}`,
         `lang:${displayLanguage}`,
       ],
     }
@@ -164,7 +163,7 @@ export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed 
   }
 
   const built = await getCachedHomepageFeedBuild(
-    tenant.slug,
+    tenant,
     displayLanguage,
     prefSignature,
     readerPrefs

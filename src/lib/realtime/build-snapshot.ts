@@ -83,21 +83,20 @@ async function buildLiveHomepageSnapshotUncached(
 }
 
 function getCachedLiveHomepageSnapshot(
-  tenantSlug: string,
+  tenant: TenantConfig,
   displayLanguage: NewsroomLanguage
 ) {
   return unstable_cache(
     async (): Promise<LiveHomepageSnapshotResult> => {
-      const tenant = await getTenantConfig();
       return buildLiveHomepageSnapshotUncached(tenant, displayLanguage);
     },
-    ["live-homepage-snapshot-v1", tenantSlug, displayLanguage],
+    ["live-homepage-snapshot-v1", tenant.slug, displayLanguage],
     {
       revalidate: INFRA_CONFIG.homepageCacheSeconds,
       tags: [
         ISR_TAGS.homepage,
         ISR_TAGS.homepageFeed,
-        `tenant:${tenantSlug}`,
+        `tenant:${tenant.slug}`,
         `lang:${displayLanguage}`,
       ],
     }
@@ -106,9 +105,9 @@ function getCachedLiveHomepageSnapshot(
 
 /** Server: build live polling snapshot from resolved article pool */
 export async function buildLiveHomepageSnapshot(): Promise<LiveHomepageSnapshotResult> {
-  const [tenant, displayLanguage] = await Promise.all([
-    getTenantConfig(),
-    getServerReaderLanguage(),
-  ]);
-  return getCachedLiveHomepageSnapshot(tenant.slug, displayLanguage)();
+  const tenant = await getTenantConfig();
+  const displayLanguage = await getServerReaderLanguage(
+    tenant.newsroom.defaultLanguage
+  );
+  return getCachedLiveHomepageSnapshot(tenant, displayLanguage)();
 }
