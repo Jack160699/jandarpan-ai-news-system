@@ -17,6 +17,7 @@ import {
 } from "@/lib/mobile/navigation-state";
 import {
   getRecordedScrollPosition,
+  resolveCurrentScrollPosition,
   saveScrollPosition,
 } from "@/lib/mobile/scroll-retention";
 
@@ -58,8 +59,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       if (!anchor) return;
       const href = anchor.getAttribute("href") ?? "";
       if (!href.startsWith("/story/")) return;
-      const scrollY =
-        getRecordedScrollPosition(pathname) ?? Math.max(0, window.scrollY);
+      const scrollY = resolveCurrentScrollPosition(pathname);
       saveScrollPosition(pathname, scrollY);
       saveStoryReferrer(
         pathname,
@@ -117,8 +117,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     (href: string) => {
       const path = href.split("#")[0] || "/";
       if (typeof window !== "undefined") {
-        const scrollY =
-          getRecordedScrollPosition(pathname) ?? Math.max(0, window.scrollY);
+        const scrollY = resolveCurrentScrollPosition(pathname);
         saveScrollPosition(pathname, scrollY);
         if (isStoryPath(path) && !isStoryPath(pathname)) {
           saveStoryReferrer(

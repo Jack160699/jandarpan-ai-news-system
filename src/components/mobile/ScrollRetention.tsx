@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
-import { isListRestorePath } from "@/lib/mobile/navigation-state";
+import { isListRestorePath, loadStoryReferrer } from "@/lib/mobile/navigation-state";
 import {
   recordScrollPosition,
   restoreScrollPosition,
@@ -22,6 +22,20 @@ export function ScrollRetention({ children }: ScrollRetentionProps) {
   const { navigationEpoch } = useNavigation();
   const prevPath = useRef<string | null>(null);
   const mounted = useRef(false);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const path = window.location.pathname || "/";
+      if (!isListRestorePath(path)) return;
+      const referrer = loadStoryReferrer();
+      if (referrer?.path === path && referrer.scrollY > 0) {
+        saveScrollPosition(path, referrer.scrollY);
+      }
+      requestAnimationFrame(() => restoreScrollPosition(path));
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   useEffect(() => {
     const onScroll = () => recordScrollPosition(pathname, window.scrollY);

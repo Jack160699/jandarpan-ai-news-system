@@ -11,6 +11,22 @@ export function getRecordedScrollPosition(path: string): number | null {
   return y != null && y > 0 ? y : null;
 }
 
+export function resolveCurrentScrollPosition(path: string): number {
+  const recorded = getRecordedScrollPosition(path);
+  if (recorded != null) return recorded;
+  if (typeof window === "undefined") return 0;
+  try {
+    const parsed = Number.parseInt(
+      sessionStorage.getItem(`${PREFIX}${path}`) ?? "",
+      10
+    );
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  } catch {
+    /* ignore */
+  }
+  return Math.max(0, Math.round(window.scrollY));
+}
+
 export function saveScrollPosition(path: string, y?: number): void {
   if (typeof window === "undefined" || !path) return;
   const scrollY =
@@ -42,10 +58,30 @@ export function restoreScrollPosition(path: string): void {
   if (typeof window === "undefined" || !path) return;
   const y = readStoredPosition(path);
   if (y == null) return;
-  requestAnimationFrame(() => {
-    window.scrollTo({ top: y, left: 0, behavior: "instant" });
-    recordScrollPosition(path, y);
-  });
+
+  let attempts = 0;
+  const maxAttempts = 12;
+
+  const apply = () => {
+    const maxScroll = Math.max(
+      0,
+      (document.documentElement?.scrollHeight ?? 0) - window.innerHeight
+    );
+    const top = Math.min(y, maxScroll);
+    window.scrollTo(0, top);
+    recordScrollPosition(path, top);
+
+    attempts += 1;
+    if (top + 8 < y && attempts < maxAttempts) {
+      window.setTimeout(apply, 120);
+    }
+  };
+
+  apply();
+  requestAnimationFrame(apply);
+  window.setTimeout(apply, 50);
+  window.setTimeout(apply, 250);
+  window.setTimeout(apply, 600);
 }
 
 /**
@@ -56,7 +92,7 @@ export function restoreScrollPositionSync(path: string): void {
   if (typeof window === "undefined" || !path) return;
   const y = readStoredPosition(path);
   if (y == null) return;
-  window.scrollTo({ top: y, left: 0, behavior: "instant" });
+  window.scrollTo(0, y);
   recordScrollPosition(path, y);
 }
 

@@ -2,6 +2,7 @@
  * Read published generated_articles — homepage + story source of truth
  */
 
+import { getStaticFallbackArticleBySlug } from "@/lib/news/fallback/wire-articles";
 import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { createAnonServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { logNewsroom } from "@/lib/newsroom/logger";
@@ -240,10 +241,17 @@ export async function fetchGoogleNewsArticlePool(
 export async function getGeneratedArticleBySlug(
   slug: string
 ): Promise<GeneratedArticleRow | null> {
-  if (!isSupabaseConfigured()) return null;
+  if (isSupabaseConfigured()) {
+    const supabase = createAnonServerClient();
+    const row = await fetchPublicGeneratedRow(supabase, slug);
+    if (row) return row;
+  }
 
-  const supabase = createAnonServerClient();
-  return fetchPublicGeneratedRow(supabase, slug);
+  const fallback = getStaticFallbackArticleBySlug(slug);
+  if (fallback) {
+    warnLiveFeed("generated_slug_static_fallback", { slug });
+  }
+  return fallback;
 }
 
 export async function getGeneratedArticleSlugs(

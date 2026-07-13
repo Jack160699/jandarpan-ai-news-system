@@ -35,6 +35,18 @@ function row(
   };
 }
 
+/** Resolve a static fallback story by slug when DB/API layers are unavailable. */
+export function getStaticFallbackArticleBySlug(
+  slug: string
+): GeneratedArticleRow | null {
+  const decoded = decodeURIComponent(slug).trim();
+  return (
+    getStaticFallbackArticlePool().find(
+      (row) => row.slug === decoded || row.slug === slug
+    ) ?? null
+  );
+}
+
 /** Curated desk headlines — rotate-safe slugs for /story routes */
 export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
   return [

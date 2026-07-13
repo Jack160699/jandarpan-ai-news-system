@@ -6,5 +6,5 @@ import { redirect } from "next/navigation";
  * the header chip so it doesn't hardcode /districts.
  */
 export default function PlacesPage() {
-  redirect("/districts");
+  redirect("/districts/raipur");
 }

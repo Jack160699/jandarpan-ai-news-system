@@ -14,6 +14,7 @@ import {
 } from "@/lib/i18n/resolve-article";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { pickEntityAwareRelatedStories } from "@/lib/story/story-entity-discovery";
+import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import {
   fetchGeneratedArticlePool,
   getGeneratedArticleBySlug,
@@ -41,7 +42,7 @@ const STORY_CACHE_TAGS = [
 function getCachedStoryArticleBySlugBuild(slug: string) {
   return unstable_cache(
     () => getGeneratedArticleBySlug(slug),
-    ["story-article-v1", slug],
+    ["story-article-v2", slug],
     {
       revalidate: INFRA_CONFIG.homepageCacheSeconds,
       tags: [...STORY_CACHE_TAGS, `story:${slug}`],
@@ -147,5 +148,10 @@ export async function getStoryRelatedArticles(
 /** Static params — slug list only; homepage projection omits article_body. */
 export async function getStoryStaticSlugs(limit = 200): Promise<string[]> {
   const pool = await fetchGeneratedArticlePool(limit, { select: "homepage" });
-  return pool.map((row) => row.slug).filter(Boolean);
+  if (pool.length > 0) {
+    return pool.map((row) => row.slug).filter(Boolean);
+  }
+  return getStaticFallbackArticlePool()
+    .map((row) => row.slug)
+    .filter(Boolean);
 }

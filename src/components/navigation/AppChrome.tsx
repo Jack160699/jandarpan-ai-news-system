@@ -53,10 +53,10 @@ type AppChromeProps = {
 const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library"];
 
 function ShortsLanguageShell({ children }: AppChromeProps) {
-  const { contentLocked } = useLanguage();
+  const { contentLocked, mounted } = useLanguage();
 
   return (
-    <div className={cn(contentLocked && "app-shell--lang-locked")}>
+    <div className={cn(contentLocked && mounted && "app-shell--lang-locked")}>
       <LanguageGate />
       <div className="app-shell__content">{children}</div>
     </div>
@@ -65,7 +65,7 @@ function ShortsLanguageShell({ children }: AppChromeProps) {
 
 function AppChromeShell({ children }: AppChromeProps) {
   const pathname = usePathname();
-  const { contentLocked } = useLanguage();
+  const { contentLocked, mounted } = useLanguage();
   const isStory = pathname.startsWith("/story/");
 
   return (
@@ -74,7 +74,7 @@ function AppChromeShell({ children }: AppChromeProps) {
         "app-shell",
         !isStory && "has-bottom-nav",
         isStory && "app-shell--story",
-        contentLocked && "app-shell--lang-locked"
+        contentLocked && mounted && "app-shell--lang-locked"
       )}
       data-hydrated="false"
     >

@@ -16,6 +16,8 @@ import {
   prefersReducedMotion,
   supportsViewTransitions,
 } from "@/lib/navigation/transition-config";
+import { isListRestorePath } from "@/lib/mobile/navigation-state";
+import { restoreScrollPosition } from "@/lib/mobile/scroll-retention";
 import { useNavigation } from "@/providers/NavigationProvider";
 
 type RouteTransitionProps = {
@@ -52,6 +54,12 @@ export function RouteTransition({ children }: RouteTransitionProps) {
   const finishTransition = useCallback(() => {
     setPhase("idle");
     completeNavigation();
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname || "/";
+      if (isListRestorePath(path)) {
+        restoreScrollPosition(path);
+      }
+    }
   }, [completeNavigation]);
 
   /* RSC refresh on same path */
@@ -78,6 +86,9 @@ export function RouteTransition({ children }: RouteTransitionProps) {
       setDisplayed(children);
       setPhase("idle");
       completeNavigation();
+      if (typeof window !== "undefined" && isListRestorePath(pathname)) {
+        restoreScrollPosition(pathname);
+      }
       return;
     }
 
