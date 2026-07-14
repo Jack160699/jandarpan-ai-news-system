@@ -8,8 +8,10 @@ import { DistrictV3Page } from "@/features/district-v3";
 import { isDistrictV3Enabled } from "@/features/district-v3/config";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
 import { filterPoolByLanguage } from "@/lib/i18n/article-language";
+import { normalizeArticleLanguage } from "@/lib/i18n/languages";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import {
   buildRegionalRankingPersonalization,
   filterRowsForDistrict,
@@ -72,9 +74,16 @@ export default async function DistrictPage({ params }: PageProps) {
   if (!district) notFound();
 
   const displayLanguage = await getServerReaderLanguage();
-  const pool = await fetchGeneratedArticlePool(120);
+  const fetchedPool = await fetchGeneratedArticlePool(120);
+  const pool =
+    fetchedPool.length > 0 ? fetchedPool : getStaticFallbackArticlePool();
   const langPool = filterPoolByLanguage(pool, displayLanguage);
-  const filtered = filterRowsForDistrict(langPool, slug);
+  const districtPool = langPool.length > 0 ? langPool : pool;
+  const districtLanguage =
+    langPool.length > 0
+      ? displayLanguage
+      : normalizeArticleLanguage(pool[0]?.language);
+  const filtered = filterRowsForDistrict(districtPool, slug);
   const personalization = buildRegionalRankingPersonalization({
     homeDistrict: slug,
     regionBoostMultiplier: 1.3,
@@ -93,7 +102,7 @@ export default async function DistrictPage({ params }: PageProps) {
           duplicateClusterId: r.ranking.duplicateClusterId,
           section: r.section,
         },
-        displayLanguage
+        districtLanguage
       )
     )
     .filter((a): a is NonNullable<typeof a> => a !== null);

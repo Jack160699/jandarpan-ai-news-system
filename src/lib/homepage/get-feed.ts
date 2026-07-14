@@ -32,7 +32,10 @@ import type { TenantConfig } from "@/lib/tenant/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { homeDebug } from "@/lib/homepage/feed-safety";
-import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import {
+  normalizeArticleLanguage,
+  type NewsroomLanguage,
+} from "@/lib/i18n/languages";
 
 const HOMEPAGE_POOL_LIMIT = 120;
 
@@ -51,18 +54,23 @@ async function buildFeedFromPool(
   scheduleMissingTranslations(pool, displayLanguage, { max: 12 });
 
   const langPool = filterPoolByLanguage(pool, displayLanguage);
+  const usingSourceFallback = langPool.length === 0 && pool.length > 0;
+  const feedPool = usingSourceFallback ? pool : langPool;
+  const feedLanguage = usingSourceFallback
+    ? normalizeArticleLanguage(pool[0]?.language)
+    : displayLanguage;
   homeDebug("homepage language pool", {
     displayLanguage,
     total: pool.length,
     eligible: langPool.length,
   });
 
-  if (!langPool.length) {
+  if (usingSourceFallback) {
     warnLiveFeed("homepage_feed_no_language_match", {
       displayLanguage,
       poolSize: pool.length,
+      fallbackLanguage: feedLanguage,
     });
-    return null;
   }
 
   const personalization = buildRankingPersonalizationFromPrefs(
@@ -70,9 +78,9 @@ async function buildFeedFromPool(
     tenant
   );
 
-  const feed = buildGeneratedHomepageFeed(langPool, {
+  const feed = buildGeneratedHomepageFeed(feedPool, {
     personalization,
-    displayLanguage,
+    displayLanguage: feedLanguage,
   });
   if (!feed) return null;
 
@@ -86,7 +94,7 @@ async function buildFeedFromPool(
     ...feed.shorts.map((a) => a.id),
   ]);
 
-  const newsShorts = buildTrendingShortsFromPool(langPool, 10, displayLanguage, {
+  const newsShorts = buildTrendingShortsFromPool(feedPool, 10, feedLanguage, {
     preferredArticleIds: feed.shorts.map((a) => a.id),
     reservedIds,
     maxHomepageOverlap: 1,
@@ -131,7 +139,7 @@ function getCachedHomepageFeedBuild(
         freshWire: isFreshWireSource(diagnostics.source),
       };
     },
-    ["homepage-generated-feed-v10", tenant.slug, displayLanguage, prefSignature],
+    ["homepage-generated-feed-v11", tenant.slug, displayLanguage, prefSignature],
     {
       revalidate: INFRA_CONFIG.homepageCacheSeconds,
       tags: [
