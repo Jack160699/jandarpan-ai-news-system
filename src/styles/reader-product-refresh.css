@@ -1,0 +1,386 @@
+/* Connected reader experience: shell, local edition picker, feed rhythm, profile and story reader. */
+
+.jdp-topbar {
+  height: calc(86px + env(safe-area-inset-top, 0px));
+  border-bottom: 0;
+  background: var(--jds-color-surface-primary);
+  box-shadow: 0 3px 16px rgb(8 44 92 / 0.1);
+}
+
+.jdp-topbar__inner {
+  height: 55px;
+  padding-inline: 10px;
+  gap: 6px;
+}
+
+.jdp-topbar__brand {
+  flex: 0 1 112px;
+}
+
+.jdp-topbar__brand .tenant-logo--banner {
+  max-width: 112px;
+}
+
+.jdp-topbar__place {
+  min-height: 36px;
+  max-width: 84px;
+  padding: 5px 8px;
+  border-color: color-mix(in srgb, #082c5c 16%, transparent);
+  background: color-mix(in srgb, #082c5c 5%, white);
+  color: #082c5c;
+  font-weight: 700;
+}
+
+.jdp-topbar__actions {
+  gap: 0;
+}
+
+.jdp-topbar__btn,
+.jdp-topbar__avatar-link {
+  min-width: 38px;
+  min-height: 38px;
+  color: #082c5c;
+}
+
+.jdp-topbar__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 31px;
+  padding-inline: 13px;
+  border-top: 1px solid rgb(255 255 255 / 0.12);
+  border-bottom: 3px solid #d71920;
+  background: #082c5c;
+  color: #fff;
+  font: 650 0.68rem/1 var(--jds-font-ui);
+  letter-spacing: 0.01em;
+}
+
+.jdp-topbar__status-time,
+.jdp-topbar__status a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jdp-topbar--collapsed {
+  height: calc(48px + env(safe-area-inset-top, 0px));
+}
+
+.jdp-topbar--collapsed .jdp-topbar__inner {
+  height: 48px;
+}
+
+.jdp-topbar--collapsed .jdp-topbar__status {
+  display: none;
+}
+
+.jdp-bottomnav {
+  padding-inline: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.jdp-bottomnav__inner {
+  height: 62px;
+  border-inline: 0;
+  border-bottom: 0;
+  border-radius: 0;
+  border-top: 1px solid color-mix(in srgb, #082c5c 18%, transparent);
+  box-shadow: 0 -7px 20px rgb(8 44 92 / 0.09);
+}
+
+.jdp-bottomnav__item {
+  gap: 2px;
+  padding: 5px 2px;
+  border-radius: 0;
+  color: #526173;
+  font-size: 0.62rem;
+}
+
+.jdp-bottomnav__item::before {
+  top: 0;
+  width: 32px;
+  height: 3px;
+  background: #d71920;
+}
+
+.jdp-bottomnav__item--active {
+  background: linear-gradient(180deg, rgb(215 25 32 / 0.08), transparent 70%);
+  color: #b10f16;
+}
+
+.jdp-bottomnav__icon {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.9;
+}
+
+.jdp-sidebar {
+  border-right-color: rgb(255 255 255 / 0.1);
+  background: linear-gradient(180deg, #061c38, #082c5c 65%, #071b34);
+  color: #fff;
+}
+
+.jdp-sidebar__header {
+  border-bottom-color: rgb(255 255 255 / 0.12);
+}
+
+.jdp-sidebar__toggle,
+.jdp-sidebar__link {
+  color: rgb(255 255 255 / 0.78);
+}
+
+.jdp-sidebar__link:hover,
+.jdp-sidebar__link--active {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+
+.jdp-sidebar__link--active {
+  box-shadow: inset 3px 0 #e1252d;
+}
+
+.home-page__content.pl-container {
+  padding-inline: 0;
+}
+
+.home-page .atlas-trust__date,
+.home-page .atlas-topic__time,
+.home-page .atlas-topic__row time {
+  color: var(--jds-color-text-tertiary);
+  font: 600 0.67rem/1.25 var(--jds-font-meta);
+  white-space: nowrap;
+}
+
+.home-page .atlas-topic__time {
+  display: block;
+  margin-top: 6px;
+}
+
+.home-page .atlas-topic__row-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.home-page .atlas-topic__row-copy strong {
+  font: inherit;
+}
+
+.home-page .atlas-feed-standard,
+.home-page .atlas-feed-compact,
+.home-page .atlas-topic__row {
+  border-bottom-color: color-mix(in srgb, #082c5c 13%, transparent);
+}
+
+.district-picker {
+  width: min(100%, 980px);
+  margin-inline: auto;
+  padding: 22px 16px 104px;
+}
+
+.district-picker__hero {
+  overflow: hidden;
+  padding: 24px 20px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 92% 10%, rgb(255 255 255 / 0.16), transparent 30%),
+    linear-gradient(135deg, #061c38, #0d427e);
+  box-shadow: 0 16px 36px rgb(8 44 92 / 0.17);
+  color: #fff;
+}
+
+.district-picker__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffb5b8;
+  font: 800 0.72rem/1 var(--jds-font-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.district-picker__hero h1 {
+  margin: 12px 0 0;
+  font: 800 clamp(1.75rem, 7vw, 2.5rem)/1.08 var(--jds-font-display);
+  letter-spacing: -0.025em;
+}
+
+.district-picker__hero p {
+  max-width: 42rem;
+  margin: 11px 0 0;
+  color: rgb(255 255 255 / 0.78);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.district-picker__search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  margin: 18px 0 14px;
+  padding-inline: 14px;
+  border: 1px solid color-mix(in srgb, #082c5c 18%, transparent);
+  border-radius: 14px;
+  background: var(--jds-color-surface-primary);
+  color: #526173;
+  box-shadow: 0 6px 18px rgb(8 44 92 / 0.07);
+}
+
+.district-picker__search:focus-within {
+  border-color: #d71920;
+  box-shadow: 0 0 0 3px rgb(215 25 32 / 0.1);
+}
+
+.district-picker__search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--jds-color-text-primary);
+  font: 600 0.9rem/1 var(--jds-font-ui);
+}
+
+.district-picker__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 9px;
+}
+
+.district-picker__card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 10px;
+  min-height: 66px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, #082c5c 13%, transparent);
+  border-radius: 14px;
+  background: var(--jds-color-surface-primary);
+  color: var(--jds-color-text-primary);
+  text-align: left;
+  box-shadow: 0 4px 14px rgb(8 44 92 / 0.045);
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.district-picker__card:active,
+.district-picker__card.is-selecting {
+  transform: scale(0.975);
+}
+
+.district-picker__card.is-active,
+.district-picker__card.is-selecting {
+  border-color: #d71920;
+  background: linear-gradient(90deg, rgb(215 25 32 / 0.08), transparent 70%);
+  box-shadow: 0 8px 22px rgb(215 25 32 / 0.1);
+}
+
+.district-picker__pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgb(8 44 92 / 0.08);
+  color: #082c5c;
+}
+
+.district-picker__card.is-active .district-picker__pin,
+.district-picker__card.is-selecting .district-picker__pin {
+  background: #d71920;
+  color: #fff;
+  animation: district-selected 320ms ease both;
+}
+
+.district-picker__name {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.district-picker__name strong {
+  font: 750 0.95rem/1.25 var(--jds-font-ui);
+}
+
+.district-picker__name small {
+  color: var(--jds-color-text-tertiary);
+  font: 500 0.7rem/1.2 var(--jds-font-meta);
+}
+
+.district-picker__arrow {
+  color: #8b96a5;
+  transition: transform 180ms ease;
+}
+
+.district-picker__card.is-selecting .district-picker__arrow {
+  transform: translateX(4px);
+}
+
+.district-picker__empty {
+  padding: 34px 0;
+  color: var(--jds-color-text-secondary);
+  text-align: center;
+}
+
+@keyframes district-selected {
+  0% { transform: scale(0.72); }
+  70% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.pv3-page {
+  padding-bottom: 104px;
+}
+
+.pv3-hero {
+  padding: 20px;
+  border-radius: 20px;
+  background: linear-gradient(140deg, rgb(8 44 92 / 0.09), rgb(215 25 32 / 0.04));
+  border: 1px solid rgb(8 44 92 / 0.08);
+}
+
+.pv3-layout__content > section {
+  padding-top: 20px;
+  border-top: 1px solid color-mix(in srgb, #082c5c 12%, transparent);
+}
+
+@media (max-width: 359px) {
+  .jdp-topbar__brand,
+  .jdp-topbar__brand .tenant-logo--banner { max-width: 92px; }
+  .jdp-topbar__place { min-width: 36px; max-width: 36px; justify-content: center; padding-inline: 0; }
+  .jdp-topbar__place span { display: none; }
+  .jdp-topbar__btn,
+  .jdp-topbar__avatar-link { min-width: 36px; }
+}
+
+@media (min-width: 640px) {
+  .district-picker__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .jdp-topbar { height: calc(92px + env(safe-area-inset-top, 0px)); }
+  .jdp-topbar__inner { height: 61px; padding-inline: 24px; }
+  .jdp-topbar__brand,
+  .jdp-topbar__brand .tenant-logo--banner { max-width: 170px; flex-basis: 170px; }
+  .jdp-topbar__place { max-width: 150px; }
+  .jdp-topbar__status { padding-inline: 24px; }
+  .district-picker { padding-inline: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .district-picker__card,
+  .district-picker__arrow { transition: none; }
+  .district-picker__card.is-active .district-picker__pin,
+  .district-picker__card.is-selecting .district-picker__pin { animation: none; }
+}

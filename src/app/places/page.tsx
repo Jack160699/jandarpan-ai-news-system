@@ -1,10 +1,17 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { PageShell } from "@/components/layout/PageShell";
+import { DistrictPicker } from "@/features/district-picker/DistrictPicker";
+import { BRAND } from "@/lib/brand";
 
-/**
- * "Places" — the Atlas shell header's place-chip destination.
- * District browsing lives at /districts; this route is a stable target for
- * the header chip so it doesn't hardcode /districts.
- */
+export const metadata: Metadata = {
+  title: `Choose your district · ${BRAND.nameEn}`,
+  description: "Select a Chhattisgarh district and open its local news edition.",
+};
+
 export default function PlacesPage() {
-  redirect("/districts/raipur");
+  return (
+    <PageShell variant="news">
+      <DistrictPicker />
+    </PageShell>
+  );
 }

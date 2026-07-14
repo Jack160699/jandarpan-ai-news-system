@@ -54,8 +54,7 @@ export function useHomeV3Data(
       ...(breakingCandidate ?? lead),
       ranking: safeArticleRanking(breakingCandidate ?? lead),
       isBreaking: Boolean(
-        breakingCandidate?.ranking?.isBreaking ||
-          breakingCandidate?.urgency === "high"
+        breakingCandidate
       ),
     };
 

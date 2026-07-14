@@ -60,6 +60,7 @@
 
 /* Light paper texture — load last so body/shell backgrounds stay transparent */
 @import "./platform/newspaper-paper.css";
+@import "./reader-product-refresh.css";
 
 @theme inline {
   --color-background: var(--color-paper);

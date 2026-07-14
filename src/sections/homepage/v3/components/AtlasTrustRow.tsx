@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from "react";
 import { LiveBadge } from "@/components/homepage/LiveBadge";
-import { formatHomeUpdated } from "@/lib/homepage/format";
+import { formatHomeDate, formatHomeTime, formatHomeUpdated } from "@/lib/homepage/format";
 import type { HomeArticle } from "@/lib/homepage/types";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
@@ -109,29 +109,13 @@ export const AtlasTrustRow = memo(function AtlasTrustRow({
 }: AtlasTrustRowProps) {
   const { t } = useLanguage();
 
-  const rankingReasons = article.ranking?.reasons?.join(",") ?? "";
-
   const signals = useMemo(
     () =>
       deriveHomeTrustSignals(article, {
         districtLabel,
         suppressLive,
       }),
-    [
-      article.aiConfidence,
-      article.categoryLabel,
-      article.id,
-      article.isLive,
-      article.publishedAt,
-      article.readingTime,
-      article.section,
-      article.sourceCount,
-      article.urgency,
-      article.ranking?.isBreaking,
-      rankingReasons,
-      districtLabel,
-      suppressLive,
-    ]
+    [article, districtLabel, suppressLive]
   );
 
   const labels = useMemo(
@@ -165,7 +149,11 @@ export const AtlasTrustRow = memo(function AtlasTrustRow({
     [signals, language, labels]
   );
 
-  if (!items.length && !labels.readingTime) return null;
+  const publishedLabel = article.publishedAt?.trim()
+    ? `${formatHomeDate(article.publishedAt, language)} · ${formatHomeTime(article.publishedAt, language)}`
+    : null;
+
+  if (!items.length && !labels.readingTime && !publishedLabel) return null;
 
   return (
     <div
@@ -174,6 +162,11 @@ export const AtlasTrustRow = memo(function AtlasTrustRow({
       aria-label={labels.trustSummary}
     >
       <div className="atlas-trust__items">
+        {publishedLabel ? (
+          <time className="atlas-trust__date" dateTime={article.publishedAt}>
+            {publishedLabel}
+          </time>
+        ) : null}
         {items.map((item) =>
           item.variant === "live" ? (
             <span key={item.key} aria-label={item.ariaLabel}>

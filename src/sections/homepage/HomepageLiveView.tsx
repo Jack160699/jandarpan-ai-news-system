@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import { useEffect, useMemo } from "react";
 import { PersonalizedHomepageBody } from "@/components/personalization/PersonalizedHomepageBody";
 import { HomepageStackBands } from "@/components/layout/HomepageStackBands";
-import { NewUpdatesBanner } from "@/components/live-newsroom/NewUpdatesBanner";
 import { HomeSectionErrorBoundary } from "@/components/errors/HomeSectionErrorBoundary";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import {
@@ -69,8 +68,6 @@ export function HomepageLiveView({ feed: serverFeed }: HomepageLiveViewProps) {
             />
           </HomeSectionErrorBoundary>
         ) : null}
-
-        <NewUpdatesBanner />
 
         <div className="home-page__content pl-container">
           {homeV3 ? (

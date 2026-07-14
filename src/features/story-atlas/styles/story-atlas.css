@@ -793,3 +793,56 @@
     transition: none !important;
   }
 }
+
+/* Mobile edition: full-bleed media with a connected, edge-aware reading column. */
+@media (max-width: 639px) {
+  .atlas-story-page {
+    --atlas-story-pad: 0;
+    --atlas-story-max: 100%;
+  }
+
+  .atlas-story-header {
+    padding-inline: 8px;
+  }
+
+  .atlas-story {
+    padding: 0 0 48px;
+  }
+
+  .atlas-story__inner {
+    max-width: 100%;
+    gap: 0;
+  }
+
+  .atlas-story__inner > * + * {
+    margin-top: 24px;
+  }
+
+  .atlas-story__inner > :not(.atlas-story-hero) {
+    margin-inline: 16px;
+  }
+
+  .atlas-story-hero__media {
+    border-radius: 0;
+  }
+
+  .atlas-story-intro {
+    padding-bottom: 20px;
+    border-bottom: 1px solid color-mix(in srgb, #082c5c 14%, transparent);
+  }
+
+  .atlas-story-intro__headline {
+    font-size: clamp(1.8rem, 8vw, 2.25rem);
+    line-height: 1.13;
+  }
+
+  .atlas-story-intro__meta {
+    padding-top: 3px;
+    line-height: 1.5;
+  }
+
+  .atlas-story-body__p {
+    font-size: 1.08rem;
+    line-height: 1.76;
+  }
+}

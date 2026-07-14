@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { CG_DISTRICTS, getDistrict } from "@/lib/regional/districts";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useHomepageLayout } from "@/hooks/useHomepageLayout";
 import type { HomepageLayoutPrefs } from "@/lib/personalization/types";
+import { triggerHaptic } from "@/lib/mobile/haptics";
 
 const QUICK_DISTRICTS = CG_DISTRICTS.filter((d) => d.priority <= 2).slice(0, 8);
 
@@ -26,6 +28,7 @@ export function DistrictQuickSwitch() {
   const { language } = useLanguage();
   const { prefs, setHomeDistrict } = useReaderPreferences();
   const { layout, persist } = useHomepageLayout();
+  const router = useRouter();
 
   const current = prefs.homeDistrict ?? "raipur";
   const currentLabel = useMemo(() => {
@@ -43,8 +46,8 @@ export function DistrictQuickSwitch() {
         <p className="hp-district-switch__label">
           {pickBilingualLabel(language, "Your district", "आपका जिला")}
         </p>
-        <Link href="/archive" className="hp-district-switch__link">
-          {currentLabel}
+        <Link href="/places" className="hp-district-switch__link">
+          {currentLabel} · {pickBilingualLabel(language, "Change", "बदलें")}
         </Link>
       </div>
       <div className="hp-district-switch__chips" role="group">
@@ -57,7 +60,11 @@ export function DistrictQuickSwitch() {
               type="button"
               className={`hp-district-switch__chip tap-target${active ? " is-active" : ""}${followed ? " is-followed" : ""}`}
               aria-pressed={active}
-              onClick={() => setHomeDistrict(d.slug)}
+              onClick={() => {
+                triggerHaptic("selection");
+                setHomeDistrict(d.slug);
+                router.push(`/district/${d.slug}`);
+              }}
               onContextMenu={(e) => {
                 e.preventDefault();
                 persist(toggleFollowed(layout, d.slug));

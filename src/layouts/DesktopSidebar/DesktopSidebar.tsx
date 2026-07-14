@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, Home, Radio } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clapperboard, Home, MapPin, Newspaper, User } from "lucide-react";
 import { cn } from "@/design-system/utils/cn";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
@@ -79,16 +79,31 @@ export function DesktopSidebar() {
           <span className="jdp-sidebar__label">{t.nav.home}</span>
         </Link>
         <Link
-          href="/live"
+          href="/places"
           className={cn(
             "jdp-sidebar__link",
-            pathname.startsWith("/live") && "jdp-sidebar__link--active"
+            (pathname.startsWith("/places") || pathname.startsWith("/district")) &&
+              "jdp-sidebar__link--active"
           )}
         >
-          <Radio size={18} aria-hidden />
-          <span className="jdp-sidebar__label">{t.nav.live}</span>
+          <MapPin size={18} aria-hidden />
+          <span className="jdp-sidebar__label">{t.nav.districts}</span>
         </Link>
-        {NAV_CATEGORIES.slice(0, 8).map((cat) => (
+        <Link
+          href="/shorts"
+          className={cn("jdp-sidebar__link", pathname.startsWith("/shorts") && "jdp-sidebar__link--active")}
+        >
+          <Clapperboard size={18} aria-hidden />
+          <span className="jdp-sidebar__label">{t.nav.shorts}</span>
+        </Link>
+        <Link
+          href="/category/chhattisgarh"
+          className={cn("jdp-sidebar__link", pathname.startsWith("/category") && "jdp-sidebar__link--active")}
+        >
+          <Newspaper size={18} aria-hidden />
+          <span className="jdp-sidebar__label">{t.nav.topNews}</span>
+        </Link>
+        {NAV_CATEGORIES.filter((cat) => cat.id !== "live" && cat.id !== "top-news").slice(0, 7).map((cat) => (
           <Link
             key={cat.id}
             href={cat.href}
@@ -101,6 +116,13 @@ export function DesktopSidebar() {
             <span className="jdp-sidebar__label">{cat.label}</span>
           </Link>
         ))}
+        <Link
+          href="/you"
+          className={cn("jdp-sidebar__link", pathname.startsWith("/you") && "jdp-sidebar__link--active")}
+        >
+          <User size={18} aria-hidden />
+          <span className="jdp-sidebar__label">{t.nav.you}</span>
+        </Link>
       </nav>
       {!sidebar.collapsed && (
         <div

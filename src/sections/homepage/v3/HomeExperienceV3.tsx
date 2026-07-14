@@ -69,6 +69,7 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
             districtName={data.districtName}
             districtNameHi={data.districtNameHi}
             localAlerts={data.localAlerts}
+            breakingStory={data.leadStory.isBreaking ? data.leadStory : null}
           />
         </HomeSectionErrorBoundary>
 

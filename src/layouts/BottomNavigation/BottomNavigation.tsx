@@ -2,16 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Radio, Home, MapPin, User } from "lucide-react";
+import { Clapperboard, Home, MapPin, Newspaper, User } from "lucide-react";
 import { cn } from "@/design-system/utils/cn";
 import { useLanguage } from "@/providers/LanguageProvider";
-import { useLive } from "@/providers/LiveProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
-import { usePlace } from "@/providers/PlaceProvider";
 import { triggerHaptic } from "@/lib/mobile/haptics";
 import { useShellScrollHide } from "../hooks/useShellScrollHide";
 
-type TabId = "today" | "place" | "live" | "you";
+type TabId = "home" | "district" | "shorts" | "news" | "you";
 
 /**
  * Bottom navigation — exactly 4 tabs: Today / {place} / Live / You.
@@ -21,17 +19,16 @@ type TabId = "today" | "place" | "live" | "you";
 export function BottomNavigation({ hidden }: { hidden?: boolean }) {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const place = usePlace();
-  const { liveInPlace } = useLive();
   const { startNavigation } = useNavigation();
   const scrollHidden = useShellScrollHide(!hidden);
 
   const isHidden = hidden || scrollHidden;
 
   const activeId: TabId | null = (() => {
-    if (pathname === "/") return "today";
-    if (pathname.startsWith("/district")) return "place";
-    if (pathname.startsWith("/live")) return "live";
+    if (pathname === "/") return "home";
+    if (pathname.startsWith("/district") || pathname.startsWith("/places")) return "district";
+    if (pathname.startsWith("/shorts")) return "shorts";
+    if (pathname.startsWith("/category") || pathname.startsWith("/news/")) return "news";
     if (pathname.startsWith("/you") || pathname.startsWith("/profile")) return "you";
     return null;
   })();
@@ -43,17 +40,11 @@ export function BottomNavigation({ hidden }: { hidden?: boolean }) {
     href: string;
     label: string;
     Icon: typeof Home;
-    showLiveDot?: boolean;
   }> = [
-    { id: "today", href: "/", label: t.common.today, Icon: Home },
-    { id: "place", href: place.href, label: place.shortName, Icon: MapPin },
-    {
-      id: "live",
-      href: "/live",
-      label: t.nav.live,
-      Icon: Radio,
-      showLiveDot: liveInPlace,
-    },
+    { id: "home", href: "/", label: t.nav.home, Icon: Home },
+    { id: "district", href: "/places", label: t.nav.districts, Icon: MapPin },
+    { id: "shorts", href: "/shorts", label: t.nav.shorts, Icon: Clapperboard },
+    { id: "news", href: "/category/chhattisgarh", label: t.nav.topNews, Icon: Newspaper },
     { id: "you", href: "/you", label: t.nav.you, Icon: User },
   ];
 
@@ -76,15 +67,12 @@ export function BottomNavigation({ hidden }: { hidden?: boolean }) {
               )}
               aria-current={isActive ? "page" : undefined}
               onClick={() => {
-                triggerHaptic(tab.id === "live" ? "medium" : "selection");
+                triggerHaptic(tab.id === "shorts" ? "medium" : "selection");
                 startNavigation(tab.href);
               }}
             >
               <span className="jdp-bottomnav__icon-wrap">
                 <tab.Icon className="jdp-bottomnav__icon" aria-hidden />
-                {tab.showLiveDot ? (
-                  <span className="jdp-bottomnav__badge" aria-hidden />
-                ) : null}
               </span>
               <span>{tab.label}</span>
             </Link>

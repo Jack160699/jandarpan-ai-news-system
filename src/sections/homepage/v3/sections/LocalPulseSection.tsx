@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { DistrictQuickSwitch } from "@/components/personalization/DistrictQuickSwitch";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
@@ -11,12 +12,14 @@ type LocalPulseSectionProps = {
   districtName: string;
   districtNameHi: string;
   localAlerts: GeneratedHomepageFeed["localBreakingAlerts"];
+  breakingStory: GeneratedHomepageFeed["editorsPicks"]["lead"] | null;
 };
 
 export function LocalPulseSection({
   districtName,
   districtNameHi,
   localAlerts,
+  breakingStory,
 }: LocalPulseSectionProps) {
   const { language } = useLanguage();
   const districtLabel = pickBilingualLabel(language, districtName, districtNameHi);
@@ -43,6 +46,17 @@ export function LocalPulseSection({
 
       {localAlerts.length > 0 ? (
         <LocalBreakingAlerts alerts={localAlerts} />
+      ) : breakingStory ? (
+        <aside className="local-strip" aria-label="Breaking news">
+          <div className="nr-wrap">
+            <strong className="local-strip__title">
+              {pickBilingualLabel(language, "Breaking", "ब्रेकिंग")}
+            </strong>
+            <Link href={`/story/${breakingStory.slug}`} className="local-strip__row tap-target">
+              <span className="local-strip__headline">{breakingStory.headline}</span>
+            </Link>
+          </div>
+        </aside>
       ) : null}
 
       <DistrictQuickSwitch />

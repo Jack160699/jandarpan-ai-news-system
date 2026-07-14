@@ -7,6 +7,7 @@ import { JdsCardImage } from "@/design-system/components/JdsCardImage/JdsCardIma
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { useLanguage } from "@/providers/LanguageProvider";
 import type { RegionalSectionBlock } from "@/lib/homepage/types";
+import { formatHomeDate, formatHomeTime } from "@/lib/homepage/format";
 
 type DeepDiveSectionsProps = {
   streams: RegionalSectionBlock[];
@@ -74,6 +75,9 @@ export function DeepDiveSections({ streams }: DeepDiveSectionsProps) {
                 />
               </div>
               <h3>{lead.headline}</h3>
+              <time className="atlas-topic__time" dateTime={lead.publishedAt}>
+                {formatHomeDate(lead.publishedAt, language)} · {formatHomeTime(lead.publishedAt, language)}
+              </time>
               {lead.summary ? <p>{lead.summary}</p> : null}
             </Link>
 
@@ -86,7 +90,12 @@ export function DeepDiveSections({ streams }: DeepDiveSectionsProps) {
                     key={article.id}
                     role="listitem"
                   >
-                    <span>{article.headline}</span>
+                    <span className="atlas-topic__row-copy">
+                      <strong>{article.headline}</strong>
+                      <time dateTime={article.publishedAt}>
+                        {formatHomeDate(article.publishedAt, language)} · {formatHomeTime(article.publishedAt, language)}
+                      </time>
+                    </span>
                     <div className="atlas-topic__thumb">
                       <JdsCardImage
                         src={article.imageUrl || article.ogImageUrl}
