@@ -91,6 +91,32 @@ export function useHomeV3Data(
     const recommended = buildRecommendedArticles(feed, signals, 6);
     const trendingFallback = dedupeArticles(feed.trending).slice(0, 6);
 
+    const streamFallback = Array.from(
+      storyPool.reduce((groups, article) => {
+        const current = groups.get(article.section) ?? [];
+        current.push(article);
+        groups.set(article.section, current);
+        return groups;
+      }, new Map<HomeArticle["section"], HomeArticle[]>())
+    ).map(([id, articles]) => ({
+      id,
+      label: articles[0]?.categoryLabel || id,
+      labelHi: articles[0]?.categoryLabel || id,
+      articles,
+    }));
+
+    const categoryStreams = (feed.categoryStreams ?? []).filter(
+      (stream) => stream.articles.length > 0
+    );
+    const editorialStreams = (feed.editorialDesks ?? [])
+      .filter((desk) => desk.articles.length > 0)
+      .map((desk) => ({
+        id: (desk.articles[0]?.section ?? "chhattisgarh") as HomeArticle["section"],
+        label: desk.label,
+        labelHi: desk.labelHi,
+        articles: desk.articles,
+      }));
+
     const hyperlocal = feed.hyperlocalFeeds?.find(
       (h) => h.districtSlug === districtSlug
     );
@@ -113,6 +139,12 @@ export function useHomeV3Data(
       localAlerts: feed.localBreakingAlerts ?? [],
       recommended,
       trendingFallback,
+      categoryStreams:
+        categoryStreams.length > 0
+          ? categoryStreams
+          : editorialStreams.length > 0
+            ? editorialStreams
+            : streamFallback,
       aiInsight,
       listenArticleIds: feed.listenArticleIds ?? [],
     };

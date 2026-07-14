@@ -19,6 +19,7 @@ import { QuickScanSection } from "./sections/QuickScanSection";
 import { AtlasEditorialFeedSection } from "./sections/AtlasEditorialFeedSection";
 import { ContinueReadingSection } from "./sections/ContinueReadingSection";
 import { DiscoverStripSection } from "./sections/DiscoverStripSection";
+import { DeepDiveSections } from "./sections/DeepDiveSections";
 import {
   FeedSkeleton,
   QuickScanSkeleton,
@@ -27,6 +28,7 @@ import "./styles/home-v31.css";
 import "./styles/home-atlas-2a.css";
 import "./styles/home-atlas-2b.css";
 import "./styles/home-atlas-2c.css";
+import "./styles/home-newsroom-refresh.css";
 
 export type HomeExperienceV3Props = {
   feed: GeneratedHomepageFeed;
@@ -103,6 +105,10 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
 
         <HomeSectionErrorBoundary name="v31-ad-mid">
           <AdSlot slotId="home_mid_feed" className="home-v31-ad" />
+        </HomeSectionErrorBoundary>
+
+        <HomeSectionErrorBoundary name="v31-deep-dive">
+          <DeepDiveSections streams={data.categoryStreams} />
         </HomeSectionErrorBoundary>
 
         <HomeSectionErrorBoundary name="v31-continue">
