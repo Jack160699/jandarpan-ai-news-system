@@ -27,7 +27,7 @@ test.describe("mobile reader product", () => {
     await page.goto("/places", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("district-picker")).toBeVisible();
 
-    const bilaspur = page.getByRole("button", { name: /Bilaspur/i });
+    const bilaspur = page.getByRole("link", { name: /Bilaspur/i });
     await bilaspur.click();
     await expect(page).toHaveURL(/\/district\/bilaspur/, { timeout: 30_000 });
     await expect(page.locator(".dv3-route-root, main").first()).toBeVisible();

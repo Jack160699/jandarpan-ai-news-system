@@ -5,6 +5,7 @@ import { Button } from "@/design-system/components/Button";
 import { ErrorState } from "@/design-system/components/ErrorState";
 import { PageContainer } from "@/layouts/PageContainer";
 import { HomeSectionErrorBoundary } from "@/components/errors/HomeSectionErrorBoundary";
+import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useDistrictV3Data } from "./hooks/useDistrictV3Data";
 import { DistrictHome } from "./components/DistrictHome";
 import { Loading } from "./components/Loading";
@@ -22,6 +23,7 @@ export function DistrictExperienceV3({
   data: dataOverride,
   simulateLoadMs = 0,
 }: DistrictExperienceV3Props) {
+  const { setHomeDistrict } = useReaderPreferences();
   const data = useDistrictV3Data({
     slug: district.slug,
     name: district.name,
@@ -32,6 +34,10 @@ export function DistrictExperienceV3({
     simulateLoadMs > 0 ? "loading" : "ready"
   );
   const [sessionKey, setSessionKey] = useState(0);
+
+  useEffect(() => {
+    setHomeDistrict(district.slug);
+  }, [district.slug, setHomeDistrict]);
 
   useEffect(() => {
     if (simulateLoadMs <= 0) return undefined;

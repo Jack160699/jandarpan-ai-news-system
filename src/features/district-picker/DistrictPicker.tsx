@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Check, ChevronRight, MapPin, Search } from "lucide-react";
 import { CG_DISTRICTS } from "@/lib/regional/districts";
 import { triggerHaptic } from "@/lib/mobile/haptics";
@@ -10,7 +9,6 @@ import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 
 export function DistrictPicker() {
-  const router = useRouter();
   const { language } = useLanguage();
   const { prefs, setHomeDistrict } = useReaderPreferences();
   const [query, setQuery] = useState("");
@@ -33,7 +31,6 @@ export function DistrictPicker() {
     triggerHaptic("medium");
     setSelectingSlug(slug);
     setHomeDistrict(slug);
-    router.push(`/district/${slug}`);
   };
 
   return (
@@ -70,12 +67,11 @@ export function DistrictPicker() {
           const active = current === district.slug;
           const selecting = selectingSlug === district.slug;
           return (
-            <button
+            <a
               key={district.slug}
-              type="button"
+              href={`/district/${district.slug}`}
               className={`district-picker__card${active ? " is-active" : ""}${selecting ? " is-selecting" : ""}`}
-              aria-pressed={active}
-              onPointerEnter={() => router.prefetch(`/district/${district.slug}`)}
+              aria-current={active ? "page" : undefined}
               onClick={() => chooseDistrict(district.slug)}
             >
               <span className="district-picker__pin" aria-hidden>
@@ -86,7 +82,7 @@ export function DistrictPicker() {
                 <small>{district.name}</small>
               </span>
               <ChevronRight className="district-picker__arrow" size={18} aria-hidden />
-            </button>
+            </a>
           );
         })}
       </div>

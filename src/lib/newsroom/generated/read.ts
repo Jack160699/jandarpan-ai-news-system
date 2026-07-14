@@ -3,6 +3,7 @@
  */
 
 import { getStaticFallbackArticleBySlug } from "@/lib/news/fallback/wire-articles";
+import { getWireGeneratedArticleBySlug } from "@/lib/news/live-feed/resolve-wire-slug";
 import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { createAnonServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { logNewsroom } from "@/lib/newsroom/logger";
@@ -250,8 +251,10 @@ export async function getGeneratedArticleBySlug(
   const fallback = getStaticFallbackArticleBySlug(slug);
   if (fallback) {
     warnLiveFeed("generated_slug_static_fallback", { slug });
+    return fallback;
   }
-  return fallback;
+
+  return getWireGeneratedArticleBySlug(slug);
 }
 
 export async function getGeneratedArticleSlugs(

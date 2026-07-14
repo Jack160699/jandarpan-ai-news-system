@@ -14,6 +14,9 @@ export const AGGREGATION_CONFIG = {
 
   wireCacheTtlSec: Number(process.env.WIRE_CACHE_TTL_SEC) || 90,
   wireCacheStaleSec: Number(process.env.WIRE_CACHE_STALE_SEC) || 120,
+  /** Maximum reader-request wait for uncached wire providers before static fallback. */
+  wireRuntimeDeadlineMs:
+    Number(process.env.WIRE_RUNTIME_DEADLINE_MS) || 6_000,
 
   staleSnapshotMaxAgeMs:
     Number(process.env.STALE_SNAPSHOT_MAX_AGE_MS) || 6 * 60 * 60 * 1000,

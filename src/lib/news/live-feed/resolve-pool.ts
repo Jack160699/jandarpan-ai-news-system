@@ -90,6 +90,25 @@ function finalizePool(
   return { rows: ranked, diagnostics };
 }
 
+function withDeadline<T>(promise: Promise<T>, deadlineMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`wire_runtime_timeout_${deadlineMs}ms`)),
+      deadlineMs
+    );
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 /**
  * Resolve articles for homepage + live polling. Never returns an empty array.
  */
@@ -165,7 +184,10 @@ export async function resolveLiveArticlePool(
 
   let wireRows: GeneratedArticleRow[] = [];
   try {
-    const wire = await getWireArticlesCached(Math.min(limit, 80));
+    const wire = await withDeadline(
+      getWireArticlesCached(Math.min(limit, 80)),
+      AGGREGATION_CONFIG.wireRuntimeDeadlineMs
+    );
     diagnostics.rateLimited = wire.rateLimited;
     diagnostics.errors.push(...wire.errors);
     diagnostics.providersAttempted = wire.providersAttempted;

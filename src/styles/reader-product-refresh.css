@@ -266,7 +266,9 @@
   border-radius: 14px;
   background: var(--jds-color-surface-primary);
   color: var(--jds-color-text-primary);
+  cursor: pointer;
   text-align: left;
+  text-decoration: none;
   box-shadow: 0 4px 14px rgb(8 44 92 / 0.045);
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
   -webkit-tap-highlight-color: transparent;
