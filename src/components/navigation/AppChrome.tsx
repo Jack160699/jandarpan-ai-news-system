@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { AdSlot } from "@/components/monetization/AdSlot";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SkipLink } from "@/components/ui/SkipLink";
@@ -19,7 +20,6 @@ import { NavProgress } from "./NavProgress";
 import { NativeTouchLayer } from "@/components/mobile/NativeTouchLayer";
 import { PullToRefresh } from "@/components/mobile/PullToRefresh";
 import { ScrollRetention } from "@/components/mobile/ScrollRetention";
-import { AppHydration } from "./AppHydration";
 import { RouteTransition } from "./RouteTransition";
 
 const ContinueRibbon = dynamic(
@@ -52,21 +52,16 @@ type AppChromeProps = {
 
 const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library"];
 
-function ShortsLanguageShell({ children }: AppChromeProps) {
-  const { contentLocked, mounted } = useLanguage();
-
-  return (
-    <div className={cn(contentLocked && mounted && "app-shell--lang-locked")}>
-      <LanguageGate />
-      <div className="app-shell__content">{children}</div>
-    </div>
-  );
-}
-
 function AppChromeShell({ children }: AppChromeProps) {
   const pathname = usePathname();
   const { contentLocked, mounted } = useLanguage();
   const isStory = pathname.startsWith("/story/");
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => setHydrated(true));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
 
   return (
     <div
@@ -76,9 +71,8 @@ function AppChromeShell({ children }: AppChromeProps) {
         isStory && "app-shell--story",
         contentLocked && mounted && "app-shell--lang-locked"
       )}
-      data-hydrated="false"
+      data-hydrated={hydrated ? "true" : "false"}
     >
-      <AppHydration />
       <SkipLink />
       <NavProgress />
       <LanguageGate />
@@ -109,28 +103,6 @@ export function AppChrome({ children }: AppChromeProps) {
 
   if (minimal) {
     return <>{children}</>;
-  }
-
-  if (pathname === "/shorts") {
-    return (
-      <EditorialIntelligenceProvider>
-        <HeadlinesListenProvider>
-          <ArticleSpeechProvider>
-            <NavigationProvider>
-              <ReaderAccountProvider>
-                <PlaceProvider>
-                  <LiveProvider>
-                    <NativeTouchLayer>
-                      <ShortsLanguageShell>{children}</ShortsLanguageShell>
-                    </NativeTouchLayer>
-                  </LiveProvider>
-                </PlaceProvider>
-              </ReaderAccountProvider>
-            </NavigationProvider>
-          </ArticleSpeechProvider>
-        </HeadlinesListenProvider>
-      </EditorialIntelligenceProvider>
-    );
   }
 
   return (

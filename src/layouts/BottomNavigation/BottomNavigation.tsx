@@ -7,7 +7,7 @@ import { cn } from "@/design-system/utils/cn";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
 import { triggerHaptic } from "@/lib/mobile/haptics";
-import { useShellScrollHide } from "../hooks/useShellScrollHide";
+import { requestDistrictPicker } from "../DistrictModal/events";
 
 type TabId = "home" | "district" | "shorts" | "news" | "you";
 
@@ -20,9 +20,6 @@ export function BottomNavigation({ hidden }: { hidden?: boolean }) {
   const pathname = usePathname();
   const { t } = useLanguage();
   const { startNavigation } = useNavigation();
-  const scrollHidden = useShellScrollHide(!hidden);
-
-  const isHidden = hidden || scrollHidden;
 
   const activeId: TabId | null = (() => {
     if (pathname === "/") return "home";
@@ -50,12 +47,35 @@ export function BottomNavigation({ hidden }: { hidden?: boolean }) {
 
   return (
     <nav
-      className={cn("jdp-bottomnav", isHidden && "jdp-bottomnav--hidden")}
+      className="jdp-bottomnav"
       aria-label="Main navigation"
     >
       <div className="jdp-bottomnav__inner">
         {tabs.map((tab) => {
           const isActive = activeId === tab.id;
+          if (tab.id === "district") {
+            return (
+              <button
+                type="button"
+                key={tab.id}
+                data-nav-id={tab.id}
+                className={cn(
+                  "jdp-bottomnav__item",
+                  isActive && "jdp-bottomnav__item--active"
+                )}
+                aria-pressed={isActive}
+                onClick={() => {
+                  triggerHaptic("selection");
+                  requestDistrictPicker();
+                }}
+              >
+                <span className="jdp-bottomnav__icon-wrap">
+                  <tab.Icon className="jdp-bottomnav__icon" aria-hidden />
+                </span>
+                <span>{tab.label}</span>
+              </button>
+            );
+          }
           return (
             <Link
               key={tab.id}

@@ -1,17 +1,18 @@
 "use client";
 
-import Link from "next/link";
-import { CloudSun, Clock3 } from "lucide-react";
+import { CloudSun } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useClientNow } from "@/hooks/useClientNow";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { usePlace } from "@/providers/PlaceProvider";
 
 const IST = "Asia/Kolkata";
 
-export function HeaderStatusStrip({ collapsed }: { collapsed: boolean }) {
+export function HeaderStatusStrip() {
   const { language } = useLanguage();
   const place = usePlace();
   const now = useClientNow(30_000);
+  const [temperature, setTemperature] = useState<string>("--°");
   const locale = language === "en" ? "en-IN" : "hi-IN";
   const date = now
     ? new Intl.DateTimeFormat(locale, {
@@ -29,19 +30,36 @@ export function HeaderStatusStrip({ collapsed }: { collapsed: boolean }) {
         hour12: true,
       }).format(now)
     : "—";
-  const weatherLabel = language === "en" ? "Weather" : "मौसम";
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const response = await fetch(`/api/weather?district=${encodeURIComponent(place.id)}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as { temperature?: number };
+        if (typeof data.temperature === "number") {
+          setTemperature(`${Math.round(data.temperature)}°`);
+        }
+      } catch {
+        // Fixed-width placeholder keeps the header stable while offline.
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, [place.id]);
 
   return (
-    <div className="jdp-topbar__status" aria-hidden={collapsed || undefined}>
+    <div className="jdp-topbar__status">
       <time dateTime={now ? new Date(now).toISOString() : undefined}>{date}</time>
       <span className="jdp-topbar__status-time">
-        <Clock3 size={12} aria-hidden />
-        {time} IST
+        {time}
       </span>
-      <Link href={`/search?q=${encodeURIComponent(`${place.name} weather`)}`}>
+      <span className="jdp-topbar__weather" aria-label={language === "en" ? "Weather" : "मौसम"}>
         <CloudSun size={13} aria-hidden />
-        {weatherLabel}
-      </Link>
+        {temperature}
+      </span>
     </div>
   );
 }

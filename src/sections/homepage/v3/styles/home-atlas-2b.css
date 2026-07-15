@@ -7,18 +7,9 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  margin-inline: calc(-1 * (var(--gutter, 1rem) + var(--jds-space-lg, 16px)));
-  padding-inline: var(--jds-space-lg);
-  width: calc(100% + 2 * (var(--gutter, 1rem) + var(--jds-space-lg, 16px)));
-  max-width: 100vw;
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
-}
-
-@media (min-width: 768px) {
-  .home-atlas-2b {
-    margin-inline: calc(-1 * var(--jds-space-lg));
-    width: calc(100% + 2 * var(--jds-space-lg));
-  }
 }
 
 .atlas-feed-section__label {

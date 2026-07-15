@@ -8,6 +8,7 @@ import { ShellProvider } from "./ShellProvider";
 import { TopBar } from "../TopBar";
 import { DesktopSidebar } from "../DesktopSidebar";
 import { BottomNavigation } from "../BottomNavigation";
+import { DistrictModal } from "../DistrictModal/DistrictModal";
 import { CommandPalette } from "../CommandPalette";
 import { isChromeHiddenRoute } from "../chrome-routes";
 import type { AppShellProps } from "../types";
@@ -73,6 +74,7 @@ export function AppShell({
 
       <CommandPalette />
       <SearchOverlay />
+      <DistrictModal />
       <SuperMenuDrawer />
     </ShellProvider>
   );

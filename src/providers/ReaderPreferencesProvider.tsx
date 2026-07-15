@@ -41,45 +41,82 @@ type ReaderPreferencesContextValue = {
   setSearchOpen: (open: boolean) => void;
 };
 
+const DISTRICT_SELECTION_KEY = "jdp-district-selection-mode";
+
 const ReaderPreferencesContext =
   createContext<ReaderPreferencesContextValue | null>(null);
-
-function readInitialPrefs(): ReaderPreferences {
-  if (typeof window === "undefined") return DEFAULT_PREFERENCES;
-  const loaded = loadPreferences();
-  const langState = loadStoredLanguage();
-  const themePrefFromDom = document.documentElement.dataset
-    .themePref as ReaderTheme | undefined;
-  return {
-    ...loaded,
-    theme: themePrefFromDom ?? loaded.theme,
-    language: langState.language,
-    languageChosen: langState.chosen,
-  };
-}
 
 export function ReaderPreferencesProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [prefs, setPrefs] = useState<ReaderPreferences>(readInitialPrefs);
+  // The server and the browser must paint the same first tree. Browser-only
+  // preferences are merged immediately after hydration instead of inside the
+  // state initializer, which previously forced React to replace the page.
+  const [prefs, setPrefs] = useState<ReaderPreferences>(DEFAULT_PREFERENCES);
   const [hydrated, setHydrated] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     const loaded = loadPreferences();
     const langState = loadStoredLanguage();
+    const themePrefFromDom = document.documentElement.dataset
+      .themePref as ReaderTheme | undefined;
     const merged = {
       ...loaded,
+      theme: themePrefFromDom ?? loaded.theme,
       language: langState.language,
       languageChosen: langState.chosen,
     };
-    setPrefs(merged);
     applyPreferencesToDocument(merged);
     syncDistrictCookie(merged.homeDistrict);
-    setHydrated(true);
+    const id = window.setTimeout(() => {
+      setPrefs(merged);
+      setHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(id);
   }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
+    let cancelled = false;
+    const selectionMode = localStorage.getItem(DISTRICT_SELECTION_KEY);
+    const stored = loadPreferences().homeDistrict?.trim().toLowerCase();
+
+    // Preserve an existing non-default choice made before the selection marker
+    // was introduced. Explicit choices always win over IP-derived defaults.
+    if (!selectionMode && stored && stored !== "raipur") {
+      localStorage.setItem(DISTRICT_SELECTION_KEY, "manual");
+      return;
+    }
+    if (selectionMode === "manual") return;
+
+    const resolveDistrict = async () => {
+      try {
+        const response = await fetch("/api/location", { cache: "no-store" });
+        if (!response.ok) return;
+        const data = (await response.json()) as { district?: string };
+        const district = data.district?.trim().toLowerCase();
+        if (!district || cancelled) return;
+        setPrefs((prev) => {
+          const next = { ...prev, homeDistrict: district };
+          savePreferences(next);
+          syncDistrictCookie(district);
+          return next;
+        });
+        localStorage.setItem(DISTRICT_SELECTION_KEY, "auto");
+      } catch {
+        // The stable Raipur default remains available when location lookup fails.
+      }
+    };
+
+    void resolveDistrict();
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -168,7 +205,10 @@ export function ReaderPreferencesProvider({
   }, [update, prefs.fontScale]);
 
   const setHomeDistrict = useCallback(
-    (homeDistrict: string | null) => update({ homeDistrict }),
+    (homeDistrict: string | null) => {
+      localStorage.setItem(DISTRICT_SELECTION_KEY, "manual");
+      update({ homeDistrict });
+    },
     [update]
   );
 

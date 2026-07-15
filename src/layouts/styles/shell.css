@@ -52,9 +52,8 @@
   height: calc(var(--shell-header-height, 56px) + env(safe-area-inset-top, 0px));
   padding-top: env(safe-area-inset-top, 0px);
   border-bottom: 1px solid transparent;
-  background: color-mix(in srgb, var(--jds-color-surface-primary) 82%, transparent);
-  backdrop-filter: blur(12px) saturate(1.2);
-  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  background: var(--jds-color-surface-primary);
+  box-shadow: none;
   transition:
     height var(--shell-duration, 180ms) var(--shell-ease, cubic-bezier(0.2, 0, 0, 1)),
     box-shadow var(--jds-duration-fast, 160ms) var(--jds-ease-standard),
@@ -112,6 +111,26 @@
 
 .jdp-topbar__brand .tenant-logo--banner {
   flex-shrink: 0;
+  max-width: min(42vw, 168px);
+}
+
+.jdp-topbar__brand .tenant-logo__banner-wrap {
+  display: block;
+  height: 32px;
+  max-height: 32px;
+}
+
+.jdp-topbar--collapsed .jdp-topbar__brand .tenant-logo__banner-wrap {
+  height: 28px;
+  max-height: 28px;
+}
+
+.jdp-topbar__brand .tenant-logo__img--banner {
+  width: auto !important;
+  height: 100% !important;
+  max-height: 32px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .jdp-topbar__wordmark {
@@ -347,9 +366,11 @@
   inset-inline: 0;
   bottom: 0;
   z-index: var(--jds-z-sticky, 90);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-inline: var(--jds-space-sm);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--jds-space-xs));
   transform: translateY(0);
   transition: transform var(--jds-duration-normal, 240ms) var(--jds-ease-standard);
+  pointer-events: none;
 }
 
 .jdp-bottomnav--hidden {
@@ -361,11 +382,13 @@
   align-items: stretch;
   justify-content: space-around;
   height: var(--shell-bottomnav-height, 56px);
-  border-top: 1px solid var(--jds-color-border-subtle);
-  background: color-mix(in srgb, var(--jds-color-surface-primary) 92%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: var(--jds-elevation-md);
+  border: 1px solid var(--jds-color-border-subtle);
+  border-radius: var(--jds-radius-xl) var(--jds-radius-xl) 0 0;
+  background: var(--jds-color-surface-primary);
+  box-shadow:
+    0 -1px 0 color-mix(in srgb, var(--jds-color-border-subtle) 60%, transparent),
+    var(--jds-elevation-sm);
+  pointer-events: auto;
 }
 
 .jdp-bottomnav__item {
@@ -375,15 +398,18 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   min-width: var(--shell-touch-target, 44px);
   min-height: var(--shell-touch-target, 44px);
+  padding: var(--jds-space-xs) var(--jds-space-sm);
   border: none;
+  border-radius: var(--jds-radius-md);
   background: transparent;
   color: var(--jds-color-text-tertiary);
   font-family: var(--jds-font-ui);
-  font-size: 0.625rem;
-  font-weight: 500;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   text-decoration: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -392,9 +418,9 @@
 .jdp-bottomnav__item::before {
   content: "";
   position: absolute;
-  top: 0;
+  top: 6px;
   left: 50%;
-  width: 20px;
+  width: 18px;
   height: 2px;
   border-radius: var(--jds-radius-full);
   background: var(--jds-color-brand-primary);
@@ -407,6 +433,7 @@
 
 .jdp-bottomnav__item--active {
   color: var(--jds-color-brand-primary);
+  background: color-mix(in srgb, var(--jds-color-brand-primary) 8%, transparent);
 }
 
 .jdp-bottomnav__item--active::before {

@@ -6,7 +6,6 @@ export async function primeReaderSession(page: Page) {
     localStorage.setItem("cgb-language", "hi");
     localStorage.setItem("cgb-language-chosen", "1");
     document.cookie = "cgb-language-chosen=1; path=/; SameSite=Lax";
-    document.documentElement.removeAttribute("data-lang-gate");
   });
 }
 
@@ -14,9 +13,15 @@ export async function primeReaderSession(page: Page) {
 export async function waitForReaderReady(page: Page) {
   const gate = page.locator(".lang-gate--visible");
   const visible = await gate.isVisible().catch(() => false);
-  if (!visible) return;
+  if (visible) {
+    await page.locator("#lang-gate-legal-checkbox").check();
+    await page.getByRole("button", { name: /^Continue$/i }).click();
+    await gate.waitFor({ state: "hidden", timeout: 15_000 });
+  }
 
-  await page.locator("#lang-gate-legal-checkbox").check();
-  await page.getByRole("button", { name: /^Continue$/i }).click();
-  await gate.waitFor({ state: "hidden", timeout: 15_000 });
+  // DOMContentLoaded can precede React attaching interactive handlers.
+  await page.locator('.app-shell[data-hydrated="true"]').waitFor({
+    state: "attached",
+    timeout: 20_000,
+  });
 }

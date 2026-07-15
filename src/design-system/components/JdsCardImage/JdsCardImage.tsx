@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { blurForCategory } from "@/lib/image-placeholder";
+import { shouldUseNativeImage } from "@/lib/images/next-image-policy";
 import { widthFromSizes } from "@/lib/images/homepage-sizes";
 import {
   normalizeMediaAspect,
@@ -62,7 +63,8 @@ export function JdsCardImage({
 }: JdsCardImageProps) {
   const [tier, setTier] = useState<LoadTier>(0);
   const [loaded, setLoaded] = useState(false);
-  const [useNativeFallback, setUseNativeFallback] = useState(false);
+  const [forceNative, setForceNative] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const aspectNorm = normalizeMediaAspect(cropAspect);
   const crop = aspectNorm === "fill" ? "16:9" : aspectNorm;
@@ -93,38 +95,37 @@ export function JdsCardImage({
   }, [src, category, source, articleUrl, crop, width, priority]);
 
   const displaySrc = media ? tierUrl(media, tier) : "";
-  const showImage = Boolean(media && displaySrc);
+  const showImage = Boolean(media && displaySrc && !failed);
   const blurData = blurForCategory(category);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      setTier(0);
-      setLoaded(false);
-      setUseNativeFallback(false);
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [displaySrc]);
-
+  const preferNative = shouldUseNativeImage(media?.optimizedUrl);
   const handleError = useCallback(() => {
     setLoaded(false);
-    if (useNativeFallback) {
-      setTier(3);
-      return;
-    }
     setTier((t) => {
-      if (!media) return 3;
+      if (!media) {
+        setFailed(true);
+        return 3;
+      }
       if (t === 0) {
         if (media.fallbackUrl === media.optimizedUrl) {
-          return media.placeholderUrl === media.optimizedUrl ? 3 : 2;
+          if (media.placeholderUrl === media.optimizedUrl) {
+            setFailed(true);
+            return 3;
+          }
+          return 2;
         }
         return 1;
       }
       if (t === 1) {
-        return media.placeholderUrl === media.fallbackUrl ? 3 : 2;
+        if (media.placeholderUrl === media.fallbackUrl) {
+          setFailed(true);
+          return 3;
+        }
+        return 2;
       }
+      setFailed(true);
       return 3;
     });
-  }, [media, useNativeFallback]);
+  }, [media]);
 
   const handleLoad = useCallback(() => {
     setLoaded(true);
@@ -140,17 +141,27 @@ export function JdsCardImage({
     );
   }
 
-  if (useNativeFallback) {
+  if (preferNative || forceNative) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        className={cn("jds-card-image", className)}
-        src={displaySrc || media?.url || src || ""}
-        alt={alt}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        fetchPriority={priority ? "high" : "auto"}
-      />
+      <div className={cn("jds-card-image", className)}>
+        {showSkeleton && !loaded ? (
+          <Skeleton variant="media" className="jds-card-image__skeleton" aria-hidden />
+        ) : null}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className={cn(
+            "jds-card-image__img",
+            loaded ? "jds-card-image__img--loaded" : "jds-card-image__img--loading"
+          )}
+          src={displaySrc || media?.url || src || ""}
+          alt={alt}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      </div>
     );
   }
 
@@ -179,7 +190,7 @@ export function JdsCardImage({
         onLoad={handleLoad}
         onError={() => {
           if (tier >= 2) {
-            setUseNativeFallback(true);
+            setForceNative(true);
           } else {
             handleError();
           }

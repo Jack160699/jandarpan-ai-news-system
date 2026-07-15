@@ -9,7 +9,7 @@
   --reels-v3-safe-top: env(safe-area-inset-top, 0px);
   --reels-v3-safe-bottom: env(safe-area-inset-bottom, 0px);
   position: relative;
-  min-height: 100dvh;
+  min-height: calc(100dvh - var(--reader-mobile-header-height, 94px) - 62px - env(safe-area-inset-bottom, 0px));
   background: var(--reels-v3-bg);
   color: #fff;
   overflow: hidden;
@@ -26,7 +26,7 @@
 
 /* ── Chrome ── */
 .reels-v3-chrome {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -93,7 +93,7 @@
 
 /* ── Viewport ── */
 .reels-v3-viewport {
-  height: 100dvh;
+  height: calc(100dvh - var(--reader-mobile-header-height, 94px) - 62px - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overflow-x: hidden;
   scroll-snap-type: y mandatory;
@@ -103,7 +103,7 @@
 }
 
 .reels-v3-viewport__slide {
-  height: 100dvh;
+  height: calc(100dvh - var(--reader-mobile-header-height, 94px) - 62px - env(safe-area-inset-bottom, 0px));
   scroll-snap-align: center;
   scroll-snap-stop: always;
 }
@@ -115,7 +115,7 @@
 
 /* ── Swipe hint ── */
 .reels-v3-swipe-hint {
-  position: fixed;
+  position: absolute;
   left: 50%;
   bottom: max(5.5rem, calc(var(--reels-v3-safe-bottom) + 4.5rem));
   transform: translateX(-50%);

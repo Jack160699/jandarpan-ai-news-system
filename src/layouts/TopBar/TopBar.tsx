@@ -1,47 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Menu, Search } from "lucide-react";
-import { cn } from "@/design-system/utils/cn";
-import { Avatar } from "@/design-system/components/Avatar";
+import { ChevronDown, MapPin, Menu } from "lucide-react";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
 import { usePlace } from "@/providers/PlaceProvider";
-import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
 import { HeaderStatusStrip } from "./HeaderStatusStrip";
-import { useHeaderCollapse } from "../hooks/useHeaderCollapse";
-import { useTopBarScrolled } from "../hooks/useTopBarScrolled";
+import { GlobalLiveBar } from "./GlobalLiveBar";
+import { requestDistrictPicker } from "../DistrictModal/events";
 
 /**
- * Global header — 56px rest / 44px collapsed on scroll-down, restores on
- * scroll-up. Wordmark, place chip, search, avatar. No menu icon, no bell,
- * no theme toggle (removed per Atlas Phase 1).
+ * Stable global header — identity, local edition, date/time/weather and menu.
+ * Search belongs to the continuous live-news row directly below.
  */
 export function TopBar() {
   const { tenant } = useTenant();
   const { language, t } = useLanguage();
   const place = usePlace();
-  const { displayName, avatarInitial } = useReaderAccount();
   const { startNavigation, toggleMenu } = useNavigation();
-  const scrolled = useTopBarScrolled();
-  const collapsed = useHeaderCollapse();
 
   const brandName =
     language !== "en" ? tenant.branding.nameHi : tenant.branding.nameEn;
-  const initials = avatarInitial || displayName.slice(0, 2);
-  const hasNotification = false; // no live unread-notification signal exists yet
-
   return (
-    <header
-      className={cn(
-        "jdp-topbar",
-        scrolled && "jdp-topbar--scrolled",
-        collapsed && "jdp-topbar--collapsed"
-      )}
-      role="banner"
-    >
+    <header className="jdp-topbar" role="banner">
       <div className="jdp-topbar__inner">
         <Link
           href="/"
@@ -52,14 +35,18 @@ export function TopBar() {
           <TenantLogo variant="banner" showText={false} />
         </Link>
 
-        <Link
-          href="/places"
+        <button
+          type="button"
           className="jdp-topbar__place jds-focus-ring"
-          onClick={() => startNavigation("/places")}
+          onClick={requestDistrictPicker}
+          aria-label={language === "en" ? `Change district, ${place.name} selected` : `जिला बदलें, ${place.name} चुना गया है`}
         >
           <MapPin size={14} aria-hidden />
           <span>{place.shortName}</span>
-        </Link>
+          <ChevronDown size={13} aria-hidden />
+        </button>
+
+        <HeaderStatusStrip />
 
         <div className="jdp-topbar__actions">
           <button
@@ -70,28 +57,9 @@ export function TopBar() {
           >
             <Menu size={20} aria-hidden />
           </button>
-          <Link
-            href="/search"
-            className="jdp-topbar__btn"
-            aria-label={t.header.search}
-            onClick={() => startNavigation("/search")}
-          >
-            <Search size={20} aria-hidden />
-          </Link>
-          <Link
-            href="/you"
-            className="jdp-topbar__avatar-link jds-focus-ring"
-            aria-label={displayName}
-            onClick={() => startNavigation("/you")}
-          >
-            <Avatar size="sm" initials={initials} alt={displayName} />
-            {hasNotification ? (
-              <span className="jdp-topbar__dot" aria-hidden />
-            ) : null}
-          </Link>
         </div>
       </div>
-      <HeaderStatusStrip collapsed={collapsed} />
+      <GlobalLiveBar />
     </header>
   );
 }

@@ -200,17 +200,7 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
       );
     }
 
-    return (
-      <AdContainer
-        variant={variant}
-        slotId={slotId}
-        showLabel={Boolean(label)}
-        label={label}
-        lazy={settings.lazyLoad}
-        className={className}
-        placeholder={`${placement.label ?? meta.label} · ${meta.sizes}`}
-      />
-    );
+    return null;
   }
 
   if (placement.type === "house") {
@@ -300,18 +290,5 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
     );
   }
 
-  return (
-    <div
-      ref={ref}
-      className={`mnr-unit ${sizeClass} ${className}`.trim()}
-      data-lazy={settings.lazyLoad ? "true" : "false"}
-      role="complementary"
-      {...NOSNIPPET_ATTRS}
-    >
-      {label ? <span className="mnr-label">{label}</span> : null}
-      <div className="mnr-house">
-        {placement.label ?? meta.label} · {meta.sizes}
-      </div>
-    </div>
-  );
+  return null;
 }

@@ -4,6 +4,7 @@
  */
 
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+import { EDITORIAL_IMAGES } from "@/lib/editorial-images";
 
 const NOW = () => new Date().toISOString();
 
@@ -56,6 +57,7 @@ export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
       headline: "रायपुर: शहर में आज मौसम सामान्य रहेगा, यातायात सुचारू",
       summary:
         "स्थानीय प्रशासन ने शाम के समय भारी वाहनों के लिए वैकल्पिक मार्ग जारी किए हैं।",
+      hero_image_url: EDITORIAL_IMAGES.raipurCity,
       tags: ["raipur", "chhattisgarh"],
       editorial_metadata: { is_breaking: true, ai_confidence: 0.5 },
     }),
@@ -64,6 +66,7 @@ export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
       slug: "bilaspur-power-grid-fallback",
       headline: "बिलासपुर: बिजली आपूर्ति स्थिर, रखरखाव कार्य पूरा",
       summary: "उपभोक्ताओं को अगले 24 घंटे में नियोजित कटौती की संभावना नहीं।",
+      hero_image_url: EDITORIAL_IMAGES.steelIndustry,
       tags: ["bilaspur", "chhattisgarh"],
     }),
     row({
@@ -71,6 +74,7 @@ export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
       slug: "bastar-health-camp-fallback",
       headline: "बस्तर: मोबाइल स्वास्थ्य शिविर में हजारों लाभार्थी",
       summary: "जिला अस्पताल ने मुफ्त जांच शिविर का विस्तार किया है।",
+      hero_image_url: EDITORIAL_IMAGES.ruralHealth,
       tags: ["bastar", "chhattisgarh"],
     }),
     row({
@@ -78,6 +82,7 @@ export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
       slug: "india-markets-brief-fallback",
       headline: "भारतीय बाजारों में सकारात्मक रुख, वैश्विक संकेत मिश्रित",
       summary: "वित्त मंत्रालय ने सूक्ष्म उद्यमों के लिए नई राहत योजना की समीक्षा की।",
+      hero_image_url: EDITORIAL_IMAGES.civicOffice,
       tags: ["business", "india"],
     }),
     row({
@@ -85,6 +90,7 @@ export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
       slug: "sports-cricket-update-fallback",
       headline: "क्रिकेट: भारतीय टीम की तैयारी जारी, कोचिंग स्टाफ बैठक",
       summary: "आगामी श्रृंखला के लिए प्लेइंग इलेवन पर चर्चा हो सकती है।",
+      hero_image_url: EDITORIAL_IMAGES.cricketGround,
       tags: ["sports", "india"],
     }),
     row({
@@ -92,6 +98,7 @@ export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
       slug: "tech-digital-india-fallback",
       headline: "डिजिटल इंडिया: ग्रामीण ब्रॉडबैंड कनेक्टिविटी में सुधार",
       summary: "दूरस्थ क्षेत्रों में 4G कवरेज विस्तार पर केंद्र का फोकस।",
+      hero_image_url: EDITORIAL_IMAGES.newsroomDesk,
       tags: ["technology", "india"],
     }),
     row({
@@ -99,6 +106,7 @@ export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
       slug: "health-monsoon-advisory-fallback",
       headline: "मानसून सलाह: डेंगू से बचाव के लिए सावधानी बरतें",
       summary: "स्वास्थ्य विभाग ने नगर निगमों को फॉगिंग अभियान तेज करने को कहा।",
+      hero_image_url: EDITORIAL_IMAGES.waterCivic,
       tags: ["health", "india"],
     }),
     row({
@@ -106,6 +114,7 @@ export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
       slug: "politics-assembly-session-fallback",
       headline: "विधानसभा सत्र: किसान कर्ज माफी पर सदन में चर्चा",
       summary: "विपक्ष ने शीघ्र पूर्ण क्रियान्वयन की मांग की।",
+      hero_image_url: EDITORIAL_IMAGES.assemblyPolitics,
       tags: ["politics", "chhattisgarh"],
       editorial_metadata: { is_breaking: true, ai_confidence: 0.48 },
     }),
