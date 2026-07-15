@@ -5,6 +5,51 @@ const STOP_WORDS = new Set([
   "और", "आज", "लिए", "में", "का", "की", "के", "से", "पर", "एक", "बाद",
 ]);
 
+const CURATED_IMAGE_TOPICS: Record<string, RegExp> = {
+  "assembly-politics.jpg": /\b(assembly|election|minister|government|politics|cabinet)\b|विधानसभा|चुनाव|सरकार|मंत्री/i,
+  "cricket-ground.jpg": /\b(cricket|sport|match|tournament|ipl)\b|क्रिकेट|खेल|मैच/i,
+  "folk-culture.jpg": /\b(culture|festival|entertainment|film|dance|tribal)\b|संस्कृति|त्योहार|मनोरंजन|फिल्म|नृत्य/i,
+  "raipur-city.jpg": /\b(raipur|city|traffic|road|urban|municipal)\b|रायपुर|शहर|यातायात|सड़क|नगर/i,
+  "rural-health.jpg": /\b(health|hospital|medical|doctor|clinic|disease)\b|स्वास्थ्य|अस्पताल|चिकित्सा|डॉक्टर/i,
+  "school-india.jpg": /\b(school|college|student|education|exam|teacher)\b|स्कूल|कॉलेज|छात्र|शिक्षा|परीक्षा|शिक्षक/i,
+  "steel-industry.jpg": /\b(steel|industry|factory|plant|manufacturing|business|power|market|trade)\b|इस्पात|उद्योग|कारखाना|व्यापार|बिजली|बाजार/i,
+  "water-civic.jpg": /\b(water|rain|monsoon|river|weather|flood|traffic|road|drainage)\b|पानी|बारिश|मानसून|नदी|मौसम|बाढ़|यातायात|सड़क|नाली/i,
+};
+
+/**
+ * Historical rows can contain a valid local fallback that belongs to a different
+ * subject. Keep the database intact, but reject that mismatch at render time.
+ */
+export function isCuratedEditorialImageRelevant(
+  imageUrl: string,
+  input: {
+    category?: string | null;
+    headline?: string | null;
+    region?: string | null;
+    tags?: string[];
+  }
+): boolean {
+  let pathname = imageUrl;
+  try {
+    pathname = new URL(imageUrl, "https://www.jandarpan.news").pathname;
+  } catch {
+    // A malformed URL is handled by the normal displayability validator.
+  }
+  if (!pathname.toLowerCase().startsWith("/editorial/")) return true;
+
+  const filename = pathname.split("/").pop()?.toLowerCase() ?? "";
+  const topic = CURATED_IMAGE_TOPICS[filename];
+  if (!topic) return true;
+
+  const storyText = [
+    input.headline ?? "",
+    input.category ?? "",
+    input.region ?? "",
+    ...(input.tags ?? []),
+  ].join(" ");
+  return topic.test(storyText);
+}
+
 function canonicalImageKey(value: string): string {
   const trimmed = value.trim();
   if (trimmed.startsWith("/")) return trimmed.toLowerCase().split("?")[0];

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { safeguardUnrelatedImageReuse } from "@/lib/news/images/relevance";
+import {
+  isCuratedEditorialImageRelevant,
+  safeguardUnrelatedImageReuse,
+} from "@/lib/news/images/relevance";
 import { isRejectedImageUrl } from "@/lib/news/images/validate";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
@@ -49,5 +52,18 @@ describe("article image relevance safeguards", () => {
   it("allows local editorial assets and blocks private remote hosts", () => {
     expect(isRejectedImageUrl("/editorial/raipur-city.jpg").rejected).toBe(false);
     expect(isRejectedImageUrl("http://127.0.0.1/private.jpg").reason).toBe("private_host");
+  });
+
+  it("rejects a subject-mismatched historical editorial fallback", () => {
+    expect(isCuratedEditorialImageRelevant("/editorial/steel-industry.jpg", {
+      headline: "Raipur traffic remains smooth after the city advisory",
+      category: "chhattisgarh",
+      region: "Raipur",
+    })).toBe(false);
+    expect(isCuratedEditorialImageRelevant("/editorial/water-civic.jpg", {
+      headline: "Raipur traffic remains smooth after monsoon rain",
+      category: "chhattisgarh",
+      region: "Raipur",
+    })).toBe(true);
   });
 });

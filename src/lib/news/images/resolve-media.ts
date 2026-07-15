@@ -10,6 +10,7 @@ import {
 import { optimizeCdnUrl } from "@/lib/news/images/cdn";
 import { normalizeImageUrl } from "@/lib/news/images/extract";
 import { isDisplayableImage } from "@/lib/news/images/validate";
+import { isCuratedEditorialImageRelevant } from "@/lib/news/images/relevance";
 import type { MediaAspect } from "@/lib/news/images/aspects";
 
 export type ResolveMediaInput = {
@@ -37,6 +38,7 @@ export type ResolvedMedia = {
 function rawArticleUrl(input: ResolveMediaInput): string | null {
   if (!input.imageUrl?.trim()) return null;
   if (!isDisplayableImage(input.imageUrl)) return null;
+  if (!isCuratedEditorialImageRelevant(input.imageUrl, input)) return null;
   return normalizeImageUrl(input.imageUrl, input.articleUrl);
 }
 
