@@ -14,6 +14,7 @@ import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import {
   buildTrendingKeywords,
   getCategorySeo,
@@ -76,11 +77,20 @@ async function buildCategoryHubUncached(
   if (!config) return null;
 
   const pool = await getCachedCategoryArticlePool();
-  const langPool = filterPoolByLanguage(pool, displayLanguage);
-  const matched = filterArticlesForCategory(langPool, config).slice(
-    0,
-    CATEGORY_DISPLAY_LIMIT
+  const fallbackPool = getStaticFallbackArticlePool();
+  const langPool = filterPoolByLanguage(
+    pool.length ? pool : fallbackPool,
+    displayLanguage
   );
+  const primaryMatches = filterArticlesForCategory(langPool, config);
+  const matched = (
+    primaryMatches.length
+      ? primaryMatches
+      : filterArticlesForCategory(
+          filterPoolByLanguage(fallbackPool, displayLanguage),
+          config
+        )
+  ).slice(0, CATEGORY_DISPLAY_LIMIT);
 
   const homeArticles = matched
     .map((row) => toHomeArticle(row, undefined, displayLanguage))

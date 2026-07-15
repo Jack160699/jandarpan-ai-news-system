@@ -83,7 +83,14 @@ export default async function DistrictPage({ params }: PageProps) {
     langPool.length > 0
       ? displayLanguage
       : normalizeArticleLanguage(pool[0]?.language);
-  const filtered = filterRowsForDistrict(districtPool, slug);
+  const filteredForDistrict = filterRowsForDistrict(districtPool, slug);
+  const fallbackForDistrict = filterRowsForDistrict(
+    filterPoolByLanguage(getStaticFallbackArticlePool(), displayLanguage),
+    slug
+  );
+  const filtered = filteredForDistrict.length
+    ? filteredForDistrict
+    : fallbackForDistrict;
   const personalization = buildRegionalRankingPersonalization({
     homeDistrict: slug,
     regionBoostMultiplier: 1.3,

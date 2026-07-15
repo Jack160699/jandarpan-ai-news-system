@@ -5,6 +5,7 @@
 
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import { EDITORIAL_IMAGES } from "@/lib/editorial-images";
+import { CG_DISTRICTS } from "@/lib/regional/districts";
 
 const NOW = () => new Date().toISOString();
 
@@ -74,7 +75,7 @@ export function getStaticFallbackArticleBySlug(
 
 /** Curated desk headlines — rotate-safe slugs for /story routes */
 export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
-  return [
+  const featured = [
     row({
       id: "fallback-cg-1",
       slug: "raipur-metro-update-fallback",
@@ -191,4 +192,40 @@ export function getStaticFallbackArticlePool(): GeneratedArticleRow[] {
       editorial_metadata: { is_breaking: true, ai_confidence: 0.48 },
     }),
   ];
+
+  const featuredDistricts = new Set(["raipur", "bilaspur", "bastar"]);
+  const districtImages = [
+    EDITORIAL_IMAGES.raipurCity,
+    EDITORIAL_IMAGES.civicOffice,
+    EDITORIAL_IMAGES.waterCivic,
+    EDITORIAL_IMAGES.schoolIndia,
+    EDITORIAL_IMAGES.ruralHealth,
+  ];
+  const districtDesk = CG_DISTRICTS.filter(
+    (district) => !featuredDistricts.has(district.slug)
+  ).map((district, index) => {
+    const hindiHeadline = `${district.nameHi} जिला डेस्क: स्थानीय सेवाओं और जनहित अपडेट पर नजर`;
+    const hindiSummary =
+      "जन दर्पण जिला डेस्क प्रशासन, मौसम, यातायात और जनसेवा से जुड़ी सत्यापित सूचनाओं को एक जगह प्रस्तुत करता है।";
+    const englishHeadline = `${district.name} district desk tracks civic services and local alerts`;
+    const englishSummary =
+      "Jan Darpan's district desk brings together verified updates on administration, weather, traffic and public services.";
+
+    return row({
+      id: `fallback-district-${district.slug}`,
+      slug: `${district.slug}-district-desk-fallback`,
+      headline: hindiHeadline,
+      summary: hindiSummary,
+      hero_image_url: districtImages[index % districtImages.length],
+      translations: fallbackTranslations(
+        hindiHeadline,
+        hindiSummary,
+        englishHeadline,
+        englishSummary
+      ),
+      tags: [district.slug, district.name.toLowerCase(), "chhattisgarh", "local"],
+    });
+  });
+
+  return [...featured, ...districtDesk];
 }
