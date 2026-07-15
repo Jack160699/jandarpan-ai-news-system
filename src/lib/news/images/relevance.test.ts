@@ -57,13 +57,18 @@ describe("article image relevance safeguards", () => {
   it("rejects a subject-mismatched historical editorial fallback", () => {
     expect(isCuratedEditorialImageRelevant("/editorial/steel-industry.jpg", {
       headline: "Raipur traffic remains smooth after the city advisory",
-      category: "chhattisgarh",
-      region: "Raipur",
+      category: "business",
+      region: "Bhilai",
     })).toBe(false);
     expect(isCuratedEditorialImageRelevant("/editorial/water-civic.jpg", {
       headline: "Raipur traffic remains smooth after monsoon rain",
       category: "chhattisgarh",
       region: "Raipur",
     })).toBe(true);
+    expect(isCuratedEditorialImageRelevant("/editorial/raipur-city.jpg", {
+      headline: "India continue preparations as coaching staff review the playing XI",
+      category: "city",
+      region: "Raipur",
+    })).toBe(false);
   });
 });

@@ -41,12 +41,10 @@ export function isCuratedEditorialImageRelevant(
   const topic = CURATED_IMAGE_TOPICS[filename];
   if (!topic) return true;
 
-  const storyText = [
-    input.headline ?? "",
-    input.category ?? "",
-    input.region ?? "",
-    ...(input.tags ?? []),
-  ].join(" ");
+  // Headline and editorial tags are the strongest evidence. Historical category
+  // and region labels are occasionally wrong, so they must not validate a
+  // subject-specific image by themselves.
+  const storyText = [input.headline ?? "", ...(input.tags ?? [])].join(" ");
   return topic.test(storyText);
 }
 
