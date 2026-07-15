@@ -48,13 +48,22 @@ const ReaderPreferencesContext =
 
 export function ReaderPreferencesProvider({
   children,
+  initialDistrict,
 }: {
   children: React.ReactNode;
+  initialDistrict?: string | null;
 }) {
   // The server and the browser must paint the same first tree. Browser-only
   // preferences are merged immediately after hydration instead of inside the
   // state initializer, which previously forced React to replace the page.
-  const [prefs, setPrefs] = useState<ReaderPreferences>(DEFAULT_PREFERENCES);
+  const initialPreferences = useMemo<ReaderPreferences>(
+    () => ({
+      ...DEFAULT_PREFERENCES,
+      homeDistrict: initialDistrict ?? DEFAULT_PREFERENCES.homeDistrict,
+    }),
+    [initialDistrict]
+  );
+  const [prefs, setPrefs] = useState<ReaderPreferences>(initialPreferences);
   const [hydrated, setHydrated] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -65,6 +74,9 @@ export function ReaderPreferencesProvider({
       .themePref as ReaderTheme | undefined;
     const merged = {
       ...loaded,
+      // The SSR-readable cookie is authoritative for the first paint. It is
+      // mirrored from local storage whenever a reader makes a selection.
+      homeDistrict: initialDistrict ?? loaded.homeDistrict,
       theme: themePrefFromDom ?? loaded.theme,
       language: langState.language,
       languageChosen: langState.chosen,
@@ -76,7 +88,7 @@ export function ReaderPreferencesProvider({
       setHydrated(true);
     }, 0);
     return () => window.clearTimeout(id);
-  }, []);
+  }, [initialDistrict]);
 
   useEffect(() => {
     if (!hydrated) return;

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin } from "lucide-react";
 import { DistrictQuickSwitch } from "@/components/personalization/DistrictQuickSwitch";
 import { LocalBreakingAlerts } from "@/components/homepage/LocalBreakingAlerts";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
@@ -16,33 +15,21 @@ type LocalPulseSectionProps = {
 };
 
 export function LocalPulseSection({
-  districtName,
-  districtNameHi,
   localAlerts,
   breakingStory,
 }: LocalPulseSectionProps) {
   const { language } = useLanguage();
-  const districtLabel = pickBilingualLabel(language, districtName, districtNameHi);
-  const dateLabel = new Date().toLocaleDateString(
-    language === "hi" ? "hi-IN" : "en-IN",
-    { weekday: "short", month: "short", day: "numeric" }
-  );
 
   return (
     <section className="home-v31__section home-v31__enter atlas-pulse" aria-label="Local Pulse">
-      <p className="atlas-pulse__brand">
-        {pickBilingualLabel(language, "Local Pulse", "स्थानीय सार")}
-      </p>
-
-      <div className="atlas-pulse__row">
-        <p className="atlas-pulse__place">
-          <MapPin size={16} aria-hidden className="atlas-pulse__place-icon" />
-          {districtLabel}
+      <div className="atlas-pulse__heading">
+        <p className="atlas-pulse__brand">
+          {pickBilingualLabel(language, "Local Pulse", "स्थानीय सार")}
         </p>
-        <time className="atlas-pulse__date" dateTime={new Date().toISOString().slice(0, 10)}>
-          {dateLabel}
-        </time>
+        <span>{pickBilingualLabel(language, "Your local edition", "आपका स्थानीय संस्करण")}</span>
       </div>
+
+      <DistrictQuickSwitch />
 
       {localAlerts.length > 0 ? (
         <LocalBreakingAlerts alerts={localAlerts} />
@@ -58,8 +45,6 @@ export function LocalPulseSection({
           </div>
         </aside>
       ) : null}
-
-      <DistrictQuickSwitch />
     </section>
   );
 }

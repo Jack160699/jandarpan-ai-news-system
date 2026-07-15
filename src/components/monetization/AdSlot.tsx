@@ -21,9 +21,21 @@ type AdSlotProps = {
   slotId: PlacementSlotId;
   className?: string;
   articleSlug?: string;
+  format?: "mobile-banner" | "rectangle" | "large-rectangle" | "leaderboard" | "sidebar";
+  responsiveSizes?: string;
+  minReservedHeight?: number;
+  collapseIfEmpty?: boolean;
 };
 
-export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
+export function AdSlot({
+  slotId,
+  className = "",
+  articleSlug,
+  format,
+  responsiveSizes,
+  minReservedHeight,
+  collapseIfEmpty = true,
+}: AdSlotProps) {
   const { getSlot, settings, affiliatesForSlot, track } = useMonetization();
   const placement = getSlot(slotId);
   const monetizationV3 = isMonetizationV3Enabled();
@@ -34,15 +46,29 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
     Boolean(placement?.enabled && !monetizationV3)
   );
 
-  if (!settings.enabled || !placement) return null;
+  if (!settings.enabled || !settings.adsEnabled || !placement) {
+    if (collapseIfEmpty) return null;
+    return (
+      <div
+        className={`mnr-unit mnr-unit--empty ${className}`.trim()}
+        data-ad-slot={slotId}
+        data-ad-empty="true"
+        style={minReservedHeight ? { minHeight: minReservedHeight } : undefined}
+        aria-hidden
+      />
+    );
+  }
 
   const meta = PLACEMENT_SLOT_META[slotId];
   const sizeClass =
+    format === "mobile-banner" || format === "leaderboard" ||
     slotId.includes("leaderboard") || slotId.includes("header")
       ? "mnr-unit--leaderboard"
-      : slotId.includes("sidebar")
+      : format === "sidebar" || slotId.includes("sidebar")
         ? "mnr-unit--sidebar"
-        : "mnr-unit--rectangle";
+        : format === "large-rectangle"
+          ? "mnr-unit--large-rectangle"
+          : "mnr-unit--rectangle";
 
   if (placement.type === "affiliate") {
     const units = affiliatesForSlot(slotId);
@@ -56,6 +82,8 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
           showLabel={settings.labelAds}
           label="Partner offers"
           lazy={settings.lazyLoad}
+          responsiveSizes={responsiveSizes}
+          minReservedHeight={minReservedHeight}
           className={className}
         >
           {units.map((a) => (
@@ -68,6 +96,9 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
     return (
       <div
         className={`mnr-unit ${sizeClass} ${className}`.trim()}
+        data-ad-slot={slotId}
+        data-responsive-sizes={responsiveSizes}
+        style={minReservedHeight ? { minHeight: minReservedHeight } : undefined}
         role="complementary"
         aria-label="Partner offers"
         {...NOSNIPPET_ATTRS}
@@ -119,9 +150,11 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
         <AdContainer
           variant={variant}
           slotId={slotId}
-          showLabel={Boolean(label)}
-          label={label}
+          showLabel
+          label="Jan Darpan"
           lazy={settings.lazyLoad}
+          responsiveSizes={responsiveSizes}
+          minReservedHeight={minReservedHeight}
           className={className}
         >
           <a
@@ -150,6 +183,8 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
           showLabel={Boolean(label)}
           label={label}
           lazy={settings.lazyLoad}
+          responsiveSizes={responsiveSizes}
+          minReservedHeight={minReservedHeight}
           className={className}
         >
           <div
@@ -170,6 +205,8 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
           showLabel={Boolean(label)}
           label={label}
           lazy={settings.lazyLoad}
+          responsiveSizes={responsiveSizes}
+          minReservedHeight={minReservedHeight}
           className={className}
         >
           <a
@@ -208,11 +245,15 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
       <div
         ref={ref}
         className={`mnr-unit mnr-unit--house ${sizeClass} ${className}`.trim()}
+        data-ad-slot={slotId}
+        data-placement-type="house"
+        data-responsive-sizes={responsiveSizes}
+        style={minReservedHeight ? { minHeight: minReservedHeight } : undefined}
         data-lazy={settings.lazyLoad ? "true" : "false"}
         role="complementary"
         {...NOSNIPPET_ATTRS}
       >
-        {label ? <span className="mnr-label">{label}</span> : null}
+        <span className="mnr-label">Jan Darpan</span>
         <a
           href={config.targetUrl ?? "/"}
           className="mnr-house mnr-link"
@@ -236,6 +277,8 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
       <div
         ref={ref}
         className={`mnr-unit ${sizeClass} ${className}`.trim()}
+        data-responsive-sizes={responsiveSizes}
+        style={minReservedHeight ? { minHeight: minReservedHeight } : undefined}
         data-lazy={settings.lazyLoad ? "true" : "false"}
         role="complementary"
         aria-label={meta.label}
@@ -257,6 +300,9 @@ export function AdSlot({ slotId, className = "", articleSlug }: AdSlotProps) {
       <div
         ref={ref}
         className={`mnr-unit ${sizeClass} ${className}`.trim()}
+        data-ad-slot={slotId}
+        data-responsive-sizes={responsiveSizes}
+        style={minReservedHeight ? { minHeight: minReservedHeight } : undefined}
         data-lazy={settings.lazyLoad ? "true" : "false"}
         role="complementary"
         {...NOSNIPPET_ATTRS}

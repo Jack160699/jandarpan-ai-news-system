@@ -26,6 +26,8 @@ export function resolveFallbackImage(input: {
   category: string;
   source?: string | null;
   region?: string | null;
+  headline?: string | null;
+  tags?: string[];
 }): string {
   return resolveContextualFallback(input).url;
 }

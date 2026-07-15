@@ -30,10 +30,10 @@ const ContinueRibbon = dynamic(
   { ssr: false }
 );
 
-const HeadlinesMiniPlayer = dynamic(
+const TopTenAudioDock = dynamic(
   () =>
-    import("@/components/listen/HeadlinesMiniPlayer").then((m) => ({
-      default: m.HeadlinesMiniPlayer,
+    import("@/components/listen/TopTenAudioDock").then((m) => ({
+      default: m.TopTenAudioDock,
     })),
   { ssr: false }
 );
@@ -91,7 +91,7 @@ function AppChromeShell({ children }: AppChromeProps) {
           </PullToRefresh>
         </AppLayout>
         <ContinueRibbon />
-        <HeadlinesMiniPlayer />
+        <TopTenAudioDock />
       </div>
     </div>
   );

@@ -67,7 +67,7 @@ export function AtlasHeroCard({
           districtLabel={districtLabel}
         />
 
-        <h2 className="atlas-hero__headline">{headline}</h2>
+        <h1 className="atlas-hero__headline">{headline}</h1>
 
         {summary ? <p className="atlas-hero__summary">{summary}</p> : null}
       </div>

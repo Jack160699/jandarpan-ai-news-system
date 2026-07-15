@@ -13,6 +13,7 @@ import {
 import { getLanguageConfig } from "@/lib/i18n/languages";
 import { getServerLanguageChosen, getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchOrganizationSettings } from "@/lib/organization/settings";
+import { getServerHomeDistrict } from "@/lib/personalization/server-prefs";
 import { getTenantConfig, stripTenantForClient } from "@/lib/tenant/resolve";
 import "@/styles/globals.css";
 
@@ -48,6 +49,7 @@ export default async function RootLayout({
   const organization = await fetchOrganizationSettings();
   const readerLang = await getServerReaderLanguage();
   const languageChosen = await getServerLanguageChosen();
+  const homeDistrict = await getServerHomeDistrict();
   const langCfg = getLanguageConfig(readerLang);
 
   return (
@@ -64,7 +66,7 @@ export default async function RootLayout({
         <ThemeScript />
         <LanguageGateScript />
         <TenantRoot tenant={stripTenantForClient(tenant)} organization={organization}>
-          <ReaderPreferencesProvider>
+          <ReaderPreferencesProvider initialDistrict={homeDistrict}>
             <LanguageProvider
               defaultLanguage={readerLang}
               enabledLanguages={tenant.newsroom.enabledLanguages}

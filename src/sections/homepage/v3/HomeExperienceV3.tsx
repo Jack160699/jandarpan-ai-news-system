@@ -20,6 +20,7 @@ import { AtlasEditorialFeedSection } from "./sections/AtlasEditorialFeedSection"
 import { ContinueReadingSection } from "./sections/ContinueReadingSection";
 import { DiscoverStripSection } from "./sections/DiscoverStripSection";
 import { DeepDiveSections } from "./sections/DeepDiveSections";
+import { TopTenAudioSection } from "./sections/TopTenAudioSection";
 import {
   FeedSkeleton,
   QuickScanSkeleton,
@@ -63,6 +64,17 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
 
   return (
     <PageContainer width="homepage" className="home-v31">
+      <HomeSectionErrorBoundary name="v31-ad-leaderboard">
+        <AdSlot
+          slotId="home_leaderboard"
+          format="mobile-banner"
+          responsiveSizes="(max-width: 767px) 320x50, 728x90"
+          minReservedHeight={50}
+          collapseIfEmpty
+          className="home-v31-ad home-v31-ad--top"
+        />
+      </HomeSectionErrorBoundary>
+
       <div className="home-atlas-2a">
         <HomeSectionErrorBoundary name="v31-local-pulse">
           <LocalPulseSection
@@ -82,8 +94,19 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
         </HomeSectionErrorBoundary>
       </div>
 
-      <HomeSectionErrorBoundary name="v31-ad-leaderboard">
-        <AdSlot slotId="home_leaderboard" className="home-v31-ad" />
+      <HomeSectionErrorBoundary name="v31-ad-mid">
+        <AdSlot
+          slotId="home_mid_feed"
+          format="rectangle"
+          responsiveSizes="(max-width: 359px) 300x250, 336x280"
+          minReservedHeight={250}
+          collapseIfEmpty
+          className="home-v31-ad"
+        />
+      </HomeSectionErrorBoundary>
+
+      <HomeSectionErrorBoundary name="v31-top-ten-audio">
+        <TopTenAudioSection shorts={data.audioShorts} />
       </HomeSectionErrorBoundary>
 
       <div className="home-atlas-2b">
@@ -104,12 +127,19 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
           </LazyV3Section>
         </HomeSectionErrorBoundary>
 
-        <HomeSectionErrorBoundary name="v31-ad-mid">
-          <AdSlot slotId="home_mid_feed" className="home-v31-ad" />
-        </HomeSectionErrorBoundary>
-
         <HomeSectionErrorBoundary name="v31-deep-dive">
           <DeepDiveSections streams={data.categoryStreams} />
+        </HomeSectionErrorBoundary>
+
+        <HomeSectionErrorBoundary name="v31-ad-footer">
+          <AdSlot
+            slotId="home_footer"
+            format="leaderboard"
+            responsiveSizes="(max-width: 767px) 320x50, 728x90"
+            minReservedHeight={50}
+            collapseIfEmpty
+            className="home-v31-ad"
+          />
         </HomeSectionErrorBoundary>
 
         <HomeSectionErrorBoundary name="v31-continue">

@@ -9,6 +9,7 @@ export function buildHeadlinePlaylist(shorts: NewsShortCard[]): HeadlineTrack[] 
     transcript: [s.anchorLine, s.summary60s].filter(Boolean).join(" "),
     durationSec: s.durationSec,
     voiceStreamPath: s.voiceStreamPath,
+    hasVoice: s.hasVoice,
     language: s.language,
     categoryLabel: s.categoryLabel,
     subtitles: s.subtitles,

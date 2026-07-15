@@ -14,6 +14,7 @@ import type { RankingPersonalization } from "@/lib/news/ai/ranking";
 import { buildOpenGraphImageUrl, optimizeCdnImageUrl } from "@/lib/news/ai/editorial-image-compress";
 import { resolveFallbackImage } from "@/lib/news/images/fallbacks";
 import { isDisplayableImage } from "@/lib/news/images/validate";
+import { safeguardUnrelatedImageReuse } from "@/lib/news/images/relevance";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import {
   resolveLocalizedFieldsStrict,
@@ -21,7 +22,6 @@ import {
 import { homeDebug } from "@/lib/homepage/feed-safety";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
 import {
-  normalizeArticleLanguage,
   readingTimeLabel,
   type NewsroomLanguage,
 } from "@/lib/i18n/languages";
@@ -61,7 +61,15 @@ function resolveImageUrls(row: GeneratedArticleRow): { hero: string; og: string 
   const hero =
     heroRaw && isDisplayableImage(heroRaw)
       ? optimizeCdnImageUrl(heroRaw, 1200)
-      : optimizeCdnImageUrl(resolveFallbackImage({ category }), 1200);
+      : optimizeCdnImageUrl(
+          resolveFallbackImage({
+            category,
+            headline: row.headline,
+            tags: row.tags,
+            region: row.editorial_metadata?.image?.district,
+          }),
+          1200
+        );
 
   const og = meta?.og_url
     ? optimizeCdnImageUrl(meta.og_url, 1200)
@@ -215,14 +223,23 @@ export function buildGeneratedHomepageFeed(
   const displayLanguage = options?.displayLanguage ?? "hi";
   if (!rows.length) return null;
 
-  const rankedOutputs = rankArticlesForHomepage(rows, {
+  const imageSafeguard = safeguardUnrelatedImageReuse(rows);
+  const safeRows = imageSafeguard.rows;
+  if (imageSafeguard.rejectedArticleIds.length) {
+    homeDebug("rejected unrelated duplicate images", {
+      count: imageSafeguard.rejectedArticleIds.length,
+      articleIds: imageSafeguard.rejectedArticleIds.slice(0, 8),
+    });
+  }
+
+  const rankedOutputs = rankArticlesForHomepage(safeRows, {
     personalization: options?.personalization,
   });
-  const hyperlocalBundle = buildHyperlocalFeedBundle(rows, {
+  const hyperlocalBundle = buildHyperlocalFeedBundle(safeRows, {
     maxDistricts: 6,
     displayLanguage,
   });
-  const localAlerts = buildLocalBreakingAlerts(rows, { cgOnly: true, limit: 8 });
+  const localAlerts = buildLocalBreakingAlerts(safeRows, { cgOnly: true, limit: 8 });
   const ranked = rankedOutputs
     .map((r) =>
       toHomeArticle(
@@ -248,7 +265,7 @@ export function buildGeneratedHomepageFeed(
     return null;
   }
 
-  const pinnedRow = rows.find((r) => r.homepage_pin);
+  const pinnedRow = safeRows.find((r) => r.homepage_pin);
   const pinnedArticle = pinnedRow
     ? ranked.find((a) => a.id === pinnedRow.id)
     : undefined;

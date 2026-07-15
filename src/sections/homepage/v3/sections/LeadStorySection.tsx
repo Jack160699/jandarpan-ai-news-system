@@ -17,7 +17,7 @@ export function LeadStorySection({ story, districtLabel }: LeadStorySectionProps
   return (
     <section
       className="home-v31__section home-v31__enter"
-      aria-labelledby="home-atlas-lead-title"
+      aria-label={pickBilingualLabel(language, "Lead story", "मुख्य खबर")}
     >
       <AtlasHeroCard
         headline={story.headline}
@@ -35,10 +35,6 @@ export function LeadStorySection({ story, districtLabel }: LeadStorySectionProps
         href={`/story/${story.slug}`}
         priority
       />
-
-      <h2 id="home-atlas-lead-title" className="sr-only">
-        {story.headline}
-      </h2>
     </section>
   );
 }

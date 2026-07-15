@@ -12,6 +12,7 @@ import { normalizeArticleLanguage } from "@/lib/i18n/languages";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
+import { safeguardUnrelatedImageReuse } from "@/lib/news/images/relevance";
 import {
   buildRegionalRankingPersonalization,
   filterRowsForDistrict,
@@ -78,7 +79,9 @@ export default async function DistrictPage({ params }: PageProps) {
   const pool =
     fetchedPool.length > 0 ? fetchedPool : getStaticFallbackArticlePool();
   const langPool = filterPoolByLanguage(pool, displayLanguage);
-  const districtPool = langPool.length > 0 ? langPool : pool;
+  const districtPool = safeguardUnrelatedImageReuse(
+    langPool.length > 0 ? langPool : pool
+  ).rows;
   const districtLanguage =
     langPool.length > 0
       ? displayLanguage

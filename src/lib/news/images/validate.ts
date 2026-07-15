@@ -60,11 +60,13 @@ export function parseDimensionsFromUrl(url: string): { width?: number; height?: 
 }
 
 export function isRejectedImageUrl(url: string): { rejected: boolean; reason?: string } {
-  if (!url?.trim() || !isValidHttpUrl(url)) {
+  const trimmed = url?.trim();
+  const isLocalAsset = Boolean(trimmed?.startsWith("/") && !trimmed.startsWith("//"));
+  if (!trimmed || (!isLocalAsset && !isValidHttpUrl(trimmed))) {
     return { rejected: true, reason: "invalid_url" };
   }
 
-  const lower = url.toLowerCase();
+  const lower = trimmed.toLowerCase();
 
   if (lower.startsWith("data:")) {
     return { rejected: true, reason: "data_uri" };
@@ -84,6 +86,21 @@ export function isRejectedImageUrl(url: string): { rejected: boolean; reason?: s
 
   if (AD_RE.test(lower)) {
     return { rejected: true, reason: "advertisement" };
+  }
+
+  if (!isLocalAsset) {
+    try {
+      const host = new URL(trimmed).hostname.toLowerCase();
+      const privateHost =
+        host === "localhost" ||
+        host === "::1" ||
+        host.endsWith(".local") ||
+        /^(0|127|10|169\.254|192\.168)\./.test(host) ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+      if (privateHost) return { rejected: true, reason: "private_host" };
+    } catch {
+      return { rejected: true, reason: "invalid_url" };
+    }
   }
 
   const { width, height } = parseDimensionsFromUrl(url);

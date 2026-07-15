@@ -1,7 +1,7 @@
 import type { PlaybackSpeed } from "@/lib/listen/types";
 import type { SleepTimerPreset } from "./types";
 
-export const AUDIO_PLAYBACK_SPEEDS: PlaybackSpeed[] = [0.75, 1, 1.25, 1.5];
+export const AUDIO_PLAYBACK_SPEEDS: PlaybackSpeed[] = [1, 1.25, 1.5, 2];
 
 export const AUDIO_SLEEP_TIMER_PRESETS: SleepTimerPreset[] = [
   { id: "5", label: "5 min", minutes: 5 },

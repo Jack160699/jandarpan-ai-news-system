@@ -1,17 +1,9 @@
-import type { Metadata } from "next";
-import { PageShell } from "@/components/layout/PageShell";
-import { DistrictPicker } from "@/features/district-picker/DistrictPicker";
-import { BRAND } from "@/lib/brand";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: `Choose your district · ${BRAND.nameEn}`,
-  description: "Select a Chhattisgarh district and open its local news edition.",
-};
-
+/**
+ * Legacy selector URL. Reader-facing district selection now lives in the one
+ * persistent shell sheet exposed by Local Pulse and the bottom navigation.
+ */
 export default function PlacesPage() {
-  return (
-    <PageShell variant="news">
-      <DistrictPicker />
-    </PageShell>
-  );
+  redirect("/");
 }

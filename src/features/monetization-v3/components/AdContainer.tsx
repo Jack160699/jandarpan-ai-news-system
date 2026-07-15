@@ -24,6 +24,8 @@ export type AdContainerProps = {
   /** Placeholder text when empty */
   placeholder?: string;
   children?: ReactNode;
+  responsiveSizes?: string;
+  minReservedHeight?: number;
 };
 
 const VARIANT_CLASS: Record<AdContainerVariant, string> = {
@@ -47,6 +49,8 @@ export function AdContainer({
   className,
   placeholder,
   children,
+  responsiveSizes,
+  minReservedHeight,
 }: AdContainerProps) {
   const ref = useAdImpression(slotId, "display", true);
 
@@ -59,6 +63,8 @@ export function AdContainer({
         className
       )}
       data-lazy={lazy ? "true" : "false"}
+      data-responsive-sizes={responsiveSizes}
+      style={minReservedHeight ? { minHeight: minReservedHeight } : undefined}
       role="complementary"
       aria-label={label}
       {...NOSNIPPET_ATTRS}

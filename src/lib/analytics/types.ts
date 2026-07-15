@@ -12,7 +12,15 @@ export type ReaderEventType =
   | "scroll_depth"
   | "share"
   | "breaking_alert_view"
-  | "search_click";
+  | "search_click"
+  | "audio_launcher_shown"
+  | "audio_launcher_opened"
+  | "audio_launcher_dismissed"
+  | "audio_play"
+  | "audio_pause"
+  | "audio_story_skipped"
+  | "audio_story_completed"
+  | "audio_queue_completed";
 
 export type AnalyticsSurface =
   | "homepage"
@@ -22,7 +30,8 @@ export type AnalyticsSurface =
   | "shorts"
   | "district"
   | "breaking"
-  | "related";
+  | "related"
+  | "audio";
 
 export type ReaderEventInput = {
   eventType: ReaderEventType;

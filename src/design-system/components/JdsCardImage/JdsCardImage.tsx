@@ -74,7 +74,13 @@ export function JdsCardImage({
     const resolvedCategory = category?.trim() || "news";
     if (category || src?.trim()) {
       return resolveMedia(
-        { imageUrl: src, category: resolvedCategory, source, articleUrl },
+        {
+          imageUrl: src,
+          category: resolvedCategory,
+          source,
+          articleUrl,
+          headline: alt,
+        },
         crop
       );
     }
@@ -92,7 +98,7 @@ export function JdsCardImage({
       placeholderUrl: optimized,
       isSynthetic: false,
     };
-  }, [src, category, source, articleUrl, crop, width, priority]);
+  }, [src, category, source, articleUrl, alt, crop, width, priority]);
 
   const displaySrc = media ? tierUrl(media, tier) : "";
   const showImage = Boolean(media && displaySrc && !failed);

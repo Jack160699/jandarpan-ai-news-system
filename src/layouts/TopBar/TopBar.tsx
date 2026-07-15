@@ -1,28 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, MapPin, Menu } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
-import { usePlace } from "@/providers/PlaceProvider";
+import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
-import { HeaderStatusStrip } from "./HeaderStatusStrip";
+import { CategoryRail } from "./CategoryRail";
 import { GlobalLiveBar } from "./GlobalLiveBar";
-import { requestDistrictPicker } from "../DistrictModal/events";
+import { HeaderStatusStrip } from "./HeaderStatusStrip";
 
-/**
- * Stable global header — identity, local edition, date/time/weather and menu.
- * Search belongs to the continuous live-news row directly below.
- */
+/** Brand/actions, utility information, linked live updates and category rail. */
 export function TopBar() {
   const { tenant } = useTenant();
   const { language, t } = useLanguage();
-  const place = usePlace();
   const { startNavigation, toggleMenu } = useNavigation();
+  const { setSearchOpen } = useReaderPreferences();
+  const brandName = language !== "en" ? tenant.branding.nameHi : tenant.branding.nameEn;
 
-  const brandName =
-    language !== "en" ? tenant.branding.nameHi : tenant.branding.nameEn;
   return (
     <header className="jdp-topbar" role="banner">
       <div className="jdp-topbar__inner">
@@ -35,31 +31,28 @@ export function TopBar() {
           <TenantLogo variant="banner" showText={false} />
         </Link>
 
-        <button
-          type="button"
-          className="jdp-topbar__place jds-focus-ring"
-          onClick={requestDistrictPicker}
-          aria-label={language === "en" ? `Change district, ${place.name} selected` : `जिला बदलें, ${place.name} चुना गया है`}
-        >
-          <MapPin size={14} aria-hidden />
-          <span>{place.shortName}</span>
-          <ChevronDown size={13} aria-hidden />
-        </button>
-
-        <HeaderStatusStrip />
-
         <div className="jdp-topbar__actions">
+          <button
+            type="button"
+            className="jdp-topbar__btn"
+            aria-label={language === "en" ? "Search news" : "समाचार खोजें"}
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search size={20} aria-hidden />
+          </button>
           <button
             type="button"
             className="jdp-topbar__btn"
             aria-label={t.nav.menu}
             onClick={toggleMenu}
           >
-            <Menu size={20} aria-hidden />
+            <Menu size={21} aria-hidden />
           </button>
         </div>
       </div>
+      <HeaderStatusStrip />
       <GlobalLiveBar />
+      <CategoryRail />
     </header>
   );
 }

@@ -146,6 +146,7 @@ export function useHomeV3Data(
             : streamFallback,
       aiInsight,
       listenArticleIds: feed.listenArticleIds ?? [],
+      audioShorts: feed.newsShorts ?? [],
     };
   }, [feed, signals]);
 }

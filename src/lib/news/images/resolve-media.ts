@@ -18,6 +18,8 @@ export type ResolveMediaInput = {
   source?: string | null;
   region?: string | null;
   articleUrl?: string;
+  headline?: string | null;
+  tags?: string[];
 };
 
 export type ResolvedMedia = {
@@ -47,6 +49,8 @@ export function resolveMedia(input: ResolveMediaInput, aspect: MediaAspect = "16
     category: input.category,
     source: input.source,
     region: input.region,
+    headline: input.headline,
+    tags: input.tags,
   });
   const categoryOnly = getCategoryFallback(input.category);
   const branded = NEWSROOM_PLACEHOLDER;

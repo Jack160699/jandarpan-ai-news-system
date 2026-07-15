@@ -18,6 +18,18 @@ export type CgDistrict = {
   lng?: number;
 };
 
+export type DistrictAvailability = "available" | "coming-soon";
+
+export type CgDistrictDirectoryEntry = {
+  slug: string;
+  name: string;
+  nameHi: string;
+  aliases: string[];
+  availability: DistrictAvailability;
+  /** Available districts retain their routing data and existing public URL. */
+  district?: CgDistrict;
+};
+
 /** Tier-1 districts surface first in hyperlocal feeds and breaking routing */
 export const CG_DISTRICTS: CgDistrict[] = [
   {
@@ -201,6 +213,114 @@ export const CG_DISTRICTS: CgDistrict[] = [
     aliases: ["narayanpur", "नारायणपुर"],
   },
 ];
+
+/**
+ * Official districts not yet backed by a Jan Darpan district feed.
+ * Keeping them beside the supported registry prevents visual-only lists from
+ * drifting while ensuring unsupported slugs never silently route to Raipur.
+ */
+const CG_COMING_SOON_DISTRICTS: Array<
+  Pick<CgDistrictDirectoryEntry, "slug" | "name" | "nameHi" | "aliases">
+> = [
+  {
+    slug: "baloda-bazar-bhatapara",
+    name: "Baloda Bazar-Bhatapara",
+    nameHi: "बलौदा बाजार-भाटापारा",
+    aliases: ["baloda bazar", "bhatapara", "बलौदा बाजार", "भाटापारा"],
+  },
+  {
+    slug: "balrampur-ramanujganj",
+    name: "Balrampur-Ramanujganj",
+    nameHi: "बलरामपुर-रामानुजगंज",
+    aliases: ["balrampur", "ramanujganj", "बलरामपुर", "रामानुजगंज"],
+  },
+  {
+    slug: "bijapur",
+    name: "Bijapur",
+    nameHi: "बीजापुर",
+    aliases: ["bijapur", "बीजापुर"],
+  },
+  {
+    slug: "gaurela-pendra-marwahi",
+    name: "Gaurela-Pendra-Marwahi",
+    nameHi: "गौरेला-पेण्ड्रा-मरवाही",
+    aliases: ["gaurela", "pendra", "marwahi", "गौरेला", "पेण्ड्रा", "मरवाही"],
+  },
+  {
+    slug: "jashpur",
+    name: "Jashpur",
+    nameHi: "जशपुर",
+    aliases: ["jashpur", "जशपुर"],
+  },
+  {
+    slug: "kabirdham",
+    name: "Kabirdham",
+    nameHi: "कबीरधाम",
+    aliases: ["kabirdham", "kawardha", "कबीरधाम", "कवर्धा"],
+  },
+  {
+    slug: "khairagarh-chhuikhadan-gandai",
+    name: "Khairagarh-Chhuikhadan-Gandai",
+    nameHi: "खैरागढ़-छुईखदान-गंडई",
+    aliases: ["khairagarh", "chhuikhadan", "gandai", "खैरागढ़", "छुईखदान", "गंडई"],
+  },
+  {
+    slug: "kondagaon",
+    name: "Kondagaon",
+    nameHi: "कोण्डागांव",
+    aliases: ["kondagaon", "कोण्डागांव", "कोंडागांव"],
+  },
+  {
+    slug: "manendragarh-chirmiri-bharatpur",
+    name: "Manendragarh-Chirmiri-Bharatpur",
+    nameHi: "मनेन्द्रगढ़-चिरमिरी-भरतपुर",
+    aliases: ["manendragarh", "chirmiri", "bharatpur", "मनेन्द्रगढ़", "चिरमिरी", "भरतपुर"],
+  },
+  {
+    slug: "mohla-manpur-ambagarh-chowki",
+    name: "Mohla-Manpur-Ambagarh Chowki",
+    nameHi: "मोहला-मानपुर-अम्बागढ़ चौकी",
+    aliases: ["mohla", "manpur", "ambagarh chowki", "मोहला", "मानपुर", "अम्बागढ़ चौकी"],
+  },
+  {
+    slug: "sakti",
+    name: "Sakti",
+    nameHi: "सक्ती",
+    aliases: ["sakti", "सक्ती"],
+  },
+  {
+    slug: "sarangarh-bilaigarh",
+    name: "Sarangarh-Bilaigarh",
+    nameHi: "सारंगढ़-बिलाईगढ़",
+    aliases: ["sarangarh", "bilaigarh", "सारंगढ़", "बिलाईगढ़"],
+  },
+  {
+    slug: "surajpur",
+    name: "Surajpur",
+    nameHi: "सूरजपुर",
+    aliases: ["surajpur", "सूरजपुर"],
+  },
+];
+
+/** Single directory used by selectors, validation, feeds, routes and SEO. */
+export const CHHATTISGARH_DISTRICT_DIRECTORY: CgDistrictDirectoryEntry[] = [
+  ...CG_DISTRICTS.map((district) => ({
+    slug: district.slug,
+    name: district.name,
+    nameHi: district.nameHi,
+    aliases: district.aliases,
+    availability: "available" as const,
+    district,
+  })),
+  ...CG_COMING_SOON_DISTRICTS.map((district) => ({
+    ...district,
+    availability: "coming-soon" as const,
+  })),
+].sort((a, b) => a.name.localeCompare(b.name, "en-IN"));
+
+export function getDistrictDirectory(): CgDistrictDirectoryEntry[] {
+  return CHHATTISGARH_DISTRICT_DIRECTORY;
+}
 
 const DISTRICT_BY_SLUG = new Map(CG_DISTRICTS.map((d) => [d.slug, d]));
 

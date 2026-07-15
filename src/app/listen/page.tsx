@@ -12,8 +12,6 @@ import {
   collectionPageJsonLd,
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
-import { AudioPageClient } from "@/features/audio/AudioPageClient";
-import { isAudioV3Enabled } from "@/features/audio/config";
 import { Footer } from "@/sections/Footer";
 import { ListenPageClient } from "@/sections/listen/ListenPageClient";
 
@@ -75,8 +73,6 @@ export default async function ListenPage({ searchParams }: ListenPageProps) {
     maxHomepageOverlap: 2,
   });
   const autoPlay = params.play === "1";
-  const audioV3 = isAudioV3Enabled();
-
   const jsonLd = [
     collectionPageJsonLd({
       name: "Listen to Today's Headlines",
@@ -98,14 +94,10 @@ export default async function ListenPage({ searchParams }: ListenPageProps) {
       <JsonLdScript data={jsonLd} />
       <main
         id="main-content"
-        className={audioV3 ? "audio-v3-page-root nr-root" : "listen-page-root nr-root"}
+        className="listen-page-root nr-root"
         role="main"
       >
-        {audioV3 ? (
-          <AudioPageClient shorts={shorts} autoPlay={autoPlay} />
-        ) : (
-          <ListenPageClient shorts={shorts} autoPlay={autoPlay} />
-        )}
+        <ListenPageClient shorts={shorts} autoPlay={autoPlay} />
       </main>
       <Footer />
     </PageShell>
