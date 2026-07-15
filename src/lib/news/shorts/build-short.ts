@@ -17,6 +17,7 @@ import { generateSubtitlesFromScript } from "@/lib/news/shorts/subtitles";
 import type { NewsShortBundle, NewsShortCard } from "@/lib/news/shorts/types";
 import { enrichShortCard } from "@/lib/news/shorts/enrich";
 import { ensureShortCard } from "@/lib/news/shorts/ensure-card";
+import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import { buildVoiceMeta } from "@/lib/news/shorts/voice";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
@@ -200,6 +201,20 @@ function localizeShortRow(
   };
 }
 
+function buildStaticFallbackShorts(
+  limit: number,
+  displayLanguage?: NewsroomLanguage
+): NewsShortCard[] {
+  return getStaticFallbackArticlePool()
+    .map((row) =>
+      displayLanguage ? localizeShortRow(row, displayLanguage) : row
+    )
+    .filter((row): row is GeneratedArticleRow => Boolean(row))
+    .map(ensureShortCard)
+    .filter((card): card is NewsShortCard => Boolean(card))
+    .slice(0, limit);
+}
+
 export async function fetchShortsPool(
   limit = 40,
   displayLanguage?: NewsroomLanguage,
@@ -218,7 +233,9 @@ export async function fetchShortsPool(
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(limit * 3);
 
-  if (error || !data?.length) return [];
+  if (error || !data?.length) {
+    return buildStaticFallbackShorts(limit, displayLanguage);
+  }
 
   const reserved = options?.reservedIds ?? new Set<string>();
   const maxOverlap = options?.maxHomepageOverlap ?? 2;
@@ -260,5 +277,8 @@ export async function fetchShortsPool(
     tryAdd(row);
   }
 
-  return cards.slice(0, limit);
+  const result = cards.slice(0, limit);
+  return result.length
+    ? result
+    : buildStaticFallbackShorts(limit, displayLanguage);
 }
