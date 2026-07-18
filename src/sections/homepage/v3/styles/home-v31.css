@@ -486,3 +486,114 @@
 .home-v31-lazy {
   width: 100%;
 }
+
+/* ── Support local journalism + founding membership ────── */
+
+.home-v31-support {
+  padding: var(--jds-space-xl) var(--jds-space-lg);
+  border: 1px solid var(--jds-color-border-subtle);
+  border-top: 3px solid var(--jds-color-brand-primary, #c62828);
+  border-radius: var(--jds-radius-md);
+  background: var(--jds-color-surface-secondary);
+}
+
+.home-v31-support__kicker {
+  margin: 0;
+  font-family: var(--jds-font-ui);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jds-color-brand-primary, #c62828);
+}
+
+.home-v31-support__title {
+  margin: 0.35rem 0 0;
+  font-family: var(--jds-font-display, serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--jds-color-text-primary);
+}
+
+.home-v31-support__body {
+  margin: 0.6rem 0 0;
+  max-width: 44rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--jds-color-text-secondary);
+}
+
+.home-v31-support__district {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.85rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--jds-color-text-secondary);
+}
+
+.home-v31-support__change {
+  font-weight: 700;
+  color: var(--jds-color-brand-primary, #c62828);
+  text-decoration: none;
+}
+
+.home-v31-support__offer {
+  margin-top: 0.85rem;
+}
+
+.home-v31-support__count {
+  margin: 0 0 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--jds-color-text-primary);
+}
+
+.home-v31-support__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.55rem 1.25rem;
+  border: none;
+  border-radius: var(--jds-radius-full, 999px);
+  background: var(--jds-color-brand-primary, #c62828);
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.home-v31-support__cta:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.home-v31-support__claimed {
+  margin: 0.85rem 0 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--jds-radius-sm, 8px);
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.home-v31-support__error {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--jds-color-brand-primary, #c62828);
+}
+
+.home-v31-support__links {
+  margin: 0.85rem 0 0;
+  font-size: 0.875rem;
+}
+
+.home-v31-support__links a {
+  font-weight: 700;
+  color: var(--jds-color-text-primary);
+  text-decoration: none;
+}
