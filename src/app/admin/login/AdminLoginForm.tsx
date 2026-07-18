@@ -6,13 +6,12 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 import { resolveAdminLanding } from "@/lib/admin-platform/role-landing";
+import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
 
 const REMEMBER_KEY = "jd-admin-login-email";
-const LOGO_SRC = "/brand/jan-darpan-mark.svg";
 
 function friendlyError(code: string | undefined): string {
   const map: Record<string, string> = {
@@ -42,30 +41,50 @@ export function AdminLoginForm() {
     errorParam ? friendlyError(errorParam) : null
   );
   const [busy, setBusy] = useState(false);
+  const [healthLine, setHealthLine] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      const remembered = window.localStorage.getItem(REMEMBER_KEY) ?? "";
-      if (remembered) {
-        setEmail(remembered);
-        setRemember(true);
+    const id = window.setTimeout(() => {
+      try {
+        const remembered = window.localStorage.getItem(REMEMBER_KEY) ?? "";
+        if (remembered) {
+          setEmail(remembered);
+          setRemember(true);
+        }
+      } catch {
+        /* ignore */
       }
-    } catch {
-      // ignore storage errors
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function probe() {
+      try {
+        const res = await fetch("/api/health/live");
+        if (!cancelled && res.ok) {
+          setHealthLine("Production systems connected");
+        }
+      } catch {
+        /* silent */
+      }
     }
+    void probe();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError(null);
 
     try {
-      if (remember) {
-        localStorage.setItem(REMEMBER_KEY, email.trim());
-      } else {
-        localStorage.removeItem(REMEMBER_KEY);
-      }
+      if (remember) localStorage.setItem(REMEMBER_KEY, email.trim());
+      else localStorage.removeItem(REMEMBER_KEY);
 
       const res = await fetch("/api/dashboard/auth/login", {
         method: "POST",
@@ -78,10 +97,8 @@ export function AdminLoginForm() {
         setError(friendlyError(json.error ?? json.message));
         return;
       }
-
       const role = json.membership?.role ?? json.role ?? null;
-      const dest = resolveAdminLanding(role, nextParam);
-      window.location.assign(dest);
+      window.location.assign(resolveAdminLanding(role, nextParam));
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -90,123 +107,115 @@ export function AdminLoginForm() {
   }
 
   return (
-    <div className="anr-login anr-login--compact">
-      <div className="anr-login__bg" aria-hidden>
-        <div className="anr-login__orb anr-login__orb--1" />
-        <div className="anr-login__orb anr-login__orb--2" />
-        <div className="anr-login__grid" />
-        <div className="anr-login__vignette" />
-      </div>
-
-      <div className="anr-login__inner anr-login__inner--compact">
-        <header className="anr-login__brand anr-login__brand--stack">
+    <div className="anr-login-v2">
+      <div className="anr-login-v2__visual" aria-hidden>
+        <div className="anr-login-v2__grid" />
+        <div className="anr-login-v2__glow anr-login-v2__glow--red" />
+        <div className="anr-login-v2__glow anr-login-v2__glow--blue" />
+        <div className="anr-login-v2__visual-inner">
           <Image
-            src={LOGO_SRC}
-            alt="Jandarpan.news"
-            width={56}
-            height={56}
-            className="anr-login__logo-img"
+            src={JAN_DARPAN_BRAND_ASSETS.logo}
+            alt=""
+            width={320}
+            height={64}
+            className="anr-login-v2__hero-logo"
             priority
           />
-          <div className="anr-login__headings">
-            <h1 className="anr-login__title">Jandarpan.news</h1>
-            <p className="anr-login__subtitle">Admin Command Centre</p>
-          </div>
-        </header>
+          <h1>Jan Darpan Command Centre</h1>
+          <p>Editorial intelligence. Business control. Platform reliability.</p>
+          {healthLine ? (
+            <span className="anr-login-v2__status">{healthLine}</span>
+          ) : null}
+        </div>
+      </div>
 
-        <Card className="anr-login__card border-zinc-800/70 bg-zinc-950/50 text-zinc-100 shadow-2xl backdrop-blur-xl">
-          <CardContent className="p-6 pt-6">
-            {error ? (
-              <div
-                className="mb-4 rounded-md border border-red-500/25 bg-red-950/50 px-3 py-2 text-sm text-red-200"
-                role="alert"
-              >
-                {error}
-              </div>
-            ) : null}
+      <div className="anr-login-v2__panel">
+        <div className="anr-login-v2__card">
+          <header className="anr-login-v2__card-head">
+            <Image
+              src={JAN_DARPAN_BRAND_ASSETS.mark}
+              alt="Jan Darpan"
+              width={48}
+              height={48}
+              className="anr-login-v2__mark"
+              priority
+            />
+            <div>
+              <h2>Sign in</h2>
+              <p>Admin access for Jandarpan.news</p>
+            </div>
+          </header>
 
-            <form onSubmit={onSubmit} className="space-y-3.5">
-              <div className="space-y-1.5">
-                <label htmlFor="admin-email" className="anr-login__label">
-                  Email
-                </label>
-                <Input
-                  id="admin-email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={busy}
-                  className="h-10 border-zinc-700/80 bg-zinc-900/90 focus-visible:ring-amber-500/45"
-                />
-              </div>
+          {error ? (
+            <div className="anr-login-v2__error" role="alert">
+              {error}
+            </div>
+          ) : null}
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="admin-password" className="anr-login__label">
-                    Password
-                  </label>
-                  <Link
-                    href="/admin/forgot-password"
-                    className="text-xs font-medium text-amber-400/90 hover:text-amber-300"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <div className="relative">
-                  <Input
-                    id="admin-password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={busy}
-                    className="h-10 border-zinc-700/80 bg-zinc-900/90 pr-10 focus-visible:ring-amber-500/45"
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-500 hover:text-zinc-300"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-500">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-900 text-amber-500"
-                />
-                Remember email
-              </label>
-
-              <Button
-                type="submit"
+          <form onSubmit={onSubmit} className="anr-login-v2__form">
+            <div className="anr-login-v2__field">
+              <label htmlFor="admin-email">Email</label>
+              <Input
+                id="admin-email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={busy}
-                className={cn(
-                  "h-10 w-full border-0 bg-gradient-to-r from-amber-500 to-orange-600",
-                  "text-sm font-semibold text-zinc-950 shadow-md shadow-amber-500/25",
-                  "hover:from-amber-400 hover:to-orange-500"
-                )}
-              >
-                {busy ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Signing in…
-                  </>
-                ) : (
-                  "Sign in"
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+              />
+            </div>
+
+            <div className="anr-login-v2__field">
+              <div className="anr-login-v2__label-row">
+                <label htmlFor="admin-password">Password</label>
+                <Link href="/admin/forgot-password">Forgot password?</Link>
+              </div>
+              <div className="anr-login-v2__password">
+                <Input
+                  id="admin-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={busy}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <label className="anr-login-v2__remember">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+              />
+              Remember email
+            </label>
+
+            <Button
+              type="submit"
+              disabled={busy}
+              className={cn("anr-login-v2__submit", busy && "opacity-80")}
+            >
+              {busy ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                "Sign in"
+              )}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

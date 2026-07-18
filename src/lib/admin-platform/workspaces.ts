@@ -1,6 +1,7 @@
 /**
  * Admin command-centre information architecture.
- * Workspaces group routes; primary nav stays short by default.
+ * Primary: Command Centre, Editorial, Business, Platform.
+ * Secondary: Team, Settings (permission-gated).
  */
 
 import type { DashboardPermission, DashboardRole } from "@/lib/saas-auth/types";
@@ -18,8 +19,8 @@ export type AdminWorkspaceId =
 export type AdminNavItem = {
   href: string;
   label: string;
-  /** Optional short helper for tooltips */
   hint?: string;
+  iconKey: string;
 };
 
 export type AdminWorkspace = {
@@ -27,76 +28,81 @@ export type AdminWorkspace = {
   label: string;
   description: string;
   homeHref: string;
-  /** Permission required to see the workspace at all */
   permission: DashboardPermission | "super_admin";
+  primary: boolean;
   items: AdminNavItem[];
 };
 
 export const ADMIN_WORKSPACES: AdminWorkspace[] = [
   {
     id: "overview",
-    label: "Overview",
-    description: "Company health at a glance",
+    label: "Command Centre",
+    description: "Cross-company attention",
     homeHref: "/admin/overview",
     permission: "analytics:read",
+    primary: true,
     items: [
-      { href: "/admin/overview", label: "Command centre" },
-      { href: "/admin/executive", label: "Costs & AI spend", hint: "Details" },
+      { href: "/admin/overview", label: "Command centre", iconKey: "layout" },
+      { href: "/admin/executive", label: "Costs & AI spend", iconKey: "landmark" },
     ],
   },
   {
     id: "editorial",
     label: "Editorial",
-    description: "Stories, queues, and publishing",
+    description: "Stories and publishing",
     homeHref: "/admin/editorial",
     permission: "content:read",
+    primary: true,
     items: [
-      { href: "/admin/editorial", label: "Editorial home" },
-      { href: "/admin/stories", label: "Story queue" },
-      { href: "/admin/articles", label: "All stories" },
-      { href: "/admin/editor", label: "Editor" },
-      { href: "/admin/workflow", label: "Workflow" },
-      { href: "/admin/live-wire", label: "Breaking & live" },
-      { href: "/admin/sources", label: "Sources" },
-      { href: "/admin/districts", label: "Districts" },
-      { href: "/admin/topics", label: "Categories" },
-      { href: "/admin/images", label: "Images & media" },
-      { href: "/admin/media", label: "Media library" },
-      { href: "/admin/collaboration", label: "Collaboration" },
-      { href: "/admin/intelligence", label: "Coverage intel" },
-      { href: "/admin/ai-copilot", label: "AI Copilot" },
+      { href: "/admin/editorial", label: "Editorial home", iconKey: "layout" },
+      { href: "/admin/stories", label: "Story queue", iconKey: "book" },
+      { href: "/admin/articles", label: "All stories", iconKey: "file" },
+      { href: "/admin/editor", label: "Editor", iconKey: "pen" },
+      { href: "/admin/workflow", label: "Workflow", iconKey: "git" },
+      { href: "/admin/live-wire", label: "Breaking & live", iconKey: "activity" },
+      { href: "/admin/sources", label: "Sources", iconKey: "radio" },
+      { href: "/admin/districts", label: "Districts", iconKey: "compass" },
+      { href: "/admin/topics", label: "Categories", iconKey: "sparkles" },
+      { href: "/admin/images", label: "Images & media", iconKey: "image" },
+      { href: "/admin/media", label: "Media library", iconKey: "images" },
+      { href: "/admin/collaboration", label: "Collaboration", iconKey: "messages" },
+      { href: "/admin/intelligence", label: "Editorial intelligence", iconKey: "brain" },
+      { href: "/admin/ai-copilot", label: "AI Copilot", iconKey: "bot" },
     ],
   },
   {
     id: "business",
     label: "Business",
-    description: "Audience, SEO, and revenue",
+    description: "Audience, SEO, revenue",
     homeHref: "/admin/business",
     permission: "analytics:read",
+    primary: true,
     items: [
-      { href: "/admin/business", label: "Business overview" },
-      { href: "/admin/analytics", label: "Traffic & audience" },
-      { href: "/admin/seo/search-console", label: "SEO" },
-      { href: "/admin/seo/rankings", label: "Rankings" },
-      { href: "/admin/seo/competitors", label: "Competitors" },
-      { href: "/admin/seo/intelligence", label: "SEO intelligence" },
-      { href: "/admin/seo/execution", label: "SEO execution" },
-      { href: "/admin/seo/autonomous", label: "Autonomous SEO" },
-      { href: "/admin/billing", label: "Revenue & billing" },
+      { href: "/admin/business", label: "Business overview", iconKey: "chart" },
+      { href: "/admin/analytics", label: "Audience analytics", iconKey: "line" },
+      { href: "/admin/seo/search-console", label: "Search Console", iconKey: "search" },
+      { href: "/admin/seo/rankings", label: "Rankings", iconKey: "trending" },
+      { href: "/admin/seo/competitors", label: "Competitors", iconKey: "search" },
+      { href: "/admin/seo/intelligence", label: "SEO intelligence", iconKey: "brain" },
+      { href: "/admin/seo/execution", label: "SEO execution", iconKey: "wand" },
+      { href: "/admin/seo/autonomous", label: "Autonomous SEO", iconKey: "cpu" },
+      { href: "/admin/billing", label: "Revenue", iconKey: "card" },
+      { href: "/admin/executive", label: "AI costs & budgets", iconKey: "landmark" },
     ],
   },
   {
     id: "technical",
-    label: "Technical",
-    description: "Pipeline, workers, and system health",
+    label: "Platform",
+    description: "Developer and operations",
     homeHref: "/admin/technical",
     permission: "monitoring:read",
+    primary: true,
     items: [
-      { href: "/admin/technical", label: "System health" },
-      { href: "/admin/health", label: "Health details" },
-      { href: "/admin/system", label: "Pipeline & workers" },
-      { href: "/admin/ingestion", label: "Ingestion" },
-      { href: "/admin/schema", label: "Database & schema" },
+      { href: "/admin/technical", label: "Overall health", iconKey: "heart" },
+      { href: "/admin/health", label: "Health details", iconKey: "activity" },
+      { href: "/admin/system", label: "Pipeline & workers", iconKey: "server" },
+      { href: "/admin/ingestion", label: "Ingestion", iconKey: "database" },
+      { href: "/admin/schema", label: "Database & schema", iconKey: "database" },
     ],
   },
   {
@@ -105,7 +111,8 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
     description: "People and access",
     homeHref: "/admin/team",
     permission: "super_admin",
-    items: [{ href: "/admin/team", label: "Team & access" }],
+    primary: false,
+    items: [{ href: "/admin/team", label: "Team & access", iconKey: "users" }],
   },
   {
     id: "settings",
@@ -113,9 +120,10 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
     description: "Platform configuration",
     homeHref: "/admin/settings",
     permission: "editorial:write",
+    primary: false,
     items: [
-      { href: "/admin/settings", label: "General" },
-      { href: "/admin/settings/organization", label: "Organization" },
+      { href: "/admin/settings", label: "General", iconKey: "settings" },
+      { href: "/admin/settings/organization", label: "Organization", iconKey: "settings" },
     ],
   },
 ];
@@ -137,10 +145,27 @@ export function workspacesForRole(
   return ADMIN_WORKSPACES.filter((ws) => workspaceAccessible(ws, role));
 }
 
+export function primaryWorkspacesForRole(
+  role: DashboardRole | string | null | undefined
+): AdminWorkspace[] {
+  return workspacesForRole(role).filter((ws) => ws.primary);
+}
+
+export function secondaryWorkspacesForRole(
+  role: DashboardRole | string | null | undefined
+): AdminWorkspace[] {
+  return workspacesForRole(role).filter((ws) => !ws.primary);
+}
+
 export function resolveWorkspaceFromPath(pathname: string): AdminWorkspaceId {
   const base = pathname.split("?")[0];
   if (base === "/admin/overview" || base === "/admin/executive") return "overview";
-  if (base.startsWith("/admin/seo") || base === "/admin/business" || base === "/admin/analytics" || base === "/admin/billing") {
+  if (
+    base.startsWith("/admin/seo") ||
+    base === "/admin/business" ||
+    base === "/admin/analytics" ||
+    base === "/admin/billing"
+  ) {
     return "business";
   }
   if (
@@ -157,10 +182,6 @@ export function resolveWorkspaceFromPath(pathname: string): AdminWorkspaceId {
   return "editorial";
 }
 
-/**
- * Role-aware landing after login.
- * Maps canonical roles to the most useful first screen.
- */
 export function landingPathForRole(role: DashboardRole | string | null | undefined): string {
   const r = normalizeDashboardRole(String(role ?? "journalist"));
   switch (r) {
@@ -176,7 +197,6 @@ export function landingPathForRole(role: DashboardRole | string | null | undefin
   }
 }
 
-/** Flat list of all nav hrefs (for policy / tests). */
 export function allWorkspaceNavHrefs(): string[] {
   return ADMIN_WORKSPACES.flatMap((ws) => ws.items.map((i) => i.href));
 }
