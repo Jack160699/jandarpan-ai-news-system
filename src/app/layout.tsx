@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { AppChrome } from "@/components/navigation/AppChrome";
-import { LanguageGateScript } from "@/components/reader/LanguageGateScript";
 import { ThemeScript } from "@/components/reader/ThemeScript";
 import { TenantRoot } from "@/components/tenant/TenantRoot";
 import { readerFontClassName } from "@/lib/fonts/reader-fonts";
@@ -62,7 +61,6 @@ export default async function RootLayout({
     >
       <body className="min-h-full antialiased text-[var(--ink-primary)]">
         <ThemeScript />
-        <LanguageGateScript />
         <TenantRoot tenant={stripTenantForClient(tenant)} organization={organization}>
           <ReaderPreferencesProvider>
             <LanguageProvider

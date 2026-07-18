@@ -1,11 +1,10 @@
 import { LANGUAGE_CONFIG, type NewsroomLanguage } from "@/lib/i18n/languages";
 import type { LanguageOption } from "@/lib/i18n/types";
 
-/** Reader-facing languages — backend may still translate to others */
+/** Reader-facing languages — Hindi-first product, English optional */
 export const READER_LANGUAGE_IDS = [
   "hi",
   "en",
-  "cg",
 ] as const satisfies readonly NewsroomLanguage[];
 
 export type ReaderLanguage = (typeof READER_LANGUAGE_IDS)[number];

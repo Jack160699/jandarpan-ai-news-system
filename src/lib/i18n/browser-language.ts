@@ -14,10 +14,9 @@ export function detectBrowserLanguage(): AppLanguage {
     const base = tag.toLowerCase().split("-")[0];
     if (base === "en") return "en";
     if (base === "hi") return "hi";
-    if (base === "cg") return "cg";
   }
 
-  return "cg";
+  return "hi";
 }
 
 /** Default highlight for onboarding when no saved preference */
@@ -27,5 +26,5 @@ export function resolveGateHighlightLanguage(
   if (stored && isGateLanguage(stored)) return stored;
   const detected = detectBrowserLanguage();
   if (isGateLanguage(detected)) return detected;
-  return "cg";
+  return "hi";
 }

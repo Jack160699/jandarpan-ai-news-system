@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { AdSlot } from "@/components/monetization/AdSlot";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SkipLink } from "@/components/ui/SkipLink";
-import { LanguageGate } from "@/components/reader/LanguageGate";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { cn } from "@/lib/cn";
 import { ArticleSpeechProvider } from "@/providers/ArticleSpeechProvider";
@@ -55,7 +54,6 @@ function ShortsLanguageShell({ children }: AppChromeProps) {
 
   return (
     <div className={cn(contentLocked && "app-shell--lang-locked")}>
-      <LanguageGate />
       <div className="app-shell__content">{children}</div>
     </div>
   );
@@ -79,7 +77,6 @@ function AppChromeShell({ children }: AppChromeProps) {
       <AppHydration />
       <SkipLink />
       <NavProgress />
-      <LanguageGate />
       <OnboardingExperienceV3 />
       <div className="app-shell__content">
         <div className="pl-hide-mobile">
