@@ -9,7 +9,11 @@ import {
   REFRESH_COOKIE,
 } from "@/lib/saas-auth/cookies";
 
-const ADMIN_PUBLIC = ["/admin/login"];
+const ADMIN_PUBLIC = [
+  "/admin/login",
+  "/admin/forgot-password",
+  "/admin/reset-password",
+];
 const DASHBOARD_PUBLIC = ["/dashboard/login"];
 const ADMIN_PREFIX = "/admin";
 const DASHBOARD_PREFIX = "/dashboard";
@@ -32,6 +36,10 @@ function isAuthLoginPage(pathname: string): boolean {
   return (
     pathname === "/admin/login" ||
     pathname.startsWith("/admin/login/") ||
+    pathname === "/admin/forgot-password" ||
+    pathname.startsWith("/admin/forgot-password/") ||
+    pathname === "/admin/reset-password" ||
+    pathname.startsWith("/admin/reset-password/") ||
     pathname === "/dashboard/login" ||
     pathname.startsWith("/dashboard/login/")
   );

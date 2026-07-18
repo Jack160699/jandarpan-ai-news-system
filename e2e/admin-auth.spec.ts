@@ -10,28 +10,34 @@ test.describe("Admin auth RBAC", () => {
     await clearE2eDeskSession(page.request);
   });
 
-  test("super_admin sees Team and can open /admin/team", async ({ page }) => {
+  test("super_admin can open Team workspace and /admin/team", async ({ page }) => {
     await setE2eDeskSession(page.request, "super_admin");
     await mockSessionApi(page, "super_admin");
 
-    await page.goto("/admin/editorial", { waitUntil: "domcontentloaded" });
-    await expect(page.locator(".anr-nav")).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('.anr-nav a[href="/admin/team"]')).toBeVisible({
+    await page.goto("/admin/overview", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".anr-workspace-switcher")).toBeVisible({
       timeout: 20_000,
     });
+    await page.locator(".anr-workspace-switcher__trigger").click();
+    await expect(
+      page.locator('.anr-workspace-switcher__item[href="/admin/team"]')
+    ).toBeVisible({ timeout: 10_000 });
 
     await page.goto("/admin/team", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/admin\/team/);
     await expect(page.locator("h1")).toContainText(/team/i);
   });
 
-  test("editor does not see Team in sidebar", async ({ page }) => {
+  test("editor does not see Team workspace", async ({ page }) => {
     await setE2eDeskSession(page.request, "editor");
     await mockSessionApi(page, "editor");
 
     await page.goto("/admin/editorial");
     await expect(page.locator(".anr-nav")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
+    await expect(
+      page.locator('.anr-workspace-switcher__item[href="/admin/team"]')
+    ).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Team & access" })).toHaveCount(0);
   });
 
   test("editor is blocked from /admin/team", async ({ page }) => {
@@ -76,5 +82,14 @@ test.describe("Admin auth RBAC", () => {
     const cookies = await page.context().cookies();
     const roleCookie = cookies.find((c) => c.name === "nr-dashboard-role");
     expect(roleCookie?.value ?? "").toBe("");
+  });
+
+  test("login page exposes forgot password and show password", async ({ page }) => {
+    await page.goto("/admin/login");
+    await expect(page.getByRole("heading", { name: /jandarpan/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /forgot password/i })).toBeVisible();
+    await page.getByLabel("Password").fill("secret-password");
+    await page.getByLabel(/show password/i).click();
+    await expect(page.getByLabel("Password")).toHaveAttribute("type", "text");
   });
 });

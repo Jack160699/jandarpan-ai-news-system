@@ -4,7 +4,11 @@
 
 import { canAccessAdminRoute } from "@/lib/newsroom-auth/rbac";
 
-const ADMIN_PUBLIC = ["/admin/login"];
+const ADMIN_PUBLIC = [
+  "/admin/login",
+  "/admin/forgot-password",
+  "/admin/reset-password",
+];
 
 export function isAdminPublicPath(pathname: string): boolean {
   return ADMIN_PUBLIC.some(
@@ -22,7 +26,7 @@ export function checkPathRbac(
   role: string
 ): { allowed: boolean; redirectTo?: string } {
   if (requiresAdminRbac(pathname) && !canAccessAdminRoute(role, pathname)) {
-    return { allowed: false, redirectTo: "/admin/login?error=forbidden" };
+    return { allowed: false, redirectTo: "/admin/editorial?error=forbidden" };
   }
 
   return { allowed: true };

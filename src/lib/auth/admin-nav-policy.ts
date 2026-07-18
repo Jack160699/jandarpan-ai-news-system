@@ -5,46 +5,18 @@ import {
   hasResolvedRole,
   type AdminPermissionContext,
 } from "@/lib/auth/admin-permissions";
+import { allWorkspaceNavHrefs } from "@/lib/admin-platform/workspaces";
 
-export type AdminNavHref =
-  | "/admin/editorial"
-  | "/admin/intelligence"
-  | "/admin/ai-copilot"
-  | "/admin/seo/competitors"
-  | "/admin/seo/intelligence"
-  | "/admin/seo/rankings"
-  | "/admin/seo/search-console"
-  | "/admin/seo/execution"
-  | "/admin/seo/autonomous"
-  | "/admin/editor"
-  | "/admin/workflow"
-  | "/admin/collaboration"
-  | "/admin/stories"
-  | "/admin/articles"
-  | "/admin/districts"
-  | "/admin/topics"
-  | "/admin/sources"
-  | "/admin/live-wire"
-  | "/admin/health"
-  | "/admin/system"
-  | "/admin/executive"
-  | "/admin/ingestion"
-  | "/admin/images"
-  | "/admin/media"
-  | "/admin/analytics"
-  | "/admin/settings"
-  | "/admin/billing"
-  | "/admin/team"
-  | "/admin/schema";
+export type AdminNavHref = string;
 
-const PRIVILEGED_HREFS = new Set<AdminNavHref>([
+const PRIVILEGED_HREFS = new Set<string>([
   "/admin/team",
   "/admin/schema",
   "/admin/billing",
 ]);
 
 export function isPrivilegedAdminNavHref(href: string): boolean {
-  return PRIVILEGED_HREFS.has(href as AdminNavHref);
+  return PRIVILEGED_HREFS.has(href);
 }
 
 /**
@@ -75,4 +47,9 @@ export function filterAdminNavItems<T extends { href: string }>(
   ctx: AdminPermissionContext
 ): T[] {
   return items.filter((item) => isAdminNavItemVisible(item.href, ctx));
+}
+
+/** Known workspace hrefs for tests / inventory. */
+export function listAdminNavHrefs(): string[] {
+  return allWorkspaceNavHrefs();
 }

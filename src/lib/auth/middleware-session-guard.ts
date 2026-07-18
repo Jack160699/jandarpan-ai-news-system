@@ -11,7 +11,11 @@ import {
 import { ROLE_COOKIE, TENANT_COOKIE_AUTH } from "@/lib/security/constants";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 
-const ADMIN_PUBLIC = ["/admin/login"];
+const ADMIN_PUBLIC = [
+  "/admin/login",
+  "/admin/forgot-password",
+  "/admin/reset-password",
+];
 const DASHBOARD_PUBLIC = ["/dashboard/login"];
 
 function isPublicAdminPath(pathname: string): boolean {

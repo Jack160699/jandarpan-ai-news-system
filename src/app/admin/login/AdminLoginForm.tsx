@@ -1,13 +1,15 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
+import { resolveAdminLanding } from "@/lib/admin-platform/role-landing";
 
 const REMEMBER_KEY = "jd-admin-login-email";
 const LOGO_SRC = "/brand/jan-darpan-mark.svg";
@@ -20,6 +22,9 @@ function friendlyError(code: string | undefined): string {
     invalid_json: "Something went wrong. Try again.",
     auth_unavailable: "Sign-in is temporarily unavailable.",
     configure_supabase: "Newsroom auth is not configured.",
+    account_locked: "Account temporarily locked. Try again later.",
+    rate_limited: "Too many attempts. Try again later.",
+    session_recovery_failed: "Session expired. Please sign in again.",
   };
   if (!code) return "Invalid email or password.";
   return map[code] ?? code.replace(/_/g, " ");
@@ -27,19 +32,28 @@ function friendlyError(code: string | undefined): string {
 
 export function AdminLoginForm() {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/admin/editorial";
+  const nextParam = searchParams.get("next");
   const errorParam = searchParams.get("error");
-  const rememberedEmail =
-    typeof window !== "undefined" ? window.localStorage.getItem(REMEMBER_KEY) ?? "" : "";
-
-  const [email, setEmail] = useState(rememberedEmail);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(Boolean(rememberedEmail));
+  const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(
     errorParam ? friendlyError(errorParam) : null
   );
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    try {
+      const remembered = window.localStorage.getItem(REMEMBER_KEY) ?? "";
+      if (remembered) {
+        setEmail(remembered);
+        setRemember(true);
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -65,8 +79,9 @@ export function AdminLoginForm() {
         return;
       }
 
-      // Full navigation ensures Set-Cookie headers are applied before RSC/middleware run
-      window.location.assign(next);
+      const role = json.membership?.role ?? json.role ?? null;
+      const dest = resolveAdminLanding(role, nextParam);
+      window.location.assign(dest);
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -87,15 +102,15 @@ export function AdminLoginForm() {
         <header className="anr-login__brand anr-login__brand--stack">
           <Image
             src={LOGO_SRC}
-            alt="Jan Darpan"
+            alt="Jandarpan.news"
             width={56}
             height={56}
             className="anr-login__logo-img"
             priority
           />
           <div className="anr-login__headings">
-            <h1 className="anr-login__title">Jan Darpan OS</h1>
-            <p className="anr-login__subtitle">Newsroom Console</p>
+            <h1 className="anr-login__title">Jandarpan.news</h1>
+            <p className="anr-login__subtitle">Admin Command Centre</p>
           </div>
         </header>
 
@@ -128,9 +143,17 @@ export function AdminLoginForm() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="admin-password" className="anr-login__label">
-                  Password
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="admin-password" className="anr-login__label">
+                    Password
+                  </label>
+                  <Link
+                    href="/admin/forgot-password"
+                    className="text-xs font-medium text-amber-400/90 hover:text-amber-300"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Input
                     id="admin-password"
@@ -147,7 +170,6 @@ export function AdminLoginForm() {
                     className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-zinc-500 hover:text-zinc-300"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? "Hide password" : "Show password"}
-                    tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -161,7 +183,7 @@ export function AdminLoginForm() {
                   onChange={(e) => setRemember(e.target.checked)}
                   className="h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-900 text-amber-500"
                 />
-                Remember me
+                Remember email
               </label>
 
               <Button

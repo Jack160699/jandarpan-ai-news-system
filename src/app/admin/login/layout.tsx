@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Sign in — Newsroom Admin",
+  title: "Sign in — Jandarpan.news Admin",
 };
 
 export default function AdminLoginLayout({

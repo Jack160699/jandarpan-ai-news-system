@@ -41,7 +41,11 @@ import {
 const DASHBOARD_PUBLIC = ["/dashboard/login"];
 const DASHBOARD_PREFIX = "/dashboard";
 
-const ADMIN_PUBLIC = ["/admin/login"];
+const ADMIN_PUBLIC = [
+  "/admin/login",
+  "/admin/forgot-password",
+  "/admin/reset-password",
+];
 const ADMIN_PREFIX = "/admin";
 
 function isProtectedPrefix(
@@ -205,7 +209,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/admin/login" && hasAuth) {
-    const dest = request.nextUrl.searchParams.get("next") ?? "/admin/editorial";
+    const next = request.nextUrl.searchParams.get("next");
+    const dest =
+      next && next.startsWith("/admin") && !next.startsWith("/admin/login")
+        ? next
+        : role === "super_admin"
+          ? "/admin/overview"
+          : role === "editor"
+            ? "/admin/stories"
+            : "/admin/editorial";
     return redirectWithCookies(request, dest, response);
   }
 

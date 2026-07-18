@@ -2,40 +2,15 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Activity,
-  HeartPulse,
-  Landmark,
-  BarChart3,
   Bell,
-  BookOpen,
-  CreditCard,
-  PenLine,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Compass,
-  Settings,
-  Database,
-  FileText,
-  Image as ImageIcon,
-  Images,
-  LayoutDashboard,
   Menu,
   Moon,
-  Radio,
   Search,
-  Sparkles,
   Sun,
   UserCircle2,
-  Brain,
-  Users,
-  GitBranch,
-  MessagesSquare,
-  ServerCog,
-  TrendingUp,
-  LineChart,
-  Bot,
-  Wand2,
-  Cpu,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -45,40 +20,15 @@ import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
 import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
-import { filterAdminNavItems } from "@/lib/auth/admin-nav-policy";
 import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
-
-const NAV = [
-  { href: "/admin/editorial", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/intelligence", label: "Intelligence", icon: Brain },
-  { href: "/admin/ai-copilot", label: "AI Copilot", icon: Bot },
-  { href: "/admin/seo/competitors", label: "Competitors", icon: Search },
-  { href: "/admin/seo/intelligence", label: "SEO Intel", icon: BarChart3 },
-  { href: "/admin/seo/rankings", label: "SERP Rankings", icon: TrendingUp },
-  { href: "/admin/seo/search-console", label: "Search Console", icon: LineChart },
-  { href: "/admin/seo/execution", label: "SEO Execution", icon: Wand2 },
-  { href: "/admin/seo/autonomous", label: "Autonomous SEO", icon: Cpu },
-  { href: "/admin/editor", label: "Editor", icon: PenLine },
-  { href: "/admin/workflow", label: "Workflow", icon: GitBranch },
-  { href: "/admin/collaboration", label: "Collaboration", icon: MessagesSquare },
-  { href: "/admin/stories", label: "Stories", icon: BookOpen },
-  { href: "/admin/articles", label: "Articles", icon: FileText },
-  { href: "/admin/districts", label: "Districts", icon: Compass },
-  { href: "/admin/topics", label: "Topics", icon: Sparkles },
-  { href: "/admin/sources", label: "Sources", icon: Radio },
-  { href: "/admin/live-wire", label: "Live wire", icon: Activity },
-  { href: "/admin/health", label: "Health", icon: HeartPulse },
-  { href: "/admin/system", label: "System", icon: ServerCog },
-  { href: "/admin/executive", label: "AI CFO", icon: Landmark },
-  { href: "/admin/ingestion", label: "Ingestion", icon: Database },
-  { href: "/admin/images", label: "Images", icon: ImageIcon },
-  { href: "/admin/media", label: "Media", icon: Images },
-  { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
-  { href: "/admin/billing", label: "Billing", icon: CreditCard },
-  { href: "/admin/team", label: "Team", icon: Users },
-  { href: "/admin/schema", label: "Schema", icon: ServerCog },
-] as const;
+import {
+  resolveWorkspaceFromPath,
+  workspacesForRole,
+  type AdminWorkspaceId,
+} from "@/lib/admin-platform/workspaces";
+import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
+import { hasResolvedRole } from "@/lib/auth/admin-permissions";
+import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 
 type AdminShellProps = {
   title: string;
@@ -87,6 +37,8 @@ type AdminShellProps = {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
+  /** Hide the page header chrome when the page provides its own */
+  hidePageHeader?: boolean;
 };
 
 export function AdminShell({
@@ -96,6 +48,7 @@ export function AdminShell({
   searchValue,
   onSearchChange,
   searchPlaceholder,
+  hidePageHeader = false,
 }: AdminShellProps) {
   const pathname = usePathname();
   const {
@@ -106,13 +59,12 @@ export function AdminShell({
     theme,
     setTheme,
     toast,
-    authReady,
     roleResolved,
-    permissions,
   } = useAdminNewsroom();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const search = searchValue ?? localSearch;
   const setSearch = onSearchChange ?? setLocalSearch;
 
@@ -126,19 +78,44 @@ export function AdminShell({
     resetAdminQueryClient();
     window.location.assign("/admin/login");
   }
-  const navPermissionCtx = useMemo(
-    () => ({ role, authReady: roleResolved, permissions }),
-    [role, roleResolved, permissions]
-  );
 
-  const visibleNav = useMemo(
-    () => filterAdminNavItems(NAV, navPermissionCtx),
-    [navPermissionCtx]
-  );
+  const canonicalRole = role ? normalizeDashboardRole(String(role)) : null;
+
+  const availableWorkspaces = useMemo(() => {
+    if (!roleResolved || !canonicalRole) return [];
+    return workspacesForRole(canonicalRole).filter((ws) => {
+      if (ws.permission === "super_admin") {
+        return isSuperAdmin(canonicalRole);
+      }
+      return (
+        canAccessAdminRoute(canonicalRole, ws.homeHref) ||
+        ws.items.some((item) => canAccessAdminRoute(canonicalRole, item.href))
+      );
+    });
+  }, [canonicalRole, roleResolved]);
+
+  const activeWorkspaceId: AdminWorkspaceId = resolveWorkspaceFromPath(pathname);
+  const activeWorkspace =
+    availableWorkspaces.find((w) => w.id === activeWorkspaceId) ??
+    availableWorkspaces[0] ??
+    null;
+
+  const visibleItems = useMemo(() => {
+    if (!activeWorkspace || !roleResolved || !canonicalRole) return [];
+    return activeWorkspace.items.filter((item) => {
+      if (item.href === "/admin/team" || item.href === "/admin/schema") {
+        return hasResolvedRole({ role: canonicalRole, authReady: roleResolved }) && isSuperAdmin(canonicalRole);
+      }
+      if (item.href === "/admin/billing") {
+        return canAccessAdminRoute(canonicalRole, item.href);
+      }
+      return canAccessAdminRoute(canonicalRole, item.href);
+    });
+  }, [activeWorkspace, canonicalRole, roleResolved]);
 
   const activeLabel = useMemo(
-    () => visibleNav.find((item) => item.href === pathname)?.label ?? "Admin",
-    [pathname, visibleNav]
+    () => visibleItems.find((item) => item.href === pathname)?.label ?? title,
+    [pathname, visibleItems, title]
   );
 
   return (
@@ -162,34 +139,79 @@ export function AdminShell({
           className={`anr-sidebar ${isMobileOpen ? "anr-sidebar--mobile-open" : ""}`}
         >
           <div className="anr-sidebar__brand">
-            <p className="anr-brand">Jan Darpan OS</p>
+            <p className="anr-brand">Jandarpan</p>
             {!isSidebarCollapsed ? (
-              <p className="anr-meta">Premium AI Newsroom Console</p>
+              <p className="anr-meta">Command Centre</p>
             ) : null}
           </div>
-          <nav className="anr-nav" aria-busy={!roleResolved}>
+
+          {!isSidebarCollapsed && availableWorkspaces.length > 1 ? (
+            <div className="anr-workspace-switcher">
+              <button
+                type="button"
+                className="anr-workspace-switcher__trigger"
+                onClick={() => setWorkspaceOpen((v) => !v)}
+                aria-expanded={workspaceOpen}
+                aria-haspopup="listbox"
+              >
+                <span>
+                  <strong>{activeWorkspace?.label ?? "Workspace"}</strong>
+                  <em>{activeWorkspace?.description ?? ""}</em>
+                </span>
+                <ChevronDown size={14} aria-hidden />
+              </button>
+              {workspaceOpen ? (
+                <ul className="anr-workspace-switcher__menu" role="listbox">
+                  {availableWorkspaces.map((ws) => (
+                    <li key={ws.id}>
+                      <Link
+                        href={ws.homeHref}
+                        className={
+                          ws.id === activeWorkspace?.id
+                            ? "anr-workspace-switcher__item anr-workspace-switcher__item--active"
+                            : "anr-workspace-switcher__item"
+                        }
+                        onClick={() => {
+                          setWorkspaceOpen(false);
+                          setIsMobileOpen(false);
+                        }}
+                        role="option"
+                        aria-selected={ws.id === activeWorkspace?.id}
+                      >
+                        <strong>{ws.label}</strong>
+                        <em>{ws.description}</em>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+
+          <nav className="anr-nav" aria-busy={!roleResolved} aria-label="Workspace navigation">
             {!roleResolved ? (
               <div className="anr-nav-loading">
                 <AdminAuthLoading label="Loading navigation…" />
               </div>
             ) : null}
-            {visibleNav.map((item) => {
-              const href = item.href;
-              const active = pathname === item.href;
-              const Icon = item.icon;
+            {visibleItems.map((item) => {
+              const active =
+                pathname === item.href ||
+                (item.href !== activeWorkspace?.homeHref &&
+                  pathname.startsWith(`${item.href}/`));
               return (
                 <Link
                   key={item.href}
-                  href={href}
+                  href={item.href}
                   onClick={() => setIsMobileOpen(false)}
                   className={`anr-nav-link ${active ? "anr-nav-link--active" : ""}`}
                 >
-                  <Icon size={16} aria-hidden />
-                  {!isSidebarCollapsed ? <span>{item.label}</span> : null}
+                  {!isSidebarCollapsed ? <span>{item.label}</span> : <span aria-label={item.label}>·</span>}
                 </Link>
               );
             })}
           </nav>
+
           <div className="anr-sidebar__footer">
             <button
               type="button"
@@ -248,7 +270,7 @@ export function AdminShell({
               </div>
             </div>
             <div className="anr-topbar__right">
-              <LiveIndicator label="Ingestion live" />
+              <LiveIndicator label="Live" />
               <ClientTime preset="clock" className="anr-clock" />
               <button type="button" className="anr-btn anr-btn--ghost" aria-label="Notifications">
                 <Bell size={16} />
@@ -261,31 +283,32 @@ export function AdminShell({
               >
                 {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
               </button>
-              <span className="anr-avatar" aria-hidden>
-                JD
-              </span>
             </div>
           </header>
 
-          <motion.header
-            className="anr-header"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div>
-              <p className="anr-meta">AI Newsroom Operating System</p>
-              <h1>{title}</h1>
-              {subtitle ? <p className="anr-meta">{subtitle}</p> : null}
-            </div>
-            <div>
-              {data ? (
+          {!hidePageHeader ? (
+            <motion.header
+              className="anr-header"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div>
                 <p className="anr-meta">
-                  Updated <ClientTime iso={data.fetchedAt} preset="time" />
+                  {activeWorkspace?.label ?? "Admin"} · Jandarpan.news
                 </p>
-              ) : null}
-            </div>
-          </motion.header>
+                <h1>{title}</h1>
+                {subtitle ? <p className="anr-meta">{subtitle}</p> : null}
+              </div>
+              <div>
+                {data ? (
+                  <p className="anr-meta">
+                    Updated <ClientTime iso={data.fetchedAt} preset="time" />
+                  </p>
+                ) : null}
+              </div>
+            </motion.header>
+          ) : null}
 
           <motion.section
             initial={{ opacity: 0, y: 8 }}

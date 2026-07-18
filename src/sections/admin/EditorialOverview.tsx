@@ -104,6 +104,7 @@ function MissionMetricCard({
 export function EditorialOverview() {
   const { data, loading, error } = useAdminNewsroom();
   const mounted = useHasMounted();
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const { health: newsroomHealth, coverage: coverageInsights, opportunities: coverageOpportunities } =
     useEditorialIntelligenceSlices(data ?? null);
 
@@ -316,6 +317,71 @@ export function EditorialOverview() {
   return (
     <>
       {error ? <p className="anr-error">{error}</p> : null}
+
+      <section className="anr-cc-hero" style={{ marginBottom: "1.25rem" }}>
+        <div className="anr-cc-hero__row">
+          <div>
+            <p className="anr-meta">Editorial home</p>
+            <h2 className="anr-cc-hero__title">
+              {pending.length} waiting · {approved.length} approved · {breaking.length} breaking
+            </h2>
+            <p className="anr-cc-hero__summary">
+              {pending.length > 0
+                ? `${pending.length} ${pending.length === 1 ? "story needs" : "stories need"} review.`
+                : "No stories waiting for review right now."}
+              {ingestionFailures.length > 0
+                ? ` ${ingestionFailures.length} recent ingestion failure${ingestionFailures.length === 1 ? "" : "s"}.`
+                : ""}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <div className="anr-kpis">
+        <MissionMetricCard
+          label="Pending review"
+          value={pending.length}
+          trend={0}
+          spark={ingestionOverTime.map((d, i) => ({ i, v: d.inserted }))}
+          live
+        />
+        <MissionMetricCard
+          label="Approved"
+          value={approved.length}
+          trend={5}
+          spark={ingestionOverTime.map((d, i) => ({ i, v: d.inserted - d.failed }))}
+        />
+        <MissionMetricCard
+          label="Breaking"
+          value={breaking.length}
+          trend={breaking.length > 0 ? 8 : 0}
+          spark={aiConfRows.slice(0, 12).map((a, i) => ({ i, v: Math.round((a.ai_confidence ?? 0) * 100) }))}
+        />
+        <MissionMetricCard
+          label="Queue pressure"
+          value={Math.round(queuePressure * 100)}
+          trend={queueTone === "breaking" ? -9 : queueTone === "warning" ? -2 : 4}
+          spark={ingestionOverTime.map((d, i) => ({ i, v: d.failed }))}
+          live
+        />
+      </div>
+
+      <AdminCard title={`Stories needing attention (${pending.length || generated.slice(0, 8).length})`}>
+        <StoriesTable articles={pending.length ? pending : generated.slice(0, 8)} />
+      </AdminCard>
+
+      <div className="anr-cc-actions" style={{ marginTop: "1.25rem" }}>
+        <button
+          type="button"
+          className="anr-btn anr-btn--ghost"
+          onClick={() => setShowAnalytics((v) => !v)}
+        >
+          {showAnalytics ? "Hide analytics details" : "See more analytics"}
+        </button>
+      </div>
+
+      {showAnalytics ? (
+      <>
       <NewsroomHealthStrip
         vm={newsroomHealth}
         loading={loading && !data}
@@ -328,34 +394,6 @@ export function EditorialOverview() {
         vm={coverageOpportunities}
         loading={loading && !data}
       />
-      <div className="anr-kpis">
-        <MissionMetricCard
-          label="Live ingestion activity"
-          value={data.counts.signals}
-          trend={8}
-          spark={ingestionOverTime.map((d, i) => ({ i, v: d.inserted }))}
-          live
-        />
-        <MissionMetricCard
-          label="Publishing velocity"
-          value={approved.length}
-          trend={5}
-          spark={ingestionOverTime.map((d, i) => ({ i, v: d.inserted - d.failed }))}
-        />
-        <MissionMetricCard
-          label="AI confidence trend"
-          value={Math.round(avgConfidence * 100)}
-          trend={3}
-          spark={aiConfRows.slice(0, 12).map((a, i) => ({ i, v: Math.round((a.ai_confidence ?? 0) * 100) }))}
-        />
-        <MissionMetricCard
-          label="Queue pressure"
-          value={Math.round(queuePressure * 100)}
-          trend={queueTone === "breaking" ? -9 : queueTone === "warning" ? -2 : 4}
-          spark={ingestionOverTime.map((d, i) => ({ i, v: d.failed }))}
-          live
-        />
-      </div>
 
       <div className="anr-grid anr-grid--2">
         <AdminWidgetBoundary name="Ingestion over time">
@@ -575,8 +613,6 @@ export function EditorialOverview() {
         </AdminCard>
       </div>
 
-      <AdminCard title={`Pending review (${pending.length})`}>{null}</AdminCard>
-
       {auditTrail.length > 0 ? (
         <AdminCard
           title="Recent editorial activity"
@@ -597,8 +633,8 @@ export function EditorialOverview() {
           </ul>
         </AdminCard>
       ) : null}
-
-      <StoriesTable articles={pending.length ? pending : generated.slice(0, 8)} />
+      </>
+      ) : null}
     </>
   );
 }

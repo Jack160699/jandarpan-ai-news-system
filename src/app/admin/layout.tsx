@@ -42,10 +42,15 @@ export default async function AdminLayout({
     );
   }
 
-  const isLoginRoute =
-    pathname === "/admin/login" || pathname.startsWith("/admin/login/");
+  const isPublicAuthRoute =
+    pathname === "/admin/login" ||
+    pathname.startsWith("/admin/login/") ||
+    pathname === "/admin/forgot-password" ||
+    pathname.startsWith("/admin/forgot-password/") ||
+    pathname === "/admin/reset-password" ||
+    pathname.startsWith("/admin/reset-password/");
 
-  if (!isLoginRoute && !isProductionDeployment()) {
+  if (!isPublicAuthRoute && !isProductionDeployment()) {
     const cookieStore = await cookies();
     const e2eUserId = cookieStore.get(E2E_AUTH_COOKIE)?.value;
     const roleCookie = cookieStore.get(ROLE_COOKIE)?.value;
@@ -83,7 +88,7 @@ export default async function AdminLayout({
   }
 
   let user = null;
-  if (!isLoginRoute) {
+  if (!isPublicAuthRoute) {
     const supabase = await createCookieServerClient();
     const {
       data: { user: authUser },
