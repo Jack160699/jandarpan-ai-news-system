@@ -653,10 +653,20 @@
   .anr-dash-grid { grid-template-columns: 1fr; }
   .anr-login-v2 { grid-template-columns: 1fr; }
   .anr-login-v2__visual {
-    min-height: 220px;
-    padding: 1.5rem;
+    min-height: 180px;
+    max-height: 34vh;
+    padding: 1.25rem 1.5rem;
     border-right: 0;
     border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    align-items: center;
+  }
+  .anr-login-v2__hero-logo { width: min(240px, 72%); margin-bottom: 0.75rem; }
+  .anr-login-v2__visual-inner h1 { font-size: 1.25rem; }
+  .anr-login-v2__visual-inner p { font-size: 0.88rem; }
+  .anr-login-v2__panel {
+    align-items: flex-start;
+    padding-top: 1.25rem;
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   }
 }
 
