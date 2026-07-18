@@ -28,6 +28,7 @@ type HeadlinesListenContextValue = {
   duration: number;
   hasPlaylist: boolean;
   initPlaylist: (tracks: HeadlineTrack[], startIndex?: number) => void;
+  clearPlaylist: () => void;
   togglePlay: () => void;
   play: () => void;
   pause: () => void;
@@ -178,6 +179,20 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
   }, []);
   const pause = useCallback(() => setPlaying(false), []);
 
+  /** Close the player entirely — stop audio and drop the playlist */
+  const clearPlaylist = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeAttribute("src");
+    }
+    setPlaying(false);
+    setTracks([]);
+    setIndex(0);
+    setCurrentTime(0);
+    setDuration(0);
+  }, []);
+
   const next = useCallback(() => {
     if (index < tracks.length - 1) {
       articleSpeechController.cancel();
@@ -220,6 +235,7 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
       duration,
       hasPlaylist: tracks.length > 0,
       initPlaylist,
+      clearPlaylist,
       togglePlay,
       play,
       pause,
@@ -239,6 +255,7 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
       currentTime,
       duration,
       initPlaylist,
+      clearPlaylist,
       togglePlay,
       play,
       pause,
