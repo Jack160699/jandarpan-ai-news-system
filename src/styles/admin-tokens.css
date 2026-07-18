@@ -1,0 +1,86 @@
+/* Jan Darpan Admin Design Tokens — restrained navy / maroon / gold */
+
+:root {
+  --jd-navy-950: #070b14;
+  --jd-navy-900: #0c1220;
+  --jd-navy-850: #111827;
+  --jd-navy-800: #161f2e;
+  --jd-slate-700: #334155;
+  --jd-slate-500: #64748b;
+  --jd-slate-400: #94a3b8;
+  --jd-slate-300: #cbd5e1;
+  --jd-ink: #f4f6f8;
+  --jd-ink-muted: #9aa6b2;
+
+  --jd-red-700: #7f1d1d;
+  --jd-red-600: #991b1b;
+  --jd-red-500: #b91c1c;
+  --jd-red-soft: rgba(185, 28, 28, 0.16);
+
+  --jd-blue-700: #1e3a5f;
+  --jd-blue-500: #2563eb;
+  --jd-blue-soft: rgba(37, 99, 235, 0.14);
+
+  --jd-gold-500: #c9a227;
+  --jd-gold-soft: rgba(201, 162, 39, 0.14);
+
+  --jd-ok: #22c55e;
+  --jd-ok-soft: rgba(34, 197, 94, 0.14);
+  --jd-warn: #d97706;
+  --jd-warn-soft: rgba(217, 119, 6, 0.14);
+  --jd-crit: #e11d48;
+  --jd-crit-soft: rgba(225, 29, 72, 0.14);
+  --jd-info: #3b82f6;
+  --jd-info-soft: rgba(59, 130, 246, 0.14);
+
+  --jd-radius-sm: 8px;
+  --jd-radius: 12px;
+  --jd-radius-lg: 16px;
+  --jd-border: rgba(148, 163, 184, 0.14);
+  --jd-border-strong: rgba(148, 163, 184, 0.28);
+  --jd-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+
+  --jd-sidebar-w: 280px;
+  --jd-sidebar-collapsed: 76px;
+  --jd-topbar-h: 56px;
+  --jd-content-max: 1400px;
+  --jd-font: "Segoe UI", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --jd-font-display: "Segoe UI Semibold", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}
+
+.anr {
+  --anr-bg: var(--jd-navy-950);
+  --anr-surface: rgba(17, 24, 39, 0.92);
+  --anr-surface-2: var(--jd-navy-850);
+  --anr-surface-3: var(--jd-navy-800);
+  --anr-border: var(--jd-border);
+  --anr-text: var(--jd-ink);
+  --anr-muted: var(--jd-ink-muted);
+  --anr-accent: var(--jd-red-500);
+  --anr-accent-soft: var(--jd-red-soft);
+  --anr-live: var(--jd-crit);
+  --anr-success: var(--jd-ok);
+  --anr-danger: var(--jd-crit);
+  --anr-info: var(--jd-info);
+  --anr-warn: var(--jd-warn);
+  font-family: var(--jd-font);
+  background:
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(127, 29, 29, 0.12), transparent 55%),
+    radial-gradient(ellipse 50% 35% at 0% 100%, rgba(30, 58, 95, 0.18), transparent 50%),
+    var(--jd-navy-950);
+}
+
+.anr[data-theme="light"] {
+  --anr-bg: #f3f5f8;
+  --anr-surface: rgba(255, 255, 255, 0.94);
+  --anr-surface-2: #eef1f6;
+  --anr-surface-3: #ffffff;
+  --anr-border: rgba(15, 23, 42, 0.1);
+  --anr-text: #0f172a;
+  --anr-muted: #64748b;
+  --anr-accent: var(--jd-red-600);
+  --anr-accent-soft: rgba(153, 27, 27, 0.1);
+  background:
+    radial-gradient(ellipse 50% 40% at 100% 0%, rgba(153, 27, 27, 0.06), transparent 55%),
+    #f3f5f8;
+}

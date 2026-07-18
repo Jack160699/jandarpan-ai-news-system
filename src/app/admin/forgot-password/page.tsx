@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-const LOGO_SRC = "/brand/jan-darpan-mark.svg";
+const LOGO_SRC = "/brand/jan-darpan-mark.png";
 
 export default function AdminForgotPasswordPage() {
   const [email, setEmail] = useState("");

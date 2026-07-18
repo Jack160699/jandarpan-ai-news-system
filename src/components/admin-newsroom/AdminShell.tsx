@@ -1,8 +1,10 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Bell,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -11,24 +13,26 @@ import {
   Search,
   Sun,
   UserCircle2,
+  X,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
-import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
+import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
+import { NotificationCentre } from "@/components/admin-newsroom/NotificationCentre";
 import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
-import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
-import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
+import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
 import {
+  primaryWorkspacesForRole,
   resolveWorkspaceFromPath,
-  workspacesForRole,
+  secondaryWorkspacesForRole,
   type AdminWorkspaceId,
 } from "@/lib/admin-platform/workspaces";
+import { navIcon } from "@/lib/admin-platform/nav-icons";
 import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { hasResolvedRole } from "@/lib/auth/admin-permissions";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
+
+const COLLAPSE_KEY = "jd-admin-sidebar-collapsed";
 
 type AdminShellProps = {
   title: string;
@@ -37,7 +41,6 @@ type AdminShellProps = {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  /** Hide the page header chrome when the page provides its own */
   hidePageHeader?: boolean;
 };
 
@@ -51,24 +54,67 @@ export function AdminShell({
   hidePageHeader = false,
 }: AdminShellProps) {
   const pathname = usePathname();
-  const {
-    email,
-    role,
-    tenantName,
-    data,
-    theme,
-    setTheme,
-    toast,
-    roleResolved,
-  } = useAdminNewsroom();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [localSearch, setLocalSearch] = useState("");
+  const { email, role, tenantName, theme, setTheme, toast, roleResolved } =
+    useAdminNewsroom();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState("");
+  const [systemState, setSystemState] = useState<"healthy" | "degraded" | "unknown">(
+    "unknown"
+  );
   const search = searchValue ?? localSearch;
   const setSearch = onSearchChange ?? setLocalSearch;
 
   useHydrationSafe("admin_shell");
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      try {
+        if (window.localStorage.getItem(COLLAPSE_KEY) === "1") {
+          setCollapsed(true);
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function probe() {
+      try {
+        const res = await fetch("/api/admin/ops/health", { credentials: "include" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        if (json.status === "healthy" || json.ok === true) setSystemState("healthy");
+        else if (json.status === "degraded" || json.status === "unhealthy") {
+          setSystemState("degraded");
+        }
+      } catch {
+        /* optional for non-monitoring roles */
+      }
+    }
+    void probe();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v;
+      try {
+        window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   async function signOut() {
     await fetch("/api/dashboard/auth/logout", {
@@ -81,169 +127,219 @@ export function AdminShell({
 
   const canonicalRole = role ? normalizeDashboardRole(String(role)) : null;
 
-  const availableWorkspaces = useMemo(() => {
+  const primaryWorkspaces = useMemo(() => {
     if (!roleResolved || !canonicalRole) return [];
-    return workspacesForRole(canonicalRole).filter((ws) => {
-      if (ws.permission === "super_admin") {
-        return isSuperAdmin(canonicalRole);
-      }
-      return (
+    return primaryWorkspacesForRole(canonicalRole).filter(
+      (ws) =>
         canAccessAdminRoute(canonicalRole, ws.homeHref) ||
         ws.items.some((item) => canAccessAdminRoute(canonicalRole, item.href))
-      );
-    });
+    );
+  }, [canonicalRole, roleResolved]);
+
+  const secondaryWorkspaces = useMemo(() => {
+    if (!roleResolved || !canonicalRole) return [];
+    return secondaryWorkspacesForRole(canonicalRole);
   }, [canonicalRole, roleResolved]);
 
   const activeWorkspaceId: AdminWorkspaceId = resolveWorkspaceFromPath(pathname);
   const activeWorkspace =
-    availableWorkspaces.find((w) => w.id === activeWorkspaceId) ??
-    availableWorkspaces[0] ??
+    [...primaryWorkspaces, ...secondaryWorkspaces].find(
+      (w) => w.id === activeWorkspaceId
+    ) ??
+    primaryWorkspaces[0] ??
     null;
 
   const visibleItems = useMemo(() => {
     if (!activeWorkspace || !roleResolved || !canonicalRole) return [];
     return activeWorkspace.items.filter((item) => {
       if (item.href === "/admin/team" || item.href === "/admin/schema") {
-        return hasResolvedRole({ role: canonicalRole, authReady: roleResolved }) && isSuperAdmin(canonicalRole);
-      }
-      if (item.href === "/admin/billing") {
-        return canAccessAdminRoute(canonicalRole, item.href);
+        return (
+          hasResolvedRole({ role: canonicalRole, authReady: roleResolved }) &&
+          isSuperAdmin(canonicalRole)
+        );
       }
       return canAccessAdminRoute(canonicalRole, item.href);
     });
   }, [activeWorkspace, canonicalRole, roleResolved]);
 
-  const activeLabel = useMemo(
-    () => visibleItems.find((item) => item.href === pathname)?.label ?? title,
-    [pathname, visibleItems, title]
+  const stateLabel =
+    systemState === "healthy"
+      ? "Production · Healthy"
+      : systemState === "degraded"
+        ? "Production · Degraded"
+        : "Production";
+
+  const navCompact = collapsed && !mobileOpen;
+
+  const sidebarInner = (
+    <>
+      <div className="anr-sidebar__brand">
+        <Link href="/admin/overview" className="anr-brand-link" onClick={() => setMobileOpen(false)}>
+          {collapsed && !mobileOpen ? (
+            <Image
+              src={JAN_DARPAN_BRAND_ASSETS.mark}
+              alt="Jan Darpan"
+              width={40}
+              height={40}
+              className="anr-brand-mark"
+              priority
+            />
+          ) : (
+            <Image
+              src={JAN_DARPAN_BRAND_ASSETS.logo}
+              alt="Jan Darpan Chhattisgarh"
+              width={196}
+              height={40}
+              className="anr-brand-logo"
+              priority
+            />
+          )}
+        </Link>
+        {!collapsed || mobileOpen ? (
+          <p className="anr-meta anr-brand-tag">Command Centre</p>
+        ) : null}
+      </div>
+
+      {(!collapsed || mobileOpen) && primaryWorkspaces.length > 1 ? (
+        <div className="anr-workspace-switcher">
+          <button
+            type="button"
+            className="anr-workspace-switcher__trigger"
+            onClick={() => setWorkspaceOpen((v) => !v)}
+            aria-expanded={workspaceOpen}
+          >
+            <span>
+              <strong>{activeWorkspace?.label ?? "Workspace"}</strong>
+              <em>{activeWorkspace?.description ?? ""}</em>
+            </span>
+            <ChevronDown size={14} aria-hidden />
+          </button>
+          {workspaceOpen ? (
+            <ul className="anr-workspace-switcher__menu" role="listbox">
+              {primaryWorkspaces.map((ws) => (
+                <li key={ws.id}>
+                  <Link
+                    href={ws.homeHref}
+                    className={
+                      ws.id === activeWorkspace?.id
+                        ? "anr-workspace-switcher__item anr-workspace-switcher__item--active"
+                        : "anr-workspace-switcher__item"
+                    }
+                    onClick={() => {
+                      setWorkspaceOpen(false);
+                      setMobileOpen(false);
+                    }}
+                    role="option"
+                    aria-selected={ws.id === activeWorkspace?.id}
+                  >
+                    <strong>{ws.label}</strong>
+                    <em>{ws.description}</em>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      <nav className="anr-nav" aria-label="Workspace navigation">
+        {!roleResolved ? (
+          <div className="anr-nav-loading">
+            <AdminAuthLoading label="Loading navigation…" />
+          </div>
+        ) : null}
+        {visibleItems.map((item) => {
+          const Icon = navIcon(item.iconKey);
+          const active =
+            pathname === item.href ||
+            (item.href !== activeWorkspace?.homeHref &&
+              pathname.startsWith(`${item.href}/`));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`anr-nav-link ${active ? "anr-nav-link--active" : ""}`}
+              title={navCompact ? item.label : undefined}
+              aria-label={item.label}
+              onClick={() => setMobileOpen(false)}
+            >
+              <Icon size={18} aria-hidden />
+              {!navCompact ? <span>{item.label}</span> : null}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="anr-sidebar__footer">
+        <button
+          type="button"
+          className="anr-btn anr-btn--ghost anr-sidebar__collapse"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {!collapsed || mobileOpen ? <span>Collapse</span> : null}
+        </button>
+
+        <div className="anr-sidebar__user-wrap">
+          <button
+            type="button"
+            className="anr-sidebar__user"
+            onClick={() => setAccountOpen((v) => !v)}
+            aria-expanded={accountOpen}
+            title={email || "Account"}
+          >
+            <UserCircle2 size={20} aria-hidden />
+            {!collapsed || mobileOpen ? (
+              <div>
+                <p>{email || "Newsroom"}</p>
+                <span>
+                  {roleResolved ? role : "…"} · {tenantName || "desk"}
+                </span>
+              </div>
+            ) : null}
+          </button>
+          {accountOpen ? (
+            <div className="anr-account-menu">
+              {secondaryWorkspaces.map((ws) => (
+                <Link
+                  key={ws.id}
+                  href={ws.homeHref}
+                  onClick={() => {
+                    setAccountOpen(false);
+                    setMobileOpen(false);
+                  }}
+                >
+                  {ws.label}
+                </Link>
+              ))}
+              <button type="button" onClick={signOut}>
+                Sign out
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </>
   );
 
   return (
     <div className="anr" data-theme={theme}>
-      <div className={`anr-shell ${isSidebarCollapsed ? "anr-shell--collapsed" : ""}`}>
-        <AnimatePresence>
-          {isMobileOpen ? (
-            <motion.button
-              type="button"
-              className="anr-backdrop"
-              onClick={() => setIsMobileOpen(false)}
-              aria-label="Close navigation backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-          ) : null}
-        </AnimatePresence>
+      <div className={`anr-shell ${collapsed ? "anr-shell--collapsed" : ""}`}>
+        {mobileOpen ? (
+          <button
+            type="button"
+            className="anr-backdrop"
+            aria-label="Close navigation"
+            onClick={() => setMobileOpen(false)}
+          />
+        ) : null}
 
         <aside
-          className={`anr-sidebar ${isMobileOpen ? "anr-sidebar--mobile-open" : ""}`}
+          className={`anr-sidebar ${mobileOpen ? "anr-sidebar--mobile-open" : ""}`}
+          aria-label="Admin navigation"
         >
-          <div className="anr-sidebar__brand">
-            <p className="anr-brand">Jandarpan</p>
-            {!isSidebarCollapsed ? (
-              <p className="anr-meta">Command Centre</p>
-            ) : null}
-          </div>
-
-          {!isSidebarCollapsed && availableWorkspaces.length > 1 ? (
-            <div className="anr-workspace-switcher">
-              <button
-                type="button"
-                className="anr-workspace-switcher__trigger"
-                onClick={() => setWorkspaceOpen((v) => !v)}
-                aria-expanded={workspaceOpen}
-                aria-haspopup="listbox"
-              >
-                <span>
-                  <strong>{activeWorkspace?.label ?? "Workspace"}</strong>
-                  <em>{activeWorkspace?.description ?? ""}</em>
-                </span>
-                <ChevronDown size={14} aria-hidden />
-              </button>
-              {workspaceOpen ? (
-                <ul className="anr-workspace-switcher__menu" role="listbox">
-                  {availableWorkspaces.map((ws) => (
-                    <li key={ws.id}>
-                      <Link
-                        href={ws.homeHref}
-                        className={
-                          ws.id === activeWorkspace?.id
-                            ? "anr-workspace-switcher__item anr-workspace-switcher__item--active"
-                            : "anr-workspace-switcher__item"
-                        }
-                        onClick={() => {
-                          setWorkspaceOpen(false);
-                          setIsMobileOpen(false);
-                        }}
-                        role="option"
-                        aria-selected={ws.id === activeWorkspace?.id}
-                      >
-                        <strong>{ws.label}</strong>
-                        <em>{ws.description}</em>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
-
-          <nav className="anr-nav" aria-busy={!roleResolved} aria-label="Workspace navigation">
-            {!roleResolved ? (
-              <div className="anr-nav-loading">
-                <AdminAuthLoading label="Loading navigation…" />
-              </div>
-            ) : null}
-            {visibleItems.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== activeWorkspace?.homeHref &&
-                  pathname.startsWith(`${item.href}/`));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileOpen(false)}
-                  className={`anr-nav-link ${active ? "anr-nav-link--active" : ""}`}
-                >
-                  {!isSidebarCollapsed ? <span>{item.label}</span> : <span aria-label={item.label}>·</span>}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="anr-sidebar__footer">
-            <button
-              type="button"
-              className="anr-btn anr-btn--ghost anr-sidebar__collapse"
-              onClick={() => setIsSidebarCollapsed((v) => !v)}
-              aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-              {!isSidebarCollapsed ? <span>Collapse</span> : null}
-            </button>
-            <div className="anr-sidebar__user">
-              <UserCircle2 size={18} />
-              {!isSidebarCollapsed ? (
-                <div>
-                  <p>{email || "Newsroom"}</p>
-                  <span>
-                    {roleResolved ? role : "…"} · {tenantName || "desk"}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-            {!isSidebarCollapsed ? (
-              <button
-                type="button"
-                className="anr-btn anr-btn--ghost"
-                style={{ marginTop: "0.5rem", width: "100%" }}
-                onClick={signOut}
-              >
-                Sign out
-              </button>
-            ) : null}
-          </div>
+          {sidebarInner}
         </aside>
 
         <main className="anr-main">
@@ -252,29 +348,39 @@ export function AdminShell({
               <button
                 type="button"
                 className="anr-btn anr-btn--ghost anr-mobile-toggle"
-                onClick={() => setIsMobileOpen((v) => !v)}
-                aria-label="Toggle sidebar"
+                onClick={() => setMobileOpen((v) => !v)}
+                aria-label="Open navigation"
               >
-                <Menu size={16} />
+                {mobileOpen ? <X size={16} /> : <Menu size={16} />}
               </button>
-              <div className="anr-search">
-                <Search size={14} />
+              <form
+                className="anr-search"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const q = search.trim();
+                  if (!q) return;
+                  window.location.assign(
+                    `/admin/stories?q=${encodeURIComponent(q)}`
+                  );
+                }}
+              >
+                <Search size={14} aria-hidden />
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder={
-                    searchPlaceholder ?? `Search ${activeLabel.toLowerCase()}...`
-                  }
-                  aria-label="Quick search"
+                  placeholder={searchPlaceholder ?? "Search stories, routes…"}
+                  aria-label="Command search"
                 />
-              </div>
+              </form>
             </div>
             <div className="anr-topbar__right">
-              <LiveIndicator label="Live" />
-              <ClientTime preset="clock" className="anr-clock" />
-              <button type="button" className="anr-btn anr-btn--ghost" aria-label="Notifications">
-                <Bell size={16} />
-              </button>
+              <span
+                className={`anr-env-pill anr-env-pill--${systemState}`}
+                title="Based on latest health check"
+              >
+                {stateLabel}
+              </span>
+              <NotificationCentre />
               <button
                 type="button"
                 className="anr-btn anr-btn--ghost"
@@ -287,12 +393,7 @@ export function AdminShell({
           </header>
 
           {!hidePageHeader ? (
-            <motion.header
-              className="anr-header"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-            >
+            <header className="anr-header">
               <div>
                 <p className="anr-meta">
                   {activeWorkspace?.label ?? "Admin"} · Jandarpan.news
@@ -300,23 +401,10 @@ export function AdminShell({
                 <h1>{title}</h1>
                 {subtitle ? <p className="anr-meta">{subtitle}</p> : null}
               </div>
-              <div>
-                {data ? (
-                  <p className="anr-meta">
-                    Updated <ClientTime iso={data.fetchedAt} preset="time" />
-                  </p>
-                ) : null}
-              </div>
-            </motion.header>
+            </header>
           ) : null}
 
-          <motion.section
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.24, delay: 0.04 }}
-          >
-            {children}
-          </motion.section>
+          <section className="anr-content">{children}</section>
         </main>
       </div>
       {toast ? <div className="anr-toast" role="status">{toast}</div> : null}

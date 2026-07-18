@@ -1,44 +1,17 @@
-/* Premium AI newsroom admin operating system */
+/* Premium Jan Darpan admin OS - base tokens come from admin-tokens.css */
 .anr {
-  --anr-bg: #09090b;
-  --anr-surface: rgba(20, 20, 24, 0.84);
-  --anr-surface-2: #18181c;
-  --anr-surface-3: #111114;
-  --anr-border: rgba(255, 255, 255, 0.1);
-  --anr-text: #f5f7fa;
-  --anr-muted: #99a1b0;
-  --anr-accent: #ff6b35;
-  --anr-accent-soft: rgba(255, 107, 53, 0.18);
-  --anr-live: #f43f5e;
-  --anr-success: #22c55e;
-  --anr-danger: #fb7185;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top right, rgba(255, 92, 56, 0.1), transparent 48%),
-    radial-gradient(circle at 12% 88%, rgba(245, 158, 11, 0.05), transparent 42%),
-    var(--anr-bg);
   color: var(--anr-text);
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-}
-
-.anr[data-theme="light"] {
-  --anr-bg: #f4f5f7;
-  --anr-surface: rgba(255, 255, 255, 0.86);
-  --anr-surface-2: #f7f7f9;
-  --anr-surface-3: #ffffff;
-  --anr-border: rgba(39, 39, 42, 0.16);
-  --anr-text: #111827;
-  --anr-muted: #6b7280;
 }
 
 .anr-shell {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: var(--jd-sidebar-w, 280px) 1fr;
   min-height: 100vh;
 }
 
 .anr-shell--collapsed {
-  grid-template-columns: 88px 1fr;
+  grid-template-columns: var(--jd-sidebar-collapsed, 76px) 1fr;
 }
 
 .anr-backdrop {
@@ -49,7 +22,7 @@
   position: sticky;
   top: 0;
   max-height: 100vh;
-  overflow: auto;
+  overflow: hidden;
   border-right: 1px solid var(--anr-border);
   background: color-mix(in srgb, var(--anr-surface) 96%, transparent);
   backdrop-filter: blur(14px);
@@ -100,7 +73,7 @@
 .anr-nav-link--active {
   color: var(--anr-text);
   background: var(--anr-accent-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--anr-accent) 48%, transparent), 0 0 18px rgba(245, 158, 11, 0.14);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--anr-accent) 48%, transparent), 0 0 18px rgba(185, 28, 28, 0.14);
 }
 
 .anr-sidebar__footer {
@@ -957,7 +930,7 @@
   color: #f97316;
 }
 
-/* Intelligence Center — Bloomberg terminal × SaaS */
+/* Intelligence Center ? Bloomberg terminal ? SaaS */
 .anr-icenter {
   --ic-bg: #0a0a0c;
   --ic-panel: #111114;
@@ -1055,7 +1028,7 @@
   font-size: 0.72rem;
 }
 
-/* ─── Admin login (isolated full-screen) ─── */
+/* ??? Admin login (isolated full-screen) ??? */
 .anr-login-root {
   position: fixed;
   inset: 0;
@@ -1246,7 +1219,7 @@
   }
 }
 
-/* ─── Team management ─── */
+/* ??? Team management ??? */
 .anr-card__head--split {
   display: flex;
   align-items: flex-start;
@@ -1553,7 +1526,7 @@
   }
 }
 
-/* ─── Team premium (Linear / Notion) ─── */
+/* ??? Team premium (Linear / Notion) ??? */
 .anr-team--premium {
   display: flex;
   flex-direction: column;
@@ -1943,7 +1916,7 @@
   }
 }
 
-/* ─── Jan Darpan article editor (Arc / NYT CMS) ─── */
+/* ??? Jan Darpan article editor (Arc / NYT CMS) ??? */
 @keyframes jd-spin {
   to {
     transform: rotate(360deg);
@@ -1962,9 +1935,9 @@
   --anr-border: rgba(255, 255, 255, 0.1);
   --anr-text: #f5f7fa;
   --anr-muted: #99a1b0;
-  --anr-accent: #f59e0b;
-  --anr-accent-soft: rgba(245, 158, 11, 0.16);
-  --anr-danger: #fb7185;
+  --anr-accent: var(--jd-red-500, #b91c1c);
+  --anr-accent-soft: var(--jd-red-soft, rgba(185, 28, 28, 0.16));
+  --anr-danger: var(--jd-crit, #e11d48);
   min-height: calc(100vh - 2rem);
   margin: -0.5rem -0.75rem 0;
   background: var(--anr-bg);
@@ -2047,8 +2020,8 @@
   --anr-border: rgba(39, 39, 42, 0.14);
   --anr-text: #111827;
   --anr-muted: #6b7280;
-  --anr-accent: #ea580c;
-  --anr-accent-soft: rgba(234, 88, 12, 0.12);
+  --anr-accent: var(--jd-red-600, #991b1b);
+  --anr-accent-soft: rgba(153, 27, 27, 0.1);
 }
 
 .jd-editor-main {
@@ -2308,7 +2281,7 @@
 }
 
 .anr-intel-inspector__summary::before {
-  content: "▸";
+  content: "?";
   display: inline-block;
   margin-right: 0.35rem;
   color: var(--anr-muted);
@@ -3037,7 +3010,7 @@
   text-decoration: none;
 }
 
-/* ─── AI Assistant (Cursor-style desk panel) ─── */
+/* ??? AI Assistant (Cursor-style desk panel) ??? */
 .jd-ai-desktop {
   display: block;
   min-height: 0;
@@ -3168,7 +3141,7 @@
   gap: 0.65rem;
 }
 
-/* ─── AI Content Intake ─── */
+/* ??? AI Content Intake ??? */
 .jd-ai-intake__intro {
   margin: 0;
   font-size: 0.72rem;
@@ -4066,7 +4039,7 @@
   }
 }
 
-/* ─── Editorial workflow kanban ─── */
+/* ??? Editorial workflow kanban ??? */
 .wf-skeleton {
   height: 20rem;
   border-radius: 14px;
@@ -4619,12 +4592,12 @@
   margin: 0 0 0.5rem;
 }
 
-/* ──────────────────────────────────────────────────────────
-   Mobile-first density pass (320–768)
+/* ??????????????????????????????????????????????????????????
+   Mobile-first density pass (320?768)
    - tighter spacing, clamp typography
    - safer overflow behavior
    - editor toolbar/table/chart touch ergonomics
-────────────────────────────────────────────────────────── */
+?????????????????????????????????????????????????????????? */
 
 .anr,
 .anr-main,
@@ -4890,7 +4863,7 @@
   flex-wrap: wrap;
 }
 
-/* ─── Workspace switcher & command centre ─── */
+/* ??? Workspace switcher & command centre ??? */
 .anr-workspace-switcher {
   position: relative;
   padding: 0 0.75rem 0.75rem;

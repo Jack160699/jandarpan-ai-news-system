@@ -1,0 +1,66 @@
+"use client";
+
+import type { LucideIcon } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  BookOpen,
+  Bot,
+  Brain,
+  Compass,
+  CreditCard,
+  Database,
+  FileText,
+  GitBranch,
+  HeartPulse,
+  Images,
+  Landmark,
+  LayoutDashboard,
+  LineChart,
+  MessagesSquare,
+  PenLine,
+  Radio,
+  Search,
+  ServerCog,
+  Settings,
+  Sparkles,
+  TrendingUp,
+  Users,
+  Wand2,
+  Cpu,
+  Image as ImageIcon,
+} from "lucide-react";
+
+const MAP: Record<string, LucideIcon> = {
+  layout: LayoutDashboard,
+  landmark: Landmark,
+  book: BookOpen,
+  file: FileText,
+  pen: PenLine,
+  git: GitBranch,
+  activity: Activity,
+  radio: Radio,
+  compass: Compass,
+  sparkles: Sparkles,
+  image: ImageIcon,
+  images: Images,
+  messages: MessagesSquare,
+  brain: Brain,
+  bot: Bot,
+  chart: BarChart3,
+  line: LineChart,
+  search: Search,
+  trending: TrendingUp,
+  wand: Wand2,
+  cpu: Cpu,
+  card: CreditCard,
+  heart: HeartPulse,
+  server: ServerCog,
+  database: Database,
+  users: Users,
+  settings: Settings,
+};
+
+export function navIcon(iconKey: string): LucideIcon {
+  return MAP[iconKey] ?? LayoutDashboard;
+}

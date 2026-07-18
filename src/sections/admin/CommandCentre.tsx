@@ -1,27 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
 
-type DetailKey = "publishing" | "attention" | "traffic" | "costs" | null;
+function asRecord(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+}
 
-function StatusPill({
-  tone,
-  label,
-}: {
-  tone: "ok" | "warn" | "bad" | "neutral";
-  label: string;
-}) {
-  return <span className={`anr-cc-pill anr-cc-pill--${tone}`}>{label}</span>;
+function money(v: unknown): string {
+  const r = asRecord(v);
+  if (typeof r.display === "string") return r.display;
+  if (typeof r.inr === "number") return `₹${r.inr.toLocaleString("en-IN")}`;
+  if (typeof r.usd === "number") return `$${r.usd.toFixed(2)}`;
+  return "—";
 }
 
 export function CommandCentre() {
   const { data, loading, error } = useAdminNewsroom();
-  const [openDetail, setOpenDetail] = useState<DetailKey>(null);
+  const [costToday, setCostToday] = useState<string>("—");
+  const [platformTone, setPlatformTone] = useState<"ok" | "warn" | "crit" | "neutral">(
+    "neutral"
+  );
+  const [platformLabel, setPlatformLabel] = useState("Checking platform…");
 
   const generated = useMemo(
     () => (Array.isArray(data?.generatedArticles) ? data.generatedArticles : []),
@@ -32,8 +35,7 @@ export function CommandCentre() {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
     return generated.filter((a) => {
-      if (!a.published_at) return false;
-      if (a.editorial_status === "rejected") return false;
+      if (!a.published_at || a.editorial_status === "rejected") return false;
       return new Date(a.published_at).getTime() >= start.getTime();
     }).length;
   }, [generated]);
@@ -42,14 +44,15 @@ export function CommandCentre() {
     () => generated.filter((a) => a.editorial_status === "pending").length,
     [generated]
   );
-  const failed = useMemo(() => {
-    const q = Array.isArray(data?.aiQueue) ? data.aiQueue : [];
-    return q.filter((item) => Boolean(item.error)).length;
-  }, [data]);
 
   const queueDepth = useMemo(() => {
     const q = Array.isArray(data?.aiQueue) ? data.aiQueue : [];
     return q.length;
+  }, [data]);
+
+  const failedQueue = useMemo(() => {
+    const q = Array.isArray(data?.aiQueue) ? data.aiQueue : [];
+    return q.filter((item) => Boolean(item.error)).length;
   }, [data]);
 
   const ingestionFailures = useMemo(() => {
@@ -57,186 +60,180 @@ export function CommandCentre() {
     return Array.isArray(f) ? f.length : 0;
   }, [data]);
 
-  const platformHealthy = failed === 0 && ingestionFailures === 0 && queueDepth < 50;
+  useEffect(() => {
+    let cancelled = false;
+    async function loadExtras() {
+      const [execRes, healthRes] = await Promise.allSettled([
+        fetch("/api/admin/ops/executive", { credentials: "include" }),
+        fetch("/api/admin/ops/health", { credentials: "include" }),
+      ]);
+      if (cancelled) return;
+      if (execRes.status === "fulfilled" && execRes.value.ok) {
+        try {
+          const json = await execRes.value.json();
+          const overview = asRecord(asRecord(json.dashboard).overview);
+          setCostToday(money(overview.todaySpend));
+        } catch {
+          /* keep placeholder */
+        }
+      }
+      if (healthRes.status === "fulfilled" && healthRes.value.ok) {
+        try {
+          const json = await healthRes.value.json();
+          const status = String(json.status ?? (json.ok ? "healthy" : "unhealthy"));
+          if (status === "healthy") {
+            setPlatformTone("ok");
+            setPlatformLabel("Platform healthy");
+          } else if (status === "degraded") {
+            setPlatformTone("warn");
+            setPlatformLabel("Platform degraded");
+          } else {
+            setPlatformTone("crit");
+            setPlatformLabel("Platform needs attention");
+          }
+        } catch {
+          /* keep placeholder */
+        }
+      }
+    }
+    void loadExtras();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const healthSummary = platformHealthy
-    ? `Publishing is healthy. ${publishedToday} ${publishedToday === 1 ? "story was" : "stories were"} published today.`
-    : `Attention needed. ${failed + ingestionFailures} issue${failed + ingestionFailures === 1 ? "" : "s"} require review.`;
-
-  const attentionItems = useMemo(() => {
+  const attention = useMemo(() => {
     const items: Array<{ label: string; href: string; count: number }> = [];
     if (pending > 0) {
       items.push({ label: "Stories waiting for review", href: "/admin/stories", count: pending });
     }
-    if (failed > 0) {
-      items.push({ label: "Failed stories", href: "/admin/stories?status=failed", count: failed });
+    if (failedQueue > 0) {
+      items.push({ label: "AI queue failures", href: "/admin/system", count: failedQueue });
     }
     if (queueDepth > 20) {
-      items.push({ label: "AI queue backlog", href: "/admin/technical", count: queueDepth });
+      items.push({ label: "Queue backlog", href: "/admin/technical", count: queueDepth });
     }
     if (ingestionFailures > 0) {
       items.push({
-        label: "Recent ingestion failures",
+        label: "Ingestion failures",
         href: "/admin/ingestion",
         count: ingestionFailures,
       });
     }
     return items;
-  }, [pending, failed, queueDepth, ingestionFailures]);
-
-  function toggle(key: Exclude<DetailKey, null>) {
-    setOpenDetail((prev) => (prev === key ? null : key));
-  }
+  }, [pending, failedQueue, queueDepth, ingestionFailures]);
 
   if (loading && !data) {
     return (
-      <div className="anr-cc" aria-busy="true">
-        <div className="anr-cc-skeleton" />
-        <div className="anr-cc-skeleton" />
-        <div className="anr-cc-skeleton" />
+      <div className="anr-dash">
+        <div className="anr-kpi-strip">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="anr-kpi-compact anr-skeleton-block" />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error && !data) {
-    return (
-      <EmptyState
-        title="Command centre unavailable"
-        description={error}
-      />
-    );
+    return <EmptyState title="Command centre unavailable" description={error} />;
   }
 
   return (
-    <div className="anr-cc">
-      <section className="anr-cc-hero" aria-labelledby="cc-health-title">
-        <div className="anr-cc-hero__row">
-          <div>
-            <p className="anr-meta">Platform status</p>
-            <h2 id="cc-health-title" className="anr-cc-hero__title">
-              {platformHealthy ? "Operating normally" : "Needs attention"}
-            </h2>
-            <p className="anr-cc-hero__summary">{healthSummary}</p>
-          </div>
-          <StatusPill
-            tone={platformHealthy ? "ok" : "warn"}
-            label={platformHealthy ? "Healthy" : "Review"}
-          />
-        </div>
-        {data?.fetchedAt ? (
-          <p className="anr-meta">
-            As of <ClientTime iso={data.fetchedAt} preset="time" />
+    <div className="anr-dash">
+      <section className={`anr-status-hero anr-status-hero--${platformTone}`}>
+        <div>
+          <p className="anr-meta">Overall system state</p>
+          <h2>{platformLabel}</h2>
+          <p className="anr-cc-hero__summary">
+            {publishedToday} published today · {pending} awaiting review · queue {queueDepth}
           </p>
-        ) : null}
+          {data?.fetchedAt ? (
+            <p className="anr-meta">
+              Editorial snapshot <ClientTime iso={data.fetchedAt} preset="time" />
+            </p>
+          ) : null}
+        </div>
+        <div className="anr-quick-actions">
+          <Link href="/admin/stories">Review stories</Link>
+          <Link href="/admin/business">Business</Link>
+          <Link href="/admin/technical">Platform</Link>
+        </div>
       </section>
 
-      <section className="anr-cc-grid" aria-label="Key metrics">
-        <article className="anr-cc-card">
+      <div className="anr-kpi-strip">
+        <article className="anr-kpi-compact">
           <p className="anr-meta">Published today</p>
           <strong>{publishedToday}</strong>
-          <p className="anr-cc-card__ctx">Stories live on the site</p>
-          <button type="button" className="anr-cc-link" onClick={() => toggle("publishing")}>
-            {openDetail === "publishing" ? "Hide details" : "View details"}
-            {openDetail === "publishing" ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {openDetail === "publishing" ? (
-            <div className="anr-cc-detail">
-              <p>Pending review: {pending}</p>
-              <p>AI queue depth: {queueDepth}</p>
-              <Link href="/admin/articles">Open published stories →</Link>
-            </div>
-          ) : null}
+          <p className="anr-kpi-compact__hint">Live on the site</p>
         </article>
-
-        <article className="anr-cc-card">
+        <article className="anr-kpi-compact">
           <p className="anr-meta">Needs attention</p>
-          <strong>{attentionItems.reduce((n, i) => n + i.count, 0)}</strong>
-          <p className="anr-cc-card__ctx">
-            {attentionItems.length === 0
-              ? "Nothing urgent right now"
-              : `${attentionItems.length} area${attentionItems.length === 1 ? "" : "s"} to review`}
-          </p>
-          <button type="button" className="anr-cc-link" onClick={() => toggle("attention")}>
-            {openDetail === "attention" ? "Hide details" : "See more"}
-            {openDetail === "attention" ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          </button>
-          {openDetail === "attention" ? (
-            <ul className="anr-cc-detail">
-              {attentionItems.length === 0 ? (
-                <li>All clear.</li>
-              ) : (
-                attentionItems.map((item) => (
-                  <li key={item.href}>
-                    <Link href={item.href}>
-                      {item.label} ({item.count})
-                    </Link>
-                  </li>
-                ))
-              )}
-            </ul>
-          ) : null}
+          <strong>{attention.reduce((n, i) => n + i.count, 0)}</strong>
+          <p className="anr-kpi-compact__hint">Editorial + pipeline</p>
         </article>
-
-        <article className="anr-cc-card">
+        <article className="anr-kpi-compact">
+          <p className="anr-meta">Pipeline queue</p>
+          <strong>{queueDepth}</strong>
+          <p className="anr-kpi-compact__hint">AI jobs waiting</p>
+        </article>
+        <article className="anr-kpi-compact">
+          <p className="anr-meta">Ingestion failures</p>
+          <strong>{ingestionFailures}</strong>
+          <p className="anr-kpi-compact__hint">Recent source failures</p>
+        </article>
+        <article className="anr-kpi-compact">
+          <p className="anr-meta">AI spend today</p>
+          <strong>{costToday}</strong>
+          <p className="anr-kpi-compact__hint">
+            {costToday === "—" ? "Open costs if unavailable" : "From finance dashboard"}
+          </p>
+          <Link href="/admin/executive" className="anr-text-link">
+            Costs
+          </Link>
+        </article>
+        <article className="anr-kpi-compact">
           <p className="anr-meta">Traffic & SEO</p>
           <strong>—</strong>
-          <p className="anr-cc-card__ctx">Open Business workspace for live metrics</p>
-          <Link href="/admin/business" className="anr-cc-link">
-            View details <ChevronRight size={14} />
+          <p className="anr-kpi-compact__hint">Open Business for live metrics</p>
+          <Link href="/admin/business" className="anr-text-link">
+            Business
           </Link>
         </article>
+      </div>
 
-        <article className="anr-cc-card">
-          <p className="anr-meta">AI cost</p>
-          <strong>—</strong>
-          <p className="anr-cc-card__ctx">Spend and forecasts in Costs & AI spend</p>
-          <Link href="/admin/executive" className="anr-cc-link">
-            View details <ChevronRight size={14} />
-          </Link>
-        </article>
-      </section>
-
-      <section className="anr-cc-actions" aria-label="Recommended actions">
-        <h3>Recommended actions</h3>
-        <ul>
-          {attentionItems.slice(0, 3).map((item) => (
-            <li key={item.href}>
-              <Link href={item.href}>{item.label}</Link>
-            </li>
-          ))}
-          {attentionItems.length === 0 ? (
-            <>
-              <li>
-                <Link href="/admin/editorial">Review editorial home</Link>
-              </li>
-              <li>
-                <Link href="/admin/business">Check SEO & traffic</Link>
-              </li>
-              <li>
-                <Link href="/admin/technical">Confirm system health</Link>
-              </li>
-            </>
-          ) : null}
-        </ul>
-      </section>
-
-      <section className="anr-cc-quick" aria-label="Quick actions">
-        <h3>Quick actions</h3>
-        <div className="anr-cc-quick__row">
-          <Link href="/admin/stories" className="anr-btn anr-btn--primary">
-            Review stories
-          </Link>
-          <Link href="/admin/live-wire" className="anr-btn anr-btn--ghost">
-            Breaking news
-          </Link>
-          <Link href="/admin/technical" className="anr-btn anr-btn--ghost">
-            System health
-          </Link>
-          <Link href="/admin/executive" className="anr-btn anr-btn--ghost">
-            AI spend
-          </Link>
-        </div>
-      </section>
+      <div className="anr-dash-grid">
+        <section className="anr-panel">
+          <header className="anr-panel__head">
+            <h2>Needs attention now</h2>
+          </header>
+          {attention.length === 0 ? (
+            <div className="anr-empty">
+              <p>Nothing urgent in the editorial snapshot.</p>
+            </div>
+          ) : (
+            <ul className="anr-dense-list">
+              {attention.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href}>{item.label}</Link>
+                  <em>{item.count}</em>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section className="anr-panel">
+          <header className="anr-panel__head">
+            <h2>Deep links</h2>
+          </header>
+          <div className="anr-quick-actions">
+            <Link href="/admin/editorial">Editorial home</Link>
+            <Link href="/admin/live-wire">Breaking & live</Link>
+            <Link href="/admin/seo/search-console">Search Console</Link>
+            <Link href="/admin/ingestion">Ingestion</Link>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
