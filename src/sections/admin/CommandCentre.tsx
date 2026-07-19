@@ -202,7 +202,7 @@ export function CommandCentre() {
     return (
       <Av3Panel title="Command centre unavailable">
         <p className="av3-note">{error}</p>
-        <button type="button" className="anr-btn anr-btn--ghost" onClick={() => void load(true)}>
+        <button type="button" className="av3-btn av3-btn--ghost" onClick={() => void load(true)}>
           Retry
         </button>
       </Av3Panel>
@@ -289,8 +289,7 @@ export function CommandCentre() {
         )}
       </Av3Panel>
 
-      <section>
-        <h3 className="av3-section-title">Today</h3>
+      <Av3Panel title="Today" subtitle="Daily operating metrics vs yesterday where available" compact>
         <Av3MetricGrid className="av3-kpi-compact">
           {canEditorial ? (
             <Av3Metric
@@ -404,23 +403,23 @@ export function CommandCentre() {
             </>
           ) : null}
         </Av3MetricGrid>
-      </section>
+      </Av3Panel>
 
       {canCosts && !data.costs?.available ? (
         <div className="av3-empty-panel">
           <strong>AI cost reporting unavailable</strong>
           <p>Connect executive costs to track daily spend.</p>
-          <Link href="/admin/executive">Open Executive costs</Link>
+          <Link href="/admin/executive">Review cost setup</Link>
         </div>
       ) : null}
 
-      <section className="av3-pulse-grid">
+      <section className="av3-pulse-grid" aria-label="Workspace pulse">
         {canEditorial ? (
-          <Av3Panel title="Editorial" subtitle="Newsroom flow">
+          <Av3Panel title="Editorial" subtitle="What to clear next">
             <ul className="av3-status-rows">
               <li>
-                <span>Awaiting review</span>
-                <strong>{data.editorial?.awaitingReview ?? "—"}</strong>
+                <span>Queue depth</span>
+                <strong>{data.today?.queuePending ?? "—"}</strong>
               </li>
               <li>
                 <span>Failed stories</span>
@@ -434,26 +433,20 @@ export function CommandCentre() {
               </li>
             </ul>
             <Link href="/admin/stories" className="av3-panel-link">
-              Open Story Queue
+              Story Queue
             </Link>
           </Av3Panel>
         ) : null}
 
         {canSeo ? (
-          <Av3Panel title="Audience & SEO" subtitle="Growth signals">
+          <Av3Panel title="Audience & SEO" subtitle="Quality signals">
             <ul className="av3-status-rows">
               <li>
-                <span>Impressions</span>
+                <span>CTR</span>
                 <strong>
-                  {data.seo?.impressions != null
-                    ? data.seo.impressions.toLocaleString("en-IN")
+                  {data.seo && Number.isFinite(data.seo.ctr)
+                    ? `${Number(data.seo.ctr).toFixed(1)}%`
                     : "—"}
-                </strong>
-              </li>
-              <li>
-                <span>Clicks</span>
-                <strong>
-                  {data.seo?.clicks != null ? data.seo.clicks.toLocaleString("en-IN") : "—"}
                 </strong>
               </li>
               <li>
@@ -464,22 +457,26 @@ export function CommandCentre() {
                     : "—"}
                 </strong>
               </li>
+              <li>
+                <span>Console</span>
+                <strong>{data.seo?.connected ? "Connected" : "Not connected"}</strong>
+              </li>
             </ul>
-            <Link href="/admin/business" className="av3-panel-link">
-              Open Business
+            <Link href="/admin/seo/search-console" className="av3-panel-link">
+              Search Console
             </Link>
           </Av3Panel>
         ) : null}
 
         {canPlatform ? (
-          <Av3Panel title="Platform" subtitle="Reliability">
+          <Av3Panel title="Platform" subtitle="Next reliability checks">
             <ul className="av3-status-rows">
               <li>
-                <span>Status</span>
-                <strong>{platform?.label ?? "Unknown"}</strong>
+                <span>Open incidents</span>
+                <strong>{incidents.length}</strong>
               </li>
               <li>
-                <span>Critical</span>
+                <span>Critical services</span>
                 <strong>{platform?.criticalCount ?? 0}</strong>
               </li>
               <li>
@@ -488,7 +485,7 @@ export function CommandCentre() {
               </li>
             </ul>
             <Link href="/admin/health" className="av3-panel-link">
-              Open Platform health
+              Platform health
             </Link>
           </Av3Panel>
         ) : null}

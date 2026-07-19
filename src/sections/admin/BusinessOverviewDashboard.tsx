@@ -234,7 +234,7 @@ export function BusinessOverviewDashboard() {
               !metric.available && metric.setupHref ? (
                 <>
                   {metric.hint}{" "}
-                  <Link href={metric.setupHref} className="anr-text-link">
+                  <Link href={metric.setupHref} className="av3-panel-link">
                     Open setup{metric.source ? ` (${metric.source})` : ""}
                   </Link>
                 </>
@@ -246,12 +246,12 @@ export function BusinessOverviewDashboard() {
         ))}
       </Av3MetricGrid>
 
-      <div className="anr-dash-grid">
+      <div className="av3-pulse-grid">
         <Av3Panel
           title="Top-performing stories"
           subtitle="Audience leaders this week"
           action={
-            <Link href="/admin/analytics" className="anr-text-link">
+            <Link href="/admin/analytics" className="av3-panel-link">
               Audience
             </Link>
           }
@@ -261,7 +261,7 @@ export function BusinessOverviewDashboard() {
               title="No story performance rows yet"
               message="Audience analytics will populate when events are flowing."
               action={
-                <Link href="/admin/analytics" className="anr-text-link">
+                <Link href="/admin/analytics" className="av3-panel-link">
                   Open setup (Audience analytics)
                 </Link>
               }
@@ -284,7 +284,7 @@ export function BusinessOverviewDashboard() {
               title="No SEO actions queued"
               message="CTR opportunities appear after Search Console sync."
               action={
-                <Link href="/admin/seo/search-console" className="anr-text-link">
+                <Link href="/admin/seo/search-console" className="av3-panel-link">
                   Open setup (Search Console)
                 </Link>
               }

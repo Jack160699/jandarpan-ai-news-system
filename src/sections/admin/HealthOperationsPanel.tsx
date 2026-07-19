@@ -232,7 +232,7 @@ export function HealthOperationsPanel() {
     return (
       <Av3Panel title="Platform health unavailable">
         <p className="av3-note">{error ?? "Unable to load health summary."}</p>
-        <button type="button" className="anr-btn anr-btn--ghost" onClick={() => void loadSummary(true)}>
+        <button type="button" className="av3-btn av3-btn--ghost" onClick={() => void loadSummary(true)}>
           Retry summary
         </button>
       </Av3Panel>
@@ -265,7 +265,7 @@ export function HealthOperationsPanel() {
         action={
           <button
             type="button"
-            className="anr-btn anr-btn--ghost"
+            className="av3-btn av3-btn--ghost"
             onClick={() => void loadSummary(false)}
           >
             Refresh
@@ -297,7 +297,7 @@ export function HealthOperationsPanel() {
           </ul>
           <button
             type="button"
-            className="anr-btn anr-btn--ghost"
+            className="av3-btn av3-btn--ghost"
             onClick={() => void loadSummary(false)}
           >
             Retry failed sources
@@ -378,7 +378,7 @@ export function HealthOperationsPanel() {
           {diagError ? (
             <p className="av3-note av3-note--warn">
               Diagnostics failed: {diagError}.{" "}
-              <button type="button" className="anr-btn anr-btn--ghost" onClick={() => void loadDiagnostics()}>
+              <button type="button" className="av3-btn av3-btn--ghost" onClick={() => void loadDiagnostics()}>
                 Retry diagnostics
               </button>
             </p>

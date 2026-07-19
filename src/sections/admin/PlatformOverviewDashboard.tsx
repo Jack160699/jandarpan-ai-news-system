@@ -186,12 +186,12 @@ export function PlatformOverviewDashboard() {
           <div className="av3-stack-inline">
             <button
               type="button"
-              className="anr-btn anr-btn--ghost"
+              className="av3-btn av3-btn--ghost"
               onClick={() => void loadSummary()}
             >
               Retry summary
             </button>
-            <Link href="/admin/health" className="anr-text-link">
+            <Link href="/admin/health" className="av3-panel-link">
               Open health details
             </Link>
           </div>
@@ -214,7 +214,7 @@ export function PlatformOverviewDashboard() {
           `${sectionState === "stale" ? "Stale · " : ""}Updated ${new Date(snapshot.checkedAt).toLocaleString()}`
         }
         action={
-          <Link href="/admin/health" className="anr-btn anr-btn--primary">
+          <Link href="/admin/health" className="av3-btn av3-btn--primary">
             Health details
           </Link>
         }

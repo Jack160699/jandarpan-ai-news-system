@@ -35,14 +35,23 @@ import { traceDashboardRender } from "@/lib/observability/dashboard-render-trace
 function useAnimatedNumber(value: number, durationMs = 700) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setDisplay(value);
+      return;
+    }
     const start = performance.now();
     const from = display;
+    let frame = 0;
     function step(now: number) {
       const progress = Math.min(1, (now - start) / durationMs);
       setDisplay(from + (value - from) * progress);
-      if (progress < 1) requestAnimationFrame(step);
+      if (progress < 1) frame = requestAnimationFrame(step);
     }
-    requestAnimationFrame(step);
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
   return display;
@@ -59,13 +68,13 @@ function EditorialQuickLinks() {
     <section className="anr-cc-quick" aria-label="Editorial quick links">
       <h3>Quick links</h3>
       <div className="anr-cc-quick__row">
-        <Link href="/admin/stories" className="anr-btn anr-btn--ghost">
+        <Link href="/admin/stories" className="av3-btn av3-btn--ghost">
           Story queue
         </Link>
-        <Link href="/admin/articles" className="anr-btn anr-btn--ghost">
+        <Link href="/admin/articles" className="av3-btn av3-btn--ghost">
           All stories
         </Link>
-        <Link href="/admin/editor" className="anr-btn anr-btn--ghost">
+        <Link href="/admin/editor" className="av3-btn av3-btn--ghost">
           Editor
         </Link>
       </div>
@@ -117,7 +126,7 @@ function EditorialDegradedShell({
               {error}
             </p>
             <div className="anr-cc-actions" style={{ marginTop: "0.85rem" }}>
-              <button type="button" className="anr-btn" onClick={() => void onRetry()}>
+              <button type="button" className="av3-btn av3-btn--ghost" onClick={() => void onRetry()}>
                 Retry dashboard
               </button>
             </div>
@@ -144,10 +153,10 @@ function EditorialDegradedShell({
           upstream failures.
         </p>
         <div className="anr-cc-actions" style={{ marginTop: "0.75rem" }}>
-          <button type="button" className="anr-btn anr-btn--ghost" onClick={() => void onRetry()}>
+          <button type="button" className="av3-btn av3-btn--ghost" onClick={() => void onRetry()}>
             Retry
           </button>
-          <Link href="/admin/health" className="anr-btn anr-btn--ghost">
+          <Link href="/admin/health" className="av3-btn av3-btn--ghost">
             Open Platform health
           </Link>
         </div>
@@ -192,7 +201,7 @@ function MissionMetricCard({
             <Area
               type="monotone"
               dataKey="v"
-              stroke="#f59e0b"
+              stroke="#2563eb"
               fill="rgba(245,158,11,0.2)"
               strokeWidth={1.5}
             />
@@ -290,7 +299,7 @@ export function EditorialOverview() {
     () => [
       { name: "Approved", value: approved.length, color: "#22c55e" },
       { name: "Rejected", value: rejected.length, color: "#fb7185" },
-      { name: "Pending", value: pending.length, color: "#f59e0b" },
+      { name: "Pending", value: pending.length, color: "#2563eb" },
     ],
     [approved.length, rejected.length, pending.length]
   );
@@ -482,7 +491,7 @@ export function EditorialOverview() {
       <div className="anr-cc-actions" style={{ marginTop: "1.25rem" }}>
         <button
           type="button"
-          className="anr-btn anr-btn--ghost"
+          className="av3-btn av3-btn--ghost"
           onClick={() => setShowAnalytics((v) => !v)}
         >
           {showAnalytics ? "Hide analytics details" : "See more analytics"}
@@ -517,15 +526,15 @@ export function EditorialOverview() {
                   <AreaChart data={Array.isArray(ingestionOverTime) ? ingestionOverTime : []}>
                     <defs>
                       <linearGradient id="ingestionFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0.05} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
                     <XAxis dataKey="time" tick={{ fill: "#99a1b0", fontSize: 11 }} />
                     <YAxis tick={{ fill: "#99a1b0", fontSize: 11 }} />
                     <Tooltip />
-                    <Area type="monotone" dataKey="inserted" stroke="#f59e0b" fill="url(#ingestionFill)" />
+                    <Area type="monotone" dataKey="inserted" stroke="#2563eb" fill="url(#ingestionFill)" />
                     <Area type="monotone" dataKey="failed" stroke="#fb7185" fill="rgba(251,113,133,0.12)" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -578,7 +587,7 @@ export function EditorialOverview() {
                     <XAxis dataKey="district" tick={{ fill: "#99a1b0", fontSize: 11 }} />
                     <YAxis tick={{ fill: "#99a1b0", fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#f59e0b" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="count" fill="#2563eb" radius={[8, 8, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

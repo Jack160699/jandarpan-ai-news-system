@@ -838,6 +838,27 @@
   .anr-login-v2__mobile-brand { display: none !important; }
 }
 
+/* Align shadcn inputs/buttons with dark navy login card */
+.anr-login-v2__card input,
+.anr-login-v2__card [data-slot="input"] {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border-color: rgba(148, 163, 184, 0.28) !important;
+  color: #f8fafc !important;
+}
+.anr-login-v2__card input:focus,
+.anr-login-v2__card [data-slot="input"]:focus {
+  border-color: rgba(37, 99, 235, 0.55) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+}
+.anr-login-v2__submit {
+  background: linear-gradient(180deg, #b91c1c, #7f1d1d) !important;
+  color: #fff !important;
+  border: 0 !important;
+}
+.anr-login-root {
+  background: var(--jd-navy-950, #070b14) !important;
+}
+
 @media (max-width: 720px) {
   .anr-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .anr-env-pill { display: none; }
