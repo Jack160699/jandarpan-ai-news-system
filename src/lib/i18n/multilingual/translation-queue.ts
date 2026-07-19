@@ -13,19 +13,34 @@ import type { ArticleLocaleBundle, ArticleTranslations } from "@/lib/i18n/multil
 import { getArticleTranslations } from "@/lib/i18n/resolve-article";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
+export function isCgTranslationEnabled(): boolean {
+  return process.env.NEWSROOM_CG_TRANSLATION === "true";
+}
+
 export const READER_TRANSLATION_PAIRS: Array<{
   source: NewsroomLanguage;
   target: NewsroomLanguage;
 }> = [
   { source: "hi", target: "en" },
-  { source: "hi", target: "cg" },
   { source: "en", target: "hi" },
 ];
+
+export function getReaderTranslationPairs(): Array<{
+  source: NewsroomLanguage;
+  target: NewsroomLanguage;
+}> {
+  if (!isCgTranslationEnabled()) return READER_TRANSLATION_PAIRS;
+  return [
+    { source: "hi", target: "en" },
+    { source: "hi", target: "cg" },
+    { source: "en", target: "hi" },
+  ];
+}
 
 export function translationTargetsForSource(
   source: NewsroomLanguage
 ): NewsroomLanguage[] {
-  return READER_TRANSLATION_PAIRS.filter((p) => p.source === source).map(
+  return getReaderTranslationPairs().filter((p) => p.source === source).map(
     (p) => p.target
   );
 }
@@ -250,7 +265,8 @@ export async function auditTranslationCoverage(): Promise<TranslationCoverageAud
     (await countPendingJobs("translate_article")) +
     (await countPendingJobs("translation_batch"));
 
-  const backlogTotal = hiMissingEn + hiMissingCg + enMissingHi;
+  const backlogTotal =
+    hiMissingEn + enMissingHi + (isCgTranslationEnabled() ? hiMissingCg : 0);
 
   return {
     publishedTotal,
@@ -431,7 +447,7 @@ export async function enqueueMissingTranslationJobs(input?: {
   pairs?: Array<{ source: NewsroomLanguage; target: NewsroomLanguage }>;
   priority?: number;
 }): Promise<{ enqueued: number; scanned: number }> {
-  const pairs = input?.pairs ?? READER_TRANSLATION_PAIRS;
+  const pairs = input?.pairs ?? getReaderTranslationPairs();
   const perPairLimit = Math.ceil((input?.limit ?? TRANSLATION_JOB_BATCH) / pairs.length);
   let enqueued = 0;
   let scanned = 0;

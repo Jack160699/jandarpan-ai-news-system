@@ -1,8 +1,10 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bell,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -11,24 +13,29 @@ import {
   Search,
   Sun,
   UserCircle2,
+  X,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
-import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
+import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
+import { NotificationCentre } from "@/components/admin-newsroom/NotificationCentre";
+import { AdminPageErrorBoundary } from "@/components/admin-newsroom/AdminPageErrorBoundary";
+import { CommandMenu } from "@/components/admin-v3/CommandMenu";
 import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
-import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
-import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
+import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
 import {
+  primaryWorkspacesForRole,
   resolveWorkspaceFromPath,
-  workspacesForRole,
+  secondaryWorkspacesForRole,
   type AdminWorkspaceId,
 } from "@/lib/admin-platform/workspaces";
+import { navIcon } from "@/lib/admin-platform/nav-icons";
 import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { hasResolvedRole } from "@/lib/auth/admin-permissions";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
+import type { CanonicalHealthSnapshot } from "@/lib/admin-v3/canonical-health";
+
+const COLLAPSE_KEY = "jd-admin-sidebar-collapsed";
 
 type AdminShellProps = {
   title: string;
@@ -37,7 +44,6 @@ type AdminShellProps = {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
-  /** Hide the page header chrome when the page provides its own */
   hidePageHeader?: boolean;
 };
 
@@ -50,25 +56,114 @@ export function AdminShell({
   searchPlaceholder,
   hidePageHeader = false,
 }: AdminShellProps) {
-  const pathname = usePathname();
-  const {
-    email,
-    role,
-    tenantName,
-    data,
-    theme,
-    setTheme,
-    toast,
-    roleResolved,
-  } = useAdminNewsroom();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [localSearch, setLocalSearch] = useState("");
+  const pathname = usePathname() ?? "";
+  const { email, role, tenantName, theme, setTheme, toast, roleResolved } =
+    useAdminNewsroom();
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [localSearch, setLocalSearch] = useState("");
+  const [health, setHealth] = useState<CanonicalHealthSnapshot | null>(null);
+  const statusWrapRef = useRef<HTMLDivElement>(null);
   const search = searchValue ?? localSearch;
-  const setSearch = onSearchChange ?? setLocalSearch;
+  void onSearchChange;
 
   useHydrationSafe("admin_shell");
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      try {
+        if (window.localStorage.getItem(COLLAPSE_KEY) === "1") setCollapsed(true);
+      } catch {
+        /* ignore */
+      }
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function probe() {
+      try {
+        const res = await fetch("/api/admin/system-status", { credentials: "include" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled && json.snapshot) setHealth(json.snapshot);
+      } catch {
+        /* optional */
+      }
+    }
+    void probe();
+    const id = window.setInterval(() => void probe(), 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (!statusOpen) return;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setStatusOpen(false);
+    }
+
+    function onPointer(e: MouseEvent) {
+      const target = e.target as Node | null;
+      if (statusWrapRef.current && target && !statusWrapRef.current.contains(target)) {
+        setStatusOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("mousedown", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("mousedown", onPointer);
+    };
+  }, [statusOpen]);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setAccountOpen(false);
+    }
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [accountOpen]);
+
+  useEffect(() => {
+    document.body.classList.toggle("av3-body-lock", mobileOpen);
+    return () => document.body.classList.remove("av3-body-lock");
+  }, [mobileOpen]);
+
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v;
+      try {
+        window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   async function signOut() {
     await fetch("/api/dashboard/auth/logout", {
@@ -81,203 +176,309 @@ export function AdminShell({
 
   const canonicalRole = role ? normalizeDashboardRole(String(role)) : null;
 
-  const availableWorkspaces = useMemo(() => {
+  const primaryWorkspaces = useMemo(() => {
     if (!roleResolved || !canonicalRole) return [];
-    return workspacesForRole(canonicalRole).filter((ws) => {
-      if (ws.permission === "super_admin") {
-        return isSuperAdmin(canonicalRole);
-      }
-      return (
+    return primaryWorkspacesForRole(canonicalRole).filter(
+      (ws) =>
         canAccessAdminRoute(canonicalRole, ws.homeHref) ||
         ws.items.some((item) => canAccessAdminRoute(canonicalRole, item.href))
-      );
-    });
+    );
+  }, [canonicalRole, roleResolved]);
+
+  const secondaryWorkspaces = useMemo(() => {
+    if (!roleResolved || !canonicalRole) return [];
+    return secondaryWorkspacesForRole(canonicalRole);
   }, [canonicalRole, roleResolved]);
 
   const activeWorkspaceId: AdminWorkspaceId = resolveWorkspaceFromPath(pathname);
   const activeWorkspace =
-    availableWorkspaces.find((w) => w.id === activeWorkspaceId) ??
-    availableWorkspaces[0] ??
+    [...primaryWorkspaces, ...secondaryWorkspaces].find(
+      (w) => w.id === activeWorkspaceId
+    ) ??
+    primaryWorkspaces[0] ??
     null;
 
   const visibleItems = useMemo(() => {
     if (!activeWorkspace || !roleResolved || !canonicalRole) return [];
     return activeWorkspace.items.filter((item) => {
       if (item.href === "/admin/team" || item.href === "/admin/schema") {
-        return hasResolvedRole({ role: canonicalRole, authReady: roleResolved }) && isSuperAdmin(canonicalRole);
-      }
-      if (item.href === "/admin/billing") {
-        return canAccessAdminRoute(canonicalRole, item.href);
+        return (
+          hasResolvedRole({ role: canonicalRole, authReady: roleResolved }) &&
+          isSuperAdmin(canonicalRole)
+        );
       }
       return canAccessAdminRoute(canonicalRole, item.href);
     });
   }, [activeWorkspace, canonicalRole, roleResolved]);
 
-  const activeLabel = useMemo(
-    () => visibleItems.find((item) => item.href === pathname)?.label ?? title,
-    [pathname, visibleItems, title]
+  const navCompact = collapsed && !mobileOpen;
+  const state = health?.state ?? "unknown";
+  const stateLabel = health?.label ?? "Production · Unknown";
+  const statusIncidents =
+    (health?.topIncidents?.length ? health.topIncidents : health?.reasons?.slice(0, 3)) ?? [];
+  const criticalCount = health?.criticalCount ?? 0;
+  const warningCount = health?.warningCount ?? 0;
+  const shortRole = roleResolved && role ? String(role).replace(/_/g, " ") : "…";
+
+  const sidebarInner = (
+    <>
+      <div className="av3-sidebar__brand">
+        <Link
+          href="/admin/overview"
+          className="av3-brand-link"
+          onClick={() => setMobileOpen(false)}
+        >
+          {navCompact ? (
+            <Image
+              src={JAN_DARPAN_BRAND_ASSETS.mark}
+              alt="Jan Darpan"
+              width={40}
+              height={40}
+              className="av3-brand-mark"
+              priority
+            />
+          ) : (
+            <Image
+              src={JAN_DARPAN_BRAND_ASSETS.logo}
+              alt="Jan Darpan Chhattisgarh"
+              width={168}
+              height={34}
+              className="av3-brand-logo"
+              priority
+            />
+          )}
+        </Link>
+        {!navCompact ? <p className="av3-brand-tag">Command Centre</p> : null}
+      </div>
+
+      {!navCompact && primaryWorkspaces.length > 1 ? (
+        <div className="av3-workspace">
+          <button
+            type="button"
+            className="av3-workspace__btn"
+            onClick={() => setWorkspaceOpen((v) => !v)}
+            aria-expanded={workspaceOpen}
+          >
+            <span>
+              <strong>{activeWorkspace?.label ?? "Workspace"}</strong>
+              <em>{activeWorkspace?.description ?? ""}</em>
+            </span>
+            <ChevronDown size={14} aria-hidden />
+          </button>
+          {workspaceOpen ? (
+            <ul className="av3-workspace__menu">
+              {primaryWorkspaces.map((ws) => (
+                <li key={ws.id}>
+                  <Link
+                    href={ws.homeHref}
+                    onClick={() => {
+                      setWorkspaceOpen(false);
+                      setMobileOpen(false);
+                    }}
+                  >
+                    <strong>{ws.label}</strong>
+                    <em>{ws.description}</em>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      <nav className="av3-nav" aria-label="Workspace navigation">
+        {!roleResolved ? (
+          <div className="av3-nav-loading">
+            <AdminAuthLoading label="Loading navigation…" />
+          </div>
+        ) : null}
+        {visibleItems.map((item) => {
+          const Icon = navIcon(item.iconKey);
+          const active =
+            pathname === item.href ||
+            (item.href !== activeWorkspace?.homeHref &&
+              pathname.startsWith(`${item.href}/`));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`av3-nav-link ${active ? "av3-nav-link--active" : ""}`}
+              title={navCompact ? item.label : undefined}
+              aria-label={item.label}
+              onClick={() => setMobileOpen(false)}
+            >
+              <Icon size={18} aria-hidden />
+              {!navCompact ? <span>{item.label}</span> : null}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="av3-sidebar__footer">
+        <button
+          type="button"
+          className="av3-btn av3-btn--ghost av3-sidebar__collapse"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {!navCompact ? <span>Collapse</span> : null}
+        </button>
+
+        <div className="av3-sidebar__user-wrap">
+          <button
+            type="button"
+            className="av3-sidebar__user"
+            onClick={() => setAccountOpen((v) => !v)}
+            aria-expanded={accountOpen}
+            title={email || "Account"}
+          >
+            <UserCircle2 size={20} aria-hidden />
+            {!navCompact ? (
+              <>
+                <div className="av3-sidebar__user-copy">
+                  <p>{email || "Newsroom"}</p>
+                  <span>{shortRole}</span>
+                </div>
+                <ChevronDown size={14} aria-hidden className="av3-sidebar__user-chevron" />
+              </>
+            ) : null}
+          </button>
+          {accountOpen ? (
+            <div className="av3-account-menu" role="menu">
+              <div className="av3-account-menu__head">
+                <strong>{email || "Newsroom account"}</strong>
+                <span>
+                  {shortRole} · {tenantName || "desk"}
+                </span>
+              </div>
+              {secondaryWorkspaces.map((ws) => (
+                <Link
+                  key={ws.id}
+                  href={ws.homeHref}
+                  onClick={() => {
+                    setAccountOpen(false);
+                    setMobileOpen(false);
+                  }}
+                >
+                  {ws.label}
+                </Link>
+              ))}
+              <Link
+                href="/admin/team"
+                onClick={() => {
+                  setAccountOpen(false);
+                  setMobileOpen(false);
+                }}
+              >
+                Team
+              </Link>
+              <Link
+                href="/admin/settings"
+                onClick={() => {
+                  setAccountOpen(false);
+                  setMobileOpen(false);
+                }}
+              >
+                Settings
+              </Link>
+              <button type="button" onClick={signOut}>
+                Sign out
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </>
   );
 
   return (
-    <div className="anr" data-theme={theme}>
-      <div className={`anr-shell ${isSidebarCollapsed ? "anr-shell--collapsed" : ""}`}>
-        <AnimatePresence>
-          {isMobileOpen ? (
-            <motion.button
-              type="button"
-              className="anr-backdrop"
-              onClick={() => setIsMobileOpen(false)}
-              aria-label="Close navigation backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            />
-          ) : null}
-        </AnimatePresence>
+    <div className="anr av3" data-theme={theme}>
+      <div className={`av3-shell ${collapsed ? "av3-shell--collapsed" : ""}`}>
+        {mobileOpen ? (
+          <button
+            type="button"
+            className="av3-backdrop"
+            aria-label="Close navigation"
+            onClick={() => setMobileOpen(false)}
+          />
+        ) : null}
 
         <aside
-          className={`anr-sidebar ${isMobileOpen ? "anr-sidebar--mobile-open" : ""}`}
+          className={`av3-sidebar ${mobileOpen ? "av3-sidebar--mobile-open" : ""}`}
+          aria-label="Admin navigation"
         >
-          <div className="anr-sidebar__brand">
-            <p className="anr-brand">Jandarpan</p>
-            {!isSidebarCollapsed ? (
-              <p className="anr-meta">Command Centre</p>
-            ) : null}
-          </div>
-
-          {!isSidebarCollapsed && availableWorkspaces.length > 1 ? (
-            <div className="anr-workspace-switcher">
-              <button
-                type="button"
-                className="anr-workspace-switcher__trigger"
-                onClick={() => setWorkspaceOpen((v) => !v)}
-                aria-expanded={workspaceOpen}
-                aria-haspopup="listbox"
-              >
-                <span>
-                  <strong>{activeWorkspace?.label ?? "Workspace"}</strong>
-                  <em>{activeWorkspace?.description ?? ""}</em>
-                </span>
-                <ChevronDown size={14} aria-hidden />
-              </button>
-              {workspaceOpen ? (
-                <ul className="anr-workspace-switcher__menu" role="listbox">
-                  {availableWorkspaces.map((ws) => (
-                    <li key={ws.id}>
-                      <Link
-                        href={ws.homeHref}
-                        className={
-                          ws.id === activeWorkspace?.id
-                            ? "anr-workspace-switcher__item anr-workspace-switcher__item--active"
-                            : "anr-workspace-switcher__item"
-                        }
-                        onClick={() => {
-                          setWorkspaceOpen(false);
-                          setIsMobileOpen(false);
-                        }}
-                        role="option"
-                        aria-selected={ws.id === activeWorkspace?.id}
-                      >
-                        <strong>{ws.label}</strong>
-                        <em>{ws.description}</em>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
-
-          <nav className="anr-nav" aria-busy={!roleResolved} aria-label="Workspace navigation">
-            {!roleResolved ? (
-              <div className="anr-nav-loading">
-                <AdminAuthLoading label="Loading navigation…" />
-              </div>
-            ) : null}
-            {visibleItems.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== activeWorkspace?.homeHref &&
-                  pathname.startsWith(`${item.href}/`));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileOpen(false)}
-                  className={`anr-nav-link ${active ? "anr-nav-link--active" : ""}`}
-                >
-                  {!isSidebarCollapsed ? <span>{item.label}</span> : <span aria-label={item.label}>·</span>}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="anr-sidebar__footer">
-            <button
-              type="button"
-              className="anr-btn anr-btn--ghost anr-sidebar__collapse"
-              onClick={() => setIsSidebarCollapsed((v) => !v)}
-              aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-              {!isSidebarCollapsed ? <span>Collapse</span> : null}
-            </button>
-            <div className="anr-sidebar__user">
-              <UserCircle2 size={18} />
-              {!isSidebarCollapsed ? (
-                <div>
-                  <p>{email || "Newsroom"}</p>
-                  <span>
-                    {roleResolved ? role : "…"} · {tenantName || "desk"}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-            {!isSidebarCollapsed ? (
-              <button
-                type="button"
-                className="anr-btn anr-btn--ghost"
-                style={{ marginTop: "0.5rem", width: "100%" }}
-                onClick={signOut}
-              >
-                Sign out
-              </button>
-            ) : null}
-          </div>
+          {sidebarInner}
         </aside>
 
-        <main className="anr-main">
-          <header className="anr-topbar">
-            <div className="anr-topbar__left">
+        <main className="av3-main">
+          <header className="av3-topbar">
+            <div className="av3-topbar__left">
               <button
                 type="button"
-                className="anr-btn anr-btn--ghost anr-mobile-toggle"
-                onClick={() => setIsMobileOpen((v) => !v)}
-                aria-label="Toggle sidebar"
+                className="av3-btn av3-btn--ghost av3-mobile-toggle"
+                onClick={() => setMobileOpen((v) => !v)}
+                aria-label="Open navigation"
               >
-                <Menu size={16} />
-              </button>
-              <div className="anr-search">
-                <Search size={14} />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={
-                    searchPlaceholder ?? `Search ${activeLabel.toLowerCase()}...`
-                  }
-                  aria-label="Quick search"
-                />
-              </div>
-            </div>
-            <div className="anr-topbar__right">
-              <LiveIndicator label="Live" />
-              <ClientTime preset="clock" className="anr-clock" />
-              <button type="button" className="anr-btn anr-btn--ghost" aria-label="Notifications">
-                <Bell size={16} />
+                {mobileOpen ? <X size={16} /> : <Menu size={16} />}
               </button>
               <button
                 type="button"
-                className="anr-btn anr-btn--ghost"
+                className="av3-search"
+                onClick={() => setCmdOpen(true)}
+                aria-label="Open command search"
+              >
+                <Search size={14} aria-hidden />
+                <span>{searchPlaceholder ?? "Search routes, stories…"}</span>
+                <kbd>Ctrl K</kbd>
+              </button>
+            </div>
+            <div className="av3-topbar__right">
+              <div className="av3-status-wrap" ref={statusWrapRef}>
+                <button
+                  type="button"
+                  className={`av3-env-pill av3-env-pill--${state}`}
+                  aria-expanded={statusOpen}
+                  onClick={() => setStatusOpen((v) => !v)}
+                  title="Canonical production health"
+                >
+                  {stateLabel}
+                </button>
+                {statusOpen ? (
+                  <div className="av3-status-popover" role="dialog" aria-label="Production status">
+                    <p className="av3-status-popover__title">{stateLabel}</p>
+                    <p className="av3-meta">
+                      Last checked{" "}
+                      {health?.checkedAt
+                        ? new Date(health.checkedAt).toLocaleString("en-IN")
+                        : "—"}
+                    </p>
+                    <div className="av3-status-popover__counts">
+                      <span>Critical: {criticalCount}</span>
+                      <span>Warnings: {warningCount}</span>
+                    </div>
+                    {statusIncidents.length > 0 ? (
+                      <ul>
+                        {statusIncidents.map((r) => (
+                          <li key={r.id}>
+                            <strong>{r.title}</strong>
+                            <span>{r.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="av3-meta">No open health incidents.</p>
+                    )}
+                    <Link href="/admin/health" onClick={() => setStatusOpen(false)}>
+                      Open Platform health
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
+              <NotificationCentre />
+              <button
+                type="button"
+                className="av3-btn av3-btn--ghost"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 aria-label="Toggle theme"
               >
@@ -287,39 +488,32 @@ export function AdminShell({
           </header>
 
           {!hidePageHeader ? (
-            <motion.header
-              className="anr-header"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-            >
+            <header className="av3-page-header">
               <div>
-                <p className="anr-meta">
+                <p className="av3-meta">
                   {activeWorkspace?.label ?? "Admin"} · Jandarpan.news
                 </p>
                 <h1>{title}</h1>
-                {subtitle ? <p className="anr-meta">{subtitle}</p> : null}
+                {subtitle ? <p className="av3-meta">{subtitle}</p> : null}
               </div>
-              <div>
-                {data ? (
-                  <p className="anr-meta">
-                    Updated <ClientTime iso={data.fetchedAt} preset="time" />
-                  </p>
-                ) : null}
-              </div>
-            </motion.header>
+            </header>
           ) : null}
 
-          <motion.section
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.24, delay: 0.04 }}
-          >
-            {children}
-          </motion.section>
+          <section className="av3-content av3-page-enter">
+            <AdminPageErrorBoundary>{children}</AdminPageErrorBoundary>
+          </section>
         </main>
       </div>
-      {toast ? <div className="anr-toast" role="status">{toast}</div> : null}
+      <CommandMenu
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        initialQuery={search}
+      />
+      {toast ? (
+        <div className="av3-toast" role="status">
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }

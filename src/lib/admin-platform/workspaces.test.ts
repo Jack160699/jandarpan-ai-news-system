@@ -22,11 +22,27 @@ describe("admin workspaces", () => {
     expect(workspaces.some((w) => w.id === "editorial")).toBe(true);
   });
 
-  it("shows technical workspace to journalists with monitoring", () => {
-    expect(workspaceAccessible(
-      { id: "technical", label: "", description: "", homeHref: "/admin/technical", permission: "monitoring:read", items: [] },
-      "journalist"
-    )).toBe(true);
+  it("shows platform workspace to journalists with monitoring", () => {
+    expect(
+      workspaceAccessible(
+        {
+          id: "technical",
+          label: "Platform",
+          description: "",
+          homeHref: "/admin/technical",
+          permission: "monitoring:read",
+          primary: true,
+          items: [],
+        },
+        "journalist"
+      )
+    ).toBe(true);
+  });
+
+  it("labels technical workspace as Platform", () => {
+    const platform = workspacesForRole("super_admin").find((w) => w.id === "technical");
+    expect(platform?.label).toBe("Platform");
+    expect(platform?.primary).toBe(true);
   });
 
   it("resolves workspace from path", () => {

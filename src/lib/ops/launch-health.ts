@@ -4,6 +4,7 @@
 
 import {
   auditTranslationCoverage,
+  isCgTranslationEnabled,
   resolveTranslationHealth,
 } from "@/lib/i18n/multilingual/translation-queue";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
@@ -12,7 +13,10 @@ import { getRssHealthDashboard } from "@/lib/news/rss-health";
 import { getCronMonitorState } from "@/lib/observability/cron-monitor";
 import { getQueueAnalyticsDashboard } from "@/lib/observability/queue-analytics";
 import { buildMainSitemap } from "@/lib/seo/sitemap-data";
-import { REQUIRED_SITEMAP_PATHS } from "@/lib/seo/sitemap-paths";
+import {
+  isRequiredPathInSitemap,
+  REQUIRED_SITEMAP_PATHS,
+} from "@/lib/seo/sitemap-paths";
 import { SITE_URL } from "@/lib/seo/constants";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
@@ -29,6 +33,20 @@ function level(ok: boolean, degraded?: boolean): LaunchHealthLevel {
   if (!ok) return "unhealthy";
   if (degraded) return "degraded";
   return "healthy";
+}
+
+function formatTranslationDetail(
+  coverage: Awaited<ReturnType<typeof auditTranslationCoverage>>
+): string {
+  const parts = [
+    `Backlog ${coverage.backlogTotal}`,
+    `hi→en ${coverage.hiMissingEn}`,
+  ];
+  if (isCgTranslationEnabled()) {
+    parts.push(`hi→cg ${coverage.hiMissingCg}`);
+  }
+  parts.push(`en→hi ${coverage.enMissingHi}`, `pending ${coverage.queuePending}`);
+  return parts.join(" · ");
 }
 
 export async function getLaunchHealthWidgets(): Promise<LaunchHealthWidget[]> {
@@ -52,7 +70,7 @@ export async function getLaunchHealthWidgets(): Promise<LaunchHealthWidget[]> {
       id: "translation",
       label: "Translation queue",
       status: tStatus,
-      detail: `Backlog ${coverage.backlogTotal} · hi→en ${coverage.hiMissingEn} · hi→cg ${coverage.hiMissingCg} · en→hi ${coverage.enMissingHi} · pending ${coverage.queuePending}`,
+      detail: formatTranslationDetail(coverage),
     });
   } catch {
     widgets.push({
@@ -149,11 +167,10 @@ export async function getLaunchHealthWidgets(): Promise<LaunchHealthWidget[]> {
 
   try {
     const sitemap = await buildMainSitemap();
-    const urls = new Set(sitemap.map((e) => e.url.replace(/\/$/, "")));
-    const missing = REQUIRED_SITEMAP_PATHS.filter((path) => {
-      const normalized = `${SITE_URL.replace(/\/$/, "")}${path}`;
-      return !urls.has(normalized);
-    });
+    const sitemapUrls = sitemap.map((e) => e.url);
+    const missing = REQUIRED_SITEMAP_PATHS.filter(
+      (path) => !isRequiredPathInSitemap(SITE_URL, path, sitemapUrls)
+    );
     widgets.push({
       id: "sitemap",
       label: "Sitemap health",

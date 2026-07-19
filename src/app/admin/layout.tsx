@@ -18,7 +18,10 @@ import { getDefaultTenant } from "@/lib/tenant/registry";
 import type { User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { createCookieServerClient } from "@/lib/supabase/server";
+import "@/styles/admin-tokens.css";
 import "@/styles/admin-newsroom.css";
+import "@/styles/admin-v2.css";
+import "@/styles/admin-v3.css";
 import "@/styles/platform-settings.css";
 
 export const metadata: Metadata = {
