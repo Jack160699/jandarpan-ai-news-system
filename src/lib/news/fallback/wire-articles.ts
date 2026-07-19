@@ -23,7 +23,6 @@ function row(
   const summary = partial.summary ?? null;
   return {
     event_id: null,
-    article_body: bodyFrom(summary, partial.headline),
     hero_image_url: null,
     seo_title: partial.headline,
     seo_description: summary,

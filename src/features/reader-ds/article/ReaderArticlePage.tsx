@@ -226,12 +226,7 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
   const isSponsored = variant === "sponsored";
   const showShareBar = variant === "standard";
   const hideBottomNav = showShareBar;
-  const pageTitle =
-    variant === "explainer"
-      ? "एक्सप्लेनर"
-      : variant === "live-blog"
-        ? "लाइव ब्लॉग"
-        : undefined;
+  const pageTitle = variant === "explainer" ? "एक्सप्लेनर" : undefined;
 
   const padStyle = {
     padding: isOpinionLike ? "16px 18px" : "12px 16px 8px",
