@@ -1,6 +1,9 @@
 # Phase 4 visual audit — Reader experience & personalization (C21–C25, D26/D29–D35)
 
 **Branch:** `feat/jandarpan-reader-design-system`  
+**Commit:** `ab4416c7`  
+**Preview:** https://newspaper-motion-aky60zk57-jack160699s-projects.vercel.app  
+**Branch alias:** https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app  
 **Flag:** `NEXT_PUBLIC_READER_DS=1`  
 **Viewport:** 390×844  
 **Design source:** Plot Design `groupC()` / `groupD()`  
