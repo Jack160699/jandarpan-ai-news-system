@@ -109,17 +109,79 @@
   color: var(--jd-red-deep);
 }
 
-/* Data-saving mode: suppress heavy imagery, keep layout stable */
-.jd-ds[data-saver="1"] .jd-img-media {
+/* Data-saving mode — attrs set on <html> by experience prefs */
+html[data-data-saving="1"] .jd-ds .jd-img-media {
   display: none;
 }
-.jd-ds[data-saver="1"] .jd-img {
+html[data-data-saving="1"] .jd-ds .jd-img {
   background: var(--jd-paper-2);
+}
+
+/* High contrast */
+html[data-high-contrast="1"] .jd-ds {
+  --jd-ink: #0a0a0a;
+  --jd-ink-2: #1a1a1a;
+  --jd-ink-3: #2a2a2a;
+  --jd-muted: #3a3a3a;
+  --jd-line: #4a4a4a;
+  --jd-line-2: #5a5a5a;
+  --jd-paper: #fffef8;
+  --jd-paper-2: #f5f2e8;
+}
+
+/* Font scale */
+html[data-font-scale="sm"] .jd-ds {
+  font-size: 94%;
+}
+html[data-font-scale="lg"] .jd-ds {
+  font-size: 106%;
+}
+html[data-font-scale="xl"] .jd-ds {
+  font-size: 114%;
+}
+
+/* Long headlines — clamp without clipping mid-glyph awkwardly */
+.jd-ds .jd-lead-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+.jd-ds .jd-sec-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* Focus rings — keyboard only */
+.jd-ds :focus {
+  outline: none;
+}
+.jd-ds :focus-visible {
+  outline: 2px solid var(--jd-gold);
+  outline-offset: 2px;
+}
+
+/* F46 skeleton shimmer */
+@keyframes jd-skel {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+.jd-ds .jd-skel {
+  background: linear-gradient(90deg, #e6e0d2, #efeade, #e6e0d2);
+  background-size: 200% 100%;
+  animation: jd-skel 1.2s ease-in-out infinite;
 }
 
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  .jd-ds * {
+  .jd-ds *,
+  .jd-ds .jd-skel {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }

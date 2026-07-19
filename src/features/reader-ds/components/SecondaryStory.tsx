@@ -35,7 +35,7 @@ export function SecondaryStory({
           <Tag>{story.kicker ?? "ख़बर"}</Tag>
         </div>
         <h3
-          className="jd-serif"
+          className="jd-serif jd-sec-title"
           style={{
             margin: 0,
             fontSize: 15,

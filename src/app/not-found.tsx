@@ -1,8 +1,14 @@
 import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
 import { BrandedErrorFallback } from "@/components/errors/BrandedErrorFallback";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { NotFoundStatePage } from "@/features/reader-ds/system";
 
 export default function NotFound() {
+  if (isReaderDesignSystemEnabled()) {
+    return <NotFoundStatePage />;
+  }
+
   return (
     <PageShell variant="news">
       <main id="main-content" role="main">

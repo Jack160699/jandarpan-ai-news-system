@@ -40,7 +40,7 @@ export function LeadStory({ story, priority = true }: { story: ReaderStory; prio
         </h2>
       </Link>
       {story.summary ? <AiSummary>{story.summary}</AiSummary> : null}
-      <ActionRow slug={story.slug} />
+      <ActionRow slug={story.slug} title={story.headline} />
     </article>
   );
 }

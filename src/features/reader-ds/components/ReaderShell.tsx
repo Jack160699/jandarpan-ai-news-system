@@ -3,6 +3,8 @@ import "../styles";
 import { readerDsFontClassName } from "../fonts";
 import { ExperienceChrome } from "../experience/ExperienceChrome";
 import type { BriefingTrack } from "../experience/audio/types";
+import { NetworkGuards } from "../system/NetworkGuards";
+import { PermissionSheet } from "../system/PermissionSheet";
 import { BottomNav, type BottomNavKey } from "./BottomNav";
 import { SearchOverlay } from "./SearchOverlay";
 
@@ -19,6 +21,8 @@ type ReaderShellProps = {
   audioTracks?: BriefingTrack[];
   /** Extra spacer when mini player may show. */
   reserveMiniPlayer?: boolean;
+  /** Permission pre-prompts (off for system states). */
+  showPermissionSheets?: boolean;
 };
 
 /**
@@ -34,6 +38,7 @@ export function ReaderShell({
   includeSearchOverlay = true,
   audioTracks,
   reserveMiniPlayer = true,
+  showPermissionSheets = true,
 }: ReaderShellProps) {
   const pad = bottomPad + (reserveMiniPlayer ? 52 : 0);
   const showNav = !hideBottomNav && activeNav;
@@ -50,6 +55,7 @@ export function ReaderShell({
           background: dark ? "#05080f" : "var(--jd-paper)",
         }}
       >
+        <NetworkGuards />
         {children}
         {showNav ? (
           <>
@@ -58,6 +64,7 @@ export function ReaderShell({
           </>
         ) : null}
         {includeSearchOverlay ? <SearchOverlay /> : null}
+        {showPermissionSheets ? <PermissionSheet /> : null}
       </div>
     </ExperienceChrome>
   );

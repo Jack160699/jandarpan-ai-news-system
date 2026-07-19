@@ -104,40 +104,4 @@ export function AiSummary({ children }: { children: ReactNode }) {
   );
 }
 
-/** Listen / share / save action row. */
-export function ActionRow({ slug }: { slug?: string }) {
-  const items: Array<{ icon: Parameters<typeof JdIcon>[0]["name"]; label: string }> = [
-    { icon: "headphone", label: "सुनें" },
-    { icon: "share", label: "शेयर" },
-    { icon: "bookmark", label: "सहेजें" },
-  ];
-  return (
-    <div style={{ display: "flex", gap: 18, padding: "4px 0 2px" }}>
-      {items.map((it) => (
-        <button
-          key={it.label}
-          type="button"
-          data-action={it.icon}
-          data-slug={slug}
-          className="jd-ui"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 11.5,
-            fontWeight: 600,
-            color: "var(--jd-ink-3)",
-            background: "none",
-            border: "none",
-            padding: "6px 2px",
-            minHeight: 40,
-            cursor: "pointer",
-          }}
-        >
-          <JdIcon name={it.icon} size={16} stroke={1.8} />
-          {it.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+export { ActionRow } from "./ActionRow";

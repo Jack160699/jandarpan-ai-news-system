@@ -21,6 +21,7 @@ export type JdIconName =
   | "eye"
   | "download"
   | "wifiOff"
+  | "wifi"
   | "globe"
   | "filter"
   | "fire"
@@ -121,6 +122,14 @@ const PATHS: Record<JdIconName, React.ReactNode> = {
       <path d="M3 3 21 21" />
       <path d="M8.5 12.5a6 6 0 0 1 7 0M5 9a11 11 0 0 1 4-2.3M19 9a11 11 0 0 0-6-2.9" />
       <path d="M11 16a2 2 0 0 1 2.4 0" />
+    </>
+  ),
+  wifi: (
+    <>
+      <path d="M5 9.5a11 11 0 0 1 14 0" />
+      <path d="M8.5 13a6 6 0 0 1 7 0" />
+      <path d="M11.5 16.5a2 2 0 0 1 1 0" />
+      <circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none" />
     </>
   ),
   globe: (

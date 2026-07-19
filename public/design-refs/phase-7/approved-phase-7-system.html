@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Approved Phase 7 · Group F System States</title>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Noto+Serif+Devanagari:wght@600;700&family=Tiro+Devanagari+Hindi&display=swap" rel="stylesheet" />
+<style>
+  :root{--navy:#0a2550;--navyDeep:#081b3a;--red:#9e1b22;--gold:#c19a3e;--goldSoft:#e7d6a4;--paper:#f7f4ec;--ink:#16130d;--ink2:#3f3a2e;--ink3:#6a6250;--muted:#9a917d;--line:#d9d2c2;--line2:#e6e0d2;--green:#2f7d52;--amber:#c07a1e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#1c2230;padding:32px 16px 64px;font-family:Mukta,system-ui,sans-serif;display:flex;flex-wrap:wrap;justify-content:center;gap:40px}
+  .block{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .label{font-weight:800;letter-spacing:.12em;font-size:11px;color:var(--goldSoft)}
+  .phone{width:390px;height:844px;background:var(--paper);overflow:hidden;position:relative;box-shadow:0 12px 40px rgba(0,0,0,.35);display:flex;flex-direction:column}
+  .mast{background:var(--navy);color:var(--paper);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .brand{font-family:'Tiro Devanagari Hindi',serif;font-size:20px}
+  .util{background:var(--navyDeep);color:#c7d0e2;padding:7px 14px;font-size:11px;flex-shrink:0}
+  .bnav{position:absolute;left:0;right:0;bottom:0;height:64px;background:#fff;border-top:1px solid var(--line);display:flex}
+  .bnav span{flex:1;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--ink3)}
+  .skel{background:linear-gradient(90deg,#e6e0d2,#efeade,#e6e0d2);border-radius:3px}
+  .serif{font-family:'Noto Serif Devanagari',serif}
+  .tiro{font-family:'Tiro Devanagari Hindi',serif}
+  .icon{width:72px;height:72px;border-radius:6px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:28px}
+  .state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 28px;text-align:center}
+  .btn{background:var(--red);color:#fff;font-weight:800;font-size:13.5px;padding:12px 26px;border-radius:3px;margin-bottom:10px}
+  .link{font-size:13px;font-weight:700;color:var(--navy);text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="block" data-screen="f46-loading">
+  <div class="label">F46 · LOADING</div>
+  <div class="phone">
+    <div class="mast"><span class="brand">जनदर्पण</span></div>
+    <div class="util">रायपुर · आज</div>
+    <div style="padding:14px;flex:1">
+      <div class="skel" style="height:180px;margin-bottom:12px"></div>
+      <div class="skel" style="width:40%;height:10px;margin-bottom:8px"></div>
+      <div class="skel" style="width:92%;height:18px;margin-bottom:8px"></div>
+      <div class="skel" style="width:80%;height:18px;margin-bottom:14px"></div>
+      <div style="height:1px;background:var(--line2);margin:14px 0"></div>
+      <div style="display:flex;gap:12px;margin-bottom:16px"><div style="flex:1"><div class="skel" style="width:30%;height:9px;margin-bottom:8px"></div><div class="skel" style="height:13px;margin-bottom:8px"></div><div class="skel" style="width:70%;height:13px"></div></div><div class="skel" style="width:96px;height:66px;flex-shrink:0"></div></div>
+    </div>
+    <div class="bnav"><span>होम</span><span>ज़िला</span><span>ताज़ा</span><span>सुनें</span><span>और</span></div>
+  </div>
+</div>
+
+<div class="block" data-screen="f47-empty">
+  <div class="label">F47 · EMPTY</div>
+  <div class="phone">
+    <div class="mast"><span class="brand">← सहेजे</span></div>
+    <div class="state">
+      <div class="icon" style="background:rgba(10,37,80,.07)">🔖</div>
+      <h1 class="serif" style="font-size:21px;margin-bottom:8px">अभी तक कुछ सहेजा नहीं</h1>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.6;max-width:260px;margin-bottom:20px">किसी भी लेख पर सहेजें दबाएँ — वे यहाँ पढ़ने के लिए, ऑफ़लाइन भी, जमा होंगे।</p>
+      <div class="btn">ख़बरें देखें</div>
+    </div>
+    <div class="bnav"><span>होम</span><span>ज़िला</span><span>ताज़ा</span><span>सुनें</span><span style="color:var(--red)">और</span></div>
+  </div>
+</div>
+
+<div class="block" data-screen="f48-error">
+  <div class="label">F48 · ERROR</div>
+  <div class="phone">
+    <div class="mast"><span class="brand">← जनदर्पण</span></div>
+    <div class="state">
+      <div class="icon" style="background:rgba(158,27,34,.08)">⚠</div>
+      <h1 class="serif" style="font-size:21px;margin-bottom:8px">कुछ ठीक नहीं चला</h1>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.6;max-width:260px;margin-bottom:20px">हम इस सामग्री को लोड नहीं कर सके। कृपया थोड़ी देर बाद पुनः प्रयास करें।</p>
+      <div class="btn">पुनः प्रयास करें</div>
+      <div class="link">समस्या रिपोर्ट करें</div>
+      <div style="margin-top:16px;font-family:ui-monospace,monospace;font-size:10px;color:var(--muted)">त्रुटि कोड: JD-500</div>
+    </div>
+    <div class="bnav"><span style="color:var(--red)">होम</span><span>ज़िला</span><span>ताज़ा</span><span>सुनें</span><span>और</span></div>
+  </div>
+</div>
+
+<div class="block" data-screen="f49-offline">
+  <div class="label">F49 · OFFLINE</div>
+  <div class="phone">
+    <div class="mast"><span class="brand">जनदर्पण</span></div>
+    <div style="background:var(--ink);color:#fff;padding:9px 14px;font-size:12px;font-weight:600;flex-shrink:0">आप ऑफ़लाइन हैं — सहेजी सामग्री उपलब्ध है</div>
+    <div style="padding:14px 16px;flex:1">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">ऑफ़लाइन उपलब्ध</div>
+      <div style="padding:12px 0;border-bottom:1px solid var(--line2)" class="serif">विधानसभा में नई औद्योगिक नीति पेश</div>
+      <div style="margin-top:16px;text-align:center;border:1.5px solid var(--navy);color:var(--navy);font-weight:700;font-size:13px;padding:11px 0;border-radius:3px">पुनः कनेक्ट करने का प्रयास</div>
+    </div>
+    <div class="bnav"><span style="color:var(--red)">होम</span><span>ज़िला</span><span>ताज़ा</span><span>सुनें</span><span>और</span></div>
+  </div>
+</div>
+
+<div class="block" data-screen="f50-slow">
+  <div class="label">F50 · SLOW</div>
+  <div class="phone">
+    <div class="mast"><span class="brand">जनदर्पण</span></div>
+    <div style="background:#f7eccf;border-bottom:1px solid var(--gold);padding:8px 14px;display:flex;gap:9px;align-items:center;flex-shrink:0">
+      <span style="flex:1;font-size:11.5px;font-weight:700;color:#7a5a12">धीमा नेटवर्क — टेक्स्ट पहले लोड हो रहा है</span>
+      <span style="font-size:11px;font-weight:800;color:var(--red)">डेटा-बचत</span>
+    </div>
+    <div style="padding:12px 16px;flex:1">
+      <div style="font-size:9.5px;font-weight:800;color:var(--red);letter-spacing:.09em">राजनीति</div>
+      <h2 class="serif" style="margin:6px 0 8px;font-size:20px;line-height:1.3">विधानसभा में नई औद्योगिक नीति पेश</h2>
+      <div style="height:150px;border-radius:2px;background:var(--paper);border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:10.5px;color:var(--muted);margin-bottom:12px">इमेज स्थगित · टेक्स्ट-प्रथम लोड</div>
+      <p style="font-size:14px;line-height:1.7;color:var(--ink2)">रायपुर। विधानसभा के मानसून सत्र में सरकार ने नई औद्योगिक नीति पेश की।</p>
+    </div>
+    <div class="bnav"><span style="color:var(--red)">होम</span><span>ज़िला</span><span>ताज़ा</span><span>सुनें</span><span>और</span></div>
+  </div>
+</div>
+
+<div class="block" data-screen="f51-notify">
+  <div class="label">F51 · NOTIFY</div>
+  <div class="phone" style="background:rgba(10,37,80,.35)">
+    <div class="mast"><span class="brand">जनदर्पण</span></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;padding:22px 22px 26px;text-align:center">
+      <div style="width:56px;height:56px;border-radius:56px;background:rgba(158,27,34,.1);margin:0 auto 14px;display:flex;align-items:center;justify-content:center">🔔</div>
+      <h2 class="serif" style="font-size:20px;margin-bottom:8px">ब्रेकिंग न्यूज़ सबसे पहले पाएँ</h2>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:18px">हम केवल ज़रूरी अलर्ट भेजेंगे — आपके ज़िले की बड़ी ख़बरें व चुनी हुई अपडेट।</p>
+      <div class="btn" style="width:100%">सूचनाएँ चालू करें</div>
+      <div style="font-size:13px;font-weight:700;color:var(--ink3)">अभी नहीं</div>
+    </div>
+  </div>
+</div>
+
+<div class="block" data-screen="f52-location">
+  <div class="label">F52 · LOCATION</div>
+  <div class="phone" style="background:rgba(10,37,80,.35)">
+    <div class="mast"><span class="brand">जनदर्पण</span></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;padding:22px 22px 26px;text-align:center">
+      <div style="width:56px;height:56px;border-radius:56px;background:rgba(10,37,80,.08);margin:0 auto 14px;display:flex;align-items:center;justify-content:center">📍</div>
+      <h2 class="serif" style="font-size:20px;margin-bottom:8px">अपने ज़िले की ख़बरें पाएँ</h2>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:8px">स्थान से हम आपका ज़िला अपने-आप चुन लेंगे।</p>
+      <div style="font-size:10.5px;color:var(--muted);margin-bottom:16px">🔒 स्थान संग्रहीत नहीं किया जाता</div>
+      <div style="background:var(--navy);color:#fff;font-weight:800;font-size:14px;padding:13px 0;border-radius:3px;margin-bottom:10px">स्थान चालू करें</div>
+      <div class="link">मैन्युअल रूप से ज़िला चुनें</div>
+    </div>
+  </div>
+</div>
+
+<div class="block" data-screen="f53-maintenance">
+  <div class="label">F53 · MAINTENANCE</div>
+  <div class="phone">
+    <div class="mast"><span class="brand">जनदर्पण</span></div>
+    <div class="state">
+      <div class="icon" style="border-radius:72px;background:rgba(10,37,80,.07)">⚙</div>
+      <h1 class="serif" style="font-size:21px;margin-bottom:8px">हम जल्द लौट रहे हैं</h1>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.6;max-width:260px;margin-bottom:20px">जनदर्पण को बेहतर बनाने के लिए कुछ नियोजित रखरखाव चल रहा है। अनुमानित वापसी: सुबह 6:00 बजे।</p>
+      <div class="btn">स्थिति पृष्ठ देखें</div>
+      <div class="link">होम पर प्रयास करें</div>
+    </div>
+  </div>
+</div>
+
+<div class="block" data-screen="f54-404">
+  <div class="label">F54 · 404</div>
+  <div class="phone">
+    <div class="mast"><span class="brand">← जनदर्पण</span></div>
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:34px 24px 20px;text-align:center">
+      <div class="tiro" style="font-size:72px;font-weight:700;color:var(--red);line-height:1">404</div>
+      <h1 class="serif" style="margin:6px 0 8px;font-size:20px">यह पृष्ठ नहीं मिला</h1>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.6;max-width:250px;margin-bottom:20px">शायद कड़ी पुरानी हो गई या पृष्ठ हटा दिया गया। नीचे से आगे बढ़ें।</p>
+      <div style="display:flex;gap:10px;margin-bottom:22px">
+        <div class="btn" style="margin:0">होम पर जाएँ</div>
+        <div style="border:1.5px solid var(--navy);color:var(--navy);font-weight:700;font-size:13px;padding:10px 20px;border-radius:3px">खोजें</div>
+      </div>
+      <div style="width:100%;border-top:1px solid var(--line2);padding-top:14px;text-align:left">
+        <div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--muted);margin-bottom:10px">अभी ट्रेंडिंग</div>
+        <div class="serif" style="font-size:15px">नई औद्योगिक नीति की पूरी जानकारी</div>
+      </div>
+    </div>
+    <div class="bnav"><span style="color:var(--red)">होम</span><span>ज़िला</span><span>ताज़ा</span><span>सुनें</span><span>और</span></div>
+  </div>
+</div>
+
+</body>
+</html>

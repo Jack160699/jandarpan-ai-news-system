@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { SecondaryStory } from "../../components/SecondaryStory";
+import { EmptyState } from "../../system/EmptyState";
 import { loadReadingMemory, toggleBookmark } from "@/lib/reading-memory";
 import type { HomeArticle } from "@/lib/homepage/types";
 import { toReaderStory } from "../../utils";
@@ -39,7 +40,7 @@ export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
     <ReaderShell activeNav="more">
       <Masthead back backHref="/archive" pageTitle="सहेजे" />
       <div style={{ display: "flex", gap: 8, padding: "9px 14px", borderBottom: "1px solid var(--jd-line)", background: "#fff", overflowX: "auto" }}>
-        {chips.map((c, i) => (
+        {chips.map((c) => (
           <button
             key={c.key}
             type="button"
@@ -63,9 +64,7 @@ export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
       </div>
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "0 14px" }}>
         {items.length === 0 ? (
-          <p className="jd-ui" style={{ padding: "20px 0", color: "var(--jd-muted)", fontSize: 13 }}>
-            अभी कोई सहेजी कहानी नहीं। लेख पर “सहेजें” टैप करें।
-          </p>
+          <EmptyState />
         ) : (
           items.map((a, i) => (
             <div key={a.slug} style={{ position: "relative" }}>

@@ -1,12 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { AudioProvider } from "./audio/AudioProvider";
 import { FullPlayer } from "./audio/FullPlayer";
 import { MiniPlayer } from "./audio/MiniPlayer";
 import type { BriefingTrack } from "./audio/types";
 import { applyExperienceToDocument, loadExperiencePrefs } from "./prefs";
-import { useEffect } from "react";
 
 function PrefsBoot() {
   useEffect(() => {
