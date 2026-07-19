@@ -1,0 +1,49 @@
+/**
+ * Gold / silver / diesel utility tiles — approved A1 homepage block.
+ * Values are presentation placeholders until a live rates API exists;
+ * they do not invent article content.
+ */
+export function UtilTiles({
+  gold = "₹73,240",
+  goldDelta = "▲ 0.4%",
+  silver = "₹92,800",
+  silverDelta = "▼ 0.2%",
+  diesel = "₹94.6",
+  dieselDelta = "— स्थिर",
+}: {
+  gold?: string;
+  goldDelta?: string;
+  silver?: string;
+  silverDelta?: string;
+  diesel?: string;
+  dieselDelta?: string;
+}) {
+  const tiles: Array<{ lb: string; val: string; sub: string; color: string }> = [
+    { lb: "सोना 24K", val: gold, sub: goldDelta, color: "var(--jd-navy)" },
+    { lb: "चांदी", val: silver, sub: silverDelta, color: "var(--jd-red)" },
+    { lb: "डीज़ल", val: diesel, sub: dieselDelta, color: "var(--jd-ink-3)" },
+  ];
+
+  return (
+    <div
+      className="jd-ui"
+      style={{
+        margin: "2px 14px",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr 1fr",
+        gap: 1,
+        background: "var(--jd-line-2)",
+        border: "1px solid var(--jd-line-2)",
+      }}
+      aria-label="बाजार भाव"
+    >
+      {tiles.map((t) => (
+        <div key={t.lb} style={{ background: "#fff", padding: "8px 10px" }}>
+          <div style={{ fontSize: 9.5, color: "var(--jd-muted)", fontWeight: 600 }}>{t.lb}</div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: "var(--jd-ink)", margin: "1px 0" }}>{t.val}</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: t.color }}>{t.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}

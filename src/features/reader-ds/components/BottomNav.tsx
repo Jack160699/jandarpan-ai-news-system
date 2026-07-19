@@ -25,7 +25,7 @@ export function BottomNav({ active = "home" }: { active?: BottomNavKey }) {
         right: 0,
         bottom: 0,
         zIndex: 50,
-        background: "var(--jd-paper)",
+        background: "#fff",
         borderTop: "1px solid var(--jd-line)",
         display: "flex",
         justifyContent: "space-around",

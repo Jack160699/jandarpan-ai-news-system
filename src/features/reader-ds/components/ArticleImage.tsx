@@ -2,14 +2,19 @@
 
 import { useState } from "react";
 import { optimizeCdnUrl } from "@/lib/news/images/cdn";
-import { JdIcon } from "./icons";
 
 export type JdImageRatio = "lead" | "video" | "thumb" | "photo" | "square";
+
+/** Approved lead height (A1); thumbs match secondary-story 96×72. */
+const FIXED_H: Partial<Record<JdImageRatio, number>> = {
+  lead: 190,
+  thumb: 72,
+};
 
 const RATIO: Record<JdImageRatio, string> = {
   lead: "3 / 2",
   video: "16 / 9",
-  thumb: "1 / 1",
+  thumb: "4 / 3",
   photo: "4 / 5",
   square: "1 / 1",
 };
@@ -17,17 +22,28 @@ const RATIO: Record<JdImageRatio, string> = {
 const CDN_ASPECT: Record<JdImageRatio, "16:9" | "4:3" | "1:1" | "4:5"> = {
   lead: "4:3",
   video: "16:9",
-  thumb: "1:1",
+  thumb: "4:3",
   photo: "4:5",
   square: "1:1",
 };
 
 const WIDTH: Record<JdImageRatio, number> = {
-  lead: 640,
+  lead: 720,
   video: 640,
   thumb: 200,
   photo: 500,
   square: 200,
+};
+
+/** Design-faithful tinted scene fallbacks (city / field / market…). */
+const TONES: Record<string, [string, string]> = {
+  city: ["#2c3e5c", "#4a5f80"],
+  field: ["#2f4a35", "#4d6b52"],
+  market: ["#5c4a2c", "#8a7145"],
+  sport: ["#2c4a5c", "#457185"],
+  court: ["#3d3a4a", "#5a5670"],
+  portrait: ["#4a3f3a", "#6b5c52"],
+  night: ["#1a2438", "#2c3a55"],
 };
 
 type ArticleImageProps = {
@@ -38,16 +54,13 @@ type ArticleImageProps = {
   className?: string;
   priority?: boolean;
   sizes?: string;
-  rounded?: boolean;
+  /** Scene tone for missing-image editorial fallback */
+  tone?: keyof typeof TONES | string;
 };
 
 /**
- * Reader-DS image with stable aspect ratio, CDN payload reduction, graceful
- * missing/broken-image fallback, and data-saving support (media hidden via
- * `.jd-img-media` under `.jd-ds[data-saver="1"]`).
- *
- * Uses a plain <img> because the app has no next/image remote allowlist; the
- * URL is optimised via `optimizeCdnUrl` (auto webp/avif on supported CDNs).
+ * Reader-DS image — fixed 190px lead height, CDN crop, design-style
+ * tinted fallback (not a grey globe watermark).
  */
 export function ArticleImage({
   src,
@@ -57,28 +70,48 @@ export function ArticleImage({
   className,
   priority = false,
   sizes,
-  rounded = false,
+  tone = "city",
 }: ArticleImageProps) {
   const [failed, setFailed] = useState(false);
   const raw = src && src.trim() ? src.trim() : "";
   const hasImage = Boolean(raw) && !failed;
   const optimized = hasImage
-    ? optimizeCdnUrl(raw, { width: WIDTH[ratio], aspect: CDN_ASPECT[ratio], quality: priority ? 82 : 74 })
+    ? optimizeCdnUrl(raw, {
+        width: WIDTH[ratio],
+        aspect: CDN_ASPECT[ratio],
+        quality: priority ? 82 : 74,
+      })
     : "";
+
+  const fixedH = FIXED_H[ratio];
+  const [c0, c1] = TONES[tone] ?? TONES.city;
 
   return (
     <figure
       className={`jd-img${className ? ` ${className}` : ""}`}
       style={{
         position: "relative",
-        aspectRatio: RATIO[ratio],
+        height: fixedH,
+        aspectRatio: fixedH ? undefined : RATIO[ratio],
         overflow: "hidden",
-        borderRadius: rounded ? "var(--jd-radius-card)" : "var(--jd-radius)",
-        background: "var(--jd-paper-2)",
-        border: "1px solid var(--jd-line-2)",
+        borderRadius: "var(--jd-radius)",
         margin: 0,
+        background: `linear-gradient(135deg, ${c0}, ${c1})`,
       }}
     >
+      {/* hatch pattern matching design placeholders */}
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "repeating-linear-gradient(115deg, rgba(255,255,255,.05) 0 2px, transparent 2px 22px)",
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      />
+
       {hasImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -90,48 +123,39 @@ export function ArticleImage({
           fetchPriority={priority ? "high" : "auto"}
           sizes={sizes}
           onError={() => setFailed(true)}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-        />
-      ) : (
-        <div
-          aria-hidden="true"
           style={{
             position: "absolute",
             inset: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            color: "var(--jd-muted)",
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            zIndex: 1,
           }}
-        >
-          <JdIcon name="globe" size={26} stroke={1.6} />
-          <span
-            className="jd-ui"
-            style={{ fontSize: 10.5, letterSpacing: ".12em", textTransform: "uppercase" }}
-          >
-            जनदर्पण
-          </span>
-        </div>
-      )}
+        />
+      ) : null}
+
       {caption ? (
         <figcaption
           className="jd-ui"
           style={{
             position: "absolute",
-            left: 0,
-            bottom: 0,
-            padding: "3px 8px",
-            fontSize: 9.5,
-            color: "#fff",
-            background: "linear-gradient(0deg, rgba(8,27,58,.72), transparent)",
-            width: "100%",
+            left: 8,
+            bottom: 8,
+            zIndex: 2,
+            fontFamily: "ui-monospace, monospace",
+            fontSize: 9,
+            color: "rgba(255,255,255,.82)",
+            background: "rgba(0,0,0,.4)",
+            padding: "2px 7px",
+            borderRadius: 2,
           }}
         >
-          {caption}
+          ▣ {caption}
         </figcaption>
       ) : null}
+
+      {/* sr-only alt when no real image */}
+      {!hasImage ? <span className="sr-only">{alt}</span> : null}
     </figure>
   );
 }

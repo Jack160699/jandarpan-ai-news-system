@@ -30,6 +30,7 @@ export type JdIconName =
   | "star"
   | "arrowL"
   | "chevR"
+  | "chevD"
   | "refresh"
   | "close"
   | "rain";
@@ -140,6 +141,7 @@ const PATHS: Record<JdIconName, React.ReactNode> = {
   ),
   arrowL: <path d="M20 12H4m6-6-6 6 6 6" />,
   chevR: <path d="m9 6 6 6-6 6" />,
+  chevD: <path d="m6 9 6 6 6-6" />,
   refresh: (
     <>
       <path d="M20 12a8 8 0 1 1-2.3-5.6" />

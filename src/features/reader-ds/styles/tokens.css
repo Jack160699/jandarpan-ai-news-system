@@ -33,10 +33,10 @@
   --jd-d-text: #e7edf6;
   --jd-d-muted: #93a4c2;
 
-  /* Typography */
-  --jd-font-brand: "Tiro Devanagari Hindi", Georgia, serif;
-  --jd-font-serif: var(--font-hindi, "Noto Serif Devanagari"), Georgia, serif;
-  --jd-font-ui: "Mukta", system-ui, -apple-system, sans-serif;
+  /* Typography — next/font vars from readerDsFontClassName + root --font-hindi */
+  --jd-ff-brand: var(--jd-font-brand), "Tiro Devanagari Hindi", Georgia, serif;
+  --jd-ff-serif: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
+  --jd-ff-ui: var(--jd-font-ui), "Mukta", system-ui, -apple-system, sans-serif;
 
   /* Spacing scale: 2 4 8 12 14 18 24 32 */
   --jd-s1: 2px;
@@ -55,7 +55,7 @@
 
   color: var(--jd-ink);
   background: var(--jd-paper);
-  font-family: var(--jd-font-ui);
+  font-family: var(--jd-ff-ui);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -74,13 +74,25 @@
 
 /* Font helpers */
 .jd-ds .jd-brand {
-  font-family: var(--jd-font-brand);
+  font-family: var(--jd-ff-brand);
 }
 .jd-ds .jd-serif {
-  font-family: var(--jd-font-serif);
+  font-family: var(--jd-ff-serif);
 }
 .jd-ds .jd-ui {
-  font-family: var(--jd-font-ui);
+  font-family: var(--jd-ff-ui);
+}
+
+.jd-ds .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Selection + links */

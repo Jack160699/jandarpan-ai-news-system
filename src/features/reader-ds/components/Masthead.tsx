@@ -2,23 +2,27 @@ import Link from "next/link";
 import { JdIcon } from "./icons";
 
 type MastheadProps = {
-  edition?: string;
   pageTitle?: string;
   back?: boolean;
   backHref?: string;
 };
 
-/** Compact sticky masthead: brand · search · notifications · profile. */
-export function Masthead({ edition = "छत्तीसगढ़", pageTitle, back, backHref = "/" }: MastheadProps) {
+/**
+ * Compact sticky masthead — matches approved A1 atom:
+ * solid navy · red “ज” mark · Tiro 22 wordmark · goldSoft icons · avatar.
+ */
+export function Masthead({ pageTitle, back, backHref = "/" }: MastheadProps) {
   return (
     <header
+      className="jd-masthead"
       style={{
         position: "sticky",
         top: 0,
         zIndex: 40,
-        background: "linear-gradient(160deg, var(--jd-navy), var(--jd-navy-deep))",
+        flexShrink: 0,
+        background: "var(--jd-navy)",
         color: "var(--jd-paper)",
-        borderBottom: "3px solid var(--jd-gold)",
+        padding: "8px 14px 9px",
       }}
     >
       <div
@@ -26,66 +30,93 @@ export function Masthead({ edition = "छत्तीसगढ़", pageTitle, b
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 10,
-          padding: "9px 14px",
           maxWidth: 900,
           margin: "0 auto",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
           {back ? (
             <Link href={backHref} aria-label="वापस" style={{ display: "flex", color: "var(--jd-gold-soft)" }}>
-              <JdIcon name="arrowL" size={22} stroke={2} />
+              <JdIcon name="arrowL" size={22} stroke={2} color="var(--jd-gold-soft)" />
             </Link>
-          ) : null}
-          <Link href="/" style={{ display: "flex", alignItems: "baseline", gap: 8, color: "inherit", minWidth: 0 }}>
-            <span className="jd-brand" style={{ fontSize: 26, lineHeight: "30px", fontWeight: 700 }}>
-              जनदर्पण
-            </span>
-            {!pageTitle ? (
-              <span className="jd-brand" style={{ fontSize: 13, color: "var(--jd-gold-soft)" }}>
-                {edition}
-              </span>
-            ) : null}
-          </Link>
-          {pageTitle ? (
-            <span
-              className="jd-serif"
+          ) : (
+            <Link
+              href="/"
+              aria-label="जनदर्पण होम"
               style={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: "var(--jd-gold-soft)",
-                borderLeft: "1px solid rgba(231,214,164,.4)",
-                paddingLeft: 9,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                width: 24,
+                height: 24,
+                borderRadius: 5,
+                background: "var(--jd-red)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                textDecoration: "none",
               }}
             >
+              <span
+                className="jd-brand"
+                style={{ fontSize: 15, color: "var(--jd-gold)", fontWeight: 700, lineHeight: 1 }}
+              >
+                ज
+              </span>
+            </Link>
+          )}
+          {pageTitle ? (
+            <span className="jd-serif" style={{ fontSize: 18, fontWeight: 700, color: "var(--jd-paper)" }}>
               {pageTitle}
             </span>
-          ) : null}
+          ) : (
+            <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+              <span className="jd-brand" style={{ fontSize: 22, lineHeight: 1, display: "block" }}>
+                जनदर्पण
+              </span>
+            </Link>
+          )}
         </div>
-        <nav style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-          <Link href="/search" aria-label="खोजें" style={iconBtn}>
-            <JdIcon name="search" size={21} stroke={1.9} color="var(--jd-paper)" />
+
+        <nav style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }} aria-label="शीर्ष क्रियाएँ">
+          <Link href="/search" aria-label="खोजें" style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}>
+            <JdIcon name="search" size={21} stroke={1.9} color="var(--jd-gold-soft)" />
           </Link>
-          <Link href="/notifications" aria-label="सूचनाएँ" style={iconBtn}>
-            <JdIcon name="bell" size={21} stroke={1.9} color="var(--jd-paper)" />
+          <Link
+            href="/notifications"
+            aria-label="सूचनाएँ"
+            style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center", position: "relative" }}
+          >
+            <JdIcon name="bell" size={21} stroke={1.9} color="var(--jd-gold-soft)" />
+            <span
+              aria-hidden
+              style={{
+                position: "absolute",
+                top: 10,
+                right: 10,
+                width: 7,
+                height: 7,
+                borderRadius: 7,
+                background: "var(--jd-red)",
+                border: "1.5px solid var(--jd-navy)",
+              }}
+            />
           </Link>
-          <Link href="/archive" aria-label="प्रोफ़ाइल" style={iconBtn}>
-            <JdIcon name="user" size={21} stroke={1.9} color="var(--jd-paper)" />
+          <Link
+            href="/archive"
+            aria-label="प्रोफ़ाइल"
+            style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 24,
+                background: "linear-gradient(135deg, var(--jd-gold), var(--jd-red))",
+              }}
+            />
           </Link>
         </nav>
       </div>
     </header>
   );
 }
-
-const iconBtn = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 44,
-  height: 44,
-} as const;
