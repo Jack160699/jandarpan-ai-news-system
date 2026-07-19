@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Line,
   LineChart,
@@ -9,11 +9,19 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { AdminCard } from "@/components/admin-newsroom/ui/AdminCard";
-import { EmptyState } from "@/components/admin-newsroom/ui/EmptyState";
-import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
-import { LiveIndicator } from "@/components/admin-newsroom/ui/LiveIndicator";
-import type { GscDashboard } from "@/lib/gsc-intelligence/types";
+import type { GscDashboard, GscPageRecord, GscQueryRecord } from "@/lib/gsc-intelligence/types";
+import {
+  Av3DataTable,
+  Av3EmptyState,
+  Av3Metric,
+  Av3MetricGrid,
+  Av3Panel,
+  Av3Skeleton,
+  Av3SkeletonGrid,
+  Av3Stack,
+  Av3StatusBadge,
+  formatShortPath,
+} from "@/components/admin-v3";
 
 type GscPayload = {
   ok: boolean;
@@ -21,6 +29,17 @@ type GscPayload = {
   credentialsConfigured: boolean;
   dashboard: GscDashboard;
 };
+
+function chartInsight(data: Array<{ clicks: number; impressions: number }>): string | null {
+  if (data.length < 2) return null;
+  const first = data[0]!;
+  const last = data[data.length - 1]!;
+  const clickDelta = last.clicks - first.clicks;
+  const impDelta = last.impressions - first.impressions;
+  const clickWord = clickDelta >= 0 ? "up" : "down";
+  const impWord = impDelta >= 0 ? "up" : "down";
+  return `Chart span: clicks ${clickWord} ${Math.abs(clickDelta).toLocaleString()} (${first.clicks.toLocaleString()} to ${last.clicks.toLocaleString()}); impressions ${impWord} ${Math.abs(impDelta).toLocaleString()}.`;
+}
 
 export function GscIntelligencePanel() {
   const [dashboard, setDashboard] = useState<GscDashboard | null>(null);
@@ -52,115 +71,78 @@ export function GscIntelligencePanel() {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void refresh();
-    }, 0);
-    const id = setInterval(() => {
-      void refresh();
-    }, 60_000);
-    return () => {
-      clearTimeout(timer);
-      clearInterval(id);
-    };
+    void refresh();
+    const id = window.setInterval(() => void refresh(), 60_000);
+    return () => window.clearInterval(id);
   }, [refresh]);
+
+  const chartData = useMemo(
+    () =>
+      (dashboard?.growthCharts ?? []).map((d) => ({
+        date: d.metric_date.slice(5),
+        clicks: d.clicks,
+        impressions: d.impressions,
+      })),
+    [dashboard]
+  );
+
+  const insight = useMemo(() => chartInsight(chartData), [chartData]);
 
   if (loading && !dashboard) {
     return (
-      <div className="anr-icenter">
-        <div className="anr-skeleton" style={{ height: "14rem" }} />
-      </div>
+      <Av3Stack>
+        <Av3SkeletonGrid count={4} />
+        <Av3Skeleton className="av3-skeleton--block" style={{ minHeight: 220 }} />
+      </Av3Stack>
     );
   }
 
-  if (error) {
-    return <EmptyState title="Search Console offline" hint={error} />;
+  if (error && !dashboard) {
+    return <Av3EmptyState title="Search Console offline" message={error} />;
   }
 
   if (!dashboard) return null;
 
-  const chartData = dashboard.growthCharts.map((d) => ({
-    date: d.metric_date.slice(5),
-    clicks: d.clicks,
-    impressions: d.impressions,
-  }));
+  if (!enabled || !credentialsConfigured) {
+    return (
+      <Av3EmptyState
+        title="Search Console not configured"
+        message="Set SEO_GSC_ENGINE=true and configure GSC_SERVICE_ACCOUNT_JSON or GSC_REFRESH_TOKEN with Google OAuth. Add the service account in Search Console."
+      />
+    );
+  }
 
   return (
-    <div className="anr-icenter">
-      <header className="anr-icenter__terminal-bar">
-        <div className="anr-icenter__brand">
-          <span className="anr-icenter__dot" />
-          <strong>GOOGLE</strong>
-          <em>SEARCH CONSOLE</em>
-        </div>
-        <LiveIndicator
-          label={
-            enabled && credentialsConfigured
-              ? "GSC sync active"
-              : enabled
-                ? "Credentials needed"
-                : "Engine disabled"
+    <Av3Stack>
+      <Av3MetricGrid>
+        <Av3Metric label="Clicks (28d)" value={dashboard.clicks.toLocaleString()} hint="Search property" />
+        <Av3Metric label="Impressions" value={dashboard.impressions.toLocaleString()} hint="Search property" />
+        <Av3Metric label="CTR" value={`${dashboard.ctr}%`} hint="Average click-through" />
+        <Av3Metric label="Avg position" value={dashboard.averagePosition} hint="Search average" />
+        <Av3Metric
+          label="7d click delta"
+          value={
+            dashboard.trends.days7.clicks_delta >= 0
+              ? `+${dashboard.trends.days7.clicks_delta}`
+              : String(dashboard.trends.days7.clicks_delta)
           }
+          hint={dashboard.trends.days7.label}
         />
-        {dashboard.lastSyncAt ? (
-          <span className="anr-icenter__clock">
-            Last sync{" "}
-            <ClientTime iso={dashboard.lastSyncAt} preset="datetime" />
-          </span>
-        ) : null}
-      </header>
+        <Av3Metric label="CTR opportunities" value={dashboard.ctrOpportunities.length} hint="Recommendations" />
+      </Av3MetricGrid>
 
-      {(!enabled || !credentialsConfigured) && (
-        <AdminCard title="Setup" className="anr-icenter__card">
-          <p className="anr-meta">
-            Set <code>SEO_GSC_ENGINE=true</code> and configure{" "}
-            <code>GSC_SERVICE_ACCOUNT_JSON</code> (preferred) or{" "}
-            <code>GSC_REFRESH_TOKEN</code> + Google OAuth credentials. Add the
-            service account as a user in Search Console. Runs once daily.
-          </p>
-        </AdminCard>
-      )}
+      {insight ? <p className="av3-insight">{insight}</p> : null}
 
-      <div className="anr-kpis anr-icenter__kpis">
-        <article className="anr-kpi anr-icenter__kpi">
-          <span>Clicks (28d)</span>
-          <strong>{dashboard.clicks.toLocaleString()}</strong>
-        </article>
-        <article className="anr-kpi anr-icenter__kpi">
-          <span>Impressions</span>
-          <strong>{dashboard.impressions.toLocaleString()}</strong>
-        </article>
-        <article className="anr-kpi anr-icenter__kpi">
-          <span>CTR</span>
-          <strong>{dashboard.ctr}%</strong>
-        </article>
-        <article className="anr-kpi anr-icenter__kpi">
-          <span>Avg Position</span>
-          <strong>{dashboard.averagePosition}</strong>
-        </article>
-        <article className="anr-kpi anr-icenter__kpi">
-          <span>7d Δ Clicks</span>
-          <strong
-            className={
-              dashboard.trends.days7.clicks_delta >= 0
-                ? undefined
-                : "anr-kpi--warn"
-            }
-          >
-            {dashboard.trends.days7.clicks_delta >= 0 ? "+" : ""}
-            {dashboard.trends.days7.clicks_delta}
-          </strong>
-        </article>
-        <article className="anr-kpi anr-icenter__kpi">
-          <span>Opportunities</span>
-          <strong className="anr-kpi--warn">
-            {dashboard.ctrOpportunities.length}
-          </strong>
-        </article>
-      </div>
-
-      <AdminCard title="Growth charts" className="anr-icenter__card">
+      <Av3Panel
+        title="Performance"
+        subtitle={
+          dashboard.lastSyncAt
+            ? `Last sync ${new Date(dashboard.lastSyncAt).toLocaleString()}`
+            : "Daily metrics trend"
+        }
+      >
         {chartData.length === 0 ? (
-          <p className="anr-meta">No daily metrics yet — run the GSC sync.</p>
+          <Av3EmptyState title="No chart data yet" message="Run the GSC sync to populate daily metrics." />
         ) : (
           <div style={{ width: "100%", height: 220 }}>
             <ResponsiveContainer>
@@ -168,163 +150,55 @@ export function GscIntelligencePanel() {
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="clicks"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="impressions"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={false}
-                />
+                <Line type="monotone" dataKey="clicks" stroke="#22c55e" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="impressions" stroke="#3b82f6" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         )}
-      </AdminCard>
+      </Av3Panel>
 
-      <div className="anr-icenter__layout">
-        <AdminCard title="Top queries" className="anr-icenter__card">
-          {dashboard.topQueries.length === 0 ? (
-            <p className="anr-meta">No query data yet.</p>
-          ) : (
-            <ul className="anr-icenter__list">
-              {dashboard.topQueries.slice(0, 12).map((q) => (
-                <li key={q.query}>
-                  <strong>{q.query}</strong>
-                  <span>
-                    {q.clicks} clicks · {q.impressions} imp · {q.ctr}% CTR · #
-                    {q.position} · {q.trend}
-                    {q.district ? ` · ${q.district}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </AdminCard>
+      <Av3Panel title="Top queries" subtitle="Highest click volume">
+        <Av3DataTable<GscQueryRecord>
+          columns={[
+            { key: "query", header: "Query", render: (row) => row.query },
+            { key: "clicks", header: "Clicks", numeric: true, render: (row) => row.clicks.toLocaleString() },
+            { key: "impressions", header: "Impressions", numeric: true, render: (row) => row.impressions.toLocaleString() },
+            { key: "ctr", header: "CTR", numeric: true, render: (row) => `${row.ctr}%` },
+            { key: "position", header: "Position", numeric: true, render: (row) => `#${row.position}` },
+            {
+              key: "trend",
+              header: "Status",
+              render: (row) => <Av3StatusBadge status={row.trend} label={row.trend} />,
+            },
+          ]}
+          rows={dashboard.topQueries.slice(0, 12)}
+          rowKey={(row) => row.query}
+          empty={<p className="av3-note">No query data yet.</p>}
+        />
+      </Av3Panel>
 
-        <AdminCard title="Top pages" className="anr-icenter__card">
-          {dashboard.topPages.length === 0 ? (
-            <p className="anr-meta">No page data yet.</p>
-          ) : (
-            <ul className="anr-icenter__list">
-              {dashboard.topPages.slice(0, 10).map((p) => (
-                <li key={p.page_url}>
-                  <strong>{p.generated_article_slug ?? p.page_url}</strong>
-                  <span>
-                    {p.clicks} clicks · {p.ctr}% CTR · #{p.position} ·{" "}
-                    {p.indexed_status}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </AdminCard>
-      </div>
-
-      <AdminCard title="Index health" className="anr-icenter__card">
-        {!dashboard.indexHealth ? (
-          <p className="anr-meta">No index health snapshot yet.</p>
-        ) : (
-          <ul className="anr-icenter__list">
-            <li>
-              <strong>Indexed pages (estimate)</strong>
-              <span>{dashboard.indexHealth.indexed_pages}</span>
-            </li>
-            <li>
-              <strong>Sitemap health</strong>
-              <span>{dashboard.indexHealth.sitemap_health}</span>
-            </li>
-            <li>
-              <strong>News sitemap</strong>
-              <span>{dashboard.indexHealth.news_sitemap_health}</span>
-            </li>
-            <li>
-              <strong>Errors / Warnings</strong>
-              <span>
-                {dashboard.indexHealth.errors} / {dashboard.indexHealth.warnings}
-              </span>
-            </li>
-          </ul>
-        )}
-      </AdminCard>
-
-      <div className="anr-icenter__layout">
-        <AdminCard title="Top winners" className="anr-icenter__card">
-          <ul className="anr-icenter__list">
-            {dashboard.executiveReport.topWinners.slice(0, 8).map((w) => (
-              <li key={w.query}>
-                <strong>{w.query}</strong>
-                <span>+{w.position_delta} positions</span>
-              </li>
-            ))}
-          </ul>
-        </AdminCard>
-
-        <AdminCard title="Top losers" className="anr-icenter__card">
-          <ul className="anr-icenter__list">
-            {dashboard.executiveReport.topLosers.slice(0, 8).map((l) => (
-              <li key={l.query}>
-                <strong>{l.query}</strong>
-                <span>{l.position_delta} positions</span>
-              </li>
-            ))}
-          </ul>
-        </AdminCard>
-      </div>
-
-      <AdminCard title="CTR opportunities" className="anr-icenter__card">
-        {dashboard.ctrOpportunities.length === 0 ? (
-          <EmptyState
-            title="No opportunities yet"
-            hint="Recommendations appear after the first GSC sync."
-          />
-        ) : (
-          <ul className="anr-icenter__list">
-            {dashboard.ctrOpportunities.map((rec, idx) => (
-              <li key={`${rec.title}-${idx}`} data-priority={rec.priority}>
-                <strong>
-                  [{rec.priority}] {rec.title}
-                </strong>
-                <span>{rec.reason}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </AdminCard>
-
-      <div className="anr-icenter__layout">
-        <AdminCard title="District trends" className="anr-icenter__card">
-          <ul className="anr-icenter__list">
-            {dashboard.districtTrends.map((d) => (
-              <li key={d.district}>
-                <strong>{d.district}</strong>
-                <span>
-                  {d.clicks} clicks · {d.trend}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </AdminCard>
-
-        <AdminCard title="Category trends" className="anr-icenter__card">
-          <ul className="anr-icenter__list">
-            {dashboard.categoryTrends.map((c) => (
-              <li key={c.category}>
-                <strong>{c.category}</strong>
-                <span>
-                  {c.clicks} clicks · {c.trend}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </AdminCard>
-      </div>
-    </div>
+      <Av3Panel title="Top pages" subtitle="Landing pages with search visibility">
+        <Av3DataTable<GscPageRecord>
+          columns={[
+            {
+              key: "page_url",
+              header: "Page",
+              url: true,
+              render: (row) => {
+                const label = row.generated_article_slug ?? formatShortPath(row.page_url);
+                return <span title={row.page_url}>{label}</span>;
+              },
+            },
+            { key: "clicks", header: "Clicks", numeric: true, render: (row) => row.clicks.toLocaleString() },
+            { key: "ctr", header: "CTR", numeric: true, render: (row) => `${row.ctr}%` },
+            { key: "position", header: "Position", numeric: true, render: (row) => `#${row.position}` },
+          ]}
+          rows={dashboard.topPages.slice(0, 10)}
+          rowKey={(row) => row.page_url}
+          empty={<p className="av3-note">No page data yet.</p>}
+        />
+      </Av3Panel>
+    </Av3Stack>
   );
 }

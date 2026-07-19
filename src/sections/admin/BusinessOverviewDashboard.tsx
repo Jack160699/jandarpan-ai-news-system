@@ -2,13 +2,24 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import type { GscDashboard } from "@/lib/gsc-intelligence/types";
+import {
+  Av3DataTable,
+  Av3EmptyState,
+  Av3Metric,
+  Av3MetricGrid,
+  Av3Panel,
+  Av3SkeletonGrid,
+  Av3Stack,
+} from "@/components/admin-v3";
 
-type Kpi = {
+type MetricDef = {
   label: string;
   value: string;
   hint: string;
-  href?: string;
   available: boolean;
+  source?: string;
+  setupHref?: string;
 };
 
 function asRecord(v: unknown): Record<string, unknown> {
@@ -24,28 +35,30 @@ function fmt(n: unknown): string {
 function money(v: unknown): string {
   const r = asRecord(v);
   if (typeof r.display === "string") return r.display;
+  if (typeof r.usdLabel === "string") return r.usdLabel;
   if (typeof r.inr === "number") return `₹${r.inr.toLocaleString("en-IN")}`;
   if (typeof r.usd === "number") return `$${r.usd.toFixed(2)}`;
   return "—";
 }
 
+function unavailableMetric(label: string, source: string, setupHref: string, hint: string): MetricDef {
+  return { label, value: "Unavailable", hint, available: false, source, setupHref };
+}
+
 export function BusinessOverviewDashboard() {
   const [loading, setLoading] = useState(true);
-  const [kpis, setKpis] = useState<Kpi[]>([]);
-  const [topStories, setTopStories] = useState<
-    Array<{ title: string; href?: string; metric?: string }>
-  >([]);
-  const [notes, setNotes] = useState<string[]>([]);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [metrics, setMetrics] = useState<MetricDef[]>([]);
+  const [topStories, setTopStories] = useState<Array<{ title: string; metric?: string }>>([]);
+  const [seoOpportunities, setSeoOpportunities] = useState<Array<{ title: string; reason: string }>>([]);
 
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       setLoading(true);
-      const nextKpis: Kpi[] = [];
-      const nextNotes: string[] = [];
-      const nextErrors: string[] = [];
-      const nextStories: Array<{ title: string; href?: string; metric?: string }> = [];
+      const nextMetrics: MetricDef[] = [];
+      const nextStories: Array<{ title: string; metric?: string }> = [];
+      const nextSeo: Array<{ title: string; reason: string }> = [];
 
       const [analyticsRes, execRes, seoRes] = await Promise.allSettled([
         fetch("/api/analytics/dashboard?hours=168", { credentials: "include" }),
@@ -58,21 +71,19 @@ export function BusinessOverviewDashboard() {
           const json = await analyticsRes.value.json();
           const report = asRecord(json.report);
           const summary = asRecord(report.summary ?? report.totals ?? report);
-          nextKpis.push({
+          const visitors = summary.visitors ?? summary.uniqueVisitors ?? summary.users;
+          const pageViews = summary.pageViews ?? summary.views ?? summary.sessions;
+          nextMetrics.push({
             label: "Visitors (7d)",
-            value: fmt(summary.visitors ?? summary.uniqueVisitors ?? summary.users),
+            value: fmt(visitors),
             hint: "Audience analytics",
-            href: "/admin/analytics",
-            available: Number.isFinite(Number(summary.visitors ?? summary.uniqueVisitors ?? summary.users)),
+            available: Number.isFinite(Number(visitors)),
           });
-          nextKpis.push({
+          nextMetrics.push({
             label: "Page views (7d)",
-            value: fmt(summary.pageViews ?? summary.views ?? summary.sessions),
+            value: fmt(pageViews),
             hint: "Traffic pulse",
-            href: "/admin/analytics",
-            available: Number.isFinite(
-              Number(summary.pageViews ?? summary.views ?? summary.sessions)
-            ),
+            available: Number.isFinite(Number(pageViews)),
           });
           const stories = Array.isArray(report.topStories)
             ? report.topStories
@@ -83,22 +94,21 @@ export function BusinessOverviewDashboard() {
             const s = asRecord(raw);
             nextStories.push({
               title: String(s.title ?? s.headline ?? s.path ?? "Story"),
-              href: s.slug ? `/admin/stories` : "/admin/analytics",
               metric: fmt(s.views ?? s.pageViews ?? s.count),
             });
           }
         } catch {
-          nextErrors.push("Audience analytics response could not be parsed.");
+          nextMetrics.push(
+            unavailableMetric("Visitors (7d)", "Audience analytics", "/admin/analytics", "Response could not be parsed")
+          );
         }
       } else {
-        nextKpis.push({
-          label: "Visitors (7d)",
-          value: "—",
-          hint: "Analytics unavailable",
-          href: "/admin/analytics",
-          available: false,
-        });
-        nextNotes.push("Audience data needs analytics aggregation to be available.");
+        nextMetrics.push(
+          unavailableMetric("Visitors (7d)", "Audience analytics", "/admin/analytics", "Aggregation not available")
+        );
+        nextMetrics.push(
+          unavailableMetric("Page views (7d)", "Audience analytics", "/admin/analytics", "Aggregation not available")
+        );
       }
 
       if (execRes.status === "fulfilled" && execRes.value.ok) {
@@ -107,76 +117,97 @@ export function BusinessOverviewDashboard() {
           const dash = asRecord(json.dashboard);
           const overview = asRecord(dash.overview);
           const kpisBlock = asRecord(dash.businessKpis);
-          nextKpis.push({
+          nextMetrics.push({
             label: "AI spend today",
             value: money(overview.todaySpend),
-            hint: "Costs & budgets",
-            href: "/admin/executive",
+            hint: "Executive cost dashboard",
             available: Boolean(overview.todaySpend),
+            setupHref: "/admin/executive",
           });
-          nextKpis.push({
+          nextMetrics.push({
             label: "Budget remaining",
             value: money(overview.budgetRemaining),
-            hint: "Monthly budget",
-            href: "/admin/executive",
+            hint: "Monthly AI budget",
             available: Boolean(overview.budgetRemaining),
+            setupHref: "/admin/executive",
           });
-          nextKpis.push({
+          nextMetrics.push({
             label: "Published today",
             value: fmt(kpisBlock.publishedToday),
             hint: "Publishing velocity",
-            href: "/admin/articles",
             available: Number.isFinite(Number(kpisBlock.publishedToday)),
           });
         } catch {
-          nextErrors.push("Cost dashboard response could not be parsed.");
+          nextMetrics.push(
+            unavailableMetric("AI spend today", "Executive costs", "/admin/executive", "Finance payload unavailable")
+          );
         }
       } else {
-        nextNotes.push("AI cost metrics require monitoring access and finance instrumentation.");
+        nextMetrics.push(
+          unavailableMetric("AI spend today", "Executive costs", "/admin/executive", "Requires monitoring access")
+        );
       }
 
       if (seoRes.status === "fulfilled" && seoRes.value.ok) {
         try {
           const json = await seoRes.value.json();
-          const data = asRecord(json.data ?? json.summary ?? json);
-          const indexed = data.indexedPages ?? data.indexed ?? data.coverage;
-          const health = data.seoHealthScore ?? data.healthScore ?? data.score;
-          nextKpis.push({
-            label: "SEO health",
-            value: Number.isFinite(Number(health)) ? `${Math.round(Number(health))}` : "—",
-            hint: "Search Console",
-            href: "/admin/seo/search-console",
-            available: Number.isFinite(Number(health)),
-          });
-          nextKpis.push({
-            label: "Indexed pages",
-            value: fmt(indexed),
-            hint: "Coverage",
-            href: "/admin/seo/search-console",
-            available: Number.isFinite(Number(indexed)),
-          });
+          const dashboard = json.dashboard as GscDashboard | undefined;
+          if (dashboard) {
+            const indexed = dashboard.indexHealth?.indexed_pages;
+            nextMetrics.push({
+              label: "Search clicks (28d)",
+              value: dashboard.clicks.toLocaleString(),
+              hint: "Search Console",
+              available: true,
+            });
+            nextMetrics.push({
+              label: "Search impressions",
+              value: dashboard.impressions.toLocaleString(),
+              hint: "Search Console",
+              available: true,
+            });
+            nextMetrics.push({
+              label: "Search CTR",
+              value: `${dashboard.ctr}%`,
+              hint: "Average CTR",
+              available: true,
+            });
+            if (indexed != null) {
+              nextMetrics.push({
+                label: "Indexed pages",
+                value: fmt(indexed),
+                hint: "Coverage estimate",
+                available: true,
+              });
+            }
+            for (const rec of dashboard.ctrOpportunities.slice(0, 5)) {
+              nextSeo.push({ title: rec.title, reason: rec.reason });
+            }
+          }
         } catch {
-          nextNotes.push("SEO summary available in Search Console detail.");
+          nextMetrics.push(
+            unavailableMetric("Search CTR", "Search Console", "/admin/seo/search-console", "GSC summary unavailable")
+          );
         }
       } else {
-        nextKpis.push({
-          label: "SEO health",
-          value: "—",
-          hint: "Open Search Console",
-          href: "/admin/seo/search-console",
-          available: false,
-        });
-        nextNotes.push("Connect or open Search Console for live SEO health.");
+        nextMetrics.push(
+          unavailableMetric(
+            "Search CTR",
+            "Search Console",
+            "/admin/seo/search-console",
+            "Connect Search Console credentials"
+          )
+        );
       }
 
       if (!cancelled) {
-        setKpis(nextKpis);
+        setMetrics(nextMetrics);
         setTopStories(nextStories);
-        setNotes(nextNotes);
-        setErrors(nextErrors);
+        setSeoOpportunities(nextSeo);
         setLoading(false);
       }
     }
+
     void load();
     return () => {
       cancelled = true;
@@ -185,49 +216,56 @@ export function BusinessOverviewDashboard() {
 
   if (loading) {
     return (
-      <div className="anr-dash">
-        <div className="anr-kpi-strip">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="anr-kpi-compact anr-skeleton-block" />
-          ))}
-        </div>
-      </div>
+      <Av3Stack>
+        <Av3SkeletonGrid count={6} />
+      </Av3Stack>
     );
   }
 
   return (
-    <div className="anr-dash">
-      <div className="anr-kpi-strip">
-        {kpis.map((kpi) => (
-          <article
-            key={kpi.label}
-            className={`anr-kpi-compact ${kpi.available ? "" : "anr-kpi-compact--empty"}`}
-          >
-            <p className="anr-meta">{kpi.label}</p>
-            <strong>{kpi.value}</strong>
-            <p className="anr-kpi-compact__hint">{kpi.hint}</p>
-            {kpi.href ? (
-              <Link href={kpi.href} className="anr-text-link">
-                Open
-              </Link>
-            ) : null}
-          </article>
+    <Av3Stack>
+      <Av3MetricGrid>
+        {metrics.map((metric) => (
+          <Av3Metric
+            key={metric.label}
+            label={metric.label}
+            value={metric.value}
+            hint={
+              !metric.available && metric.setupHref ? (
+                <>
+                  {metric.hint}{" "}
+                  <Link href={metric.setupHref} className="anr-text-link">
+                    Open setup{metric.source ? ` (${metric.source})` : ""}
+                  </Link>
+                </>
+              ) : (
+                metric.hint
+              )
+            }
+          />
         ))}
-      </div>
+      </Av3MetricGrid>
 
       <div className="anr-dash-grid">
-        <section className="anr-panel">
-          <header className="anr-panel__head">
-            <h2>Top-performing stories</h2>
+        <Av3Panel
+          title="Top-performing stories"
+          subtitle="Audience leaders this week"
+          action={
             <Link href="/admin/analytics" className="anr-text-link">
               Audience
             </Link>
-          </header>
+          }
+        >
           {topStories.length === 0 ? (
-            <div className="anr-empty">
-              <p>No story performance rows yet.</p>
-              <p className="anr-meta">Open Audience analytics when events are flowing.</p>
-            </div>
+            <Av3EmptyState
+              title="No story performance rows yet"
+              message="Audience analytics will populate when events are flowing."
+              action={
+                <Link href="/admin/analytics" className="anr-text-link">
+                  Open setup (Audience analytics)
+                </Link>
+              }
+            />
           ) : (
             <ul className="anr-dense-list">
               {topStories.map((s, i) => (
@@ -238,34 +276,31 @@ export function BusinessOverviewDashboard() {
               ))}
             </ul>
           )}
-        </section>
+        </Av3Panel>
 
-        <section className="anr-panel">
-          <header className="anr-panel__head">
-            <h2>Business actions</h2>
-          </header>
-          <div className="anr-quick-actions">
-            <Link href="/admin/seo/search-console">Search Console</Link>
-            <Link href="/admin/seo/rankings">Rankings</Link>
-            <Link href="/admin/seo/competitors">Competitors</Link>
-            <Link href="/admin/seo/intelligence">SEO intelligence</Link>
-            <Link href="/admin/billing">Revenue</Link>
-            <Link href="/admin/executive">AI costs</Link>
-          </div>
-          {notes.length > 0 ? (
-            <ul className="anr-note-list">
-              {notes.map((n) => (
-                <li key={n}>{n}</li>
-              ))}
-            </ul>
-          ) : null}
-          {errors.map((e) => (
-            <p key={e} className="anr-error">
-              {e}
-            </p>
-          ))}
-        </section>
+        <Av3Panel title="SEO opportunities" subtitle="Search Console recommendations">
+          {seoOpportunities.length === 0 ? (
+            <Av3EmptyState
+              title="No SEO actions queued"
+              message="CTR opportunities appear after Search Console sync."
+              action={
+                <Link href="/admin/seo/search-console" className="anr-text-link">
+                  Open setup (Search Console)
+                </Link>
+              }
+            />
+          ) : (
+            <Av3DataTable
+              columns={[
+                { key: "title", header: "Action", render: (row) => row.title },
+                { key: "reason", header: "Reason", truncate: true, render: (row) => row.reason },
+              ]}
+              rows={seoOpportunities}
+              rowKey={(row, i) => `${row.title}-${i}`}
+            />
+          )}
+        </Av3Panel>
       </div>
-    </div>
+    </Av3Stack>
   );
 }

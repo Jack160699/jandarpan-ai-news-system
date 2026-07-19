@@ -1,7 +1,6 @@
 import { AdminPageGate } from "@/components/admin-newsroom/AdminPageGate";
 import { AdminShell } from "@/components/admin-newsroom/AdminShell";
-import { ExecutiveCfoPanel } from "@/sections/admin/ExecutiveCfoPanel";
-import "@/styles/executive-cfo.css";
+import { ExecutiveCostDashboard } from "@/sections/admin/ExecutiveCostDashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -9,10 +8,10 @@ export default function AdminExecutivePage() {
   return (
     <AdminPageGate permission="monitoring:read">
       <AdminShell
-        title="Executive AI CFO"
-        subtitle="AI spend, profitability & forecasts at a glance."
+        title="Costs & AI spend"
+        subtitle="Spend, budget, forecast, and expensive runs — one operating view."
       >
-        <ExecutiveCfoPanel />
+        <ExecutiveCostDashboard />
       </AdminShell>
     </AdminPageGate>
   );

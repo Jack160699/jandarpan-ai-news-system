@@ -18,6 +18,7 @@ import {
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
 import { NotificationCentre } from "@/components/admin-newsroom/NotificationCentre";
+import { CommandMenu } from "@/components/admin-v3/CommandMenu";
 import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
 import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
@@ -31,6 +32,7 @@ import { navIcon } from "@/lib/admin-platform/nav-icons";
 import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { hasResolvedRole } from "@/lib/auth/admin-permissions";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
+import type { CanonicalHealthSnapshot } from "@/lib/admin-v3/canonical-health";
 
 const COLLAPSE_KEY = "jd-admin-sidebar-collapsed";
 
@@ -60,21 +62,19 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
-  const [systemState, setSystemState] = useState<"healthy" | "degraded" | "unknown">(
-    "unknown"
-  );
+  const [health, setHealth] = useState<CanonicalHealthSnapshot | null>(null);
   const search = searchValue ?? localSearch;
-  const setSearch = onSearchChange ?? setLocalSearch;
+  void onSearchChange;
 
   useHydrationSafe("admin_shell");
 
   useEffect(() => {
     const id = window.setTimeout(() => {
       try {
-        if (window.localStorage.getItem(COLLAPSE_KEY) === "1") {
-          setCollapsed(true);
-        }
+        if (window.localStorage.getItem(COLLAPSE_KEY) === "1") setCollapsed(true);
       } catch {
         /* ignore */
       }
@@ -86,23 +86,37 @@ export function AdminShell({
     let cancelled = false;
     async function probe() {
       try {
-        const res = await fetch("/api/admin/ops/health", { credentials: "include" });
+        const res = await fetch("/api/admin/system-status", { credentials: "include" });
         if (!res.ok) return;
         const json = await res.json();
-        if (cancelled) return;
-        if (json.status === "healthy" || json.ok === true) setSystemState("healthy");
-        else if (json.status === "degraded" || json.status === "unhealthy") {
-          setSystemState("degraded");
-        }
+        if (!cancelled && json.snapshot) setHealth(json.snapshot);
       } catch {
-        /* optional for non-monitoring roles */
+        /* optional */
       }
     }
     void probe();
+    const id = window.setInterval(() => void probe(), 60_000);
     return () => {
       cancelled = true;
+      window.clearInterval(id);
     };
   }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdOpen(true);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle("av3-body-lock", mobileOpen);
+    return () => document.body.classList.remove("av3-body-lock");
+  }, [mobileOpen]);
 
   function toggleCollapsed() {
     setCollapsed((v) => {
@@ -162,49 +176,46 @@ export function AdminShell({
     });
   }, [activeWorkspace, canonicalRole, roleResolved]);
 
-  const stateLabel =
-    systemState === "healthy"
-      ? "Production · Healthy"
-      : systemState === "degraded"
-        ? "Production · Degraded"
-        : "Production";
-
   const navCompact = collapsed && !mobileOpen;
+  const state = health?.state ?? "unknown";
+  const stateLabel = health?.label ?? "Production · Unknown";
 
   const sidebarInner = (
     <>
-      <div className="anr-sidebar__brand">
-        <Link href="/admin/overview" className="anr-brand-link" onClick={() => setMobileOpen(false)}>
-          {collapsed && !mobileOpen ? (
+      <div className="av3-sidebar__brand">
+        <Link
+          href="/admin/overview"
+          className="av3-brand-link"
+          onClick={() => setMobileOpen(false)}
+        >
+          {navCompact ? (
             <Image
               src={JAN_DARPAN_BRAND_ASSETS.mark}
               alt="Jan Darpan"
               width={40}
               height={40}
-              className="anr-brand-mark"
+              className="av3-brand-mark"
               priority
             />
           ) : (
             <Image
               src={JAN_DARPAN_BRAND_ASSETS.logo}
               alt="Jan Darpan Chhattisgarh"
-              width={196}
-              height={40}
-              className="anr-brand-logo"
+              width={168}
+              height={34}
+              className="av3-brand-logo"
               priority
             />
           )}
         </Link>
-        {!collapsed || mobileOpen ? (
-          <p className="anr-meta anr-brand-tag">Command Centre</p>
-        ) : null}
+        {!navCompact ? <p className="av3-brand-tag">Command Centre</p> : null}
       </div>
 
-      {(!collapsed || mobileOpen) && primaryWorkspaces.length > 1 ? (
-        <div className="anr-workspace-switcher">
+      {!navCompact && primaryWorkspaces.length > 1 ? (
+        <div className="av3-workspace">
           <button
             type="button"
-            className="anr-workspace-switcher__trigger"
+            className="av3-workspace__btn"
             onClick={() => setWorkspaceOpen((v) => !v)}
             aria-expanded={workspaceOpen}
           >
@@ -215,22 +226,15 @@ export function AdminShell({
             <ChevronDown size={14} aria-hidden />
           </button>
           {workspaceOpen ? (
-            <ul className="anr-workspace-switcher__menu" role="listbox">
+            <ul className="av3-workspace__menu">
               {primaryWorkspaces.map((ws) => (
                 <li key={ws.id}>
                   <Link
                     href={ws.homeHref}
-                    className={
-                      ws.id === activeWorkspace?.id
-                        ? "anr-workspace-switcher__item anr-workspace-switcher__item--active"
-                        : "anr-workspace-switcher__item"
-                    }
                     onClick={() => {
                       setWorkspaceOpen(false);
                       setMobileOpen(false);
                     }}
-                    role="option"
-                    aria-selected={ws.id === activeWorkspace?.id}
                   >
                     <strong>{ws.label}</strong>
                     <em>{ws.description}</em>
@@ -242,9 +246,9 @@ export function AdminShell({
         </div>
       ) : null}
 
-      <nav className="anr-nav" aria-label="Workspace navigation">
+      <nav className="av3-nav" aria-label="Workspace navigation">
         {!roleResolved ? (
-          <div className="anr-nav-loading">
+          <div className="av3-nav-loading">
             <AdminAuthLoading label="Loading navigation…" />
           </div>
         ) : null}
@@ -258,7 +262,7 @@ export function AdminShell({
             <Link
               key={item.href}
               href={item.href}
-              className={`anr-nav-link ${active ? "anr-nav-link--active" : ""}`}
+              className={`av3-nav-link ${active ? "av3-nav-link--active" : ""}`}
               title={navCompact ? item.label : undefined}
               aria-label={item.label}
               onClick={() => setMobileOpen(false)}
@@ -270,27 +274,27 @@ export function AdminShell({
         })}
       </nav>
 
-      <div className="anr-sidebar__footer">
+      <div className="av3-sidebar__footer">
         <button
           type="button"
-          className="anr-btn anr-btn--ghost anr-sidebar__collapse"
+          className="av3-btn av3-btn--ghost av3-sidebar__collapse"
           onClick={toggleCollapsed}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          {!collapsed || mobileOpen ? <span>Collapse</span> : null}
+          {!navCompact ? <span>Collapse</span> : null}
         </button>
 
-        <div className="anr-sidebar__user-wrap">
+        <div className="av3-sidebar__user-wrap">
           <button
             type="button"
-            className="anr-sidebar__user"
+            className="av3-sidebar__user"
             onClick={() => setAccountOpen((v) => !v)}
             aria-expanded={accountOpen}
             title={email || "Account"}
           >
             <UserCircle2 size={20} aria-hidden />
-            {!collapsed || mobileOpen ? (
+            {!navCompact ? (
               <div>
                 <p>{email || "Newsroom"}</p>
                 <span>
@@ -300,7 +304,7 @@ export function AdminShell({
             ) : null}
           </button>
           {accountOpen ? (
-            <div className="anr-account-menu">
+            <div className="av3-account-menu">
               {secondaryWorkspaces.map((ws) => (
                 <Link
                   key={ws.id}
@@ -324,66 +328,82 @@ export function AdminShell({
   );
 
   return (
-    <div className="anr" data-theme={theme}>
-      <div className={`anr-shell ${collapsed ? "anr-shell--collapsed" : ""}`}>
+    <div className="anr av3" data-theme={theme}>
+      <div className={`av3-shell ${collapsed ? "av3-shell--collapsed" : ""}`}>
         {mobileOpen ? (
           <button
             type="button"
-            className="anr-backdrop"
+            className="av3-backdrop"
             aria-label="Close navigation"
             onClick={() => setMobileOpen(false)}
           />
         ) : null}
 
         <aside
-          className={`anr-sidebar ${mobileOpen ? "anr-sidebar--mobile-open" : ""}`}
+          className={`av3-sidebar ${mobileOpen ? "av3-sidebar--mobile-open" : ""}`}
           aria-label="Admin navigation"
         >
           {sidebarInner}
         </aside>
 
-        <main className="anr-main">
-          <header className="anr-topbar">
-            <div className="anr-topbar__left">
+        <main className="av3-main">
+          <header className="av3-topbar">
+            <div className="av3-topbar__left">
               <button
                 type="button"
-                className="anr-btn anr-btn--ghost anr-mobile-toggle"
+                className="av3-btn av3-btn--ghost av3-mobile-toggle"
                 onClick={() => setMobileOpen((v) => !v)}
                 aria-label="Open navigation"
               >
                 {mobileOpen ? <X size={16} /> : <Menu size={16} />}
               </button>
-              <form
-                className="anr-search"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const q = search.trim();
-                  if (!q) return;
-                  window.location.assign(
-                    `/admin/stories?q=${encodeURIComponent(q)}`
-                  );
-                }}
+              <button
+                type="button"
+                className="av3-search"
+                onClick={() => setCmdOpen(true)}
+                aria-label="Open command search"
               >
                 <Search size={14} aria-hidden />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={searchPlaceholder ?? "Search stories, routes…"}
-                  aria-label="Command search"
-                />
-              </form>
+                <span>{searchPlaceholder ?? "Search routes, stories…"}</span>
+                <kbd>Ctrl K</kbd>
+              </button>
             </div>
-            <div className="anr-topbar__right">
-              <span
-                className={`anr-env-pill anr-env-pill--${systemState}`}
-                title="Based on latest health check"
-              >
-                {stateLabel}
-              </span>
+            <div className="av3-topbar__right">
+              <div className="av3-status-wrap">
+                <button
+                  type="button"
+                  className={`av3-env-pill av3-env-pill--${state}`}
+                  aria-expanded={statusOpen}
+                  onClick={() => setStatusOpen((v) => !v)}
+                  title="Canonical production health"
+                >
+                  {stateLabel}
+                </button>
+                {statusOpen ? (
+                  <div className="av3-status-popover" role="dialog">
+                    <p className="av3-status-popover__title">{stateLabel}</p>
+                    {(health?.reasons?.length ?? 0) > 0 ? (
+                      <ul>
+                        {health!.reasons.slice(0, 6).map((r) => (
+                          <li key={r.id}>
+                            <strong>{r.title}</strong>
+                            <span>{r.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="av3-meta">No open health reasons.</p>
+                    )}
+                    <Link href="/admin/health" onClick={() => setStatusOpen(false)}>
+                      Open Platform health
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
               <NotificationCentre />
               <button
                 type="button"
-                className="anr-btn anr-btn--ghost"
+                className="av3-btn av3-btn--ghost"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 aria-label="Toggle theme"
               >
@@ -393,21 +413,30 @@ export function AdminShell({
           </header>
 
           {!hidePageHeader ? (
-            <header className="anr-header">
+            <header className="av3-page-header">
               <div>
-                <p className="anr-meta">
+                <p className="av3-meta">
                   {activeWorkspace?.label ?? "Admin"} · Jandarpan.news
                 </p>
                 <h1>{title}</h1>
-                {subtitle ? <p className="anr-meta">{subtitle}</p> : null}
+                {subtitle ? <p className="av3-meta">{subtitle}</p> : null}
               </div>
             </header>
           ) : null}
 
-          <section className="anr-content">{children}</section>
+          <section className="av3-content av3-page-enter">{children}</section>
         </main>
       </div>
-      {toast ? <div className="anr-toast" role="status">{toast}</div> : null}
+      <CommandMenu
+        open={cmdOpen}
+        onClose={() => setCmdOpen(false)}
+        initialQuery={search}
+      />
+      {toast ? (
+        <div className="av3-toast" role="status">
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }

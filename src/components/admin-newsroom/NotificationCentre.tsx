@@ -50,10 +50,11 @@ export function NotificationCentre() {
     const tick = () => {
       if (!cancelled) void load();
     };
-    tick();
+    const start = window.setTimeout(tick, 0);
     const id = window.setInterval(tick, 60_000);
     return () => {
       cancelled = true;
+      window.clearTimeout(start);
       window.clearInterval(id);
     };
   }, [load]);
@@ -65,14 +66,12 @@ export function NotificationCentre() {
   }, [open, load]);
 
   return (
-    <div className="anr-bell">
+    <div className="av3-bell anr-bell">
       <button
         type="button"
-        className={`anr-btn anr-btn--ghost anr-bell__trigger anr-bell__trigger--${tone}`}
+        className={`av3-btn av3-btn--ghost anr-bell__trigger anr-bell__trigger--${tone}`}
         aria-label={
-          unread > 0
-            ? `Notifications, ${unread} unread`
-            : "Notifications"
+          unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
         }
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
@@ -89,60 +88,56 @@ export function NotificationCentre() {
         <>
           <button
             type="button"
-            className="anr-bell__scrim"
+            className="av3-cmd__backdrop"
+            style={{ zIndex: 55 }}
             aria-label="Close notifications"
             onClick={() => setOpen(false)}
           />
-          <div className="anr-bell__panel" role="dialog" aria-label="Notification centre">
+          <div className="anr-bell__panel av3-bell__panel" role="dialog" aria-label="Notification centre">
             <header className="anr-bell__head">
-              <div>
-                <strong>Attention</strong>
-                <p className="anr-meta">
-                  {unread > 0 ? `${unread} item${unread === 1 ? "" : "s"} need review` : "All clear"}
-                </p>
-              </div>
+              <strong>Attention</strong>
               <button
                 type="button"
-                className="anr-btn anr-btn--ghost"
+                className="av3-btn av3-btn--ghost"
                 aria-label="Close"
                 onClick={() => setOpen(false)}
               >
-                <X size={16} />
+                <X size={14} />
               </button>
             </header>
-
-            <div className="anr-bell__body">
-              {loading && items.length === 0 ? (
-                <p className="anr-meta">Loading alerts…</p>
-              ) : null}
-              {error ? <p className="anr-error">{error}</p> : null}
-              {!loading && !error && items.length === 0 ? (
-                <div className="anr-empty">
-                  <p>No operational alerts right now.</p>
-                  <p className="anr-meta">Publishing, queues, and health look quiet.</p>
-                </div>
-              ) : null}
-              <ul className="anr-bell__list">
-                {items.map((item) => (
-                  <li key={item.id} className={`anr-bell__item anr-bell__item--${item.severity}`}>
-                    <Link href={item.href} onClick={() => setOpen(false)}>
-                      <span className="anr-bell__sev">{item.severity}</span>
-                      <strong>{item.title}</strong>
-                      <p>{item.explanation}</p>
-                      <em>
-                        {item.source} ·{" "}
-                        {new Date(item.timestamp).toLocaleString("en-IN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </em>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {loading && items.length === 0 ? (
+              <p className="av3-meta" style={{ padding: "0.85rem" }}>
+                Loading alerts…
+              </p>
+            ) : null}
+            {error ? (
+              <p className="av3-meta" style={{ padding: "0.85rem", color: "#fda4af" }}>
+                {error}
+              </p>
+            ) : null}
+            {!loading && !error && items.length === 0 ? (
+              <p className="av3-meta" style={{ padding: "0.85rem" }}>
+                No unresolved operational alerts.
+              </p>
+            ) : null}
+            <ul className="anr-bell__list">
+              {items.map((item) => (
+                <li key={item.id} className={`anr-bell__item anr-bell__item--${item.severity}`}>
+                  <Link href={item.href} onClick={() => setOpen(false)}>
+                    <strong>{item.title}</strong>
+                    <span>{item.explanation}</span>
+                    <em>
+                      {item.source} · {new Date(item.timestamp).toLocaleString()}
+                    </em>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <footer style={{ padding: "0.55rem 0.85rem", borderTop: "1px solid var(--anr-border)" }}>
+              <Link href="/admin/health" onClick={() => setOpen(false)} style={{ fontSize: "0.78rem", color: "#fca5a5" }}>
+                Open Platform health
+              </Link>
+            </footer>
           </div>
         </>
       ) : null}

@@ -1,6 +1,6 @@
 /**
  * GET /api/admin/notifications — operational attention feed for the bell.
- * Aggregates collaboration notifications + ops signals (permission-aware).
+ * Aggregates collaboration + canonical ops signals (permission-aware).
  */
 
 import { NextResponse } from "next/server";
@@ -13,7 +13,12 @@ import {
   getQueueAnalyticsDashboard,
   runAllHealthChecks,
   aggregateHealthStatus,
+  getCronMonitorState,
+  computeStabilityScore,
+  getMetricsDashboard,
 } from "@/lib/observability";
+import { getLaunchHealthWidgets } from "@/lib/ops/launch-health";
+import { deriveCanonicalHealth } from "@/lib/admin-v3/canonical-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +39,14 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
+function severityFromState(
+  state: string
+): "critical" | "warning" | "info" {
+  if (state === "critical") return "critical";
+  if (state === "degraded" || state === "warning") return "warning";
+  return "info";
+}
+
 export async function GET(request: Request) {
   const guard = await requireDashboardSession(request, "content:read");
   if (!guard.ok) return guard.response;
@@ -41,6 +54,7 @@ export async function GET(request: Request) {
   const role = guard.session.membership.role;
   const items: AdminNotificationItem[] = [];
   let unread = 0;
+  const now = new Date().toISOString();
 
   if (roleHasPermission(role, "editorial:write")) {
     try {
@@ -59,7 +73,7 @@ export async function GET(request: Request) {
           title: String(n.title ?? "Editorial notification"),
           explanation: String(n.body ?? n.message ?? "Open collaboration for details."),
           source: "Editorial",
-          timestamp: String(n.created_at ?? new Date().toISOString()),
+          timestamp: String(n.created_at ?? now),
           href: String(n.href ?? "/admin/collaboration"),
           unread: isUnread,
           dismissible: true,
@@ -73,36 +87,42 @@ export async function GET(request: Request) {
 
   if (roleHasPermission(role, "monitoring:read")) {
     try {
-      const [errorList, errorSummary, queue, checks] = await Promise.all([
-        getRecentOpsErrors(12),
-        getOpsErrorSummary(),
-        getQueueAnalyticsDashboard(),
-        runAllHealthChecks(),
-      ]);
+      const [errorList, errorSummary, queue, checks, cron, metrics, launchWidgets] =
+        await Promise.all([
+          getRecentOpsErrors(8),
+          getOpsErrorSummary(),
+          getQueueAnalyticsDashboard(),
+          runAllHealthChecks(),
+          getCronMonitorState(),
+          getMetricsDashboard(),
+          getLaunchHealthWidgets(),
+        ]);
 
       const status = aggregateHealthStatus(checks);
-      if (status === "unhealthy") {
+      const stability = await computeStabilityScore({
+        checks,
+        apiSamples: metrics.api,
+      });
+      const snapshot = deriveCanonicalHealth({
+        ok: status !== "unhealthy",
+        status,
+        stability,
+        checks,
+        cron,
+        launchWidgets,
+        timestamp: now,
+      });
+
+      for (const reason of snapshot.reasons) {
+        const sev = severityFromState(reason.severity);
         items.push({
-          id: "health-unhealthy",
-          severity: "critical",
-          title: "Platform health degraded",
-          explanation: "One or more health checks are failing. Review Platform health.",
+          id: reason.id,
+          severity: sev === "info" ? "warning" : sev,
+          title: reason.title,
+          explanation: reason.detail,
           source: "Platform",
-          timestamp: new Date().toISOString(),
-          href: "/admin/technical",
-          unread: true,
-          dismissible: false,
-        });
-        unread += 1;
-      } else if (status === "degraded") {
-        items.push({
-          id: "health-degraded",
-          severity: "warning",
-          title: "Platform health warning",
-          explanation: "Some checks are degraded. Inspect Platform for details.",
-          source: "Platform",
-          timestamp: new Date().toISOString(),
-          href: "/admin/technical",
+          timestamp: snapshot.checkedAt,
+          href: reason.href || "/admin/health",
           unread: true,
           dismissible: false,
         });
@@ -119,7 +139,7 @@ export async function GET(request: Request) {
           title: "Queue backlog elevated",
           explanation: `${queueDepth} jobs are waiting in the processing queue.`,
           source: "Pipeline",
-          timestamp: new Date().toISOString(),
+          timestamp: now,
           href: "/admin/system",
           unread: true,
           dismissible: false,
@@ -128,15 +148,15 @@ export async function GET(request: Request) {
       }
 
       const summary = asRecord(errorSummary);
-      const recentCount = Number(summary.recent24h ?? summary.count ?? 0) || 0;
-      if (recentCount > 0) {
+      const recentCount = Number(summary.recent24h ?? summary.last24h ?? summary.count ?? 0) || 0;
+      if (recentCount > 10) {
         items.push({
           id: "ops-errors-summary",
           severity: recentCount > 20 ? "critical" : "warning",
-          title: "Recent operational errors",
-          explanation: `${recentCount} ops error${recentCount === 1 ? "" : "s"} recorded recently.`,
+          title: "Elevated operational errors",
+          explanation: `${recentCount} ops errors recorded in the last 24 hours.`,
           source: "Platform",
-          timestamp: new Date().toISOString(),
+          timestamp: now,
           href: "/admin/health",
           unread: true,
           dismissible: false,
@@ -145,40 +165,50 @@ export async function GET(request: Request) {
       }
 
       const list = Array.isArray(errorList) ? errorList : [];
-      for (const raw of list.slice(0, 6)) {
+      for (const raw of list.slice(0, 4)) {
         const err = asRecord(raw);
-        const ts = String(err.created_at ?? err.timestamp ?? new Date().toISOString());
+        const ts = String(err.created_at ?? err.ts ?? err.timestamp ?? now);
         const msg = String(err.message ?? "Operational error");
         items.push({
           id: `err-${String(err.id ?? ts)}`,
           severity:
             err.severity === "critical" || err.level === "error" ? "critical" : "warning",
           title: msg.slice(0, 80),
-          explanation: String(err.route ?? err.source ?? "See Platform health for context."),
+          explanation: String(err.route ?? err.source ?? "See Platform health."),
           source: "Ops",
           timestamp: ts,
           href: "/admin/health",
           unread: true,
           dismissible: false,
         });
+        unread += 1;
       }
     } catch {
       /* optional */
     }
   }
 
-  items.sort(
+  // Deduplicate by id
+  const seen = new Set<string>();
+  const unique = items.filter((i) => {
+    if (seen.has(i.id)) return false;
+    seen.add(i.id);
+    return true;
+  });
+
+  unique.sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
-  const critical = items.some((i) => i.severity === "critical" && i.unread);
-  const warning = items.some((i) => i.severity === "warning" && i.unread);
+  const critical = unique.some((i) => i.severity === "critical" && i.unread);
+  const warning = unique.some((i) => i.severity === "warning" && i.unread);
+  const unreadCount = unique.filter((i) => i.unread).length;
 
   return NextResponse.json({
     ok: true,
-    unread,
+    unread: unreadCount,
     tone: critical ? "critical" : warning ? "warning" : "neutral",
-    items: items.slice(0, 40),
-    timestamp: new Date().toISOString(),
+    items: unique.slice(0, 40),
+    timestamp: now,
   });
 }

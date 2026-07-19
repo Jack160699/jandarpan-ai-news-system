@@ -1,24 +1,21 @@
-import type { LaunchHealthLevel, LaunchHealthWidget } from "@/lib/ops/launch-health";
+import type { LaunchHealthWidget } from "@/lib/ops/launch-health";
+import { Av3HealthRow, Av3Panel } from "@/components/admin-v3";
 
-const STATUS_CLASS: Record<LaunchHealthLevel, string> = {
-  healthy: "anr-pulse-item--stable",
-  degraded: "anr-pulse-item--warning",
-  unhealthy: "anr-pulse-item--breaking",
-};
-
-function statusClass(status: LaunchHealthWidget["status"]): string {
-  return STATUS_CLASS[status as LaunchHealthLevel] ?? "";
+function tone(
+  status: LaunchHealthWidget["status"]
+): "healthy" | "warning" | "critical" | "neutral" {
+  if (status === "healthy") return "healthy";
+  if (status === "degraded") return "warning";
+  if (status === "unhealthy") return "critical";
+  return "neutral";
 }
 
-function statusLabel(status: LaunchHealthWidget["status"]): string {
-  return STATUS_LABEL[status as LaunchHealthLevel] ?? status;
+function label(status: string): string {
+  if (status === "healthy") return "Healthy";
+  if (status === "degraded") return "Warning";
+  if (status === "unhealthy") return "Critical";
+  return "Unknown";
 }
-
-const STATUS_LABEL: Record<LaunchHealthLevel, string> = {
-  healthy: "Green",
-  degraded: "Yellow",
-  unhealthy: "Red",
-};
 
 type LaunchHealthSummaryStripProps = {
   widgets: LaunchHealthWidget[];
@@ -28,23 +25,18 @@ export function LaunchHealthSummaryStrip({ widgets }: LaunchHealthSummaryStripPr
   if (!widgets.length) return null;
 
   return (
-    <section className="anr-health-ops__launch-strip" aria-label="Launch health summary">
-      <h3 className="anr-meta m-0 mb-3 font-bold uppercase tracking-wide">
-        Launch health
-      </h3>
-      <ul className="anr-health-ops__launch-grid">
+    <Av3Panel title="Launch health" subtitle="Queues, cron, RSS, sitemap">
+      <ul className="av3-stack" style={{ listStyle: "none", margin: 0, padding: 0 }}>
         {widgets.map((widget) => (
-          <li
+          <Av3HealthRow
             key={widget.id}
-            className={`anr-pulse-item ${statusClass(widget.status)}`}
-            title={widget.detail}
-          >
-            <span className="anr-pulse-item__label">{widget.label}</span>
-            <span className="anr-pulse-item__value">{statusLabel(widget.status)}</span>
-            <span className="anr-meta block text-xs opacity-80">{widget.detail}</span>
-          </li>
+            label={widget.label}
+            tone={tone(widget.status)}
+            statusLabel={label(widget.status)}
+            message={widget.detail}
+          />
         ))}
       </ul>
-    </section>
+    </Av3Panel>
   );
 }
