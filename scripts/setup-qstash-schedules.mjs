@@ -5,9 +5,10 @@
  * Production uses staggered schedules (see docs/QSTASH_SCHEDULER_SETUP.md):
  *   fetch-news → ingest → event bus enqueues editorial_generate job
  *   orchestrate → intelligence pipeline (ai_enrich, job_processor, …)
+ *   editorial-generate → dedicated lane draining worker_jobs(editorial_generate)
  *
- * Editorial generation is NOT a separate QStash schedule — it runs via
- * job_processor after ingest.completed. Vercel daily cron is the backup.
+ * Editorial generation runs via event-bus enqueue + dedicated editorial-generate cron.
+ * Orchestrate/job_processor exclude editorial_generate to avoid duplicate drains.
  *
  * Scheduled worker job ids (health monitoring) are defined in:
  *   src/lib/infrastructure/cron/registered-jobs.ts
@@ -47,7 +48,7 @@ const baseUrl = normalizeProductionUrl(rawUrl);
 const client = new Client({ token });
 
 /** Retired schedules — removed on each setup run */
-const RETIRED_SCHEDULE_IDS = ["jandarpan-editorial-generate"];
+const RETIRED_SCHEDULE_IDS = [];
 
 /** @type {Array<{ scheduleId: string; destination: string; cron: string; method: string; body?: string }>} */
 const schedules = [
@@ -61,6 +62,13 @@ const schedules = [
     scheduleId: "jandarpan-orchestrate",
     destination: `${baseUrl}/api/cron/orchestrate`,
     cron: "15,45 * * * *",
+    method: "POST",
+    body: "{}",
+  },
+  {
+    scheduleId: "jandarpan-editorial-generate",
+    destination: `${baseUrl}/api/cron/editorial-generate`,
+    cron: "5,20,35,50 * * * *",
     method: "POST",
     body: "{}",
   },
@@ -138,6 +146,6 @@ console.log(
   "Manual recovery: POST /api/generate-articles or POST /api/cron/orchestrate with { workers: [\"editorial_generate\"] }."
 );
 console.log(
-  "Disaster recovery backup: set EDITORIAL_GENERATE_BACKUP_CRON=true to re-enable direct QStash/Vercel worker hits."
+  "Dedicated lane: POST /api/cron/editorial-generate (QStash jandarpan-editorial-generate, Vercel cron backup)."
 );
 

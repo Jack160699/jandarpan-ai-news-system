@@ -30,6 +30,7 @@ async function runJobProcessor(ctx: WorkerContext): Promise<WorkerResult> {
     workerId: "job_processor",
     deadline: ctx.deadline,
     oldestFirst: health?.oldestFirst ?? false,
+    excludeJobTypes: ["editorial_generate"],
   });
   const pending = await countPendingJobs();
 

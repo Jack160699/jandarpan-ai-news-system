@@ -135,7 +135,7 @@ export async function enqueueJobs(
 export async function claimJobBatch(
   limit = DEFAULT_BATCH,
   jobTypes?: JobType[],
-  options?: { oldestFirst?: boolean }
+  options?: { oldestFirst?: boolean; excludeJobTypes?: JobType[] }
 ): Promise<WorkerJobRow[]> {
   await reclaimStaleClaimedJobs();
 
@@ -159,6 +159,14 @@ export async function claimJobBatch(
 
   if (jobTypes?.length) {
     query = query.in("job_type", jobTypes);
+  }
+
+  if (options?.excludeJobTypes?.length) {
+    query = query.not(
+      "job_type",
+      "in",
+      `(${options.excludeJobTypes.join(",")})`
+    );
   }
 
   const { data: pending, error } = await query;
@@ -271,6 +279,7 @@ export async function processJobBatch(
   options?: {
     limit?: number;
     jobTypes?: JobType[];
+    excludeJobTypes?: JobType[];
     workerId?: string;
     deadline?: ExecutionDeadline;
     oldestFirst?: boolean;
@@ -285,6 +294,7 @@ export async function processJobBatch(
 }> {
   const jobs = await claimJobBatch(options?.limit, options?.jobTypes, {
     oldestFirst: options?.oldestFirst,
+    excludeJobTypes: options?.excludeJobTypes,
   });
   const deadline = options?.deadline;
   const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;

@@ -16,7 +16,6 @@ import {
 } from "@/lib/infrastructure/queue/tuning";
 import { recordPerfAudit } from "@/lib/observability/queue-analytics";
 import { monitorWorkerResult } from "@/lib/observability/worker-monitor";
-import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 import {
   completeWorkerResult,
   partialWorkerResult,
@@ -25,7 +24,6 @@ import {
 } from "@/lib/infrastructure/workers/deadline-aware";
 import { processAiQueueBatch } from "@/lib/news/ai/process";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
-import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
 import {
   countPendingEditorialImages,
   processEditorialImageQueue,
@@ -184,38 +182,10 @@ async function runEditorialWorker(ctx: WorkerContext): Promise<WorkerResult> {
     );
   }
 
-  if (process.env.NEWSROOM_GENERATE_ARTICLES !== "true") {
-    return skippedWorkerResult("editorial_generate", started, ctx.deadline, "not_enabled");
-  }
-
-  if (!process.env.OPENAI_API_KEY?.trim()) {
-    return skippedWorkerResult("editorial_generate", started, ctx.deadline, "no_openai_key");
-  }
-
-  if (shouldSkipForDeadline(ctx.deadline, INFRA_CONFIG.workerDeadlineReserveMs)) {
-    return skippedWorkerResult("editorial_generate", started, ctx.deadline, "deadline_precheck");
-  }
-
-  const result = await generateEditorialsFromEvents({
-    limit: INFRA_CONFIG.editorialBatchLimit,
-  });
-
-  if (result.published > 0) {
-    await revalidateNewsroomCaches({ publishedStories: result.published });
-  }
-
-  return completeWorkerResult("editorial_generate", started, ctx.deadline, {
-    recordsProcessed: result.published,
-    recordsSkipped: result.rejected,
-    partial: false,
-    extra: {
-      published: result.published,
-      rejected: result.rejected,
-      generated: result.generated,
-      avgConfidence: result.avgConfidence,
-      concurrency: INFRA_CONFIG.editorialConcurrency,
-    },
-  });
+  const { runEditorialGenerateLane } = await import(
+    "@/lib/infrastructure/workers/editorial-generate-lane"
+  );
+  return runEditorialGenerateLane(ctx);
 }
 
 async function runImagesWorker(ctx: WorkerContext): Promise<WorkerResult> {

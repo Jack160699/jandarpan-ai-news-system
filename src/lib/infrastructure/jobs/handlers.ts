@@ -449,6 +449,9 @@ const editorialGenerate: JobHandler = async (job) => {
       repaired: result.repaired,
       skipped: result.skipped,
       errors: result.errors.slice(0, 5),
+      ...(result.topStory?.storyId
+        ? { generatedArticleIds: [result.topStory.storyId] }
+        : {}),
     },
   };
 };

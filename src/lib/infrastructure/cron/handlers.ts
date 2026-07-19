@@ -117,6 +117,7 @@ export async function handleCronJobs(request: Request): Promise<NextResponse> {
       const batch = await processJobBatch(JOB_HANDLERS, {
         limit: INFRA_CONFIG.workerJobBatch,
         workerId: "cron_jobs",
+        excludeJobTypes: ["editorial_generate"],
       });
       const stats = await getQueueStats();
 

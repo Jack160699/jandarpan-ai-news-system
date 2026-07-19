@@ -9,7 +9,9 @@ export type EditorialGenerateTrigger =
   /** Vercel daily backup cron (x-vercel-cron) */
   | "vercel_backup"
   /** Explicit orchestrate body, dev cycle, or other manual override */
-  | "manual_override";
+  | "manual_override"
+  /** Phase 2 dedicated /api/cron/editorial-generate lane */
+  | "dedicated_lane";
 
 export function isEditorialBackupCronEnabled(): boolean {
   return process.env.EDITORIAL_GENERATE_BACKUP_CRON === "true";
@@ -26,14 +28,14 @@ export function resolveDirectEditorialGate(
     return { allowed: true, reason: "vercel_daily_backup" };
   }
 
-  if (trigger === "scheduled_cron" && isEditorialBackupCronEnabled()) {
-    return { allowed: true, reason: "backup_cron_env_enabled" };
+  if (trigger === "dedicated_lane") {
+    return { allowed: true, reason: "dedicated_lane" };
   }
 
   if (trigger === "scheduled_cron") {
     return {
       allowed: false,
-      reason: "canonical_path_ingest_event_job_processor",
+      reason: "use_dedicated_editorial_generate_cron",
     };
   }
 

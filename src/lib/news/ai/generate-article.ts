@@ -57,6 +57,7 @@ import type {
 } from "@/lib/news/ai/editorial-types";
 import { logNewsroom } from "@/lib/newsroom/logger";
 import { EDITORIAL_CAPACITY } from "@/lib/newsroom/editorial-capacity";
+import { selectEditorialCandidates } from "@/lib/infrastructure/workers/editorial-priority";
 import { asJson } from "@/types/json";
 import { resolveEditorialTierPlan } from "@/lib/newsroom/ai-cost-tiers";
 import type {
@@ -907,7 +908,8 @@ export async function generateEditorialsFromEvents(options?: {
     };
   }
 
-  const pending = events.filter((e) => !usedEventIds.has(e.id)).slice(0, limit);
+  const eligible = events.filter((e) => !usedEventIds.has(e.id));
+  const pending = selectEditorialCandidates(eligible, limit);
 
   let published = 0;
   let rejected = 0;

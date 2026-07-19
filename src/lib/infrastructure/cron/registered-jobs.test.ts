@@ -14,6 +14,7 @@ describe("REGISTERED_CRON_JOBS", () => {
       expect.arrayContaining([
         "fetch-news",
         "orchestrate",
+        "editorial-generate",
         "edition-publish",
         "workers-health",
         "translation-backfill",

@@ -106,7 +106,12 @@ function isProbeTimeoutCheck(c: Record<string, unknown>): boolean {
  * Cron-job criticality. A single ingestion/optional cron hard-failure must not
  * escalate the whole platform to Critical — only core publishing crons do.
  */
-const CORE_CRON_JOBS = new Set(["orchestrate", "edition-publish"]);
+const CORE_CRON_JOBS = new Set([
+  "orchestrate",
+  "edition-publish",
+  "editorial-generate",
+  "editorial_generate",
+]);
 const INGESTION_CRON_JOBS = new Set(["fetch-news"]);
 
 function cronJobCriticality(job: string): "core" | "ingestion" | "optional" {
@@ -134,6 +139,20 @@ function describeCronIncident(
       title: "News ingestion degraded",
       detail:
         "Fallback providers continued; some optional sources degraded on the last run.",
+    };
+  }
+
+  const j = job.toLowerCase();
+  if (j === "editorial-generate" || j === "editorial_generate") {
+    if (input.failed) {
+      return {
+        title: "Editorial generation failed",
+        detail: "Last dedicated editorial lane run reported a hard failure.",
+      };
+    }
+    return {
+      title: "Editorial generation degraded",
+      detail: "Last dedicated editorial lane run completed with tolerated degradation.",
     };
   }
 

@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase";
 import { asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
 import { enqueueJob } from "@/lib/infrastructure/jobs/queue";
 import type { JobType } from "@/lib/infrastructure/jobs/types";
+import { editorialJobQueuePriority } from "@/lib/infrastructure/workers/editorial-priority";
 
 export type EventTopic =
   | "ingest.completed"
@@ -103,7 +104,15 @@ export async function deliverPendingEvents(
           dedupeKey,
           tenantId,
           payload: { ...payload, sourceEventId: event.id },
-          priority: jobType === "intelligence_snapshot" ? 5 : 0,
+          priority:
+            jobType === "intelligence_snapshot"
+              ? 5
+              : jobType === "editorial_generate"
+                ? editorialJobQueuePriority(
+                    payload as unknown as import("@/lib/types/newsroom").NewsEventRow
+                  )
+                : 0,
+          timeoutMs: jobType === "editorial_generate" ? 90_000 : undefined,
         });
         if (!jobId) {
           enqueueFailures.push(jobType);
