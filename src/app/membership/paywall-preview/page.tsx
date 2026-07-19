@@ -1,5 +1,5 @@
 import { PremiumPaywallPage } from "@/features/reader-ds/monetization";
-import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { isReaderDesignSystemQaEnabled } from "@/features/reader-ds/config";
 import { fetchMonetizationPayload } from "@/lib/monetization/fetch-payload";
 import { getTenantConfig } from "@/lib/tenant/resolve";
 import { buildUtilityPageMetadata } from "@/lib/seo/metadata";
@@ -16,7 +16,7 @@ export const metadata = buildUtilityPageMetadata({
  * Uses the first real premium_reports teaser when available — never invents a news story.
  */
 export default async function PaywallPreviewRoute() {
-  if (!isReaderDesignSystemEnabled()) redirect("/membership");
+  if (!isReaderDesignSystemQaEnabled()) redirect("/membership");
   const tenant = await getTenantConfig();
   const payload = await fetchMonetizationPayload(tenant);
   const report = payload.premiumReports.find((r) => r.isPaywalled) ?? payload.premiumReports[0];

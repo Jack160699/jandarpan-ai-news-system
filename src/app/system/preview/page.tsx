@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { isReaderDesignSystemQaEnabled } from "@/features/reader-ds/config";
 import {
   EmptyState,
   ErrorStatePage,
@@ -21,7 +21,7 @@ export default async function SystemPreviewPage({
 }: {
   searchParams: Promise<{ state?: string }>;
 }) {
-  if (!isReaderDesignSystemEnabled()) redirect("/");
+  if (!isReaderDesignSystemQaEnabled()) redirect("/");
   const { state = "loading" } = await searchParams;
 
   switch (state) {
