@@ -1,7 +1,8 @@
 # Phase 6 Checkpoint
 
 **Status:** COMPLETE  
-**Commit message:** `feat(admin): complete Admin V3 stabilization and premium finish`
+**Commit:** `efe2d6bad42a9e459de2c54e7c998bd7dd2ac911`  
+**Message:** `feat(admin): complete Admin V3 stabilization and premium finish`
 
 ## Visual
 
@@ -12,7 +13,7 @@
 
 ## Screenshots
 
-`docs/audits/admin-stabilization/final-screenshots/` — login, CC, editorial, business, platform, health, settings, SEO, costs, sidebar, mobile drawer, zoom 125/150  
+`docs/audits/admin-stabilization/final-screenshots/` — 89 PNGs across login, CC, editorial, business, platform, health, settings, SEO, costs, sidebar expanded/collapsed, mobile drawer/More/command, zoom 125/150, viewports 1920–360  
 
 ## Tests
 
@@ -23,4 +24,17 @@
 
 ## Deploy
 
-Push `main` → wait Vercel READY → verify aliases www.jandarpan.news / jandarpan.news  
+| Item | Value |
+|---|---|
+| Push | `main` → `origin/main` (fast-forward, no force) |
+| Deployment ID | `dpl_X8sUsK6wMeukDdN2UhXKQAZMP2pp` |
+| readyState | `READY` |
+| Aliases | `www.jandarpan.news`, `jandarpan.news` |
+| Inspector | https://vercel.com/jack160699s-projects/newspaper-motion/X8sUsK6wMeukDdN2UhXKQAZMP2pp |
+
+## Production smoke
+
+- Login 200  
+- Protected routes redirect to login with `next=`  
+- No admin runtime error clusters in last 24h  
+- Authenticated deep QA blocked (no production password env)
