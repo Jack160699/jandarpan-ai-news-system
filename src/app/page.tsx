@@ -5,7 +5,10 @@ import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { ReaderHomepage } from "@/features/reader-ds/homepage/ReaderHomepage";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
+import { fetchMonetizationPayload } from "@/lib/monetization/fetch-payload";
+import { getNativeAdCreative } from "@/lib/monetization/native-feed-ads";
 import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
+import { getTenantConfig } from "@/lib/tenant/resolve";
 import { Footer } from "@/sections/Footer";
 import { HomepageEmpty } from "@/sections/homepage";
 import { HomepageLiveView } from "@/sections/homepage/HomepageLiveView";
@@ -46,6 +49,10 @@ async function HomeFeed() {
 /** Approved navy/red/gold reader design (flag-gated, preview only). */
 async function ReaderDesignFeed() {
   const feed = await getCachedGeneratedHomepageFeed();
+  const tenant = await getTenantConfig();
+  const monetization = await fetchMonetizationPayload(tenant);
+  const adsEnabled = monetization.settings.enabled && monetization.settings.adsEnabled;
+  const nativeAd = adsEnabled ? getNativeAdCreative(0) : null;
   const trending = buildTrendingKeywords({ limit: 12 });
   const storyCount = feed ? feed.trending.length + feed.liveWire.length + 1 : 0;
 
@@ -53,7 +60,7 @@ async function ReaderDesignFeed() {
     <>
       <JsonLdScript data={homepageJsonLd({ storyCount, trendingKeywords: trending })} />
       {feed ? (
-        <ReaderHomepage feed={feed} />
+        <ReaderHomepage feed={feed} nativeAd={nativeAd} adsEnabled={adsEnabled} />
       ) : (
         <>
           <HomepageEmpty />

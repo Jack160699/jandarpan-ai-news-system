@@ -11,6 +11,7 @@ import { DistrictHomepage } from "@/features/reader-ds/pages";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
 import { filterPoolByLanguage } from "@/lib/i18n/article-language";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
+import { fetchMonetizationPayload } from "@/lib/monetization/fetch-payload";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import {
   buildRegionalRankingPersonalization,
@@ -26,6 +27,7 @@ import {
   collectionPageJsonLd,
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
+import { getTenantConfig } from "@/lib/tenant/resolve";
 
 export const revalidate = 60;
 
@@ -118,6 +120,16 @@ export default async function DistrictPage({ params }: PageProps) {
   ];
 
   if (isReaderDesignSystemEnabled()) {
+    const tenant = await getTenantConfig();
+    const monetization = await fetchMonetizationPayload(tenant);
+    // Only show district sponsor when a real affiliate/house partner exists — never invent a brand.
+    const sponsorLabel =
+      monetization.settings.affiliatesEnabled && monetization.affiliates[0]?.partnerName
+        ? monetization.affiliates[0].partnerName
+        : monetization.settings.placements.find(
+            (p) => p.enabled && p.slotId === "affiliate_rail" && p.label?.trim()
+          )?.label ?? null;
+
     return (
       <>
         <JsonLdScript data={jsonLd} />
@@ -125,6 +137,7 @@ export default async function DistrictPage({ params }: PageProps) {
           districtName={district.name}
           districtNameHi={district.nameHi}
           articles={articles}
+          sponsorLabel={sponsorLabel}
         />
       </>
     );

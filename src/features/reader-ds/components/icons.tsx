@@ -42,7 +42,8 @@ export type JdIconName =
   | "list"
   | "plus"
   | "cog"
-  | "sun";
+  | "sun"
+  | "alert";
 
 type JdIconProps = {
   name: JdIconName;
@@ -196,6 +197,12 @@ const PATHS: Record<JdIconName, React.ReactNode> = {
     <>
       <circle cx="12" cy="12" r="4" />
       <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+    </>
+  ),
+  alert: (
+    <>
+      <path d="M12 3 2.5 20h19L12 3Z" />
+      <path d="M12 9v5M12 17h.01" />
     </>
   ),
 };

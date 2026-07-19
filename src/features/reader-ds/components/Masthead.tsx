@@ -8,13 +8,24 @@ type MastheadProps = {
   backHref?: string;
   /** Hide right-side actions (used on focused overlays). */
   hideActions?: boolean;
+  /** Gold “प्रीमियम” badge beside wordmark (E43 member home). */
+  premiumBadge?: boolean;
+  /** Replace back/brand with close control (E36 overlay). */
+  closeHref?: string;
 };
 
 /**
  * Compact sticky masthead — matches approved A1 atom:
  * solid navy · red “ज” mark · Tiro 22 wordmark · goldSoft icons · avatar.
  */
-export function Masthead({ pageTitle, back, backHref = "/", hideActions = false }: MastheadProps) {
+export function Masthead({
+  pageTitle,
+  back,
+  backHref = "/",
+  hideActions = false,
+  premiumBadge = false,
+  closeHref,
+}: MastheadProps) {
   return (
     <header
       className="jd-masthead"
@@ -38,7 +49,11 @@ export function Masthead({ pageTitle, back, backHref = "/", hideActions = false 
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          {back ? (
+          {closeHref ? (
+            <Link href={closeHref} aria-label="बंद करें" style={{ display: "flex", color: "var(--jd-gold-soft)" }}>
+              <JdIcon name="close" size={22} stroke={2} color="var(--jd-gold-soft)" />
+            </Link>
+          ) : back ? (
             <Link href={backHref} aria-label="वापस" style={{ display: "flex", color: "var(--jd-gold-soft)" }}>
               <JdIcon name="arrowL" size={22} stroke={2} color="var(--jd-gold-soft)" />
             </Link>
@@ -71,10 +86,26 @@ export function Masthead({ pageTitle, back, backHref = "/", hideActions = false 
               {pageTitle}
             </span>
           ) : (
-            <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+            <Link href="/" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 8 }}>
               <span className="jd-brand" style={{ fontSize: 22, lineHeight: 1, display: "block" }}>
                 जनदर्पण
               </span>
+              {premiumBadge ? (
+                <span
+                  className="jd-ui"
+                  style={{
+                    fontSize: 8.5,
+                    fontWeight: 800,
+                    letterSpacing: ".06em",
+                    color: "var(--jd-navy)",
+                    background: "var(--jd-gold)",
+                    padding: "2px 6px",
+                    borderRadius: 2,
+                  }}
+                >
+                  प्रीमियम
+                </span>
+              ) : null}
             </Link>
           )}
         </div>

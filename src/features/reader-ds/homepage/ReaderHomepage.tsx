@@ -1,9 +1,12 @@
+"use client";
+
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
+import type { NativeAdCreative } from "@/lib/monetization/native-feed-ads";
+import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import "../styles";
 import { readerDsFontClassName } from "../fonts";
 import type { ReaderStory } from "../utils";
 import {
-  Ad,
   BottomNav,
   BreakingStrip,
   LeadStory,
@@ -14,6 +17,11 @@ import {
   UtilityRow,
 } from "../components";
 import { UtilTiles } from "../components/UtilTiles";
+import { DismissibleAd } from "../components/DismissibleAd";
+import {
+  NativeSponsoredCard,
+  PremiumExclusiveStrip,
+} from "../monetization";
 
 function toStory(a: HomeArticle): ReaderStory {
   return {
@@ -37,7 +45,6 @@ type HomeSection = {
   stories: ReaderStory[];
 };
 
-/** Prefer articles that carry a real image URL for lead visual fidelity. */
 function pickLead(feed: GeneratedHomepageFeed): HomeArticle | null {
   const candidates = [
     feed.editorsPicks?.lead,
@@ -115,11 +122,24 @@ function buildSections(feed: GeneratedHomepageFeed, excludeSlugs: Set<string>): 
   return sections;
 }
 
+type ReaderHomepageProps = {
+  feed: GeneratedHomepageFeed;
+  /** When ads enabled — house/native creative from existing monetization helpers. */
+  nativeAd?: NativeAdCreative | null;
+  adsEnabled?: boolean;
+};
+
 /**
- * Approved A1 homepage composition (flag-gated):
- * masthead → utility → breaking → lead → 2 secondary → util tiles → ad → sections → bottom nav.
+ * Approved A1 homepage + Phase 5 monetization states (E43–E45).
  */
-export function ReaderHomepage({ feed }: { feed: GeneratedHomepageFeed }) {
+export function ReaderHomepage({
+  feed,
+  nativeAd = null,
+  adsEnabled = true,
+}: ReaderHomepageProps) {
+  const { isPremium } = useReaderAccount();
+  const showAds = adsEnabled && !isPremium;
+
   const leadArticle = pickLead(feed);
   const lead = leadArticle ? toStory(leadArticle) : null;
 
@@ -153,14 +173,18 @@ export function ReaderHomepage({ feed }: { feed: GeneratedHomepageFeed }) {
       className={`jd-ds ${readerDsFontClassName}`}
       style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", background: "var(--jd-paper)" }}
     >
-      <Masthead />
+      <Masthead premiumBadge={isPremium} />
       <UtilityRow />
       <BreakingStrip headline={breaking} href={breakingHref} />
 
       <main
         id="main-content"
         role="main"
-        style={{ flex: 1, paddingBottom: 72, background: "var(--jd-paper)" }}
+        style={{
+          flex: 1,
+          paddingBottom: showAds ? 128 : 72,
+          background: "var(--jd-paper)",
+        }}
       >
         {lead ? <LeadStory story={lead} /> : null}
 
@@ -179,7 +203,25 @@ export function ReaderHomepage({ feed }: { feed: GeneratedHomepageFeed }) {
 
         <UtilTiles />
 
-        <Ad label="विज्ञापन · टॉप 320×64" />
+        {isPremium ? (
+          <PremiumExclusiveStrip href="/membership/manage" title="एक्सक्लूसिव: सदस्य डेस्क से चयनित विश्लेषण" />
+        ) : showAds ? (
+          <DismissibleAd label="विज्ञापन · टॉप 320×64" height={64} />
+        ) : null}
+
+        {showAds && nativeAd ? (
+          <NativeSponsoredCard
+            sponsorName={nativeAd.sponsorName}
+            headline={nativeAd.headline}
+            ctaLabel={
+              /learn more|explore|see partnership|watch now|view offer/i.test(nativeAd.ctaLabel)
+                ? "और जानें"
+                : nativeAd.ctaLabel
+            }
+            href={nativeAd.targetUrl}
+            imageUrl={nativeAd.imageUrl ?? nativeAd.videoPosterUrl}
+          />
+        ) : null}
 
         {sections.map((section, i) => (
           <section key={section.key}>
@@ -194,11 +236,14 @@ export function ReaderHomepage({ feed }: { feed: GeneratedHomepageFeed }) {
                 />
               ))}
             </div>
-            {i === 0 ? <Ad label="विज्ञापन · मिड-फ़ीड" close height={64} /> : null}
+            {i === 0 && showAds ? (
+              <DismissibleAd label="विज्ञापन · मिड-फ़ीड 300×250" height={96} />
+            ) : null}
           </section>
         ))}
       </main>
 
+      {showAds ? <DismissibleAd sticky label="स्टिकी बैनर · 320×50" /> : null}
       <BottomNav active="home" />
       <SearchOverlay />
     </div>

@@ -79,6 +79,12 @@ export function ProfileHubPage() {
           <JdIcon name="chevR" size={20} stroke={2} color="var(--jd-gold-soft)" />
         </Link>
 
+        <SettingRow
+          icon="star"
+          label="सदस्यता प्रबंधन"
+          sub="प्लान · रसीदें · रद्द करें"
+          href="/membership/manage"
+        />
         <SettingRow icon="bookmark" label="सहेजी कहानियाँ" sub={`${saved} सहेजी`} href="/archive/saved" />
         <SettingRow icon="clock" label="पढ़ने का इतिहास" href="/archive/history" />
         <SettingRow

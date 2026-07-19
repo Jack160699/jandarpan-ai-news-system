@@ -64,6 +64,7 @@ const READER_DS_EXACT = new Set([
   "/live",
   "/listen",
   "/archive",
+  "/membership",
 ]);
 const READER_DS_PREFIXES = [
   "/district/",
@@ -74,6 +75,7 @@ const READER_DS_PREFIXES = [
   "/premium/",
   "/listen/",
   "/archive/",
+  "/membership/",
 ];
 
 function isReaderDsRoute(pathname: string): boolean {

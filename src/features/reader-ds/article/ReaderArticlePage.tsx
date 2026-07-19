@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { LiveStoryJsonLd } from "@/components/seo/LiveStoryJsonLd";
 import { ArticleImage } from "../components/ArticleImage";
 import { Masthead } from "../components/Masthead";
@@ -24,6 +25,7 @@ import { NoImagePlaceholder } from "./components/NoImagePlaceholder";
 import { OpinionBody } from "./components/OpinionBody";
 import { PhotoGallery } from "./components/PhotoGallery";
 import { VideoPlayer } from "./components/VideoPlayer";
+import { ArticleInlineAd } from "../monetization";
 import type { ReaderArticleModel } from "./types";
 
 function storyAsLiveEntries(model: ReaderArticleModel): LiveBlogEntry[] {
@@ -37,22 +39,32 @@ function storyAsLiveEntries(model: ReaderArticleModel): LiveBlogEntry[] {
   }));
 }
 
-function BodyParas({ paragraphs }: { paragraphs: string[] }) {
+function BodyParas({
+  paragraphs,
+  showInlineAd = false,
+}: {
+  paragraphs: string[];
+  showInlineAd?: boolean;
+}) {
   return (
     <>
       {paragraphs.map((p, i) => (
-        <p
-          key={i}
-          className="jd-serif"
-          style={{
-            margin: "0 0 12px",
-            fontSize: 15,
-            lineHeight: 1.75,
-            color: "var(--jd-ink-2)",
-          }}
-        >
-          {p}
-        </p>
+        <Fragment key={i}>
+          <p
+            className="jd-serif"
+            style={{
+              margin: "0 0 12px",
+              fontSize: 15,
+              lineHeight: 1.75,
+              color: "var(--jd-ink-2)",
+            }}
+          >
+            {p}
+          </p>
+          {showInlineAd && i === 0 && paragraphs.length > 1 ? (
+            <ArticleInlineAd />
+          ) : null}
+        </Fragment>
       ))}
     </>
   );
@@ -421,7 +433,15 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
             variant === "no-image" ||
             variant === "video" ? (
               <div style={{ marginTop: variant === "breaking" || variant === "sponsored" ? 12 : 0 }}>
-                <BodyParas paragraphs={paragraphs} />
+                <BodyParas
+                  paragraphs={paragraphs}
+                  showInlineAd={
+                    variant === "standard" ||
+                    variant === "breaking" ||
+                    variant === "no-image" ||
+                    variant === "video"
+                  }
+                />
               </div>
             ) : null}
 
