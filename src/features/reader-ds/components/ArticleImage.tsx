@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { optimizeCdnUrl } from "@/lib/news/images/cdn";
 
 export type JdImageRatio = "lead" | "video" | "thumb" | "photo" | "square";
@@ -74,8 +74,22 @@ export function ArticleImage({
   tone = "city",
 }: ArticleImageProps) {
   const [failed, setFailed] = useState(false);
+  const [forceLoad, setForceLoad] = useState(false);
+  const [dataSaving, setDataSaving] = useState(false);
+  useEffect(() => {
+    const read = () =>
+      setDataSaving(document.documentElement.getAttribute("data-data-saving") === "1");
+    read();
+    const obs = new MutationObserver(read);
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-data-saving"],
+    });
+    return () => obs.disconnect();
+  }, []);
   const raw = src && src.trim() ? src.trim() : "";
-  const hasImage = Boolean(raw) && !failed;
+  const blocked = dataSaving && !forceLoad && Boolean(raw);
+  const hasImage = Boolean(raw) && !failed && !blocked;
   const optimized = hasImage
     ? optimizeCdnUrl(raw, {
         width: WIDTH[ratio],
@@ -133,6 +147,30 @@ export function ArticleImage({
             zIndex: 1,
           }}
         />
+      ) : null}
+
+      {blocked ? (
+        <button
+          type="button"
+          onClick={() => setForceLoad(true)}
+          className="jd-ui"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "rgba(255,255,255,.9)",
+            fontSize: 12,
+            fontWeight: 800,
+          }}
+        >
+          इमेज लोड करें
+        </button>
       ) : null}
 
       {caption ? (

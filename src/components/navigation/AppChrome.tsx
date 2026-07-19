@@ -55,7 +55,16 @@ const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library
  * so they opt out of the legacy app chrome entirely (flag-gated).
  * Exact routes + dynamic prefixes for hubs.
  */
-const READER_DS_EXACT = new Set(["/", "/district", "/latest", "/trending", "/search", "/live"]);
+const READER_DS_EXACT = new Set([
+  "/",
+  "/district",
+  "/latest",
+  "/trending",
+  "/search",
+  "/live",
+  "/listen",
+  "/archive",
+]);
 const READER_DS_PREFIXES = [
   "/district/",
   "/category/",
@@ -63,6 +72,8 @@ const READER_DS_PREFIXES = [
   "/live/",
   "/story/",
   "/premium/",
+  "/listen/",
+  "/archive/",
 ];
 
 function isReaderDsRoute(pathname: string): boolean {

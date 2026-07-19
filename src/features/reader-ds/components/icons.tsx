@@ -36,7 +36,13 @@ export type JdIconName =
   | "rain"
   | "check"
   | "flag"
-  | "pause";
+  | "pause"
+  | "prev"
+  | "next"
+  | "list"
+  | "plus"
+  | "cog"
+  | "sun";
 
 type JdIconProps = {
   name: JdIconName;
@@ -169,6 +175,27 @@ const PATHS: Record<JdIconName, React.ReactNode> = {
     <>
       <rect x="7" y="5" width="3.5" height="14" rx="1" />
       <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
+    </>
+  ),
+  prev: <path d="M19 5v14L7 12l12-7Z" />,
+  next: <path d="M5 5v14l12-7L5 5Z" />,
+  list: (
+    <>
+      <path d="M8 7h12M8 12h12M8 17h12" />
+      <path d="M4 7h.01M4 12h.01M4 17h.01" />
+    </>
+  ),
+  plus: <path d="M12 5v14M5 12h14" />,
+  cog: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v2.2M12 18.8V21M4.9 6.5l1.6 1.5M17.5 16l1.6 1.5M3 12h2.2M18.8 12H21M4.9 17.5l1.6-1.5M17.5 8l1.6-1.5" />
+    </>
+  ),
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
     </>
   ),
 };
