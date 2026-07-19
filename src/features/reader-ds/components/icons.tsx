@@ -33,7 +33,8 @@ export type JdIconName =
   | "chevD"
   | "refresh"
   | "close"
-  | "rain";
+  | "rain"
+  | "check";
 
 type JdIconProps = {
   name: JdIconName;
@@ -155,6 +156,7 @@ const PATHS: Record<JdIconName, React.ReactNode> = {
       <path d="M9 18l-1 2M13 18l-1 2M17 18l-1 2" />
     </>
   ),
+  check: <path d="M5 12.5 10 17.5 19 7" />,
 };
 
 export function JdIcon({

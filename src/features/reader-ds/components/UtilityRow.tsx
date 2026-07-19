@@ -27,7 +27,7 @@ function formatShortHindiDate(): string {
  */
 export function UtilityRow({
   district = "रायपुर",
-  districtHref = "/district",
+  districtHref = "/district?select=1",
   dateLabel,
   temp = "32°",
 }: UtilityRowProps) {

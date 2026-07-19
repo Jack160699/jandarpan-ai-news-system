@@ -53,8 +53,15 @@ const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library
 /**
  * Reader Design System routes render their own masthead + bottom navigation,
  * so they opt out of the legacy app chrome entirely (flag-gated).
+ * Exact routes + dynamic prefixes for hubs.
  */
-const READER_DS_ROUTES = ["/"];
+const READER_DS_EXACT = new Set(["/", "/district", "/latest", "/trending", "/search", "/live"]);
+const READER_DS_PREFIXES = ["/district/", "/category/", "/topics/", "/live/"];
+
+function isReaderDsRoute(pathname: string): boolean {
+  if (READER_DS_EXACT.has(pathname)) return true;
+  return READER_DS_PREFIXES.some((p) => pathname.startsWith(p));
+}
 
 function ShortsLanguageShell({ children }: AppChromeProps) {
   const { contentLocked } = useLanguage();
@@ -109,10 +116,7 @@ export function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname();
   const minimal = MINIMAL_CHROME_PREFIXES.some((p) => pathname.startsWith(p));
 
-  if (
-    minimal ||
-    (isReaderDesignSystemEnabled() && READER_DS_ROUTES.includes(pathname))
-  ) {
+  if (minimal || (isReaderDesignSystemEnabled() && isReaderDsRoute(pathname))) {
     return <>{children}</>;
   }
 

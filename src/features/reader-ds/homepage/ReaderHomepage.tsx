@@ -7,6 +7,7 @@ import {
   BreakingStrip,
   LeadStory,
   Masthead,
+  SearchOverlay,
   SectionHeader,
   SecondaryStory,
   UtilityRow,
@@ -198,6 +199,7 @@ export function ReaderHomepage({ feed }: { feed: GeneratedHomepageFeed }) {
       </main>
 
       <BottomNav active="home" />
+      <SearchOverlay />
     </div>
   );
 }

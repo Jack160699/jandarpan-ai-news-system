@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { JdIcon } from "./icons";
+import { MastheadSearchButton } from "./MastheadSearchButton";
 
 type MastheadProps = {
   pageTitle?: string;
   back?: boolean;
   backHref?: string;
+  /** Hide right-side actions (used on focused overlays). */
+  hideActions?: boolean;
 };
 
 /**
  * Compact sticky masthead — matches approved A1 atom:
  * solid navy · red “ज” mark · Tiro 22 wordmark · goldSoft icons · avatar.
  */
-export function Masthead({ pageTitle, back, backHref = "/" }: MastheadProps) {
+export function Masthead({ pageTitle, back, backHref = "/", hideActions = false }: MastheadProps) {
   return (
     <header
       className="jd-masthead"
@@ -76,46 +79,46 @@ export function Masthead({ pageTitle, back, backHref = "/" }: MastheadProps) {
           )}
         </div>
 
-        <nav style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }} aria-label="शीर्ष क्रियाएँ">
-          <Link href="/search" aria-label="खोजें" style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}>
-            <JdIcon name="search" size={21} stroke={1.9} color="var(--jd-gold-soft)" />
-          </Link>
-          <Link
-            href="/notifications"
-            aria-label="सूचनाएँ"
-            style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center", position: "relative" }}
-          >
-            <JdIcon name="bell" size={21} stroke={1.9} color="var(--jd-gold-soft)" />
-            <span
-              aria-hidden
-              style={{
-                position: "absolute",
-                top: 10,
-                right: 10,
-                width: 7,
-                height: 7,
-                borderRadius: 7,
-                background: "var(--jd-red)",
-                border: "1.5px solid var(--jd-navy)",
-              }}
-            />
-          </Link>
-          <Link
-            href="/archive"
-            aria-label="प्रोफ़ाइल"
-            style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
-          >
-            <span
-              aria-hidden
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 24,
-                background: "linear-gradient(135deg, var(--jd-gold), var(--jd-red))",
-              }}
-            />
-          </Link>
-        </nav>
+        {!hideActions ? (
+          <nav style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }} aria-label="शीर्ष क्रियाएँ">
+            <MastheadSearchButton />
+            <Link
+              href="/notifications"
+              aria-label="सूचनाएँ"
+              style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center", position: "relative" }}
+            >
+              <JdIcon name="bell" size={21} stroke={1.9} color="var(--jd-gold-soft)" />
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  right: 10,
+                  width: 7,
+                  height: 7,
+                  borderRadius: 7,
+                  background: "var(--jd-red)",
+                  border: "1.5px solid var(--jd-navy)",
+                }}
+              />
+            </Link>
+            <Link
+              href="/archive"
+              aria-label="प्रोफ़ाइल"
+              style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 24,
+                  background: "linear-gradient(135deg, var(--jd-gold), var(--jd-red))",
+                }}
+              />
+            </Link>
+          </nav>
+        ) : null}
       </div>
     </header>
   );

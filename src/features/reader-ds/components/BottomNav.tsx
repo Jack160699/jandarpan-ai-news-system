@@ -15,7 +15,13 @@ const ITEMS: Array<{ key: BottomNavKey; icon: JdIconName; label: string; href: s
  * 5-destination bottom navigation. Never covers content — the page reserves
  * bottom padding equal to its height. Active destination is red.
  */
-export function BottomNav({ active = "home" }: { active?: BottomNavKey }) {
+export function BottomNav({
+  active = "home",
+  dark = false,
+}: {
+  active?: BottomNavKey;
+  dark?: boolean;
+}) {
   return (
     <nav
       aria-label="मुख्य नेविगेशन"
@@ -25,8 +31,8 @@ export function BottomNav({ active = "home" }: { active?: BottomNavKey }) {
         right: 0,
         bottom: 0,
         zIndex: 50,
-        background: "#fff",
-        borderTop: "1px solid var(--jd-line)",
+        background: dark ? "#0a1220" : "#fff",
+        borderTop: dark ? "1px solid rgba(150,175,215,0.16)" : "1px solid var(--jd-line)",
         display: "flex",
         justifyContent: "space-around",
         padding: "7px 0 max(9px, env(safe-area-inset-bottom))",
@@ -34,7 +40,7 @@ export function BottomNav({ active = "home" }: { active?: BottomNavKey }) {
     >
       {ITEMS.map((it) => {
         const on = it.key === active;
-        const color = on ? "var(--jd-red)" : "var(--jd-muted)";
+        const color = on ? "var(--jd-red)" : dark ? "#93a4c2" : "var(--jd-muted)";
         return (
           <Link
             key={it.key}

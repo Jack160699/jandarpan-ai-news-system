@@ -5,6 +5,8 @@ import { SearchPanel } from "@/components/search/SearchPanel";
 import { SearchResultsList } from "@/components/search/SearchResultsList";
 import { SearchEmptyState } from "@/components/search/SearchEmptyState";
 import { SearchTrendingChips } from "@/components/search/SearchTrendingChips";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { SearchLandingPage, SearchResultsPageView } from "@/features/reader-ds/pages";
 import {
   SearchExperienceV3,
   SearchResults,
@@ -15,6 +17,7 @@ import { executeSearch } from "@/lib/search/search";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
+import { getPlatformTopic } from "@/lib/newsroom-platform/config/topics";
 import { BRAND } from "@/lib/brand";
 import {
   NOINDEX_FOLLOW_ROBOTS,
@@ -152,6 +155,32 @@ export default async function SearchPage({ searchParams }: PageProps) {
         limit: 20,
       },
       displayLanguage
+    );
+  }
+
+  if (isReaderDesignSystemEnabled()) {
+    if (!q && !district && !category) {
+      return <SearchLandingPage />;
+    }
+
+    const topicSlug = q.toLowerCase().replace(/\s+/g, "-").slice(0, 48);
+    const topic = q ? await getPlatformTopic(topicSlug) : null;
+
+    return (
+      <SearchResultsPageView
+        query={q || district || category || "खोज"}
+        total={serverResult?.total ?? 0}
+        hits={serverResult?.hits ?? []}
+        topicSuggestion={
+          topic
+            ? {
+                title: topic.titleHi || topic.titleEn,
+                href: `/topics/${topic.slug}`,
+                label: "टॉपिक",
+              }
+            : null
+        }
+      />
     );
   }
 

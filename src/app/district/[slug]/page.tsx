@@ -6,6 +6,8 @@ import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { StoryCard } from "@/components/homepage/StoryCard";
 import { DistrictV3Page } from "@/features/district-v3";
 import { isDistrictV3Enabled } from "@/features/district-v3/config";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { DistrictHomepage } from "@/features/reader-ds/pages";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
 import { filterPoolByLanguage } from "@/lib/i18n/article-language";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
@@ -114,6 +116,19 @@ export default async function DistrictPage({ params }: PageProps) {
       { name: district.name, href: path },
     ]),
   ];
+
+  if (isReaderDesignSystemEnabled()) {
+    return (
+      <>
+        <JsonLdScript data={jsonLd} />
+        <DistrictHomepage
+          districtName={district.name}
+          districtNameHi={district.nameHi}
+          articles={articles}
+        />
+      </>
+    );
+  }
 
   if (isDistrictV3Enabled()) {
     return (
