@@ -75,11 +75,16 @@ Vercel config, ISR/caching, Sentry. No admin changes, no migrations, no data cha
 
 | Item | Value |
 |------|-------|
-| Deployment ID | `dpl_6VGr8aT7yntvxT2uW1rk1QWy9eAF` |
+| Deployment ID | `dpl_4k1wukGYe9mmmXBreMhtK1hr3zUr` (commit `2f867ff`) — **state: READY ✅** |
+| Prior deploy | `dpl_6VGr8aT7yntvxT2uW1rk1QWy9eAF` (commit `1275475`) — READY |
 | Trigger | auto (GitHub push of `feat/jandarpan-reader-design-system`) |
-| Preview URL | https://newspaper-motion-9ksnfk5jn-jack160699s-projects.vercel.app |
+| Preview URL | https://newspaper-motion-mk0v5rbp9-jack160699s-projects.vercel.app |
 | Branch alias | https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app |
-| Inspector | https://vercel.com/jack160699s-projects/newspaper-motion/6VGr8aT7yntvxT2uW1rk1QWy9eAF |
+| Inspector | https://vercel.com/jack160699s-projects/newspaper-motion/4k1wukGYe9mmmXBreMhtK1hr3zUr |
+
+**Smoke test:** the Vercel preview builds succeeded (READY) → build integrity on
+Vercel infra confirmed. The preview currently renders the *existing* reader UI
+because the flag is OFF in the Preview environment (see action required below).
 
 **⚠️ Action required to see the new design on preview:** set `NEXT_PUBLIC_READER_DS=1`
 as a **Preview-scoped** (or this-branch-scoped) environment variable on the Vercel
