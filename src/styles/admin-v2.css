@@ -819,8 +819,13 @@
     margin-top: 0.35rem;
   }
   .anr-login-v2__panel {
+    flex-direction: column;
     align-items: stretch;
+    justify-content: flex-start;
     padding: max(1rem, env(safe-area-inset-top)) 1rem max(1.25rem, env(safe-area-inset-bottom));
+  }
+  .anr-login-v2__mobile-brand {
+    width: 100%;
   }
   .anr-login-v2__card {
     width: 100%;
