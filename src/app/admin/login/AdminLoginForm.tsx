@@ -133,10 +133,10 @@ export function AdminLoginForm() {
         <div className="anr-login-v2__card">
           <header className="anr-login-v2__card-head">
             <Image
-              src={JAN_DARPAN_BRAND_ASSETS.mark}
+              src={JAN_DARPAN_BRAND_ASSETS.logo}
               alt="Jan Darpan"
-              width={48}
-              height={48}
+              width={160}
+              height={32}
               className="anr-login-v2__mark"
               priority
             />
