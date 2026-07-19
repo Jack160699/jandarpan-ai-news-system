@@ -197,7 +197,9 @@ export function ReelCard({
 
         <p className="reels-v3-card__source">
           {short.sourceLabel}
-          {short.sourceCount > 1 ? ` · ${short.sourceCount} sources` : ""}
+          {short.sourceCount > 1
+            ? ` · ${short.sourceCount} ${language === "en" ? "sources" : "स्रोत"}`
+            : ""}
         </p>
 
         <h2

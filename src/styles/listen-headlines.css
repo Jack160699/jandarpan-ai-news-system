@@ -630,6 +630,24 @@
   cursor: pointer;
 }
 
+.hl-mini--flush {
+  bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.hl-mini__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
 .hl-mini__next:disabled {
   opacity: 0.35;
 }

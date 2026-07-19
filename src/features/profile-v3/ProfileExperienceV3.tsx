@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PageContainer } from "@/layouts/PageContainer";
-import { EditionLineage } from "@/components/institution";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useProfileV3Data } from "./hooks/useProfileV3Data";
@@ -175,7 +174,6 @@ function ProfileExperienceV3Inner({
           </Link>
           <h1 className="pv3-hero__title">{t.profile.title}</h1>
           <p className="pv3-hero__subtitle">{t.profile.subtitle}</p>
-          <EditionLineage className="pv3-hero__lineage" />
         </header>
 
         <div className="pv3-layout">

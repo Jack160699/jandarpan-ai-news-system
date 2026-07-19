@@ -169,7 +169,7 @@ export const JAN_DARPAN_CHHATTISGARH_TENANT: TenantConfig = {
   ],
   newsroom: {
     defaultLanguage: "hi",
-    enabledLanguages: ["hi", "en", "cg"],
+    enabledLanguages: ["hi", "en"],
     primaryRegionSlug: "chhattisgarh",
     regionalFirst: true,
     regionalBoostMultiplier: 1.15,

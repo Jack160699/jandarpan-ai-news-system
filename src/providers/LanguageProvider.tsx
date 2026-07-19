@@ -14,12 +14,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { traceStability } from "@/lib/observability/stability-trace";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { normalizeAppLanguage } from "@/lib/i18n/safe-language";
-import { resolveGateHighlightLanguage } from "@/lib/i18n/browser-language";
 import { filterGateOptions } from "@/lib/i18n/gate-languages";
 import {
   applyLanguageToDocument,
   loadStoredLanguage,
-  lockLanguageGateDocument,
   saveStoredLanguage,
   unlockLanguageGateDocument,
 } from "@/lib/i18n/storage";
@@ -92,28 +90,19 @@ export function LanguageProvider({
   const [language, setLanguageState] = useState<AppLanguage>(defaultLanguage);
   const [ready, setReady] = useState(initialLanguageChosen);
   const [mounted, setMounted] = useState(false);
-  const [gateOpen, setGateOpen] = useState(!initialLanguageChosen);
+  // Hindi-first: readers land directly in Hindi — no first-visit language gate
+  const gateOpen = false;
 
   useEffect(() => {
     setMounted(true);
     const stored = loadStoredLanguage();
-    const highlight = resolveGateHighlightLanguage(
-      stored.chosen ? stored.language : null
-    );
-    const initial = stored.chosen ? stored.language : highlight;
+    const initial = stored.chosen ? stored.language : "hi";
     const safe = normalizeAppLanguage(initial);
 
     setLanguageState(safe);
     applyLanguageToDocument(safe);
     syncReaderPrefsLanguage(safe, stored.chosen);
-
-    if (stored.chosen) {
-      setGateOpen(false);
-      unlockLanguageGateDocument();
-    } else {
-      setGateOpen(true);
-      lockLanguageGateDocument();
-    }
+    unlockLanguageGateDocument();
 
     setReady(true);
 
@@ -121,7 +110,6 @@ export function LanguageProvider({
       console.debug("[Language] hydrated", {
         language: safe,
         chosen: stored.chosen,
-        gateOpen: !stored.chosen,
       });
     }
   }, []);
@@ -142,7 +130,6 @@ export function LanguageProvider({
   }, []);
 
   const dismissGate = useCallback(() => {
-    setGateOpen(false);
     unlockLanguageGateDocument();
   }, []);
 

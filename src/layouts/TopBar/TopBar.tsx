@@ -1,19 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, LayoutGrid, MapPin, Search } from "lucide-react";
+import { Bell, LayoutGrid, Search } from "lucide-react";
 import { cn } from "@/design-system/utils/cn";
 import { Avatar } from "@/design-system/components/Avatar";
 import { ThemeToggleButton } from "@/components/navigation/ThemeToggleButton";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useNavigation } from "@/providers/NavigationProvider";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
-import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { useTenant } from "@/providers/TenantProvider";
 import { TenantLogo } from "@/components/tenant/TenantLogo";
 import { isNotificationCenterV3Enabled } from "@/features/notifications/config";
 import { useShell } from "../AppShell/ShellProvider";
 import { useTopBarScrolled } from "../hooks/useTopBarScrolled";
+import { TopBarDateline } from "./TopBarDateline";
 
 /**
  * Sticky top bar — 56px mobile, 64px desktop.
@@ -22,15 +22,11 @@ import { useTopBarScrolled } from "../hooks/useTopBarScrolled";
 export function TopBar() {
   const { tenant } = useTenant();
   const { language, t } = useLanguage();
-  const { prefs } = useReaderPreferences();
   const { displayName, avatarInitial } = useReaderAccount();
   const { startNavigation, toggleMenu, menuOpen } = useNavigation();
   const { openCommandPalette } = useShell();
   const scrolled = useTopBarScrolled();
 
-  const district = prefs.homeDistrict ?? "raipur";
-  const districtLabel =
-    district.charAt(0).toUpperCase() + district.slice(1).replace(/-/g, " ");
   const brandName =
     language !== "en" ? tenant.branding.nameHi : tenant.branding.nameEn;
   const initials = avatarInitial || displayName.slice(0, 2);
@@ -51,14 +47,7 @@ export function TopBar() {
           <TenantLogo variant="banner" showText={false} />
         </Link>
 
-        <Link
-          href={`/district/${district}`}
-          className="jdp-topbar__district"
-          onClick={() => startNavigation(`/district/${district}`)}
-        >
-          <MapPin size={14} aria-hidden />
-          {districtLabel}
-        </Link>
+        <TopBarDateline />
 
         <button
           type="button"

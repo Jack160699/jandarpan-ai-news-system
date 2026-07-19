@@ -17,6 +17,7 @@ import { QuickScanSection } from "./sections/QuickScanSection";
 import { StoryFeedSection } from "./sections/StoryFeedSection";
 import { NearYouSection } from "./sections/NearYouSection";
 import { LiveWireSection } from "./sections/LiveWireSection";
+import { SupportJournalismSection } from "./sections/SupportJournalismSection";
 import { ContinueReadingSection } from "./sections/ContinueReadingSection";
 import { ForYouSection } from "./sections/ForYouSection";
 import { DiscoverStripSection } from "./sections/DiscoverStripSection";
@@ -67,8 +68,8 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
         <LeadStorySection story={data.leadStory} aiInsight={data.aiInsight} />
       </HomeSectionErrorBoundary>
 
-      <HomeSectionErrorBoundary name="v31-ad-leaderboard">
-        <AdSlot slotId="home_leaderboard" className="home-v31-ad" />
+      <HomeSectionErrorBoundary name="v31-support">
+        <SupportJournalismSection />
       </HomeSectionErrorBoundary>
 
       <HomeSectionErrorBoundary name="v31-quick-scan">

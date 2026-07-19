@@ -1062,6 +1062,41 @@ html[data-theme="dark"] .super-menu--minimal .super-menu__panel {
   left: auto;
 }
 
+/* Hindi/English segmented toggle in menu row */
+.sm-lang-toggle {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0.125rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-rule) 55%, transparent);
+  background: color-mix(in srgb, var(--color-paper) 60%, transparent);
+}
+
+.sm-lang-toggle__btn {
+  min-height: 2rem;
+  padding: 0.25rem 0.65rem;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sm-lang-toggle__btn--active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.sm-lang-toggle__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
 /* Today Live compact widget */
 .sm-today-v2 {
   padding: 0.45rem 0.55rem;

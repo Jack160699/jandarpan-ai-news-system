@@ -122,6 +122,73 @@
   color: var(--jds-color-text-primary);
 }
 
+/* ── Dateline: date · time · district · weather in the header middle ── */
+.jdp-topbar__dateline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+  text-decoration: none;
+  color: var(--jds-color-text-secondary);
+  font-family: var(--jds-font-ui);
+  line-height: 1.25;
+  min-height: 44px;
+}
+
+.jdp-topbar__dateline-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jdp-topbar__dateline-row--date {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--jds-color-text-primary);
+}
+
+.jdp-topbar__dateline-row--meta {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.jdp-topbar__dateline-district {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
+  color: var(--jds-color-accent, var(--color-primary));
+}
+
+.jdp-topbar__dateline-temp {
+  font-weight: 700;
+  color: var(--jds-color-text-primary);
+}
+
+@media (min-width: 768px) {
+  .jdp-topbar__dateline {
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: var(--jds-space-sm);
+    padding-inline: var(--jds-space-md);
+  }
+
+  .jdp-topbar__dateline-row--date {
+    font-size: 0.8125rem;
+  }
+
+  .jdp-topbar__dateline-row--meta {
+    font-size: 0.75rem;
+  }
+}
+
 .jdp-topbar__search-trigger {
   display: none;
   flex: 1;

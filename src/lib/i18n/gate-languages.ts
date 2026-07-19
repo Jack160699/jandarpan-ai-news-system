@@ -1,9 +1,8 @@
 import { LANGUAGE_CONFIG, type NewsroomLanguage } from "@/lib/i18n/languages";
 import type { LanguageOption } from "@/lib/i18n/types";
 
-/** Languages shown in onboarding gate — Hindi, English, Chhattisgarhiya */
+/** Languages available in reader-facing switchers — Hindi first, English optional */
 export const GATE_LANGUAGE_IDS = [
-  "cg",
   "hi",
   "en",
 ] as const satisfies readonly NewsroomLanguage[];

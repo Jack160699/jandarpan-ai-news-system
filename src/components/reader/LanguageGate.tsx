@@ -58,7 +58,7 @@ export function LanguageGate() {
   const copy = useMemo(() => getGateCopy(gateUiLocale), [gateUiLocale]);
 
   const initialSelection = useMemo(() => {
-    if (!ready) return "cg" as AppLanguage;
+    if (!ready) return "hi" as AppLanguage;
     const stored = loadStoredLanguage();
     if (stored.chosen && isGateLanguage(stored.language)) {
       return stored.language;
