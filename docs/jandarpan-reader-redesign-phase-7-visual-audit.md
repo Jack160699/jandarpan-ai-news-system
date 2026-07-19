@@ -1,6 +1,9 @@
 # Phase 7 visual audit — Product polish & Group F system states
 
 **Branch:** `feat/jandarpan-reader-design-system`  
+**Commit:** `726b8ca`  
+**Preview:** https://newspaper-motion-faumlh45l-jack160699s-projects.vercel.app  
+**Branch alias:** https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app  
 **Flag:** `NEXT_PUBLIC_READER_DS=1`  
 **Approved refs:** `public/design-refs/phase-7/approved-phase-7-system.html`  
 **Screenshot dir:** `docs/jandarpan-reader-redesign/screenshots/phase-7/`  
@@ -68,5 +71,11 @@
 No major visual differences remain vs approved Phase 7 phone refs for F46–F54 structure, copy, and colour. Remaining deltas are listed in `jandarpan-reader-redesign-phase-7-remaining-issues.md`.
 
 ## Preview
+
+| URL | Role |
+|-----|------|
+| https://newspaper-motion-faumlh45l-jack160699s-projects.vercel.app | Phase 7 Preview (READY) |
+| https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app | Stable branch alias |
+| https://vercel.com/jack160699s-projects/newspaper-motion/A4QKFusqv56Az7nnY3KqKqV6Qzdp | Inspector |
 
 Production was not promoted. Enable `NEXT_PUBLIC_READER_DS=1` on Preview to exercise DS routes.
