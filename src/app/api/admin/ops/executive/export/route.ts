@@ -17,7 +17,7 @@ type ExportBody = {
 };
 
 export async function POST(request: Request) {
-  const auth = await requireEditorialAuth(request, "monitoring:read");
+  const auth = await requireEditorialAuth(request, "billing:read");
   if (!auth.ok) return auth.response;
 
   let body: ExportBody = {};

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
 import { getDashboardSession } from "@/lib/saas-auth/session";
 import type { DashboardPermission, DashboardSession } from "@/lib/saas-auth/types";
+import { logAdminAccessDenied } from "@/lib/security/admin-access-log";
 import { logSecurityAudit } from "@/lib/security/audit";
 import { getClientIp, getUserAgent } from "@/lib/security/request-context";
 
@@ -16,6 +17,12 @@ export async function requireDashboardSession(
   const session = await getDashboardSession(request);
 
   if (!session) {
+    await logAdminAccessDenied({
+      request,
+      reason: "unauthenticated",
+      resourceType: "admin_session",
+      resourceId: permission,
+    });
     return {
       ok: false,
       response: NextResponse.json(
@@ -29,6 +36,15 @@ export async function requireDashboardSession(
     permission &&
     !roleHasPermission(session.membership.role, permission)
   ) {
+    await logAdminAccessDenied({
+      request,
+      reason: "permission_denied",
+      resourceType: "permission",
+      resourceId: permission,
+      session,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
     await logSecurityAudit({
       tenantId: session.membership.tenantId,
       actorUserId: session.userId,

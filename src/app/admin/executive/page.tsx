@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default function AdminExecutivePage() {
   return (
-    <AdminPageGate permission="monitoring:read">
+    <AdminPageGate permission="billing:read">
       <AdminShell
         title="Costs & AI spend"
         subtitle="Spend, budget, forecast, and expensive runs — one operating view."

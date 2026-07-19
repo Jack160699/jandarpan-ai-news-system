@@ -11,9 +11,14 @@ import { E2E_AUTH_COOKIE } from "@/lib/auth/session-refresh";
 import { isProductionDeployment } from "@/lib/infrastructure/production";
 import { permissionsForRole } from "@/lib/newsroom-auth/role-permissions";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
-import { getDashboardSession } from "@/lib/saas-auth/session";
 import type { AdminSessionResponse } from "@/lib/auth/admin-session-types";
-import { ROLE_COOKIE, TENANT_COOKIE_AUTH } from "@/lib/security/constants";
+import { ROLE_COOKIE } from "@/lib/security/constants";
+import { checkPathRbac } from "@/lib/security/middleware-rbac";
+import { logAdminAccessDenied, logAdminSessionMismatch } from "@/lib/security/admin-access-log";
+import {
+  getDashboardSession,
+  setMembershipContextCookies,
+} from "@/lib/saas-auth/session";
 import { getDefaultTenant } from "@/lib/tenant/registry";
 import type { User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
@@ -124,6 +129,45 @@ export default async function AdminLayout({
       userId: user.id,
       email: user.email,
     });
+  }
+
+  if (user && dashboardSession?.membership?.role && !isPublicAuthRoute) {
+    const trustedRole = dashboardSession.membership.role;
+    const cookieStore = await cookies();
+    const roleCookie = cookieStore.get(ROLE_COOKIE)?.value ?? null;
+    const cookieRole = roleCookie
+      ? normalizeDashboardRole(roleCookie)
+      : null;
+
+    if (cookieRole && cookieRole !== trustedRole) {
+      await logAdminSessionMismatch({
+        session: dashboardSession,
+        cookieRole: roleCookie,
+        pathname,
+      });
+      try {
+        await setMembershipContextCookies(
+          trustedRole,
+          dashboardSession.membership.tenantSlug
+        );
+      } catch {
+        /* cookie mutation may be unavailable in some render paths */
+      }
+    }
+
+    const rbac = checkPathRbac(pathname, trustedRole);
+    if (!rbac.allowed) {
+      await logAdminAccessDenied({
+        reason: "route_forbidden",
+        resourceType: "admin_route",
+        resourceId: pathname,
+        pathname,
+        session: dashboardSession,
+        cookieRole: roleCookie,
+        trustedRole,
+      });
+      redirect(rbac.redirectTo ?? "/admin/editorial?error=forbidden");
+    }
   }
 
   traceAdminEmergency("LAYOUT_RENDER", "production_shell");

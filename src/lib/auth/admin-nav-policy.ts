@@ -13,6 +13,7 @@ const PRIVILEGED_HREFS = new Set<string>([
   "/admin/team",
   "/admin/schema",
   "/admin/billing",
+  "/admin/executive",
 ]);
 
 export function isPrivilegedAdminNavHref(href: string): boolean {
@@ -32,7 +33,7 @@ export function isAdminNavItemVisible(
     if (href === "/admin/team" || href === "/admin/schema") {
       return canManageTeam(ctx);
     }
-    if (href === "/admin/billing") {
+    if (href === "/admin/billing" || href === "/admin/executive") {
       return canAccessBilling(ctx);
     }
   }

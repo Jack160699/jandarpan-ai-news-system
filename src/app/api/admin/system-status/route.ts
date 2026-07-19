@@ -4,27 +4,35 @@
  */
 
 import { NextResponse } from "next/server";
-import { requireDashboardSession } from "@/lib/saas-auth/guard";
+import { requireAdminPermission } from "@/lib/auth/admin-authorization";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
 import { buildHealthSummary } from "@/lib/admin-v3/health-summary";
+import { buildEnvelope } from "@/lib/admin-v3/metric-contract";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const guard = await requireDashboardSession(request, "content:read");
+  const guard = await requireAdminPermission(request, "content:read");
   if (!guard.ok) return guard.response;
 
   if (!roleHasPermission(guard.session.membership.role, "monitoring:read")) {
+    const checkedAt = new Date().toISOString();
     return NextResponse.json({
       ok: true,
       snapshot: {
         state: "unknown",
         label: "Production",
         reasons: [],
-        checkedAt: new Date().toISOString(),
+        checkedAt,
       },
       limited: true,
+      permissions: { monitoring: false },
+      contract: buildEnvelope({
+        ok: true,
+        generatedAt: checkedAt,
+        forbidden: true,
+      }),
     });
   }
 
@@ -39,12 +47,19 @@ export async function GET(request: Request) {
       snapshot: summary.snapshot,
       limited: false,
       degraded: summary.stale,
+      permissions: { monitoring: true },
       timing: {
         totalMs: summary.totalMs,
         sources: summary.sources,
       },
+      contract: buildEnvelope({
+        ok: true,
+        generatedAt: summary.checkedAt,
+        stale: summary.stale,
+      }),
     });
   } catch {
+    const checkedAt = new Date().toISOString();
     return NextResponse.json({
       ok: true,
       snapshot: {
@@ -59,10 +74,12 @@ export async function GET(request: Request) {
             href: "/admin/health",
           },
         ],
-        checkedAt: new Date().toISOString(),
+        checkedAt,
       },
       limited: false,
       degraded: true,
+      permissions: { monitoring: true },
+      contract: buildEnvelope({ ok: false, generatedAt: checkedAt }),
     });
   }
 }

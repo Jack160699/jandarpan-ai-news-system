@@ -1,5 +1,9 @@
 /**
- * Edge-safe RBAC path checks for middleware
+ * Admin path RBAC helpers.
+ *
+ * IMPORTANT: Do not use ROLE_COOKIE as the authorization source in middleware.
+ * Call `canAccessAdminRoute` only with a role from the trusted membership session
+ * (layout / API guards). Middleware may authenticate presence of a session only.
  */
 
 import { canAccessAdminRoute } from "@/lib/newsroom-auth/rbac";
@@ -21,6 +25,9 @@ export function requiresAdminRbac(pathname: string): boolean {
   return !isAdminPublicPath(pathname);
 }
 
+/**
+ * Server-side path check — `role` must come from trusted membership, never a cookie.
+ */
 export function checkPathRbac(
   pathname: string,
   role: string
@@ -30,4 +37,9 @@ export function checkPathRbac(
   }
 
   return { allowed: true };
+}
+
+/** Explicit policy: middleware must not authorize from role cookies. */
+export function middlewareMayAuthorizeFromRoleCookie(): false {
+  return false;
 }

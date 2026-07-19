@@ -29,7 +29,6 @@ import {
   isE2eAuthEnabled,
 } from "@/lib/auth/session-refresh";
 import { ROLE_COOKIE, TENANT_COOKIE_AUTH } from "@/lib/security/constants";
-import { checkPathRbac } from "@/lib/security/middleware-rbac";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 import { securityHeaders } from "@/lib/security/headers";
 import {
@@ -210,6 +209,8 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === "/admin/login" && hasAuth) {
     const next = request.nextUrl.searchParams.get("next");
+    // Soft landing hint only — ROLE_COOKIE is NOT authorization. Server layout
+    // re-enforces route RBAC from the trusted membership session.
     const dest =
       next && next.startsWith("/admin") && !next.startsWith("/admin/login")
         ? next
@@ -233,27 +234,8 @@ export async function middleware(request: NextRequest) {
     return redirectWithCookies(request, `${login.pathname}${login.search}`, response);
   }
 
-  if (hasAuth && role) {
-    const rbac = checkPathRbac(pathname, role);
-    if (!rbac.allowed && rbac.redirectTo) {
-      const redirectUrl = new URL(rbac.redirectTo, request.url);
-      if (
-        redirectUrl.pathname === "/admin/login" &&
-        pathname.startsWith(ADMIN_PREFIX) &&
-        pathname !== "/admin/login"
-      ) {
-        redirectUrl.searchParams.set("next", pathname);
-      }
-      if (redirectUrl.pathname === pathname) {
-        return response;
-      }
-      return redirectWithCookies(
-        request,
-        `${redirectUrl.pathname}${redirectUrl.search}`,
-        response
-      );
-    }
-  }
+  // Path RBAC is enforced in admin layout + API guards from the membership
+  // session. An editable/forged nr-dashboard-role cookie must never grant access.
 
   response.headers.set(REQUEST_ID_HEADER, requestId);
   return response;

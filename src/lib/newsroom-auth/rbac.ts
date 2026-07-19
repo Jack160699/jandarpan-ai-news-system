@@ -36,7 +36,7 @@ const ADMIN_ROUTE_PERMISSIONS: Record<string, DashboardPermission> = {
   "/admin/ingestion": "monitoring:read",
   "/admin/health": "monitoring:read",
   "/admin/system": "monitoring:read",
-  "/admin/executive": "monitoring:read",
+  "/admin/executive": "billing:read",
   "/admin/billing": "billing:read",
   "/admin/team": "team:read",
 };

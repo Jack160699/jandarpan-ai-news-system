@@ -17,6 +17,9 @@ export type SecurityAuditAction =
   | "rbac.permission_changed"
   | "rbac.role_changed"
   | "admin.super_action"
+  | "admin.access_denied"
+  | "admin.session_invalid"
+  | "admin.session_mismatch"
   | "api.forbidden"
   | "api.rate_limited";
 

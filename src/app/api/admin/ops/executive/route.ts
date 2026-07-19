@@ -10,7 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const auth = await requireEditorialAuth(request, "monitoring:read");
+  // Financial / AI spend — billing permission required (not monitoring alone).
+  const auth = await requireEditorialAuth(request, "billing:read");
   if (!auth.ok) return auth.response;
 
   const dashboard = await getExecutiveDashboard();
