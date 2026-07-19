@@ -1,6 +1,9 @@
 # Phase 5 visual audit — Monetization (E36–E45 + district sponsor)
 
 **Branch:** `feat/jandarpan-reader-design-system`  
+**Commit:** `7527abf`  
+**Preview:** https://newspaper-motion-b10lvl6wn-jack160699s-projects.vercel.app  
+**Branch alias:** https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app  
 **Flag:** `NEXT_PUBLIC_READER_DS=1`  
 **Viewport:** 390×844 (mobile) + 1280×800 (desktop)  
 **Design source:** Plot Design `groupE()` + A2 district sponsor strip  
@@ -81,4 +84,10 @@
 
 ## Preview
 
-_(filled after deploy)_
+| URL | Role |
+|-----|------|
+| https://newspaper-motion-b10lvl6wn-jack160699s-projects.vercel.app | Phase 5 Preview (READY) |
+| https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app | Stable branch alias |
+| https://vercel.com/jack160699s-projects/newspaper-motion/DFWtPmBWeu6djj6jajEduLQHbx45 | Inspector |
+
+Production was not promoted. Enable `NEXT_PUBLIC_READER_DS=1` on Preview to exercise DS routes.
