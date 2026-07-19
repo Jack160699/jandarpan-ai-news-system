@@ -32,8 +32,19 @@ function writeRecent(items: string[]) {
  * A6 search overlay — opens from masthead search via ReaderPreferences.searchOpen.
  * Hindi + English input; submits to real `/search?q=` results route.
  */
-export function SearchOverlay({ trending: trendingProp = [] }: { trending?: string[] }) {
+export function SearchOverlay({
+  trending: trendingProp = [],
+  forceOpen = false,
+  onDismiss,
+}: {
+  trending?: string[];
+  /** Keep overlay open (used by `/search` landing). */
+  forceOpen?: boolean;
+  /** Called when the user dismisses the overlay (back / Esc). */
+  onDismiss?: () => void;
+}) {
   const { searchOpen, setSearchOpen } = useReaderPreferences();
+  const open = forceOpen || searchOpen;
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
@@ -41,12 +52,20 @@ export function SearchOverlay({ trending: trendingProp = [] }: { trending?: stri
   const [trending, setTrending] = useState<string[]>(trendingProp);
   const [, startTransition] = useTransition();
 
+  const dismiss = () => {
+    if (onDismiss) {
+      onDismiss();
+      return;
+    }
+    setSearchOpen(false);
+  };
+
   useEffect(() => {
-    if (!searchOpen) return;
+    if (!open) return;
     setRecent(readRecent());
     const t = window.setTimeout(() => inputRef.current?.focus(), 40);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSearchOpen(false);
+      if (e.key === "Escape") dismiss();
     };
     window.addEventListener("keydown", onKey);
 
@@ -71,9 +90,9 @@ export function SearchOverlay({ trending: trendingProp = [] }: { trending?: stri
       window.clearTimeout(t);
       window.removeEventListener("keydown", onKey);
     };
-  }, [searchOpen, setSearchOpen, trendingProp]);
+  }, [open, forceOpen, setSearchOpen, trendingProp]);
 
-  if (!searchOpen) return null;
+  if (!open) return null;
 
   const go = (q: string) => {
     const trimmed = q.trim();
@@ -119,7 +138,7 @@ export function SearchOverlay({ trending: trendingProp = [] }: { trending?: stri
         <button
           type="button"
           aria-label="बंद करें"
-          onClick={() => setSearchOpen(false)}
+          onClick={dismiss}
           style={{
             display: "flex",
             background: "none",

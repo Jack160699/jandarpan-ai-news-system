@@ -1,26 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
-import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
-import { Masthead } from "../components/Masthead";
+import { useRouter } from "next/navigation";
 import { ReaderShell } from "../components/ReaderShell";
+import { SearchOverlay } from "../components/SearchOverlay";
 
 /**
- * `/search` without a query — opens A6 overlay on the paper canvas.
+ * `/search` without a query — A6 search overlay as the page surface.
  * Results (`?q=`) use SearchResultsPageView instead.
  */
 export function SearchLandingPage() {
-  const { setSearchOpen } = useReaderPreferences();
-
-  useEffect(() => {
-    setSearchOpen(true);
-    return () => setSearchOpen(false);
-  }, [setSearchOpen]);
+  const router = useRouter();
 
   return (
-    <ReaderShell activeNav="home">
-      <Masthead />
-      <main id="main-content" role="main" style={{ flex: 1, minHeight: 400 }} />
+    <ReaderShell hideBottomNav includeSearchOverlay={false}>
+      <SearchOverlay forceOpen onDismiss={() => router.push("/")} />
     </ReaderShell>
   );
 }

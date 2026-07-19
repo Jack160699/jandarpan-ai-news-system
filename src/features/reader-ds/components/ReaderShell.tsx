@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "../styles";
 import { readerDsFontClassName } from "../fonts";
 import { BottomNav, type BottomNavKey } from "./BottomNav";
 import { SearchOverlay } from "./SearchOverlay";
@@ -10,6 +11,8 @@ type ReaderShellProps = {
   /** Extra bottom padding when bottom nav is shown (default 72). */
   bottomPad?: number;
   hideBottomNav?: boolean;
+  /** Mount shared search overlay (disable when page embeds its own). */
+  includeSearchOverlay?: boolean;
 };
 
 /**
@@ -21,6 +24,7 @@ export function ReaderShell({
   dark = false,
   bottomPad = 72,
   hideBottomNav = false,
+  includeSearchOverlay = true,
 }: ReaderShellProps) {
   return (
     <div
@@ -40,7 +44,7 @@ export function ReaderShell({
           <BottomNav active={activeNav} dark={dark} />
         </>
       ) : null}
-      <SearchOverlay />
+      {includeSearchOverlay ? <SearchOverlay /> : null}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
+import "../styles";
 import { readerDsFontClassName } from "../fonts";
 import type { ReaderStory } from "../utils";
 import {

@@ -52,9 +52,19 @@ export default async function LatestPage() {
     .filter((a): a is NonNullable<typeof a> => a !== null);
 
   const feed = await getCachedGeneratedHomepageFeed();
-  const feedWire = feed ? [...(feed.liveWire ?? []), ...(feed.trending ?? [])] : [];
+  const feedWire = feed
+    ? [
+        ...(feed.liveWire ?? []),
+        ...(feed.trending ?? []),
+        ...(feed.regionalHighlights ?? []),
+        ...(feed.editorsPicks?.supporting ?? []),
+        ...(feed.editorsPicks?.lead ? [feed.editorsPicks.lead] : []),
+        ...(feed.breakingTicker ?? []),
+      ]
+    : [];
   const bySlug = new Map<string, (typeof fromPool)[number]>();
-  for (const a of [...fromPool, ...feedWire]) {
+  // Prefer live feed slices first (pool can be empty in some local/dev caches).
+  for (const a of [...feedWire, ...fromPool]) {
     if (a?.slug && !bySlug.has(a.slug)) bySlug.set(a.slug, a);
   }
   const articles = [...bySlug.values()]
