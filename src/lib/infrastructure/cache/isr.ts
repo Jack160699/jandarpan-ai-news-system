@@ -36,6 +36,15 @@ export async function revalidateNewsroomCaches(options?: {
     }
     revalidatePath(ISR_PATHS.home);
     revalidatePath("/category", "layout");
+    revalidatePath(ISR_PATHS.sitemap);
+
+    // Phase 6: drop warm in-process sitemap / pool-summary snapshots on publish.
+    const { clearMainSitemapCache } = await import("@/lib/seo/sitemap-data");
+    const { clearGeneratedPoolSummaryCache } = await import(
+      "@/lib/newsroom/generated/pool-summary"
+    );
+    clearMainSitemapCache();
+    clearGeneratedPoolSummaryCache();
 
     const redisInvalidation = await invalidateHomepageRedisCaches();
 

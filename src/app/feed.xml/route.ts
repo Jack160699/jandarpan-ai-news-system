@@ -31,7 +31,7 @@ function languageTag(lang: string | null | undefined): string {
 export async function GET() {
   const [org, pool] = await Promise.all([
     fetchOrganizationSettings(),
-    fetchGeneratedArticlePool(100).catch(() => []),
+    fetchGeneratedArticlePool(100, { select: "homepage" }).catch(() => []),
   ]);
 
   const seenGuids = new Set<string>();

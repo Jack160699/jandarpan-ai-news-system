@@ -72,7 +72,7 @@ export default async function DistrictPage({ params }: PageProps) {
   if (!district) notFound();
 
   const displayLanguage = await getServerReaderLanguage();
-  const pool = await fetchGeneratedArticlePool(120);
+  const pool = await fetchGeneratedArticlePool(120, { select: "homepage" });
   const langPool = filterPoolByLanguage(pool, displayLanguage);
   const filtered = filterRowsForDistrict(langPool, slug);
   const personalization = buildRegionalRankingPersonalization({

@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const displayLanguage = await getServerReaderLanguage();
   const prefs = parseRegionalPrefsFromQuery(request.nextUrl.searchParams);
-  const pool = await fetchGeneratedArticlePool(100);
+  const pool = await fetchGeneratedArticlePool(100, { select: "homepage" });
   const bundle = buildHyperlocalFeedBundle(pool, {
     homeDistrict: prefs.homeDistrict,
     maxDistricts: 10,

@@ -38,7 +38,13 @@ function classifyError(
   postgrest: PostgrestError | null
 ): SafeQueryError["code"] {
   if (isPostgrestSchemaError(message)) return "schema_mismatch";
-  if (/timeout|aborted/i.test(message)) return "timeout";
+  // PostgreSQL 57014 = statement_timeout (canceling statement due to statement timeout)
+  if (
+    postgrest?.code === "57014" ||
+    /timeout|aborted|57014|canceling statement/i.test(message)
+  ) {
+    return "timeout";
+  }
   if (postgrest?.code) return "query_failed";
   return "unknown";
 }

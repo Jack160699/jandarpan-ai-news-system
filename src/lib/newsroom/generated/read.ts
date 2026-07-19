@@ -1,14 +1,22 @@
 /**
- * Read published generated_articles — homepage + story source of truth
+ * Read published generated_articles — homepage + story source of truth.
+ * Phase 6: bounded limits, strict projections, no body on sitemap/health paths.
  */
 
 import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { createAnonServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { safeQuery } from "@/lib/supabase/safe-query";
 import { logNewsroom } from "@/lib/newsroom/logger";
 import {
   isPublicGeneratedArticle,
   PUBLIC_EDITORIAL_STATUSES,
 } from "@/lib/newsroom/publish-state";
+import {
+  clampGeneratedPoolLimit,
+  GENERATED_POOL_HARD_CAPS,
+  isStatementTimeoutError,
+  type GeneratedPoolSelectMode,
+} from "@/lib/newsroom/generated/pool-limits";
 import {
   getGoogleNewsCutoffIso,
   GOOGLE_NEWS_SITEMAP_LIMIT,
@@ -22,12 +30,38 @@ const GENERATED_SELECT =
 export const GENERATED_SELECT_HOMEPAGE =
   "id,event_id,slug,headline,summary,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,created_at";
 
-/** Google News sitemap — only fields required for news:news entries. */
-const GOOGLE_NEWS_SELECT = "slug,headline,published_at,language,editorial_status,workflow_status";
+/** Main sitemap — slug + stable lastmod only. */
+export const GENERATED_SELECT_SITEMAP =
+  "slug,published_at,created_at,editorial_status,workflow_status";
 
-export type GeneratedPoolSelect = "full" | "homepage";
+/** Slug listing — no body, no summary. */
+export const GENERATED_SELECT_SLUG =
+  "slug,published_at,editorial_status,workflow_status";
+
+/** Google News sitemap — only fields required for news:news entries. */
+const GOOGLE_NEWS_SELECT =
+  "slug,headline,published_at,language,editorial_status,workflow_status";
+
+export type GeneratedPoolSelect = GeneratedPoolSelectMode;
 
 const MIN_POOL_LOG = 3;
+const POOL_QUERY_TIMEOUT_MS = 4_000;
+
+function selectColumns(mode: GeneratedPoolSelectMode): string {
+  switch (mode) {
+    case "homepage":
+      return GENERATED_SELECT_HOMEPAGE;
+    case "sitemap":
+      return GENERATED_SELECT_SITEMAP;
+    case "slug":
+      return GENERATED_SELECT_SLUG;
+    case "summary":
+      return "id,published_at,editorial_status";
+    case "full":
+    default:
+      return GENERATED_SELECT;
+  }
+}
 
 /** Event id suffix embedded in SEO slugs (`optimizeSeoSlug`). */
 export function extractGeneratedSlugSuffix(slug: string): string | null {
@@ -65,7 +99,10 @@ async function fetchPublicGeneratedRow(
     .maybeSingle();
 
   if (exactError) {
-    errorLiveFeed("generated_slug_exact_error", { slug: decoded, message: exactError.message });
+    errorLiveFeed("generated_slug_exact_error", {
+      slug: decoded,
+      message: exactError.message,
+    });
   }
   if (exact) return mapGeneratedRow(exact);
 
@@ -96,9 +133,15 @@ async function fetchPublicGeneratedRow(
   return null;
 }
 
+export type FetchGeneratedArticlePoolOptions = {
+  select?: GeneratedPoolSelect;
+  /** Keyset cursor: return rows older than this published_at ISO timestamp. */
+  cursorPublishedAt?: string;
+};
+
 export async function fetchGeneratedArticlePool(
   limit = 280,
-  options?: { select?: GeneratedPoolSelect }
+  options?: FetchGeneratedArticlePoolOptions
 ): Promise<GeneratedArticleRow[]> {
   if (!isSupabaseConfigured()) {
     warnLiveFeed("generated_pool_skip", {
@@ -108,47 +151,67 @@ export async function fetchGeneratedArticlePool(
     return [];
   }
 
+  const mode: GeneratedPoolSelectMode = options?.select ?? "full";
+  const bounded = clampGeneratedPoolLimit(limit, mode);
+  const columns = selectColumns(mode);
   const supabase = createAnonServerClient();
   const startedAt = Date.now();
 
-  const { data, error } =
-    options?.select === "homepage"
-      ? await supabase
-          .from("generated_articles")
-          .select(GENERATED_SELECT_HOMEPAGE)
-          .not("published_at", "is", null)
-          .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
-          .order("published_at", { ascending: false, nullsFirst: false })
-          .limit(limit)
-      : await supabase
-          .from("generated_articles")
-          .select(GENERATED_SELECT)
-          .not("published_at", "is", null)
-          .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
-          .order("published_at", { ascending: false, nullsFirst: false })
-          .limit(limit);
+  const result = await safeQuery<Record<string, unknown>[]>(
+    async () => {
+      let q = supabase
+        .from("generated_articles")
+        .select(columns)
+        .not("published_at", "is", null)
+        .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
+        .order("published_at", { ascending: false, nullsFirst: false });
 
-  if (error) {
+      if (options?.cursorPublishedAt) {
+        q = q.lt("published_at", options.cursorPublishedAt);
+      }
+
+      const res = await q.limit(bounded);
+      return { data: (res.data ?? null) as Record<string, unknown>[] | null, error: res.error };
+    },
+    {
+      label: `generated_pool_${mode}`,
+      timeoutMs: POOL_QUERY_TIMEOUT_MS,
+      retries: 0,
+    }
+  );
+
+  if (!result.ok) {
+    const timedOut = isStatementTimeoutError(result.error.message);
     errorLiveFeed("generated_pool_query_error", {
-      message: error.message,
-      code: error.code,
-      hint: error.hint,
+      message: result.error.message,
+      code: result.error.postgrest?.code,
+      timedOut,
+      select: mode,
+      limit: bounded,
       durationMs: Date.now() - startedAt,
     });
-    logNewsroom("generated", "fetch_pool_failed", { error: error.message });
+    logNewsroom("generated", "fetch_pool_failed", {
+      error: result.error.message,
+      timedOut,
+      select: mode,
+    });
     return [];
   }
 
-  const rows = (data ?? []).map((row) => ({
-    ...row,
-    editorial_metadata: row.editorial_metadata ?? {},
-  }));
+  const rows = (result.data ?? []).map((row) =>
+    mapGeneratedRow({
+      ...row,
+      editorial_metadata: row.editorial_metadata ?? {},
+    })
+  );
 
   const publicRows = rows.filter((row) => isPublicGeneratedArticle(row));
 
   logLiveFeed("generated_pool", {
     publicCount: publicRows.length,
     rawCount: rows.length,
+    select: mode,
+    limit: bounded,
     durationMs: Date.now() - startedAt,
   });
 
@@ -162,8 +225,10 @@ export async function fetchGeneratedArticlePool(
   logNewsroom("generated", "fetch_pool", {
     count: publicRows.length,
     total: rows.length,
+    select: mode,
+    limit: bounded,
   });
-  return publicRows as unknown as GeneratedArticleRow[];
+  return publicRows;
 }
 
 export type GoogleNewsArticleRow = Pick<
@@ -187,35 +252,51 @@ export async function fetchGoogleNewsArticlePool(
     return [];
   }
 
+  const bounded = Math.min(
+    Math.max(1, Math.floor(limit)),
+    GENERATED_POOL_HARD_CAPS.googleNews
+  );
   const supabase = createAnonServerClient();
   const startedAt = Date.now();
   const cutoffIso = getGoogleNewsCutoffIso(now);
 
-  const { data, error } = await supabase
-    .from("generated_articles")
-    .select(GOOGLE_NEWS_SELECT)
-    .not("published_at", "is", null)
-    .gte("published_at", cutoffIso)
-    .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(limit);
+  const result = await safeQuery<GoogleNewsArticleRow[]>(
+    async () => {
+      const res = await supabase
+        .from("generated_articles")
+        .select(GOOGLE_NEWS_SELECT)
+        .not("published_at", "is", null)
+        .gte("published_at", cutoffIso)
+        .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .limit(bounded);
+      return {
+        data: (res.data ?? null) as GoogleNewsArticleRow[] | null,
+        error: res.error,
+      };
+    },
+    {
+      label: "google_news_pool",
+      timeoutMs: POOL_QUERY_TIMEOUT_MS,
+      retries: 0,
+    }
+  );
 
-  if (error) {
+  if (!result.ok) {
     errorLiveFeed("google_news_pool_query_error", {
-      message: error.message,
-      code: error.code,
-      hint: error.hint,
+      message: result.error.message,
+      code: result.error.postgrest?.code,
       cutoffIso,
       durationMs: Date.now() - startedAt,
     });
     logNewsroom("generated", "fetch_google_news_pool_failed", {
-      error: error.message,
+      error: result.error.message,
       cutoffIso,
     });
     return [];
   }
 
-  const rows = (data ?? []).filter(
+  const rows = (result.data ?? []).filter(
     (row) =>
       isPublicGeneratedArticle(row) &&
       Boolean(row.slug?.trim()) &&
@@ -234,7 +315,7 @@ export async function fetchGoogleNewsArticlePool(
     cutoffIso,
   });
 
-  return rows as GoogleNewsArticleRow[];
+  return rows;
 }
 
 export async function getGeneratedArticleBySlug(
@@ -249,6 +330,28 @@ export async function getGeneratedArticleBySlug(
 export async function getGeneratedArticleSlugs(
   limit = 200
 ): Promise<string[]> {
-  const pool = await fetchGeneratedArticlePool(limit);
+  const pool = await fetchGeneratedArticlePool(limit, { select: "slug" });
   return pool.map((r) => r.slug).filter(Boolean);
+}
+
+export type SitemapGeneratedArticle = {
+  slug: string;
+  published_at: string | null;
+  created_at: string;
+  editorial_status?: string | null;
+  workflow_status?: string | null;
+};
+
+/** Sitemap-oriented pool: slug + lastmod fields only, hard-capped. */
+export async function fetchSitemapGeneratedArticles(
+  limit: number = GENERATED_POOL_HARD_CAPS.sitemap
+): Promise<SitemapGeneratedArticle[]> {
+  const pool = await fetchGeneratedArticlePool(limit, { select: "sitemap" });
+  return pool.map((row) => ({
+    slug: row.slug,
+    published_at: row.published_at,
+    created_at: row.created_at,
+    editorial_status: row.editorial_status,
+    workflow_status: (row as { workflow_status?: string | null }).workflow_status,
+  }));
 }

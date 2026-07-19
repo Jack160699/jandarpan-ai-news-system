@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const prefs = parseRegionalPrefsFromQuery(request.nextUrl.searchParams);
-  const pool = await fetchGeneratedArticlePool(80);
+  const pool = await fetchGeneratedArticlePool(80, { select: "homepage" });
   const alerts = buildLocalBreakingAlerts(pool, {
     homeDistrict: prefs.homeDistrict,
     cgOnly: true,

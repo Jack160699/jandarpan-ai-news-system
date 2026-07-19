@@ -186,7 +186,7 @@ export async function captureNewsroomSnapshot(): Promise<NewsroomSnapshot> {
   let homepageError: string | null = null;
 
   try {
-    const pool = await fetchGeneratedArticlePool(120);
+    const pool = await fetchGeneratedArticlePool(120, { select: "homepage" });
     poolSize = pool.length;
     const tenant = getDefaultTenant();
     const feed = buildGeneratedHomepageFeed(pool, {

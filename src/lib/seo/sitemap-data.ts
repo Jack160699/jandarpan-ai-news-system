@@ -1,5 +1,6 @@
 /**
- * Sitemap URL builders — static, category, story routes
+ * Sitemap URL builders — static, category, story routes.
+ * Phase 6: slim projections, warm cache, no full article body fetch.
  */
 
 import type { MetadataRoute } from "next";
@@ -11,11 +12,24 @@ import { getLiveCoverageSlugs } from "@/lib/news/coverage/read";
 import { getAllDistrictSlugs } from "@/lib/regional";
 import { loadPlatformTopics } from "@/lib/newsroom-platform/config/topics";
 import {
-  fetchGeneratedArticlePool,
+  fetchSitemapGeneratedArticles,
   getGeneratedArticleSlugs,
 } from "@/lib/newsroom/generated/read";
+import { GENERATED_POOL_HARD_CAPS } from "@/lib/newsroom/generated/pool-limits";
 
-const SITEMAP_QUERY_TIMEOUT_MS = 8_000;
+const SITEMAP_QUERY_TIMEOUT_MS = 3_500;
+const SITEMAP_CACHE_TTL_MS = 5 * 60_000;
+
+let sitemapCache: { at: number; value: MetadataRoute.Sitemap } | null = null;
+let sitemapInflight: Promise<MetadataRoute.Sitemap> | null = null;
+
+export function clearMainSitemapCache(): void {
+  sitemapCache = null;
+  sitemapInflight = null;
+}
+
+/** @deprecated alias — prefer clearMainSitemapCache */
+export const clearMainSitemapCacheForTests = clearMainSitemapCache;
 
 async function withQueryTimeout<T>(
   promise: Promise<T>,
@@ -35,7 +49,7 @@ async function withQueryTimeout<T>(
   }
 }
 
-export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
+async function buildMainSitemapUncached(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -136,20 +150,25 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
   let storyRoutes: MetadataRoute.Sitemap = [];
   try {
     const pool = await withQueryTimeout(
-      fetchGeneratedArticlePool(800),
-      [] as Awaited<ReturnType<typeof fetchGeneratedArticlePool>>
+      fetchSitemapGeneratedArticles(GENERATED_POOL_HARD_CAPS.sitemap),
+      []
     );
     storyRoutes = pool.map((row) => ({
       url: `${SITE_URL}/story/${encodeURIComponent(row.slug)}`,
       lastModified: row.published_at
         ? new Date(row.published_at)
-        : new Date(row.created_at),
+        : row.created_at
+          ? new Date(row.created_at)
+          : now,
       changeFrequency: "hourly" as const,
       priority: 0.85,
     }));
   } catch {
     try {
-      const slugs = await withQueryTimeout(getGeneratedArticleSlugs(400), []);
+      const slugs = await withQueryTimeout(
+        getGeneratedArticleSlugs(GENERATED_POOL_HARD_CAPS.slug),
+        []
+      );
       storyRoutes = slugs.map((slug) => ({
         url: `${SITE_URL}/story/${encodeURIComponent(slug)}`,
         lastModified: now,
@@ -199,6 +218,25 @@ export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
     seen.add(key);
     return true;
   });
+}
+
+export async function buildMainSitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = Date.now();
+  if (sitemapCache && now - sitemapCache.at < SITEMAP_CACHE_TTL_MS) {
+    return sitemapCache.value;
+  }
+  if (sitemapInflight) return sitemapInflight;
+
+  sitemapInflight = buildMainSitemapUncached()
+    .then((value) => {
+      sitemapCache = { at: Date.now(), value };
+      return value;
+    })
+    .finally(() => {
+      sitemapInflight = null;
+    });
+
+  return sitemapInflight;
 }
 
 export async function buildGoogleNewsEntries(now = new Date()) {

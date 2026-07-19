@@ -29,7 +29,7 @@ function statusFrom(ok: boolean, degraded?: boolean): HealthStatus {
   return "unknown";
 }
 
-async function timed<T>(
+async function timed(
   id: string,
   label: string,
   fn: () => Promise<{ ok: boolean; degraded?: boolean; message?: string; details?: Record<string, unknown> }>
@@ -62,19 +62,43 @@ export async function checkSupabase(): Promise<HealthCheckResult> {
       return { ok: false, message: "not_configured" };
     }
 
-    const supabase = createAnonServerClient();
-    const { count, error } = await supabase
-      .from("generated_articles")
-      .select("id", { count: "exact", head: true })
-      .neq("editorial_status", "rejected");
+    // Phase 6: bounded summary only — never scan hundreds of article rows/bodies.
+    const { getGeneratedPoolSummary } = await import(
+      "@/lib/newsroom/generated/pool-summary"
+    );
+    const summary = await getGeneratedPoolSummary();
 
-    if (error) return { ok: false, message: error.message, details: { code: error.code } };
+    if (!summary.ok && !summary.fromCache) {
+      return {
+        ok: false,
+        degraded: summary.timedOut,
+        message: summary.error ?? "generated_pool_summary_failed",
+        details: {
+          env: getSupabaseEnvDiagnostics(),
+          timedOut: summary.timedOut,
+          durationMs: summary.durationMs,
+          fromCache: summary.fromCache,
+        },
+      };
+    }
 
     return {
       ok: true,
+      degraded: summary.timedOut || summary.fromCache,
+      message: summary.timedOut
+        ? "generated_pool_summary_timeout_using_last_known"
+        : summary.fromCache
+          ? "generated_pool_summary_cached"
+          : undefined,
       details: {
         env: getSupabaseEnvDiagnostics(),
-        generatedArticles: count ?? 0,
+        generatedArticles: summary.publishedCount ?? 0,
+        pendingArticles: summary.pendingCount,
+        latestPublishedAt: summary.latestPublishedAt,
+        hasPublished: summary.hasPublished,
+        durationMs: summary.durationMs,
+        fromCache: summary.fromCache,
+        timedOut: summary.timedOut,
       },
     };
   });
@@ -362,14 +386,18 @@ export async function checkHomepageReadable(): Promise<HealthCheckResult> {
   return timed("homepage", "Homepage content pool", async () => {
     if (!isSupabaseConfigured()) return { ok: false, message: "supabase_missing" };
 
+    // Heavy diagnostics only — tiny sample, indexed public filter, no body.
+    const { PUBLIC_EDITORIAL_STATUSES } = await import(
+      "@/lib/newsroom/publish-state"
+    );
     const HOMEPAGE_POOL_SELECT =
       "id,slug,headline,summary,published_at,editorial_status,workflow_status,created_at";
     const supabase = createAnonServerClient();
     const { data, error } = await supabase
       .from("generated_articles")
       .select(HOMEPAGE_POOL_SELECT)
-      .neq("editorial_status", "rejected")
-      .neq("editorial_status", "pending")
+      .not("published_at", "is", null)
+      .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(3);
 
