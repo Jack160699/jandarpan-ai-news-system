@@ -3,9 +3,9 @@
 **Status:** Release Candidate (RC) — **not merged · not promoted to Production**  
 **Date:** 2026-07-20  
 **Feature branch:** `feat/jandarpan-reader-design-system`  
-**RC HEAD (at doc authoring):** see latest push on branch (includes Phase 8 cleanup)  
+**RC HEAD:** `e92f34d` (Phase 8 cleanup + this document)  
 **Merge base with `main`:** `33d1cb1`  
-**Commits ahead of `main`:** 17+ (Phases 1–7 + Phase 8 RC cleanup)
+**Commits ahead of `main`:** 18 (Phases 1–7 + Phase 8 RC)
 
 > This document prepares a production-ready candidate for the navy/red/gold
 > public reader redesign. It does **not** authorize merge to `main` or a
@@ -46,7 +46,7 @@
 | `8002225` | Phase 6 Preview URL |
 | `726b8ca` | Phase 7 system states + product polish |
 | `7fdcefb` | Phase 7 Preview URL |
-| *(Phase 8)* | RC cleanup + this release doc |
+| `e92f34d` | Phase 8 — RC cleanup + production release doc |
 
 ---
 
