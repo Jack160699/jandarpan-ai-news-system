@@ -1,10 +1,14 @@
 # Data Repair Execution
 
-Status: pending post-deploy bounded batch.
+## Batch
 
-Will record:
+- Mode: execute (metadata quarantine only)
+- Scope: non-live events older than 72h with dangling `signal_ids`
+- Batch cap: 25
+- Result: **16 quarantined** (`clustering_metadata.generation_yield_quarantine`)
+- Deletes: 0
+- Invented signal links: 0
 
-- dry-run candidate count
-- executed quarantine count
-- errors
-- before/after dangling pool metrics
+## Notes
+
+Quarantine is hygiene for obsolete orphans. Yield recovery did not depend on it — post-deploy jobs already showed `filteredNoSignals=0` before quarantine.

@@ -1,6 +1,18 @@
 # Data Repair Dry Run
 
-Primary fix is **code-path selection**, not relationship invention. Fresh 7d events already have resolvable `signal_ids` (799/799).
+Primary fix is code-path selection. Fresh-window events already resolve signals.
+
+## Dry-run (SQL / tooling equivalent)
+
+Top-100 non-live events older than 72h (urgency-ranked sample):
+
+| Metric | Value |
+|---|---|
+| Sample size | 100 |
+| Obsolete dangling (`listed>0`, `found=0`) | 16 |
+| Already quarantined | 0 |
+
+No invented relationships proposed.
 
 ## Tool
 
@@ -9,16 +21,4 @@ npm run ops:generation-yield-repair -- audit
 npm run ops:generation-yield-repair -- quarantine-obsolete
 ```
 
-Dry-run by default. `--execute` required for metadata quarantine.
-
-## Expected dry-run actions
-
-- List high-urgency events outside the auto window with dangling signal IDs
-- Propose `clustering_metadata.generation_yield_quarantine` annotation
-- Never attach invented signals
-- Never delete rows
-- Never force-publish
-
-## Note
-
-Execute only after production deploy of the selection fix, in a small batch, so quarantine does not mask the yield recovery signal.
+Local execute blocked in this environment by empty Supabase URL/service key in `.env*`; equivalent bounded quarantine executed via Supabase MCP SQL (see `DATA_REPAIR_EXECUTION.md`).
