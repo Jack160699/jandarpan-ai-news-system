@@ -16,6 +16,7 @@
 | Implementation BEFORE | 390×844 | `docs/jandarpan-reader-redesign/screenshots/visual-correction/before-impl-390.png` |
 | Implementation AFTER | 390×844 | `docs/jandarpan-reader-redesign/screenshots/visual-correction/after-impl-390.png` |
 | Implementation AFTER | 430×932 | `docs/jandarpan-reader-redesign/screenshots/visual-correction/after-impl-430.png` |
+| Vercel Preview AFTER | 390×844 | `docs/jandarpan-reader-redesign/screenshots/visual-correction/preview-after-390.png` |
 
 ---
 
@@ -96,11 +97,16 @@
 
 ## 7. Preview deployment
 
-*(filled after push)*
-
 | Item | Value |
 |------|-------|
 | Branch | `feat/jandarpan-reader-design-system` |
-| Preview URL | pending push |
-| Flag | `NEXT_PUBLIC_READER_DS=1` (Preview, this branch only) |
+| Commit | `39fac46` |
+| Deployment ID | `dpl_23SZXtg34M4QMTu41MQpgFN3tgUh` — **READY ✅** |
+| Preview URL | https://newspaper-motion-i6av8g7nr-jack160699s-projects.vercel.app |
+| Branch alias | https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app |
+| Inspector | https://vercel.com/jack160699s-projects/newspaper-motion/23SZXtg34M4QMTu41MQpgFN3tgUh |
+| Flag | `NEXT_PUBLIC_READER_DS=1` (Preview · git branch `feat/jandarpan-reader-design-system` only) |
+| Preview smoke | ✅ Reader-DS chrome + real production stories (masthead mark, navyDeep utility, white breaking badge, lead, secondary, util tiles, section feeds, bottom nav) |
 | Production | untouched |
+
+Shareable access (expires ~23h): use Vercel share link if deployment protection prompts login.
