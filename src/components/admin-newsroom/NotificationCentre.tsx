@@ -1,31 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, AlertTriangle, Bell, ChevronDown, Info, X } from "lucide-react";
-
-type Tone = "critical" | "warning" | "neutral";
-
-type Item = {
-  id: string;
-  severity: "critical" | "warning" | "info";
-  title: string;
-  explanation: string;
-  source: string;
-  timestamp: string;
-  href: string;
-  unread: boolean;
-};
+import { useAdminNotifications } from "@/hooks/useAdminNotifications";
+import { ADMIN_POLL } from "@/lib/admin-v3/admin-poll";
 
 type FilterTab = "all" | "critical" | "editorial" | "platform";
 
-function severityIcon(severity: Item["severity"]) {
+function severityIcon(severity: "critical" | "warning" | "info") {
   if (severity === "critical") return AlertCircle;
   if (severity === "warning") return AlertTriangle;
   return Info;
 }
 
-function matchesFilter(item: Item, filter: FilterTab): boolean {
+function matchesFilter(
+  item: { severity: string; source: string },
+  filter: FilterTab
+): boolean {
   if (filter === "all") return true;
   if (filter === "critical") return item.severity === "critical";
   if (filter === "editorial") {
@@ -36,55 +28,29 @@ function matchesFilter(item: Item, filter: FilterTab): boolean {
 
 export function NotificationCentre() {
   const [open, setOpen] = useState(false);
-  const [tone, setTone] = useState<Tone>("neutral");
-  const [unread, setUnread] = useState(0);
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    items,
+    unread,
+    tone,
+    loading,
+    error,
+    refresh,
+    acknowledge,
+    markReadRemote,
+    cacheAgeMs,
+  } = useAdminNotifications();
   const [filter, setFilter] = useState<FilterTab>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/admin/notifications", { credentials: "include" });
-      const json = await res.json();
-      if (!json.ok) {
-        setError("Unable to load alerts");
-        return;
-      }
-      setTone((json.tone as Tone) ?? "neutral");
-      setUnread(Number(json.unread) || 0);
-      setItems(Array.isArray(json.items) ? json.items : []);
-    } catch {
-      setError("Unable to load alerts");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    const tick = () => {
-      if (!cancelled) void load();
-    };
-    const start = window.setTimeout(tick, 0);
-    const id = window.setInterval(tick, 60_000);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(start);
-      window.clearInterval(id);
-    };
-  }, [load]);
-
   useEffect(() => {
     if (!open) return;
-    const id = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(id);
-  }, [open, load]);
+    // Refetch only when cached feed is stale — not on every open.
+    if (cacheAgeMs() >= ADMIN_POLL.clientStaleMs) {
+      void refresh(true);
+    }
+  }, [open, refresh, cacheAgeMs]);
 
   useEffect(() => {
     if (!open) return;
@@ -134,7 +100,7 @@ export function NotificationCentre() {
 
   const showFilters = filterTabs.length > 2;
 
-  function markRead(id: string) {
+  function markReadLocal(id: string) {
     setReadIds((prev) => {
       const next = new Set(prev);
       next.add(id);
@@ -274,17 +240,33 @@ export function NotificationCentre() {
                             <Link
                               href={item.href}
                               onClick={() => {
-                                markRead(item.id);
+                                markReadLocal(item.id);
                                 setOpen(false);
                               }}
                             >
                               Open
                             </Link>
                             {item.unread ? (
-                              <button type="button" onClick={() => markRead(item.id)}>
-                                Mark read
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  markReadLocal(item.id);
+                                  if (item.id.startsWith("collab-")) {
+                                    void markReadRemote(item.id);
+                                  } else {
+                                    void acknowledge(item.id);
+                                  }
+                                }}
+                              >
+                                {item.id.startsWith("collab-") ? "Mark read" : "Acknowledge"}
                               </button>
                             ) : null}
+                            <Link
+                              href="/admin/health"
+                              onClick={() => setOpen(false)}
+                            >
+                              Diagnostics
+                            </Link>
                           </div>
                         </div>
                       </div>

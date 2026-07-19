@@ -40,7 +40,10 @@ export function PlatformOverviewDashboard() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/admin/ops/health", { credentials: "include" });
+        // Summary-first — same canonical service as header / health page.
+        const res = await fetch("/api/admin/ops/health-summary", {
+          credentials: "include",
+        });
         if (!res.ok) {
           if (!cancelled) setError("Platform health API unavailable for this session.");
           return;
@@ -48,7 +51,15 @@ export function PlatformOverviewDashboard() {
         const json = await res.json();
         if (cancelled) return;
 
-        setSnapshot(deriveCanonicalHealth(json));
+        const snap =
+          json.snapshot ??
+          deriveCanonicalHealth({
+            status: json.status,
+            checks: json.checks,
+            cron: json.cron,
+            timestamp: json.checkedAt,
+          });
+        setSnapshot(snap);
 
         const checkList = Array.isArray(json.checks) ? json.checks : [];
         setChecks(
@@ -62,20 +73,25 @@ export function PlatformOverviewDashboard() {
 
         const metrics = asRecord(json.metrics);
         const queues = asRecord(metrics.queues);
-        const qa = asRecord(json.queueAnalytics);
-        const aiPending = Number(queues.aiPending ?? asRecord(qa.ai).pending ?? NaN);
-        const editorialPending = Number(
-          queues.editorialImagesPending ?? asRecord(qa.editorial).pending ?? NaN
-        );
+        const aiPending = Number(queues.aiPending ?? NaN);
+        const editorialPending = Number(queues.editorialImagesPending ?? NaN);
         if (Number.isFinite(aiPending) && Number.isFinite(editorialPending)) {
           setQueuePending(aiPending + editorialPending);
         } else if (Number.isFinite(aiPending)) {
           setQueuePending(aiPending);
         }
 
-        setRedisConnected(Boolean(asRecord(json.caching).redis));
-        setStabilityScore(Number(asRecord(json.stability).score));
-        setErrors24h(Number(asRecord(json.errors).last24h));
+        const redisSource = Array.isArray(json.sources)
+          ? json.sources.find(
+              (s: { source?: string }) =>
+                String(s.source).includes("redis")
+            )
+          : null;
+        setRedisConnected(redisSource ? Boolean(redisSource.ok) : null);
+        setStabilityScore(
+          Number(snap.score ?? asRecord(json.stability).score) || null
+        );
+        setErrors24h(null);
       } catch {
         if (!cancelled) setError("Unable to load platform health.");
       } finally {

@@ -2,7 +2,10 @@
  * Owner daily briefing builder — permission-sectioned payload.
  */
 
-import { buildHealthSummary } from "@/lib/admin-v3/health-summary";
+import {
+  getCanonicalHealth,
+  type CanonicalHealthServiceResult,
+} from "@/lib/admin-v3/canonical-health-service";
 import { buildAdminMetric } from "@/lib/admin-v3/metric-contract";
 import {
   resolveDailySectionAccess,
@@ -137,7 +140,7 @@ export async function buildOverviewDailyPayload(input: BuildOverviewDailyInput) 
       } satisfies Timed<unknown>);
 
   const healthTask = access.bySection.platform
-    ? timed("platform", () => buildHealthSummary(), 1500)
+    ? timed("platform", () => getCanonicalHealth(), 1500)
     : Promise.resolve({
         source: "platform",
         ok: false,
@@ -201,7 +204,7 @@ export async function buildOverviewDailyPayload(input: BuildOverviewDailyInput) 
     generatedAt,
     wallStart,
     editorialR: editorialR as Timed<EditorialData>,
-    healthR: healthR as Timed<Awaited<ReturnType<typeof buildHealthSummary>>>,
+    healthR: healthR as Timed<CanonicalHealthServiceResult>,
     execR: execR as Timed<ExecData>,
     gscR: gscR as Timed<Record<string, unknown>>,
     analyticsR: analyticsR as Timed<Record<string, unknown>>,
@@ -236,7 +239,7 @@ export function assembleDailyPayload(args: {
   generatedAt: string;
   wallStart: number;
   editorialR: Timed<EditorialData>;
-  healthR: Timed<Awaited<ReturnType<typeof buildHealthSummary>>>;
+  healthR: Timed<CanonicalHealthServiceResult>;
   execR: Timed<ExecData>;
   gscR: Timed<Record<string, unknown>>;
   analyticsR: Timed<Record<string, unknown>>;

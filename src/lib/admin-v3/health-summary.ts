@@ -106,16 +106,11 @@ export async function buildHealthSummary() {
         api: [],
       };
 
+  // No synthetic stability score — deriveCanonicalHealth estimates from state.
+  // Heavy diagnostics attach real computeStabilityScore when requested.
   const snapshot = deriveCanonicalHealth({
     ok: status !== "unhealthy",
     status,
-    stability: {
-      score:
-        status === "healthy" ? 88 : status === "degraded" ? 62 : status === "unhealthy" ? 28 : 50,
-      grade:
-        status === "healthy" ? "B" : status === "degraded" ? "C" : status === "unhealthy" ? "F" : "D",
-      factors: [],
-    },
     checks,
     cron,
     launchWidgets: [],

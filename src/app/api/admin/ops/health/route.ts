@@ -23,6 +23,7 @@ import { isSentryEnabled, sentryReadyState } from "@/lib/observability/sentry";
 import { getProductionEnvChecks } from "@/lib/infrastructure/production";
 import { getLaunchHealthWidgets } from "@/lib/ops/launch-health";
 import { getBuildInfo } from "@/lib/observability/build-info";
+import { deriveCanonicalHealth } from "@/lib/admin-v3/canonical-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
   const auth = await requireEditorialAuth(request, "monitoring:read");
   if (!auth.ok) return auth.response;
 
+  const wall = Date.now();
   const [checks, metrics, cron, errors, errorList, queueAnalytics, openAiUsage, aiFinancial, launchWidgets] =
     await Promise.all([
     runAllHealthChecks(),
@@ -46,10 +48,30 @@ export async function GET(request: Request) {
 
   const status = aggregateHealthStatus(checks);
   const score = await computeStabilityScore({ checks, apiSamples: metrics.api });
+  const timestamp = new Date().toISOString();
+
+  // Canonical overall state — must not contradict summary surfaces.
+  const snapshot = deriveCanonicalHealth({
+    ok: status !== "unhealthy",
+    status,
+    stability: score,
+    checks,
+    cron,
+    launchWidgets,
+    timestamp,
+  });
+
+  console.info("[ops-health]", {
+    totalMs: Date.now() - wall,
+    canonicalState: snapshot.state,
+    aggregateStatus: status,
+  });
 
   return NextResponse.json({
     ok: status !== "unhealthy",
     status,
+    /** Prefer this for overall state — same model as header / summary. */
+    snapshot,
     stability: score,
     checks,
     metrics,
@@ -72,6 +94,8 @@ export async function GET(request: Request) {
     production: getProductionEnvChecks(),
     launchWidgets,
     build: getBuildInfo(),
-    timestamp: new Date().toISOString(),
+    timestamp,
+    mode: "diagnostics",
+    timing: { totalMs: Date.now() - wall },
   });
 }

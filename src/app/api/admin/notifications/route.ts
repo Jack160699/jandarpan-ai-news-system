@@ -1,25 +1,13 @@
 /**
- * GET /api/admin/notifications — operational attention feed for the bell.
- * Aggregates collaboration + canonical ops signals (permission-aware).
+ * GET /api/admin/notifications — lightweight attention feed for the bell.
+ * Ops branch uses canonical health + bounded probes (no runAllHealthChecks).
  */
 
 import { NextResponse } from "next/server";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
 import { fetchCollaborationHub } from "@/lib/collaboration/store";
-import {
-  getRecentOpsErrors,
-  getOpsErrorSummary,
-  getQueueAnalyticsDashboard,
-  runAllHealthChecks,
-  aggregateHealthStatus,
-  getCronMonitorState,
-  computeStabilityScore,
-  getMetricsDashboard,
-} from "@/lib/observability";
-import { getLaunchHealthWidgets } from "@/lib/ops/launch-health";
-import { deriveCanonicalHealth, incidentNotificationKey } from "@/lib/admin-v3/canonical-health";
-import type { CanonicalHealthReason } from "@/lib/admin-v3/canonical-health";
+import { buildIncidentFeed, type AdminIncident } from "@/lib/admin-v3/incident-feed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,73 +22,51 @@ export type AdminNotificationItem = {
   href: string;
   unread: boolean;
   dismissible: boolean;
+  actions?: Array<{
+    id: "open" | "mark_read" | "acknowledge" | "diagnostics";
+    label: string;
+  }>;
+  subsystem?: string;
+  businessImpact?: string;
+  firstSeenAt?: string;
+  lastSeenAt?: string;
+  state?: string;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
-function severityFromState(
-  state: string
-): "critical" | "warning" | "info" {
-  if (state === "critical") return "critical";
-  if (state === "degraded" || state === "warning") return "warning";
-  return "info";
-}
-
-function mapNotificationSource(reason: CanonicalHealthReason): string {
-  const title = reason.title.toLowerCase();
-  const href = reason.href.toLowerCase();
-  const detail = reason.detail.toLowerCase();
-  const haystack = `${title} ${href} ${detail}`;
-
-  if (haystack.includes("translation")) return "Translation";
-  if (haystack.includes("editorial") || haystack.includes("collaboration")) {
-    return "Editorial";
-  }
-  if (haystack.includes("publish") || haystack.includes("edition")) {
-    return "Publishing";
-  }
-  if (
-    haystack.includes("ingest") ||
-    haystack.includes("rss") ||
-    haystack.includes("fetch-news")
-  ) {
-    return "Ingestion";
-  }
-  if (
-    haystack.includes("seo") ||
-    haystack.includes("sitemap") ||
-    haystack.includes("serp") ||
-    haystack.includes("gsc")
-  ) {
-    return "SEO";
-  }
-  if (haystack.includes("security") || haystack.includes("auth")) {
-    return "Security";
-  }
-  if (haystack.includes("cost") || haystack.includes("openai")) return "Cost";
-  if (haystack.includes("deploy") || haystack.includes("vercel")) {
-    return "Deployment";
-  }
-  return "Platform";
-}
-
-function reasonToNotification(
-  reason: CanonicalHealthReason,
-  checkedAt: string
-): AdminNotificationItem {
-  const sev = severityFromState(reason.severity);
+function incidentToNotification(incident: AdminIncident): AdminNotificationItem {
   return {
-    id: incidentNotificationKey(reason),
-    severity: sev === "info" ? "warning" : sev,
-    title: reason.title,
-    explanation: reason.detail,
-    source: mapNotificationSource(reason),
-    timestamp: checkedAt,
-    href: reason.href || "/admin/health",
-    unread: true,
+    id: incident.id,
+    severity: incident.severity,
+    title: incident.summary,
+    explanation: `${incident.detail}${incident.businessImpact ? ` · ${incident.businessImpact}` : ""}`,
+    source:
+      incident.subsystem === "translation"
+        ? "Translation"
+        : incident.subsystem === "ingestion"
+          ? "Ingestion"
+          : incident.subsystem === "seo"
+            ? "SEO"
+            : incident.subsystem === "workers"
+              ? "Platform"
+              : "Platform",
+    timestamp: incident.lastUpdatedAt,
+    href: incident.href,
+    unread: incident.state === "active" && !incident.acknowledged,
     dismissible: false,
+    subsystem: incident.subsystem,
+    businessImpact: incident.businessImpact,
+    firstSeenAt: incident.firstSeenAt,
+    lastSeenAt: incident.lastSeenAt,
+    state: incident.state,
+    actions: [
+      { id: "open", label: "Open" },
+      { id: "acknowledge", label: "Acknowledge" },
+      { id: "diagnostics", label: "View diagnostics" },
+    ],
   };
 }
 
@@ -111,6 +77,7 @@ export async function GET(request: Request) {
   const role = guard.session.membership.role;
   const items: AdminNotificationItem[] = [];
   const now = new Date().toISOString();
+  const wall = Date.now();
 
   if (roleHasPermission(role, "editorial:write")) {
     try {
@@ -133,109 +100,33 @@ export async function GET(request: Request) {
           href: String(n.href ?? "/admin/collaboration"),
           unread: isUnread,
           dismissible: true,
+          actions: [
+            { id: "open", label: "Open" },
+            { id: "mark_read", label: "Mark read" },
+          ],
         });
       }
     } catch {
       /* optional */
     }
   }
+
+  let feedTiming: Record<string, number> | undefined;
+  let canonicalState: string | undefined;
 
   if (roleHasPermission(role, "monitoring:read")) {
     try {
-      const [errorList, errorSummary, queue, checks, cron, metrics, launchWidgets] =
-        await Promise.all([
-          getRecentOpsErrors(8),
-          getOpsErrorSummary(),
-          getQueueAnalyticsDashboard(),
-          runAllHealthChecks(),
-          getCronMonitorState(),
-          getMetricsDashboard(),
-          getLaunchHealthWidgets(),
-        ]);
-
-      const status = aggregateHealthStatus(checks);
-      const stability = await computeStabilityScore({
-        checks,
-        apiSamples: metrics.api,
-      });
-      const snapshot = deriveCanonicalHealth({
-        ok: status !== "unhealthy",
-        status,
-        stability,
-        checks,
-        cron,
-        launchWidgets,
-        timestamp: now,
-      });
-
-      const opsItems: AdminNotificationItem[] = [];
-      const seenIncidents = new Set<string>();
-
-      for (const reason of snapshot.reasons) {
-        const key = incidentNotificationKey(reason);
-        if (seenIncidents.has(key)) continue;
-        seenIncidents.add(key);
-        opsItems.push(reasonToNotification(reason, snapshot.checkedAt));
-      }
-
-      items.push(...opsItems);
-      const q = asRecord(queue);
-      const totals = asRecord(q.totals);
-      const queueDepth = Number(totals.pending ?? q.pending ?? q.currentQueue ?? 0) || 0;
-      if (queueDepth > 50) {
-        items.push({
-          id: `queue-${queueDepth}`,
-          severity: queueDepth > 150 ? "critical" : "warning",
-          title: "Queue backlog elevated",
-          explanation: `${queueDepth} jobs are waiting in the processing queue.`,
-          source: "Ingestion",
-          timestamp: now,
-          href: "/admin/system",
-          unread: true,
-          dismissible: false,
-        });
-      }
-
-      const summary = asRecord(errorSummary);
-      const recentCount = Number(summary.recent24h ?? summary.last24h ?? summary.count ?? 0) || 0;
-      if (recentCount > 10) {
-        items.push({
-          id: "ops-errors-summary",
-          severity: recentCount > 20 ? "critical" : "warning",
-          title: "Elevated operational errors",
-          explanation: `${recentCount} ops errors recorded in the last 24 hours.`,
-          source: "Platform",
-          timestamp: now,
-          href: "/admin/health",
-          unread: true,
-          dismissible: false,
-        });
-      }
-
-      const list = Array.isArray(errorList) ? errorList : [];
-      for (const raw of list.slice(0, 4)) {
-        const err = asRecord(raw);
-        const ts = String(err.created_at ?? err.ts ?? err.timestamp ?? now);
-        const msg = String(err.message ?? "Operational error");
-        items.push({
-          id: `err-${String(err.id ?? ts)}`,
-          severity:
-            err.severity === "critical" || err.level === "error" ? "critical" : "warning",
-          title: msg.slice(0, 80),
-          explanation: String(err.route ?? err.source ?? "See Platform health."),
-          source: "Platform",
-          timestamp: ts,
-          href: "/admin/health",
-          unread: true,
-          dismissible: false,
-        });
+      const feed = await buildIncidentFeed();
+      feedTiming = feed.timing;
+      canonicalState = feed.canonical.state;
+      for (const incident of feed.incidents) {
+        items.push(incidentToNotification(incident));
       }
     } catch {
       /* optional */
     }
   }
 
-  // Deduplicate by id (collaboration + ops may share keys after incident merge)
   const seen = new Set<string>();
   const unique = items.filter((i) => {
     if (seen.has(i.id)) return false;
@@ -251,11 +142,21 @@ export async function GET(request: Request) {
   const warning = unique.some((i) => i.severity === "warning" && i.unread);
   const unreadCount = unique.filter((i) => i.unread).length;
 
+  console.info("[admin-notifications]", {
+    totalMs: Date.now() - wall,
+    unread: unreadCount,
+    items: unique.length,
+    canonicalState,
+    feedTiming,
+  });
+
   return NextResponse.json({
     ok: true,
     unread: unreadCount,
     tone: critical ? "critical" : warning ? "warning" : "neutral",
     items: unique.slice(0, 40),
     timestamp: now,
+    timing: { totalMs: Date.now() - wall, ...feedTiming },
+    canonicalState,
   });
 }

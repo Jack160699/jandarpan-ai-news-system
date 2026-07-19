@@ -1,42 +1,23 @@
 /**
- * GET /api/status/production — public production reachability + canonical state for login.
- * Returns only { reachable, state, label } — no secrets or operational detail.
+ * GET /api/status/production — public production reachability + canonical state.
+ * Uses the same light canonical health service as the admin shell (not heavy diagnostics).
  */
 
 import { NextResponse } from "next/server";
 import { edgeCacheHeaders } from "@/lib/infrastructure/cache/edge";
 import {
-  aggregateHealthStatus,
-  runAllHealthChecks,
-} from "@/lib/observability/health/checks";
-import { getCronMonitorState } from "@/lib/observability/cron-monitor";
-import {
-  deriveCanonicalHealth,
   loginStatusFromCanonical,
   type CanonicalHealthState,
 } from "@/lib/admin-v3/canonical-health";
+import { getCanonicalHealth } from "@/lib/admin-v3/canonical-health-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const [checks, cron] = await Promise.all([
-      runAllHealthChecks(),
-      getCronMonitorState(),
-    ]);
-
-    const status = aggregateHealthStatus(checks);
-    const snapshot = deriveCanonicalHealth({
-      ok: status !== "unhealthy",
-      status,
-      checks,
-      cron,
-      launchWidgets: [],
-      timestamp: new Date().toISOString(),
-    });
-
-    const state = snapshot.state as CanonicalHealthState;
+    const health = await getCanonicalHealth();
+    const state = health.snapshot.state as CanonicalHealthState;
     const label = loginStatusFromCanonical(state, true);
 
     return NextResponse.json(

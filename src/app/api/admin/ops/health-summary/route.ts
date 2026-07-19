@@ -1,10 +1,10 @@
 /**
- * GET /api/admin/ops/health-summary — fast owner/health shell payload (<1.5s target).
+ * GET /api/admin/ops/health-summary — canonical health summary (<1.5s target).
  */
 
 import { NextResponse } from "next/server";
 import { requireAdminPermission } from "@/lib/auth/admin-authorization";
-import { buildHealthSummary } from "@/lib/admin-v3/health-summary";
+import { getCanonicalHealth } from "@/lib/admin-v3/canonical-health-service";
 import { buildEnvelope } from "@/lib/admin-v3/metric-contract";
 
 export const runtime = "nodejs";
@@ -15,19 +15,36 @@ export async function GET(request: Request) {
   if (!gate.ok) return gate.response;
 
   try {
-    const summary = await buildHealthSummary();
+    const summary = await getCanonicalHealth();
     console.info("[health-summary]", {
-      totalMs: summary.totalMs,
+      totalMs: summary.timing.totalMs,
+      cacheHit: summary.fromCache,
+      state: summary.snapshot.state,
       failed: summary.failedSources.map((s) => s.source),
-      sources: summary.sources,
     });
     return NextResponse.json({
-      ...summary,
-      contract: buildEnvelope({
-        ok: true,
-        generatedAt: summary.checkedAt,
-        stale: summary.stale,
-      }),
+      ok: summary.ok,
+      mode: summary.mode,
+      status:
+        summary.snapshot.state === "critical"
+          ? "unhealthy"
+          : summary.snapshot.state === "degraded" || summary.snapshot.state === "warning"
+            ? "degraded"
+            : summary.snapshot.state === "healthy"
+              ? "healthy"
+              : "unknown",
+      snapshot: summary.snapshot,
+      checks: summary.checks,
+      metrics: summary.metrics,
+      cron: summary.cron,
+      sources: summary.sources,
+      failedSources: summary.failedSources,
+      totalMs: summary.totalMs,
+      checkedAt: summary.checkedAt,
+      stale: summary.stale,
+      fromCache: summary.fromCache,
+      contract: summary.contract,
+      timing: summary.timing,
     });
   } catch (err) {
     console.error("[health-summary] failed", err);

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { NewsroomHealthPanel } from "@/components/admin-newsroom/NewsroomHealthStrip";
 import type { CanonicalHealthSnapshot } from "@/lib/admin-v3/canonical-health";
+import { statusIntervalForState, isDocumentHidden } from "@/lib/admin-v3/admin-poll";
+import { peekSharedCanonicalStatus } from "@/hooks/useCanonicalStatus";
 import {
   Av3Disclosure,
   Av3HealthRow,
@@ -88,8 +90,7 @@ type DiagnosticsPayload = {
 
 const SUMMARY_TIMEOUT_MS = 4_000;
 const DIAG_TIMEOUT_MS = 12_000;
-const CACHE_KEY = "jd-admin-health-summary-v1";
-const POLL_MS = 60_000;
+const CACHE_KEY = "jd-admin-health-summary-v2";
 
 function readCache(): SummaryPayload | null {
   try {
@@ -132,10 +133,30 @@ async function fetchJson<T>(
   }
 }
 
+function seedSummary(): SummaryPayload | null {
+  if (typeof window === "undefined") return null;
+  const cached = readCache();
+  if (cached) return cached;
+  const shared = peekSharedCanonicalStatus();
+  if (!shared) return null;
+  return {
+    ok: true,
+    mode: "summary",
+    status: shared.state,
+    snapshot: shared,
+    checks: [],
+    metrics: { memoryUsageMb: 0, uptimeSec: 0, queues: null },
+    cron: { jobs: [], staleJobs: [] },
+    sources: [],
+    failedSources: [],
+    totalMs: 0,
+    checkedAt: shared.checkedAt,
+    stale: shared.usedLastKnown || shared.freshness === "stale",
+  };
+}
+
 export function HealthOperationsPanel() {
-  const [summary, setSummary] = useState<SummaryPayload | null>(() =>
-    typeof window === "undefined" ? null : readCache()
-  );
+  const [summary, setSummary] = useState<SummaryPayload | null>(() => seedSummary());
   const [initialLoading, setInitialLoading] = useState(!summary);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,11 +197,18 @@ export function HealthOperationsPanel() {
 
   useEffect(() => {
     void loadSummary(true);
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      void loadSummary(false);
-    }, POLL_MS);
-    return () => window.clearInterval(id);
+    let timer: number | null = null;
+    const schedule = () => {
+      if (timer != null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (!isDocumentHidden()) void loadSummary(false);
+        schedule();
+      }, statusIntervalForState(summary?.snapshot.state));
+    };
+    schedule();
+    return () => {
+      if (timer != null) window.clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount + poll only
   }, []);
 
