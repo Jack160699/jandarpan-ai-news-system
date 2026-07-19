@@ -24,12 +24,16 @@ export function buildHomepageFeedRedisKey(
 /** Legacy base key (pre-tenant); deleted on invalidate for safety. */
 export const LEGACY_HOMEPAGE_FEED_REDIS_KEY = CACHE_KEYS.homepageFeed;
 
-/** Segment micro-caches written by writeFeedSegmentCaches (global, not tenant-scoped). */
+/** Legacy segment micro-cache bases (pre Phase 8 global keys). */
 export const HOMEPAGE_SEGMENT_REDIS_KEYS = [
   NEWS_CACHE_KEYS.homepage,
   NEWS_CACHE_KEYS.breaking,
   NEWS_CACHE_KEYS.regional,
 ] as const;
+
+function segmentKeyForTenant(base: string, tenantSlug: string): string {
+  return `${base}:t:${tenantSlug}`;
+}
 
 function languagesForTenant(tenant: TenantConfig | null): NewsroomLanguage[] {
   const enabled = tenant?.newsroom.enabledLanguages;
@@ -61,6 +65,9 @@ export function collectHomepageRedisInvalidationKeys(
     const tenant = staticBySlug.get(slug) ?? getTenantBySlug(slug);
     for (const language of languagesForTenant(tenant)) {
       keys.add(buildHomepageFeedRedisKey(slug, language));
+    }
+    for (const base of HOMEPAGE_SEGMENT_REDIS_KEYS) {
+      keys.add(segmentKeyForTenant(base, slug));
     }
   }
 

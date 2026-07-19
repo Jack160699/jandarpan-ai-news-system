@@ -358,11 +358,4 @@ export function isAnyChatProviderConfigured(): boolean {
   return getProviderConfigs().length > 0;
 }
 
-export function isLocalEnrichEnabled(): boolean {
-  if (process.env.AI_LOCAL_ENRICH_ENABLED === "true") return true;
-  if (process.env.AI_LOCAL_ENRICH_ENABLED === "false") return false;
-  return (
-    process.env.NODE_ENV !== "production" &&
-    process.env.VERCEL_ENV !== "production"
-  );
-}
+export { isLocalEnrichEnabled } from "@/lib/ai/providers/local-enrich-flag";

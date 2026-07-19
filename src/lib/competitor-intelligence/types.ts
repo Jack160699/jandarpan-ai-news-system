@@ -77,6 +77,15 @@ export type CompetitorCrawlResult = {
   errors: string[];
   durationMs: number;
   sourcesCrawled: number;
+  /** Sources selected for this tick (batch size). */
+  sourcesAttempted: number;
+  /** True when more sources remain for a later tick. */
+  continued: boolean;
+  nextCursorSourceId: string | null;
+  timedOutSources: number;
+  retryableFailures: number;
+  /** Partial success — saved some articles or crawled some sources despite errors/timeouts. */
+  partialSuccess?: boolean;
   skippedReason?: string;
 };
 

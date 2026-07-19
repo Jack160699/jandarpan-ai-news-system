@@ -1,5 +1,6 @@
 /**
- * GET/POST /api/cron/competitor-tracker — competitor intelligence crawl (every 30 min)
+ * GET/POST /api/cron/competitor-tracker — bounded competitor crawl (every 30 min)
+ * Continues from persisted cursor; one slow domain cannot exhaust the 120s budget alone.
  */
 
 import { NextResponse } from "next/server";
@@ -36,7 +37,14 @@ async function handle(request: Request) {
     ok: result.ok,
     startedAt: new Date(startedAt).toISOString(),
     durationMs,
-    degraded: result.status === "skipped",
+    degraded: result.status === "skipped" || Boolean(result.continued),
+    entityCount: result.articlesSaved,
+    metadata: {
+      continued: result.continued,
+      nextCursorSourceId: result.nextCursorSourceId,
+      timedOutSources: result.timedOutSources,
+      partialSuccess: result.partialSuccess ?? false,
+    },
     ...(result.ok ? {} : { error: result.errors[0] ?? "competitor_crawl_failed" }),
   });
 

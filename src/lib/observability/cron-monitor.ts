@@ -4,6 +4,10 @@
 
 import { cacheGetJson, cacheSetJson } from "@/lib/infrastructure/cache";
 import { REGISTERED_CRON_JOBS } from "@/lib/infrastructure/cron/registered-jobs";
+import {
+  isRetiredCronJob,
+  staleThresholdForJob,
+} from "@/lib/infrastructure/cron/retired-jobs";
 import { opsLogger } from "@/lib/observability/logger";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { WorkerResult } from "@/lib/infrastructure/workers/types";
@@ -78,11 +82,23 @@ export async function getCronMonitorState(): Promise<{
     (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
   );
 
-  const maxAgeMs = Number(process.env.CRON_STALE_THRESHOLD_MS ?? 86_400_000);
+  const defaultMaxAgeMs = Number(
+    process.env.CRON_STALE_THRESHOLD_MS ?? 86_400_000
+  );
   const now = Date.now();
   const staleJobs: string[] = [];
 
+  // Drop retired ids from cached state so they never resurface as stale.
+  for (const job of Object.keys(state)) {
+    if (isRetiredCronJob(job)) {
+      delete state[job];
+    }
+  }
+
   for (const job of REGISTERED_CRON_JOBS) {
+    if (isRetiredCronJob(job)) continue;
+
+    const thresholdMs = staleThresholdForJob(job, defaultMaxAgeMs);
     const rec = state[job];
     if (!rec) {
       staleJobs.push(job);
@@ -92,13 +108,13 @@ export async function getCronMonitorState(): Promise<{
         expectedHeartbeat: job,
         lastHeartbeat: null,
         ageMs: null,
-        thresholdMs: maxAgeMs,
+        thresholdMs,
       });
       continue;
     }
 
     const ageMs = now - new Date(rec.startedAt).getTime();
-    if (ageMs > maxAgeMs) {
+    if (ageMs > thresholdMs) {
       staleJobs.push(job);
       opsLogger.warn("worker_heartbeat_stale", {
         job,
@@ -106,10 +122,13 @@ export async function getCronMonitorState(): Promise<{
         expectedHeartbeat: job,
         lastHeartbeat: rec.startedAt,
         ageMs,
-        thresholdMs: maxAgeMs,
+        thresholdMs,
       });
     }
   }
 
-  return { jobs, staleJobs };
+  return {
+    jobs: jobs.filter((j) => !isRetiredCronJob(j.job)),
+    staleJobs,
+  };
 }

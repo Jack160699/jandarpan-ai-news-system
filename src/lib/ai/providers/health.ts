@@ -2,6 +2,7 @@
  * In-memory AI provider health — avoids retry storms on bad keys.
  */
 
+import { isLocalEnrichEnabled } from "@/lib/ai/providers/local-enrich-flag";
 import type {
   AiProviderHealthSnapshot,
   AiProviderId,
@@ -216,7 +217,7 @@ export function getAiProviderHealthSummary(): {
 } {
   const openai = getState("openai");
   const openrouterConfigured = Boolean(process.env.OPENROUTER_API_KEY?.trim());
-  const localEnrichEnabled = process.env.AI_LOCAL_ENRICH_ENABLED !== "false";
+  const localEnrichEnabled = isLocalEnrichEnabled();
 
   let OPENAI_PROVIDER_STATUS: OpenAiProviderStatus = "healthy";
   if (openai.lastHttpStatus === 401 || openai.lastHttpStatus === 403) {

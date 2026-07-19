@@ -12,6 +12,7 @@ import type {
   JobType,
   WorkerJobRow,
 } from "@/lib/infrastructure/jobs/types";
+import { resolveJobTenantId } from "@/lib/infrastructure/jobs/tenant-hygiene";
 import type { ExecutionDeadline } from "@/lib/serverless/deadline";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { recordJobRun } from "@/lib/infrastructure/jobs/monitor";
@@ -75,6 +76,26 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<string | null>
   const supabase = createAdminClient();
   const now = new Date().toISOString();
 
+  const tenantResolved = resolveJobTenantId(input.jobType, input.tenantId, {
+    // Strict rejection when caller opts in via env (default: resolve pipeline tenant).
+    allowPipelineFallback: process.env.WORKER_REQUIRE_EXPLICIT_TENANT !== "true",
+  });
+  if (!tenantResolved.ok) {
+    console.warn(
+      JSON.stringify({
+        tag: "[worker-jobs]",
+        phase: "enqueue_rejected",
+        reason: "missing_tenant",
+        jobType: input.jobType,
+        dedupeKey: input.dedupeKey,
+        ts: now,
+      })
+    );
+    return null;
+  }
+
+  const tenantId = tenantResolved.tenantId;
+
   const { data: existing } = await supabase
     .from("worker_jobs")
     .select("id")
@@ -87,6 +108,7 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<string | null>
     await supabase
       .from("worker_jobs")
       .update({
+        tenant_id: tenantId,
         priority: Math.max(input.priority ?? 0, 0),
         scheduled_at: (input.scheduledAt ?? new Date()).toISOString(),
         payload: asJsonObject(input.payload ?? {}),
@@ -99,7 +121,7 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<string | null>
   const { data, error } = await supabase
     .from("worker_jobs")
     .insert({
-      tenant_id: input.tenantId ?? null,
+      tenant_id: tenantId,
       job_type: input.jobType,
       dedupe_key: input.dedupeKey,
       payload: asJsonObject(input.payload ?? {}),

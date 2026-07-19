@@ -355,6 +355,10 @@ export async function checkIngestion(): Promise<HealthCheckResult> {
 
 export async function checkRedisCache(): Promise<HealthCheckResult> {
   return timed("redis", "Upstash Redis", async () => {
+    const { redisFailureImpact } = await import(
+      "@/lib/infrastructure/cache/tenant-keys"
+    );
+    const impact = redisFailureImpact();
     const configured = isRedisConfigured();
     if (!configured) {
       return {
@@ -364,6 +368,8 @@ export async function checkRedisCache(): Promise<HealthCheckResult> {
         details: {
           enabled: INFRA_CONFIG.redisEnabled,
           homepageCacheSeconds: INFRA_CONFIG.homepageCacheSeconds,
+          fallback: "memory",
+          impact,
         },
       };
     }
@@ -377,6 +383,10 @@ export async function checkRedisCache(): Promise<HealthCheckResult> {
         enabled: INFRA_CONFIG.redisEnabled,
         latencyMs: ping.latencyMs,
         homepageCacheSeconds: INFRA_CONFIG.homepageCacheSeconds,
+        fallback: ping.reachable ? "redis" : "memory",
+        impact: ping.reachable
+          ? { correctness: "unaffected", performance: "ok" }
+          : impact,
       },
     };
   });

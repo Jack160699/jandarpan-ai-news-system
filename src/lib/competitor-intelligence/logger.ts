@@ -3,6 +3,8 @@
  */
 
 type CompetitorLogEvent =
+  | "page_timeout"
+  | "domain_timeout"
   | "crawl_start"
   | "crawl_finish"
   | "articles_saved"

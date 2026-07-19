@@ -66,7 +66,8 @@ function getCronSecret(): { secret: string | null; env: string | null } {
   return { secret: null, env: null };
 }
 
-function collectAcceptedSecrets(capability?: CronCapability): string[] {
+/** Exported for tests — never log return values. */
+export function collectAcceptedSecrets(capability?: CronCapability): string[] {
   const secrets = new Set<string>();
 
   const master = process.env.CRON_SECRET?.trim();
@@ -86,6 +87,16 @@ function collectAcceptedSecrets(capability?: CronCapability): string[] {
   }
 
   return [...secrets];
+}
+
+/** Which env keys contribute secrets for a capability (names only). */
+export function cronSecretEnvKeysForCapability(
+  capability?: CronCapability
+): string[] {
+  const keys = ["CRON_SECRET", "CRON_API_SECRET"];
+  if (capability) keys.push(CAPABILITY_ENV_KEYS[capability]);
+  if (capability === "admin") keys.push("ADMIN_SECRET");
+  return keys;
 }
 
 function matchesAcceptedSecret(

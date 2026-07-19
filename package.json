@@ -31,6 +31,8 @@
     "ops:editorial-backlog-retry": "npx tsx scripts/editorial-backlog-recovery.ts retry",
     "ops:translation-recovery": "npx tsx scripts/translation-recovery.ts",
     "ops:translation-coverage": "npx tsx scripts/translation-recovery.ts --coverage-only",
+    "ops:tenant-job-repair": "npx tsx scripts/tenant-job-repair.ts",
+    "ops:tenant-job-repair-execute": "npx tsx scripts/tenant-job-repair.ts --execute",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {
