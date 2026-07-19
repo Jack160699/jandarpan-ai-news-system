@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { BrandedErrorFallback } from "@/components/errors/BrandedErrorFallback";
+import { AdminEditorialErrorFallback } from "@/components/admin-newsroom/AdminEditorialErrorFallback";
 import { captureOpsException } from "@/lib/observability/sentry";
 
 type AdminErrorProps = {
@@ -19,15 +19,10 @@ export default function AdminError({ error, reset }: AdminErrorProps) {
   }, [error]);
 
   return (
-    <BrandedErrorFallback
-      title="Newsroom panel error"
-      message={
-        process.env.NODE_ENV === "development"
-          ? error.message
-          : "Something went wrong in the editorial workspace. Try reloading or return to the overview."
-      }
+    <AdminEditorialErrorFallback
+      title="Editorial workspace unavailable"
+      error={error}
       reset={reset}
-      showHome
     />
   );
 }

@@ -60,16 +60,42 @@ export function AdminLoginForm() {
 
   useEffect(() => {
     let cancelled = false;
+
     async function probe() {
+      let reachable = false;
       try {
-        const res = await fetch("/api/health/live");
-        if (!cancelled && res.ok) {
-          setHealthLine("Production systems connected");
+        const liveRes = await fetch("/api/health/live");
+        reachable = liveRes.ok;
+      } catch {
+        reachable = false;
+      }
+
+      if (!reachable) {
+        if (!cancelled) setHealthLine("Status unavailable");
+        return;
+      }
+
+      try {
+        const statusRes = await fetch("/api/status/production");
+        if (statusRes.ok) {
+          const json = (await statusRes.json()) as {
+            label?: string;
+            state?: string;
+          };
+          if (!cancelled) {
+            setHealthLine(
+              typeof json.label === "string" ? json.label : "Production reachable"
+            );
+          }
+          return;
         }
       } catch {
-        /* silent */
+        /* fall through to reachable-only */
       }
+
+      if (!cancelled) setHealthLine("Production reachable");
     }
+
     void probe();
     return () => {
       cancelled = true;
@@ -124,7 +150,21 @@ export function AdminLoginForm() {
           <h1>Jan Darpan Command Centre</h1>
           <p>Editorial intelligence. Business control. Platform reliability.</p>
           {healthLine ? (
-            <span className="anr-login-v2__status">{healthLine}</span>
+            <span
+              className={`anr-login-v2__status ${
+                healthLine === "Production healthy"
+                  ? "anr-login-v2__status--healthy"
+                  : healthLine === "Status unavailable"
+                    ? "anr-login-v2__status--unknown"
+                    : healthLine.includes("incident") || healthLine.includes("Critical")
+                      ? "anr-login-v2__status--critical"
+                      : healthLine.includes("degraded") || healthLine.includes("Warning")
+                        ? "anr-login-v2__status--warning"
+                        : "anr-login-v2__status--neutral"
+              }`}
+            >
+              {healthLine}
+            </span>
           ) : null}
         </div>
       </div>

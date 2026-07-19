@@ -18,7 +18,8 @@ import {
   getMetricsDashboard,
 } from "@/lib/observability";
 import { getLaunchHealthWidgets } from "@/lib/ops/launch-health";
-import { deriveCanonicalHealth } from "@/lib/admin-v3/canonical-health";
+import { deriveCanonicalHealth, incidentNotificationKey } from "@/lib/admin-v3/canonical-health";
+import type { CanonicalHealthReason } from "@/lib/admin-v3/canonical-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,13 +48,68 @@ function severityFromState(
   return "info";
 }
 
+function mapNotificationSource(reason: CanonicalHealthReason): string {
+  const title = reason.title.toLowerCase();
+  const href = reason.href.toLowerCase();
+  const detail = reason.detail.toLowerCase();
+  const haystack = `${title} ${href} ${detail}`;
+
+  if (haystack.includes("translation")) return "Translation";
+  if (haystack.includes("editorial") || haystack.includes("collaboration")) {
+    return "Editorial";
+  }
+  if (haystack.includes("publish") || haystack.includes("edition")) {
+    return "Publishing";
+  }
+  if (
+    haystack.includes("ingest") ||
+    haystack.includes("rss") ||
+    haystack.includes("fetch-news")
+  ) {
+    return "Ingestion";
+  }
+  if (
+    haystack.includes("seo") ||
+    haystack.includes("sitemap") ||
+    haystack.includes("serp") ||
+    haystack.includes("gsc")
+  ) {
+    return "SEO";
+  }
+  if (haystack.includes("security") || haystack.includes("auth")) {
+    return "Security";
+  }
+  if (haystack.includes("cost") || haystack.includes("openai")) return "Cost";
+  if (haystack.includes("deploy") || haystack.includes("vercel")) {
+    return "Deployment";
+  }
+  return "Platform";
+}
+
+function reasonToNotification(
+  reason: CanonicalHealthReason,
+  checkedAt: string
+): AdminNotificationItem {
+  const sev = severityFromState(reason.severity);
+  return {
+    id: incidentNotificationKey(reason),
+    severity: sev === "info" ? "warning" : sev,
+    title: reason.title,
+    explanation: reason.detail,
+    source: mapNotificationSource(reason),
+    timestamp: checkedAt,
+    href: reason.href || "/admin/health",
+    unread: true,
+    dismissible: false,
+  };
+}
+
 export async function GET(request: Request) {
   const guard = await requireDashboardSession(request, "content:read");
   if (!guard.ok) return guard.response;
 
   const role = guard.session.membership.role;
   const items: AdminNotificationItem[] = [];
-  let unread = 0;
   const now = new Date().toISOString();
 
   if (roleHasPermission(role, "editorial:write")) {
@@ -78,7 +134,6 @@ export async function GET(request: Request) {
           unread: isUnread,
           dismissible: true,
         });
-        if (isUnread) unread += 1;
       }
     } catch {
       /* optional */
@@ -113,22 +168,17 @@ export async function GET(request: Request) {
         timestamp: now,
       });
 
+      const opsItems: AdminNotificationItem[] = [];
+      const seenIncidents = new Set<string>();
+
       for (const reason of snapshot.reasons) {
-        const sev = severityFromState(reason.severity);
-        items.push({
-          id: reason.id,
-          severity: sev === "info" ? "warning" : sev,
-          title: reason.title,
-          explanation: reason.detail,
-          source: "Platform",
-          timestamp: snapshot.checkedAt,
-          href: reason.href || "/admin/health",
-          unread: true,
-          dismissible: false,
-        });
-        unread += 1;
+        const key = incidentNotificationKey(reason);
+        if (seenIncidents.has(key)) continue;
+        seenIncidents.add(key);
+        opsItems.push(reasonToNotification(reason, snapshot.checkedAt));
       }
 
+      items.push(...opsItems);
       const q = asRecord(queue);
       const totals = asRecord(q.totals);
       const queueDepth = Number(totals.pending ?? q.pending ?? q.currentQueue ?? 0) || 0;
@@ -138,13 +188,12 @@ export async function GET(request: Request) {
           severity: queueDepth > 150 ? "critical" : "warning",
           title: "Queue backlog elevated",
           explanation: `${queueDepth} jobs are waiting in the processing queue.`,
-          source: "Pipeline",
+          source: "Ingestion",
           timestamp: now,
           href: "/admin/system",
           unread: true,
           dismissible: false,
         });
-        unread += 1;
       }
 
       const summary = asRecord(errorSummary);
@@ -161,7 +210,6 @@ export async function GET(request: Request) {
           unread: true,
           dismissible: false,
         });
-        unread += 1;
       }
 
       const list = Array.isArray(errorList) ? errorList : [];
@@ -175,20 +223,19 @@ export async function GET(request: Request) {
             err.severity === "critical" || err.level === "error" ? "critical" : "warning",
           title: msg.slice(0, 80),
           explanation: String(err.route ?? err.source ?? "See Platform health."),
-          source: "Ops",
+          source: "Platform",
           timestamp: ts,
           href: "/admin/health",
           unread: true,
           dismissible: false,
         });
-        unread += 1;
       }
     } catch {
       /* optional */
     }
   }
 
-  // Deduplicate by id
+  // Deduplicate by id (collaboration + ops may share keys after incident merge)
   const seen = new Set<string>();
   const unique = items.filter((i) => {
     if (seen.has(i.id)) return false;

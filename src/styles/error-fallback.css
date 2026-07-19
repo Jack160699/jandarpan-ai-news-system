@@ -68,3 +68,71 @@
   color: #f5b0b8;
   text-decoration: none;
 }
+
+.error-fallback__digest {
+  margin: 0 0 1rem;
+  font-size: 0.75rem;
+  color: rgb(255 255 255 / 0.55);
+}
+
+.error-fallback__digest code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.06);
+}
+
+.error-fallback--admin {
+  min-height: auto;
+  padding: 0.5rem 0 1.5rem;
+  background: transparent;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.error-fallback--admin .error-fallback__card {
+  width: 100%;
+  max-width: 36rem;
+  text-align: left;
+  border-radius: 14px;
+  border-color: var(--anr-border, rgb(255 255 255 / 0.08));
+  background: var(--anr-surface-2, rgb(255 255 255 / 0.04));
+}
+
+.error-fallback--admin .error-fallback__title {
+  font-size: 1.125rem;
+  font-family: "Segoe UI", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+.error-fallback--admin .error-fallback__message {
+  color: var(--anr-muted, rgb(255 255 255 / 0.72));
+}
+
+.error-fallback--admin .error-fallback__digest {
+  color: var(--anr-muted, rgb(255 255 255 / 0.55));
+}
+
+.error-fallback--admin .error-fallback__actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.error-fallback--admin .error-fallback__btn {
+  min-height: 2.25rem;
+  padding: 0 1rem;
+  font-size: 0.8125rem;
+  border-radius: 9px;
+}
+
+.error-fallback--admin .error-fallback__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 0.85rem;
+  border-radius: 9px;
+  border: 1px solid var(--anr-border, rgb(255 255 255 / 0.12));
+  color: var(--anr-text, #f5b0b8);
+  background: transparent;
+}

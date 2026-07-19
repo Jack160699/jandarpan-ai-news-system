@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -18,6 +18,7 @@ import {
 import { useAdminNewsroom } from "@/components/admin-newsroom/AdminProvider";
 import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
 import { NotificationCentre } from "@/components/admin-newsroom/NotificationCentre";
+import { AdminPageErrorBoundary } from "@/components/admin-newsroom/AdminPageErrorBoundary";
 import { CommandMenu } from "@/components/admin-v3/CommandMenu";
 import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
@@ -55,7 +56,7 @@ export function AdminShell({
   searchPlaceholder,
   hidePageHeader = false,
 }: AdminShellProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const { email, role, tenantName, theme, setTheme, toast, roleResolved } =
     useAdminNewsroom();
   const [collapsed, setCollapsed] = useState(false);
@@ -66,6 +67,7 @@ export function AdminShell({
   const [cmdOpen, setCmdOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState("");
   const [health, setHealth] = useState<CanonicalHealthSnapshot | null>(null);
+  const statusWrapRef = useRef<HTMLDivElement>(null);
   const search = searchValue ?? localSearch;
   void onSearchChange;
 
@@ -112,6 +114,39 @@ export function AdminShell({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (!statusOpen) return;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setStatusOpen(false);
+    }
+
+    function onPointer(e: MouseEvent) {
+      const target = e.target as Node | null;
+      if (statusWrapRef.current && target && !statusWrapRef.current.contains(target)) {
+        setStatusOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("mousedown", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("mousedown", onPointer);
+    };
+  }, [statusOpen]);
+
+  useEffect(() => {
+    if (!accountOpen) return;
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setAccountOpen(false);
+    }
+
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [accountOpen]);
 
   useEffect(() => {
     document.body.classList.toggle("av3-body-lock", mobileOpen);
@@ -179,6 +214,11 @@ export function AdminShell({
   const navCompact = collapsed && !mobileOpen;
   const state = health?.state ?? "unknown";
   const stateLabel = health?.label ?? "Production · Unknown";
+  const statusIncidents =
+    (health?.topIncidents?.length ? health.topIncidents : health?.reasons?.slice(0, 3)) ?? [];
+  const criticalCount = health?.criticalCount ?? 0;
+  const warningCount = health?.warningCount ?? 0;
+  const shortRole = roleResolved && role ? String(role).replace(/_/g, " ") : "…";
 
   const sidebarInner = (
     <>
@@ -295,16 +335,23 @@ export function AdminShell({
           >
             <UserCircle2 size={20} aria-hidden />
             {!navCompact ? (
-              <div>
-                <p>{email || "Newsroom"}</p>
-                <span>
-                  {roleResolved ? role : "…"} · {tenantName || "desk"}
-                </span>
-              </div>
+              <>
+                <div className="av3-sidebar__user-copy">
+                  <p>{email || "Newsroom"}</p>
+                  <span>{shortRole}</span>
+                </div>
+                <ChevronDown size={14} aria-hidden className="av3-sidebar__user-chevron" />
+              </>
             ) : null}
           </button>
           {accountOpen ? (
-            <div className="av3-account-menu">
+            <div className="av3-account-menu" role="menu">
+              <div className="av3-account-menu__head">
+                <strong>{email || "Newsroom account"}</strong>
+                <span>
+                  {shortRole} · {tenantName || "desk"}
+                </span>
+              </div>
               {secondaryWorkspaces.map((ws) => (
                 <Link
                   key={ws.id}
@@ -317,6 +364,24 @@ export function AdminShell({
                   {ws.label}
                 </Link>
               ))}
+              <Link
+                href="/admin/team"
+                onClick={() => {
+                  setAccountOpen(false);
+                  setMobileOpen(false);
+                }}
+              >
+                Team
+              </Link>
+              <Link
+                href="/admin/settings"
+                onClick={() => {
+                  setAccountOpen(false);
+                  setMobileOpen(false);
+                }}
+              >
+                Settings
+              </Link>
               <button type="button" onClick={signOut}>
                 Sign out
               </button>
@@ -369,7 +434,7 @@ export function AdminShell({
               </button>
             </div>
             <div className="av3-topbar__right">
-              <div className="av3-status-wrap">
+              <div className="av3-status-wrap" ref={statusWrapRef}>
                 <button
                   type="button"
                   className={`av3-env-pill av3-env-pill--${state}`}
@@ -380,11 +445,21 @@ export function AdminShell({
                   {stateLabel}
                 </button>
                 {statusOpen ? (
-                  <div className="av3-status-popover" role="dialog">
+                  <div className="av3-status-popover" role="dialog" aria-label="Production status">
                     <p className="av3-status-popover__title">{stateLabel}</p>
-                    {(health?.reasons?.length ?? 0) > 0 ? (
+                    <p className="av3-meta">
+                      Last checked{" "}
+                      {health?.checkedAt
+                        ? new Date(health.checkedAt).toLocaleString("en-IN")
+                        : "—"}
+                    </p>
+                    <div className="av3-status-popover__counts">
+                      <span>Critical: {criticalCount}</span>
+                      <span>Warnings: {warningCount}</span>
+                    </div>
+                    {statusIncidents.length > 0 ? (
                       <ul>
-                        {health!.reasons.slice(0, 6).map((r) => (
+                        {statusIncidents.map((r) => (
                           <li key={r.id}>
                             <strong>{r.title}</strong>
                             <span>{r.detail}</span>
@@ -392,7 +467,7 @@ export function AdminShell({
                         ))}
                       </ul>
                     ) : (
-                      <p className="av3-meta">No open health reasons.</p>
+                      <p className="av3-meta">No open health incidents.</p>
                     )}
                     <Link href="/admin/health" onClick={() => setStatusOpen(false)}>
                       Open Platform health
@@ -424,7 +499,9 @@ export function AdminShell({
             </header>
           ) : null}
 
-          <section className="av3-content av3-page-enter">{children}</section>
+          <section className="av3-content av3-page-enter">
+            <AdminPageErrorBoundary>{children}</AdminPageErrorBoundary>
+          </section>
         </main>
       </div>
       <CommandMenu

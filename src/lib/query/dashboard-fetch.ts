@@ -55,7 +55,7 @@ export async function fetchEditorialDashboard(
   const run = async (): Promise<EditorialDashboardSnapshot> => {
     const result = await apiClient.get<DashboardApiResponse>(
       "/api/editorial/dashboard",
-      { label: "editorial_dashboard" }
+      { label: "editorial_dashboard", timeoutMs: 15_000 }
     );
     if (!result.ok) {
       throw new Error(result.timedOut ? "timeout" : result.error);

@@ -16,6 +16,8 @@ export type CanonicalHealthReason = {
   title: string;
   detail: string;
   href: string;
+  /** Normalized incident family for deduplication across sources. */
+  incidentFamily?: string;
 };
 
 export type CanonicalHealthSnapshot = {
@@ -25,6 +27,9 @@ export type CanonicalHealthSnapshot = {
   checkedAt: string;
   score?: number;
   grade?: string;
+  criticalCount?: number;
+  warningCount?: number;
+  topIncidents?: CanonicalHealthReason[];
 };
 
 const STATE_RANK: Record<CanonicalHealthState, number> = {
@@ -34,6 +39,8 @@ const STATE_RANK: Record<CanonicalHealthState, number> = {
   critical: 3,
   unknown: 1,
 };
+
+const CRON_EXECUTION_FAMILY = "cron-execution";
 
 function worse(
   a: CanonicalHealthState,
@@ -56,6 +63,83 @@ function asRecord(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
 }
 
+function isCronHealthCheck(c: Record<string, unknown>): boolean {
+  const id = String(c.id ?? "").toLowerCase();
+  const label = String(c.label ?? "").toLowerCase();
+  return id === "cron_workers" || label.includes("cron worker");
+}
+
+function isCronLaunchWidget(w: Record<string, unknown>): boolean {
+  const id = String(w.id ?? "").toLowerCase();
+  const label = String(w.label ?? "").toLowerCase();
+  return id === "cron" || label.includes("cron health");
+}
+
+function incidentFamilyForReason(reason: CanonicalHealthReason): string {
+  if (reason.incidentFamily) return reason.incidentFamily;
+  if (reason.id === "incident-cron-execution") return CRON_EXECUTION_FAMILY;
+  if (reason.id.startsWith("cron-fail-")) return `cron-fail:${reason.id}`;
+  if (reason.id.startsWith("check-")) return `check:${reason.id.slice("check-".length)}`;
+  if (reason.id.startsWith("launch-")) return `launch:${reason.id.slice("launch-".length)}`;
+  return reason.id;
+}
+
+function dedupeByIncidentFamily(
+  reasons: CanonicalHealthReason[]
+): CanonicalHealthReason[] {
+  const byFamily = new Map<string, CanonicalHealthReason>();
+
+  for (const reason of reasons) {
+    const family = incidentFamilyForReason(reason);
+    const existing = byFamily.get(family);
+    if (!existing) {
+      byFamily.set(family, { ...reason, incidentFamily: family });
+      continue;
+    }
+    const mergedSeverity = worse(existing.severity, reason.severity);
+    byFamily.set(family, {
+      ...existing,
+      severity: mergedSeverity,
+      detail:
+        mergedSeverity === existing.severity && reason.detail.length > existing.detail.length
+          ? reason.detail
+          : existing.detail,
+      incidentFamily: family,
+    });
+  }
+
+  return [...byFamily.values()];
+}
+
+function countBySeverity(
+  reasons: CanonicalHealthReason[],
+  severity: CanonicalHealthState
+): number {
+  return reasons.filter((r) => r.severity === severity).length;
+}
+
+export function loginStatusLabel(state: CanonicalHealthState): string {
+  switch (state) {
+    case "healthy":
+      return "Production healthy";
+    case "warning":
+    case "degraded":
+      return "Production degraded";
+    case "critical":
+      return "Production incident detected";
+    default:
+      return "Status unavailable";
+  }
+}
+
+export function loginStatusFromCanonical(
+  state: CanonicalHealthState,
+  reachable: boolean
+): string {
+  if (!reachable) return "Status unavailable";
+  return loginStatusLabel(state);
+}
+
 /** Derive canonical state from /api/admin/ops/health JSON (or partial). */
 export function deriveCanonicalHealth(payload: unknown): CanonicalHealthSnapshot {
   const data = asRecord(payload);
@@ -65,6 +149,8 @@ export function deriveCanonicalHealth(payload: unknown): CanonicalHealthSnapshot
   const checks = Array.isArray(data.checks) ? data.checks : [];
   for (const raw of checks) {
     const c = asRecord(raw);
+    if (isCronHealthCheck(c)) continue;
+
     const mapped = mapCheckStatus(String(c.status ?? "unknown"));
     state = worse(state, mapped === "healthy" ? state : mapped);
     if (mapped === "degraded" || mapped === "critical") {
@@ -81,6 +167,8 @@ export function deriveCanonicalHealth(payload: unknown): CanonicalHealthSnapshot
   const launch = Array.isArray(data.launchWidgets) ? data.launchWidgets : [];
   for (const raw of launch) {
     const w = asRecord(raw);
+    if (isCronLaunchWidget(w)) continue;
+
     const mapped = mapCheckStatus(String(w.status ?? "unknown"));
     if (mapped === "warning" || mapped === "degraded" || mapped === "critical") {
       state = worse(state, mapped === "warning" ? "warning" : mapped);
@@ -96,13 +184,48 @@ export function deriveCanonicalHealth(payload: unknown): CanonicalHealthSnapshot
 
   const cron = asRecord(data.cron);
   const stale = Array.isArray(cron.staleJobs) ? cron.staleJobs.map(String) : [];
-  if (stale.length > 0) {
-    state = worse(state, stale.length >= 3 ? "critical" : "degraded");
+  const cronCheck = checks.find((raw) => isCronHealthCheck(asRecord(raw)));
+  const cronWidget = launch.find((raw) => isCronLaunchWidget(asRecord(raw)));
+  const cronCheckMapped = cronCheck
+    ? mapCheckStatus(String(asRecord(cronCheck).status ?? "unknown"))
+    : null;
+  const cronWidgetMapped = cronWidget
+    ? mapCheckStatus(String(asRecord(cronWidget).status ?? "unknown"))
+    : null;
+
+  const cronSignalsDegraded =
+    stale.length > 0 ||
+    cronCheckMapped === "degraded" ||
+    cronCheckMapped === "critical" ||
+    cronWidgetMapped === "degraded" ||
+    cronWidgetMapped === "critical";
+
+  if (cronSignalsDegraded) {
+    const cronSeverity: CanonicalHealthState =
+      stale.length >= 3 ||
+      cronCheckMapped === "critical" ||
+      cronWidgetMapped === "critical"
+        ? "critical"
+        : stale.length > 0 ||
+            cronCheckMapped === "degraded" ||
+            cronWidgetMapped === "degraded"
+          ? "degraded"
+          : "warning";
+
+    state = worse(state, cronSeverity);
     reasons.push({
-      id: "cron-stale",
-      severity: stale.length >= 3 ? "critical" : "degraded",
-      title: "Stale cron jobs",
-      detail: stale.slice(0, 6).join(", "),
+      id: "incident-cron-execution",
+      incidentFamily: CRON_EXECUTION_FAMILY,
+      severity: cronSeverity,
+      title: "Cron execution degraded",
+      detail:
+        stale.length > 0
+          ? stale.slice(0, 6).join(", ")
+          : String(
+              asRecord(cronCheck).message ??
+                asRecord(cronWidget).detail ??
+                "Cron schedules not running on track"
+            ),
       href: "/admin/health",
     });
   }
@@ -147,13 +270,10 @@ export function deriveCanonicalHealth(payload: unknown): CanonicalHealthSnapshot
     unknown: "Production · Unknown",
   };
 
-  // Deduplicate by id
-  const seen = new Set<string>();
-  const unique = reasons.filter((r) => {
-    if (seen.has(r.id)) return false;
-    seen.add(r.id);
-    return true;
-  });
+  const unique = dedupeByIncidentFamily(reasons);
+  const criticalCount = countBySeverity(unique, "critical");
+  const warningCount =
+    countBySeverity(unique, "warning") + countBySeverity(unique, "degraded");
 
   return {
     state,
@@ -162,9 +282,17 @@ export function deriveCanonicalHealth(payload: unknown): CanonicalHealthSnapshot
     checkedAt: String(data.timestamp ?? new Date().toISOString()),
     score: Number.isFinite(score) ? score : undefined,
     grade,
+    criticalCount,
+    warningCount,
+    topIncidents: unique.slice(0, 3),
   };
 }
 
 export function headerTone(state: CanonicalHealthState): string {
   return state;
+}
+
+/** Normalized incident key for notification deduplication (subsystem + type). */
+export function incidentNotificationKey(reason: CanonicalHealthReason): string {
+  return incidentFamilyForReason(reason);
 }

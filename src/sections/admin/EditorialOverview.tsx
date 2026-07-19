@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Area,
   AreaChart,
@@ -53,6 +54,108 @@ function toneFromHealth(score: number): "stable" | "warning" | "breaking" {
   return "breaking";
 }
 
+function EditorialQuickLinks() {
+  return (
+    <section className="anr-cc-quick" aria-label="Editorial quick links">
+      <h3>Quick links</h3>
+      <div className="anr-cc-quick__row">
+        <Link href="/admin/stories" className="anr-btn anr-btn--ghost">
+          Story queue
+        </Link>
+        <Link href="/admin/articles" className="anr-btn anr-btn--ghost">
+          All stories
+        </Link>
+        <Link href="/admin/editor" className="anr-btn anr-btn--ghost">
+          Editor
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function EditorialKpiSkeletons({ count = 8 }: { count?: number }) {
+  return (
+    <div className="anr-kpis">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="anr-kpi">
+          <div className="anr-skeleton" style={{ height: "2.5rem" }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EditorialDegradedMetric({ label, value }: { label: string; value: string | number }) {
+  return (
+    <article className="anr-kpi anr-kpi--mission">
+      <div className="anr-kpi__head">
+        <span>{label}</span>
+      </div>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function EditorialDegradedShell({
+  error,
+  onRetry,
+}: {
+  error: string;
+  onRetry: () => void;
+}) {
+  return (
+    <>
+      <section className="anr-cc-hero anr-cc-hero--degraded" style={{ marginBottom: "1.25rem" }}>
+        <div className="anr-cc-hero__row">
+          <div>
+            <p className="anr-meta">Editorial dashboard degraded</p>
+            <h2 className="anr-cc-hero__title">Live metrics unavailable</h2>
+            <p className="anr-cc-hero__summary">
+              The editorial dashboard source timed out or failed. You can still reach key routes below.
+            </p>
+            <p className="anr-error" style={{ marginTop: "0.65rem" }}>
+              {error}
+            </p>
+            <div className="anr-cc-actions" style={{ marginTop: "0.85rem" }}>
+              <button type="button" className="anr-btn" onClick={() => void onRetry()}>
+                Retry dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="anr-kpis">
+        <EditorialDegradedMetric label="Story queue" value="—" />
+        <EditorialDegradedMetric label="Published today" value="—" />
+        <EditorialDegradedMetric label="Awaiting review" value="—" />
+        <EditorialDegradedMetric label="Failed stories" value="—" />
+        <EditorialDegradedMetric label="Ingestion" value="—" />
+        <EditorialDegradedMetric label="Translation" value="—" />
+        <EditorialDegradedMetric label="Breaking / live" value="—" />
+        <EditorialDegradedMetric label="Recent activity" value="—" />
+      </div>
+
+      <EditorialQuickLinks />
+
+      <AdminCard title="Dashboard source failed" description="Operational recovery">
+        <p className="anr-meta">
+          Editorial dashboard data could not be loaded. Retry the fetch or inspect platform health for
+          upstream failures.
+        </p>
+        <div className="anr-cc-actions" style={{ marginTop: "0.75rem" }}>
+          <button type="button" className="anr-btn anr-btn--ghost" onClick={() => void onRetry()}>
+            Retry
+          </button>
+          <Link href="/admin/health" className="anr-btn anr-btn--ghost">
+            Open Platform health
+          </Link>
+        </div>
+      </AdminCard>
+    </>
+  );
+}
+
 function MissionMetricCard({
   label,
   value,
@@ -102,7 +205,7 @@ function MissionMetricCard({
 }
 
 export function EditorialOverview() {
-  const { data, loading, error } = useAdminNewsroom();
+  const { data, loading, error, refresh } = useAdminNewsroom();
   const mounted = useHasMounted();
   const [showAnalytics, setShowAnalytics] = useState(false);
   const { health: newsroomHealth, coverage: coverageInsights, opportunities: coverageOpportunities } =
@@ -280,28 +383,34 @@ export function EditorialOverview() {
     hasData: Boolean(data),
   });
 
-  if (loading && !data) {
+  const showDegraded = Boolean(error && !data);
+  const showLoadingShell = Boolean(loading && !data);
+
+  if (showDegraded) {
     return (
-      <div className="anr-kpis">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="anr-kpi">
-            <div className="anr-skeleton" style={{ height: "2.5rem" }} />
-          </div>
-        ))}
-      </div>
+      <EditorialDegradedShell
+        error={error ?? "Dashboard unavailable"}
+        onRetry={refresh}
+      />
+    );
+  }
+
+  if (showLoadingShell) {
+    return (
+      <>
+        <EditorialKpiSkeletons />
+        <EditorialQuickLinks />
+      </>
     );
   }
 
   if (!data) {
-    if (error) {
-      return (
-        <EmptyState
-          title="Editorial data unavailable"
-          hint={error}
-        />
-      );
-    }
-    return null;
+    return (
+      <>
+        <EditorialKpiSkeletons count={4} />
+        <EditorialQuickLinks />
+      </>
+    );
   }
 
   traceDashboardRender("CHART_DATA", "ingestion_over_time", {

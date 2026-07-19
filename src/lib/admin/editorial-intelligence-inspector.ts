@@ -297,7 +297,31 @@ function buildGenerationVm(meta: EditorialMetadata): InspectorGenerationVm | nul
   };
 }
 
+const EMPTY_INSPECTOR_VM: EditorialIntelligenceInspectorVm = {
+  hasContent: false,
+  editorial: null,
+  trust: null,
+  knowledge: null,
+  generation: null,
+  event: null,
+  decision: null,
+  workflow: null,
+  version: null,
+  navigation: null,
+};
+
 export function buildEditorialIntelligenceInspector(
+  article: EditorArticleRecord
+): EditorialIntelligenceInspectorVm {
+  try {
+    return buildEditorialIntelligenceInspectorUnsafe(article);
+  } catch (err) {
+    console.error("[editorial-intelligence-inspector]", err);
+    return EMPTY_INSPECTOR_VM;
+  }
+}
+
+function buildEditorialIntelligenceInspectorUnsafe(
   article: EditorArticleRecord
 ): EditorialIntelligenceInspectorVm {
   const generatedRow = editorArticleToGeneratedRow(article);

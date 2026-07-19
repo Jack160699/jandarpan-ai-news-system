@@ -367,14 +367,20 @@
   min-height: 112px;
 }
 
-.anr-bell { position: relative; }
-.anr-bell__trigger { position: relative; min-width: 40px; min-height: 40px; }
+.anr-bell { position: relative; font-family: "Segoe UI", "Noto Sans", ui-sans-serif, system-ui, sans-serif; }
+.anr-bell__trigger {
+  position: relative;
+  min-width: 40px;
+  min-height: 40px;
+  background: transparent;
+  box-shadow: none;
+}
 .anr-bell__trigger--critical { color: #fda4af; }
 .anr-bell__trigger--warning { color: #fcd34d; }
 .anr-bell__badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 4px;
+  right: 4px;
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
@@ -386,20 +392,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
 .anr-bell__scrim {
   position: fixed;
   inset: 0;
   border: 0;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.35);
   z-index: 60;
 }
 .anr-bell__panel {
   position: absolute;
   right: 0;
   top: calc(100% + 0.45rem);
-  width: min(380px, calc(100vw - 1.5rem));
-  max-height: min(70vh, 520px);
+  width: min(430px, calc(100vw - 1.5rem));
+  max-height: min(74vh, 640px);
   display: flex;
   flex-direction: column;
   border-radius: 14px;
@@ -408,41 +415,134 @@
   box-shadow: var(--jd-shadow);
   z-index: 70;
   overflow: hidden;
+  font-family: "Segoe UI", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
 }
 .anr-bell__head {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 0.75rem;
   padding: 0.85rem 0.95rem;
   border-bottom: 1px solid var(--anr-border);
 }
-.anr-bell__head strong { display: block; }
+.anr-bell__head strong { display: block; font-size: 0.95rem; font-weight: 650; }
+.anr-bell__head .av3-meta { display: block; margin-top: 0.15rem; font-size: 0.72rem; }
+.anr-bell__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.55rem 0.75rem 0;
+}
+.anr-bell__filter {
+  border: 1px solid var(--anr-border);
+  background: transparent;
+  color: var(--anr-muted);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+.anr-bell__filter--active {
+  color: var(--anr-text);
+  border-color: rgba(225, 29, 72, 0.35);
+  background: rgba(225, 29, 72, 0.08);
+}
 .anr-bell__body {
   overflow-y: auto;
-  padding: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  flex: 1;
+  min-height: 0;
 }
-.anr-bell__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
-.anr-bell__item a {
-  display: grid;
-  gap: 0.2rem;
-  padding: 0.7rem 0.75rem;
+.anr-bell__error {
+  margin: 0 0 0.55rem;
+  color: #fda4af;
+  font-size: 0.78rem;
+}
+.anr-bell__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; }
+.anr-bell__item {
   border-radius: 10px;
   border: 1px solid var(--anr-border);
-  color: inherit;
-  text-decoration: none;
   background: var(--anr-surface);
 }
-.anr-bell__item--critical a { border-color: rgba(225, 29, 72, 0.35); }
-.anr-bell__item--warning a { border-color: rgba(217, 119, 6, 0.35); }
-.anr-bell__sev {
-  text-transform: uppercase;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--anr-muted);
+.anr-bell__item--critical { border-color: rgba(225, 29, 72, 0.35); }
+.anr-bell__item--warning { border-color: rgba(217, 119, 6, 0.35); }
+.anr-bell__item--unread { box-shadow: inset 3px 0 0 var(--anr-accent); }
+.anr-bell__item-row {
+  display: flex;
+  gap: 0.55rem;
+  padding: 0.65rem 0.7rem;
 }
-.anr-bell__item p { margin: 0; color: var(--anr-muted); font-size: 0.78rem; }
-.anr-bell__item em { font-style: normal; color: var(--anr-muted); font-size: 0.7rem; }
+.anr-bell__sev-icon { flex-shrink: 0; margin-top: 0.15rem; color: var(--anr-muted); }
+.anr-bell__item--critical .anr-bell__sev-icon { color: #fda4af; }
+.anr-bell__item--warning .anr-bell__sev-icon { color: #fcd34d; }
+.anr-bell__item-main { min-width: 0; flex: 1; display: grid; gap: 0.2rem; }
+.anr-bell__item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+.anr-bell__item-head strong {
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.anr-bell__item-head time {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  color: var(--anr-muted);
+  white-space: nowrap;
+}
+.anr-bell__item p {
+  margin: 0;
+  color: var(--anr-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+.anr-bell__item em {
+  font-style: normal;
+  color: var(--anr-muted);
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.anr-bell__expand {
+  border: 0;
+  background: transparent;
+  color: #93c5fd;
+  font-size: 0.68rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  cursor: pointer;
+  padding: 0;
+}
+.anr-bell__item-actions {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 0.15rem;
+}
+.anr-bell__item-actions a,
+.anr-bell__item-actions button {
+  border: 0;
+  background: transparent;
+  color: #fca5a5;
+  font-size: 0.72rem;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0;
+}
+.anr-bell__foot {
+  padding: 0.55rem 0.85rem;
+  border-top: 1px solid var(--anr-border);
+}
+.anr-bell__foot a {
+  font-size: 0.78rem;
+  color: #fca5a5;
+  text-decoration: none;
+}
 
 .anr-login-root { background: var(--jd-navy-950); }
 .anr-login-v2 {
@@ -512,11 +612,36 @@
   margin-top: 1.25rem;
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  color: #86efac;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  color: #cbd5e1;
   font-size: 0.75rem;
   font-weight: 600;
+  background: rgba(148, 163, 184, 0.08);
+}
+.anr-login-v2__status--healthy {
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #86efac;
   background: rgba(34, 197, 94, 0.1);
+}
+.anr-login-v2__status--neutral {
+  border-color: rgba(148, 163, 184, 0.35);
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.08);
+}
+.anr-login-v2__status--warning {
+  border-color: rgba(217, 119, 6, 0.35);
+  color: #fcd34d;
+  background: rgba(217, 119, 6, 0.1);
+}
+.anr-login-v2__status--critical {
+  border-color: rgba(225, 29, 72, 0.4);
+  color: #fda4af;
+  background: rgba(225, 29, 72, 0.12);
+}
+.anr-login-v2__status--unknown {
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.35);
 }
 .anr-login-v2__panel {
   display: flex;

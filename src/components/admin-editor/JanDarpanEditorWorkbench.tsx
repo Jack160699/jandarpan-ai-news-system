@@ -315,10 +315,15 @@ export function JanDarpanEditorWorkbench({ articleId }: JanDarpanEditorWorkbench
     focusKeyword: seoMeta.focusKeyword,
   });
   const readability = readingEaseScore(bodyMarkdown);
-  const intelligenceInspector = useMemo(
-    () => (article ? buildEditorialIntelligenceInspector(article) : null),
-    [article]
-  );
+  const intelligenceInspector = useMemo(() => {
+    if (!article) return null;
+    try {
+      return buildEditorialIntelligenceInspector(article);
+    } catch (err) {
+      console.error("[JanDarpanEditorWorkbench] inspector build failed", err);
+      return null;
+    }
+  }, [article]);
   const keywords = suggestKeywords({
     headline: article?.headline ?? "",
     summary: article?.summary ?? "",
