@@ -89,6 +89,8 @@ export function NotificationCentre() {
   useEffect(() => {
     if (!open) return;
 
+    document.body.classList.add("av3-body-lock");
+
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
@@ -103,6 +105,7 @@ export function NotificationCentre() {
     window.addEventListener("keydown", onKey);
     window.addEventListener("mousedown", onPointer);
     return () => {
+      document.body.classList.remove("av3-body-lock");
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousedown", onPointer);
     };

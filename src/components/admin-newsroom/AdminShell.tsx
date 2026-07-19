@@ -20,6 +20,7 @@ import { AdminAuthLoading } from "@/components/admin-newsroom/AdminAuthLoading";
 import { NotificationCentre } from "@/components/admin-newsroom/NotificationCentre";
 import { AdminPageErrorBoundary } from "@/components/admin-newsroom/AdminPageErrorBoundary";
 import { CommandMenu } from "@/components/admin-v3/CommandMenu";
+import { useCanonicalStatus } from "@/hooks/useCanonicalStatus";
 import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
 import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
@@ -33,9 +34,9 @@ import { navIcon } from "@/lib/admin-platform/nav-icons";
 import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
 import { hasResolvedRole } from "@/lib/auth/admin-permissions";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
-import type { CanonicalHealthSnapshot } from "@/lib/admin-v3/canonical-health";
 
 const COLLAPSE_KEY = "jd-admin-sidebar-collapsed";
+const MOBILE_PRIMARY_ROUTE_COUNT = 5;
 
 type AdminShellProps = {
   title: string;
@@ -59,15 +60,19 @@ export function AdminShell({
   const pathname = usePathname() ?? "";
   const { email, role, tenantName, theme, setTheme, toast, roleResolved } =
     useAdminNewsroom();
+  const { snapshot: health, loading: healthLoading, label: stateLabel, state } =
+    useCanonicalStatus();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [headerAccountOpen, setHeaderAccountOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [localSearch, setLocalSearch] = useState("");
-  const [health, setHealth] = useState<CanonicalHealthSnapshot | null>(null);
+  const [showMoreRoutes, setShowMoreRoutes] = useState(false);
+  const [localSearch] = useState("");
   const statusWrapRef = useRef<HTMLDivElement>(null);
+  const headerAccountRef = useRef<HTMLDivElement>(null);
   const search = searchValue ?? localSearch;
   void onSearchChange;
 
@@ -85,73 +90,84 @@ export function AdminShell({
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function probe() {
-      try {
-        const res = await fetch("/api/admin/system-status", { credentials: "include" });
-        if (!res.ok) return;
-        const json = await res.json();
-        if (!cancelled && json.snapshot) setHealth(json.snapshot);
-      } catch {
-        /* optional */
-      }
-    }
-    void probe();
-    const id = window.setInterval(() => void probe(), 60_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, []);
-
-  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setCmdOpen(true);
       }
+      if (e.key === "Escape") {
+        if (cmdOpen) setCmdOpen(false);
+        else if (statusOpen) setStatusOpen(false);
+        else if (mobileOpen) setMobileOpen(false);
+        else if (accountOpen) setAccountOpen(false);
+        else if (headerAccountOpen) setHeaderAccountOpen(false);
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [cmdOpen, statusOpen, mobileOpen, accountOpen, headerAccountOpen]);
 
   useEffect(() => {
     if (!statusOpen) return;
-
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setStatusOpen(false);
-    }
-
     function onPointer(e: MouseEvent) {
       const target = e.target as Node | null;
       if (statusWrapRef.current && target && !statusWrapRef.current.contains(target)) {
         setStatusOpen(false);
       }
     }
-
-    window.addEventListener("keydown", onKey);
     window.addEventListener("mousedown", onPointer);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("mousedown", onPointer);
-    };
+    return () => window.removeEventListener("mousedown", onPointer);
   }, [statusOpen]);
 
   useEffect(() => {
-    if (!accountOpen) return;
-
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setAccountOpen(false);
+    if (!headerAccountOpen) return;
+    function onPointer(e: MouseEvent) {
+      const target = e.target as Node | null;
+      if (
+        headerAccountRef.current &&
+        target &&
+        !headerAccountRef.current.contains(target)
+      ) {
+        setHeaderAccountOpen(false);
+      }
     }
-
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [accountOpen]);
+    window.addEventListener("mousedown", onPointer);
+    return () => window.removeEventListener("mousedown", onPointer);
+  }, [headerAccountOpen]);
 
   useEffect(() => {
-    document.body.classList.toggle("av3-body-lock", mobileOpen);
+    const locked = mobileOpen || cmdOpen || statusOpen;
+    document.body.classList.toggle("av3-body-lock", locked);
     return () => document.body.classList.remove("av3-body-lock");
-  }, [mobileOpen]);
+  }, [mobileOpen, cmdOpen, statusOpen]);
+
+  useEffect(() => {
+    const anyOverlay = mobileOpen || cmdOpen || statusOpen || headerAccountOpen;
+    if (!anyOverlay) return;
+
+    const alreadyMarked =
+      typeof window.history.state === "object" &&
+      window.history.state !== null &&
+      (window.history.state as { av3Overlay?: boolean }).av3Overlay === true;
+    if (!alreadyMarked) {
+      window.history.pushState({ av3Overlay: true }, "");
+    }
+
+    function onPop() {
+      setCmdOpen(false);
+      setStatusOpen(false);
+      setHeaderAccountOpen(false);
+      setMobileOpen(false);
+      setAccountOpen(false);
+    }
+
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [mobileOpen, cmdOpen, statusOpen, headerAccountOpen]);
+
+  useEffect(() => {
+    setShowMoreRoutes(false);
+  }, [pathname]);
 
   function toggleCollapsed() {
     setCollapsed((v) => {
@@ -211,190 +227,127 @@ export function AdminShell({
     });
   }, [activeWorkspace, canonicalRole, roleResolved]);
 
+  const primaryRoutes = visibleItems.slice(0, MOBILE_PRIMARY_ROUTE_COUNT);
+  const extraRoutes = visibleItems.slice(MOBILE_PRIMARY_ROUTE_COUNT);
+  const desktopRoutes = showMoreRoutes ? visibleItems : primaryRoutes;
+
   const navCompact = collapsed && !mobileOpen;
-  const state = health?.state ?? "unknown";
-  const stateLabel = health?.label ?? "Production · Unknown";
+  const displayLabel =
+    healthLoading && !health ? "Checking…" : stateLabel;
   const statusIncidents =
-    (health?.topIncidents?.length ? health.topIncidents : health?.reasons?.slice(0, 3)) ?? [];
+    (health?.topIncidents?.length
+      ? health.topIncidents
+      : health?.reasons?.slice(0, 3)) ?? [];
   const criticalCount = health?.criticalCount ?? 0;
   const warningCount = health?.warningCount ?? 0;
   const shortRole = roleResolved && role ? String(role).replace(/_/g, " ") : "…";
 
-  const sidebarInner = (
+  const accountMenuItems = (
     <>
-      <div className="av3-sidebar__brand">
+      <div className="av3-account-menu__head">
+        <strong>{email || "Newsroom account"}</strong>
+        <span>
+          {shortRole} · {tenantName || "desk"}
+        </span>
+      </div>
+      {secondaryWorkspaces.map((ws) => (
         <Link
-          href="/admin/overview"
-          className="av3-brand-link"
-          onClick={() => setMobileOpen(false)}
+          key={ws.id}
+          href={ws.homeHref}
+          onClick={() => {
+            setAccountOpen(false);
+            setHeaderAccountOpen(false);
+            setMobileOpen(false);
+          }}
         >
-          {navCompact ? (
-            <Image
-              src={JAN_DARPAN_BRAND_ASSETS.mark}
-              alt="Jan Darpan"
-              width={40}
-              height={40}
-              className="av3-brand-mark"
-              priority
-            />
-          ) : (
-            <Image
-              src={JAN_DARPAN_BRAND_ASSETS.logo}
-              alt="Jan Darpan Chhattisgarh"
-              width={168}
-              height={34}
-              className="av3-brand-logo"
-              priority
-            />
-          )}
+          {ws.label}
         </Link>
-        {!navCompact ? <p className="av3-brand-tag">Command Centre</p> : null}
-      </div>
-
-      {!navCompact && primaryWorkspaces.length > 1 ? (
-        <div className="av3-workspace">
-          <button
-            type="button"
-            className="av3-workspace__btn"
-            onClick={() => setWorkspaceOpen((v) => !v)}
-            aria-expanded={workspaceOpen}
-          >
-            <span>
-              <strong>{activeWorkspace?.label ?? "Workspace"}</strong>
-              <em>{activeWorkspace?.description ?? ""}</em>
-            </span>
-            <ChevronDown size={14} aria-hidden />
-          </button>
-          {workspaceOpen ? (
-            <ul className="av3-workspace__menu">
-              {primaryWorkspaces.map((ws) => (
-                <li key={ws.id}>
-                  <Link
-                    href={ws.homeHref}
-                    onClick={() => {
-                      setWorkspaceOpen(false);
-                      setMobileOpen(false);
-                    }}
-                  >
-                    <strong>{ws.label}</strong>
-                    <em>{ws.description}</em>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ) : null}
-
-      <nav className="av3-nav" aria-label="Workspace navigation">
-        {!roleResolved ? (
-          <div className="av3-nav-loading">
-            <AdminAuthLoading label="Loading navigation…" />
-          </div>
-        ) : null}
-        {visibleItems.map((item) => {
-          const Icon = navIcon(item.iconKey);
-          const active =
-            pathname === item.href ||
-            (item.href !== activeWorkspace?.homeHref &&
-              pathname.startsWith(`${item.href}/`));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`av3-nav-link ${active ? "av3-nav-link--active" : ""}`}
-              title={navCompact ? item.label : undefined}
-              aria-label={item.label}
-              onClick={() => setMobileOpen(false)}
-            >
-              <Icon size={18} aria-hidden />
-              {!navCompact ? <span>{item.label}</span> : null}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="av3-sidebar__footer">
-        <button
-          type="button"
-          className="av3-btn av3-btn--ghost av3-sidebar__collapse"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          {!navCompact ? <span>Collapse</span> : null}
-        </button>
-
-        <div className="av3-sidebar__user-wrap">
-          <button
-            type="button"
-            className="av3-sidebar__user"
-            onClick={() => setAccountOpen((v) => !v)}
-            aria-expanded={accountOpen}
-            title={email || "Account"}
-          >
-            <UserCircle2 size={20} aria-hidden />
-            {!navCompact ? (
-              <>
-                <div className="av3-sidebar__user-copy">
-                  <p>{email || "Newsroom"}</p>
-                  <span>{shortRole}</span>
-                </div>
-                <ChevronDown size={14} aria-hidden className="av3-sidebar__user-chevron" />
-              </>
-            ) : null}
-          </button>
-          {accountOpen ? (
-            <div className="av3-account-menu" role="menu">
-              <div className="av3-account-menu__head">
-                <strong>{email || "Newsroom account"}</strong>
-                <span>
-                  {shortRole} · {tenantName || "desk"}
-                </span>
-              </div>
-              {secondaryWorkspaces.map((ws) => (
-                <Link
-                  key={ws.id}
-                  href={ws.homeHref}
-                  onClick={() => {
-                    setAccountOpen(false);
-                    setMobileOpen(false);
-                  }}
-                >
-                  {ws.label}
-                </Link>
-              ))}
-              <Link
-                href="/admin/team"
-                onClick={() => {
-                  setAccountOpen(false);
-                  setMobileOpen(false);
-                }}
-              >
-                Team
-              </Link>
-              <Link
-                href="/admin/settings"
-                onClick={() => {
-                  setAccountOpen(false);
-                  setMobileOpen(false);
-                }}
-              >
-                Settings
-              </Link>
-              <button type="button" onClick={signOut}>
-                Sign out
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </div>
+      ))}
+      <button
+        type="button"
+        className="av3-account-menu__theme av3-only-mobile"
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      >
+        {theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+      </button>
+      <button type="button" onClick={signOut}>
+        Sign out
+      </button>
     </>
   );
 
+  const statusPanel = (
+    <div className="av3-status-popover" role="dialog" aria-label="Production status">
+      <header className="av3-status-popover__head">
+        <p className="av3-status-popover__title">{displayLabel}</p>
+        <button
+          type="button"
+          className="av3-btn av3-btn--ghost av3-only-mobile"
+          aria-label="Close status"
+          onClick={() => setStatusOpen(false)}
+        >
+          <X size={16} />
+        </button>
+      </header>
+      <p className="av3-meta">
+        Last checked{" "}
+        {health?.checkedAt
+          ? new Date(health.checkedAt).toLocaleString("en-IN")
+          : "—"}
+      </p>
+      <div className="av3-status-popover__counts">
+        <span>Critical: {criticalCount}</span>
+        <span>Warnings: {warningCount}</span>
+      </div>
+      {statusIncidents.length > 0 ? (
+        <ul>
+          {statusIncidents.map((r) => (
+            <li key={r.id}>
+              <strong>{r.title}</strong>
+              <span>{r.detail}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="av3-meta">No open health incidents.</p>
+      )}
+      <Link href="/admin/health" onClick={() => setStatusOpen(false)}>
+        Open Platform health
+      </Link>
+    </div>
+  );
+
+  function renderRouteLink(
+    item: (typeof visibleItems)[number],
+    opts?: { compact?: boolean }
+  ) {
+    const Icon = navIcon(item.iconKey);
+    const active =
+      pathname === item.href ||
+      (item.href !== activeWorkspace?.homeHref &&
+        pathname.startsWith(`${item.href}/`));
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`av3-nav-link ${active ? "av3-nav-link--active" : ""}`}
+        title={opts?.compact ? item.label : undefined}
+        aria-label={item.label}
+        onClick={() => setMobileOpen(false)}
+      >
+        <Icon size={18} aria-hidden />
+        {!opts?.compact ? <span>{item.label}</span> : null}
+      </Link>
+    );
+  }
+
   return (
     <div className="anr av3" data-theme={theme}>
-      <div className={`av3-shell ${collapsed ? "av3-shell--collapsed" : ""}`}>
+      <div
+        className={`av3-shell ${collapsed ? "av3-shell--collapsed" : ""} ${
+          mobileOpen ? "av3-shell--drawer-open" : ""
+        }`}
+      >
         {mobileOpen ? (
           <button
             type="button"
@@ -408,7 +361,181 @@ export function AdminShell({
           className={`av3-sidebar ${mobileOpen ? "av3-sidebar--mobile-open" : ""}`}
           aria-label="Admin navigation"
         >
-          {sidebarInner}
+          <div className="av3-sidebar__brand">
+            <div className="av3-sidebar__brand-row">
+              <Link
+                href="/admin/overview"
+                className="av3-brand-link"
+                onClick={() => setMobileOpen(false)}
+              >
+                {navCompact ? (
+                  <Image
+                    src={JAN_DARPAN_BRAND_ASSETS.mark}
+                    alt="Jan Darpan"
+                    width={36}
+                    height={36}
+                    className="av3-brand-mark"
+                    priority
+                  />
+                ) : (
+                  <Image
+                    src={JAN_DARPAN_BRAND_ASSETS.logo}
+                    alt="Jan Darpan Chhattisgarh"
+                    width={148}
+                    height={30}
+                    className="av3-brand-logo"
+                    priority
+                  />
+                )}
+              </Link>
+              <button
+                type="button"
+                className="av3-btn av3-btn--ghost av3-drawer-close"
+                aria-label="Close navigation"
+                onClick={() => setMobileOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            {!navCompact ? <p className="av3-brand-tag">Command Centre</p> : null}
+          </div>
+
+          {/* Mobile: workspace cards */}
+          <nav className="av3-drawer-workspaces av3-only-mobile" aria-label="Workspaces">
+            {primaryWorkspaces.map((ws) => {
+              const Icon = navIcon(ws.items[0]?.iconKey ?? "layout");
+              const active = ws.id === activeWorkspaceId;
+              return (
+                <Link
+                  key={ws.id}
+                  href={ws.homeHref}
+                  className={`av3-drawer-ws ${active ? "av3-drawer-ws--active" : ""}`}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <Icon size={18} aria-hidden />
+                  <span>
+                    <strong>{ws.label}</strong>
+                    <em>{ws.description}</em>
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Desktop workspace selector */}
+          {!navCompact && primaryWorkspaces.length > 1 ? (
+            <div className="av3-workspace av3-only-desktop">
+              <button
+                type="button"
+                className="av3-workspace__btn"
+                onClick={() => setWorkspaceOpen((v) => !v)}
+                aria-expanded={workspaceOpen}
+              >
+                <span>
+                  <strong>{activeWorkspace?.label ?? "Workspace"}</strong>
+                  <em>{activeWorkspace?.description ?? ""}</em>
+                </span>
+                <ChevronDown size={14} aria-hidden />
+              </button>
+              {workspaceOpen ? (
+                <ul className="av3-workspace__menu">
+                  {primaryWorkspaces.map((ws) => (
+                    <li key={ws.id}>
+                      <Link
+                        href={ws.homeHref}
+                        onClick={() => {
+                          setWorkspaceOpen(false);
+                          setMobileOpen(false);
+                        }}
+                      >
+                        <strong>{ws.label}</strong>
+                        <em>{ws.description}</em>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+
+          <nav className="av3-nav" aria-label="Workspace navigation">
+            {!roleResolved ? (
+              <div className="av3-nav-loading">
+                <AdminAuthLoading label="Loading navigation…" />
+              </div>
+            ) : null}
+
+            <p className="av3-nav-section av3-only-mobile">
+              {activeWorkspace?.label ?? "Routes"}
+            </p>
+
+            {(mobileOpen ? primaryRoutes : desktopRoutes).map((item) =>
+              renderRouteLink(item, { compact: navCompact })
+            )}
+
+            {extraRoutes.length > 0 || (!mobileOpen && showMoreRoutes) ? (
+              <button
+                type="button"
+                className="av3-nav-more"
+                onClick={() => {
+                  if (mobileOpen) {
+                    setMobileOpen(false);
+                    setCmdOpen(true);
+                  } else {
+                    setShowMoreRoutes((v) => !v);
+                  }
+                }}
+              >
+                {mobileOpen
+                  ? "More tools"
+                  : showMoreRoutes
+                    ? "Show fewer"
+                    : `More tools (${extraRoutes.length})`}
+              </button>
+            ) : null}
+          </nav>
+
+          <div className="av3-sidebar__footer">
+            <button
+              type="button"
+              className="av3-btn av3-btn--ghost av3-sidebar__collapse av3-only-desktop"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+              {!navCompact ? <span>Collapse</span> : null}
+            </button>
+
+            <div className="av3-sidebar__user-wrap">
+              <button
+                type="button"
+                className="av3-sidebar__user"
+                onClick={() => setAccountOpen((v) => !v)}
+                aria-expanded={accountOpen}
+                title={email || "Account"}
+              >
+                <UserCircle2 size={20} aria-hidden />
+                {!navCompact ? (
+                  <>
+                    <div className="av3-sidebar__user-copy">
+                      <p>{email || "Newsroom"}</p>
+                      <span>{shortRole}</span>
+                    </div>
+                    <ChevronDown
+                      size={14}
+                      aria-hidden
+                      className="av3-sidebar__user-chevron"
+                    />
+                  </>
+                ) : null}
+              </button>
+              {accountOpen ? (
+                <div className="av3-account-menu" role="menu">
+                  {accountMenuItems}
+                </div>
+              ) : null}
+            </div>
+          </div>
         </aside>
 
         <main className="av3-main">
@@ -418,13 +545,18 @@ export function AdminShell({
                 type="button"
                 className="av3-btn av3-btn--ghost av3-mobile-toggle"
                 onClick={() => setMobileOpen((v) => !v)}
-                aria-label="Open navigation"
+                aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
               >
-                {mobileOpen ? <X size={16} /> : <Menu size={16} />}
+                {mobileOpen ? <X size={18} /> : <Menu size={18} />}
               </button>
+
+              <span className="av3-topbar__workspace av3-only-mobile">
+                {activeWorkspace?.label ?? "Admin"}
+              </span>
+
               <button
                 type="button"
-                className="av3-search"
+                className="av3-search av3-search--desktop"
                 onClick={() => setCmdOpen(true)}
                 aria-label="Open command search"
               >
@@ -433,57 +565,76 @@ export function AdminShell({
                 <kbd>Ctrl K</kbd>
               </button>
             </div>
+
             <div className="av3-topbar__right">
+              <button
+                type="button"
+                className="av3-btn av3-btn--ghost av3-search-icon av3-only-mobile"
+                onClick={() => setCmdOpen(true)}
+                aria-label="Search"
+              >
+                <Search size={18} />
+              </button>
+
               <div className="av3-status-wrap" ref={statusWrapRef}>
                 <button
                   type="button"
-                  className={`av3-env-pill av3-env-pill--${state}`}
+                  className={`av3-env-pill av3-env-pill--${state} av3-env-pill--desktop`}
                   aria-expanded={statusOpen}
                   onClick={() => setStatusOpen((v) => !v)}
                   title="Canonical production health"
                 >
-                  {stateLabel}
+                  {displayLabel}
+                </button>
+                <button
+                  type="button"
+                  className={`av3-status-dot av3-status-dot--${state} av3-only-mobile`}
+                  aria-label={`Production status: ${displayLabel}`}
+                  aria-expanded={statusOpen}
+                  onClick={() => setStatusOpen((v) => !v)}
+                >
+                  <span />
                 </button>
                 {statusOpen ? (
-                  <div className="av3-status-popover" role="dialog" aria-label="Production status">
-                    <p className="av3-status-popover__title">{stateLabel}</p>
-                    <p className="av3-meta">
-                      Last checked{" "}
-                      {health?.checkedAt
-                        ? new Date(health.checkedAt).toLocaleString("en-IN")
-                        : "—"}
-                    </p>
-                    <div className="av3-status-popover__counts">
-                      <span>Critical: {criticalCount}</span>
-                      <span>Warnings: {warningCount}</span>
-                    </div>
-                    {statusIncidents.length > 0 ? (
-                      <ul>
-                        {statusIncidents.map((r) => (
-                          <li key={r.id}>
-                            <strong>{r.title}</strong>
-                            <span>{r.detail}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="av3-meta">No open health incidents.</p>
-                    )}
-                    <Link href="/admin/health" onClick={() => setStatusOpen(false)}>
-                      Open Platform health
-                    </Link>
-                  </div>
+                  <>
+                    <button
+                      type="button"
+                      className="av3-sheet-backdrop av3-only-mobile"
+                      aria-label="Close status"
+                      onClick={() => setStatusOpen(false)}
+                    />
+                    {statusPanel}
+                  </>
                 ) : null}
               </div>
+
               <NotificationCentre />
+
               <button
                 type="button"
-                className="av3-btn av3-btn--ghost"
+                className="av3-btn av3-btn--ghost av3-theme-desktop"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 aria-label="Toggle theme"
               >
                 {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
               </button>
+
+              <div className="av3-header-account av3-only-mobile" ref={headerAccountRef}>
+                <button
+                  type="button"
+                  className="av3-btn av3-btn--ghost"
+                  aria-label="Account menu"
+                  aria-expanded={headerAccountOpen}
+                  onClick={() => setHeaderAccountOpen((v) => !v)}
+                >
+                  <UserCircle2 size={20} />
+                </button>
+                {headerAccountOpen ? (
+                  <div className="av3-account-menu av3-account-menu--header" role="menu">
+                    {accountMenuItems}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </header>
 
@@ -504,6 +655,7 @@ export function AdminShell({
           </section>
         </main>
       </div>
+
       <CommandMenu
         open={cmdOpen}
         onClose={() => setCmdOpen(false)}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { ADMIN_WORKSPACES } from "@/lib/admin-platform/workspaces";
 
 type CommandItem = {
@@ -71,21 +72,36 @@ export function CommandMenu({ open, onClose, initialQuery = "" }: CommandMenuPro
 
   return (
     <div className="av3-cmd" role="dialog" aria-modal="true" aria-label="Command menu">
-      <button type="button" className="av3-cmd__backdrop" aria-label="Close command menu" onClick={onClose} />
+      <button
+        type="button"
+        className="av3-cmd__backdrop"
+        aria-label="Close command menu"
+        onClick={onClose}
+      />
       <div className="av3-cmd__panel">
-        <input
-          autoFocus
-          className="av3-cmd__input"
-          placeholder="Search routes, stories, actions…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && items[0]) {
-              router.push(items[0].href);
-              onClose();
-            }
-          }}
-        />
+        <header className="av3-cmd__head">
+          <input
+            autoFocus
+            className="av3-cmd__input"
+            placeholder="Search routes, stories, actions…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && items[0]) {
+                router.push(items[0].href);
+                onClose();
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="av3-btn av3-btn--ghost av3-cmd__close"
+            aria-label="Close search"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </header>
         <ul className="av3-cmd__list">
           {items.map((item) => (
             <li key={item.id}>

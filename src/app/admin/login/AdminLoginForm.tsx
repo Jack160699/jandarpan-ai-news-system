@@ -41,7 +41,6 @@ export function AdminLoginForm() {
     errorParam ? friendlyError(errorParam) : null
   );
   const [busy, setBusy] = useState(false);
-  const [healthLine, setHealthLine] = useState<string | null>(null);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -56,50 +55,6 @@ export function AdminLoginForm() {
       }
     }, 0);
     return () => window.clearTimeout(id);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function probe() {
-      let reachable = false;
-      try {
-        const liveRes = await fetch("/api/health/live");
-        reachable = liveRes.ok;
-      } catch {
-        reachable = false;
-      }
-
-      if (!reachable) {
-        if (!cancelled) setHealthLine("Status unavailable");
-        return;
-      }
-
-      try {
-        const statusRes = await fetch("/api/status/production");
-        if (statusRes.ok) {
-          const json = (await statusRes.json()) as {
-            label?: string;
-            state?: string;
-          };
-          if (!cancelled) {
-            setHealthLine(
-              typeof json.label === "string" ? json.label : "Production reachable"
-            );
-          }
-          return;
-        }
-      } catch {
-        /* fall through to reachable-only */
-      }
-
-      if (!cancelled) setHealthLine("Production reachable");
-    }
-
-    void probe();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
@@ -134,127 +89,126 @@ export function AdminLoginForm() {
 
   return (
     <div className="anr-login-v2">
-      <div className="anr-login-v2__visual" aria-hidden>
-        <div className="anr-login-v2__grid" />
-        <div className="anr-login-v2__glow anr-login-v2__glow--red" />
-        <div className="anr-login-v2__glow anr-login-v2__glow--blue" />
-        <div className="anr-login-v2__visual-inner">
-          <Image
-            src={JAN_DARPAN_BRAND_ASSETS.logo}
-            alt=""
-            width={320}
-            height={64}
-            className="anr-login-v2__hero-logo"
-            priority
-          />
-          <h1>Jan Darpan Command Centre</h1>
-          <p>Editorial intelligence. Business control. Platform reliability.</p>
-          {healthLine ? (
-            <span
-              className={`anr-login-v2__status ${
-                healthLine === "Production healthy"
-                  ? "anr-login-v2__status--healthy"
-                  : healthLine === "Status unavailable"
-                    ? "anr-login-v2__status--unknown"
-                    : healthLine.includes("incident") || healthLine.includes("Critical")
-                      ? "anr-login-v2__status--critical"
-                      : healthLine.includes("degraded") || healthLine.includes("Warning")
-                        ? "anr-login-v2__status--warning"
-                        : "anr-login-v2__status--neutral"
-              }`}
-            >
-              {healthLine}
-            </span>
-          ) : null}
+      <div className="anr-login-v2__frame">
+        <div className="anr-login-v2__visual" aria-hidden="true">
+          <div className="anr-login-v2__grid" />
+          <div className="anr-login-v2__glow anr-login-v2__glow--red" />
+          <div className="anr-login-v2__glow anr-login-v2__glow--blue" />
+          <div className="anr-login-v2__visual-inner">
+            <Image
+              src={JAN_DARPAN_BRAND_ASSETS.logo}
+              alt=""
+              width={280}
+              height={56}
+              className="anr-login-v2__hero-logo"
+              priority
+            />
+            <h1>Jan Darpan Command Centre</h1>
+            <p>Editorial intelligence. Business control. Platform reliability.</p>
+            <span className="anr-login-v2__secure">Secure admin access</span>
+          </div>
         </div>
-      </div>
 
-      <div className="anr-login-v2__panel">
-        <div className="anr-login-v2__card">
-          <header className="anr-login-v2__card-head">
+        <div className="anr-login-v2__panel">
+          <div className="anr-login-v2__mobile-brand">
             <Image
               src={JAN_DARPAN_BRAND_ASSETS.logo}
               alt="Jan Darpan"
               width={160}
               height={32}
-              className="anr-login-v2__mark"
+              className="anr-login-v2__mobile-logo"
               priority
             />
-            <div>
-              <h2>Sign in</h2>
-              <p>Admin access for Jandarpan.news</p>
-            </div>
-          </header>
+            <h1>Command Centre</h1>
+            <p>Protected Jan Darpan admin access</p>
+          </div>
 
-          {error ? (
-            <div className="anr-login-v2__error" role="alert">
-              {error}
-            </div>
-          ) : null}
-
-          <form onSubmit={onSubmit} className="anr-login-v2__form">
-            <div className="anr-login-v2__field">
-              <label htmlFor="admin-email">Email</label>
-              <Input
-                id="admin-email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={busy}
+          <div className="anr-login-v2__card">
+            <header className="anr-login-v2__card-head">
+              <Image
+                src={JAN_DARPAN_BRAND_ASSETS.logo}
+                alt="Jan Darpan"
+                width={140}
+                height={28}
+                className="anr-login-v2__mark"
+                priority
               />
-            </div>
-
-            <div className="anr-login-v2__field">
-              <div className="anr-login-v2__label-row">
-                <label htmlFor="admin-password">Password</label>
-                <Link href="/admin/forgot-password">Forgot password?</Link>
+              <div>
+                <h2>Sign in</h2>
+                <p>Admin access for Jandarpan.news</p>
               </div>
-              <div className="anr-login-v2__password">
+            </header>
+
+            {error ? (
+              <div className="anr-login-v2__error" role="alert">
+                {error}
+              </div>
+            ) : null}
+
+            <form onSubmit={onSubmit} className="anr-login-v2__form">
+              <div className="anr-login-v2__field">
+                <label htmlFor="admin-email">Email</label>
                 <Input
-                  id="admin-password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
+                  id="admin-email"
+                  type="email"
+                  autoComplete="email"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   disabled={busy}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
               </div>
-            </div>
 
-            <label className="anr-login-v2__remember">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-              />
-              Remember email
-            </label>
+              <div className="anr-login-v2__field">
+                <div className="anr-login-v2__label-row">
+                  <label htmlFor="admin-password">Password</label>
+                  <Link href="/admin/forgot-password">Forgot password?</Link>
+                </div>
+                <div className="anr-login-v2__password">
+                  <Input
+                    id="admin-password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={busy}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
 
-            <Button
-              type="submit"
-              disabled={busy}
-              className={cn("anr-login-v2__submit", busy && "opacity-80")}
-            >
-              {busy ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Signing in…
-                </>
-              ) : (
-                "Sign in"
-              )}
-            </Button>
-          </form>
+              <label className="anr-login-v2__remember">
+                <input
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                />
+                Remember email
+              </label>
+
+              <Button
+                type="submit"
+                disabled={busy}
+                className={cn("anr-login-v2__submit", busy && "opacity-80")}
+              >
+                {busy ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Signing in…
+                  </>
+                ) : (
+                  "Sign in"
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

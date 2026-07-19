@@ -547,17 +547,43 @@
 .anr-login-root { background: var(--jd-navy-950); }
 .anr-login-v2 {
   min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+}
+.anr-login-v2__frame {
+  width: min(1400px, 100%);
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
+  grid-template-columns: 1.1fr 0.9fr;
+  min-height: min(640px, calc(100dvh - 4rem));
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: rgba(8, 12, 22, 0.92);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
 }
 .anr-login-v2__visual {
   position: relative;
   overflow: hidden;
-  padding: 2.5rem;
+  padding: 2.5rem 2.75rem;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   border-right: 1px solid rgba(148, 163, 184, 0.12);
   background: linear-gradient(160deg, #140a12 0%, #0b1220 55%, #070b14 100%);
+}
+.anr-login-v2__mobile-brand { display: none; }
+.anr-login-v2__secure {
+  display: inline-flex;
+  margin-top: 1.25rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.08);
 }
 .anr-login-v2__grid {
   position: absolute;
@@ -586,13 +612,13 @@
 .anr-login-v2__visual-inner {
   position: relative;
   z-index: 1;
-  max-width: 420px;
+  max-width: 400px;
   animation: anr-login-enter 0.55s ease both;
 }
 .anr-login-v2__hero-logo {
-  width: min(320px, 100%);
+  width: min(280px, 100%);
   height: auto;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.1rem;
   border-radius: 10px;
 }
 .anr-login-v2__visual-inner h1 {
@@ -607,54 +633,19 @@
   line-height: 1.5;
   font-size: 1rem;
 }
-.anr-login-v2__status {
-  display: inline-flex;
-  margin-top: 1.25rem;
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  color: #cbd5e1;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: rgba(148, 163, 184, 0.08);
-}
-.anr-login-v2__status--healthy {
-  border-color: rgba(34, 197, 94, 0.35);
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.1);
-}
-.anr-login-v2__status--neutral {
-  border-color: rgba(148, 163, 184, 0.35);
-  color: #cbd5e1;
-  background: rgba(148, 163, 184, 0.08);
-}
-.anr-login-v2__status--warning {
-  border-color: rgba(217, 119, 6, 0.35);
-  color: #fcd34d;
-  background: rgba(217, 119, 6, 0.1);
-}
-.anr-login-v2__status--critical {
-  border-color: rgba(225, 29, 72, 0.4);
-  color: #fda4af;
-  background: rgba(225, 29, 72, 0.12);
-}
-.anr-login-v2__status--unknown {
-  border-color: rgba(148, 163, 184, 0.25);
-  color: #94a3b8;
-  background: rgba(15, 23, 42, 0.35);
-}
 .anr-login-v2__panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: 2rem 1.75rem;
+  background: rgba(10, 14, 24, 0.55);
 }
 .anr-login-v2__card {
-  width: min(420px, 100%);
+  width: min(440px, 100%);
   padding: 1.5rem;
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(17, 24, 39, 0.88);
+  background: rgba(17, 24, 39, 0.92);
   backdrop-filter: blur(14px);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
   animation: anr-login-enter 0.55s ease 0.08s both;
@@ -785,36 +776,56 @@
   .anr-mobile-toggle { display: inline-flex !important; }
   .anr-shell--collapsed .anr-sidebar__collapse { display: none; }
   .anr-dash-grid { grid-template-columns: 1fr; }
-  .anr-login-v2 { grid-template-columns: 1fr; }
-  .anr-login-v2__visual {
-    min-height: 180px;
-    max-height: 34vh;
-    padding: 1.25rem 1.5rem;
-    border-right: 0;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-    align-items: center;
+  .anr-login-v2 {
+    align-items: stretch;
+    padding: 0;
   }
-  .anr-login-v2__hero-logo { width: min(240px, 72%); margin-bottom: 0.75rem; }
-  .anr-login-v2__visual-inner h1 { font-size: 1.25rem; }
-  .anr-login-v2__visual-inner p { font-size: 0.88rem; }
+  .anr-login-v2__frame {
+    min-height: 100dvh;
+    grid-template-columns: 1fr;
+    border-radius: 0;
+    border: 0;
+    box-shadow: none;
+  }
+  .anr-login-v2__visual { display: none; }
+  .anr-login-v2__mobile-brand {
+    display: grid;
+    gap: 0.35rem;
+    justify-items: start;
+    margin-bottom: 1rem;
+    padding: 0 0.15rem;
+  }
+  .anr-login-v2__mobile-logo {
+    width: min(168px, 60vw);
+    height: auto;
+    border-radius: 8px;
+  }
+  .anr-login-v2__mobile-brand h1 {
+    margin: 0;
+    font-size: 1.35rem;
+    color: #f8fafc;
+    letter-spacing: -0.02em;
+  }
+  .anr-login-v2__mobile-brand p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.86rem;
+  }
   .anr-login-v2__panel {
-    align-items: flex-start;
-    padding-top: 1.25rem;
-    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    align-items: stretch;
+    padding: max(1rem, env(safe-area-inset-top)) 1rem max(1.25rem, env(safe-area-inset-bottom));
   }
+  .anr-login-v2__card {
+    width: 100%;
+    box-shadow: none;
+  }
+  .anr-login-v2__card-head .anr-login-v2__mark { display: none; }
 }
 
 @media (max-width: 720px) {
   .anr-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .anr-env-pill { display: none; }
   .anr-status-hero { flex-direction: column; align-items: flex-start; }
-  .anr-bell__panel {
-    position: fixed;
-    inset: auto 0 0 0;
-    width: 100%;
-    max-height: 78vh;
-    border-radius: 18px 18px 0 0;
-  }
 }
 
 @media (max-width: 420px) {
