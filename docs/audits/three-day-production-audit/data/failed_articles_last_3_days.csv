@@ -1,0 +1,3 @@
+category,identifier,failure_type,detail,count_in_window,first_ist,last_ist
+generated_article,0c94912c-f663-4f66-a48b-5baf5cbe5c7b,empty_body_untitled,"editorial_generate produced 'Untitled story' with 0-char body; stuck editorial_status=pending/draft",1,2026-07-19 05:53,2026-07-19 05:53
+worker_job,translate_article,code_bug,"ReferenceError: urgencyScore is not defined — 100% failure",26,2026-07-16 (approx),2026-07-19

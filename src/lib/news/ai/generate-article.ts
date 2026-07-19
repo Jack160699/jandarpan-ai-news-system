@@ -32,6 +32,19 @@ import {
   type EditorialQualityReport,
   type SourceAttribution,
 } from "@/lib/news/ai/editorial-guards";
+import {
+  fingerprintBody,
+  shouldQuarantineGenerationFailure,
+  shouldRetryGenerationFailure,
+  validateGeneratedArticle,
+} from "@/lib/news/ai/generated-article-validation";
+import {
+  createGenerationQualityMetrics,
+  logGenerationQualityMetrics,
+  recordValidationOutcome,
+  shouldRaiseGenerationQualityIncident,
+  validationPassRate,
+} from "@/lib/news/ai/generation-quality-metrics";
 import { buildPublicPublishPatch } from "@/lib/newsroom/publish-state";
 import {
   applyEditorialEnhancements,
@@ -285,14 +298,26 @@ async function loadSignalsForEvent(event: NewsEventRow): Promise<NewsSignalRow[]
   return data ?? [];
 }
 
-async function loadExistingHeadlines(): Promise<string[]> {
+async function loadExistingStoryIndex(): Promise<{
+  headlines: string[];
+  bodyFingerprints: string[];
+  eventIds: string[];
+}> {
   const supabase = createAdminServerClient();
   const { data } = await supabase
     .from("generated_articles")
-    .select("headline")
+    .select("headline, article_body, event_id")
     .order("created_at", { ascending: false })
     .limit(200);
-  return (data ?? []).map((r) => r.headline);
+  const headlines: string[] = [];
+  const bodyFingerprints: string[] = [];
+  const eventIds: string[] = [];
+  for (const row of data ?? []) {
+    if (row.headline) headlines.push(row.headline);
+    if (row.article_body) bodyFingerprints.push(fingerprintBody(row.article_body));
+    if (row.event_id) eventIds.push(row.event_id);
+  }
+  return { headlines, bodyFingerprints, eventIds };
 }
 
 function evaluateDraft(input: {
@@ -302,6 +327,8 @@ function evaluateDraft(input: {
   factPackText: string;
   sourceTexts: string[];
   existingHeadlines: string[];
+  existingBodyFingerprints?: string[];
+  existingEventIds?: string[];
   forcePublish?: boolean;
 }): EditorialQualityReport {
   return runEditorialQualityChecks({
@@ -317,6 +344,8 @@ function evaluateDraft(input: {
     category: input.event.category,
     language: input.draft.language,
     existingHeadlines: input.existingHeadlines,
+    existingBodyFingerprints: input.existingBodyFingerprints,
+    existingEventIds: input.existingEventIds,
     forcePublish: input.forcePublish,
     event: input.event,
   });
@@ -412,6 +441,44 @@ async function persistGeneratedArticle(input: {
     };
   }
 
+  const persistValidation = validateGeneratedArticle({
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    articleBody: input.draft.article_body,
+    language: input.draft.language,
+    category: input.event.category ?? category,
+    region: input.event.region,
+    sourceAttributions: input.attributions,
+    sourceUrls: input.attributions.map((a) => a.article_url).filter(Boolean),
+    generationMetadata: {
+      event_id: input.event.id,
+      generated_at: new Date().toISOString(),
+      model:
+        process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
+        process.env.OPENAI_MODEL?.trim() ||
+        "gpt-4o-mini",
+    },
+    eventId: input.event.id,
+    stage: "persist",
+  });
+
+  if (!persistValidation.ok) {
+    const codes = persistValidation.codes.join(",");
+    logEditorial("persist_validation_failed", {
+      eventId: input.event.id,
+      codes,
+      issues: persistValidation.issues,
+    });
+    return {
+      ok: false,
+      article: null,
+      draft: input.draft,
+      quality: input.quality,
+      skipped: false,
+      reason: `validation_failed:${codes}`,
+    };
+  }
+
   const row: GeneratedArticleInsert = {
     tenant_id: getPipelineTenantId(),
     event_id: input.event.id,
@@ -471,6 +538,9 @@ async function persistGeneratedArticle(input: {
       regional: geo,
       regional_topic_score: regionalTopic.score,
       structure: ["lead", "details", "context"],
+      title_fingerprint: persistValidation.titleFingerprint,
+      body_fingerprint: persistValidation.bodyFingerprint,
+      phase5_validation: { ok: true, stage: "persist" },
       desk_template: resolveDeskTemplateFromCategory(input.event.category, {
         region: input.event.region,
         urgencyScore: input.event.urgency_score,
@@ -554,7 +624,11 @@ async function persistGeneratedArticle(input: {
 
 async function prepareCandidate(
   event: NewsEventRow,
-  existingHeadlines: string[]
+  existingHeadlines: string[],
+  storyIndex?: {
+    bodyFingerprints?: string[];
+    eventIds?: string[];
+  }
 ): Promise<{
   candidate: PendingCandidate | null;
   skipped: boolean;
@@ -612,6 +686,8 @@ async function prepareCandidate(
     factPackText,
     sourceTexts,
     existingHeadlines,
+    existingBodyFingerprints: storyIndex?.bodyFingerprints,
+    existingEventIds: storyIndex?.eventIds,
   });
 
   const repairDecision = shouldRunEditorialRepair(quality);
@@ -631,6 +707,8 @@ async function prepareCandidate(
       factPackText,
       sourceTexts,
       existingHeadlines,
+      existingBodyFingerprints: storyIndex?.bodyFingerprints,
+      existingEventIds: storyIndex?.eventIds,
     });
     logEditorial("borderline_repaired", {
       eventId: event.id,
@@ -738,10 +816,14 @@ export async function generateEditorialFromEvent(
     };
   }
 
+  const storyIndex = await loadExistingStoryIndex();
   const existingHeadlines =
-    options?.existingHeadlines ?? (await loadExistingHeadlines());
+    options?.existingHeadlines ?? storyIndex.headlines;
 
-  const prepared = await prepareCandidate(event, existingHeadlines);
+  const prepared = await prepareCandidate(event, existingHeadlines, {
+    bodyFingerprints: storyIndex.bodyFingerprints,
+    eventIds: storyIndex.eventIds,
+  });
   if (!prepared.candidate) {
     logArticleGenerationPhase("article_generation_failed", {
       eventId: event.id,
@@ -877,15 +959,12 @@ export async function generateEditorialsFromEvents(options?: {
   }
 
   const supabase = createAdminServerClient();
-  const existingHeadlines = await loadExistingHeadlines();
-
-  const { data: existing } = await supabase
-    .from("generated_articles")
-    .select("event_id");
-
-  const usedEventIds = new Set(
-    (existing ?? []).map((r) => r.event_id).filter(Boolean)
-  );
+  const storyIndex = await loadExistingStoryIndex();
+  const existingHeadlines = [...storyIndex.headlines];
+  const existingBodyFingerprints = [...storyIndex.bodyFingerprints];
+  const usedEventIds = new Set(storyIndex.eventIds);
+  const qualityMetrics = createGenerationQualityMetrics();
+  const validationAttempts = new Map<string, number>();
 
   const { data: events, error } = await supabase
     .from("news_events")
@@ -926,10 +1005,17 @@ export async function generateEditorialsFromEvents(options?: {
     pending,
     INFRA_CONFIG.editorialConcurrency,
     (event) =>
-      prepareCandidate(event, [
-        ...existingHeadlines,
-        ...failedCandidates.map((c) => c.draft.headline),
-      ])
+      prepareCandidate(
+        event,
+        [
+          ...existingHeadlines,
+          ...failedCandidates.map((c) => c.draft.headline),
+        ],
+        {
+          bodyFingerprints: existingBodyFingerprints,
+          eventIds: [...usedEventIds],
+        }
+      )
   );
 
   for (let i = 0; i < pending.length; i++) {
@@ -986,6 +1072,22 @@ export async function generateEditorialsFromEvents(options?: {
       });
 
       if (saved.ok && saved.article) {
+        recordValidationOutcome(qualityMetrics, {
+          ok: true,
+          issues: [],
+          codes: [],
+          retryable: false,
+          quarantineRecommended: false,
+          titleFingerprint: "",
+          bodyFingerprint: fingerprintBody(candidate.draft.article_body),
+          metrics: {
+            titleFailure: false,
+            bodyFailure: false,
+            missingSource: false,
+            duplicateRejection: false,
+            languageFailure: false,
+          },
+        });
         logArticleGenerationPhase("article_generation_completed", {
           eventId: event.id,
           articleId: saved.article.id,
@@ -995,6 +1097,10 @@ export async function generateEditorialsFromEvents(options?: {
         });
         published++;
         existingHeadlines.push(candidate.draft.headline);
+        existingBodyFingerprints.push(
+          fingerprintBody(candidate.draft.article_body)
+        );
+        usedEventIds.add(event.id);
         if (
           !lastPublishedStory ||
           candidate.quality.ai_confidence > lastPublishedStory.confidence
@@ -1017,25 +1123,60 @@ export async function generateEditorialsFromEvents(options?: {
         if (saved.reason) errors.push(`${event.id}: ${saved.reason}`);
       }
     } else {
+      // One invalid article must not stop the batch — classify + continue.
+      const structural = validateGeneratedArticle({
+        headline: candidate.draft.headline,
+        summary: candidate.draft.summary,
+        articleBody: candidate.draft.article_body,
+        language: candidate.draft.language,
+        category: candidate.event.category,
+        region: candidate.event.region,
+        eventId: candidate.event.id,
+        existingHeadlines,
+        existingBodyFingerprints,
+        existingEventIds: [...usedEventIds],
+        stage: "draft",
+      });
+      const attempts = (validationAttempts.get(event.id) ?? 0) + 1;
+      validationAttempts.set(event.id, attempts);
+      const retryable = shouldRetryGenerationFailure(structural, attempts);
+      const quarantine = shouldQuarantineGenerationFailure(structural, attempts);
+      recordValidationOutcome(qualityMetrics, structural, {
+        retried: retryable,
+        quarantined: quarantine,
+        manualReview: quarantine || structural.quarantineRecommended,
+      });
+
+      let reason = candidate.quality.hard_reject
+        ? candidate.quality.hard_reject_reasons.join(",")
+        : "quality_checks_failed";
+      if (!structural.ok) {
+        reason = `validation_failed:${structural.codes.join(",")}`;
+      }
+      if (quarantine) {
+        reason = `quarantine:${reason};manual_review_required`;
+      } else if (retryable) {
+        reason = `retryable:${reason}`;
+      }
+
       logArticleGenerationPhase("article_generation_failed", {
         eventId: event.id,
-        reason: candidate.quality.hard_reject
-          ? candidate.quality.hard_reject_reasons.join(",")
-          : "quality_checks_failed",
+        reason,
         hardReject: candidate.quality.hard_reject,
         confidence: candidate.quality.ai_confidence,
         mode: "batch",
+        validationCodes: structural.codes,
+        attempts,
+        quarantine,
       });
-      failedCandidates.push(candidate);
+      if (!quarantine) failedCandidates.push(candidate);
       rejected++;
       results.push({
         eventId: event.id,
         ok: false,
         published: false,
         repaired: candidate.repaired,
-        reason: candidate.quality.hard_reject
-          ? candidate.quality.hard_reject_reasons.join(",")
-          : "quality_checks_failed",
+        reason,
         ...qualityResultFields(candidate.quality),
       });
 
@@ -1164,6 +1305,24 @@ export async function generateEditorialsFromEvents(options?: {
     };
   }
 
+  logGenerationQualityMetrics(qualityMetrics, {
+    published,
+    rejected,
+    repaired,
+    skipped,
+  });
+  if (shouldRaiseGenerationQualityIncident(qualityMetrics)) {
+    console.error(
+      "[GENERATION_QUALITY_INCIDENT]",
+      JSON.stringify({
+        type: "REPEATED_GENERATION_VALIDATION_FAILURES",
+        passRate: validationPassRate(qualityMetrics),
+        ...qualityMetrics,
+        ts: new Date().toISOString(),
+      })
+    );
+  }
+
   logEditorial("batch_complete", {
     published,
     rejected,
@@ -1171,6 +1330,7 @@ export async function generateEditorialsFromEvents(options?: {
     skipped,
     avgConfidence,
     topStory,
+    qualityPassRate: validationPassRate(qualityMetrics),
   });
 
   return {
@@ -1182,6 +1342,17 @@ export async function generateEditorialsFromEvents(options?: {
     avgConfidence,
     topStory,
     errors,
+    qualityMetrics: {
+      passRate: validationPassRate(qualityMetrics),
+      titleFailure: qualityMetrics.titleFailure,
+      bodyFailure: qualityMetrics.bodyFailure,
+      missingSource: qualityMetrics.missingSource,
+      duplicateRejection: qualityMetrics.duplicateRejection,
+      languageFailure: qualityMetrics.languageFailure,
+      retries: qualityMetrics.retries,
+      quarantined: qualityMetrics.quarantined,
+      manualReview: qualityMetrics.manualReview,
+    },
     results,
   };
 }

@@ -22,7 +22,8 @@ export async function POST(request: Request) {
     body = {};
   }
 
-  const headline = body.headline?.trim() || "Untitled draft";
+  // Desk seed drafts must not use publishable placeholder titles like "Untitled story".
+  const headline = body.headline?.trim() || `Desk draft ${new Date().toISOString().slice(0, 10)}`;
   const slug = `${slugifyHeadline(headline)}-${Date.now().toString(36)}`;
   const tenantId = auth.session.membership.tenantId;
 
@@ -41,6 +42,8 @@ export async function POST(request: Request) {
       tenant_id: tenantId,
       editorial_metadata: {
         draft_state: { createdAt: new Date().toISOString(), authoring: true },
+        desk_placeholder: true,
+        publication_blocked: true,
         editor_versions: [],
       },
     })

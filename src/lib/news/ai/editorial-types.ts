@@ -42,6 +42,17 @@ export type BatchEditorialResult = {
     confidence: number;
   } | null;
   errors: string[];
+  qualityMetrics?: {
+    passRate: number;
+    titleFailure: number;
+    bodyFailure: number;
+    missingSource: number;
+    duplicateRejection: number;
+    languageFailure: number;
+    retries: number;
+    quarantined: number;
+    manualReview: number;
+  };
   results: Array<{
     eventId: string;
     ok: boolean;

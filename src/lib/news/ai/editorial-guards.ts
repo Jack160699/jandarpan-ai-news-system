@@ -9,6 +9,10 @@ import {
   type EditorialIntelligenceResult,
   type PublishDecision,
 } from "@/lib/news/ai/editorial-intelligence";
+import {
+  applyStructuralHardReject,
+  validateGeneratedArticle,
+} from "@/lib/news/ai/generated-article-validation";
 import { normalizeTitle, titleSimilarity } from "@/lib/news/normalize";
 import type { NewsEventRow } from "@/lib/types/newsroom";
 
@@ -292,6 +296,8 @@ export function runEditorialQualityChecks(input: {
   category?: string | null;
   language?: string;
   existingHeadlines?: string[];
+  existingBodyFingerprints?: string[];
+  existingEventIds?: string[];
   forcePublish?: boolean;
   event?: NewsEventRow | null;
 }): EditorialQualityReport {
@@ -303,6 +309,20 @@ export function runEditorialQualityChecks(input: {
     input.seoTitle,
     input.seoDescription,
   ].join("\n");
+
+  const structural = validateGeneratedArticle({
+    headline: input.headline,
+    summary: input.summary,
+    articleBody: input.articleBody,
+    language: input.language,
+    category: input.category ?? input.event?.category,
+    region: input.region ?? input.event?.region,
+    eventId: input.event?.id,
+    existingHeadlines: input.existingHeadlines,
+    existingBodyFingerprints: input.existingBodyFingerprints,
+    existingEventIds: input.existingEventIds,
+    stage: "draft",
+  });
 
   const duplicate_phrasing = findDuplicatePhrasing(draftText, input.sourceTexts);
   const source_overlap_score = computeSourceOverlapScore(
@@ -350,16 +370,19 @@ export function runEditorialQualityChecks(input: {
     intelligence.duplicateCluster !== null &&
     intelligence.duplicateCluster.similarity >= 0.88;
 
-  const hard_reject_reasons = detectHardRejects({
-    headline: input.headline,
-    summary: input.summary,
-    articleBody: input.articleBody,
-    unsafeText: draftText,
-    hallucination_flags,
-    duplicateStory,
-    isSpam: intelligence.isSpam,
-    thresholds,
-  });
+  const hard_reject_reasons = applyStructuralHardReject(
+    detectHardRejects({
+      headline: input.headline,
+      summary: input.summary,
+      articleBody: input.articleBody,
+      unsafeText: draftText,
+      hallucination_flags,
+      duplicateStory,
+      isSpam: intelligence.isSpam,
+      thresholds,
+    }),
+    structural
+  );
 
   const hard_reject = hard_reject_reasons.length > 0;
   const rejectionReasons: string[] = [...hard_reject_reasons];
@@ -420,6 +443,7 @@ export function runEditorialQualityChecks(input: {
       intelligence.readability >= 0.45;
   }
 
+  // forcePublish may bypass soft quality gates only — never structural hard rejects
   if (input.forcePublish && !hard_reject) {
     publish_allowed = true;
     rejectionReasons.length = 0;
@@ -445,6 +469,7 @@ export function runEditorialQualityChecks(input: {
       "unverified_language",
       "numeric_fact_alignment",
       "hard_reject_gate",
+      "phase5_structural_validation",
       thresholds.strictMode ? "strict_mode" : "production_tolerant",
     ],
     rejectionReasons,

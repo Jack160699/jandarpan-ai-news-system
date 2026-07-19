@@ -14,6 +14,7 @@ import {
   isActiveReaderTarget,
   isCgTranslationEnabled,
 } from "@/lib/i18n/multilingual/translation-contract";
+import { isPlaceholderTitle } from "@/lib/news/ai/generated-article-validation";
 import { enqueueJob, enqueueJobs, countPendingJobs } from "@/lib/infrastructure/jobs/queue";
 import { createAdminServerClient } from "@/lib/supabase";
 import type { ArticleLocaleBundle, ArticleTranslations } from "@/lib/i18n/multilingual/types";
@@ -120,7 +121,7 @@ export function isTranslatableArticle(
   row: Pick<GeneratedArticleRow, "headline" | "summary" | "article_body">
 ): boolean {
   const headline = row.headline?.trim() ?? "";
-  if (!headline || /^untitled story$/i.test(headline)) return false;
+  if (!headline || isPlaceholderTitle(headline)) return false;
   return Boolean(row.summary?.trim() || row.article_body?.trim());
 }
 

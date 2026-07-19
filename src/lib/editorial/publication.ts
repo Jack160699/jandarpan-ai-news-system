@@ -95,6 +95,71 @@ export async function publishGeneratedArticle(
   articleId: string,
   tenantId: string
 ): Promise<PublicationResult> {
+  const supabase = createAdminServerClient();
+  const { data: row, error } = await supabase
+    .from("generated_articles")
+    .select(
+      "id, headline, summary, article_body, language, editorial_metadata, event_id, geo_metadata"
+    )
+    .eq("id", articleId)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (error || !row) {
+    return { ok: false, message: error?.message ?? "article_not_found" };
+  }
+
+  const { validateGeneratedArticle } = await import(
+    "@/lib/news/ai/generated-article-validation"
+  );
+  const meta =
+    row.editorial_metadata && typeof row.editorial_metadata === "object"
+      ? (row.editorial_metadata as Record<string, unknown>)
+      : {};
+  const attributions = Array.isArray(meta.source_attribution)
+    ? (meta.source_attribution as Array<{
+        source?: string | null;
+        article_url?: string | null;
+        signal_id?: string | null;
+      }>)
+    : [];
+  const geo =
+    row.geo_metadata && typeof row.geo_metadata === "object"
+      ? (row.geo_metadata as Record<string, unknown>)
+      : {};
+  const validation = validateGeneratedArticle({
+    headline: row.headline ?? "",
+    summary: row.summary ?? "",
+    articleBody: row.article_body ?? "",
+    language: row.language,
+    category: typeof meta.category === "string" ? meta.category : "world",
+    region:
+      typeof geo.primary_district === "string"
+        ? geo.primary_district
+        : typeof geo.region === "string"
+          ? geo.region
+          : null,
+    sourceAttributions: attributions,
+    generationMetadata: meta,
+    eventId: row.event_id,
+    stage: "publish",
+    allowDeskDraft: meta.draft_state != null && attributions.length === 0,
+  });
+
+  // Desk drafts with empty bodies must never become public.
+  if (!validation.ok && meta.draft_state != null) {
+    return {
+      ok: false,
+      message: `validation_failed:${validation.codes.join(",")}`,
+    };
+  }
+  if (!validation.ok) {
+    return {
+      ok: false,
+      message: `validation_failed:${validation.codes.join(",")}`,
+    };
+  }
+
   const result = await applyGeneratedArticlePatch(
     articleId,
     tenantId,

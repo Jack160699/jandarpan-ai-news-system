@@ -16,7 +16,7 @@ export function EditorIndexPanel() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ headline: "Untitled story", language: "hi" }),
+        body: JSON.stringify({ language: "hi" }),
       });
       const json = await res.json();
       if (json.ok && json.id) {
