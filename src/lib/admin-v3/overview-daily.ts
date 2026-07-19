@@ -23,6 +23,28 @@ type Timed<T> = {
   data?: T;
 };
 
+type EditorialData = {
+  publishedToday: number;
+  publishedYesterday: number;
+  awaitingReview: number;
+  failedStories: number;
+  queuePending: number;
+  latestPublished: {
+    id: string;
+    headline: string | null;
+    publishedAt: string | null;
+    district: string | null;
+  } | null;
+};
+
+type ExecData = {
+  overview?: {
+    todaySpend?: Record<string, unknown>;
+    monthSpend?: Record<string, unknown>;
+    currentMonthSpend?: Record<string, unknown>;
+  };
+};
+
 async function timed<T>(
   source: string,
   fn: () => Promise<T>,
@@ -197,42 +219,35 @@ export async function buildOverviewDailyPayload(input: BuildOverviewDailyInput) 
       } satisfies Timed<unknown>);
 
   tasks.push(editorialTask, healthTask, costsTask, seoTask, audienceTask);
-  const [editorialR, healthR, execR, gscR, analyticsR] = await Promise.all(tasks);
+  const settled = await Promise.allSettled(tasks);
+  const unwrap = <T,>(
+    result: PromiseSettledResult<Timed<unknown>>,
+    source: string
+  ): Timed<T> => {
+    if (result.status === "fulfilled") return result.value as Timed<T>;
+    return {
+      source,
+      ok: false,
+      ms: 0,
+      error:
+        result.reason instanceof Error
+          ? result.reason.message
+          : String(result.reason ?? "rejected"),
+    };
+  };
 
   return assembleDailyPayload({
     access,
     generatedAt,
     wallStart,
-    editorialR: editorialR as Timed<EditorialData>,
-    healthR: healthR as Timed<CanonicalHealthServiceResult>,
-    execR: execR as Timed<ExecData>,
-    gscR: gscR as Timed<Record<string, unknown>>,
-    analyticsR: analyticsR as Timed<Record<string, unknown>>,
+    editorialR: unwrap<EditorialData>(settled[0], "editorial"),
+    healthR: unwrap<CanonicalHealthServiceResult>(settled[1], "platform"),
+    execR: unwrap<ExecData>(settled[2], "costs"),
+    gscR: unwrap<Record<string, unknown>>(settled[3], "seo"),
+    analyticsR: unwrap<Record<string, unknown>>(settled[4], "audience"),
     period,
   });
 }
-
-type EditorialData = {
-  publishedToday: number;
-  publishedYesterday: number;
-  awaitingReview: number;
-  failedStories: number;
-  queuePending: number;
-  latestPublished: {
-    id: string;
-    headline: string | null;
-    publishedAt: string | null;
-    district: string | null;
-  } | null;
-};
-
-type ExecData = {
-  overview?: {
-    todaySpend?: Record<string, unknown>;
-    monthSpend?: Record<string, unknown>;
-    currentMonthSpend?: Record<string, unknown>;
-  };
-};
 
 export function assembleDailyPayload(args: {
   access: DailySectionAccess;

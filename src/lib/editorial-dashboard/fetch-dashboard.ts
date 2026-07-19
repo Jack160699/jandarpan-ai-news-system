@@ -17,6 +17,10 @@ export async function fetchEditorialDashboard(
 
   const supabase = createAdminServerClient();
 
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayIso = todayStart.toISOString();
+
   const [
     logsRes,
     failuresRes,
@@ -27,10 +31,17 @@ export async function fetchEditorialDashboard(
     imageQueueRes,
     signalsCount,
     auditRes,
+    pendingCountRes,
+    approvedCountRes,
+    publishedTodayCountRes,
+    generatedCountRes,
+    aiPendingCountRes,
   ] = await Promise.all([
     supabase
       .from("ingestion_logs")
-      .select("*")
+      .select(
+        "id, status, inserted, total_fetched, failed_validation, duration_ms, created_at, metadata"
+      )
       .order("created_at", { ascending: false })
       .limit(12),
     supabase
@@ -38,7 +49,11 @@ export async function fetchEditorialDashboard(
       .select("id, title, provider, reason, created_at")
       .order("created_at", { ascending: false })
       .limit(15),
-    supabase.from("rss_source_health").select("*"),
+    supabase
+      .from("rss_source_health")
+      .select(
+        "source_id, last_success, failure_count, consecutive_failures, disabled_until"
+      ),
     supabase
       .from("news_ai_queue")
       .select("id, article_id, status, error, created_at")
@@ -52,6 +67,7 @@ export async function fetchEditorialDashboard(
       .eq("tenant_id", tenantId)
       .order("urgency_score", { ascending: false })
       .limit(25),
+    // Desk list is bounded; accurate totals come from head counts below.
     supabase
       .from("generated_articles")
       .select(
@@ -59,7 +75,7 @@ export async function fetchEditorialDashboard(
       )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
-      .limit(80),
+      .limit(40),
     supabase
       .from("editorial_image_queue")
       .select(
@@ -77,6 +93,31 @@ export async function fetchEditorialDashboard(
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(12),
+    supabase
+      .from("generated_articles")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("editorial_status", "pending"),
+    supabase
+      .from("generated_articles")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("editorial_status", "approved"),
+    supabase
+      .from("generated_articles")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .gte("published_at", todayIso)
+      .neq("editorial_status", "rejected"),
+    supabase
+      .from("generated_articles")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .neq("editorial_status", "rejected"),
+    supabase
+      .from("news_ai_queue")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
   ]);
 
   const healthMap = new Map(
@@ -233,29 +274,20 @@ export async function fetchEditorialDashboard(
     tenantArticleIds.has(q.generated_article_id)
   );
 
-  const pending = generatedArticles.filter((a) => a.editorial_status === "pending").length;
-  const approved = generatedArticles.filter((a) => a.editorial_status === "approved").length;
-  const aiPending = (aiQueueRes.data ?? []).filter((q) => q.status === "pending").length;
+  const pending = pendingCountRes.count ?? 0;
+  const approved = approvedCountRes.count ?? 0;
+  const aiPending = aiPendingCountRes.count ?? 0;
   const imagePending = tenantImageQueue.filter(
     (q) => q.status === "pending"
   ).length;
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-
   let fallbackArticles = 0;
   let repairedArticles = 0;
   let eventLinkedArticles = 0;
-  let publishedToday = 0;
+  const publishedToday = publishedTodayCountRes.count ?? 0;
 
   for (const article of generatedArticles) {
     if (article.event_id) eventLinkedArticles += 1;
-    if (
-      article.published_at &&
-      new Date(article.published_at) >= todayStart
-    ) {
-      publishedToday += 1;
-    }
   }
 
   for (const row of articlesRes.data ?? []) {
@@ -288,7 +320,7 @@ export async function fetchEditorialDashboard(
     counts: {
       signals: signalsCount.count ?? 0,
       events: eventsRes.data?.length ?? 0,
-      generated: generatedArticles.length,
+      generated: generatedCountRes.count ?? generatedArticles.length,
       pending,
       approved,
       aiQueuePending: aiPending,

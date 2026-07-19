@@ -1,9 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { deriveCanonicalHealth } from "@/lib/admin-v3/canonical-health";
 import {
+  ADMIN_FETCH_DEFAULTS,
+  adminGet,
+  type PartialSectionState,
+} from "@/lib/admin-v3/admin-fetch";
+import {
+  peekSharedCanonicalStatus,
+  seedSharedCanonicalStatus,
+} from "@/hooks/useCanonicalStatus";
+import {
+  Av3Disclosure,
   Av3EmptyState,
   Av3HealthRow,
   Av3Hero,
@@ -21,91 +31,144 @@ function asRecord(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
 }
 
+type Snapshot = ReturnType<typeof deriveCanonicalHealth> & {
+  usedLastKnown?: boolean;
+  freshness?: string;
+};
+
 export function PlatformOverviewDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [snapshot, setSnapshot] = useState<ReturnType<typeof deriveCanonicalHealth> | null>(null);
+  const shared = peekSharedCanonicalStatus();
+  const [sectionState, setSectionState] = useState<PartialSectionState>(
+    shared ? "stale" : "loading"
+  );
+  const [snapshot, setSnapshot] = useState<Snapshot | null>(
+    () => (shared as Snapshot | null) ?? null
+  );
   const [checks, setChecks] = useState<
     Array<{ id: string; label: string; status: string; latencyMs: number }>
   >([]);
   const [queuePending, setQueuePending] = useState<number | null>(null);
   const [redisConnected, setRedisConnected] = useState<boolean | null>(null);
-  const [stabilityScore, setStabilityScore] = useState<number | null>(null);
-  const [errors24h, setErrors24h] = useState<number | null>(null);
+  const [stabilityScore, setStabilityScore] = useState<number | null>(
+    () => (shared?.score != null ? Number(shared.score) : null)
+  );
   const [error, setError] = useState<string | null>(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagError, setDiagError] = useState<string | null>(null);
+  const [diagNote, setDiagNote] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadSummary = useCallback(async () => {
+    setSectionState((prev) => (prev === "loaded" || prev === "stale" ? prev : "loading"));
+    setError(null);
+    const result = await adminGet<{
+      status?: string;
+      checks?: unknown[];
+      cron?: unknown;
+      checkedAt?: string;
+      snapshot?: Snapshot;
+      metrics?: Record<string, unknown>;
+      sources?: Array<{ source?: string; ok?: boolean }>;
+      stale?: boolean;
+    }>("/api/admin/ops/health-summary", {
+      timeoutMs: ADMIN_FETCH_DEFAULTS.summaryTimeoutMs,
+      label: "technical-home-summary",
+    });
 
-    async function load() {
-      setLoading(true);
-      setError(null);
-      try {
-        // Summary-first — same canonical service as header / health page.
-        const res = await fetch("/api/admin/ops/health-summary", {
-          credentials: "include",
-        });
-        if (!res.ok) {
-          if (!cancelled) setError("Platform health API unavailable for this session.");
-          return;
-        }
-        const json = await res.json();
-        if (cancelled) return;
-
-        const snap =
-          json.snapshot ??
-          deriveCanonicalHealth({
-            status: json.status,
-            checks: json.checks,
-            cron: json.cron,
-            timestamp: json.checkedAt,
-          });
-        setSnapshot(snap);
-
-        const checkList = Array.isArray(json.checks) ? json.checks : [];
-        setChecks(
-          checkList.slice(0, 6).map((raw: Record<string, unknown>) => ({
-            id: String(raw.id ?? raw.label),
-            label: String(raw.label ?? raw.id ?? "Check"),
-            status: String(raw.status ?? "unknown"),
-            latencyMs: Number(raw.latencyMs ?? 0),
-          }))
+    if (!result.ok) {
+      if (result.timedOut) {
+        setError("Summary timed out — showing last-known if available.");
+        setSectionState((prev) => (prev === "loaded" || prev === "stale" ? "stale" : "timeout"));
+      } else {
+        setError("Platform summary unavailable for this session.");
+        setSectionState((prev) =>
+          prev === "loaded" || prev === "stale" ? "stale" : "unavailable"
         );
-
-        const metrics = asRecord(json.metrics);
-        const queues = asRecord(metrics.queues);
-        const aiPending = Number(queues.aiPending ?? NaN);
-        const editorialPending = Number(queues.editorialImagesPending ?? NaN);
-        if (Number.isFinite(aiPending) && Number.isFinite(editorialPending)) {
-          setQueuePending(aiPending + editorialPending);
-        } else if (Number.isFinite(aiPending)) {
-          setQueuePending(aiPending);
-        }
-
-        const redisSource = Array.isArray(json.sources)
-          ? json.sources.find(
-              (s: { source?: string }) =>
-                String(s.source).includes("redis")
-            )
-          : null;
-        setRedisConnected(redisSource ? Boolean(redisSource.ok) : null);
-        setStabilityScore(
-          Number(snap.score ?? asRecord(json.stability).score) || null
-        );
-        setErrors24h(null);
-      } catch {
-        if (!cancelled) setError("Unable to load platform health.");
-      } finally {
-        if (!cancelled) setLoading(false);
       }
+      return;
     }
 
-    void load();
-    return () => {
-      cancelled = true;
-    };
+    const json = result.data;
+    const snap =
+      (json.snapshot as Snapshot | undefined) ??
+      deriveCanonicalHealth({
+        status: json.status,
+        checks: json.checks,
+        cron: json.cron,
+        timestamp: json.checkedAt,
+      });
+    setSnapshot(snap);
+    seedSharedCanonicalStatus(snap);
+
+    const checkList = Array.isArray(json.checks) ? json.checks : [];
+    setChecks(
+      checkList.slice(0, 8).map((value) => {
+        const raw = asRecord(value);
+        return {
+          id: String(raw.id ?? raw.label),
+          label: String(raw.label ?? raw.id ?? "Check"),
+          status: String(raw.status ?? "unknown"),
+          latencyMs: Number(raw.latencyMs ?? 0),
+        };
+      })
+    );
+
+    const metrics = asRecord(json.metrics);
+    const queues = asRecord(metrics.queues);
+    const aiPending = Number(queues.aiPending ?? NaN);
+    const editorialPending = Number(queues.editorialImagesPending ?? NaN);
+    if (Number.isFinite(aiPending) && Number.isFinite(editorialPending)) {
+      setQueuePending(aiPending + editorialPending);
+    } else if (Number.isFinite(aiPending)) {
+      setQueuePending(aiPending);
+    }
+
+    const redisSource = Array.isArray(json.sources)
+      ? json.sources.find((s) => String(s.source).includes("redis"))
+      : null;
+    setRedisConnected(redisSource ? Boolean(redisSource.ok) : null);
+    setStabilityScore(Number(snap.score ?? NaN) || null);
+    const snapExt = snap as Snapshot;
+    setSectionState(
+      json.stale || snapExt.usedLastKnown || snapExt.freshness === "stale"
+        ? "stale"
+        : "loaded"
+    );
   }, []);
 
-  if (loading) {
+  const loadDiagnostics = useCallback(async () => {
+    setDiagLoading(true);
+    setDiagError(null);
+    const result = await adminGet<{
+      snapshot?: { state?: string };
+    }>("/api/admin/ops/health", {
+      timeoutMs: ADMIN_FETCH_DEFAULTS.diagnosticsTimeoutMs,
+      label: "technical-home-diagnostics",
+      skipDedupe: true,
+    });
+    if (!result.ok) {
+      setDiagError(
+        result.timedOut ? "Diagnostics timed out." : "Diagnostics unavailable."
+      );
+      setDiagLoading(false);
+      return;
+    }
+    const json = result.data;
+    if (json.snapshot?.state) {
+      setDiagNote(
+        `Diagnostics overall state: ${json.snapshot.state} (same model as summary).`
+      );
+    } else {
+      setDiagNote("Diagnostics loaded. Open Health details for full matrix.");
+    }
+    setDiagLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once
+  }, []);
+
+  if (sectionState === "loading" && !snapshot) {
     return (
       <Av3Stack>
         <Av3Skeleton className="av3-skeleton--block" style={{ minHeight: 88 }} />
@@ -114,15 +177,24 @@ export function PlatformOverviewDashboard() {
     );
   }
 
-  if (error || !snapshot) {
+  if (!snapshot) {
     return (
       <Av3EmptyState
         title={error ?? "Health data unavailable"}
-        message="Retry from Health details if you have monitoring access."
+        message="Retry summary, or open Health details if you have monitoring access."
         action={
-          <Link href="/admin/health" className="anr-text-link">
-            Open health details
-          </Link>
+          <div className="av3-stack-inline">
+            <button
+              type="button"
+              className="anr-btn anr-btn--ghost"
+              onClick={() => void loadSummary()}
+            >
+              Retry summary
+            </button>
+            <Link href="/admin/health" className="anr-text-link">
+              Open health details
+            </Link>
+          </div>
         }
       />
     );
@@ -138,7 +210,9 @@ export function PlatformOverviewDashboard() {
             ? `Stability ${snapshot.score}/100${snapshot.grade ? ` · ${snapshot.grade}` : ""}`
             : "Platform overview"
         }
-        meta={`Updated ${new Date(snapshot.checkedAt).toLocaleString()}`}
+        meta={
+          `${sectionState === "stale" ? "Stale · " : ""}Updated ${new Date(snapshot.checkedAt).toLocaleString()}`
+        }
         action={
           <Link href="/admin/health" className="anr-btn anr-btn--primary">
             Health details
@@ -146,22 +220,38 @@ export function PlatformOverviewDashboard() {
         }
       />
 
+      {error ? <p className="av3-note av3-note--warn">{error}</p> : null}
+
       <Av3ReasonList reasons={snapshot.reasons} />
 
       <Av3MetricGrid>
-        <Av3Metric label="Stability score" value={stabilityScore ?? "—"} hint="Production readiness" />
-        <Av3Metric label="Errors (24h)" value={errors24h ?? "—"} hint="Tracked ops events" />
-        <Av3Metric label="Queue pending" value={queuePending ?? "—"} hint="AI + editorial backlog" />
+        <Av3Metric
+          label="Stability score"
+          value={stabilityScore ?? "—"}
+          hint="From canonical summary"
+        />
+        <Av3Metric
+          label="Critical"
+          value={snapshot.criticalCount ?? 0}
+          hint="Active incidents"
+        />
+        <Av3Metric
+          label="Queue pending"
+          value={queuePending ?? "—"}
+          hint="AI + editorial backlog"
+        />
         <Av3Metric
           label="Redis cache"
-          value={redisConnected == null ? "—" : redisConnected ? "Connected" : "Off"}
+          value={
+            redisConnected == null ? "—" : redisConnected ? "Connected" : "Off"
+          }
           hint="Dashboard cache layer"
         />
       </Av3MetricGrid>
 
-      <Av3Panel title="Service summary" subtitle="Latest health checks">
+      <Av3Panel title="Service summary" subtitle="Lightweight probes">
         {checks.length === 0 ? (
-          <p className="av3-note">No health checks returned.</p>
+          <p className="av3-note">Service matrix loading or unavailable.</p>
         ) : (
           <ul className="av3-health-list">
             {checks.map((check) => (
@@ -175,6 +265,20 @@ export function PlatformOverviewDashboard() {
           </ul>
         )}
       </Av3Panel>
+
+      <Av3Disclosure
+        title="View diagnostics"
+        onOpenChange={(open) => {
+          if (open && !diagNote && !diagLoading) void loadDiagnostics();
+        }}
+      >
+        {diagLoading ? <p className="av3-note">Loading diagnostics…</p> : null}
+        {diagError ? <p className="av3-note av3-note--warn">{diagError}</p> : null}
+        {diagNote ? <p className="av3-note">{diagNote}</p> : null}
+        <Link href="/admin/health" className="av3-panel-link">
+          Open full Platform health
+        </Link>
+      </Av3Disclosure>
     </Av3Stack>
   );
 }

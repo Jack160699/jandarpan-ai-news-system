@@ -5,6 +5,10 @@ import { useCallback, useEffect, useState } from "react";
 import { NewsroomHealthPanel } from "@/components/admin-newsroom/NewsroomHealthStrip";
 import type { CanonicalHealthSnapshot } from "@/lib/admin-v3/canonical-health";
 import { statusIntervalForState, isDocumentHidden } from "@/lib/admin-v3/admin-poll";
+import {
+  ADMIN_FETCH_DEFAULTS,
+  adminGet,
+} from "@/lib/admin-v3/admin-fetch";
 import { peekSharedCanonicalStatus } from "@/hooks/useCanonicalStatus";
 import {
   Av3Disclosure,
@@ -88,8 +92,8 @@ type DiagnosticsPayload = {
   };
 };
 
-const SUMMARY_TIMEOUT_MS = 4_000;
-const DIAG_TIMEOUT_MS = 12_000;
+const SUMMARY_TIMEOUT_MS = ADMIN_FETCH_DEFAULTS.summaryTimeoutMs;
+const DIAG_TIMEOUT_MS = ADMIN_FETCH_DEFAULTS.diagnosticsTimeoutMs;
 const CACHE_KEY = "jd-admin-health-summary-v2";
 
 function readCache(): SummaryPayload | null {
@@ -112,25 +116,26 @@ function writeCache(payload: SummaryPayload) {
 
 async function fetchJson<T>(
   url: string,
-  timeoutMs: number
+  timeoutMs: number,
+  label: string
 ): Promise<{ data: T | null; error: string | null }> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { credentials: "include", signal: controller.signal });
-    const json = (await res.json()) as T & { ok?: boolean; error?: string };
-    if (!res.ok || json.ok === false) {
-      return { data: null, error: json.error ?? `Failed to load ${url}` };
-    }
-    return { data: json as T, error: null };
-  } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") {
-      return { data: null, error: `Timed out after ${Math.round(timeoutMs / 1000)}s` };
-    }
-    return { data: null, error: "Network error" };
-  } finally {
-    window.clearTimeout(timeout);
+  const result = await adminGet<T & { ok?: boolean; error?: string }>(url, {
+    timeoutMs,
+    label,
+    skipDedupe: label.includes("diagnostics"),
+  });
+  if (!result.ok) {
+    return {
+      data: null,
+      error: result.timedOut
+        ? `Timed out after ${Math.round(timeoutMs / 1000)}s`
+        : result.error || `Failed to load ${url}`,
+    };
   }
+  if (result.data.ok === false) {
+    return { data: null, error: result.data.error ?? `Failed to load ${url}` };
+  }
+  return { data: result.data as T, error: null };
 }
 
 function seedSummary(): SummaryPayload | null {
@@ -168,7 +173,8 @@ export function HealthOperationsPanel() {
     if (!isInitial) setRefreshing(true);
     const result = await fetchJson<SummaryPayload>(
       "/api/admin/ops/health-summary",
-      SUMMARY_TIMEOUT_MS
+      SUMMARY_TIMEOUT_MS,
+      "health-page-summary"
     );
     if (result.data) {
       setSummary(result.data);
@@ -188,7 +194,8 @@ export function HealthOperationsPanel() {
     setDiagError(null);
     const result = await fetchJson<DiagnosticsPayload>(
       "/api/admin/ops/health",
-      DIAG_TIMEOUT_MS
+      DIAG_TIMEOUT_MS,
+      "health-page-diagnostics"
     );
     if (result.data) setDiagnostics(result.data);
     else setDiagError(result.error);

@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ClientTime } from "@/components/admin-newsroom/ui/ClientTime";
+import { seedSharedCanonicalStatus } from "@/hooks/useCanonicalStatus";
+import {
+  isDocumentHidden,
+  statusIntervalForState,
+} from "@/lib/admin-v3/admin-poll";
 import {
   Av3Metric,
   Av3MetricGrid,
@@ -112,6 +117,18 @@ export function CommandCentre() {
       }
       setData(json);
       setError(null);
+      if (json.platform?.snapshot) {
+        const snap = json.platform.snapshot;
+        seedSharedCanonicalStatus({
+          state: snap.state as "healthy" | "degraded" | "critical" | "unknown",
+          label: snap.label,
+          reasons: [],
+          checkedAt: snap.checkedAt || json.checkedAt,
+          criticalCount: snap.criticalCount ?? 0,
+          warningCount: snap.warningCount ?? 0,
+          topIncidents: [],
+        });
+      }
       try {
         sessionStorage.setItem(CACHE_KEY, JSON.stringify(json));
       } catch {
@@ -127,11 +144,18 @@ export function CommandCentre() {
 
   useEffect(() => {
     void load(true);
-    const id = window.setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      void load(false);
-    }, 60_000);
-    return () => window.clearInterval(id);
+    let timer: number | null = null;
+    const schedule = () => {
+      if (timer != null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (!isDocumentHidden()) void load(false);
+        schedule();
+      }, statusIntervalForState(null));
+    };
+    schedule();
+    return () => {
+      if (timer != null) window.clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

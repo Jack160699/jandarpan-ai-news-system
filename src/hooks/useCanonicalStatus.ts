@@ -84,6 +84,20 @@ export function peekSharedCanonicalStatus(): ExtendedSnapshot | null {
   return cache.snapshot;
 }
 
+/** Seed from overview/daily platform block so shell + page share one snapshot. */
+export function seedSharedCanonicalStatus(
+  snapshot: ExtendedSnapshot | null | undefined
+): void {
+  if (!snapshot?.state) return;
+  cache.snapshot = {
+    ...snapshot,
+    checkedAt: snapshot.checkedAt || new Date().toISOString(),
+  };
+  cache.checkedAt = Date.now();
+  cache.errorAttempts = 0;
+  notify();
+}
+
 export function useCanonicalStatus() {
   const [snapshot, setSnapshot] = useState<ExtendedSnapshot | null>(
     () => cache.snapshot

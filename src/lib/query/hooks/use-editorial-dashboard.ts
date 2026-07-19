@@ -10,7 +10,7 @@ import {
   DASHBOARD_STALE_MS,
   getDashboardPollIntervalMs,
   isAdminUserIdle,
-  isDashboardPollRoute,
+  isEditorialDashboardRoute,
   isDocumentHidden,
 } from "@/lib/query/dashboard-poll-state";
 import { queryKeys } from "@/lib/query/query-keys";
@@ -22,6 +22,8 @@ type DashboardQueryMeta = {
 
 export function useEditorialDashboardQuery(enabled = true) {
   const pathname = usePathname() ?? "/admin";
+  const routeEnabled = isEditorialDashboardRoute(pathname);
+  const active = enabled && routeEnabled;
 
   return useQuery<EditorialDashboardSnapshot>({
     queryKey: queryKeys.editorial.dashboard,
@@ -36,7 +38,7 @@ export function useEditorialDashboardQuery(enabled = true) {
         reason,
       });
     },
-    enabled,
+    enabled: active,
     staleTime: DASHBOARD_STALE_MS,
     gcTime: DASHBOARD_GC_MS,
     refetchOnMount: false,
@@ -46,13 +48,13 @@ export function useEditorialDashboardQuery(enabled = true) {
     structuralSharing: true,
     placeholderData: (prev: EditorialDashboardSnapshot | undefined) => prev,
     refetchInterval: () => {
-      if (!enabled) return false;
+      if (!active) return false;
       if (isDocumentHidden()) {
         traceDashboard("DASHBOARD_SKIP_HIDDEN", "refetch_interval");
         return false;
       }
       if (isAdminUserIdle()) return false;
-      if (!isDashboardPollRoute(pathname)) return false;
+      if (!isEditorialDashboardRoute(pathname)) return false;
       return getDashboardPollIntervalMs();
     },
     meta: { reason: "initial" as const },

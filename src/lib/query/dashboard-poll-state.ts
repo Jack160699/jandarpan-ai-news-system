@@ -1,5 +1,6 @@
 /**
  * Shared dashboard poll gating: visibility, idle, route activity.
+ * Editorial dashboard fetches are allowlisted — not global on every admin page.
  */
 
 const IDLE_MS = 5 * 60_000;
@@ -26,12 +27,40 @@ export function isAdminUserIdle(): boolean {
   return Date.now() - lastActivityAt > IDLE_MS;
 }
 
-/** Routes that should not run background dashboard polling */
-export function isDashboardPollRoute(pathname: string): boolean {
+/**
+ * Routes that may load the full editorial dashboard snapshot.
+ * Business / Platform / Team / Settings / overview / SEO must NOT be listed.
+ */
+export const EDITORIAL_DASHBOARD_ROUTE_PREFIXES = [
+  "/admin/editorial",
+  "/admin/stories",
+  "/admin/articles",
+  "/admin/images",
+  "/admin/live-wire",
+  "/admin/workflow",
+  "/admin/intelligence",
+  "/admin/analytics",
+  "/admin/collaboration",
+  "/admin/media",
+  "/admin/editor", // index only; /admin/editor/[id] excluded below
+] as const;
+
+export function isEditorialDashboardRoute(pathname: string): boolean {
   if (!pathname.startsWith("/admin")) return false;
   if (pathname.startsWith("/admin/login")) return false;
+  if (pathname.startsWith("/admin/forgot-password")) return false;
+  if (pathname.startsWith("/admin/reset-password")) return false;
+  // Immersive editor workbench — no full desk snapshot
   if (/^\/admin\/editor\/[^/]+/.test(pathname)) return false;
-  return true;
+
+  return EDITORIAL_DASHBOARD_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+}
+
+/** @deprecated Use isEditorialDashboardRoute — poll only on allowlisted routes */
+export function isDashboardPollRoute(pathname: string): boolean {
+  return isEditorialDashboardRoute(pathname);
 }
 
 export function isDocumentHidden(): boolean {
