@@ -127,9 +127,13 @@ export function ReelCard({
 
         <div className="reels-v3-card__progress-top">
           <ReelProgress
-            total={slides.length}
-            activeIndex={slideIndex}
-            progressPct={slideProgressInSegment}
+            progressPct={
+              slides.length > 0
+                ? ((slideIndex + slideProgressInSegment / 100) /
+                    slides.length) *
+                  100
+                : 0
+            }
           />
         </div>
 

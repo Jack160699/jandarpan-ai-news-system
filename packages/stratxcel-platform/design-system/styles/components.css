@@ -450,7 +450,9 @@
   position: relative;
   border-radius: var(--jds-radius-xl);
   overflow: hidden;
-  background: var(--jds-color-surface-elevated);
+  /* Deep navy fallback: white headline text must stay readable even when
+     the story has no image — never a light surface behind inverse text. */
+  background: var(--jds-color-brand-navy, #17223b);
   box-shadow: var(--jds-elevation-lg);
   min-height: 280px;
 }
@@ -477,9 +479,9 @@
   inset: 0;
   background: linear-gradient(
     to top,
-    rgb(0 0 0 / 0.85) 0%,
-    rgb(0 0 0 / 0.4) 45%,
-    rgb(0 0 0 / 0.1) 100%
+    rgb(0 0 0 / 0.88) 0%,
+    rgb(0 0 0 / 0.55) 45%,
+    rgb(0 0 0 / 0.18) 100%
   );
 }
 

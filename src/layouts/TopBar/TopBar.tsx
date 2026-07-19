@@ -64,17 +64,7 @@ export function TopBar() {
         <div className="jdp-topbar__actions">
           <button
             type="button"
-            className="jdp-topbar__btn hidden lg:inline-flex"
-            aria-label={t.nav.menu}
-            aria-expanded={menuOpen}
-            aria-haspopup="dialog"
-            onClick={() => toggleMenu()}
-          >
-            <LayoutGrid size={20} strokeWidth={1.75} aria-hidden />
-          </button>
-          <button
-            type="button"
-            className="jdp-topbar__btn lg:hidden"
+            className="jdp-topbar__btn jdp-topbar__btn--search-mobile"
             aria-label={t.header.search}
             onClick={openCommandPalette}
           >
@@ -82,16 +72,18 @@ export function TopBar() {
           </button>
           <Link
             href={notificationsHref}
-            className="jdp-topbar__btn"
+            className="jdp-topbar__btn jdp-topbar__btn--desktop"
             aria-label={t.profile.notifications}
             onClick={() => startNavigation(notificationsHref)}
           >
             <Bell size={20} aria-hidden />
           </Link>
-          <ThemeToggleButton compact />
+          <span className="jdp-topbar__btn-wrap--desktop">
+            <ThemeToggleButton compact />
+          </span>
           <Link
             href="/archive"
-            className="jdp-topbar__btn hidden sm:inline-flex"
+            className="jdp-topbar__btn jdp-topbar__btn--desktop"
             aria-label="Profile"
             onClick={() => startNavigation("/archive")}
           >
@@ -101,6 +93,16 @@ export function TopBar() {
               alt={displayName}
             />
           </Link>
+          <button
+            type="button"
+            className="jdp-topbar__btn"
+            aria-label={t.nav.menu}
+            aria-expanded={menuOpen}
+            aria-haspopup="dialog"
+            onClick={() => toggleMenu()}
+          >
+            <LayoutGrid size={20} strokeWidth={1.75} aria-hidden />
+          </button>
         </div>
       </div>
     </header>

@@ -73,9 +73,7 @@ export function ReelViewer({
           <span className="reels-v3-chrome__brand">{t.shorts.title}</span>
           <span className="reels-v3-chrome__sub">{t.shorts.subtitle}</span>
         </div>
-        <span className="reels-v3-chrome__position" aria-live="polite">
-          {activeIndex + 1}/{shorts.length}
-        </span>
+        <span className="reels-v3-chrome__spacer" aria-hidden />
       </header>
 
       <ReelSwipeNavigation visible={activeIndex === 0} />

@@ -31,9 +31,9 @@ export const SCROLL_POSITIONS_KEY = "jdp-scroll-positions";
 export const SHELL_BOTTOM_NAV = [
   { id: "home", href: "/", icon: "home" as const },
   { id: "district", href: "/district", icon: "district" as const, dynamic: true },
-  { id: "ai", href: "#ai", icon: "ai" as const, action: "command-palette" as const },
-  { id: "alerts", href: "/live", icon: "alerts" as const },
-  { id: "you", href: "#you", icon: "you" as const, action: "menu" as const },
+  { id: "reels", href: "/shorts", icon: "reels" as const },
+  { id: "topnews", href: "/live", icon: "topnews" as const },
+  { id: "you", href: "/archive", icon: "you" as const },
 ] as const;
 
 /** Command palette static navigation targets */

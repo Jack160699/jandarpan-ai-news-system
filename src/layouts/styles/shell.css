@@ -122,6 +122,27 @@
   color: var(--jds-color-text-primary);
 }
 
+/* Action visibility: mobile keeps only search + menu so the dateline
+   has room; bell / theme / avatar appear from 1024px. */
+.jdp-topbar__btn--desktop,
+.jdp-topbar__btn-wrap--desktop {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .jdp-topbar__btn--desktop {
+    display: inline-flex;
+  }
+
+  .jdp-topbar__btn-wrap--desktop {
+    display: inline-flex;
+  }
+
+  .jdp-topbar__btn--search-mobile {
+    display: none;
+  }
+}
+
 /* ── Dateline: date · time · district · weather in the header middle ── */
 .jdp-topbar__dateline {
   display: flex;

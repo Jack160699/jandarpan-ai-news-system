@@ -80,15 +80,9 @@
   margin-top: 0.1rem;
 }
 
-.reels-v3-chrome__position {
+.reels-v3-chrome__spacer {
   justify-self: end;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  padding: 0.25rem 0.55rem;
-  border-radius: var(--ds-radius-full, 999px);
-  background: rgb(255 255 255 / 0.1);
-  border: 1px solid rgb(255 255 255 / 0.12);
+  width: 2.5rem;
 }
 
 /* ── Viewport ── */
