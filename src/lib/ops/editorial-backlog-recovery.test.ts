@@ -4,7 +4,7 @@ const reclaim = vi.fn(async () => 2);
 
 vi.mock("@/lib/infrastructure/jobs/queue", () => ({
   enqueueJob: vi.fn(async () => "new-job"),
-  reclaimStaleClaimedJobs: (staleMs?: number) => reclaim(staleMs),
+  reclaimStaleClaimedJobs: () => reclaim(),
 }));
 
 type Row = Record<string, unknown>;

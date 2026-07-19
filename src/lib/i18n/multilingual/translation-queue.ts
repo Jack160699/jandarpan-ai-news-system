@@ -7,15 +7,20 @@ import {
   type NewsroomLanguage,
 } from "@/lib/i18n/languages";
 import { DEFAULT_TRANSLATION_TARGETS } from "@/lib/i18n/multilingual/translate";
+import {
+  buildTranslateArticlePayload,
+  buildTranslationDedupeKey,
+  computeSourceContentVersion,
+  isActiveReaderTarget,
+  isCgTranslationEnabled,
+} from "@/lib/i18n/multilingual/translation-contract";
 import { enqueueJob, enqueueJobs, countPendingJobs } from "@/lib/infrastructure/jobs/queue";
 import { createAdminServerClient } from "@/lib/supabase";
 import type { ArticleLocaleBundle, ArticleTranslations } from "@/lib/i18n/multilingual/types";
 import { getArticleTranslations } from "@/lib/i18n/resolve-article";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
-export function isCgTranslationEnabled(): boolean {
-  return process.env.NEWSROOM_CG_TRANSLATION === "true";
-}
+export { isCgTranslationEnabled, buildTranslationDedupeKey } from "@/lib/i18n/multilingual/translation-contract";
 
 export const READER_TRANSLATION_PAIRS: Array<{
   source: NewsroomLanguage;
@@ -150,9 +155,17 @@ export function articleNeedsTranslation(
 ): boolean {
   const source = normalizeArticleLanguage(row.language);
   if (source === target) return false;
+  if (!isActiveReaderTarget(target)) return false;
   if (!isTranslatableArticle(row)) return false;
-  if (hasReaderTranslation(row, target) && getStoredTranslation(row, target)) {
-    return false;
+  const version = computeSourceContentVersion(row);
+  const complete = getStoredTranslation(row, target);
+  if (complete) {
+    const storedVersion = complete.source_content_version;
+    // Re-translate only when we have a stamped version that no longer matches.
+    if (!storedVersion || storedVersion === "legacy" || storedVersion === version) {
+      return false;
+    }
+    return true;
   }
   const bundle = getArticleTranslations(
     row.editorial_metadata,
@@ -416,26 +429,40 @@ export async function findArticlesMissingTranslation(input: {
     .slice(0, limit) as GeneratedArticleRow[];
 }
 
-export function buildTranslationDedupeKey(
-  articleId: string,
-  target: NewsroomLanguage
-): string {
-  return `translate:${articleId}:${target}`;
-}
-
 export async function enqueueArticleTranslation(
-  row: Pick<GeneratedArticleRow, "id" | "tenant_id">,
+  row: Pick<GeneratedArticleRow, "id" | "tenant_id"> &
+    Partial<
+      Pick<
+        GeneratedArticleRow,
+        "language" | "headline" | "summary" | "article_body"
+      >
+    >,
   target: NewsroomLanguage,
-  options?: { priority?: number }
+  options?: { priority?: number; reason?: string; urgencyScore?: number | null }
 ): Promise<string | null> {
+  if (!isActiveReaderTarget(target)) return null;
+
+  const sourceLanguage = normalizeArticleLanguage(row.language ?? "hi");
+  const sourceContentVersion = computeSourceContentVersion({
+    headline: row.headline ?? "",
+    summary: row.summary ?? "",
+    article_body: row.article_body ?? "",
+  });
+
   return enqueueJob({
     jobType: "translate_article",
-    dedupeKey: buildTranslationDedupeKey(row.id, target),
+    dedupeKey: buildTranslationDedupeKey(row.id, target, sourceContentVersion),
     tenantId: row.tenant_id ?? null,
-    payload: {
+    payload: buildTranslateArticlePayload({
       articleId: row.id,
+      tenantId: row.tenant_id ?? null,
+      sourceLanguage,
       targetLanguage: target,
-    },
+      sourceContentVersion,
+      reason: options?.reason ?? "publish_or_backfill",
+      priority: options?.priority ?? 6,
+      urgencyScore: options?.urgencyScore,
+    }),
     priority: options?.priority ?? 6,
     maxAttempts: 5,
     timeoutMs: 120_000,
@@ -463,14 +490,21 @@ export async function enqueueMissingTranslationJobs(input?: {
     scanned += rows.length;
 
     for (const row of rows) {
+      if (!isActiveReaderTarget(pair.target)) continue;
+      const sourceContentVersion = computeSourceContentVersion(row);
       jobs.push({
         jobType: "translate_article" as const,
-        dedupeKey: buildTranslationDedupeKey(row.id, pair.target),
+        dedupeKey: buildTranslationDedupeKey(row.id, pair.target, sourceContentVersion),
         tenantId: row.tenant_id ?? null,
-        payload: {
+        payload: buildTranslateArticlePayload({
           articleId: row.id,
+          tenantId: row.tenant_id ?? null,
+          sourceLanguage: pair.source,
           targetLanguage: pair.target,
-        },
+          sourceContentVersion,
+          reason: "missing_backfill",
+          priority: input?.priority ?? 6,
+        }),
         priority: input?.priority ?? 6,
         maxAttempts: 5,
         timeoutMs: 120_000,

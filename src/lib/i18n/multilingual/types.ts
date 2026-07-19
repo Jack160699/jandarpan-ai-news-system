@@ -11,6 +11,8 @@ export type ArticleLocaleBundle = {
   translated_at: string;
   model?: string;
   tone_profile?: string;
+  /** Hash of source headline/summary/body at translation time */
+  source_content_version?: string;
 };
 
 export type ArticleTranslations = Partial<

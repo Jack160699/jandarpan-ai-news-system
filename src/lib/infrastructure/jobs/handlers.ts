@@ -18,10 +18,7 @@ import { clusterRecentSignals } from "@/lib/newsroom";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
-import {
-  isNewsroomLanguage,
-  normalizeArticleLanguage,
-} from "@/lib/i18n/languages";
+import { normalizeArticleLanguage } from "@/lib/i18n/languages";
 import {
   auditTranslationCoverage,
   enqueueMissingTranslationJobs,
@@ -241,24 +238,46 @@ const translateArticle: JobHandler = async (job) => {
     return { ok: true, result: { skipped: true, reason: "no_openai" } };
   }
 
-  const articleId = String(job.payload.articleId ?? "").trim();
-  const targetRaw = String(job.payload.targetLanguage ?? "en").trim().toLowerCase();
+  const {
+    computeSourceContentVersion,
+    isActiveReaderTarget,
+    normalizeTranslateArticlePayload,
+    resolveTranslationUrgencyScore,
+    bundleMatchesSourceVersion,
+  } = await import("@/lib/i18n/multilingual/translation-contract");
 
-  if (!articleId) {
-    return { ok: false, error: "articleId_required", retryable: false };
-  }
+  const normalized = normalizeTranslateArticlePayload(job.payload, {
+    tenantId: job.tenant_id,
+    priority: job.priority,
+    attempts: job.attempts,
+    status: job.status,
+    lastError: job.last_error,
+    dedupeKey: job.dedupe_key,
+  });
 
-  if (!isNewsroomLanguage(targetRaw)) {
+  if (!normalized) {
+    const articleId = String(job.payload.articleId ?? "").trim();
+    if (!articleId) {
+      return { ok: false, error: "articleId_required", retryable: false };
+    }
     return { ok: false, error: "invalid_target_language", retryable: false };
   }
 
-  const targetLanguage = normalizeArticleLanguage(targetRaw);
+  const { articleId, targetLanguage } = normalized;
+
+  if (!isActiveReaderTarget(targetLanguage)) {
+    return {
+      ok: true,
+      result: { skipped: true, reason: "language_disabled", targetLanguage },
+    };
+  }
+
   const supabase = createAdminServerClient();
 
   const { data: row, error } = await supabase
     .from("generated_articles")
     .select(
-      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, tenant_id, published_at, editorial_status"
+      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, translations, tenant_id, published_at, editorial_status, event_id"
     )
     .eq("id", articleId)
     .maybeSingle();
@@ -284,17 +303,40 @@ const translateArticle: JobHandler = async (job) => {
   }
 
   const source = normalizeArticleLanguage(article.language);
+  const sourceContentVersion = computeSourceContentVersion(article);
 
   if (source === targetLanguage) {
     return { ok: true, result: { skipped: true, reason: "same_language" } };
   }
 
-  if (getStoredTranslation(article, targetLanguage)) {
+  const existing = getStoredTranslation(article, targetLanguage);
+  if (existing && bundleMatchesSourceVersion(existing, sourceContentVersion)) {
     return { ok: true, result: { skipped: true, reason: "already_translated" } };
   }
 
+  let eventUrgency: number | null = null;
+  if (article.event_id) {
+    const { data: eventRow } = await supabase
+      .from("news_events")
+      .select("urgency_score")
+      .eq("id", article.event_id)
+      .maybeSingle();
+    if (eventRow && typeof eventRow.urgency_score === "number") {
+      eventUrgency = eventRow.urgency_score;
+    }
+  }
+
+  const urgencyScore = resolveTranslationUrgencyScore({
+    payloadUrgency: normalized.urgencyScore,
+    eventUrgency,
+    editorialMetadata: article.editorial_metadata,
+  });
+
   const started = Date.now();
-  const results = await translateGeneratedArticle(article, [targetLanguage]);
+  const results = await translateGeneratedArticle(article, [targetLanguage], {
+    urgencyScore,
+    sourceContentVersion,
+  });
   const result = results.find((r) => r.language === targetLanguage);
 
   if (!result?.ok) {
@@ -311,6 +353,9 @@ const translateArticle: JobHandler = async (job) => {
       articleId,
       slug: article.slug,
       targetLanguage,
+      sourceLanguage: source,
+      sourceContentVersion,
+      urgencyScore,
       durationMs: Date.now() - started,
     },
   };

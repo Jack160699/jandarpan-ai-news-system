@@ -22,7 +22,13 @@ import type {
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
 import {
+  computeSourceContentVersion,
+  resolveTranslationUrgencyScore,
+  withSourceContentVersion,
+} from "@/lib/i18n/multilingual/translation-contract";
+import {
   adaptiveTranslationBodySlice,
+  classifyTranslationBodyTierFromText,
   translationMaxTokens,
 } from "@/lib/observability/openai-cost/adaptive-tokens";
 import {
@@ -74,12 +80,15 @@ export async function translateArticleBundle(input: {
   sourceLanguage: NewsroomLanguage;
   targetLanguage: NewsroomLanguage;
   articleId?: string;
+  /** Intended: news_events.urgency_score; resolved via resolveTranslationUrgencyScore */
+  urgencyScore?: number | null;
+  sourceContentVersion?: string;
 }): Promise<ArticleLocaleBundle | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
   if (input.sourceLanguage === input.targetLanguage) {
     const mins = estimateMinutes(input.article_body);
-    return {
+    const sameLang: ArticleLocaleBundle = {
       headline: input.headline,
       summary: input.summary,
       article_body: input.article_body,
@@ -90,6 +99,9 @@ export async function translateArticleBundle(input: {
       translated_at: new Date().toISOString(),
       tone_profile: getRegionalToneProfile(input.targetLanguage).id,
     };
+    return input.sourceContentVersion
+      ? withSourceContentVersion(sameLang, input.sourceContentVersion)
+      : sameLang;
   }
 
   const system = buildToneSystemPrompt(
@@ -97,10 +109,23 @@ export async function translateArticleBundle(input: {
     input.sourceLanguage
   );
 
-  const bodySlice = adaptiveTranslationBodySlice(input.article_body);
+  // Always bind urgencyScore before adaptive helpers — production previously
+  // failed with ReferenceError when a bare identifier was passed undeclared.
+  const urgencyScore = resolveTranslationUrgencyScore({
+    payloadUrgency: input.urgencyScore,
+  });
+  const bodySlice = adaptiveTranslationBodySlice(
+    input.article_body,
+    urgencyScore
+  );
+  const bodyTier = classifyTranslationBodyTierFromText(
+    input.article_body,
+    urgencyScore
+  );
   const maxTokens = translationMaxTokens({
     bodyChars: bodySlice.length,
     targetLanguage: input.targetLanguage,
+    tier: bodyTier,
   });
 
   const userContent = `Translate this news article JSON fields into the target language.
@@ -140,7 +165,7 @@ Return JSON only:
       if (headline && summary) {
         const article_body = parsed.article_body?.trim() || input.article_body;
         const mins = estimateMinutes(article_body);
-        return {
+        const cachedBundle: ArticleLocaleBundle = {
           headline,
           summary,
           article_body,
@@ -154,6 +179,9 @@ Return JSON only:
           model: process.env.NEWSROOM_TRANSLATION_MODEL?.trim() || "gpt-4o-mini",
           tone_profile: getRegionalToneProfile(input.targetLanguage).id,
         };
+        return input.sourceContentVersion
+          ? withSourceContentVersion(cachedBundle, input.sourceContentVersion)
+          : cachedBundle;
       }
     } catch {
       /* cache parse failed — fall through */
@@ -251,7 +279,7 @@ Return JSON only:
       ? parsed.tags.map((t) => String(t).trim()).filter(Boolean)
       : input.tags;
 
-    return {
+    const translated: ArticleLocaleBundle = {
       headline,
       summary,
       article_body,
@@ -263,6 +291,9 @@ Return JSON only:
       model: body.model,
       tone_profile: getRegionalToneProfile(input.targetLanguage).id,
     };
+    return input.sourceContentVersion
+      ? withSourceContentVersion(translated, input.sourceContentVersion)
+      : translated;
   } catch {
     return null;
   }
@@ -270,7 +301,11 @@ Return JSON only:
 
 export async function translateGeneratedArticle(
   row: GeneratedArticleRow,
-  targets?: NewsroomLanguage[]
+  targets?: NewsroomLanguage[],
+  options?: {
+    urgencyScore?: number | null;
+    sourceContentVersion?: string;
+  }
 ): Promise<TranslationJobResult[]> {
   const source = normalizeArticleLanguage(row.language);
   const langs = (targets ?? parseTranslationTargets()).filter(
@@ -282,6 +317,12 @@ export async function translateGeneratedArticle(
     row.editorial_metadata,
     row.translations as ArticleTranslations | null
   );
+  const urgencyScore = resolveTranslationUrgencyScore({
+    payloadUrgency: options?.urgencyScore,
+    editorialMetadata: row.editorial_metadata,
+  });
+  const sourceContentVersion =
+    options?.sourceContentVersion ?? computeSourceContentVersion(row);
 
   for (const lang of langs) {
     const bundle = await translateArticleBundle({
@@ -294,6 +335,8 @@ export async function translateGeneratedArticle(
       sourceLanguage: source,
       targetLanguage: lang,
       articleId: row.id,
+      urgencyScore,
+      sourceContentVersion,
     });
 
     if (!bundle) {

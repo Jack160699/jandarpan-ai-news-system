@@ -180,14 +180,14 @@ describe("classifyDeadLetterEntry", () => {
     expect(c.resolution).toBe("retryable");
   });
 
-  it("requires code repair for urgencyScore bug", () => {
+  it("marks urgencyScore DLQ as fixed by Phase 4 translation repair", () => {
     const c = classifyDeadLetterEntry({
       id: "dlq-3",
       jobType: "translate_article",
       lastError: "urgencyScore is not defined",
       hasActiveDuplicate: false,
     });
-    expect(c.resolution).toBe("requires_code_repair");
+    expect(c.resolution).toBe("fixed_by_new_architecture");
   });
 });
 

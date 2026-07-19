@@ -292,8 +292,8 @@ export function classifyDeadLetterEntry(input: {
       id: input.id,
       jobType: input.jobType,
       lastError: input.lastError,
-      resolution: "requires_code_repair",
-      reasons: ["translate_urgencyScore_bug"],
+      resolution: "fixed_by_new_architecture",
+      reasons: ["translate_urgency_wired_phase4"],
       action: "annotate_dlq",
     };
   }

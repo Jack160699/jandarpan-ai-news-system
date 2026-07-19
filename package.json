@@ -29,6 +29,8 @@
     "ops:editorial-backlog": "npx tsx scripts/editorial-backlog-recovery.ts",
     "ops:editorial-backlog-audit": "npx tsx scripts/editorial-backlog-recovery.ts audit",
     "ops:editorial-backlog-retry": "npx tsx scripts/editorial-backlog-recovery.ts retry",
+    "ops:translation-recovery": "npx tsx scripts/translation-recovery.ts",
+    "ops:translation-coverage": "npx tsx scripts/translation-recovery.ts --coverage-only",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {
