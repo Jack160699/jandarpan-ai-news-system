@@ -26,6 +26,9 @@
     "ops:queue-reset-audit": "npx tsx scripts/production-queue-reset.ts --audit",
     "ops:dead-letters": "npx tsx scripts/dead-letter-remediation.ts --execute",
     "ops:dead-letters-audit": "npx tsx scripts/dead-letter-remediation.ts --dry-run",
+    "ops:editorial-backlog": "npx tsx scripts/editorial-backlog-recovery.ts",
+    "ops:editorial-backlog-audit": "npx tsx scripts/editorial-backlog-recovery.ts audit",
+    "ops:editorial-backlog-retry": "npx tsx scripts/editorial-backlog-recovery.ts retry",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {

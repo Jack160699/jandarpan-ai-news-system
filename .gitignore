@@ -43,4 +43,5 @@ next-env.d.ts
 
 .vercel
 
-.vercel
+# Phase 3 recovery CLI runtime artifacts
+/docs/audits/production-recovery/logs/

@@ -1,0 +1,8 @@
+job_type,pending_total,stuck_gt_30min,stuck_gt_2h,stuck_gt_12h,oldest_pending_ist,max_attempts,note
+translate_article,51,51,51,12,2026-07-17 11:14,0,"blocked by code bug urgencyScore is not defined"
+intelligence_snapshot,50,49,46,25,2026-07-17 10:46,3,"heavy worker times out under orchestrate budget"
+embed_signals,40,39,36,16,2026-07-17 17:16,3,"embeddings backlog; times out"
+event_cluster,36,35,32,12,2026-07-18 16:45,1,"clustering backlog"
+analytics_aggregate,35,34,31,11,2026-07-18 11:16,1,"analytics rollup backlog"
+intelligence_cluster,34,33,30,10,2026-07-18 17:15,1,"clustering backlog"
+editorial_generate,18,17,14,0,2026-07-19 09:15,0,"article generation backlog (newer, <12h)"

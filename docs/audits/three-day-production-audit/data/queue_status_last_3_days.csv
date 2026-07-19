@@ -1,0 +1,9 @@
+queue_job_type,pending,dead,completed_total,runs_window,ok_window,fail_window,fail_reason,oldest_pending_ist,success_rate_window
+editorial_generate,18,0,295,81,72,9,job_timeout,2026-07-19 09:15,88.9%
+embed_signals,40,0,289,166,122,44,job_timeout,2026-07-17 17:16,73.5%
+event_cluster,36,0,332,133,124,9,job_timeout,2026-07-18 16:45,93.2%
+intelligence_cluster,34,0,302,129,126,3,job_timeout,2026-07-18 17:15,97.7%
+intelligence_snapshot,50,2,357,181,115,66,job_timeout,2026-07-17 10:46,63.5%
+analytics_aggregate,35,0,335,133,127,6,job_timeout,2026-07-18 11:16,95.5%
+translate_article,51,0,6,26,0,26,"ReferenceError: urgencyScore is not defined",2026-07-17 11:14,0.0%
+translation_batch,0,0,4,0,0,0,,,n/a
