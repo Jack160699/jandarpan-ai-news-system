@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
-import { ADMIN_WORKSPACES } from "@/lib/admin-platform/workspaces";
+import {
+  ADMIN_WORKSPACES,
+  workspacesForRole,
+} from "@/lib/admin-platform/workspaces";
+import { canAccessAdminRoute, isSuperAdmin } from "@/lib/newsroom-auth/rbac";
+import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
+import type { DashboardRole } from "@/lib/saas-auth/types";
 
 type CommandItem = {
   id: string;
@@ -14,19 +20,30 @@ type CommandItem = {
 
 const ACTIONS: CommandItem[] = [
   { id: "a-stories", label: "Open story queue", href: "/admin/stories", group: "Actions" },
+  { id: "a-editor", label: "Open editor", href: "/admin/editor", group: "Actions" },
   { id: "a-health", label: "Open platform health", href: "/admin/health", group: "Actions" },
-  { id: "a-gsc", label: "Open Search Console", href: "/admin/seo/search-console", group: "Actions" },
+  { id: "a-gsc", label: "Open SEO Hub", href: "/admin/seo/search-console", group: "Actions" },
   { id: "a-auto", label: "Open Autonomous SEO", href: "/admin/seo/autonomous", group: "Actions" },
   { id: "a-costs", label: "Open AI costs", href: "/admin/executive", group: "Actions" },
+  { id: "a-sources", label: "Open sources", href: "/admin/sources", group: "Actions" },
+  { id: "a-districts", label: "Open districts", href: "/admin/districts", group: "Actions" },
+  { id: "a-settings", label: "Open settings", href: "/admin/settings", group: "Actions" },
+  { id: "a-team", label: "Open team", href: "/admin/team", group: "Actions" },
 ];
 
 type CommandMenuProps = {
   open: boolean;
   onClose: () => void;
   initialQuery?: string;
+  role?: DashboardRole | string | null;
 };
 
-export function CommandMenu({ open, onClose, initialQuery = "" }: CommandMenuProps) {
+export function CommandMenu({
+  open,
+  onClose,
+  initialQuery = "",
+  role = null,
+}: CommandMenuProps) {
   const router = useRouter();
   const [q, setQ] = useState(initialQuery);
 
@@ -44,9 +61,23 @@ export function CommandMenu({ open, onClose, initialQuery = "" }: CommandMenuPro
   }, [open, onClose]);
 
   const items = useMemo(() => {
+    const canonical = role ? normalizeDashboardRole(String(role)) : null;
+    const workspaces = canonical
+      ? workspacesForRole(canonical)
+      : ADMIN_WORKSPACES;
+
     const routes: CommandItem[] = [];
-    for (const ws of ADMIN_WORKSPACES) {
+    for (const ws of workspaces) {
       for (const item of ws.items) {
+        if (canonical) {
+          if (
+            (item.href === "/admin/team" || item.href === "/admin/schema") &&
+            !isSuperAdmin(canonical)
+          ) {
+            continue;
+          }
+          if (!canAccessAdminRoute(canonical, item.href)) continue;
+        }
         routes.push({
           id: item.href,
           label: item.label,
@@ -55,9 +86,16 @@ export function CommandMenu({ open, onClose, initialQuery = "" }: CommandMenuPro
         });
       }
     }
-    const all = [...ACTIONS, ...routes];
+
+    const actions = ACTIONS.filter((a) => {
+      if (!canonical) return true;
+      if (a.href === "/admin/team" && !isSuperAdmin(canonical)) return false;
+      return canAccessAdminRoute(canonical, a.href);
+    });
+
+    const all = [...actions, ...routes];
     const needle = q.trim().toLowerCase();
-    if (!needle) return all.slice(0, 24);
+    if (!needle) return all.slice(0, 28);
     return all
       .filter(
         (i) =>
@@ -65,8 +103,8 @@ export function CommandMenu({ open, onClose, initialQuery = "" }: CommandMenuPro
           i.href.toLowerCase().includes(needle) ||
           i.group.toLowerCase().includes(needle)
       )
-      .slice(0, 24);
-  }, [q]);
+      .slice(0, 28);
+  }, [q, role]);
 
   if (!open) return null;
 
@@ -83,7 +121,7 @@ export function CommandMenu({ open, onClose, initialQuery = "" }: CommandMenuPro
           <input
             autoFocus
             className="av3-cmd__input"
-            placeholder="Search routes, stories, actions…"
+            placeholder="Search routes, stories, settings, actions…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => {
@@ -104,7 +142,7 @@ export function CommandMenu({ open, onClose, initialQuery = "" }: CommandMenuPro
         </header>
         <ul className="av3-cmd__list">
           {items.map((item) => (
-            <li key={item.id}>
+            <li key={`${item.group}-${item.id}`}>
               <button
                 type="button"
                 className="av3-cmd__item"

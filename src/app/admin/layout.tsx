@@ -27,7 +27,7 @@ import "@/styles/admin-tokens.css";
 import "@/styles/admin-newsroom.css";
 import "@/styles/admin-v2.css";
 import "@/styles/admin-v3.css";
-import "@/styles/platform-settings.css";
+import "@/styles/admin-v3-editor.css";
 
 export const metadata: Metadata = {
   title: "Newsroom Admin",

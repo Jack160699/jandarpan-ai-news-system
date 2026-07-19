@@ -1,0 +1,22 @@
+/* Phase 4 — dense editor content + settings icon (scoped Admin V3) */
+.av3-content--dense {
+  padding-top: 0;
+  padding-inline: 0;
+  max-width: none;
+}
+.av3-content--dense .jd-editor-page {
+  margin: 0;
+  min-height: calc(100dvh - var(--av3-topbar, 56px));
+}
+.av3-settings-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--anr-border);
+  background: var(--anr-surface-2);
+  color: var(--anr-text);
+  flex-shrink: 0;
+}

@@ -25,8 +25,11 @@ import { useHydrationSafe } from "@/hooks/useHydrationSafe";
 import { resetAdminQueryClient } from "@/lib/query/query-client";
 import { JAN_DARPAN_BRAND_ASSETS } from "@/lib/brand/assets";
 import {
+  moreToolsLabel,
+  primaryNavItems,
   primaryWorkspacesForRole,
   resolveWorkspaceFromPath,
+  secondaryNavItems,
   secondaryWorkspacesForRole,
   type AdminWorkspaceId,
 } from "@/lib/admin-platform/workspaces";
@@ -36,7 +39,7 @@ import { hasResolvedRole } from "@/lib/auth/admin-permissions";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
 
 const COLLAPSE_KEY = "jd-admin-sidebar-collapsed";
-const MOBILE_PRIMARY_ROUTE_COUNT = 5;
+const DESKTOP_MIN_PX = 1200;
 
 type AdminShellProps = {
   title: string;
@@ -70,6 +73,7 @@ export function AdminShell({
   const [statusOpen, setStatusOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [showMoreRoutes, setShowMoreRoutes] = useState(false);
+  const [desktopViewport, setDesktopViewport] = useState(true);
   const [localSearch] = useState("");
   const statusWrapRef = useRef<HTMLDivElement>(null);
   const headerAccountRef = useRef<HTMLDivElement>(null);
@@ -87,6 +91,14 @@ export function AdminShell({
       }
     }, 0);
     return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${DESKTOP_MIN_PX}px)`);
+    const apply = () => setDesktopViewport(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
   }, []);
 
   useEffect(() => {
@@ -246,11 +258,16 @@ export function AdminShell({
     });
   }, [activeWorkspace, canonicalRole, roleResolved]);
 
-  const primaryRoutes = visibleItems.slice(0, MOBILE_PRIMARY_ROUTE_COUNT);
-  const extraRoutes = visibleItems.slice(MOBILE_PRIMARY_ROUTE_COUNT);
-  const desktopRoutes = showMoreRoutes ? visibleItems : primaryRoutes;
+  const primaryRoutes = primaryNavItems(visibleItems);
+  const extraRoutes = secondaryNavItems(visibleItems);
+  const moreLabel = moreToolsLabel(activeWorkspaceId);
+  const listedRoutes =
+    showMoreRoutes || extraRoutes.length === 0
+      ? [...primaryRoutes, ...extraRoutes]
+      : primaryRoutes;
 
-  const navCompact = collapsed && !mobileOpen;
+  const shellCollapsed = collapsed && desktopViewport && !mobileOpen;
+  const navCompact = shellCollapsed;
   const displayLabel =
     healthLoading && !health ? "Checking…" : stateLabel;
   const statusIncidents =
@@ -318,30 +335,34 @@ export function AdminShell({
           <X size={16} />
         </button>
       </header>
-      <p className="av3-meta">
-        Last checked{" "}
-        {health?.checkedAt
-          ? new Date(health.checkedAt).toLocaleString("en-IN")
-          : "—"}
+      <p className="av3-note">
+        {criticalCount} critical · {warningCount} warning
       </p>
-      <div className="av3-status-popover__counts">
-        <span>Critical: {criticalCount}</span>
-        <span>Warnings: {warningCount}</span>
-      </div>
       {statusIncidents.length > 0 ? (
-        <ul>
-          {statusIncidents.map((r) => (
-            <li key={r.id}>
-              <strong>{r.title}</strong>
-              <span>{r.detail}</span>
+        <ul className="av3-attention-list">
+          {statusIncidents.map((inc) => (
+            <li
+              key={inc.id}
+              className={`av3-attention-row av3-attention-row--${
+                inc.severity === "critical" ? "critical" : "warning"
+              }`}
+            >
+              <span>
+                <em>{inc.title}</em>
+                <strong>{inc.detail ?? inc.severity}</strong>
+              </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="av3-meta">No open health incidents.</p>
+        <p className="av3-note">No active incidents in this snapshot.</p>
       )}
-      <Link href="/admin/health" onClick={() => setStatusOpen(false)}>
-        Open Platform health
+      <Link
+        href="/admin/health"
+        className="av3-status-popover__link"
+        onClick={() => setStatusOpen(false)}
+      >
+        Open health details
       </Link>
     </div>
   );
@@ -373,9 +394,9 @@ export function AdminShell({
   return (
     <div className="anr av3" data-theme={theme}>
       <div
-        className={`av3-shell ${collapsed ? "av3-shell--collapsed" : ""} ${
+        className={`av3-shell ${shellCollapsed ? "av3-shell--collapsed" : ""} ${
           mobileOpen ? "av3-shell--drawer-open" : ""
-        }`}
+        } ${hidePageHeader ? "av3-shell--dense" : ""}`}
       >
         {mobileOpen ? (
           <button
@@ -429,7 +450,6 @@ export function AdminShell({
             {!navCompact ? <p className="av3-brand-tag">Command Centre</p> : null}
           </div>
 
-          {/* Mobile: workspace cards */}
           <nav className="av3-drawer-workspaces av3-only-mobile" aria-label="Workspaces">
             {primaryWorkspaces.map((ws) => {
               const Icon = navIcon(ws.items[0]?.iconKey ?? "layout");
@@ -451,7 +471,6 @@ export function AdminShell({
             })}
           </nav>
 
-          {/* Desktop workspace selector */}
           {!navCompact && primaryWorkspaces.length > 1 ? (
             <div className="av3-workspace av3-only-desktop">
               <button
@@ -498,41 +517,36 @@ export function AdminShell({
               {activeWorkspace?.label ?? "Routes"}
             </p>
 
-            {(mobileOpen ? primaryRoutes : desktopRoutes).map((item) =>
+            {listedRoutes.map((item) =>
               renderRouteLink(item, { compact: navCompact })
             )}
 
-            {extraRoutes.length > 0 || (!mobileOpen && showMoreRoutes) ? (
+            {extraRoutes.length > 0 ? (
               <button
                 type="button"
                 className="av3-nav-more"
-                onClick={() => {
-                  if (mobileOpen) {
-                    openExclusive("cmd");
-                  } else {
-                    setShowMoreRoutes((v) => !v);
-                  }
-                }}
+                data-testid="admin-nav-more-tools"
+                onClick={() => setShowMoreRoutes((v) => !v)}
               >
-                {mobileOpen
-                  ? "More tools"
-                  : showMoreRoutes
-                    ? "Show fewer"
-                    : `More tools (${extraRoutes.length})`}
+                {showMoreRoutes
+                  ? "Show fewer"
+                  : `${moreLabel} (${extraRoutes.length})`}
               </button>
             ) : null}
           </nav>
 
           <div className="av3-sidebar__footer">
-            <button
-              type="button"
-              className="av3-btn av3-btn--ghost av3-sidebar__collapse av3-only-desktop"
-              onClick={toggleCollapsed}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-              {!navCompact ? <span>Collapse</span> : null}
-            </button>
+            {desktopViewport ? (
+              <button
+                type="button"
+                className="av3-btn av3-btn--ghost av3-sidebar__collapse av3-only-desktop"
+                onClick={toggleCollapsed}
+                aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+                {!navCompact ? <span>Collapse</span> : null}
+              </button>
+            ) : null}
 
             <div className="av3-sidebar__user-wrap">
               <button
@@ -680,7 +694,11 @@ export function AdminShell({
             </header>
           ) : null}
 
-          <section className="av3-content av3-page-enter">
+          <section
+            className={`av3-content av3-page-enter ${
+              hidePageHeader ? "av3-content--dense" : ""
+            }`}
+          >
             <AdminPageErrorBoundary>{children}</AdminPageErrorBoundary>
           </section>
         </main>
@@ -690,6 +708,7 @@ export function AdminShell({
         open={cmdOpen}
         onClose={() => setCmdOpen(false)}
         initialQuery={search}
+        role={canonicalRole}
       />
       {toast ? (
         <div className="av3-toast" role="status">

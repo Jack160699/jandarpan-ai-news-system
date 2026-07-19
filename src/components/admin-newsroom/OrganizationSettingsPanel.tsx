@@ -140,7 +140,7 @@ export function OrganizationSettingsPanel() {
     <div className="anr-panel space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <span className="anr-ps-card__icon" aria-hidden>
+          <span className="av3-settings-icon" aria-hidden>
             <Building2 size={18} />
           </span>
           <div>

@@ -1,7 +1,8 @@
 /**
  * Admin command-centre information architecture.
- * Primary: Command Centre, Editorial, Business, Platform.
- * Secondary: Team, Settings (permission-gated).
+ * Primary workspaces: Command Centre, Editorial, Business, Platform.
+ * Account menu only: Team, Settings (+ Sign out in shell).
+ * Nav items use tier primary | secondary (More tools).
  */
 
 import type { DashboardPermission, DashboardRole } from "@/lib/saas-auth/types";
@@ -16,11 +17,15 @@ export type AdminWorkspaceId =
   | "team"
   | "settings";
 
+export type AdminNavTier = "primary" | "secondary";
+
 export type AdminNavItem = {
   href: string;
   label: string;
   hint?: string;
   iconKey: string;
+  /** Primary sidebar routes vs More tools overflow */
+  tier?: AdminNavTier;
 };
 
 export type AdminWorkspace = {
@@ -42,8 +47,12 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
     permission: "analytics:read",
     primary: true,
     items: [
-      { href: "/admin/overview", label: "Command centre", iconKey: "layout" },
-      { href: "/admin/executive", label: "Costs & AI spend", iconKey: "landmark" },
+      {
+        href: "/admin/overview",
+        label: "Command centre",
+        iconKey: "layout",
+        tier: "primary",
+      },
     ],
   },
   {
@@ -54,20 +63,90 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
     permission: "content:read",
     primary: true,
     items: [
-      { href: "/admin/editorial", label: "Editorial home", iconKey: "layout" },
-      { href: "/admin/stories", label: "Story queue", iconKey: "book" },
-      { href: "/admin/articles", label: "All stories", iconKey: "file" },
-      { href: "/admin/editor", label: "Editor", iconKey: "pen" },
-      { href: "/admin/workflow", label: "Workflow", iconKey: "git" },
-      { href: "/admin/live-wire", label: "Breaking & live", iconKey: "activity" },
-      { href: "/admin/sources", label: "Sources", iconKey: "radio" },
-      { href: "/admin/districts", label: "Districts", iconKey: "compass" },
-      { href: "/admin/topics", label: "Categories", iconKey: "sparkles" },
-      { href: "/admin/images", label: "Images & media", iconKey: "image" },
-      { href: "/admin/media", label: "Media library", iconKey: "images" },
-      { href: "/admin/collaboration", label: "Collaboration", iconKey: "messages" },
-      { href: "/admin/intelligence", label: "Editorial intelligence", iconKey: "brain" },
-      { href: "/admin/ai-copilot", label: "AI Copilot", iconKey: "bot" },
+      {
+        href: "/admin/editorial",
+        label: "Editorial Home",
+        iconKey: "layout",
+        tier: "primary",
+      },
+      {
+        href: "/admin/stories",
+        label: "Story Queue",
+        iconKey: "book",
+        tier: "primary",
+      },
+      {
+        href: "/admin/articles",
+        label: "All Stories",
+        iconKey: "file",
+        tier: "primary",
+      },
+      {
+        href: "/admin/editor",
+        label: "Editor",
+        iconKey: "pen",
+        tier: "primary",
+      },
+      {
+        href: "/admin/live-wire",
+        label: "Breaking & Live",
+        iconKey: "activity",
+        tier: "primary",
+      },
+      {
+        href: "/admin/sources",
+        label: "Sources",
+        iconKey: "radio",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/districts",
+        label: "Districts",
+        iconKey: "compass",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/topics",
+        label: "Categories",
+        iconKey: "sparkles",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/images",
+        label: "Images & Media",
+        iconKey: "image",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/media",
+        label: "Media Library",
+        iconKey: "images",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/workflow",
+        label: "Workflow",
+        iconKey: "git",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/collaboration",
+        label: "Collaboration",
+        iconKey: "messages",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/intelligence",
+        label: "Intelligence",
+        iconKey: "brain",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/ai-copilot",
+        label: "AI Copilot",
+        iconKey: "bot",
+        tier: "secondary",
+      },
     ],
   },
   {
@@ -78,16 +157,66 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
     permission: "analytics:read",
     primary: true,
     items: [
-      { href: "/admin/business", label: "Business overview", iconKey: "chart" },
-      { href: "/admin/analytics", label: "Audience analytics", iconKey: "line" },
-      { href: "/admin/seo/search-console", label: "Search Console", iconKey: "search" },
-      { href: "/admin/seo/rankings", label: "Rankings", iconKey: "trending" },
-      { href: "/admin/seo/competitors", label: "Competitors", iconKey: "search" },
-      { href: "/admin/seo/intelligence", label: "SEO intelligence", iconKey: "brain" },
-      { href: "/admin/seo/execution", label: "SEO execution", iconKey: "wand" },
-      { href: "/admin/seo/autonomous", label: "Autonomous SEO", iconKey: "cpu" },
-      { href: "/admin/billing", label: "Revenue", iconKey: "card" },
-      { href: "/admin/executive", label: "AI costs & budgets", iconKey: "landmark" },
+      {
+        href: "/admin/business",
+        label: "Business Overview",
+        iconKey: "chart",
+        tier: "primary",
+      },
+      {
+        href: "/admin/analytics",
+        label: "Audience",
+        iconKey: "line",
+        tier: "primary",
+      },
+      {
+        href: "/admin/seo/search-console",
+        label: "SEO Hub",
+        iconKey: "search",
+        tier: "primary",
+      },
+      {
+        href: "/admin/executive",
+        label: "Costs",
+        iconKey: "landmark",
+        tier: "primary",
+      },
+      {
+        href: "/admin/seo/rankings",
+        label: "Rankings",
+        iconKey: "trending",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/seo/competitors",
+        label: "Competitors",
+        iconKey: "search",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/seo/intelligence",
+        label: "SEO Intelligence",
+        iconKey: "brain",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/seo/execution",
+        label: "SEO Execution",
+        iconKey: "wand",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/seo/autonomous",
+        label: "Autonomous SEO",
+        iconKey: "cpu",
+        tier: "secondary",
+      },
+      {
+        href: "/admin/billing",
+        label: "Revenue / Billing",
+        iconKey: "card",
+        tier: "secondary",
+      },
     ],
   },
   {
@@ -98,11 +227,36 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
     permission: "monitoring:read",
     primary: true,
     items: [
-      { href: "/admin/technical", label: "Overall health", iconKey: "heart" },
-      { href: "/admin/health", label: "Health details", iconKey: "activity" },
-      { href: "/admin/system", label: "Pipeline & workers", iconKey: "server" },
-      { href: "/admin/ingestion", label: "Ingestion", iconKey: "database" },
-      { href: "/admin/schema", label: "Database & schema", iconKey: "database" },
+      {
+        href: "/admin/technical",
+        label: "Platform Overview",
+        iconKey: "heart",
+        tier: "primary",
+      },
+      {
+        href: "/admin/health",
+        label: "Health",
+        iconKey: "activity",
+        tier: "primary",
+      },
+      {
+        href: "/admin/system",
+        label: "Pipeline",
+        iconKey: "server",
+        tier: "primary",
+      },
+      {
+        href: "/admin/ingestion",
+        label: "Ingestion",
+        iconKey: "database",
+        tier: "primary",
+      },
+      {
+        href: "/admin/schema",
+        label: "Database",
+        iconKey: "database",
+        tier: "primary",
+      },
     ],
   },
   {
@@ -112,7 +266,7 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
     homeHref: "/admin/team",
     permission: "super_admin",
     primary: false,
-    items: [{ href: "/admin/team", label: "Team & access", iconKey: "users" }],
+    items: [{ href: "/admin/team", label: "Team & access", iconKey: "users", tier: "primary" }],
   },
   {
     id: "settings",
@@ -122,11 +276,46 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
     permission: "editorial:write",
     primary: false,
     items: [
-      { href: "/admin/settings", label: "General", iconKey: "settings" },
-      { href: "/admin/settings/organization", label: "Organization", iconKey: "settings" },
+      {
+        href: "/admin/settings",
+        label: "General",
+        iconKey: "settings",
+        tier: "primary",
+      },
+      {
+        href: "/admin/settings/organization",
+        label: "Organization",
+        iconKey: "settings",
+        tier: "primary",
+      },
     ],
   },
 ];
+
+export function navItemTier(item: AdminNavItem): AdminNavTier {
+  return item.tier ?? "primary";
+}
+
+export function primaryNavItems(items: AdminNavItem[]): AdminNavItem[] {
+  return items.filter((i) => navItemTier(i) === "primary");
+}
+
+export function secondaryNavItems(items: AdminNavItem[]): AdminNavItem[] {
+  return items.filter((i) => navItemTier(i) === "secondary");
+}
+
+export function moreToolsLabel(workspaceId: AdminWorkspaceId | null | undefined): string {
+  switch (workspaceId) {
+    case "editorial":
+      return "More Editorial Tools";
+    case "business":
+      return "More Business Tools";
+    case "technical":
+      return "More Platform Tools";
+    default:
+      return "More tools";
+  }
+}
 
 export function workspaceAccessible(
   workspace: AdminWorkspace,
@@ -159,7 +348,8 @@ export function secondaryWorkspacesForRole(
 
 export function resolveWorkspaceFromPath(pathname: string): AdminWorkspaceId {
   const base = pathname.split("?")[0];
-  if (base === "/admin/overview" || base === "/admin/executive") return "overview";
+  if (base === "/admin/overview") return "overview";
+  if (base === "/admin/executive") return "business";
   if (
     base.startsWith("/admin/seo") ||
     base === "/admin/business" ||
