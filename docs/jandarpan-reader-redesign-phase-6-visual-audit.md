@@ -1,6 +1,9 @@
 # Phase 6 visual audit — Tablet & desktop editorial grid
 
 **Branch:** `feat/jandarpan-reader-design-system`  
+**Commit:** `7fcb377`  
+**Preview:** https://newspaper-motion-g2wbv0e9a-jack160699s-projects.vercel.app  
+**Branch alias:** https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app  
 **Flag:** `NEXT_PUBLIC_READER_DS=1`  
 **Breakpoints verified:** 390 · 768 · 1024 · 1280 · 1440  
 **Approved refs:** `public/design-refs/phase-6/approved-phase-6-desktop.html`  
@@ -65,4 +68,10 @@ The Plot gallery ships **mobile-only** (390×844) phones. Phase 6 encodes the **
 
 ## Preview
 
-_(filled after deploy)_
+| URL | Role |
+|-----|------|
+| https://newspaper-motion-g2wbv0e9a-jack160699s-projects.vercel.app | Phase 6 Preview (READY) |
+| https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app | Stable branch alias |
+| https://vercel.com/jack160699s-projects/newspaper-motion/7qsNB9QXESEYfpvV5gAog1cH2TMd | Inspector |
+
+Production was not promoted. Enable `NEXT_PUBLIC_READER_DS=1` on Preview to exercise DS routes.
