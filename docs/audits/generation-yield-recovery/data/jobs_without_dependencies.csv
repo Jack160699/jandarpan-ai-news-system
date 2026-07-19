@@ -1,0 +1,5 @@
+﻿note,detail
+sourceEventId_is_event_bus_id,Confirmed: payload.sourceEventId references event_bus_messages.id not news_events.id
+jobs_without_missing_news_event,0 pending editorial_generate jobs reference missing news_events (wake-up pattern)
+jobs_with_wrong_tenant,0 observed in pending sample
+relationship_table,Canonical attachment is news_events.signal_ids uuid[]; no separate event_signal link table

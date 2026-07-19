@@ -42,6 +42,14 @@ export type BatchEditorialResult = {
     confidence: number;
   } | null;
   errors: string[];
+  /** Per-reason skip tallies for generation-yield observability */
+  skipReasonCounts?: Record<string, number>;
+  candidatePool?: {
+    windowed: number;
+    resolvable: number;
+    filteredNoSignals: number;
+    selected: number;
+  };
   qualityMetrics?: {
     passRate: number;
     titleFailure: number;

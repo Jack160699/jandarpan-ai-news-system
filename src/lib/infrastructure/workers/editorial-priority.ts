@@ -45,11 +45,22 @@ export function scoreEditorialCandidate(
   score += Math.round(regional.score * 100);
 
   const ageMs = Math.max(0, nowMs - new Date(event.created_at).getTime());
+  const ageHours = ageMs / 3_600_000;
+  // Freshness boost for recent events (first ~48h).
   const freshness = Math.max(
     0,
     120 - Math.floor(ageMs / (48 * 3_600_000)) * 120
   );
   score += freshness;
+  // Steep age penalty so high-urgency orphans (missing signals) cannot starve
+  // fresh eligible events. ~200 pts per day beyond 48h.
+  if (ageHours > 48) {
+    score -= Math.floor((ageHours - 48) / 24) * 200;
+  }
+  // Hard exclusion band for auto-generation outside the live window.
+  if (!event.is_live && ageHours > 7 * 24) {
+    score -= 10_000;
+  }
 
   const geo = geoFromRecord(event);
   const district = geo.primary_district ?? event.region ?? "unknown";

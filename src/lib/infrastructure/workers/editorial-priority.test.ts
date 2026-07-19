@@ -72,4 +72,23 @@ describe("editorial-priority", () => {
     expect(priority).toBeGreaterThanOrEqual(0);
     expect(priority).toBeLessThanOrEqual(100);
   });
+
+  it("ranks fresh moderate-urgency events above month-old urgency orphans", () => {
+    const fresh = makeEvent({
+      id: "fresh",
+      urgency_score: 8,
+      created_at: new Date(Date.now() - 6 * 3_600_000).toISOString(),
+    });
+    const orphan = makeEvent({
+      id: "orphan",
+      urgency_score: 100,
+      created_at: new Date(Date.now() - 28 * 24 * 3_600_000).toISOString(),
+      signal_ids: ["deleted-signal"],
+    });
+
+    expect(scoreEditorialCandidate(fresh)).toBeGreaterThan(
+      scoreEditorialCandidate(orphan)
+    );
+    expect(selectEditorialCandidates([orphan, fresh], 1)[0].id).toBe("fresh");
+  });
 });

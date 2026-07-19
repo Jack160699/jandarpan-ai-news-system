@@ -71,6 +71,14 @@ import type {
 import { logNewsroom } from "@/lib/newsroom/logger";
 import { EDITORIAL_CAPACITY } from "@/lib/newsroom/editorial-capacity";
 import { selectEditorialCandidates } from "@/lib/infrastructure/workers/editorial-priority";
+import {
+  AUTO_GENERATION_MAX_AGE_HOURS,
+  classifyNoSignalsForEvent,
+  countFoundSignalsPerEvent,
+  filterEventsWithResolvableSignals,
+  isWithinAutoGenerationWindow,
+  uniqueSignalIds,
+} from "@/lib/news/ai/event-signal-yield";
 import { asJson } from "@/types/json";
 import { resolveEditorialTierPlan } from "@/lib/newsroom/ai-cost-tiers";
 import type {
@@ -296,6 +304,29 @@ async function loadSignalsForEvent(event: NewsEventRow): Promise<NewsSignalRow[]
   }
 
   return data ?? [];
+}
+
+async function loadExistingSignalIdSet(signalIds: string[]): Promise<Set<string>> {
+  const existing = new Set<string>();
+  if (!signalIds.length) return existing;
+
+  const supabase = createAdminServerClient();
+  const chunkSize = 100;
+  for (let i = 0; i < signalIds.length; i += chunkSize) {
+    const chunk = signalIds.slice(i, i + chunkSize);
+    const { data, error } = await supabase
+      .from("news_signals")
+      .select("id")
+      .in("id", chunk);
+    if (error) {
+      logEditorial("load_signal_id_set_error", { message: error.message });
+      continue;
+    }
+    for (const row of data ?? []) {
+      if (row.id) existing.add(row.id);
+    }
+  }
+  return existing;
 }
 
 async function loadExistingStoryIndex(): Promise<{
@@ -636,7 +667,15 @@ async function prepareCandidate(
 }> {
   const signals = await loadSignalsForEvent(event);
   if (!signals.length) {
-    return { candidate: null, skipped: true, reason: "no_signals_for_event" };
+    const classification = classifyNoSignalsForEvent({
+      event,
+      foundSignalCount: 0,
+    });
+    return {
+      candidate: null,
+      skipped: true,
+      reason: classification.reason,
+    };
   }
 
   const language = resolveLanguage(event, signals);
@@ -966,12 +1005,37 @@ export async function generateEditorialsFromEvents(options?: {
   const qualityMetrics = createGenerationQualityMetrics();
   const validationAttempts = new Map<string, number>();
 
-  const { data: events, error } = await supabase
+  // Prefer the auto-generation freshness window so high-urgency orphans with
+  // deleted signal rows cannot monopolize the candidate pool.
+  const windowStart = new Date(
+    Date.now() - AUTO_GENERATION_MAX_AGE_HOURS * 3_600_000
+  ).toISOString();
+  const fetchLimit = Math.max(limit * 40, 80);
+
+  let { data: events, error } = await supabase
     .from("news_events")
     .select("*")
+    .gte("created_at", windowStart)
     .order("urgency_score", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(limit * 20);
+    .limit(fetchLimit);
+
+  if (!error && (events?.length ?? 0) < limit * 5) {
+    const expandedStart = new Date(
+      Date.now() - AUTO_GENERATION_MAX_AGE_HOURS * 2 * 3_600_000
+    ).toISOString();
+    const expanded = await supabase
+      .from("news_events")
+      .select("*")
+      .gte("created_at", expandedStart)
+      .order("urgency_score", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(fetchLimit);
+    if (!expanded.error && expanded.data?.length) {
+      events = expanded.data;
+      error = expanded.error;
+    }
+  }
 
   if (error || !events?.length) {
     return {
@@ -987,8 +1051,33 @@ export async function generateEditorialsFromEvents(options?: {
     };
   }
 
-  const eligible = events.filter((e) => !usedEventIds.has(e.id));
+  const windowed = (events as NewsEventRow[]).filter(
+    (e) => isWithinAutoGenerationWindow(e) && !usedEventIds.has(e.id)
+  );
+
+  const existingSignalIds = await loadExistingSignalIdSet(
+    uniqueSignalIds(windowed)
+  );
+  const foundByEvent = countFoundSignalsPerEvent(windowed, existingSignalIds);
+  const resolvable = filterEventsWithResolvableSignals(windowed, foundByEvent);
+
+  const filteredNoSignals = windowed.length - resolvable.length;
+  if (filteredNoSignals > 0) {
+    logEditorial("generation_yield_filter", {
+      windowed: windowed.length,
+      resolvable: resolvable.length,
+      filteredNoSignals,
+    });
+  }
+
+  const eligible = resolvable;
   const pending = selectEditorialCandidates(eligible, limit);
+  const candidatePool = {
+    windowed: windowed.length,
+    resolvable: resolvable.length,
+    filteredNoSignals,
+    selected: pending.length,
+  };
 
   let published = 0;
   let rejected = 0;
@@ -1323,6 +1412,12 @@ export async function generateEditorialsFromEvents(options?: {
     );
   }
 
+  const skipReasonCounts: Record<string, number> = {};
+  for (const row of results) {
+    if (row.ok || !row.reason) continue;
+    skipReasonCounts[row.reason] = (skipReasonCounts[row.reason] ?? 0) + 1;
+  }
+
   logEditorial("batch_complete", {
     published,
     rejected,
@@ -1331,6 +1426,8 @@ export async function generateEditorialsFromEvents(options?: {
     avgConfidence,
     topStory,
     qualityPassRate: validationPassRate(qualityMetrics),
+    candidatePool,
+    skipReasonCounts,
   });
 
   return {
@@ -1342,6 +1439,8 @@ export async function generateEditorialsFromEvents(options?: {
     avgConfidence,
     topStory,
     errors,
+    skipReasonCounts,
+    candidatePool,
     qualityMetrics: {
       passRate: validationPassRate(qualityMetrics),
       titleFailure: qualityMetrics.titleFailure,

@@ -494,6 +494,8 @@ const editorialGenerate: JobHandler = async (job) => {
       repaired: result.repaired,
       skipped: result.skipped,
       errors: result.errors.slice(0, 5),
+      skipReasonCounts: result.skipReasonCounts ?? {},
+      candidatePool: result.candidatePool ?? null,
       ...(result.topStory?.storyId
         ? { generatedArticleIds: [result.topStory.storyId] }
         : {}),

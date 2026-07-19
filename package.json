@@ -29,6 +29,7 @@
     "ops:editorial-backlog": "npx tsx scripts/editorial-backlog-recovery.ts",
     "ops:editorial-backlog-audit": "npx tsx scripts/editorial-backlog-recovery.ts audit",
     "ops:editorial-backlog-retry": "npx tsx scripts/editorial-backlog-recovery.ts retry",
+    "ops:generation-yield-repair": "npx tsx scripts/generation-yield-repair.ts",
     "ops:translation-recovery": "npx tsx scripts/translation-recovery.ts",
     "ops:translation-coverage": "npx tsx scripts/translation-recovery.ts --coverage-only",
     "ops:tenant-job-repair": "npx tsx scripts/tenant-job-repair.ts",
