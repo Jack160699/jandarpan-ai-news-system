@@ -1,0 +1,113 @@
+/*
+ * Jan Darpan Reader Design System — design tokens.
+ *
+ * Scoped to `.jd-ds` so the approved navy/red/gold identity never leaks into the
+ * existing production reader UI. Values extracted verbatim from the approved
+ * design system (Jandarpan-Design-System).
+ */
+
+.jd-ds {
+  /* Colour — light */
+  --jd-navy: #0a2550;
+  --jd-navy-deep: #081b3a;
+  --jd-red: #9e1b22;
+  --jd-red-deep: #7a1319;
+  --jd-red-bright: #e05a63;
+  --jd-gold: #c19a3e;
+  --jd-gold-soft: #e7d6a4;
+  --jd-paper: #f7f4ec;
+  --jd-paper-2: #f2ede1;
+  --jd-ink: #16130d;
+  --jd-ink-2: #3f3a2e;
+  --jd-ink-3: #6a6250;
+  --jd-muted: #9a917d;
+  --jd-line: #d9d2c2;
+  --jd-line-2: #e6e0d2;
+  --jd-ok: #2f7d52;
+  --jd-amber: #c07a1e;
+
+  /* Colour — dark (applied under .jd-ds[data-theme="dark"]) */
+  --jd-d-bg: #0e1626;
+  --jd-d-surface: #16233b;
+  --jd-d-line: rgba(150, 175, 215, 0.16);
+  --jd-d-text: #e7edf6;
+  --jd-d-muted: #93a4c2;
+
+  /* Typography */
+  --jd-font-brand: "Tiro Devanagari Hindi", Georgia, serif;
+  --jd-font-serif: var(--font-hindi, "Noto Serif Devanagari"), Georgia, serif;
+  --jd-font-ui: "Mukta", system-ui, -apple-system, sans-serif;
+
+  /* Spacing scale: 2 4 8 12 14 18 24 32 */
+  --jd-s1: 2px;
+  --jd-s2: 4px;
+  --jd-s3: 8px;
+  --jd-s4: 12px;
+  --jd-gutter: 14px;
+  --jd-s5: 18px;
+  --jd-s6: 24px;
+  --jd-s7: 32px;
+
+  /* Radii + touch */
+  --jd-radius: 2px;
+  --jd-radius-card: 8px;
+  --jd-touch: 44px;
+
+  color: var(--jd-ink);
+  background: var(--jd-paper);
+  font-family: var(--jd-font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+.jd-ds[data-theme="dark"] {
+  --jd-paper: var(--jd-d-bg);
+  --jd-paper-2: var(--jd-d-surface);
+  --jd-ink: var(--jd-d-text);
+  --jd-ink-2: var(--jd-d-text);
+  --jd-ink-3: var(--jd-d-muted);
+  --jd-muted: var(--jd-d-muted);
+  --jd-line: var(--jd-d-line);
+  --jd-line-2: var(--jd-d-line);
+  --jd-red: var(--jd-red-bright);
+  --jd-gold: var(--jd-gold-soft);
+}
+
+/* Font helpers */
+.jd-ds .jd-brand {
+  font-family: var(--jd-font-brand);
+}
+.jd-ds .jd-serif {
+  font-family: var(--jd-font-serif);
+}
+.jd-ds .jd-ui {
+  font-family: var(--jd-font-ui);
+}
+
+/* Selection + links */
+.jd-ds ::selection {
+  background: var(--jd-gold);
+  color: #fff;
+}
+.jd-ds a {
+  color: var(--jd-red);
+  text-decoration: none;
+}
+.jd-ds a:hover {
+  color: var(--jd-red-deep);
+}
+
+/* Data-saving mode: suppress heavy imagery, keep layout stable */
+.jd-ds[data-saver="1"] .jd-img-media {
+  display: none;
+}
+.jd-ds[data-saver="1"] .jd-img {
+  background: var(--jd-paper-2);
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .jd-ds * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

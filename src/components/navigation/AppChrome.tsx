@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { AdSlot } from "@/components/monetization/AdSlot";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SkipLink } from "@/components/ui/SkipLink";
@@ -48,6 +49,12 @@ type AppChromeProps = {
 };
 
 const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library"];
+
+/**
+ * Reader Design System routes render their own masthead + bottom navigation,
+ * so they opt out of the legacy app chrome entirely (flag-gated).
+ */
+const READER_DS_ROUTES = ["/"];
 
 function ShortsLanguageShell({ children }: AppChromeProps) {
   const { contentLocked } = useLanguage();
@@ -102,7 +109,10 @@ export function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname();
   const minimal = MINIMAL_CHROME_PREFIXES.some((p) => pathname.startsWith(p));
 
-  if (minimal) {
+  if (
+    minimal ||
+    (isReaderDesignSystemEnabled() && READER_DS_ROUTES.includes(pathname))
+  ) {
     return <>{children}</>;
   }
 
