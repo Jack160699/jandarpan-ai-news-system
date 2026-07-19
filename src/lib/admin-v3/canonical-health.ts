@@ -3,6 +3,13 @@
  * Header, Command Centre, bell, and Platform Health must share this model.
  */
 
+import {
+  computeCanonicalScore,
+  gradeForScore,
+  type SubsystemId,
+  type SubsystemStates,
+} from "@/lib/admin-v3/health-scoring";
+
 export type CanonicalHealthState =
   | "healthy"
   | "warning"
@@ -95,22 +102,100 @@ function isProbeTimeoutCheck(c: Record<string, unknown>): boolean {
   );
 }
 
-function estimateScoreFromState(state: CanonicalHealthState): {
-  score: number;
-  grade: string;
-} {
-  switch (state) {
-    case "healthy":
-      return { score: 92, grade: "A" };
-    case "warning":
-      return { score: 78, grade: "B" };
-    case "degraded":
-      return { score: 62, grade: "C" };
-    case "critical":
-      return { score: 28, grade: "F" };
-    default:
-      return { score: 50, grade: "D" };
+/**
+ * Cron-job criticality. A single ingestion/optional cron hard-failure must not
+ * escalate the whole platform to Critical — only core publishing crons do.
+ */
+const CORE_CRON_JOBS = new Set(["orchestrate", "edition-publish"]);
+const INGESTION_CRON_JOBS = new Set(["fetch-news"]);
+
+function cronJobCriticality(job: string): "core" | "ingestion" | "optional" {
+  const j = job.toLowerCase();
+  if (CORE_CRON_JOBS.has(j)) return "core";
+  if (INGESTION_CRON_JOBS.has(j)) return "ingestion";
+  return "optional";
+}
+
+/** Non-alarming incident language for cron outcomes. */
+function describeCronIncident(
+  job: string,
+  input: { failed: boolean; degraded: boolean }
+): { title: string; detail: string } {
+  const criticality = cronJobCriticality(job);
+  if (criticality === "ingestion") {
+    if (input.failed) {
+      return {
+        title: "News ingestion failed",
+        detail:
+          "All news source families failed or persistence failed on the last run.",
+      };
+    }
+    return {
+      title: "News ingestion degraded",
+      detail:
+        "Fallback providers continued; some optional sources degraded on the last run.",
+    };
   }
+
+  if (input.failed) {
+    return {
+      title: `Cron failed: ${job}`,
+      detail: "Last scheduled run reported a hard failure.",
+    };
+  }
+  return {
+    title: `Cron degraded: ${job}`,
+    detail: "Last scheduled run completed with tolerated degradation.",
+  };
+}
+
+/**
+ * Map an incident reason to the subsystem it affects, for weighted scoring.
+ */
+function subsystemForReason(reason: CanonicalHealthReason): SubsystemId {
+  const family = reason.incidentFamily ?? "";
+  const hay = `${reason.id} ${reason.title} ${reason.detail}`.toLowerCase();
+
+  if (family.startsWith("provider-quota") || hay.includes("gnews")) return "external";
+  if (family === "translation-backlog" || hay.includes("translation")) return "translation";
+  if (family === "database-performance" || hay.includes("database") || hay.includes("supabase")) {
+    return "database";
+  }
+  if (reason.id.startsWith("cron-fail-")) {
+    const job = reason.id.slice("cron-fail-".length).split("-")[0] ?? "";
+    const crit = cronJobCriticality(job);
+    if (crit === "ingestion") return "ingestion";
+    if (crit === "core") return "publishing";
+    return "seo";
+  }
+  if (family === "cron-execution" || reason.id === "incident-cron-execution") {
+    return "ingestion";
+  }
+  if (hay.includes("homepage") || hay.includes("website")) return "website";
+  if (hay.includes("queue") || hay.includes("publish")) return "publishing";
+  if (hay.includes("editorial") || hay.includes("generation")) return "editorial";
+  if (hay.includes("openai") || hay.includes("ai provider") || hay.includes("enrich")) {
+    return "ai";
+  }
+  if (hay.includes("image")) return "images";
+  if (hay.includes("seo") || hay.includes("sitemap") || hay.includes("search console")) {
+    return "seo";
+  }
+  if (hay.includes("ingest")) return "ingestion";
+  // Default unknown incidents to database (a core weighted subsystem) so they
+  // are neither ignored nor allowed to masquerade as an optional provider.
+  return "database";
+}
+
+function deriveSubsystemStates(
+  reasons: CanonicalHealthReason[]
+): SubsystemStates {
+  const states: SubsystemStates = {};
+  for (const reason of reasons) {
+    const sub = subsystemForReason(reason);
+    states[sub] = worse(states[sub] ?? "healthy", reason.severity);
+  }
+  return states;
 }
 
 function asRecord(v: unknown): Record<string, unknown> {
@@ -320,16 +405,34 @@ export function deriveCanonicalHealth(payload: unknown): CanonicalHealthSnapshot
   const jobs = Array.isArray(cron.jobs) ? cron.jobs : [];
   for (const raw of jobs.slice(0, 12)) {
     const j = asRecord(raw);
-    if (j.ok === false) {
-      state = worse(state, "critical");
-      reasons.push({
-        id: `cron-fail-${String(j.job)}-${String(j.startedAt)}`,
-        severity: "critical",
-        title: `Cron failed: ${String(j.job)}`,
-        detail: String(j.startedAt ?? "Recent run failed"),
-        href: "/admin/health",
-      });
-    }
+    const job = String(j.job ?? "");
+    const jobFailed = j.ok === false;
+    const jobDegraded = j.degraded === true;
+    if (!jobFailed && !jobDegraded) continue;
+
+    // Criticality × outcome matrix (replaces the blanket "any failed cron ⇒
+    // critical" rule). A core publishing cron hard-failure is critical; a single
+    // ingestion/optional cron failure or any degraded run is degraded.
+    const criticality = cronJobCriticality(job);
+    const severity: CanonicalHealthState = jobFailed
+      ? criticality === "core"
+        ? "critical"
+        : "degraded"
+      : "degraded";
+
+    state = worse(state, severity);
+    const lang = describeCronIncident(job, {
+      failed: jobFailed,
+      degraded: jobDegraded,
+    });
+    reasons.push({
+      id: `cron-fail-${job}-${String(j.startedAt)}`,
+      incidentFamily: CRON_EXECUTION_FAMILY,
+      severity,
+      title: lang.title,
+      detail: lang.detail || String(j.startedAt ?? "Recent run"),
+      href: "/admin/health",
+    });
   }
 
   const aggregate = String(data.status ?? "");
@@ -362,12 +465,14 @@ export function deriveCanonicalHealth(payload: unknown): CanonicalHealthSnapshot
     state = worse(state, "warning");
   }
 
-  const estimate = estimateScoreFromState(state);
-  // Prefer real stability score when provided; never let a synthetic "healthy"
-  // score override a worse derived state (callers must pass real scores only
-  // from heavy diagnostics — summary path may omit score).
-  const score = Number.isFinite(providedScore) ? providedScore : estimate.score;
-  const grade = providedGrade ?? estimate.grade;
+  // Deterministic weighted score from per-subsystem states — no all-or-nothing
+  // snapping. A single optional-provider failure can no longer collapse the
+  // score. Prefer a real stability score from heavy diagnostics when provided.
+  const canonical = computeCanonicalScore(deriveSubsystemStates(unique));
+  const score = Number.isFinite(providedScore) ? providedScore : canonical.score;
+  const grade =
+    providedGrade ??
+    (Number.isFinite(providedScore) ? gradeForScore(providedScore) : canonical.grade);
 
   const labelMap: Record<CanonicalHealthState, string> = {
     healthy: "Production · Healthy",

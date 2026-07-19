@@ -20,6 +20,11 @@ import {
   logIngestSuccess,
 } from "@/lib/news/pipeline/ingest-logger";
 import { runScalableIngestion } from "@/lib/news/pipeline/scalable-ingest";
+import {
+  classifyIngestionOutcome,
+  describeIngestionOutcome,
+  type IngestionOutcome,
+} from "@/lib/news/pipeline/ingestion-outcome";
 import { runWorkerEndpoint } from "@/lib/infrastructure/workers/run-guard";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -99,6 +104,7 @@ async function handleFetchNews(request: Request) {
     if (health?.pauseIngestion) {
       return {
         ok: true,
+        degraded: true,
         processed: 0,
         failed: 0,
         details: {
@@ -111,6 +117,7 @@ async function handleFetchNews(request: Request) {
 
     logIngestionAnalytics({ event: "worker_start", worker: "ingest" });
 
+    const workerStartedAt = Date.now();
     const result = await runScalableIngestion(deadline);
     const providerCount = result.completedProviders.length;
     const quota = detectQuotaStatus(result.errors);
@@ -119,11 +126,34 @@ async function handleFetchNews(request: Request) {
       await revalidateNewsroomCaches();
     }
 
+    // Canonical ingestion outcome — the single source of truth for how this run
+    // should be classified (success | degraded | failed). Soft provider errors
+    // never fail the run on their own.
+    const outcome = classifyIngestionOutcome({
+      fetched: result.totalFetched,
+      inserted: result.inserted,
+      signalsInserted: result.signalsInserted,
+      duplicates: result.skippedDuplicates,
+      rejected: result.failedValidation,
+      queuedForAI: result.queuedForAI,
+      completedProviders: result.completedProviders,
+      skippedProviders: result.skippedProviders,
+      errors: result.errors,
+      timedOutSafely: result.timedOutSafely,
+      // A completed result object means the persistence pipeline ran; hard DB
+      // failures throw and are handled by the catch branch below.
+      persistenceSucceeded: true,
+      startedAt: workerStartedAt,
+      completedAt: Date.now(),
+    });
+
     return {
-      ok: result.ok,
+      ok: outcome.status !== "failed",
+      degraded: outcome.degraded,
       processed: result.inserted + result.signalsInserted,
-      failed: result.errors.length,
-      details: { result, providerCount, quota },
+      // Only a genuine failure counts against the worker; soft errors do not.
+      failed: outcome.status === "failed" ? 1 : 0,
+      details: { result, providerCount, quota, outcome },
     };
   });
 
@@ -146,7 +176,30 @@ async function handleFetchNews(request: Request) {
     );
   }
 
-  if (!lockResult.ok || !lockResult.details?.result) {
+  // Ingestion intentionally skipped this cycle (queue backpressure). This is a
+  // healthy protective skip, not a failure.
+  if (lockResult.details?.skipped) {
+    await recordCronRun({
+      job: "fetch-news",
+      ok: true,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs: Date.now() - startedAt,
+      degraded: true,
+    });
+    return NextResponse.json(
+      {
+        ok: true,
+        skipped: true,
+        reason: String(lockResult.details.reason ?? "skipped"),
+        durationMs: Date.now() - startedAt,
+      },
+      { headers: noStoreHeaders() }
+    );
+  }
+
+  // No result object means the worker threw before producing an outcome — a
+  // genuine infrastructure failure.
+  if (!lockResult.details?.result || !lockResult.details?.outcome) {
     const message = lockResult.reason ?? "ingest_worker_failed";
     await recordCronRun({
       job: "fetch-news",
@@ -167,22 +220,15 @@ async function handleFetchNews(request: Request) {
     >;
     const providerCount = lockResult.details.providerCount as number;
     const quota = lockResult.details.quota as ReturnType<typeof detectQuotaStatus>;
+    const outcome = lockResult.details.outcome as IngestionOutcome;
     const durationMs = Date.now() - startedAt;
+    const incident = describeIngestionOutcome(outcome);
 
-    const hasPartialSuccess =
-      result.inserted > 0 ||
-      result.signalsInserted > 0 ||
-      (result.totalFetched > 0 && providerCount > 0);
-
-    const allProvidersFailed =
-      result.totalFetched === 0 &&
-      result.inserted === 0 &&
-      providerCount === 0;
-
-    if (allProvidersFailed) {
+    // ---- GENUINE FAILURE: every source family failed / persistence failed ----
+    if (outcome.status === "failed") {
       logIngestFailure({
         articleCount: 0,
-        providerCount: 0,
+        providerCount,
         latencyMs: durationMs,
         rateLimited: quota.rateLimited,
         quotaHints: quota.quotaHints,
@@ -196,16 +242,20 @@ async function handleFetchNews(request: Request) {
         ok: false,
         startedAt: new Date(startedAt).toISOString(),
         durationMs,
-        error: "no_articles_fetched",
+        error: outcome.failureReason ?? "ingestion_failed",
       });
 
       return NextResponse.json(
         {
           ok: false,
-          error: "No articles fetched from providers",
+          status: outcome.status,
+          error: incident.title,
+          detail: incident.detail,
+          failureReason: outcome.failureReason,
           preservedExistingDb: true,
           completedProviders: result.completedProviders,
           skippedProviders: result.skippedProviders,
+          requiredProviderFailures: outcome.requiredProviderFailures,
           validationStats: result.validationStats,
           errors: result.errors,
           durationMs,
@@ -218,7 +268,9 @@ async function handleFetchNews(request: Request) {
 
     const payload = {
       ok: true as const,
-      degraded: result.errors.length > 0 || result.skippedProviders.length > 0,
+      status: outcome.status,
+      degraded: outcome.degraded,
+      incident: outcome.degraded ? incident : undefined,
       inserted: result.inserted,
       signalsInserted: result.signalsInserted,
       skippedDuplicates: result.skippedDuplicates,
@@ -271,19 +323,9 @@ async function handleFetchNews(request: Request) {
       });
     }
 
-    if (!hasPartialSuccess) {
-      logIngestFailure({
-        reason: "no_inserts_after_fetch",
-        totalFetched: result.totalFetched,
-        providerCount,
-        latencyMs: durationMs,
-        preservedExistingDb: true,
-      });
-    }
-
     await recordCronRun({
       job: "fetch-news",
-      ok: payload.ok,
+      ok: true,
       startedAt: new Date(startedAt).toISOString(),
       durationMs,
       degraded: payload.degraded,

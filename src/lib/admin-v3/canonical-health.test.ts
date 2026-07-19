@@ -72,7 +72,7 @@ describe("deriveCanonicalHealth", () => {
     expect(snap.reasons[0]?.severity).toBe("critical");
   });
 
-  it("maps failed cron job to critical", () => {
+  it("does NOT force critical for a single ingestion cron hard-failure", () => {
     const snap = deriveCanonicalHealth({
       status: "degraded",
       checks: [],
@@ -82,8 +82,57 @@ describe("deriveCanonicalHealth", () => {
       },
       launchWidgets: [],
     });
+    // Ingestion cron hard-failure is degraded, not platform-critical.
+    expect(snap.state).toBe("degraded");
+    expect(snap.criticalCount).toBe(0);
+    expect(snap.reasons.some((r) => r.title === "News ingestion failed")).toBe(true);
+  });
+
+  it("treats a degraded ingestion run (ok:true, degraded:true) as degraded, not critical", () => {
+    const snap = deriveCanonicalHealth({
+      status: "healthy",
+      checks: [],
+      cron: {
+        jobs: [
+          { job: "fetch-news", ok: true, degraded: true, startedAt: "2026-07-19T00:00:00Z" },
+        ],
+        staleJobs: [],
+      },
+      launchWidgets: [],
+    });
+    expect(snap.state).toBe("degraded");
+    expect(snap.criticalCount).toBe(0);
+    expect(snap.reasons.some((r) => r.title === "News ingestion degraded")).toBe(true);
+  });
+
+  it("maps a core publishing cron hard-failure to critical", () => {
+    const snap = deriveCanonicalHealth({
+      status: "degraded",
+      checks: [],
+      cron: {
+        jobs: [{ job: "orchestrate", ok: false, startedAt: "2026-07-19T00:00:00Z" }],
+        staleJobs: [],
+      },
+      launchWidgets: [],
+    });
     expect(snap.state).toBe("critical");
-    expect(snap.reasons.some((r) => r.id.startsWith("cron-fail-"))).toBe(true);
+    expect(snap.criticalCount).toBeGreaterThan(0);
+  });
+
+  it("keeps a real weighted score well above the old 28/F for a degraded ingestion incident", () => {
+    const snap = deriveCanonicalHealth({
+      status: "degraded",
+      checks: [],
+      cron: {
+        jobs: [
+          { job: "fetch-news", ok: true, degraded: true, startedAt: "2026-07-19T00:00:00Z" },
+        ],
+        staleJobs: [],
+      },
+      launchWidgets: [],
+    });
+    expect(snap.score ?? 0).toBeGreaterThanOrEqual(80);
+    expect(["A", "B"]).toContain(snap.grade);
   });
 
   it("exposes severity counts and top incidents", () => {

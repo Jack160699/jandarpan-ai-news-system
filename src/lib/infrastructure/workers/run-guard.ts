@@ -12,6 +12,8 @@ export type WorkerRunPayload = {
   failed: number;
   duration_ms: number;
   skipped?: boolean;
+  /** Useful work happened but with tolerated degradation (soft errors). */
+  degraded?: boolean;
   reason?: string;
   details?: Record<string, unknown>;
 };
@@ -53,6 +55,7 @@ export async function runWorkerEndpoint<T extends Record<string, unknown>>(
     processed?: number;
     failed?: number;
     ok?: boolean;
+    degraded?: boolean;
     details?: Record<string, unknown>;
   }>
 ): Promise<WorkerRunPayload> {
@@ -74,12 +77,18 @@ export async function runWorkerEndpoint<T extends Record<string, unknown>>(
     const result = await fn();
     const processed = result.processed ?? 0;
     const failed = result.failed ?? 0;
-    const ok = result.ok !== false && failed === 0;
+    // Backward-compatible ok computation: unchanged for existing callers.
+    // A worker may explicitly flag `degraded: true` to signal that its soft
+    // errors were already accounted for as tolerated degradation — in that case
+    // a non-zero `failed` count must NOT flip a useful run to a hard failure.
+    const ok =
+      result.ok !== false && (failed === 0 || result.degraded === true);
 
     return {
       ok,
       processed,
       failed,
+      degraded: result.degraded === true,
       duration_ms: Date.now() - started,
       details: {
         ...result.details,
