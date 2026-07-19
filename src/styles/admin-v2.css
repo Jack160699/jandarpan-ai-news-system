@@ -776,6 +776,10 @@
   .anr-mobile-toggle { display: inline-flex !important; }
   .anr-shell--collapsed .anr-sidebar__collapse { display: none; }
   .anr-dash-grid { grid-template-columns: 1fr; }
+}
+
+/* Login: compact single column below desktop split */
+@media (max-width: 1199px) {
   .anr-login-v2 {
     align-items: stretch;
     padding: 0;
@@ -787,7 +791,7 @@
     border: 0;
     box-shadow: none;
   }
-  .anr-login-v2__visual { display: none; }
+  .anr-login-v2__visual { display: none !important; }
   .anr-login-v2__mobile-brand {
     display: grid;
     gap: 0.35rem;
@@ -811,6 +815,9 @@
     color: #94a3b8;
     font-size: 0.86rem;
   }
+  .anr-login-v2__mobile-brand .anr-login-v2__secure {
+    margin-top: 0.35rem;
+  }
   .anr-login-v2__panel {
     align-items: stretch;
     padding: max(1rem, env(safe-area-inset-top)) 1rem max(1.25rem, env(safe-area-inset-bottom));
@@ -820,6 +827,10 @@
     box-shadow: none;
   }
   .anr-login-v2__card-head .anr-login-v2__mark { display: none; }
+}
+
+@media (min-width: 1200px) {
+  .anr-login-v2__mobile-brand { display: none !important; }
 }
 
 @media (max-width: 720px) {

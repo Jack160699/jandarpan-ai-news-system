@@ -120,7 +120,8 @@ export function AdminLoginForm() {
               priority
             />
             <h1>Command Centre</h1>
-            <p>Protected Jan Darpan admin access</p>
+            <p>Protected Jan Darpan Command Centre</p>
+            <span className="anr-login-v2__secure">Secure admin access</span>
           </div>
 
           <div className="anr-login-v2__card">

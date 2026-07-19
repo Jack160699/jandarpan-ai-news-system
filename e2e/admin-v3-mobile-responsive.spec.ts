@@ -61,7 +61,12 @@ test.describe("Admin V3 mobile login", () => {
       await expect(page.getByText(/Production incident detected/i)).toHaveCount(0);
       await expect(page.locator(".anr-login-v2__visual")).toBeHidden();
       await expect(page.locator(".anr-login-v2__mobile-brand")).toBeVisible();
-      await expect(page.getByText(/Secure admin access|Protected Jan Darpan/i).first()).toBeVisible();
+      await expect(
+        page.locator(".anr-login-v2__mobile-brand .anr-login-v2__secure")
+      ).toBeVisible();
+      await expect(
+        page.locator(".anr-login-v2__mobile-brand").getByText(/Protected Jan Darpan/i)
+      ).toBeVisible();
 
       await assertNoHorizontalOverflow(page);
       await page.screenshot({
