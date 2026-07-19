@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useMemo } from "react";
 import { PersonalizedHomepageBody } from "@/components/personalization/PersonalizedHomepageBody";
 import { HomepageStackBands } from "@/components/layout/HomepageStackBands";
@@ -18,14 +17,10 @@ import { useLanguage } from "@/providers/LanguageProvider";
 import { HomepageFooter } from "@/components/footer/HomepageFooter";
 import { HomepageSeoHub } from "@/sections/homepage/HomepageSeoHub";
 import { HomepageFeedFallback } from "@/sections/homepage/HomepageFeedFallback";
-
-const HomeExperienceV3 = dynamic(
-  () =>
-    import("@/sections/homepage/v3/HomeExperienceV3").then((m) => ({
-      default: m.HomeExperienceV3,
-    })),
-  { loading: () => null }
-);
+// Static import: this IS the default homepage body. Loading it via
+// next/dynamic with a null fallback collapsed the page during hydration on
+// slow networks — a 0.8+ CLS jump and ~19s LCP render delay on mobile.
+import { HomeExperienceV3 } from "@/sections/homepage/v3/HomeExperienceV3";
 
 type HomepageLiveViewProps = {
   feed: GeneratedHomepageFeed;
