@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AdminPageGate } from "@/components/admin-newsroom/AdminPageGate";
 import { AdminShell } from "@/components/admin-newsroom/AdminShell";
-import { PlatformSettingsDashboard } from "@/components/admin-newsroom/PlatformSettingsDashboard";
+import { Av3SettingsDashboard } from "@/components/admin-newsroom/Av3SettingsDashboard";
 
 export function PlatformSettingsPage() {
   const [search, setSearch] = useState("");
@@ -12,15 +12,12 @@ export function PlatformSettingsPage() {
     <AdminPageGate permission="editorial:write">
       <AdminShell
         title="Platform settings"
-        subtitle="AI newsroom operating system — modules, pipelines, and infrastructure."
+        subtitle="Configuration for modules, languages, editorial rules, and integrations."
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="Search modules, AI systems, pipelines…"
+        searchPlaceholder="Search settings…"
       >
-        <PlatformSettingsDashboard
-          searchQuery={search}
-          onSearchQueryChange={setSearch}
-        />
+        <Av3SettingsDashboard searchQuery={search} />
       </AdminShell>
     </AdminPageGate>
   );

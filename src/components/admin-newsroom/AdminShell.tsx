@@ -136,13 +136,15 @@ export function AdminShell({
   }, [headerAccountOpen]);
 
   useEffect(() => {
-    const locked = mobileOpen || cmdOpen || statusOpen;
+    const locked =
+      mobileOpen || cmdOpen || statusOpen || accountOpen || headerAccountOpen;
     document.body.classList.toggle("av3-body-lock", locked);
     return () => document.body.classList.remove("av3-body-lock");
-  }, [mobileOpen, cmdOpen, statusOpen]);
+  }, [mobileOpen, cmdOpen, statusOpen, accountOpen, headerAccountOpen]);
 
   useEffect(() => {
-    const anyOverlay = mobileOpen || cmdOpen || statusOpen || headerAccountOpen;
+    const anyOverlay =
+      mobileOpen || cmdOpen || statusOpen || headerAccountOpen || accountOpen;
     if (!anyOverlay) return;
 
     const alreadyMarked =
@@ -163,11 +165,28 @@ export function AdminShell({
 
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [mobileOpen, cmdOpen, statusOpen, headerAccountOpen]);
+  }, [mobileOpen, cmdOpen, statusOpen, headerAccountOpen, accountOpen]);
 
   useEffect(() => {
     setShowMoreRoutes(false);
+    setMobileOpen(false);
+    setCmdOpen(false);
+    setStatusOpen(false);
+    setAccountOpen(false);
+    setHeaderAccountOpen(false);
+    setWorkspaceOpen(false);
   }, [pathname]);
+
+  function openExclusive(
+    kind: "drawer" | "cmd" | "status" | "account" | "headerAccount" | null
+  ) {
+    setMobileOpen(kind === "drawer");
+    setCmdOpen(kind === "cmd");
+    setStatusOpen(kind === "status");
+    setAccountOpen(kind === "account");
+    setHeaderAccountOpen(kind === "headerAccount");
+    if (kind !== "drawer") setWorkspaceOpen(false);
+  }
 
   function toggleCollapsed() {
     setCollapsed((v) => {
@@ -245,10 +264,20 @@ export function AdminShell({
   const accountMenuItems = (
     <>
       <div className="av3-account-menu__head">
-        <strong>{email || "Newsroom account"}</strong>
-        <span>
-          {shortRole} · {tenantName || "desk"}
-        </span>
+        <div>
+          <strong>{email || "Newsroom account"}</strong>
+          <span>
+            {shortRole} · {tenantName || "desk"}
+          </span>
+        </div>
+        <button
+          type="button"
+          className="av3-btn av3-btn--ghost av3-only-mobile"
+          aria-label="Close account menu"
+          onClick={() => openExclusive(null)}
+        >
+          <X size={16} />
+        </button>
       </div>
       {secondaryWorkspaces.map((ws) => (
         <Link
@@ -479,8 +508,7 @@ export function AdminShell({
                 className="av3-nav-more"
                 onClick={() => {
                   if (mobileOpen) {
-                    setMobileOpen(false);
-                    setCmdOpen(true);
+                    openExclusive("cmd");
                   } else {
                     setShowMoreRoutes((v) => !v);
                   }
@@ -510,7 +538,7 @@ export function AdminShell({
               <button
                 type="button"
                 className="av3-sidebar__user"
-                onClick={() => setAccountOpen((v) => !v)}
+                onClick={() => openExclusive(accountOpen ? null : "account")}
                 aria-expanded={accountOpen}
                 title={email || "Account"}
               >
@@ -544,7 +572,7 @@ export function AdminShell({
               <button
                 type="button"
                 className="av3-btn av3-btn--ghost av3-mobile-toggle"
-                onClick={() => setMobileOpen((v) => !v)}
+                onClick={() => openExclusive(mobileOpen ? null : "drawer")}
                 aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
               >
                 {mobileOpen ? <X size={18} /> : <Menu size={18} />}
@@ -557,7 +585,7 @@ export function AdminShell({
               <button
                 type="button"
                 className="av3-search av3-search--desktop"
-                onClick={() => setCmdOpen(true)}
+                onClick={() => openExclusive("cmd")}
                 aria-label="Open command search"
               >
                 <Search size={14} aria-hidden />
@@ -570,7 +598,7 @@ export function AdminShell({
               <button
                 type="button"
                 className="av3-btn av3-btn--ghost av3-search-icon av3-only-mobile"
-                onClick={() => setCmdOpen(true)}
+                onClick={() => openExclusive("cmd")}
                 aria-label="Search"
               >
                 <Search size={18} />
@@ -581,7 +609,7 @@ export function AdminShell({
                   type="button"
                   className={`av3-env-pill av3-env-pill--${state} av3-env-pill--desktop`}
                   aria-expanded={statusOpen}
-                  onClick={() => setStatusOpen((v) => !v)}
+                  onClick={() => openExclusive(statusOpen ? null : "status")}
                   title="Canonical production health"
                 >
                   {displayLabel}
@@ -591,7 +619,7 @@ export function AdminShell({
                   className={`av3-status-dot av3-status-dot--${state} av3-only-mobile`}
                   aria-label={`Production status: ${displayLabel}`}
                   aria-expanded={statusOpen}
-                  onClick={() => setStatusOpen((v) => !v)}
+                  onClick={() => openExclusive(statusOpen ? null : "status")}
                 >
                   <span />
                 </button>
@@ -625,7 +653,9 @@ export function AdminShell({
                   className="av3-btn av3-btn--ghost"
                   aria-label="Account menu"
                   aria-expanded={headerAccountOpen}
-                  onClick={() => setHeaderAccountOpen((v) => !v)}
+                  onClick={() =>
+                    openExclusive(headerAccountOpen ? null : "headerAccount")
+                  }
                 >
                   <UserCircle2 size={20} />
                 </button>

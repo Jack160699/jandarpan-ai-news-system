@@ -1,9 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { NewsroomHealthPanel } from "@/components/admin-newsroom/NewsroomHealthStrip";
-import type { LaunchHealthWidget } from "@/lib/ops/launch-health";
-import { deriveCanonicalHealth } from "@/lib/admin-v3/canonical-health";
+import type { CanonicalHealthSnapshot } from "@/lib/admin-v3/canonical-health";
 import {
   Av3Disclosure,
   Av3HealthRow,
@@ -18,15 +18,18 @@ import {
   truncateText,
 } from "@/components/admin-v3";
 
-type HealthPayload = {
+type SourceTiming = {
+  source: string;
   ok: boolean;
+  ms: number;
+  error?: string;
+};
+
+type SummaryPayload = {
+  ok: boolean;
+  mode: "summary";
   status: string;
-  timestamp?: string;
-  stability: {
-    score: number;
-    grade: string;
-    factors: Array<{ name: string; weight: number; score: number; note?: string }>;
-  };
+  snapshot: CanonicalHealthSnapshot;
   checks: Array<{
     id: string;
     label: string;
@@ -37,9 +40,29 @@ type HealthPayload = {
   metrics: {
     memoryUsageMb: number;
     uptimeSec: number;
-    queues: { aiPending: number; editorialImagesPending: number } | null;
+    queues: { aiPending?: number; editorialImagesPending?: number } | null;
   };
   cron: { jobs: Array<{ job: string; ok: boolean; startedAt: string }>; staleJobs: string[] };
+  sources: SourceTiming[];
+  failedSources: SourceTiming[];
+  totalMs: number;
+  checkedAt: string;
+  stale?: boolean;
+  error?: string;
+};
+
+type DiagnosticsPayload = {
+  ok: boolean;
+  status: string;
+  timestamp?: string;
+  stability: {
+    score: number;
+    grade: string;
+    factors: Array<{ name: string; weight: number; score: number; note?: string }>;
+  };
+  checks: SummaryPayload["checks"];
+  metrics: SummaryPayload["metrics"] & { memoryUsageMb: number; uptimeSec: number };
+  cron: SummaryPayload["cron"];
   errors: { total: number; last24h: number; bySeverity: Record<string, number> };
   recentErrors: Array<{
     id: string;
@@ -60,117 +83,131 @@ type HealthPayload = {
       storageSuccessRate: number;
     };
     performance: { aiRecordsPerSec: number; editorialRecordsPerSec: number; bottleneck: string };
-    recentFailures: {
-      ai: Array<{ articleId: string; error: string; retryCount: number; terminal: boolean; category: string }>;
-      editorial: Array<{ articleId: string; error: string; retryCount: number; terminal: boolean; category: string }>;
-    };
   };
-  aiFinancial?: Record<string, unknown>;
-  launchWidgets?: LaunchHealthWidget[];
 };
 
-const FETCH_TIMEOUT_MS = 8000;
-const SLOW_SOURCE_MS = 3000;
+const SUMMARY_TIMEOUT_MS = 4_000;
+const DIAG_TIMEOUT_MS = 12_000;
+const CACHE_KEY = "jd-admin-health-summary-v1";
 const POLL_MS = 60_000;
 
-function launchStatusLabel(status: string): string {
-  if (status === "healthy") return "Healthy";
-  if (status === "degraded") return "Warning";
-  if (status === "unhealthy") return "Critical";
-  return status;
+function readCache(): SummaryPayload | null {
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as SummaryPayload;
+  } catch {
+    return null;
+  }
 }
 
-async function fetchHealthPayload(): Promise<{ data: HealthPayload | null; error: string | null }> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+function writeCache(payload: SummaryPayload) {
   try {
-    const res = await fetch("/api/admin/ops/health", {
-      credentials: "include",
-      signal: controller.signal,
-    });
-    const json = (await res.json()) as HealthPayload & { error?: string };
-    if (!res.ok || !json.ok) {
-      return { data: json.ok === false ? json : null, error: json.error ?? "Failed to load health data" };
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    /* ignore */
+  }
+}
+
+async function fetchJson<T>(
+  url: string,
+  timeoutMs: number
+): Promise<{ data: T | null; error: string | null }> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { credentials: "include", signal: controller.signal });
+    const json = (await res.json()) as T & { ok?: boolean; error?: string };
+    if (!res.ok || json.ok === false) {
+      return { data: null, error: json.error ?? `Failed to load ${url}` };
     }
-    return { data: json, error: null };
+    return { data: json as T, error: null };
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {
-      return { data: null, error: "Health request timed out after 8s" };
+      return { data: null, error: `Timed out after ${Math.round(timeoutMs / 1000)}s` };
     }
-    return { data: null, error: "Network error loading health dashboard" };
+    return { data: null, error: "Network error" };
   } finally {
     window.clearTimeout(timeout);
   }
 }
 
 export function HealthOperationsPanel() {
-  const [data, setData] = useState<HealthPayload | null>(null);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [slowSource, setSlowSource] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<SummaryPayload | null>(() =>
+    typeof window === "undefined" ? null : readCache()
+  );
+  const [initialLoading, setInitialLoading] = useState(!summary);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsPayload | null>(null);
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagError, setDiagError] = useState<string | null>(null);
 
-  const load = useCallback(async (isInitial: boolean) => {
-    if (isInitial) {
-      setSlowSource(false);
-      const slowTimer = window.setTimeout(() => setSlowSource(true), SLOW_SOURCE_MS);
-      try {
-        const result = await fetchHealthPayload();
-        setData(result.data);
-        setError(result.error);
-      } finally {
-        window.clearTimeout(slowTimer);
-        setInitialLoading(false);
-      }
-      return;
-    }
-
-    setRefreshing(true);
-    try {
-      const result = await fetchHealthPayload();
-      if (result.data) setData(result.data);
+  const loadSummary = useCallback(async (isInitial: boolean) => {
+    if (!isInitial) setRefreshing(true);
+    const result = await fetchJson<SummaryPayload>(
+      "/api/admin/ops/health-summary",
+      SUMMARY_TIMEOUT_MS
+    );
+    if (result.data) {
+      setSummary(result.data);
+      writeCache(result.data);
+      setError(null);
+    } else if (!summary) {
       setError(result.error);
-    } finally {
-      setRefreshing(false);
+    } else {
+      setError(result.error);
     }
+    setInitialLoading(false);
+    setRefreshing(false);
+  }, [summary]);
+
+  const loadDiagnostics = useCallback(async () => {
+    setDiagLoading(true);
+    setDiagError(null);
+    const result = await fetchJson<DiagnosticsPayload>(
+      "/api/admin/ops/health",
+      DIAG_TIMEOUT_MS
+    );
+    if (result.data) setDiagnostics(result.data);
+    else setDiagError(result.error);
+    setDiagLoading(false);
   }, []);
 
   useEffect(() => {
-    void load(true);
-    const id = window.setInterval(() => void load(false), POLL_MS);
+    void loadSummary(true);
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void loadSummary(false);
+    }, POLL_MS);
     return () => window.clearInterval(id);
-  }, [load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount + poll only
+  }, []);
 
-  if (initialLoading && !data) {
+  if (initialLoading && !summary) {
     return (
       <Av3Stack>
-        <Av3SkeletonGrid count={6} />
-        {slowSource ? (
-          <p className="av3-note av3-note--warn">Slow source: health API still responding.</p>
-        ) : null}
+        <Av3SkeletonGrid count={4} />
+        <p className="av3-note">Loading health summary…</p>
       </Av3Stack>
     );
   }
 
-  if (error && !data) {
+  if (!summary) {
     return (
       <Av3Panel title="Platform health unavailable">
-        <p className="av3-note">{error}</p>
-        <button type="button" className="anr-btn anr-btn--ghost" onClick={() => void load(true)}>
-          Retry
+        <p className="av3-note">{error ?? "Unable to load health summary."}</p>
+        <button type="button" className="anr-btn anr-btn--ghost" onClick={() => void loadSummary(true)}>
+          Retry summary
         </button>
       </Av3Panel>
     );
   }
 
-  if (!data) return null;
-
-  const snapshot = deriveCanonicalHealth(data);
-  const aiPending = data.metrics.queues?.aiPending ?? data.queueAnalytics?.ai.pending ?? null;
-  const imagePending =
-    data.metrics.queues?.editorialImagesPending ?? data.queueAnalytics?.editorial.pending ?? null;
-  const queuePending =
-    aiPending != null && imagePending != null ? aiPending + imagePending : aiPending ?? imagePending;
+  const snapshot = summary.snapshot;
+  const queues = summary.metrics.queues;
+  const aiPending = queues?.aiPending ?? null;
+  const imagePending = queues?.editorialImagesPending ?? null;
 
   return (
     <Av3Stack>
@@ -184,34 +221,81 @@ export function HealthOperationsPanel() {
         }
         meta={
           <>
-            Checked {new Date(snapshot.checkedAt).toLocaleString()}
+            Summary in {summary.totalMs}ms · Checked{" "}
+            {new Date(summary.checkedAt).toLocaleString()}
             {refreshing ? " · Refreshing…" : null}
+            {summary.stale ? " · Partial sources" : null}
           </>
         }
         action={
-          <button type="button" className="anr-btn anr-btn--ghost" onClick={() => void load(false)}>
+          <button
+            type="button"
+            className="anr-btn anr-btn--ghost"
+            onClick={() => void loadSummary(false)}
+          >
             Refresh
           </button>
         }
       />
 
+      {error ? (
+        <p className="av3-note av3-note--warn">
+          Live refresh issue: {error}. Showing last-known summary.
+        </p>
+      ) : null}
+
       <Av3ReasonList reasons={snapshot.reasons} />
 
+      {summary.failedSources.length > 0 ? (
+        <Av3Panel title="Failed sources" subtitle="Retry only these panels">
+          <ul className="av3-attention-list">
+            {summary.failedSources.map((s) => (
+              <li key={s.source} className="av3-attention-row av3-attention-row--warning">
+                <span>
+                  <em>{s.source}</em>
+                  <strong>
+                    {s.error ?? "unavailable"} · {s.ms}ms
+                  </strong>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            className="anr-btn anr-btn--ghost"
+            onClick={() => void loadSummary(false)}
+          >
+            Retry failed sources
+          </button>
+        </Av3Panel>
+      ) : null}
+
       <Av3MetricGrid>
-        <Av3Metric label="Stability score" value={data.stability.score} hint={`Grade ${data.stability.grade}`} />
-        <Av3Metric label="Errors (24h)" value={data.errors.last24h} hint={`Critical ${data.errors.bySeverity.critical ?? 0}`} />
-        <Av3Metric label="Memory" value={`${data.metrics.memoryUsageMb} MB`} hint={`Uptime ${Math.round(data.metrics.uptimeSec / 60)}m`} />
-        <Av3Metric label="Redis cache" value={data.caching.redis ? "Connected" : "Off"} hint={`Sentry ${data.observability.sentry ? "on" : "off"}`} />
         <Av3Metric
-          label="Queue pending"
-          value={queuePending ?? "—"}
-          hint={aiPending != null && imagePending != null ? `AI ${aiPending} · Images ${imagePending}` : "Backlog total"}
+          label="Summary latency"
+          value={`${summary.totalMs}ms`}
+          hint="Fast path target &lt;1.5s"
+        />
+        <Av3Metric
+          label="Memory"
+          value={`${summary.metrics.memoryUsageMb} MB`}
+          hint={`Uptime ${Math.round(summary.metrics.uptimeSec / 60)}m`}
+        />
+        <Av3Metric
+          label="AI queue"
+          value={aiPending ?? "—"}
+          hint="Pending jobs"
+        />
+        <Av3Metric
+          label="Image queue"
+          value={imagePending ?? "—"}
+          hint="Editorial images"
         />
       </Av3MetricGrid>
 
-      <Av3Panel title="Service checks" subtitle="Supabase, OpenAI, cron, vectors, queues">
+      <Av3Panel title="Service checks" subtitle="Fast summary probes">
         <ul className="av3-health-list">
-          {data.checks.map((check) => (
+          {summary.checks.map((check) => (
             <Av3HealthRow
               key={check.id}
               label={check.label}
@@ -223,115 +307,97 @@ export function HealthOperationsPanel() {
         </ul>
       </Av3Panel>
 
-      <Av3Panel title="Cron jobs" subtitle="Last orchestration runs">
-        {data.cron.staleJobs.length > 0 ? (
+      <Av3Panel title="Cron jobs" subtitle="Latest heartbeat">
+        {summary.cron.staleJobs?.length ? (
           <div style={{ marginBottom: "0.65rem", display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-            {data.cron.staleJobs.map((job) => (
+            {summary.cron.staleJobs.map((job) => (
               <Av3StatusBadge key={job} tone="warning" label={`Stale: ${job}`} />
             ))}
           </div>
-        ) : null}
-        {data.cron.jobs.slice(0, 8).map((job) => (
+        ) : (
+          <p className="av3-note">No stale cron jobs in summary.</p>
+        )}
+        {(summary.cron.jobs ?? []).slice(0, 6).map((job) => (
           <div key={`${job.job}-${job.startedAt}`} className="av3-cron-row">
             <span>{job.job}</span>
             <Av3StatusBadge tone={job.ok ? "healthy" : "critical"} label={job.ok ? "OK" : "Failed"} />
-            <span className="av3-health-row__latency">{new Date(job.startedAt).toLocaleString()}</span>
+            <span className="av3-health-row__latency">
+              {new Date(job.startedAt).toLocaleString()}
+            </span>
           </div>
         ))}
       </Av3Panel>
-
-      {data.queueAnalytics ? (
-        <div className="av3-metric-grid">
-          <Av3Panel title="AI queue" subtitle="Drain and backlog" compact>
-            <p className="av3-note">Pending: {data.queueAnalytics.ai.pending}</p>
-            <p className="av3-note">Dead: {data.queueAnalytics.ai.dead}</p>
-            <p className="av3-note">
-              Drain {data.queueAnalytics.ai.drainPerHour}/hr · ETA {data.queueAnalytics.ai.eta.etaLabel}
-            </p>
-          </Av3Panel>
-          <Av3Panel title="Editorial images" subtitle="Generation pipeline" compact>
-            <p className="av3-note">Pending: {data.queueAnalytics.editorial.pending}</p>
-            <p className="av3-note">Processing: {data.queueAnalytics.editorial.processing}</p>
-            <p className="av3-note">
-              OpenAI {data.queueAnalytics.editorial.openAiSuccessRate}% · Storage{" "}
-              {data.queueAnalytics.editorial.storageSuccessRate}%
-            </p>
-          </Av3Panel>
-          <Av3Panel title="Throughput" subtitle="Performance signals" compact>
-            <p className="av3-note">
-              AI {data.queueAnalytics.performance.aiRecordsPerSec} rec/s · Editorial{" "}
-              {data.queueAnalytics.performance.editorialRecordsPerSec} rec/s
-            </p>
-            <p className="av3-note">Bottleneck: {data.queueAnalytics.performance.bottleneck}</p>
-          </Av3Panel>
-        </div>
-      ) : null}
-
-      {(data.launchWidgets?.length ?? 0) > 0 ? (
-        <Av3Panel title="Launch readiness" subtitle="Pre-launch widget signals">
-          <ul className="av3-health-list">
-            {data.launchWidgets!.map((widget) => (
-              <Av3HealthRow
-                key={widget.id}
-                label={widget.label}
-                status={widget.status}
-                statusLabel={launchStatusLabel(widget.status)}
-                message={widget.detail}
-              />
-            ))}
-          </ul>
-        </Av3Panel>
-      ) : null}
 
       <Av3Panel title="Newsroom health" subtitle="Editorial layer signals">
         <NewsroomHealthPanel />
       </Av3Panel>
 
-      <Av3Disclosure title="View diagnostics">
+      <Av3Disclosure
+        title="View diagnostics"
+        onOpenChange={(open) => {
+          if (open && !diagnostics && !diagLoading) void loadDiagnostics();
+        }}
+      >
         <Av3Stack>
-          <Av3Panel title="Recent errors" subtitle="Admin error tracking" compact>
-            {data.recentErrors.length === 0 ? (
-              <p className="av3-note">No recent errors</p>
-            ) : (
-              <ul className="anr-dense-list">
-                {data.recentErrors.map((e) => (
-                  <li key={e.id}>
-                    <span>
-                      <Av3StatusBadge status={e.severity} label={e.severity} /> {e.source} —{" "}
-                      {truncateText(e.message, 100)}
-                    </span>
-                    <em>{new Date(e.ts).toLocaleString()}</em>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Av3Panel>
-
-          <Av3Panel title="Stability factors" subtitle="Weighted production score" compact>
-            <ul className="anr-dense-list">
-              {data.stability.factors.map((f) => (
-                <li key={f.name}>
-                  <span>
-                    {f.name}: {Math.round(f.score)} ({Math.round(f.weight * 100)}%)
-                    {f.note ? ` — ${f.note}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Av3Panel>
-
-          {data.aiFinancial ? (
-            <Av3Panel title="AI financial snapshot" subtitle="Raw finance payload" compact>
-              <p className="av3-note">
-                Full AI financial data is in the executive cost dashboard. Public probe: /api/health
-              </p>
-              <pre className="av3-note" style={{ overflow: "auto", maxHeight: 240 }}>
-                {JSON.stringify(data.aiFinancial, null, 2).slice(0, 4000)}
-              </pre>
-            </Av3Panel>
+          {diagLoading ? <Av3SkeletonGrid count={3} /> : null}
+          {diagError ? (
+            <p className="av3-note av3-note--warn">
+              Diagnostics failed: {diagError}.{" "}
+              <button type="button" className="anr-btn anr-btn--ghost" onClick={() => void loadDiagnostics()}>
+                Retry diagnostics
+              </button>
+            </p>
           ) : null}
-
-          <p className="av3-note">Auto-refresh every 60s</p>
+          {diagnostics ? (
+            <>
+              <Av3MetricGrid>
+                <Av3Metric
+                  label="Stability"
+                  value={diagnostics.stability.score}
+                  hint={`Grade ${diagnostics.stability.grade}`}
+                />
+                <Av3Metric
+                  label="Errors (24h)"
+                  value={diagnostics.errors.last24h}
+                  hint={`Critical ${diagnostics.errors.bySeverity.critical ?? 0}`}
+                />
+                <Av3Metric
+                  label="Redis"
+                  value={diagnostics.caching.redis ? "Connected" : "Off"}
+                  hint={`Sentry ${diagnostics.observability.sentry ? "on" : "off"}`}
+                />
+              </Av3MetricGrid>
+              {diagnostics.queueAnalytics ? (
+                <Av3Panel title="Queue analytics" compact>
+                  <p className="av3-note">
+                    AI pending {diagnostics.queueAnalytics.ai.pending} · Drain{" "}
+                    {diagnostics.queueAnalytics.ai.drainPerHour}/hr · ETA{" "}
+                    {diagnostics.queueAnalytics.ai.eta.etaLabel}
+                  </p>
+                </Av3Panel>
+              ) : null}
+              <Av3Panel title="Recent errors" compact>
+                {diagnostics.recentErrors.length === 0 ? (
+                  <p className="av3-note">No recent errors</p>
+                ) : (
+                  <ul className="anr-dense-list">
+                    {diagnostics.recentErrors.slice(0, 8).map((e) => (
+                      <li key={e.id}>
+                        <span>
+                          <Av3StatusBadge status={e.severity} label={e.severity} /> {e.source} —{" "}
+                          {truncateText(e.message, 100)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Av3Panel>
+            </>
+          ) : null}
+          <p className="av3-note">
+            Heavy diagnostics load on demand only.{" "}
+            <Link href="/admin/technical">Open Platform overview</Link>
+          </p>
         </Av3Stack>
       </Av3Disclosure>
     </Av3Stack>

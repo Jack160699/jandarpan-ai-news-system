@@ -168,15 +168,25 @@ test.describe("Admin V3 mobile authenticated shell", () => {
     await expect(page.locator(".av3-sidebar--mobile-open")).toBeVisible();
     await expect(page.getByRole("button", { name: /Collapse/i })).toHaveCount(0);
     await expect(page.locator(".av3-drawer-ws")).toHaveCount(4);
-    await expect(page.getByText(/^Team/i)).toHaveCount(0);
-    await expect(page.getByText(/^Settings/i)).toHaveCount(0);
+    const routeLink = page.locator(".av3-sidebar--mobile-open .av3-nav-link").first();
+    if ((await routeLink.count()) > 0) {
+      const box = await routeLink.boundingBox();
+      expect(box).toBeTruthy();
+      expect(box!.width).toBeGreaterThan(180);
+    }
+    await expect(page.getByText(/^Team$/i)).toHaveCount(0);
+    await expect(page.getByText(/^Settings$/i)).toHaveCount(0);
     await expect(page.getByText(/^Sign out$/i)).toHaveCount(0);
     await page.screenshot({ path: path.join(SHOT_DIR, "nav-drawer-390x844.png") });
     await page.getByRole("button", { name: /Close navigation/i }).first().click();
 
-    // Account menu
+    // Account menu bottom sheet
     await page.getByRole("button", { name: /Account menu/i }).click();
     await expect(page.locator(".av3-account-menu--header")).toBeVisible();
+    const accountBox = await page.locator(".av3-account-menu--header").boundingBox();
+    expect(accountBox).toBeTruthy();
+    expect(accountBox!.x).toBeGreaterThanOrEqual(-1);
+    expect(accountBox!.width).toBeGreaterThan(300);
     await expect(page.getByRole("button", { name: /Sign out/i })).toBeVisible();
     await page.screenshot({ path: path.join(SHOT_DIR, "account-menu-390x844.png") });
   });

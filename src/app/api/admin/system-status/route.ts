@@ -1,20 +1,12 @@
 /**
  * GET /api/admin/system-status — lightweight canonical health for header/bell.
- * Shares derivation with Platform Health via deriveCanonicalHealth.
+ * Uses the fast health-summary path (no OpenAI usage scans / sitemap / launch widgets).
  */
 
 import { NextResponse } from "next/server";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
-import {
-  runAllHealthChecks,
-  aggregateHealthStatus,
-  getCronMonitorState,
-  computeStabilityScore,
-  getMetricsDashboard,
-} from "@/lib/observability";
-import { getLaunchHealthWidgets } from "@/lib/ops/launch-health";
-import { deriveCanonicalHealth } from "@/lib/admin-v3/canonical-health";
+import { buildHealthSummary } from "@/lib/admin-v3/health-summary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,37 +29,20 @@ export async function GET(request: Request) {
   }
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8_000);
-
-    const [checks, cron, metrics, launchWidgets] = await Promise.all([
-      runAllHealthChecks(),
-      getCronMonitorState(),
-      getMetricsDashboard(),
-      getLaunchHealthWidgets(),
-    ]);
-    clearTimeout(timeout);
-
-    const status = aggregateHealthStatus(checks);
-    const stability = await computeStabilityScore({
-      checks,
-      apiSamples: metrics.api,
+    const summary = await buildHealthSummary();
+    console.info("[system-status]", {
+      totalMs: summary.totalMs,
+      failed: summary.failedSources.map((s) => s.source),
     });
-
-    const snapshot = deriveCanonicalHealth({
-      ok: status !== "unhealthy",
-      status,
-      stability,
-      checks,
-      cron,
-      launchWidgets,
-      timestamp: new Date().toISOString(),
-    });
-
     return NextResponse.json({
       ok: true,
-      snapshot,
+      snapshot: summary.snapshot,
       limited: false,
+      degraded: summary.stale,
+      timing: {
+        totalMs: summary.totalMs,
+        sources: summary.sources,
+      },
     });
   } catch {
     return NextResponse.json({

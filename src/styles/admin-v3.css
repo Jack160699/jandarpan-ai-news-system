@@ -718,7 +718,7 @@
   color: var(--anr-text); background: var(--anr-accent-soft);
   box-shadow: inset 3px 0 0 var(--anr-accent);
 }
-.av3-shell--collapsed .av3-nav-link {
+.av3-shell--collapsed:not(.av3-shell--drawer-open) .av3-nav-link {
   justify-content: center; width: 44px; margin-inline: auto; padding: 0.5rem;
 }
 
@@ -1034,10 +1034,24 @@ body.av3-body-lock { overflow: hidden; }
   left: auto;
   bottom: auto;
   top: calc(100% + 0.4rem);
+  min-width: 220px;
+  max-width: min(320px, calc(100vw - 1rem));
 }
 .av3-account-menu__theme {
   width: 100%;
   text-align: left;
+}
+.av3-account-menu__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.av3-account-menu__head strong {
+  display: block;
+  word-break: break-all;
+  white-space: normal;
+  max-width: none;
 }
 
 /* Owner dashboard */
@@ -1157,6 +1171,30 @@ body.av3-body-lock { overflow: hidden; }
   text-decoration: none;
 }
 .av3-owner-links { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; }
+.av3-settings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.av3-settings-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--anr-border);
+  background: var(--anr-surface-2);
+}
+.av3-settings-row strong { display: block; font-size: 0.86rem; }
+.av3-settings-row p {
+  margin: 0.2rem 0 0.35rem;
+  font-size: 0.76rem;
+  color: var(--anr-muted);
+  line-height: 1.35;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .av3-sidebar,
@@ -1179,7 +1217,7 @@ body.av3-body-lock { overflow: hidden; }
   .av3-sidebar {
     position: fixed;
     inset: 0 auto 0 0;
-    width: min(360px, 88vw);
+    width: min(380px, 90vw);
     height: 100dvh;
     max-height: 100dvh;
     z-index: 90;
@@ -1187,11 +1225,47 @@ body.av3-body-lock { overflow: hidden; }
     padding-bottom: max(0.85rem, env(safe-area-inset-bottom));
     transform: translateX(-105%);
     transition: transform 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   .av3-sidebar--mobile-open { transform: translateX(0); }
   .av3-mobile-toggle { display: inline-flex !important; }
   .av3-sidebar__collapse,
   .av3-shell--collapsed .av3-sidebar__collapse { display: none !important; }
+  /* Never inherit desktop collapsed 44px rail widths in the drawer */
+  .av3-shell--collapsed .av3-nav-link,
+  .av3-shell--drawer-open .av3-nav-link {
+    width: 100% !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+    justify-content: flex-start !important;
+    padding: 0.55rem 0.7rem !important;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .av3-shell--collapsed .av3-nav-link span,
+  .av3-shell--drawer-open .av3-nav-link span {
+    display: inline !important;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .av3-nav {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    width: 100%;
+  }
+  .av3-drawer-workspaces,
+  .av3-drawer-ws,
+  .av3-nav-more {
+    width: 100%;
+    box-sizing: border-box;
+  }
   .av3-drawer-close { display: inline-flex !important; }
   .av3-sidebar__brand-row {
     display: flex;
@@ -1320,14 +1394,30 @@ body.av3-body-lock { overflow: hidden; }
   .av3-page-header h1 { font-size: 1.25rem; }
   .av3-content { padding-top: 0.55rem; }
   .av3-owner { gap: 0.75rem; }
+  .av3-account-menu,
+  .av3-account-menu--header,
   .av3-sidebar__user-wrap .av3-account-menu {
-    position: fixed;
-    left: 0.75rem;
-    right: 0.75rem;
-    bottom: max(0.75rem, env(safe-area-inset-bottom));
-    top: auto;
-    width: auto;
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    max-height: 75dvh;
+    overflow: auto;
+    border-radius: 18px 18px 0 0 !important;
     z-index: 98;
+    padding: 0.85rem 1rem max(1rem, env(safe-area-inset-bottom));
+    box-sizing: border-box;
+    animation: av3-sheet-up 0.18s ease both;
+  }
+  .av3-account-menu strong,
+  .av3-account-menu span {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    max-width: none;
   }
 }
 

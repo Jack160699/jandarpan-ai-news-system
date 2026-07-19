@@ -417,6 +417,7 @@ export type Av3DisclosureProps = {
   children: ReactNode;
   defaultOpen?: boolean;
   className?: string;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function Av3Disclosure({
@@ -424,6 +425,7 @@ export function Av3Disclosure({
   children,
   defaultOpen = false,
   className,
+  onOpenChange,
 }: Av3DisclosureProps) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
@@ -435,7 +437,13 @@ export function Av3Disclosure({
         className="av3-disclosure__trigger"
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => {
+            const next = !v;
+            onOpenChange?.(next);
+            return next;
+          });
+        }}
       >
         <span>{title}</span>
         <span className="av3-disclosure__chevron" aria-hidden>
