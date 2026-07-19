@@ -114,7 +114,10 @@ export function SupportJournalismSection() {
         <span>
           {hi ? "आपका ज़िला:" : "Your district:"} <strong>{districtName}</strong>
         </span>
-        <Link href="/districts" className="home-v31-support__change">
+        <Link
+          href={`/district/${district?.slug ?? "raipur"}`}
+          className="home-v31-support__change"
+        >
           {hi ? "बदलें" : "Change"}
         </Link>
       </p>
