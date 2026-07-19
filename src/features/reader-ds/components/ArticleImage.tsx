@@ -44,6 +44,7 @@ const TONES: Record<string, [string, string]> = {
   court: ["#3d3a4a", "#5a5670"],
   portrait: ["#4a3f3a", "#6b5c52"],
   night: ["#1a2438", "#2c3a55"],
+  festival: ["#4a2c3e", "#7a4a5c"],
 };
 
 type ArticleImageProps = {

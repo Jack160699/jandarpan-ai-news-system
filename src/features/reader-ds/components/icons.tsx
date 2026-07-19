@@ -34,7 +34,9 @@ export type JdIconName =
   | "refresh"
   | "close"
   | "rain"
-  | "check";
+  | "check"
+  | "flag"
+  | "pause";
 
 type JdIconProps = {
   name: JdIconName;
@@ -157,6 +159,18 @@ const PATHS: Record<JdIconName, React.ReactNode> = {
     </>
   ),
   check: <path d="M5 12.5 10 17.5 19 7" />,
+  flag: (
+    <>
+      <path d="M5 21V4" />
+      <path d="M5 4h10l-1.5 4L15 12H5" />
+    </>
+  ),
+  pause: (
+    <>
+      <rect x="7" y="5" width="3.5" height="14" rx="1" />
+      <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
+    </>
+  ),
 };
 
 export function JdIcon({

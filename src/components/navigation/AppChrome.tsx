@@ -56,7 +56,14 @@ const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library
  * Exact routes + dynamic prefixes for hubs.
  */
 const READER_DS_EXACT = new Set(["/", "/district", "/latest", "/trending", "/search", "/live"]);
-const READER_DS_PREFIXES = ["/district/", "/category/", "/topics/", "/live/"];
+const READER_DS_PREFIXES = [
+  "/district/",
+  "/category/",
+  "/topics/",
+  "/live/",
+  "/story/",
+  "/premium/",
+];
 
 function isReaderDsRoute(pathname: string): boolean {
   if (READER_DS_EXACT.has(pathname)) return true;
