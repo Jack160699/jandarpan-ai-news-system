@@ -47,6 +47,14 @@ type DailyPayload = {
       publishedAt: string | null;
       district: string | null;
     } | null;
+    metrics?: {
+      publishedToday?: {
+        source?: string;
+        period?: string;
+        freshness?: string;
+        availability?: string;
+      };
+    };
   };
   seo?: {
     connected: boolean;
@@ -84,7 +92,30 @@ type DailyPayload = {
   activity?: Array<{ id: string; label: string; meta: string; href: string }>;
   sources?: Array<{ source: string; ok: boolean; ms: number; error?: string }>;
   availability?: Record<string, boolean>;
+  contract?: {
+    generatedAt?: string;
+    freshness?: string;
+    availability?: string;
+  };
 };
+
+function metricTrustTitle(opts: {
+  source: string;
+  period: string;
+  freshness?: string;
+  availability?: boolean | string;
+  updatedAt?: string;
+}): string {
+  const avail =
+    opts.availability === false || opts.availability === "unavailable"
+      ? "unavailable"
+      : opts.availability === true || opts.availability === "available"
+        ? "available"
+        : String(opts.availability ?? "unknown");
+  const fresh = opts.freshness ?? "unknown";
+  const updated = opts.updatedAt ? ` · updated ${opts.updatedAt}` : "";
+  return `${opts.source} · ${opts.period} · ${fresh} · ${avail}${updated}`;
+}
 
 const CACHE_KEY = "jd-admin-overview-daily-v2";
 
@@ -272,6 +303,18 @@ export function CommandCentre() {
                     : `${data.comparisons.publishedDelta > 0 ? "+" : ""}${data.comparisons.publishedDelta} vs yesterday`
                   : undefined
               }
+              trustTitle={metricTrustTitle({
+                source:
+                  data.editorial?.metrics?.publishedToday?.source ??
+                  "generated_articles.published_at",
+                period:
+                  data.editorial?.metrics?.publishedToday?.period ?? "today_local",
+                freshness:
+                  data.editorial?.metrics?.publishedToday?.freshness ??
+                  data.contract?.freshness,
+                availability: data.availability?.editorial,
+                updatedAt: data.checkedAt,
+              })}
             />
           ) : null}
           {canAudience ? (
@@ -285,6 +328,13 @@ export function CommandCentre() {
                     : "—"
               }
               hint={data.availability?.audience ? "Audience today" : "Analytics pending"}
+              trustTitle={metricTrustTitle({
+                source: "analytics.dashboard",
+                period: "today",
+                freshness: data.contract?.freshness,
+                availability: data.availability?.audience,
+                updatedAt: data.checkedAt,
+              })}
             />
           ) : null}
           {canSeo ? (
@@ -302,6 +352,13 @@ export function CommandCentre() {
                     ? "Search Console"
                     : "SEO not connected"
               }
+              trustTitle={metricTrustTitle({
+                source: "seo.search_console",
+                period: "gsc_rolling",
+                freshness: data.contract?.freshness,
+                availability: data.availability?.seo,
+                updatedAt: data.checkedAt,
+              })}
             />
           ) : null}
           {canCosts ? (
@@ -309,6 +366,13 @@ export function CommandCentre() {
               label="AI spend"
               value={data.today?.aiSpend ?? "—"}
               hint={data.costs?.available ? "Today" : "Not connected"}
+              trustTitle={metricTrustTitle({
+                source: "ops.executive",
+                period: "today",
+                freshness: data.contract?.freshness,
+                availability: data.availability?.costs ?? data.costs?.available,
+                updatedAt: data.checkedAt,
+              })}
             />
           ) : null}
           {canEditorial ? (
@@ -317,11 +381,25 @@ export function CommandCentre() {
                 label="Pipeline queue"
                 value={data.today?.queuePending ?? "—"}
                 hint="AI jobs waiting"
+                trustTitle={metricTrustTitle({
+                  source: "ai_queue.pending",
+                  period: "now",
+                  freshness: data.contract?.freshness,
+                  availability: data.availability?.editorial,
+                  updatedAt: data.checkedAt,
+                })}
               />
               <Av3Metric
                 label="Failed jobs"
                 value={data.today?.failedJobs ?? "—"}
                 hint="Queue errors"
+                trustTitle={metricTrustTitle({
+                  source: "editorial.failed_stories",
+                  period: "now",
+                  freshness: data.contract?.freshness,
+                  availability: data.availability?.editorial,
+                  updatedAt: data.checkedAt,
+                })}
               />
             </>
           ) : null}

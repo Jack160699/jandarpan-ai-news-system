@@ -1,16 +1,13 @@
-# Admin auth E2E
-
-Run locally:
+# Admin auth E2E (Phase 5)
 
 ```bash
-# Terminal 1 — enable E2E routes (non-production only)
 set ENABLE_E2E_AUTH=1
 npm run dev
-
-# Terminal 2
-npm run test:e2e
+npm run test:e2e -- e2e/phase5-*.spec.ts e2e/admin-auth.spec.ts
 ```
 
-Playwright can also start the dev server with `ENABLE_E2E_AUTH=1` when port 3000 is free.
+Uses `POST /api/e2e/auth/set-session` + optional session mocks.  
+`ENABLE_E2E_AUTH=1` required when `.env.local` has pulled `VERCEL=1`.  
+Never enabled for `NODE_ENV=production` or `VERCEL_ENV=production`.
 
-E2E uses `POST /api/e2e/auth/set-session` (header `x-e2e-auth: playwright-local`) plus optional session API mocks. Disabled when `VERCEL_ENV=production`.
+Production password QA needs `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` (not committed).

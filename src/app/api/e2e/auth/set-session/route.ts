@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * E2E-only: sets desk auth cookies without Supabase (disabled in production).
- * POST { role: "super_admin" | "editor", userId?: string }
+ * POST { role: CanonicalRole, userId?: string }
  */
 export async function POST(request: NextRequest) {
   if (!isE2eAuthEnabled(request)) {

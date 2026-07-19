@@ -30,6 +30,8 @@ import {
 } from "@/lib/auth/session-refresh";
 import { ROLE_COOKIE, TENANT_COOKIE_AUTH } from "@/lib/security/constants";
 import { normalizeDashboardRole } from "@/lib/saas-auth/roles";
+import { landingPathForRole } from "@/lib/admin-platform/workspaces";
+import { checkPathRbac } from "@/lib/security/middleware-rbac";
 import { securityHeaders } from "@/lib/security/headers";
 import {
   generateRequestId,
@@ -204,22 +206,61 @@ export async function middleware(request: NextRequest) {
   }
 
   if (sessionGuard.action === "refresh") {
+    // E2E desk cookies cannot be restored via Supabase refresh — force re-login.
+    const e2eOnly =
+      isE2eAuthEnabled(request) &&
+      Boolean(request.cookies.get(E2E_AUTH_COOKIE)?.value) &&
+      !roleCookie;
+    if (e2eOnly) {
+      const login = new URL("/admin/login", request.url);
+      login.searchParams.set("error", "session_recovery_failed");
+      login.searchParams.set("next", pathname);
+      return redirectWithCookies(
+        request,
+        `${login.pathname}${login.search}`,
+        response
+      );
+    }
     return redirectWithCookies(request, sessionGuard.redirectTo, response);
   }
 
+  // Local E2E desk cookies only — never treat ROLE_COOKIE as auth in production.
+  const e2eUser = request.cookies.get(E2E_AUTH_COOKIE)?.value;
+  if (
+    isE2eAuthEnabled(request) &&
+    e2eUser &&
+    role &&
+    isProtectedPrefix(pathname, ADMIN_PREFIX, ADMIN_PUBLIC)
+  ) {
+    if (pathname === "/admin" || pathname === "/admin/") {
+      return redirectWithCookies(request, landingPathForRole(role), response);
+    }
+    const rbac = checkPathRbac(pathname, role);
+    if (!rbac.allowed) {
+      return redirectWithCookies(
+        request,
+        rbac.redirectTo ?? "/admin/editorial?error=forbidden",
+        response
+      );
+    }
+  }
+
   if (pathname === "/admin/login" && hasAuth) {
-    const next = request.nextUrl.searchParams.get("next");
-    // Soft landing hint only — ROLE_COOKIE is NOT authorization. Server layout
-    // re-enforces route RBAC from the trusted membership session.
-    const dest =
-      next && next.startsWith("/admin") && !next.startsWith("/admin/login")
-        ? next
-        : role === "super_admin"
-          ? "/admin/overview"
-          : role === "editor"
-            ? "/admin/stories"
-            : "/admin/editorial";
-    return redirectWithCookies(request, dest, response);
+    const e2eIncomplete =
+      isE2eAuthEnabled(request) &&
+      Boolean(request.cookies.get(E2E_AUTH_COOKIE)?.value) &&
+      !roleCookie;
+    // Incomplete E2E desk cookies must stay on login (avoid refresh/login loops).
+    if (!e2eIncomplete) {
+      const next = request.nextUrl.searchParams.get("next");
+      // Soft landing hint only — ROLE_COOKIE is NOT authorization. Server layout
+      // re-enforces route RBAC from the trusted membership session.
+      const dest =
+        next && next.startsWith("/admin") && !next.startsWith("/admin/login")
+          ? next
+          : landingPathForRole(role);
+      return redirectWithCookies(request, dest, response);
+    }
   }
 
   if (isProtectedPrefix(pathname, DASHBOARD_PREFIX, DASHBOARD_PUBLIC) && !hasAuth) {

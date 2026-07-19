@@ -20,6 +20,10 @@ import {
   ROLE_COOKIE,
   TENANT_COOKIE_AUTH,
 } from "@/lib/security/constants";
+import {
+  E2E_AUTH_COOKIE,
+  isE2eAuthEnabled,
+} from "@/lib/auth/session-refresh";
 import { createUserAuthClient } from "@/lib/supabase/auth";
 
 export const runtime = "nodejs";
@@ -49,6 +53,9 @@ export async function POST(request: NextRequest) {
   response.cookies.set(LAST_ACTIVITY_COOKIE, "", clearOpts);
   response.cookies.set(ROLE_COOKIE, "", clearOpts);
   response.cookies.set(TENANT_COOKIE_AUTH, "", clearOpts);
+  if (isE2eAuthEnabled(request)) {
+    response.cookies.set(E2E_AUTH_COOKIE, "", clearOpts);
+  }
 
   await clearMembershipContextCookies();
 

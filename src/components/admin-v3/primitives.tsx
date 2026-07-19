@@ -92,13 +92,22 @@ export type Av3MetricProps = {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
+  /** Compact data-trust tooltip (source · period · freshness). */
+  trustTitle?: string;
   trend?: { direction: "up" | "down" | "flat"; label?: string };
   className?: string;
 };
 
-export function Av3Metric({ label, value, hint, trend, className }: Av3MetricProps) {
+export function Av3Metric({
+  label,
+  value,
+  hint,
+  trustTitle,
+  trend,
+  className,
+}: Av3MetricProps) {
   return (
-    <article className={cn("av3-metric", className)}>
+    <article className={cn("av3-metric", className)} title={trustTitle}>
       <p className="av3-metric__label">{label}</p>
       <p className="av3-metric__value">{value}</p>
       {hint ? <p className="av3-metric__hint">{hint}</p> : null}

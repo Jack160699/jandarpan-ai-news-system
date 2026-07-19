@@ -31,6 +31,7 @@ import { traceAdminBoot } from "@/lib/observability/admin-boot";
 import { isTimeoutError, withTimeout, withTimeoutFallback } from "@/lib/utils/withTimeout";
 
 import { ACCESS_COOKIE, REFRESH_COOKIE } from "@/lib/saas-auth/cookies";
+import { resolveE2eDashboardSession } from "@/lib/auth/e2e-dashboard-session";
 
 const AUTH_CALL_TIMEOUT_MS = 5_000;
 const MEMBERSHIP_TIMEOUT_MS = 4_000;
@@ -180,6 +181,11 @@ export async function getDashboardSession(
   const cookieSummary = summarizeAuthCookies(cookieStore.getAll());
   const tenantHints = resolveAuthTenantHint(request, cookieStore);
   const tenantHint = tenantHints.used;
+
+  const e2eSession = await resolveE2eDashboardSession(request);
+  if (e2eSession) {
+    return e2eSession;
+  }
 
   if (!isSupabaseConfigured()) {
     logAuthTrace(

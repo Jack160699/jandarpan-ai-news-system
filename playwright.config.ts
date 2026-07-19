@@ -24,7 +24,9 @@ export default defineConfig({
           ...process.env,
           ENABLE_E2E_AUTH: "1",
           NODE_ENV: "development",
-          VERCEL_ENV: "",
+          // Pulled `.env.local` may set these; keep E2E local-only and off Vercel runtime.
+          VERCEL: "",
+          VERCEL_ENV: "development",
         },
       },
 });

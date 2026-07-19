@@ -52,10 +52,28 @@ export function buildRefreshSessionUrl(
 const E2E_AUTH_HEADER = "x-e2e-auth";
 const E2E_AUTH_HEADER_VALUE = "playwright-local";
 
+/**
+ * Local Playwright desk auth only.
+ * Never enable on production builds or Vercel production.
+ * Explicit ENABLE_E2E_AUTH=1 wins even when `.env.local` contains pulled VERCEL=1.
+ * Header opt-in is local-only (blocked when VERCEL=1 without ENABLE_E2E_AUTH).
+ */
+function envFlag(name: string): string {
+  return (process.env[name] ?? "")
+    .trim()
+    .replace(/^['"]|['"]$/g, "");
+}
+
 export function isE2eAuthEnabled(request?: Request): boolean {
-  if (process.env.VERCEL_ENV) return false;
-  if (process.env.NODE_ENV === "production") return false;
-  if (process.env.ENABLE_E2E_AUTH === "1") return true;
+  const nodeEnv = envFlag("NODE_ENV");
+  const vercelEnv = envFlag("VERCEL_ENV");
+  if (nodeEnv === "production") return false;
+  if (vercelEnv === "production") return false;
+
+  if (envFlag("ENABLE_E2E_AUTH") === "1") return true;
+
+  // Pulled Vercel project env often sets VERCEL=1 / VERCEL="1".
+  if (envFlag("VERCEL") === "1") return false;
 
   if (request?.headers.get(E2E_AUTH_HEADER) === E2E_AUTH_HEADER_VALUE) {
     return true;

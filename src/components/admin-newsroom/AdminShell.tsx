@@ -155,9 +155,10 @@ export function AdminShell({
   }, [mobileOpen, cmdOpen, statusOpen, accountOpen, headerAccountOpen]);
 
   useEffect(() => {
-    const anyOverlay =
-      mobileOpen || cmdOpen || statusOpen || headerAccountOpen || accountOpen;
-    if (!anyOverlay) return;
+    // History trap only for full-screen overlays. Account/status popovers must not
+    // pushState — Playwright and some browsers treat that as an immediate pop.
+    const fullScreenOverlay = mobileOpen || cmdOpen;
+    if (!fullScreenOverlay) return;
 
     const alreadyMarked =
       typeof window.history.state === "object" &&
@@ -169,15 +170,12 @@ export function AdminShell({
 
     function onPop() {
       setCmdOpen(false);
-      setStatusOpen(false);
-      setHeaderAccountOpen(false);
       setMobileOpen(false);
-      setAccountOpen(false);
     }
 
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, [mobileOpen, cmdOpen, statusOpen, headerAccountOpen, accountOpen]);
+  }, [mobileOpen, cmdOpen]);
 
   useEffect(() => {
     setShowMoreRoutes(false);

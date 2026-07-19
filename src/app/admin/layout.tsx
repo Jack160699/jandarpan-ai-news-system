@@ -65,6 +65,18 @@ export default async function AdminLayout({
     if (e2eUserId && roleCookie) {
       const tenant = getDefaultTenant();
       const role = normalizeDashboardRole(roleCookie);
+      const rbac = checkPathRbac(pathname, role);
+      if (!rbac.allowed) {
+        void logAdminAccessDenied({
+          reason: "route_forbidden",
+          resourceType: "admin_route",
+          resourceId: pathname,
+          pathname,
+          cookieRole: roleCookie,
+          trustedRole: role,
+        });
+        return redirect(rbac.redirectTo ?? "/admin/editorial?error=forbidden");
+      }
       const e2eSession: AdminSessionResponse = {
         ok: true,
         user: { id: e2eUserId, email: "e2e@newsroom.test" },
@@ -157,7 +169,7 @@ export default async function AdminLayout({
 
     const rbac = checkPathRbac(pathname, trustedRole);
     if (!rbac.allowed) {
-      await logAdminAccessDenied({
+      void logAdminAccessDenied({
         reason: "route_forbidden",
         resourceType: "admin_route",
         resourceId: pathname,
@@ -166,7 +178,7 @@ export default async function AdminLayout({
         cookieRole: roleCookie,
         trustedRole,
       });
-      redirect(rbac.redirectTo ?? "/admin/editorial?error=forbidden");
+      return redirect(rbac.redirectTo ?? "/admin/editorial?error=forbidden");
     }
   }
 

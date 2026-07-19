@@ -14,11 +14,17 @@ export async function GET(request: Request) {
   const auth = await requireEditorialAuth(request, "billing:read");
   if (!auth.ok) return auth.response;
 
-  const dashboard = await getExecutiveDashboard();
-
-  return NextResponse.json({
-    ok: true,
-    dashboard,
-    timestamp: dashboard.generatedAt,
-  });
+  try {
+    const dashboard = await getExecutiveDashboard();
+    return NextResponse.json({
+      ok: true,
+      dashboard,
+      timestamp: dashboard.generatedAt,
+    });
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: "executive_unavailable" },
+      { status: 503 }
+    );
+  }
 }
