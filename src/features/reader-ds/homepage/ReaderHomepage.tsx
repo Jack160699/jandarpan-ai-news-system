@@ -9,6 +9,7 @@ import type { ReaderStory } from "../utils";
 import {
   BottomNav,
   BreakingStrip,
+  DesktopPrimaryNav,
   LeadStory,
   Masthead,
   SearchOverlay,
@@ -124,13 +125,13 @@ function buildSections(feed: GeneratedHomepageFeed, excludeSlugs: Set<string>): 
 
 type ReaderHomepageProps = {
   feed: GeneratedHomepageFeed;
-  /** When ads enabled — house/native creative from existing monetization helpers. */
   nativeAd?: NativeAdCreative | null;
   adsEnabled?: boolean;
 };
 
 /**
- * Approved A1 homepage + Phase 5 monetization states (E43–E45).
+ * A1 homepage + Phase 6 editorial newspaper grid (tablet/desktop).
+ * Phone layout stays the approved single column — never stretched.
  */
 export function ReaderHomepage({
   feed,
@@ -170,36 +171,39 @@ export function ReaderHomepage({
 
   return (
     <div
-      className={`jd-ds ${readerDsFontClassName}`}
+      className={`jd-ds jd-ds--stage ${readerDsFontClassName}`}
       style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", background: "var(--jd-paper)" }}
     >
       <Masthead premiumBadge={isPremium} />
+      <DesktopPrimaryNav active="home" />
       <UtilityRow />
       <BreakingStrip headline={breaking} href={breakingHref} />
 
       <main
         id="main-content"
         role="main"
+        className="jd-shell"
         style={{
           flex: 1,
           paddingBottom: showAds ? 128 : 72,
           background: "var(--jd-paper)",
         }}
       >
-        {lead ? <LeadStory story={lead} /> : null}
-
-        {secondary.length ? (
-          <div style={{ padding: "6px 14px 0" }}>
-            {secondary.map((s, i) => (
-              <SecondaryStory
-                key={s.slug}
-                story={s}
-                last={i === secondary.length - 1}
-                toneIndex={i + 1}
-              />
-            ))}
-          </div>
-        ) : null}
+        <div className="jd-home-hero">
+          <div className="jd-home-lead">{lead ? <LeadStory story={lead} /> : null}</div>
+          {secondary.length ? (
+            <aside className="jd-home-rail" aria-label="द्वितीयक ख़बरें">
+              {secondary.map((s, i) => (
+                <SecondaryStory
+                  key={s.slug}
+                  story={s}
+                  last={i === secondary.length - 1}
+                  toneIndex={i + 1}
+                />
+              ))}
+            </aside>
+          ) : null}
+        </div>
 
         <UtilTiles />
 
@@ -223,24 +227,26 @@ export function ReaderHomepage({
           />
         ) : null}
 
-        {sections.map((section, i) => (
-          <section key={section.key}>
-            <SectionHeader title={section.title} color={section.color} moreHref={section.moreHref} />
-            <div style={{ padding: "0 14px" }}>
-              {section.stories.map((s, idx) => (
-                <SecondaryStory
-                  key={s.slug}
-                  story={s}
-                  last={idx === section.stories.length - 1}
-                  toneIndex={idx}
-                />
-              ))}
-            </div>
-            {i === 0 && showAds ? (
-              <DismissibleAd label="विज्ञापन · मिड-फ़ीड 300×250" height={96} />
-            ) : null}
-          </section>
-        ))}
+        <div className="jd-home-sections">
+          {sections.map((section, i) => (
+            <section key={section.key}>
+              <SectionHeader title={section.title} color={section.color} moreHref={section.moreHref} />
+              <div className="jd-story-grid" style={{ padding: "0 14px" }}>
+                {section.stories.map((s, idx) => (
+                  <SecondaryStory
+                    key={s.slug}
+                    story={s}
+                    last={idx === section.stories.length - 1}
+                    toneIndex={idx}
+                  />
+                ))}
+              </div>
+              {i === 0 && showAds ? (
+                <DismissibleAd label="विज्ञापन · मिड-फ़ीड 300×250" height={96} />
+              ) : null}
+            </section>
+          ))}
+        </div>
       </main>
 
       {showAds ? <DismissibleAd sticky label="स्टिकी बैनर · 320×50" /> : null}

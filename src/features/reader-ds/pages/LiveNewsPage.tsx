@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { HomeArticle } from "@/lib/homepage/types";
 import { ArticleImage } from "../components/ArticleImage";
+import { DesktopPrimaryNav } from "../components/DesktopPrimaryNav";
 import { Masthead } from "../components/Masthead";
 import { ReaderShell } from "../components/ReaderShell";
 import { JdIcon } from "../components/icons";
@@ -67,8 +68,9 @@ export function LiveNewsPageView({ articles, isLiveActive, heroTitle }: Props) {
       ) : (
         <Masthead back pageTitle="लाइव" />
       )}
+      <DesktopPrimaryNav active="latest" dark />
 
-      <main id="main-content" role="main" style={{ flex: 1, background: "#05080f" }}>
+      <main id="main-content" role="main" className="jd-live-shell" style={{ flex: 1, background: "#05080f" }}>
         {!isLiveActive ? (
           <div style={{ padding: 20 }}>
             <p className="jd-serif" style={{ fontSize: 18, fontWeight: 700, color: "#e7edf6", margin: "0 0 8px" }}>
@@ -80,99 +82,101 @@ export function LiveNewsPageView({ articles, isLiveActive, heroTitle }: Props) {
           </div>
         ) : null}
 
-        {lead ? (
-          <>
-            <div style={{ margin: "12px 14px 4px" }}>
-              <ArticleImage
-                src={lead.imageUrl}
-                alt={lead.headline}
-                ratio="lead"
-                caption={isLiveActive ? "लाइव कवरेज" : undefined}
-                priority
-                sizes="(max-width: 640px) 100vw, 620px"
-                tone="night"
-              />
-            </div>
-            <div style={{ padding: "6px 14px 2px" }}>
-              <h1
-                className="jd-serif"
-                style={{ margin: 0, fontSize: 19, fontWeight: 700, color: "#e7edf6", lineHeight: 1.3 }}
-              >
-                {title}
-              </h1>
-            </div>
-          </>
-        ) : null}
-
-        <div style={{ padding: "8px 14px" }}>
-          {updates.length === 0 ? (
-            <p className="jd-ui" style={{ color: "#93a4c2", fontSize: 14 }}>
-              अपडेट उपलब्ध नहीं।
-            </p>
-          ) : (
-            updates.map((s, i) => {
-              const colors = ["#e05a63", "#c19a3e", "#93a4c2"];
-              const color = colors[Math.min(i, colors.length - 1)];
-              const time = hindiRelativeTime(s.publishedAt) || "अपडेट";
-              return (
-                <Link
-                  key={s.slug}
-                  href={storyHref(s.slug)}
-                  style={{
-                    display: "flex",
-                    gap: 11,
-                    paddingBottom: 14,
-                    color: "inherit",
-                    textDecoration: "none",
-                  }}
+        <div className="jd-live-hero">
+          {lead ? (
+            <div>
+              <div style={{ margin: "12px 14px 4px" }}>
+                <ArticleImage
+                  src={lead.imageUrl}
+                  alt={lead.headline}
+                  ratio="lead"
+                  caption={isLiveActive ? "लाइव कवरेज" : undefined}
+                  priority
+                  sizes="(max-width: 767px) 100vw, (max-width: 1023px) 55vw, 640px"
+                  tone="night"
+                />
+              </div>
+              <div style={{ padding: "6px 14px 2px" }}>
+                <h1
+                  className="jd-serif"
+                  style={{ margin: 0, fontSize: 19, fontWeight: 700, color: "#e7edf6", lineHeight: 1.3 }}
                 >
-                  <div
+                  {title}
+                </h1>
+              </div>
+            </div>
+          ) : null}
+
+          <div style={{ padding: "8px 14px" }}>
+            {updates.length === 0 ? (
+              <p className="jd-ui" style={{ color: "#93a4c2", fontSize: 14 }}>
+                अपडेट उपलब्ध नहीं।
+              </p>
+            ) : (
+              updates.map((s, i) => {
+                const colors = ["#e05a63", "#c19a3e", "#93a4c2"];
+                const color = colors[Math.min(i, colors.length - 1)];
+                const time = hindiRelativeTime(s.publishedAt) || "अपडेट";
+                return (
+                  <Link
+                    key={s.slug}
+                    href={storyHref(s.slug)}
                     style={{
                       display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      flexShrink: 0,
+                      gap: 11,
+                      paddingBottom: 14,
+                      color: "inherit",
+                      textDecoration: "none",
                     }}
                   >
-                    <span
+                    <div
                       style={{
-                        width: 9,
-                        height: 9,
-                        borderRadius: 9,
-                        background: color,
-                        marginTop: 3,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        flexShrink: 0,
                       }}
-                    />
-                    {i < updates.length - 1 ? (
-                      <div
+                    >
+                      <span
                         style={{
-                          width: 2,
-                          flex: 1,
-                          background: "rgba(150,175,215,0.16)",
+                          width: 9,
+                          height: 9,
+                          borderRadius: 9,
+                          background: color,
                           marginTop: 3,
-                          minHeight: 24,
                         }}
                       />
-                    ) : null}
-                  </div>
-                  <div>
-                    <div
-                      className="jd-ui"
-                      style={{ fontSize: 11, fontWeight: 800, color, marginBottom: 2 }}
-                    >
-                      {time}
+                      {i < updates.length - 1 ? (
+                        <div
+                          style={{
+                            width: 2,
+                            flex: 1,
+                            background: "rgba(150,175,215,0.16)",
+                            marginTop: 3,
+                            minHeight: 24,
+                          }}
+                        />
+                      ) : null}
                     </div>
-                    <div
-                      className="jd-serif"
-                      style={{ fontSize: 15, lineHeight: 1.4, color: "#e7edf6" }}
-                    >
-                      {s.headline}
+                    <div>
+                      <div
+                        className="jd-ui"
+                        style={{ fontSize: 11, fontWeight: 800, color, marginBottom: 2 }}
+                      >
+                        {time}
+                      </div>
+                      <div
+                        className="jd-serif"
+                        style={{ fontSize: 15, lineHeight: 1.4, color: "#e7edf6" }}
+                      >
+                        {s.headline}
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              );
-            })
-          )}
+                  </Link>
+                );
+              })
+            )}
+          </div>
         </div>
       </main>
     </ReaderShell>

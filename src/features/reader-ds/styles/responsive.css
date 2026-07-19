@@ -1,0 +1,345 @@
+/*
+ * Phase 6 — tablet / desktop editorial newspaper grid.
+ *
+ * Breakpoints:
+ *   mobile  < 768px  — phone column (unchanged atoms)
+ *   tablet  ≥ 768px  — centered shell, top nav, 2-col feeds
+ *   desktop ≥ 1024px — multi-column newspaper grid
+ *   wide    ≥ 1280px — full editorial canvas
+ *
+ * Rule: never stretch the 390px mobile composition full-bleed.
+ */
+
+.jd-ds {
+  --jd-bp-tablet: 768px;
+  --jd-bp-desktop: 1024px;
+  --jd-bp-wide: 1280px;
+  --jd-shell-max: 1120px;
+  --jd-reading-max: 720px;
+  --jd-rail-w: 300px;
+}
+
+/* Desktop primary nav — hidden on phone */
+.jd-desktop-nav {
+  display: none;
+}
+
+/* Bottom nav spacer — phone only */
+.jd-nav-spacer {
+  display: block;
+}
+
+/* Sticky ad offset assumes bottom nav on phone */
+.jd-sticky-ad {
+  /* positioning set inline; offset adjusted below */
+}
+
+/* ---------- Tablet+ ---------- */
+@media (min-width: 768px) {
+  .jd-ds .jd-bottom-nav {
+    display: none !important;
+  }
+
+  .jd-ds .jd-nav-spacer {
+    display: none !important;
+  }
+
+  .jd-ds .jd-desktop-nav {
+    display: flex;
+  }
+
+  .jd-ds .jd-masthead {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .jd-ds .jd-masthead__inner {
+    max-width: var(--jd-shell-max) !important;
+  }
+
+  .jd-ds .jd-shell {
+    width: 100%;
+    max-width: var(--jd-shell-max);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 20px;
+    padding-right: 20px;
+    box-sizing: border-box;
+  }
+
+  /* Sticky ads sit flush to viewport bottom (no bottom nav) */
+  .jd-ds .jd-sticky-ad {
+    bottom: 0 !important;
+  }
+
+  /* Phone bottom-nav padding not needed when top nav is used */
+  .jd-ds main.jd-shell,
+  .jd-ds .jd-article-layout,
+  .jd-ds .jd-live-shell,
+  .jd-ds .jd-search-results {
+    padding-bottom: 40px !important;
+  }
+
+  /* Soft paper stage behind the editorial column */
+  .jd-ds.jd-ds--stage {
+    background:
+      radial-gradient(1200px 480px at 50% -10%, rgba(193, 154, 62, 0.08), transparent 60%),
+      linear-gradient(180deg, #efe8d8 0%, var(--jd-paper) 220px);
+  }
+
+  .jd-ds.jd-ds--stage[data-theme="dark"] {
+    background: #05080f;
+  }
+
+  /* Homepage: lead + rail stack on tablet as 2-col secondary list */
+  .jd-ds .jd-home-hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .jd-ds .jd-home-rail {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 18px;
+    padding: 0 !important;
+  }
+
+  .jd-ds .jd-story-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+    padding: 0 !important;
+  }
+
+  .jd-ds .jd-util-tiles {
+    max-width: none;
+  }
+
+  /* Article: reading column centered */
+  .jd-ds .jd-article-layout {
+    display: grid;
+    grid-template-columns: minmax(0, var(--jd-reading-max));
+    justify-content: center;
+    gap: 32px;
+    width: 100%;
+    max-width: var(--jd-shell-max);
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    box-sizing: border-box;
+  }
+
+  .jd-ds .jd-article-rail {
+    display: none;
+  }
+
+  /* District / category lead image taller on tablet */
+  .jd-ds .jd-hub-lead {
+    max-width: none;
+  }
+
+  .jd-ds .jd-hub-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+  }
+
+  /* Search results 2-col */
+  .jd-ds .jd-search-results {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+    max-width: var(--jd-shell-max);
+    margin: 0 auto;
+    padding: 8px 20px 40px;
+    box-sizing: border-box;
+  }
+
+  /* Live: wider timeline */
+  .jd-ds .jd-live-shell {
+    max-width: var(--jd-shell-max);
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    box-sizing: border-box;
+  }
+
+  .jd-ds .jd-live-hero {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+}
+
+/* ---------- Desktop newspaper grid ---------- */
+@media (min-width: 1024px) {
+  .jd-ds {
+    --jd-shell-max: 1180px;
+  }
+
+  .jd-ds .jd-home-hero {
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, 1fr);
+    gap: 28px;
+    padding: 18px 0 8px;
+    border-bottom: 1px solid var(--jd-line);
+    margin-bottom: 8px;
+  }
+
+  .jd-ds .jd-home-lead {
+    padding-right: 8px;
+    border-right: 1px solid var(--jd-line);
+  }
+
+  .jd-ds .jd-home-lead .jd-lead-title {
+    font-size: 28px !important;
+    line-height: 1.25 !important;
+  }
+
+  .jd-ds .jd-home-rail {
+    grid-template-columns: 1fr;
+    gap: 0;
+    align-content: start;
+  }
+
+  .jd-ds .jd-story-grid {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 32px;
+  }
+
+  /* Sections as newspaper columns with hairline */
+  .jd-ds .jd-home-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 36px;
+  }
+
+  .jd-ds .jd-home-sections > section {
+    min-width: 0;
+  }
+
+  .jd-ds .jd-home-sections > section:nth-child(odd) {
+    padding-right: 8px;
+  }
+
+  /* Article + related rail */
+  .jd-ds .jd-article-layout {
+    grid-template-columns: minmax(0, var(--jd-reading-max)) var(--jd-rail-w);
+    justify-content: center;
+    padding-top: 12px;
+  }
+
+  .jd-ds .jd-article-rail {
+    display: block;
+    padding-top: 8px;
+    border-left: 1px solid var(--jd-line);
+    padding-left: 22px;
+  }
+
+  .jd-ds .jd-article-related-inline {
+    display: none !important;
+  }
+
+  .jd-ds .jd-article-rail .jd-rail-title {
+    font-family: var(--jd-ff-ui);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--jd-muted);
+    margin: 0 0 10px;
+  }
+
+  /* Hub pages: lead spanning left, list right on first fold */
+  .jd-ds .jd-hub-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+    padding-top: 12px;
+  }
+
+  .jd-ds .jd-hub-list {
+    grid-template-columns: 1fr;
+  }
+
+  .jd-ds .jd-hub-list--wide {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 8px;
+  }
+
+  .jd-ds .jd-live-hero {
+    grid-template-columns: 1.35fr 1fr;
+    gap: 32px;
+    padding-top: 16px;
+  }
+}
+
+/* ---------- Wide ---------- */
+@media (min-width: 1280px) {
+  .jd-ds {
+    --jd-shell-max: 1240px;
+    --jd-reading-max: 740px;
+    --jd-rail-w: 320px;
+  }
+
+  .jd-ds .jd-home-sections {
+    grid-template-columns: 1fr 1fr 1fr;
+    column-gap: 28px;
+  }
+
+  .jd-ds .jd-home-sections > section:nth-child(odd) {
+    padding-right: 0;
+  }
+}
+
+/* Mobile-only: keep phone padding atoms */
+@media (max-width: 767px) {
+  .jd-ds .jd-shell {
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .jd-ds .jd-home-hero,
+  .jd-ds .jd-home-sections,
+  .jd-ds .jd-story-grid,
+  .jd-ds .jd-hub-layout,
+  .jd-ds .jd-hub-list,
+  .jd-ds .jd-search-results,
+  .jd-ds .jd-article-layout,
+  .jd-ds .jd-live-hero {
+    display: block;
+  }
+
+  .jd-ds .jd-article-rail,
+  .jd-ds .jd-desktop-nav {
+    display: none !important;
+  }
+
+  .jd-ds .jd-home-lead {
+    border-right: none !important;
+    padding-right: 0 !important;
+  }
+}
+
+/* Smooth layout transitions without stretching content */
+@media (min-width: 768px) {
+  .jd-ds .jd-home-hero,
+  .jd-ds .jd-home-sections,
+  .jd-ds .jd-article-layout,
+  .jd-ds .jd-hub-layout,
+  .jd-ds .jd-live-hero {
+    transition: gap 180ms ease, grid-template-columns 180ms ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jd-ds .jd-home-hero,
+  .jd-ds .jd-home-sections,
+  .jd-ds .jd-article-layout,
+  .jd-ds .jd-hub-layout,
+  .jd-ds .jd-live-hero {
+    transition: none;
+  }
+}

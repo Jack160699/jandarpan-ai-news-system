@@ -34,10 +34,11 @@ export function UtilityRow({
   const date = dateLabel ?? formatShortHindiDate();
   return (
     <div
-      className="jd-ui"
+      className="jd-ui jd-utility-row"
       style={{
         flexShrink: 0,
         background: "var(--jd-navy-deep)",
+        width: "100%",
         color: "#c7d0e2",
         display: "flex",
         alignItems: "center",

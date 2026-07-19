@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { LiveStoryJsonLd } from "@/components/seo/LiveStoryJsonLd";
 import { ArticleImage } from "../components/ArticleImage";
+import { DesktopPrimaryNav } from "../components/DesktopPrimaryNav";
 import { Masthead } from "../components/Masthead";
 import { ReaderShell } from "../components/ReaderShell";
 import { AiSummary, SectionHeader, Tag } from "../components/primitives";
@@ -186,6 +187,7 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
         <LiveStoryJsonLd article={article} imageMeta={editorialMeta?.image} />
         <ReaderShell activeNav="latest">
           <Masthead back backHref="/live" pageTitle="लाइव ब्लॉग" />
+          <DesktopPrimaryNav active="latest" />
           <div
             style={{
               flexShrink: 0,
@@ -256,13 +258,19 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
         bottomPad={showShareBar ? 64 : 72}
       >
         <Masthead back backHref="/" pageTitle={pageTitle} />
+        <DesktopPrimaryNav
+          active={
+            variant === "breaking" || variant === "no-image" ? "latest" : "home"
+          }
+        />
 
         {variant === "breaking" ? <BreakingBanner updatedLabel={updatedLabel} /> : null}
         {variant === "sponsored" ? <SponsoredBanner sponsored={sponsored} /> : null}
         {variant === "premium" ? <PremiumRibbon /> : null}
         {variant === "explainer" ? <ProgressBar progress={0.4} /> : null}
 
-        <div style={{ flex: 1, overflow: "auto" }}>
+        <div className="jd-article-layout" style={{ flex: 1, overflow: "auto" }}>
+          <div>
           {variant === "video" ? (
             <VideoPlayer
               imageUrl={imageUrl}
@@ -484,40 +492,63 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
               )
             ) : null}
 
-            {variant === "video" && relatedStories.length > 0 ? (
-              <>
-                <div style={{ paddingTop: 6 }}>
-                  <SectionHeader title="आगे देखें" />
-                </div>
-                {relatedStories.slice(0, 3).map((s, i) => (
-                  <SecondaryStory
-                    key={s.slug}
-                    story={{ ...s, kicker: s.kicker ?? "वीडियो" }}
-                    last={i === Math.min(2, relatedStories.length - 1)}
-                    toneIndex={i}
-                  />
-                ))}
-              </>
-            ) : null}
+            <div className="jd-article-related-inline">
+              {variant === "video" && relatedStories.length > 0 ? (
+                <>
+                  <div style={{ paddingTop: 6 }}>
+                    <SectionHeader title="आगे देखें" />
+                  </div>
+                  {relatedStories.slice(0, 3).map((s, i) => (
+                    <SecondaryStory
+                      key={s.slug}
+                      story={{ ...s, kicker: s.kicker ?? "वीडियो" }}
+                      last={i === Math.min(2, relatedStories.length - 1)}
+                      toneIndex={i}
+                    />
+                  ))}
+                </>
+              ) : null}
 
-            {variant !== "video" &&
-            variant !== "explainer" &&
-            relatedStories.length > 0 ? (
-              <>
-                <div style={{ paddingTop: 4 }}>
-                  <SectionHeader title="संबंधित ख़बरें" />
-                </div>
-                {relatedStories.slice(0, 4).map((s, i) => (
-                  <SecondaryStory
-                    key={s.slug}
-                    story={s}
-                    last={i === Math.min(3, relatedStories.length - 1)}
-                    toneIndex={i}
-                  />
-                ))}
-              </>
-            ) : null}
+              {variant !== "video" &&
+              variant !== "explainer" &&
+              relatedStories.length > 0 ? (
+                <>
+                  <div style={{ paddingTop: 4 }}>
+                    <SectionHeader title="संबंधित ख़बरें" />
+                  </div>
+                  {relatedStories.slice(0, 4).map((s, i) => (
+                    <SecondaryStory
+                      key={s.slug}
+                      story={s}
+                      last={i === Math.min(3, relatedStories.length - 1)}
+                      toneIndex={i}
+                    />
+                  ))}
+                </>
+              ) : null}
+            </div>
           </article>
+          </div>
+
+          {relatedStories.length > 0 && variant !== "explainer" ? (
+            <aside className="jd-article-rail" aria-label="संबंधित ख़बरें">
+              <p className="jd-rail-title">
+                {variant === "video" ? "आगे देखें" : "संबंधित ख़बरें"}
+              </p>
+              {relatedStories.slice(0, 5).map((s, i) => (
+                <SecondaryStory
+                  key={`rail-${s.slug}`}
+                  story={
+                    variant === "video"
+                      ? { ...s, kicker: s.kicker ?? "वीडियो" }
+                      : s
+                  }
+                  last={i === Math.min(4, relatedStories.length - 1)}
+                  toneIndex={i}
+                />
+              ))}
+            </aside>
+          ) : null}
         </div>
 
         {showShareBar ? <ArticleShareBar slug={slug} /> : null}

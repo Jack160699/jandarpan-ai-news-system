@@ -22,7 +22,8 @@ type ReaderShellProps = {
 };
 
 /**
- * Shared Phase 1–4 page chrome — fonts, tokens, search, audio, bottom nav.
+ * Shared page chrome — fonts, tokens, search, audio, phone bottom nav +
+ * tablet/desktop primary nav (Phase 6).
  */
 export function ReaderShell({
   children,
@@ -35,10 +36,12 @@ export function ReaderShell({
   reserveMiniPlayer = true,
 }: ReaderShellProps) {
   const pad = bottomPad + (reserveMiniPlayer ? 52 : 0);
+  const showNav = !hideBottomNav && activeNav;
+
   return (
     <ExperienceChrome tracks={audioTracks}>
       <div
-        className={`jd-ds ${readerDsFontClassName}`}
+        className={`jd-ds jd-ds--stage ${readerDsFontClassName}`}
         data-theme={dark ? "dark" : undefined}
         style={{
           minHeight: "100dvh",
@@ -48,9 +51,9 @@ export function ReaderShell({
         }}
       >
         {children}
-        {!hideBottomNav && activeNav ? (
+        {showNav ? (
           <>
-            <div aria-hidden style={{ height: pad, flexShrink: 0 }} />
+            <div className="jd-nav-spacer" aria-hidden style={{ height: pad, flexShrink: 0 }} />
             <BottomNav active={activeNav} dark={dark} />
           </>
         ) : null}

@@ -26,7 +26,7 @@ export function UtilTiles({
 
   return (
     <div
-      className="jd-ui"
+      className="jd-ui jd-util-tiles"
       style={{
         margin: "2px 14px",
         display: "grid",

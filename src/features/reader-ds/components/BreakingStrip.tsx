@@ -14,7 +14,7 @@ export function BreakingStrip({ headline, href = "#" }: BreakingStripProps) {
   return (
     <Link
       href={href}
-      className="jd-ui"
+      className="jd-ui jd-breaking-strip"
       style={{
         flexShrink: 0,
         display: "flex",
@@ -24,6 +24,8 @@ export function BreakingStrip({ headline, href = "#" }: BreakingStripProps) {
         background: "var(--jd-red)",
         color: "#fff",
         textDecoration: "none",
+        width: "100%",
+        boxSizing: "border-box",
       }}
     >
       <span

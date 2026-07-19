@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { SearchHit } from "@/lib/search/types";
+import { DesktopPrimaryNav } from "../components/DesktopPrimaryNav";
 import { Masthead } from "../components/Masthead";
 import { ReaderShell } from "../components/ReaderShell";
 import { SecondaryStory } from "../components/SecondaryStory";
@@ -38,8 +39,9 @@ export function SearchResultsPageView({ query, total, hits, topicSuggestion }: P
   return (
     <ReaderShell activeNav="home">
       <Masthead back pageTitle="खोज" backHref="/" />
+      <DesktopPrimaryNav active="home" />
       <div
-        className="jd-ui"
+        className="jd-ui jd-shell"
         style={{
           flexShrink: 0,
           padding: "8px 14px",
@@ -48,6 +50,7 @@ export function SearchResultsPageView({ query, total, hits, topicSuggestion }: P
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          boxSizing: "border-box",
         }}
       >
         <span style={{ fontSize: 12.5, color: "var(--jd-ink-3)" }}>
@@ -110,7 +113,7 @@ export function SearchResultsPageView({ query, total, hits, topicSuggestion }: P
           </div>
         ) : null}
 
-        <div style={{ padding: "0 14px" }}>
+        <div className="jd-search-results" style={{ padding: "0 14px" }}>
           {stories.length === 0 ? (
             <p className="jd-ui" style={{ padding: "20px 0", color: "var(--jd-muted)", fontSize: 14 }}>
               कोई परिणाम नहीं मिला। दूसरी खोज आज़माएँ।

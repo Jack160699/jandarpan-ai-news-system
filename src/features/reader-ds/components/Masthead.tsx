@@ -40,12 +40,14 @@ export function Masthead({
       }}
     >
       <div
+        className="jd-masthead__inner"
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           maxWidth: 900,
           margin: "0 auto",
+          width: "100%",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>

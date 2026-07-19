@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Approved Phase 6 Desktop/Tablet · Jan Darpan Editorial Grid</title>
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&family=Noto+Serif+Devanagari:wght@600;700&family=Tiro+Devanagari+Hindi&display=swap" rel="stylesheet" />
+<style>
+  :root{--navy:#0a2550;--navyDeep:#081b3a;--red:#9e1b22;--gold:#c19a3e;--goldSoft:#e7d6a4;--paper:#f7f4ec;--ink:#16130d;--ink2:#3f3a2e;--ink3:#6a6250;--muted:#9a917d;--line:#d9d2c2;--line2:#e6e0d2}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#1c2230;padding:32px 16px 64px;font-family:Mukta,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;gap:48px}
+  .block{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .label{font-weight:800;letter-spacing:.12em;font-size:12px;color:var(--goldSoft)}
+  .note{font-size:11px;color:#93a4c2;max-width:900px;text-align:center;line-height:1.5}
+  .frame{background:var(--paper);overflow:hidden;position:relative;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+  .frame.desktop{width:1280px;height:800px}
+  .frame.tablet{width:768px;height:1024px}
+  .serif{font-family:'Noto Serif Devanagari',serif}
+  .tiro{font-family:'Tiro Devanagari Hindi',serif}
+  .ui{font-family:Mukta,system-ui,sans-serif}
+  .mast{background:var(--navy);color:var(--paper);padding:10px 28px;display:flex;align-items:center;justify-content:space-between}
+  .mast-inner{width:100%;max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+  .brand{font-family:'Tiro Devanagari Hindi',serif;font-size:24px}
+  .topnav{background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:center}
+  .topnav-inner{max-width:1180px;width:100%;display:flex}
+  .topnav a{flex:1;text-align:center;padding:12px 8px;font-size:13px;font-weight:600;color:var(--ink2);border-bottom:2.5px solid transparent;text-decoration:none}
+  .topnav a.on{color:var(--red);font-weight:800;border-bottom-color:var(--red)}
+  .util{background:var(--navyDeep);color:#c7d0e2;padding:8px 28px;font-size:12px;display:flex;justify-content:space-between;max-width:none}
+  .shell{max-width:1180px;margin:0 auto;padding:16px 28px 32px}
+  .hero{display:grid;grid-template-columns:1.45fr 1fr;gap:28px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px}
+  .lead-img{height:260px;background:linear-gradient(135deg,#2c3e5c,#4a5f80);border-radius:2px;margin-bottom:10px}
+  .rail-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line2)}
+  .rail-thumb{width:96px;height:66px;background:linear-gradient(135deg,#586178,#3a4258);flex-shrink:0;border-radius:2px}
+  .cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;margin-top:16px}
+  .cols h3{font-family:'Noto Serif Devanagari',serif;font-size:16px;border-left:3px solid var(--red);padding-left:8px;margin-bottom:10px}
+  .article-grid{display:grid;grid-template-columns:minmax(0,720px) 300px;gap:36px;max-width:1180px;margin:0 auto;padding:20px 28px}
+  .hub{display:grid;grid-template-columns:1.35fr 1fr;gap:28px;max-width:1180px;margin:0 auto;padding:16px 28px}
+  .search-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 28px;max-width:1180px;margin:0 auto;padding:16px 28px}
+  .live{background:#05080f;color:#e7edf6;height:100%}
+  .live-hero{display:grid;grid-template-columns:1.35fr 1fr;gap:32px;max-width:1180px;margin:0 auto;padding:20px 28px}
+  .tag{font-size:9.5px;font-weight:800;letter-spacing:.09em;color:var(--red);text-transform:uppercase}
+  .tablet .hero{grid-template-columns:1fr;gap:8px}
+  .tablet .rail{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+  .tablet .cols{grid-template-columns:1fr 1fr}
+  .tablet .article-grid{grid-template-columns:minmax(0,720px);justify-content:center}
+  .tablet .hub{grid-template-columns:1fr}
+  .phone-warn{display:none}
+</style>
+</head>
+<body>
+
+<div class="block">
+  <div class="label">G-HOME-DESKTOP · 1280×800</div>
+  <div class="note">Editorial newspaper grid — masthead full-bleed · top primary nav · lead + rail · 3-column section feeds. Not a stretched phone column.</div>
+  <div class="frame desktop" data-screen="g-home-desktop" id="g-home-desktop">
+    <header class="mast"><div class="mast-inner"><div style="display:flex;align-items:center;gap:8px"><div style="width:26px;height:26px;border-radius:5px;background:var(--red);color:var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Tiro Devanagari Hindi',serif">ज</div><div class="brand">जनदर्पण</div></div><div class="ui" style="opacity:.85">⌕  🔔  ●</div></div></header>
+    <nav class="topnav ui"><div class="topnav-inner"><a class="on" href="#">होम</a><a href="#">मेरा जिला</a><a href="#">ताज़ा</a><a href="#">सुनें</a><a href="#">अधिक</a></div></nav>
+    <div class="util ui"><span>📍 रायपुर ▾</span><span>रवि · 19 जुलाई</span><span>🌧 32°</span></div>
+    <div class="shell">
+      <div class="hero">
+        <div>
+          <div class="lead-img"></div>
+          <div class="tag">प्रमुख · राजनीति</div>
+          <h1 class="serif" style="font-size:28px;line-height:1.25;font-weight:700;margin:6px 0">विधानसभा में नई औद्योगिक नीति पेश, दस लाख रोज़गार का लक्ष्य</h1>
+          <p class="ui" style="font-size:13px;color:var(--ink3);line-height:1.5">सरकार ने इस्पात, खनन व सौर ऊर्जा पर ज़ोर दिया — पाँच वर्षों में निवेश व ग्रामीण रोज़गार का दावा।</p>
+        </div>
+        <aside class="rail">
+          <div class="rail-item"><div style="flex:1"><div class="tag">व्यापार</div><div class="serif" style="font-size:15px;font-weight:700;margin-top:4px">GST संग्रह रिकॉर्ड 18% बढ़ा</div></div><div class="rail-thumb"></div></div>
+          <div class="rail-item"><div style="flex:1"><div class="tag">खेल</div><div class="serif" style="font-size:15px;font-weight:700;margin-top:4px">रणजी: राज्य टीम सेमीफ़ाइनल में</div></div><div class="rail-thumb"></div></div>
+          <div class="rail-item"><div style="flex:1"><div class="tag">ज़िला</div><div class="serif" style="font-size:15px;font-weight:700;margin-top:4px">रायपुर: पार्किंग नीति पर विरोध</div></div><div class="rail-thumb"></div></div>
+        </aside>
+      </div>
+      <div class="cols">
+        <div><h3>आपके जिले से</h3><div class="ui" style="font-size:13px;color:var(--ink2);line-height:1.5">स्थानीय ख़बर 1<br/>स्थानीय ख़बर 2<br/>स्थानीय ख़बर 3</div></div>
+        <div><h3>शीर्ष ख़बरें</h3><div class="ui" style="font-size:13px;color:var(--ink2);line-height:1.5">ट्रेंडिंग 1<br/>ट्रेंडिंग 2<br/>ट्रेंडिंग 3</div></div>
+        <div><h3>व्यापार</h3><div class="ui" style="font-size:13px;color:var(--ink2);line-height:1.5">बाज़ार 1<br/>बाज़ार 2<br/>बाज़ार 3</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="label">G-HOME-TABLET · 768×1024</div>
+  <div class="note">Centered shell · top nav · lead stacked · secondary 2-col rail. Phone atoms preserved, not stretched.</div>
+  <div class="frame tablet" data-screen="g-home-tablet" id="g-home-tablet">
+    <header class="mast"><div class="mast-inner"><div class="brand">जनदर्पण</div><div>⌕ 🔔</div></div></header>
+    <nav class="topnav ui"><div class="topnav-inner"><a class="on" href="#">होम</a><a href="#">मेरा जिला</a><a href="#">ताज़ा</a><a href="#">सुनें</a><a href="#">अधिक</a></div></nav>
+    <div class="util ui"><span>📍 रायपुर</span><span>19 जुलाई</span><span>32°</span></div>
+    <div class="shell">
+      <div class="hero">
+        <div><div class="lead-img" style="height:200px"></div><h1 class="serif" style="font-size:24px;font-weight:700;margin-top:8px">विधानसभा में नई औद्योगिक नीति पेश</h1></div>
+        <aside class="rail">
+          <div class="rail-item"><div style="flex:1"><div class="serif" style="font-size:14px;font-weight:700">GST संग्रह रिकॉर्ड बढ़ा</div></div><div class="rail-thumb"></div></div>
+          <div class="rail-item"><div style="flex:1"><div class="serif" style="font-size:14px;font-weight:700">रणजी सेमीफ़ाइनल</div></div><div class="rail-thumb"></div></div>
+        </aside>
+      </div>
+      <div class="cols">
+        <div><h3>आपके जिले से</h3><div class="ui" style="font-size:13px;color:var(--ink2)">स्थानीय · सूची</div></div>
+        <div><h3>शीर्ष ख़बरें</h3><div class="ui" style="font-size:13px;color:var(--ink2)">ट्रेंडिंग · सूची</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="label">G-ARTICLE-DESKTOP · 1280×800</div>
+  <div class="note">Reading column ~720px + related rail 300px — newspaper sidebar, not full-bleed phone article.</div>
+  <div class="frame desktop" data-screen="g-article-desktop" id="g-article-desktop">
+    <header class="mast"><div class="mast-inner"><div class="ui" style="display:flex;gap:10px;align-items:center"><span>‹</span><span class="brand" style="font-size:20px">जनदर्पण</span></div><div>⌕ 🔔</div></div></header>
+    <nav class="topnav ui"><div class="topnav-inner"><a class="on" href="#">होम</a><a href="#">मेरा जिला</a><a href="#">ताज़ा</a><a href="#">सुनें</a><a href="#">अधिक</a></div></nav>
+    <div class="article-grid">
+      <article>
+        <div class="tag">राजनीति · विश्लेषण</div>
+        <h1 class="serif" style="font-size:32px;line-height:1.28;font-weight:700;margin:8px 0 12px">औद्योगिक नीति के पाँच बड़े बदलाव</h1>
+        <div class="ui" style="font-size:12px;color:var(--muted);margin-bottom:14px">संवाददाता · 6 मिनट पढ़ें</div>
+        <div style="height:280px;background:linear-gradient(135deg,#2c3e5c,#4a5f80);border-radius:2px;margin-bottom:16px"></div>
+        <p class="serif" style="font-size:16px;line-height:1.75;color:var(--ink2)">मुख्य पाठ इस कॉलम में रहता है — डेस्कटॉप पर मोबाइल चौड़ाई नहीं खिंचती। संबंधित ख़बरें दाहिनी रेल में।</p>
+      </article>
+      <aside style="border-left:1px solid var(--line);padding-left:22px">
+        <div class="ui" style="font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--muted);margin-bottom:12px">संबंधित ख़बरें</div>
+        <div class="rail-item"><div class="serif" style="font-size:14px;font-weight:700">नीति पर उद्योग जगत की प्रतिक्रिया</div></div>
+        <div class="rail-item"><div class="serif" style="font-size:14px;font-weight:700">ज़िलेवार निवेश लक्ष्य</div></div>
+        <div class="rail-item"><div class="serif" style="font-size:14px;font-weight:700">रोज़गार आँकड़ों की पड़ताल</div></div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="label">G-DISTRICT-DESKTOP · 1280×800</div>
+  <div class="frame desktop" data-screen="g-district-desktop" id="g-district-desktop">
+    <header class="mast"><div class="mast-inner"><div class="serif" style="font-size:20px;font-weight:700">रायपुर</div><div>⌕ 🔔</div></div></header>
+    <nav class="topnav ui"><div class="topnav-inner"><a href="#">होम</a><a class="on" href="#">मेरा जिला</a><a href="#">ताज़ा</a><a href="#">सुनें</a><a href="#">अधिक</a></div></nav>
+    <div style="background:var(--navyDeep);color:#c7d0e2;padding:8px 28px;font-size:12px" class="ui">📍 रायपुर ज़िला · बदलें</div>
+    <div class="hub">
+      <div>
+        <div class="lead-img" style="height:220px"></div>
+        <h2 class="serif" style="font-size:22px;font-weight:700;margin:10px 0">नगर निगम की नई पार्किंग नीति</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+          <div style="background:#fff;border:1px solid var(--line2);padding:12px" class="ui">मंडी भाव</div>
+          <div style="background:#fff;border:1px solid var(--line2);padding:12px" class="ui">बिजली</div>
+          <div style="background:#fff;border:1px solid var(--line2);padding:12px" class="ui">परिवहन</div>
+          <div style="background:#fff;border:1px solid var(--line2);padding:12px" class="ui">मौसम</div>
+        </div>
+      </div>
+      <div>
+        <h3 class="serif" style="font-size:16px;border-left:3px solid var(--red);padding-left:8px;margin-bottom:10px">रायपुर की ख़बरें</h3>
+        <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">स्मार्ट क्लास शुरू</div></div>
+        <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">बाजार में यातायात व्यवस्था</div></div>
+        <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">नदी किनारे सफाई अभियान</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="label">G-CATEGORY-DESKTOP · 1280×800</div>
+  <div class="frame desktop" data-screen="g-category-desktop" id="g-category-desktop">
+    <header class="mast"><div class="mast-inner"><div class="serif" style="font-size:20px;font-weight:700">राजनीति</div><div>⌕</div></div></header>
+    <nav class="topnav ui"><div class="topnav-inner"><a class="on" href="#">होम</a><a href="#">मेरा जिला</a><a href="#">ताज़ा</a><a href="#">सुनें</a><a href="#">अधिक</a></div></nav>
+    <div class="ui" style="padding:10px 28px;border-bottom:1px solid var(--line);display:flex;gap:8px"><span style="background:var(--navy);color:#fff;padding:6px 12px;border-radius:2px;font-size:12px;font-weight:800">सभी</span><span style="border:1px solid var(--line);padding:6px 12px;border-radius:2px;font-size:12px">छत्तीसगढ़</span><span style="border:1px solid var(--line);padding:6px 12px;border-radius:2px;font-size:12px">राष्ट्रीय</span></div>
+    <div class="hub">
+      <div><div class="lead-img" style="height:240px"></div><div class="tag" style="margin-top:10px">विधानसभा</div><h2 class="serif" style="font-size:22px;font-weight:700;margin-top:6px">सदन में नीति चर्चा</h2></div>
+      <div>
+        <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">विपक्ष का मुद्दा</div></div>
+        <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">समिति बैठक आज</div></div>
+        <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">चुनाव आयोग अद्यतन</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="label">G-SEARCH-DESKTOP · 1280×800</div>
+  <div class="frame desktop" data-screen="g-search-desktop" id="g-search-desktop">
+    <header class="mast"><div class="mast-inner"><div class="serif" style="font-size:20px;font-weight:700">खोज</div><div>⌕</div></div></header>
+    <nav class="topnav ui"><div class="topnav-inner"><a class="on" href="#">होम</a><a href="#">मेरा जिला</a><a href="#">ताज़ा</a><a href="#">सुनें</a><a href="#">अधिक</a></div></nav>
+    <div class="ui" style="padding:10px 28px;border-bottom:1px solid var(--line)">“औद्योगिक नीति” के 24 परिणाम · फ़िल्टर</div>
+    <div class="search-grid">
+      <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">नीति का पूर्ण पाठ</div><div class="rail-thumb"></div></div>
+      <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">निवेश लक्ष्य विश्लेषण</div><div class="rail-thumb"></div></div>
+      <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">उद्योग संघ की प्रतिक्रिया</div><div class="rail-thumb"></div></div>
+      <div class="rail-item"><div class="serif" style="font-size:15px;font-weight:700">ज़िलेवार असर</div><div class="rail-thumb"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="label">G-LIVE-DESKTOP · 1280×800</div>
+  <div class="frame desktop live" data-screen="g-live-desktop" id="g-live-desktop">
+    <div style="padding:12px 28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(150,175,215,.16)">
+      <div class="serif" style="font-size:18px;font-weight:700">लाइव अपडेट</div>
+      <div class="ui" style="color:#e05a63;font-weight:800;letter-spacing:.08em">● LIVE</div>
+    </div>
+    <nav class="topnav ui" style="background:#0a1220;border-color:rgba(150,175,215,.16)"><div class="topnav-inner"><a href="#" style="color:#93a4c2">होम</a><a href="#" style="color:#93a4c2">मेरा जिला</a><a class="on" href="#">ताज़ा</a><a href="#" style="color:#93a4c2">सुनें</a><a href="#" style="color:#93a4c2">अधिक</a></div></nav>
+    <div class="live-hero">
+      <div>
+        <div style="height:240px;background:linear-gradient(135deg,#1a2438,#2a3548);border-radius:2px;margin-bottom:12px"></div>
+        <h1 class="serif" style="font-size:22px;font-weight:700">लाइव: विधानसभा सत्र अपडेट</h1>
+      </div>
+      <div>
+        <div style="display:flex;gap:11px;margin-bottom:14px"><span style="width:9px;height:9px;border-radius:9px;background:#e05a63;margin-top:4px;flex-shrink:0"></span><div><div class="ui" style="font-size:11px;color:#e05a63;font-weight:800">अभी</div><div class="serif" style="font-size:15px">मुख्यमंत्री का बयान</div></div></div>
+        <div style="display:flex;gap:11px;margin-bottom:14px"><span style="width:9px;height:9px;border-radius:9px;background:#c19a3e;margin-top:4px;flex-shrink:0"></span><div><div class="ui" style="font-size:11px;color:#c19a3e;font-weight:800">12 मि</div><div class="serif" style="font-size:15px">विपक्ष का जवाब</div></div></div>
+        <div style="display:flex;gap:11px"><span style="width:9px;height:9px;border-radius:9px;background:#93a4c2;margin-top:4px;flex-shrink:0"></span><div><div class="ui" style="font-size:11px;color:#93a4c2;font-weight:800">28 मि</div><div class="serif" style="font-size:15px">समिति गठित</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

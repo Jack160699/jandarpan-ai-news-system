@@ -27,7 +27,7 @@ export function LeadStory({ story, priority = true }: { story: ReaderStory; prio
           ) : null}
         </div>
         <h2
-          className="jd-serif"
+          className="jd-serif jd-lead-title"
           style={{
             margin: "0 0 4px",
             fontSize: 22,

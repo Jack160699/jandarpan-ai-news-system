@@ -23,6 +23,7 @@ export function DismissibleAd({
   if (sticky) {
     return (
       <div
+        className="jd-sticky-ad"
         role="complementary"
         aria-label="विज्ञापन"
         style={{

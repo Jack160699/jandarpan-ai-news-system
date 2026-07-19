@@ -1,19 +1,12 @@
 import Link from "next/link";
-import { JdIcon, type JdIconName } from "./icons";
+import { JdIcon } from "./icons";
+import { PRIMARY_NAV_ITEMS } from "./navItems";
 
 export type BottomNavKey = "home" | "district" | "latest" | "listen" | "more";
 
-const ITEMS: Array<{ key: BottomNavKey; icon: JdIconName; label: string; href: string }> = [
-  { key: "home", icon: "home", label: "होम", href: "/" },
-  { key: "district", icon: "pin", label: "मेरा जिला", href: "/district" },
-  { key: "latest", icon: "bolt", label: "ताज़ा", href: "/latest" },
-  { key: "listen", icon: "headphone", label: "सुनें", href: "/listen" },
-  { key: "more", icon: "user", label: "अधिक", href: "/archive" },
-];
-
 /**
- * 5-destination bottom navigation. Never covers content — the page reserves
- * bottom padding equal to its height. Active destination is red.
+ * 5-destination bottom navigation (phone). Hidden at tablet+ via CSS —
+ * replaced by DesktopPrimaryNav so the mobile column is never stretched.
  */
 export function BottomNav({
   active = "home",
@@ -24,6 +17,7 @@ export function BottomNav({
 }) {
   return (
     <nav
+      className="jd-bottom-nav"
       aria-label="मुख्य नेविगेशन"
       style={{
         position: "fixed",
@@ -38,7 +32,7 @@ export function BottomNav({
         padding: "7px 0 max(9px, env(safe-area-inset-bottom))",
       }}
     >
-      {ITEMS.map((it) => {
+      {PRIMARY_NAV_ITEMS.map((it) => {
         const on = it.key === active;
         const color = on ? "var(--jd-red)" : dark ? "#93a4c2" : "var(--jd-muted)";
         return (
