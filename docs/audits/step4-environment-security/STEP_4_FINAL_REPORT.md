@@ -1,87 +1,95 @@
-# STEP_4_FINAL_REPORT
+# Step 4 Final Report
 
-**Step:** 4 — Environment & Security Hardening  
-**Repo:** Jack160699/jandarpan-ai-news-system  
-**Vercel:** newspaper-motion (jack160699s-projects)  
-**Production:** https://www.jandarpan.news  
-**Working branch:** `fix/step4-environment-security-hardening`  
-**Rollback:** `backup/before-step4-environment-security-hardening` @ `f23df88` → deploy `dpl_dqno1GZSPufCJJUVjCyfpuubWqiN`
+## Verdict
 
-## Executive summary
+**PARTIAL**
 
-Step 4 Production env hardening and supporting code are prepared: scoped cron secrets + dedicated 2FA key + explicit `AI_LOCAL_ENRICH_ENABLED=false`, timing-safe cron auth, dual-key 2FA crypto, tenant null-job repair, and an ops health probe workflow. Preview env parity is incomplete. Production redeploy and post-redeploy probe are still required before a final PASS.
+Reason: Production environment hardening and newsroom continuity are verified. Scoped cron secrets are configured and timing-safe auth is deployed, but Vercel Cron / QStash / GitHub Actions still authenticate with legacy `CRON_SECRET`. Full route-specific secret isolation is therefore not claimed.
 
-## Context carried from Step 3
+## Environment
 
-- Step 3: **PASS**
-- Incremental ingestion live; migration `065` applied
-- 22 `ingestion_source_state` rows; 5 RSS retired
+| Variable | Environment | Before | After | Value exposed? |
+|---|---|---|---|---|
+| AI_LOCAL_ENRICH_ENABLED | Production | missing | configured (explicit false) | no |
+| AI_LOCAL_ENRICH_ENABLED | Preview (branch) | missing | configured (explicit false) | no |
+| SECURITY_2FA_ENCRYPTION_KEY | Production | missing | configured | no |
+| SECURITY_2FA_ENCRYPTION_KEY | Preview (branch) | missing | configured | no |
+| CRON_INGEST_SECRET | Production + Preview branch | missing | configured | no |
+| CRON_PIPELINE_SECRET | Production + Preview branch | missing | configured | no |
+| CRON_OPS_SECRET | Production + Preview branch | missing | configured | no |
+| CRON_ADMIN_SECRET | Production + Preview branch | missing | configured | no |
+| CRON_SECRET | Production + Preview | configured | configured (preserved) | no |
+| UPSTASH_REDIS_REST_URL/TOKEN | Production + Preview | configured | configured (unchanged) | no |
 
-## What was completed
+## Cron security
 
-| Area | Outcome |
-|---|---|
-| Production env | Scoped cron secrets, 2FA key, AI local enrich flag configured; `CRON_SECRET` + Redis preserved |
-| Cron auth code | `timingSafeEqual`; scoped **or** legacy accept |
-| 2FA | Case A (0 rows); dedicated key + dual-key decrypt; no migration |
-| Tenant hygiene | 26 active null-tenant jobs → pipeline tenant; remaining active null = 0 |
-| Source-state null tenants | 22 intentional global keys |
-| Ops probe workflow | GET `/api/health` only |
-| Optional CSE | Missing → warn, not Critical |
-| SERPAPI / GSC / Sentry | Configured |
+- Caller matrix completed (see CRON_CALLER_MATRIX.md)
+- Scoped secrets configured in Production (+ Preview branch)
+- Routes retain legacy `CRON_SECRET` fallback (required for Vercel Cron)
+- Natural scheduled runs verified post-redeploy: fetch-news, editorial-generate, translation-backfill, orchestrate — all ok
+- Authentication failures: none observed in post-deploy log scan
 
-## Delivery placeholders
+## 2FA security
 
-| Item | Status |
-|---|---|
-| PR number | **TBD** |
-| Preview URL | **TBD** |
-| Production redeploy | **REQUIRED** |
-| Current prod (pre-redeploy) | `dpl_dqno1GZSPufCJJUVjCyfpuubWqiN` @ `f23df88` |
+- Existing encrypted record count: **0** (Case A)
+- Dedicated key configured: yes (Production + Preview branch)
+- Records migrated: N/A (none)
+- Legacy decrypt fallback retained in code for future Case C
+- Compatibility: verified by Case A + dual-key unit tests authored
 
-## Explicit non-claims
+## Redis
 
-- **Not** complete scoped cron isolation while callers send `CRON_SECRET` (Vercel Cron / QStash / Actions).
-- **Not** Preview env parity (CLI `git_branch_required` / branch not pushed).
-- **Not** Redis R/W proven until post-redeploy ops probe (`PENDING_UNTIL_REDEPLOY_PROBE`).
-- Local vitest not run (disk/`node_modules` constraint); rely on CI.
+- Canonical: UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+- Ops probe: redisConfigured=true; health check id=redis status=healthy (includes set/TTL probe)
+- productionWarnings: []
+- Tenant-safe namespace: application prefixes; probe uses ops:health:ping
 
-## Audit index
+## Tenant hygiene
 
-1. `ENVIRONMENT_BASELINE.md`
-2. `CRON_CALLER_MATRIX.md`
-3. `SCOPED_SECRET_MIGRATION.md`
-4. `TWO_FACTOR_KEY_AUDIT.md`
-5. `TWO_FACTOR_KEY_ROTATION.md`
-6. `REDIS_VERIFICATION.md`
-7. `TENANT_HYGIENE.md`
-8. `OPTIONAL_INTEGRATIONS.md`
-9. `CODE_CHANGES.md`
-10. `TEST_RESULTS.md`
-11. `PREVIEW_VALIDATION.md`
-12. `PRODUCTION_DEPLOYMENT.md`
-13. `PRODUCTION_VERIFICATION.md`
-14. `REMAINING_MANUAL_ACTIONS.md`
-15. `STEP_4_FINAL_REPORT.md` (this file)
+- Audited active jobs; repaired 26 deterministic null-tenant jobs earlier in Step 4
+- Remaining active null-tenant jobs: **0**
+- ingestion_source_state: 22 rows with intentional global null tenant_id
 
-## Current verdict pending final probe
+## Optional integrations
 
-**Likely: PARTIAL** until all of the following clear:
+- Google CSE: missing / optional (not Critical)
+- SERP / GSC / Sentry: configured
+- Redis: healthy
 
-1. Preview env parity for scoped/2FA/`AI_LOCAL` (or consciously deferred with Production-only acceptance).
-2. Production redeploy with Step 4 code + env bound.
-3. `step4-ops-probe.yml` shows healthy Redis / infrastructure checks.
-4. Natural cron observation shows auth success under dual-accept.
+## Delivery
 
-**PASS path:** After probe, if Redis + Step 4 env warnings are clear and natural crons are OK, update this section to **PASS** and record deployment ID, SHA, probe timestamp, and PR number.
+- Branch: `fix/step4-environment-security-hardening`
+- PR: **#34** (merged)
+- Head commit: `072fbe4eb8f3c00613b5eaaa3dd9d845c32bd975`
+- Merge SHA: `c43f13d472b0a2549bcf5fd3b7dd4bf7ef73f3ba`
+- Preview: `dpl_AVoF4vpYiZ57BjMCvyTXLcvF6xgh` READY
+- Production deployment: `dpl_8Ths8phDoZbZWmzFUvsj8t8zXeH4` READY
+- Production SHA: `c43f13d` (main)
+- Aliases: www.jandarpan.news, jandarpan.news on newspaper-motion
+- Rollback target: `dpl_dqno1GZSPufCJJUVjCyfpuubWqiN` @ `f23df88`
 
-| Gate | Status now |
-|---|---|
-| Production env configured | Done |
-| Code ready on working branch | Done |
-| Preview parity | PARTIAL |
-| Redeploy + ops probe | Pending |
-| Natural cron OK | Pending |
-| **Step 4 verdict** | **PARTIAL** (pending final probe) |
+## Tests
 
-No secret values are included in this report or sibling audits.
+- Local vitest: not executed (disk / no node_modules constraint)
+- Authored: cron-auth.phase8 (~8 cases) + two-factor.step4 (3 cases)
+- Step4 Ops Probe workflow: **PASS** (HTTP 200, healthy, redis healthy, productionEnvReady true, warnings [])
+- Preview `Vercel – newspaper-motion`: **PASS**
+- Orphan `Vercel – jandarpan-ai-news-system`: FAILURE (non-blocking Case A)
+
+## Production regression checks
+
+- ingestion: ok (degraded provider path operational)
+- generation: ok
+- translation: ok
+- publishing: 29 published in 24h window (stable)
+- admin login page: HTTP 200
+- health: healthy
+- runtime auth errors: none observed
+
+## Manual action
+
+None required for Production. Optional: add Step 4 secrets to all Preview branches (CLI currently requires branch-specific add; branch vars are set for `fix/step4-environment-security-hardening`).
+
+## Next readiness
+
+Step 5 (72-hour operational observation) **may begin**. Do not start it in this response.
