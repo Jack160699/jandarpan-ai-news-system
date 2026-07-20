@@ -13,6 +13,7 @@ import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 export type AccountNavKey =
   | "profile"
   | "saved"
+  | "offline"
   | "history"
   | "language"
   | "district"
@@ -22,10 +23,11 @@ export type AccountNavKey =
 type NavItem = {
   key: AccountNavKey;
   href: string;
-  icon: "user" | "bookmark" | "clock" | "globe" | "pin" | "star" | "bell";
+  icon: "user" | "bookmark" | "download" | "clock" | "globe" | "pin" | "star" | "bell";
   labelKey:
     | "account.profile"
     | "account.saved"
+    | "account.offline"
     | "account.history"
     | "account.language"
     | "account.district"
@@ -36,6 +38,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { key: "profile", href: "/archive", icon: "user", labelKey: "account.profile" },
   { key: "saved", href: "/archive/saved", icon: "bookmark", labelKey: "account.saved" },
+  { key: "offline", href: "/archive/offline", icon: "download", labelKey: "account.offline" },
   { key: "history", href: "/archive/history", icon: "clock", labelKey: "account.history" },
   { key: "language", href: "/archive/language", icon: "globe", labelKey: "account.language" },
   { key: "district", href: "/archive/districts", icon: "pin", labelKey: "account.district" },
@@ -44,6 +47,7 @@ const NAV: NavItem[] = [
 ];
 
 function resolveActive(pathname: string): AccountNavKey {
+  if (pathname.startsWith("/archive/offline")) return "offline";
   if (pathname.startsWith("/archive/saved")) return "saved";
   if (pathname.startsWith("/archive/history")) return "history";
   if (pathname.startsWith("/archive/language")) return "language";

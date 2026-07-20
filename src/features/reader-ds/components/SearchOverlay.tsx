@@ -102,8 +102,16 @@ export function SearchOverlay({
     const next = [trimmed, ...readRecent().filter((r) => r !== trimmed)].slice(0, 8);
     writeRecent(next);
     setSearchOpen(false);
+    const forcedOffline =
+      typeof document !== "undefined" &&
+      document.documentElement.getAttribute("data-jd-force-offline") === "1";
+    const offline = forcedOffline || (typeof navigator !== "undefined" && !navigator.onLine);
     startTransition(() => {
-      router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+      router.push(
+        offline
+          ? `/archive/offline?q=${encodeURIComponent(trimmed)}`
+          : `/search?q=${encodeURIComponent(trimmed)}`
+      );
     });
   };
 

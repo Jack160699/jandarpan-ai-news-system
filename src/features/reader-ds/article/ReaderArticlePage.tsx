@@ -31,6 +31,7 @@ import { PhotoGallery } from "./components/PhotoGallery";
 import { VideoPlayer } from "./components/VideoPlayer";
 import { ArticleInlineAd } from "../monetization";
 import { ReservedAd } from "../components/ReservedAd";
+import { OfflineDownloadControl } from "../offline/OfflineDownloadControl";
 import type { ReaderArticleModel } from "./types";
 
 function storyAsLiveEntries(model: ReaderArticleModel): LiveBlogEntry[] {
@@ -484,6 +485,24 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
                 />
               </div>
             ) : null}
+
+            <OfflineDownloadControl
+              model={{
+                slug: model.slug,
+                headline: model.headline,
+                summary: model.summary,
+                paragraphs: model.paragraphs,
+                imageUrl: model.imageUrl,
+                imageCaption: model.imageCaption,
+                author: model.author,
+                role: model.role,
+                publishedLabel: model.publishedLabel,
+                kicker: model.kicker,
+                categoryLabel: model.categoryLabel,
+                tags: model.tags,
+                article: model.article,
+              }}
+            />
 
             {variant === "sponsored" ? (
               sponsored?.ctaUrl ? (

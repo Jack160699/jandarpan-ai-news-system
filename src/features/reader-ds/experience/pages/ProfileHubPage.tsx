@@ -96,6 +96,12 @@ export function ProfileHubPage() {
           sub={t("profile.savedCount", { n: saved })}
           href="/archive/saved"
         />
+        <SettingRow
+          icon="download"
+          label={t("profile.offline")}
+          sub={t("profile.offlineSub")}
+          href="/archive/offline"
+        />
         <SettingRow icon="clock" label={t("profile.history")} href="/archive/history" />
         <SettingRow
           icon="bell"

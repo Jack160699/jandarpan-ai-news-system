@@ -67,6 +67,7 @@ const READER_DS_EXACT = new Set([
   "/membership",
   "/maintenance",
   "/login",
+  "/offline-unavailable",
 ]);
 const READER_DS_PREFIXES = [
   "/district/",

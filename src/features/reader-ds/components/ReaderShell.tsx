@@ -3,6 +3,7 @@ import "../styles";
 import { readerDsFontClassName } from "../fonts";
 import { ExperienceChrome } from "../experience/ExperienceChrome";
 import type { BriefingTrack } from "../experience/audio/types";
+import { OfflineServiceWorkerRegister } from "../offline/OfflineServiceWorkerRegister";
 import { NetworkGuards } from "../system/NetworkGuards";
 import { PermissionSheet } from "../system/PermissionSheet";
 import { BottomNav, type BottomNavKey } from "./BottomNav";
@@ -61,6 +62,7 @@ export function ReaderShell({
           background: dark ? "#05080f" : "var(--jd-paper)",
         }}
       >
+        <OfflineServiceWorkerRegister />
         <NetworkGuards />
         {!dark ? (
           <div className="jd-desk-chrome-root">

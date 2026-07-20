@@ -83,8 +83,8 @@ export function NetworkGuards() {
           <JdIcon name="wifiOff" size={18} stroke={1.9} color="#fff" />
           <span style={{ flex: 1, fontSize: 12, fontWeight: 600 }}>
             {t("system.offlineSaved")}{" "}
-            <Link href="/archive/saved" style={{ color: "var(--jd-gold-soft)", fontWeight: 800 }}>
-              {t("system.offlineSavedLink")}
+            <Link href="/archive/offline" style={{ color: "var(--jd-gold-soft)", fontWeight: 800 }}>
+              {t("offline.library")}
             </Link>{" "}
             {t("system.offlineSavedSuffix")}
           </span>
