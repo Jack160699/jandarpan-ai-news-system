@@ -16,6 +16,10 @@ import { resolveMedia } from "@/lib/news/images/resolve-media";
 
 type LoadTier = 0 | 1 | 2 | 3;
 
+/** Default intrinsic size hints — avoid zero-height while CSS aspect classes apply */
+export const MEDIA_IMAGE_DEFAULT_WIDTH = 720;
+export const MEDIA_IMAGE_DEFAULT_HEIGHT = 405;
+
 export type MediaImageProps = {
   src?: string | null;
   alt: string;
@@ -39,6 +43,10 @@ export type MediaImageProps = {
   hoverZoom?: boolean;
   /** Subtle frame shadow */
   shadow?: boolean;
+  /** Optional intrinsic width hint (defaults avoid zero-height) */
+  width?: number;
+  /** Optional intrinsic height hint */
+  height?: number;
 };
 
 function tierUrl(
@@ -92,14 +100,18 @@ export function MediaImage({
   fillParent = false,
   hoverZoom = true,
   shadow = true,
+  width: widthProp,
+  height: heightProp,
 }: MediaImageProps) {
   const aspectNorm = normalizeMediaAspect(aspect);
   const cropAspect = cropAspectFor(aspectNorm, cropAspectProp);
-  const width = widthFromSizes(sizes);
+  const width = widthProp ?? (widthFromSizes(sizes) || MEDIA_IMAGE_DEFAULT_WIDTH);
+  const height = heightProp ?? MEDIA_IMAGE_DEFAULT_HEIGHT;
   const [tier, setTier] = useState<LoadTier>(0);
   const [loaded, setLoaded] = useState(false);
 
   const media = useMemo(() => {
+    // Empty src + category still resolves via resolveMedia (contextual / placeholder).
     if (category) {
       return resolveMedia(
         {
@@ -143,17 +155,23 @@ export function MediaImage({
 
   const handleError = useCallback(() => {
     setLoaded(false);
-    setTier((t) => {
+    setTier((t: LoadTier) => {
       if (!media) return 3;
+      // Prefer stable category/branded placeholder over blanking the frame.
       if (t === 0) {
-        if (media.fallbackUrl === media.optimizedUrl) {
-          return media.placeholderUrl === media.optimizedUrl ? 3 : 2;
+        if (media.placeholderUrl && media.placeholderUrl !== media.optimizedUrl) {
+          return 2;
         }
-        return 1;
+        if (media.fallbackUrl !== media.optimizedUrl) {
+          return 1;
+        }
+        if (media.placeholderUrl) return 2;
+        return 3;
       }
       if (t === 1) {
-        return media.placeholderUrl === media.fallbackUrl ? 3 : 2;
+        return media.placeholderUrl ? 2 : 3;
       }
+      // Placeholder already tried once → CSS fallback frame (keeps placeholderUrl bg).
       return 3;
     });
   }, [media]);
@@ -178,7 +196,16 @@ export function MediaImage({
   const quality = priority ? 84 : 76;
 
   return (
-    <div className={`${frameClass} ${frameMods} ${className}`.trim()}>
+    <div
+      className={`${frameClass} ${frameMods} ${className}`.trim()}
+      style={
+        fillParent || aspectNorm === "fill"
+          ? undefined
+          : { minHeight: Math.max(1, Math.round(height * 0.25)) }
+      }
+      data-media-w={width}
+      data-media-h={height}
+    >
       <div className="media-frame__inner">
         {showImage ? (
           <>

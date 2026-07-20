@@ -10,6 +10,7 @@ import type {
   GnewsQuotaAllocation,
   GnewsQuotaBucket,
 } from "@/lib/autonomous/types";
+import { getDistrict } from "@/lib/regional/districts";
 
 /** Percent shares — must sum to 100 */
 export const GNEWS_QUOTA_ALLOCATION_PCT: GnewsQuotaAllocation = {
@@ -103,12 +104,44 @@ export function buildDistrictGapQueries(
   maxQueries = 40
 ): GnewsDistrictQuery[] {
   const sorted = [...underCovered].sort((a, b) => b.deficit - a.deficit);
-  return sorted.slice(0, maxQueries).map((item) => ({
-    districtSlug: item.districtSlug,
-    query: `${item.districtSlug.replace(/-/g, " ")} Chhattisgarh news`,
-    bucket: "gaps" as const,
-    deficit: item.deficit,
-  }));
+  const queries: GnewsDistrictQuery[] = [];
+  const seen = new Set<string>();
+
+  for (const item of sorted) {
+    if (queries.length >= maxQueries) break;
+
+    const district = getDistrict(item.districtSlug);
+    const nameEn = district?.name ?? item.districtSlug.replace(/-/g, " ");
+    const enQuery = `${nameEn} Chhattisgarh news`;
+    const enKey = enQuery.toLowerCase();
+    if (!seen.has(enKey)) {
+      seen.add(enKey);
+      queries.push({
+        districtSlug: item.districtSlug,
+        query: enQuery,
+        bucket: "gaps",
+        deficit: item.deficit,
+      });
+    }
+
+    if (queries.length >= maxQueries) break;
+
+    const nameHi = district?.nameHi?.trim();
+    if (nameHi) {
+      const hiQuery = `${nameHi} छत्तीसगढ़ समाचार`;
+      if (!seen.has(hiQuery)) {
+        seen.add(hiQuery);
+        queries.push({
+          districtSlug: item.districtSlug,
+          query: hiQuery,
+          bucket: "gaps",
+          deficit: item.deficit,
+        });
+      }
+    }
+  }
+
+  return queries;
 }
 
 export function planGnewsQuota(input: {

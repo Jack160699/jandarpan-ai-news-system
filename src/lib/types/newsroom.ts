@@ -37,6 +37,7 @@ export type NewsSignalInsert = {
   region?: string | null;
   language?: string | null;
   ingestion_metadata?: JsonObject;
+  geo_metadata?: RegionalGeoMetadata | Json;
 };
 
 export type NewsEventRow = {
@@ -166,6 +167,21 @@ export type EditorialMetadata = {
   used_fallback?: boolean;
   batch_rescue?: boolean;
   image?: EditorialImageMeta;
+  /** Timeline of material updates to an already-published story */
+  updates?: Array<{
+    timestamp: string;
+    signal_ids: string[];
+    summary: string;
+    source_urls?: string[];
+  }>;
+  /** Last signal/URL checkpoint used to detect material updates */
+  update_checkpoint?: {
+    at?: string;
+    source_urls?: string[];
+    signal_ids?: string[];
+  };
+  /** ISO timestamp of last material editorial update (metadata-only; no DB column) */
+  date_modified?: string;
   source_attribution?: Array<{
     signal_id: string;
     source: string | null;

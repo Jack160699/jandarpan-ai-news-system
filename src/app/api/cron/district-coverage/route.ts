@@ -1,6 +1,6 @@
 /**
  * POST/GET /api/cron/district-coverage
- * Shadow-safe district coverage planner.
+ * IST-day coverage planner with real published/generated counts + upsert.
  * Registered in vercel.json at "20 * * * *" (hourly :20).
  * Default AUTONOMOUS_ROLLOUT_STAGE=shadow → plan only; does NOT increase publish volume.
  */
@@ -9,11 +9,17 @@ import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
-import { runCoverageController } from "@/lib/autonomous/coverage-controller";
+import {
+  getUnderCoveredDistricts,
+  runCoverageController,
+} from "@/lib/autonomous/coverage-controller";
+import { planGnewsQuota } from "@/lib/autonomous/gnews-quota-planner";
+import { getIstDayBounds } from "@/lib/autonomous/ist-day";
 import {
   getAutonomousRolloutStage,
   isAutonomousKillSwitchOn,
 } from "@/lib/autonomous/rollout-state";
+import { CG_DISTRICTS } from "@/lib/regional/districts";
 import { pipelineLog } from "@/lib/observability/production-log";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 
@@ -28,8 +34,130 @@ export async function POST(request: Request) {
   return handleDistrictCoverage(request);
 }
 
-function utcDay(d = new Date()): string {
-  return d.toISOString().slice(0, 10);
+function primaryDistrictFromRow(row: {
+  geo_metadata?: Record<string, unknown> | null;
+}): string | null {
+  const geo = row.geo_metadata;
+  if (!geo || typeof geo !== "object") return null;
+  if (typeof geo.primary_district === "string" && geo.primary_district.trim()) {
+    return geo.primary_district.trim().toLowerCase();
+  }
+  if (typeof geo.district === "string" && geo.district.trim()) {
+    return geo.district.trim().toLowerCase();
+  }
+  return null;
+}
+
+async function loadDistrictCountsForIstDay(
+  startIso: string,
+  endIso: string
+): Promise<{
+  publishedByDistrict: Record<string, number>;
+  generatedByDistrict: Record<string, number>;
+}> {
+  const publishedByDistrict: Record<string, number> = {};
+  const generatedByDistrict: Record<string, number> = {};
+
+  const { createAdminServerClient, isSupabaseConfigured } = await import(
+    "@/lib/supabase"
+  );
+  if (!isSupabaseConfigured()) {
+    return { publishedByDistrict, generatedByDistrict };
+  }
+
+  const supabase = createAdminServerClient();
+
+  const { data: publishedRows, error: pubErr } = await supabase
+    .from("generated_articles")
+    .select("geo_metadata")
+    .eq("workflow_status", "published")
+    .gte("published_at", startIso)
+    .lt("published_at", endIso)
+    .limit(2000);
+
+  if (pubErr) {
+    pipelineLog("[district_coverage_publish_counts_error]", {
+      message: pubErr.message,
+    });
+  } else {
+    for (const row of publishedRows ?? []) {
+      const slug = primaryDistrictFromRow(
+        row as { geo_metadata?: Record<string, unknown> | null }
+      );
+      if (!slug) continue;
+      publishedByDistrict[slug] = (publishedByDistrict[slug] ?? 0) + 1;
+    }
+  }
+
+  const { data: generatedRows, error: genErr } = await supabase
+    .from("generated_articles")
+    .select("geo_metadata,created_at")
+    .gte("created_at", startIso)
+    .lt("created_at", endIso)
+    .limit(2000);
+
+  if (genErr) {
+    pipelineLog("[district_coverage_generated_counts_error]", {
+      message: genErr.message,
+    });
+  } else {
+    for (const row of generatedRows ?? []) {
+      const slug = primaryDistrictFromRow(
+        row as { geo_metadata?: Record<string, unknown> | null }
+      );
+      if (!slug) continue;
+      generatedByDistrict[slug] = (generatedByDistrict[slug] ?? 0) + 1;
+    }
+  }
+
+  return { publishedByDistrict, generatedByDistrict };
+}
+
+async function persistCoverageDaily(
+  day: string,
+  planItems: Array<{
+    districtSlug: string;
+    tier: string;
+    target: number;
+    published: number;
+    deficit: number;
+  }>,
+  generatedByDistrict: Record<string, number>
+): Promise<{ upserted: number; error?: string }> {
+  try {
+    const { createAdminServerClient, isSupabaseConfigured } = await import(
+      "@/lib/supabase"
+    );
+    if (!isSupabaseConfigured()) return { upserted: 0, error: "no_supabase" };
+
+    const supabase = createAdminServerClient();
+    const now = new Date().toISOString();
+    const rows = planItems.map((item) => ({
+      district_slug: item.districtSlug,
+      day,
+      target: item.target,
+      published: item.published,
+      deficit: item.deficit,
+      tier: item.tier,
+      metadata: {
+        generated: generatedByDistrict[item.districtSlug] ?? 0,
+        updated_via: "district-coverage-cron",
+      },
+      updated_at: now,
+    }));
+
+    const { error } = await supabase
+      .from("district_coverage_daily")
+      .upsert(rows, { onConflict: "district_slug,day" });
+
+    if (error) return { upserted: 0, error: error.message };
+    return { upserted: rows.length };
+  } catch (err) {
+    return {
+      upserted: 0,
+      error: err instanceof Error ? err.message : "upsert_failed",
+    };
+  }
 }
 
 async function handleDistrictCoverage(request: Request) {
@@ -41,12 +169,14 @@ async function handleDistrictCoverage(request: Request) {
 
   const stage = getAutonomousRolloutStage();
   const killSwitch = isAutonomousKillSwitchOn();
+  const bounds = getIstDayBounds();
 
   pipelineLog("[cron_triggered]", {
     job: "district-coverage",
     path: new URL(request.url).pathname,
     stage,
     killSwitch,
+    istDay: bounds.day,
     ts: new Date().toISOString(),
   });
 
@@ -64,13 +194,17 @@ async function handleDistrictCoverage(request: Request) {
         mode: "paused",
         reason: "AUTONOMOUS_KILL_SWITCH",
         stage,
+        day: bounds.day,
       },
       { headers: noStoreHeaders() }
     );
   }
 
-  // Prefer body injection (tests); otherwise load today's published counts from DB.
+  // Prefer body injection (tests); otherwise load IST-day counts from DB.
   let publishedByDistrict: Record<string, number> = {};
+  let generatedByDistrict: Record<string, number> = {};
+  let bodyInjected = false;
+
   try {
     const body = await request.json();
     if (
@@ -80,38 +214,29 @@ async function handleDistrictCoverage(request: Request) {
       typeof body.publishedByDistrict === "object"
     ) {
       publishedByDistrict = body.publishedByDistrict as Record<string, number>;
+      bodyInjected = true;
+      if (
+        body.generatedByDistrict &&
+        typeof body.generatedByDistrict === "object"
+      ) {
+        generatedByDistrict = body.generatedByDistrict as Record<
+          string,
+          number
+        >;
+      }
     }
   } catch {
     /* empty / non-JSON body */
   }
 
-  if (Object.keys(publishedByDistrict).length === 0) {
+  if (!bodyInjected) {
     try {
-      const { createAdminServerClient, isSupabaseConfigured } = await import(
-        "@/lib/supabase"
+      const counts = await loadDistrictCountsForIstDay(
+        bounds.startIso,
+        bounds.endIso
       );
-      if (isSupabaseConfigured()) {
-        const supabase = createAdminServerClient();
-        const dayStart = `${utcDay()}T00:00:00.000Z`;
-        const { data } = await supabase
-          .from("generated_articles")
-          .select("geo_metadata,tags")
-          .eq("workflow_status", "published")
-          .gte("published_at", dayStart)
-          .limit(500);
-        for (const row of data ?? []) {
-          const geo = (row as { geo_metadata?: Record<string, unknown> | null })
-            .geo_metadata;
-          const slug =
-            (typeof geo?.primary_district === "string" &&
-              geo.primary_district) ||
-            (typeof geo?.district === "string" && geo.district) ||
-            null;
-          if (!slug) continue;
-          const key = slug.toLowerCase();
-          publishedByDistrict[key] = (publishedByDistrict[key] ?? 0) + 1;
-        }
-      }
+      publishedByDistrict = counts.publishedByDistrict;
+      generatedByDistrict = counts.generatedByDistrict;
     } catch (err) {
       pipelineLog("[district_coverage_publish_counts_error]", {
         message: err instanceof Error ? err.message : "unknown",
@@ -120,17 +245,55 @@ async function handleDistrictCoverage(request: Request) {
   }
 
   const { plan, publishAllowed, paused } = runCoverageController({
-    day: utcDay(),
+    day: bounds.day,
     publishedByDistrict,
   });
 
-  // SHADOW: log plan only — does not increase publish volume
+  const underCovered = getUnderCoveredDistricts(plan);
+  const gnewsPlan = planGnewsQuota({
+    day: bounds.day,
+    requestsLimit: Number(process.env.GNEWS_DAILY_LIMIT ?? "100") || 100,
+    requestsUsed: 0,
+    underCovered,
+  });
+
+  const persist = await persistCoverageDaily(
+    bounds.day,
+    plan.items,
+    generatedByDistrict
+  );
+
+  const shadowPayload = {
+    ok: true,
+    mode: "shadow" as const,
+    publishAllowed: false,
+    paused,
+    stage,
+    day: bounds.day,
+    dayBounds: { startIso: bounds.startIso, endIso: bounds.endIso },
+    plan,
+    deficits: underCovered.map((i) => ({
+      districtSlug: i.districtSlug,
+      deficit: i.deficit,
+      tier: i.tier,
+      target: i.target,
+      published: i.published,
+    })),
+    proposedGnewsQueries: gnewsPlan.queries,
+    generatedByDistrict,
+    persist,
+    districtRegistrySize: CG_DISTRICTS.length,
+  };
+
+  // SHADOW: return full plan with deficits + proposed GNews queries
   if (stage === "shadow" || !publishAllowed) {
     pipelineLog("[district_coverage_shadow_plan]", {
       day: plan.day,
       totalDeficit: plan.totalDeficit,
       totalTarget: plan.totalTarget,
-      underCovered: plan.items.filter((i) => i.deficit > 0).length,
+      underCovered: underCovered.length,
+      proposedQueries: gnewsPlan.queries.length,
+      persistUpserted: persist.upserted,
       top: plan.items.slice(0, 8).map((i) => ({
         district: i.districtSlug,
         deficit: i.deficit,
@@ -143,40 +306,26 @@ async function handleDistrictCoverage(request: Request) {
       ok: true,
       startedAt: new Date(startedAt).toISOString(),
       durationMs: Date.now() - startedAt,
-      degraded: false,
+      degraded: Boolean(persist.error),
     });
 
-    return NextResponse.json(
-      {
-        ok: true,
-        mode: "shadow",
-        publishAllowed: false,
-        paused,
-        stage,
-        plan,
-      },
-      { headers: noStoreHeaders() }
-    );
+    return NextResponse.json(shadowPayload, { headers: noStoreHeaders() });
   }
 
-  // Non-shadow stages: still plan-only in this foundation PR (no publish wiring yet)
   await recordCronRun({
     job: "district-coverage",
     ok: true,
     startedAt: new Date(startedAt).toISOString(),
     durationMs: Date.now() - startedAt,
-    degraded: false,
+    degraded: Boolean(persist.error),
   });
 
   return NextResponse.json(
     {
-      ok: true,
+      ...shadowPayload,
       mode: stage,
       publishAllowed,
-      paused,
-      stage,
-      plan,
-      note: "Foundation: plan computed; publish wiring deferred to later stage.",
+      note: "Stage plan persisted; autonomous publish volume still gated by rollout + capacity.",
     },
     { headers: noStoreHeaders() }
   );

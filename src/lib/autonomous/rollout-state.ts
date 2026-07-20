@@ -52,3 +52,94 @@ export function describeRolloutState(env: NodeJS.ProcessEnv = process.env): {
     publishingEnabled: isAutonomousPublishingEnabled(env),
   };
 }
+
+export type ActivateStage1Result = {
+  ok: boolean;
+  stage: RolloutStage;
+  reason: string;
+  persisted: boolean;
+  error?: string;
+};
+
+/**
+ * Persist stage_1 into autonomous_rollout_state (singleton id=1).
+ * Intended for guarded admin/cron paths only — does not flip env vars.
+ *
+ * Manual SQL alternative:
+ *   update public.autonomous_rollout_state
+ *   set stage = 'stage_1', reason = '...', updated_at = now()
+ *   where id = 1;
+ *
+ * Also set AUTONOMOUS_ROLLOUT_STAGE=stage_1 in the deployment env
+ * (DB row is the audit trail; runtime gates still read process.env).
+ */
+export async function activateStage1(
+  reason: string
+): Promise<ActivateStage1Result> {
+  const trimmed = reason.trim() || "stage_1_activation";
+
+  if (isAutonomousKillSwitchOn()) {
+    return {
+      ok: false,
+      stage: "shadow",
+      reason: trimmed,
+      persisted: false,
+      error: "AUTONOMOUS_KILL_SWITCH is on — refuse stage_1 activation",
+    };
+  }
+
+  try {
+    const { createAdminServerClient, isSupabaseConfigured } = await import(
+      "@/lib/supabase"
+    );
+    if (!isSupabaseConfigured()) {
+      return {
+        ok: false,
+        stage: getAutonomousRolloutStage(),
+        reason: trimmed,
+        persisted: false,
+        error: "supabase_not_configured",
+      };
+    }
+
+    const supabase = createAdminServerClient();
+    const { error } = await supabase.from("autonomous_rollout_state").upsert(
+      {
+        id: 1,
+        stage: "stage_1",
+        reason: trimmed,
+        updated_at: new Date().toISOString(),
+        metadata: {
+          activated_via: "activateStage1",
+          at: new Date().toISOString(),
+        },
+      },
+      { onConflict: "id" }
+    );
+
+    if (error) {
+      return {
+        ok: false,
+        stage: getAutonomousRolloutStage(),
+        reason: trimmed,
+        persisted: false,
+        error: error.message,
+      };
+    }
+
+    return {
+      ok: true,
+      stage: "stage_1",
+      reason: trimmed,
+      persisted: true,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      stage: getAutonomousRolloutStage(),
+      reason: trimmed,
+      persisted: false,
+      error: err instanceof Error ? err.message : "activate_failed",
+    };
+  }
+}

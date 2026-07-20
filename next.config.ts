@@ -3,6 +3,14 @@ import { LEGACY_DASHBOARD_REDIRECTS } from "./src/lib/admin-platform/legacy-redi
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@stratxcel/platform"],
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**.supabase.co" },
+      { protocol: "https", hostname: "**.supabase.in" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "**.jandarpan.news" },
+    ],
+  },
   async redirects() {
     return [
       ...LEGACY_DASHBOARD_REDIRECTS.map((r) => ({

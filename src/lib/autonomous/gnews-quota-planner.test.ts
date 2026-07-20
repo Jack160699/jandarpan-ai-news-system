@@ -27,7 +27,7 @@ describe("gnews-quota-planner", () => {
     expect(Object.values(alloc).reduce((a, b) => a + b, 0)).toBe(100);
   });
 
-  it("builds gap queries for under-covered districts", () => {
+  it("builds English and Hindi gap queries for under-covered districts", () => {
     const queries = buildDistrictGapQueries(
       [
         {
@@ -52,6 +52,11 @@ describe("gnews-quota-planner", () => {
     expect(queries[0].districtSlug).toBe("raipur");
     expect(queries[0].bucket).toBe("gaps");
     expect(queries[0].query.toLowerCase()).toContain("raipur");
+    const raipurQueries = queries.filter((q) => q.districtSlug === "raipur");
+    expect(raipurQueries.length).toBeGreaterThanOrEqual(2);
+    expect(raipurQueries.some((q) => /रायपुर/.test(q.query))).toBe(true);
+    const unique = new Set(queries.map((q) => q.query));
+    expect(unique.size).toBe(queries.length);
   });
 
   it("planGnewsQuota exposes remaining and queries", () => {
