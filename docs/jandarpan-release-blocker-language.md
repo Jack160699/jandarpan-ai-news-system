@@ -95,9 +95,12 @@ Capture: `npx playwright test e2e/reader-ds-language-screenshots.spec.ts`
 
 - Not every tertiary label inside long article variants / ad creatives is dictionary-driven.
 - English category section titles still follow CMS Hindi labels when editors only publish `labelHi`.
+- Dismissible ad chrome (`रिपोर्ट` / `बंद करें` / `विज्ञापन बंद करें`) and some relative-time chips can still show Hindi in English mode.
 - Weather/rate tiles and tablet/desktop Plot fidelity are **out of scope** (other blockers).
 - Checkout remains preview-only (blocker #2); only chrome strings localized.
 
 ## Blocker #3 closure
 
 **Yes — closed for primary Reader DS routes** listed in the release brief: home, search, district/category chrome, article controls, saved/history/notifications, D26, membership chrome, system states, login — Hindi default, English consistent chrome, persist + reload, flag-off untouched.
+
+**Preview verified** on commit `d48daf27f372b3b2476f0cb777f2e404d4c4e83d`: Hindi default chrome, D26 → English updates nav/masthead/section labels without mixed primary nav.
