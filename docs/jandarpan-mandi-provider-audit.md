@@ -47,12 +47,12 @@ Unauthenticated probe:
 
 Invalid key probe returns HTTP **403** with an `error` field (body not logged here).
 
-**Live notes (Preview deploy `bda229b`):**
+**Live notes (Preview deploy `f2d8c7f`):**
 
-1. Authenticated Preview `/api/utilities/mandi` responded without leaking key/URL.
-2. Initial filter-only path returned `no_current_records` (filters may be ignored or CG sparse in the first pages).
-3. Provider now includes an unfiltered page scan + in-memory Chhattisgarh filter as fallback.
-4. Unit fixtures cover snake_case + PascalCase schemas.
+1. Authenticated Preview `/api/utilities/mandi?district=raipur` → `status: available` without leaking key/URL/host.
+2. Sample live row (credentials removed): state `Chattisgarh`, district `Mahasamund`, market `Pithoura APMC`, commodity `Paddy(Common)`, modal `1700`, arrival `20/07/2026`, unit `₹/क्विंटल`.
+3. State filters alone often return 0 rows; unfiltered scan + in-memory CG filter is required.
+4. Unit fixtures cover snake_case + PascalCase schemas. Weather API still `ok` on same deploy.
 
 ---
 
@@ -83,9 +83,9 @@ Until live confirmation, prefer these documented AGMARKNET English spellings:
 
 | Dimension | Preferred exact value | Notes |
 |-----------|----------------------|-------|
-| State | `Chhattisgarh` | Primary; also try `Chattisgarh` only as diagnostic, not for UI |
-| District | `Raipur` | User district English name when available |
-| Commodity candidates | `Paddy(Dhan)(Common)`, `Wheat`, `Gram`, `Tomato`, `Onion` | Exact labels must be remapped after first successful live pull |
+| State | `Chattisgarh` (live Preview) / also try `Chhattisgarh` | Live row used single-t spelling |
+| District | `Raipur` preferred; live fallback example `Mahasamund` | User district English name when available |
+| Commodity candidates | Live: `Paddy(Common)`; also match `Paddy`/`Dhan`, `Wheat`, `Gram`, `Tomato`, `Onion` | Localized to Hindi after match |
 
 Hindi UI labels are **mapped locally** after match; never sent as filter values unless observed in the feed.
 

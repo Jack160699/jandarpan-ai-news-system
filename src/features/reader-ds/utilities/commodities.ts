@@ -45,7 +45,8 @@ export const MANDI_COMMODITY_PREFS: MandiCommodityPref[] = [
   },
 ];
 
-export const MANDI_STATE_FILTERS = ["Chhattisgarh"] as const;
+/** Exact spellings observed / attempted against AGMARKNET (live Preview saw `Chattisgarh`). */
+export const MANDI_STATE_FILTERS = ["Chhattisgarh", "Chattisgarh"] as const;
 
 export function localizeCommodity(providerCommodity: string): { hi: string; en: string } {
   const lower = providerCommodity.toLowerCase();
