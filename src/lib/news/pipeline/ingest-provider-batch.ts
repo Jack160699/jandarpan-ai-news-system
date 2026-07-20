@@ -2,13 +2,19 @@
  * Incremental provider ingest — AI newsroom pipeline
  *
  * 1. Sanitize + validate
- * 2. Enrich images
- * 3. Persist → news_signals (raw, never public)
- * 4. Bridge → news_articles (legacy homepage, default ON)
+ * 2. In-memory + early DB duplicate filter (before expensive work)
+ * 3. Enrich images (novel items only)
+ * 4. Persist → news_signals (raw, never public)
+ * 5. Bridge → news_articles (legacy homepage, default ON)
  */
 
 import { enrichArticleImages } from "@/lib/news/images/enrich";
 import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
+import {
+  emptyEarlyDedupMetrics,
+  filterKnownSignalDuplicates,
+  type EarlyDedupMetrics,
+} from "@/lib/news/ingestion/early-dedup";
 import {
   mergeValidationStats,
   sanitizeNewsArticle,
@@ -41,6 +47,9 @@ export type ProviderIngestResult = {
   failures: Array<{ title: string; reason: string; provider: string }>;
   imageAnalytics: ImageEnrichmentAnalytics | null;
   validationStats: ArticleValidationStats;
+  earlyDedup: EarlyDedupMetrics;
+  /** In-memory URL/title dups before DB early filter */
+  memoryDuplicates: number;
 };
 
 export async function ingestProviderArticles(
@@ -49,6 +58,7 @@ export async function ingestProviderArticles(
   options?: {
     maxImagePageFetches?: number;
     revalidateHome?: boolean;
+    tenantId?: string | null;
   }
 ): Promise<ProviderIngestResult> {
   const result: ProviderIngestResult = {
@@ -71,6 +81,8 @@ export async function ingestProviderArticles(
       rejected: 0,
       reasons: {},
     },
+    earlyDedup: emptyEarlyDedupMetrics(),
+    memoryDuplicates: 0,
   };
 
   if (!rawArticles.length) return result;
@@ -112,6 +124,7 @@ export async function ingestProviderArticles(
   const { unique: dedupedValid, skipped: urlDuplicates } = dedupeArticles(valid, {
     fuzzy: true,
   });
+  result.memoryDuplicates = urlDuplicates;
   if (urlDuplicates > 0) {
     logIngestTrace("provider_articles_deduped", {
       provider,
@@ -119,10 +132,36 @@ export async function ingestProviderArticles(
       inputCount: valid.length,
       outputCount: dedupedValid.length,
     });
-    result.skippedDuplicates += urlDuplicates;
   }
 
-  const { articles: enriched, analytics } = await enrichArticleImages(dedupedValid, {
+  // Step 3: reject known signals BEFORE image enrichment / page fetches.
+  const early = await filterKnownSignalDuplicates(dedupedValid, {
+    tenantId: options?.tenantId ?? null,
+  });
+  result.earlyDedup = early.metrics;
+  result.skippedDuplicates =
+    urlDuplicates +
+    early.metrics.earlyDuplicateKnownSignal +
+    early.metrics.earlyDuplicateBatch;
+
+  logIngestTrace("early_dedup_complete", {
+    provider,
+    input: early.metrics.input,
+    passed: early.metrics.passed,
+    knownSignalDupes: early.metrics.earlyDuplicateKnownSignal,
+    batchDupes: early.metrics.earlyDuplicateBatch,
+  });
+
+  if (!early.novel.length) {
+    logNewsroom("pipeline", "provider_all_early_duplicates", {
+      provider,
+      total: rawArticles.length,
+      earlyDedup: early.metrics,
+    });
+    return result;
+  }
+
+  const { articles: enriched, analytics } = await enrichArticleImages(early.novel, {
     maxPageFetches: options?.maxImagePageFetches ?? 12,
   });
   result.imageAnalytics = analytics;
@@ -137,11 +176,13 @@ export async function ingestProviderArticles(
   result.signalsInserted = signalResult.inserted;
   result.signalsSkipped = signalResult.skippedDuplicates;
   result.signalIds = signalResult.signalIds;
+  // Preserve early + upsert duplicates honestly (do not overwrite early count).
+  result.skippedDuplicates += signalResult.skippedDuplicates;
 
   const legacyResult = await publishToLegacyArticles(postEnrich);
   result.inserted = legacyResult.inserted;
-  result.skippedDuplicates = legacyResult.skippedDuplicates;
   result.queuedForAI = legacyResult.queuedForAI;
+  result.skippedDuplicates += legacyResult.skippedDuplicates;
 
   for (const article of postEnrich) {
     result.categoryStats[article.category] =
@@ -158,6 +199,8 @@ export async function ingestProviderArticles(
     legacyInserted: result.inserted,
     rejected: result.failedValidation,
     queuedForAI: result.queuedForAI,
+    earlyDedup: result.earlyDedup,
+    imagePageFetches: analytics?.extractedFromPage ?? null,
   });
 
   return result;

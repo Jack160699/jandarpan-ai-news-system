@@ -246,6 +246,10 @@ export const RSS_FEED_TIMEOUT_MS = 8_000;
 export const RSS_MAX_RETRIES = 2;
 export const RSS_MAX_CONSECUTIVE_FAILURES = 3;
 export const RSS_DISABLE_HOURS = 12;
+/** After this many consecutive failures with no success, permanently retire. */
+export const RSS_PERMANENT_RETIRE_FAILURES = 40;
+/** Long cooldown used for permanent retirement (effectively never on normal runs). */
+export const RSS_PERMANENT_DISABLE_YEARS = 10;
 export const RSS_MAX_ARTICLE_AGE_DAYS = 10;
 export const RSS_PARALLEL_BATCH = 5;
 export const RSS_PAGE_ENRICH_LIMIT = 20;

@@ -31,6 +31,10 @@ export type RssSourceAnalytics = {
   duplicates: number;
   skipped?: boolean;
   error?: string;
+  /** Known-signal / batch dups filtered before page enrichment */
+  earlyDuplicates?: number;
+  /** Items older than incremental cursor−overlap */
+  incrementalFiltered?: number;
 };
 
 export type ProviderFetchResult = {

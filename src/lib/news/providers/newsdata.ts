@@ -143,11 +143,32 @@ export async function fetchNewsDataAll(): Promise<ProviderFetchResult> {
     };
   }
 
-  const queries = [
+  const {
+    advanceSourceCursorSafe,
+    buildSourceKey,
+    filterArticlesByPublishedAfter,
+    loadIngestionSourceState,
+    publishedAfterIsoFromCursor,
+  } = await import("@/lib/news/ingestion/source-state");
+
+  const sourceKey = buildSourceKey("newsdata", "api");
+  const state = await loadIngestionSourceState(sourceKey);
+  const publishedAfter = publishedAfterIsoFromCursor(
+    state?.last_item_timestamp ?? null
+  );
+  const fromDate = publishedAfter
+    ? publishedAfter.slice(0, 10)
+    : null;
+
+  const baseQueries = [
     { country: "in", language: "en,hi", category: "top" },
     { country: "in", language: "hi", category: "top" },
     { category: "world", language: "en" },
   ];
+
+  const queries = baseQueries.map((q) =>
+    fromDate ? { ...q, from_date: fromDate } : q
+  );
 
   const results = await Promise.all(
     queries.map((q) => fetchNewsDataQuery(q as Record<string, string>))
@@ -163,9 +184,32 @@ export async function fetchNewsDataAll(): Promise<ProviderFetchResult> {
     articles.push(...r.articles);
   }
 
-  const { unique, skipped } = dedupeArticles(articles, { fuzzy: true });
+  const { kept: windowed, filtered } = filterArticlesByPublishedAfter(
+    articles,
+    publishedAfter
+  );
+  if (filtered > 0) {
+    console.log(`[newsdata] incremental filtered ${filtered} older items`);
+  }
+
+  const { unique, skipped } = dedupeArticles(windowed, { fuzzy: true });
   if (skipped > 0) {
     console.log(`[newsdata] deduped ${skipped} duplicate articles across queries`);
+  }
+
+  const newest = unique
+    .map((a) => a.published_at)
+    .filter((v): v is string => Boolean(v))
+    .sort()
+    .at(-1);
+  if (newest) {
+    await advanceSourceCursorSafe({
+      sourceKey,
+      providerFamily: "newsdata",
+      expectedPrevious: state?.last_item_timestamp ?? null,
+      nextTimestamp: newest,
+      newItemCount: unique.length,
+    });
   }
 
   return {

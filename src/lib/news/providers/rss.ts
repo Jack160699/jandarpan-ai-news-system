@@ -23,11 +23,21 @@ import {
 import { enrichRssArticlesBatch } from "@/lib/news/rss-enrich";
 import { parseFeedResilient } from "@/lib/news/rss-fetch";
 import {
+  isRssSourceBlocked,
   isSourceSkipped,
   loadSourceHealth,
   recordSourceFailure,
   recordSourceSuccess,
 } from "@/lib/news/rss-health";
+import { filterKnownSignalDuplicates } from "@/lib/news/ingestion/early-dedup";
+import {
+  advanceSourceCursorSafe,
+  buildSourceKey,
+  filterArticlesByPublishedAfter,
+  loadIngestionSourceState,
+  publishedAfterIsoFromCursor,
+  upsertIngestionSourceState,
+} from "@/lib/news/ingestion/source-state";
 import {
   regionToDbRegion,
   RSS_PAGE_ENRICH_LIMIT,
@@ -152,8 +162,9 @@ export async function fetchRssSourceBatch(
   };
 
   try {
-    if (isSourceSkipped(source, health)) {
-      return { ...empty, skipped: true };
+    const blocked = await isRssSourceBlocked(source, health);
+    if (blocked.skipped) {
+      return { ...empty, skipped: true, error: blocked.reason ?? "skipped" };
     }
 
     const { feed, error } = await parseFeedResilient(source);
@@ -179,8 +190,22 @@ export async function fetchRssSourceBatch(
       });
     }
 
+    // Incremental window: drop items older than last cursor − overlap.
+    const sourceKey = buildSourceKey("rss", source.id);
+    const state = await loadIngestionSourceState(sourceKey);
+    const publishedAfter = publishedAfterIsoFromCursor(
+      state?.last_item_timestamp ?? null
+    );
+    const { kept: windowed, filtered: incrementalFiltered } =
+      filterArticlesByPublishedAfter(mapped, publishedAfter);
+
+    // Early DB dedup BEFORE page enrichment (largest RSS waste reduction).
+    const early = await filterKnownSignalDuplicates(windowed);
+    const earlyDupes =
+      early.metrics.earlyDuplicateKnownSignal + early.metrics.earlyDuplicateBatch;
+
     const { articles: enrichedRaw, recoveredCount } =
-      await enrichRssArticlesBatch(mapped, RSS_PAGE_ENRICH_LIMIT);
+      await enrichRssArticlesBatch(early.novel, RSS_PAGE_ENRICH_LIMIT);
 
     const priority = sourceEffectivePriority(source);
     const enriched = enrichedRaw.map((a) => ({ ...a, _priority: priority }));
@@ -198,28 +223,54 @@ export async function fetchRssSourceBatch(
 
     if (unique.length > 0) {
       await recordSourceSuccess(source, health, unique.length);
-    } else {
-      await recordSourceFailure(source, health, "no valid articles after filter");
+      const newest = unique
+        .map((a) => a.published_at)
+        .filter((v): v is string => Boolean(v))
+        .sort()
+        .at(-1);
+      if (newest) {
+        await advanceSourceCursorSafe({
+          sourceKey,
+          providerFamily: "rss",
+          expectedPrevious: state?.last_item_timestamp ?? null,
+          nextTimestamp: newest,
+          newItemCount: unique.length,
+        });
+      } else {
+        await upsertIngestionSourceState({
+          source_key: sourceKey,
+          provider_family: "rss",
+          last_successful_at: new Date().toISOString(),
+          health_state: "healthy",
+        });
+      }
+    } else if (mapped.length > 0 && early.novel.length === 0) {
+      // Feed had items but all known — still record success / empty-new run.
+      await recordSourceSuccess(source, health, 0);
+      await upsertIngestionSourceState({
+        source_key: sourceKey,
+        provider_family: "rss",
+        last_successful_at: new Date().toISOString(),
+        consecutive_empty_runs: (state?.consecutive_empty_runs ?? 0) + 1,
+        health_state: "healthy",
+      });
     }
-
-    console.log(
-      `[rss] ${source.id}: raw=${rawItems.length} valid=${unique.length} rejected=${rejected} recovered=${recoveredCount}`
-    );
 
     return {
       source: source.id,
       fetched: rawItems.length,
       valid: unique.length,
       rejected,
-      duplicates: skipped,
+      duplicates: skipped + earlyDupes + incrementalFiltered,
       articles: unique,
       recovered: recoveredCount,
+      earlyDuplicates: earlyDupes,
+      incrementalFiltered,
     };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "source crash";
-    console.error(`[rss] ${source.id} crashed:`, msg);
-    await recordSourceFailure(source, health, msg).catch(() => {});
-    return { ...empty, error: msg };
+    const message = err instanceof Error ? err.message : "rss_fetch_failed";
+    await recordSourceFailure(source, health, message);
+    return { ...empty, error: message };
   }
 }
 
