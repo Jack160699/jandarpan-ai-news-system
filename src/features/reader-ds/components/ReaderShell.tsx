@@ -6,6 +6,8 @@ import type { BriefingTrack } from "../experience/audio/types";
 import { NetworkGuards } from "../system/NetworkGuards";
 import { PermissionSheet } from "../system/PermissionSheet";
 import { BottomNav, type BottomNavKey } from "./BottomNav";
+import { DeskChrome } from "./DeskChrome";
+import { DeskFooter } from "./DeskFooter";
 import { SearchOverlay } from "./SearchOverlay";
 
 type ReaderShellProps = {
@@ -23,11 +25,13 @@ type ReaderShellProps = {
   reserveMiniPlayer?: boolean;
   /** Permission pre-prompts (off for system states). */
   showPermissionSheets?: boolean;
+  /** Show SoT desktop/tablet footer (default on). */
+  showDeskFooter?: boolean;
 };
 
 /**
  * Shared page chrome — fonts, tokens, search, audio, phone bottom nav +
- * tablet/desktop primary nav (Phase 6).
+ * desktop/tablet SoT editorial chrome (DeskChrome).
  */
 export function ReaderShell({
   children,
@@ -39,6 +43,7 @@ export function ReaderShell({
   audioTracks,
   reserveMiniPlayer = true,
   showPermissionSheets = true,
+  showDeskFooter = true,
 }: ReaderShellProps) {
   const pad = bottomPad + (reserveMiniPlayer ? 52 : 0);
   const showNav = !hideBottomNav && activeNav;
@@ -56,7 +61,13 @@ export function ReaderShell({
         }}
       >
         <NetworkGuards />
+        {!dark ? (
+          <div className="jd-desk-chrome-root">
+            <DeskChrome />
+          </div>
+        ) : null}
         {children}
+        {showDeskFooter && !dark ? <DeskFooter /> : null}
         {showNav ? (
           <>
             <div className="jd-nav-spacer" aria-hidden style={{ height: pad, flexShrink: 0 }} />

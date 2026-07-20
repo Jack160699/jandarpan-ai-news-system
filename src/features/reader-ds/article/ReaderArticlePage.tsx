@@ -19,6 +19,7 @@ import {
   SponsoredBanner,
 } from "./components/ArticleBanners";
 import { ArticleShareBar } from "./components/ArticleShareBar";
+import { ArticleShareRail } from "../components/ArticleShareRail";
 import { AudioInline } from "./components/AudioInline";
 import { Byline } from "./components/Byline";
 import { ExplainerBody } from "./components/ExplainerBody";
@@ -286,7 +287,11 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
         {variant === "premium" ? <PremiumRibbon /> : null}
         {variant === "explainer" ? <ProgressBar progress={0.4} /> : null}
 
-        <div className="jd-article-layout" style={{ flex: 1, overflow: "auto" }}>
+        <div
+          className={`jd-article-layout${isOpinionLike ? " jd-article-layout--opinion" : ""}`}
+          style={{ flex: 1, overflow: "auto" }}
+        >
+          {variant === "standard" || isOpinionLike ? <ArticleShareRail /> : null}
           <div>
           {variant === "video" ? (
             <VideoPlayer

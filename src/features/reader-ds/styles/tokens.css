@@ -10,6 +10,7 @@
   /* Colour — light */
   --jd-navy: #0a2550;
   --jd-navy-deep: #081b3a;
+  --jd-navy-2: #13315f;
   --jd-red: #9e1b22;
   --jd-red-deep: #7a1319;
   --jd-red-bright: #e05a63;
@@ -17,15 +18,37 @@
   --jd-gold-soft: #e7d6a4;
   --jd-paper: #f7f4ec;
   --jd-paper-2: #f2ede1;
+  --jd-shell: #ece6d9;
   --jd-ink: #16130d;
   --jd-ink-2: #3f3a2e;
   --jd-ink-3: #6a6250;
   --jd-muted: #9a917d;
-  --jd-line: #d9d2c2;
+  --jd-line: #dcd5c5;
   --jd-line-2: #e6e0d2;
   --jd-ok: #2f7d52;
   --jd-amber: #c07a1e;
   --jd-green: #2f7d52;
+
+  /* Desktop / tablet layout tokens (SoT: desktop-tablet design brief) */
+  --jd-bp-phone-max: 767px;
+  --jd-bp-tablet: 768px;
+  --jd-bp-desk: 1024px;
+  --jd-bp-wide: 1280px;
+  --jd-bp-full: 1440px;
+  --jd-shell-max: 100%;
+  --jd-gutter-x: 14px;
+  --jd-section-gap: 32px;
+  --jd-card-gap: 20px;
+  --jd-reading-max: 680px;
+  --jd-home-rail-w: 384px;
+  --jd-article-rail-w: 300px;
+  --jd-share-rail-w: 56px;
+  --jd-util-h: 38px;
+  --jd-brand-h: 88px;
+  --jd-catnav-h: 46px;
+  --jd-sticky-h: 56px;
+  --jd-col-gap: 24px;
+  --jd-shadow-soft: 0 1px 3px rgba(10, 37, 80, 0.08);
 
   /* Colour — dark (applied under .jd-ds[data-theme="dark"]) */
   --jd-d-bg: #0e1626;

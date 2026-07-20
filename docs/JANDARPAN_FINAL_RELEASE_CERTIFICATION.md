@@ -31,7 +31,7 @@ Gatekeeper remediation fixed those **critical integrity defects** locally (accou
 | **HIGH** | Live checkout / payments not production-ready | `/membership/checkout` intentionally routes to failure (`checkout-not-live`). **Deferred — open.** No Razorpay work in A1 utilities pass. |
 | **HIGH** | D28 login not redesigned to Plot DS | Addressed on feature branch after certification; re-verify on latest Preview. |
 | **HIGH** | Language switching incomplete on DS chrome | Closed later on feature branch (`d48daf2` / follow-ups); re-verify on Preview. |
-| **HIGH** | Desktop/tablet grid not Plot-approved | Plot gallery is phone-first; Phase 6 grid is derived invention. Visual risk at ≥768. |
+| **HIGH** | Desktop/tablet grid not Plot-approved | **Partially closed:** imported SoT wired into DeskChrome + breakpoints 768/1024/1280/1440. Remaining page-level fidelity gaps — see `docs/jandarpan-release-blocker-desktop-tablet.md`. |
 | **HIGH** | Offline / downloads not real | C25 downloads are localStorage IDs, not offline media packages. |
 | **HIGH** | A1 Plot fidelity incomplete without inventing data | **Partially closed:** weather via Open-Meteo in `UtilityRow`. **Still open:** gold/silver/diesel tiles omitted (no honest live rates feed). See `docs/jandarpan-release-blocker-a1-weather-market.md`. |
 | **MED** | Gatekeeper / A1 Preview lag | Confirm latest feature Preview SHA after push. |

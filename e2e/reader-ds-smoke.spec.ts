@@ -24,21 +24,31 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await page.goto("/system/preview?state=empty", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("अभी तक कुछ सहेजा नहीं")).toBeVisible({ timeout: 20_000 });
 
-    await page.goto("/system/preview?state=error");
-    await expect(page.getByText("कुछ ठीक नहीं चला")).toBeVisible();
+    await page.goto("/system/preview?state=error", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("कुछ ठीक नहीं चला")).toBeVisible({ timeout: 20_000 });
 
-    await page.goto("/system/preview?state=404");
-    await expect(page.getByText("यह पृष्ठ नहीं मिला")).toBeVisible();
+    await page.goto("/system/preview?state=404", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("यह पृष्ठ नहीं मिला")).toBeVisible({ timeout: 20_000 });
 
-    await page.goto("/maintenance");
-    await expect(page.getByText("हम जल्द लौट रहे हैं")).toBeVisible();
+    await page.goto("/maintenance", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("हम जल्द लौट रहे हैं")).toBeVisible({ timeout: 20_000 });
   });
 
   test("tablet shows desktop primary nav", async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(page.locator(".jd-desktop-nav").first()).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator(".jd-bottom-nav")).toBeHidden();
+    await expect(page.locator(".jd-desk-chrome").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator(".jd-desk-catnav").first()).toBeVisible();
+    await expect(page.locator(".jd-bottom-nav")).toHaveCount(0);
+  });
+
+  test("desktop shows SoT editorial chrome and footer", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-desk-chrome").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator(".jd-desk-brand").first()).toBeVisible();
+    await expect(page.locator(".jd-desk-footer").first()).toBeVisible();
+    await expect(page.locator(".jd-masthead")).toHaveCount(0);
   });
 
   test("membership landing remains labeled and gated", async ({ page }) => {
