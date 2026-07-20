@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { JdIcon } from "../components/icons";
+import { useJdDsT } from "../i18n";
 import { saveExperiencePrefs } from "../experience/prefs";
 
 /**
@@ -10,6 +11,7 @@ import { saveExperiencePrefs } from "../experience/prefs";
  * Mounted once inside ExperienceChrome / ReaderShell.
  */
 export function NetworkGuards() {
+  const { t } = useJdDsT();
   const [offline, setOffline] = useState(false);
   const [slow, setSlow] = useState(false);
   const [dismissSlow, setDismissSlow] = useState(false);
@@ -36,8 +38,8 @@ export function NetworkGuards() {
       const forced =
         typeof document !== "undefined" &&
         document.documentElement.getAttribute("data-jd-force-slow") === "1";
-      const t = conn?.effectiveType;
-      setSlow(forced || t === "2g" || t === "slow-2g");
+      const et = conn?.effectiveType;
+      setSlow(forced || et === "2g" || et === "slow-2g");
     };
     checkSlow();
     conn?.addEventListener?.("change", checkSlow);
@@ -80,11 +82,11 @@ export function NetworkGuards() {
         >
           <JdIcon name="wifiOff" size={18} stroke={1.9} color="#fff" />
           <span style={{ flex: 1, fontSize: 12, fontWeight: 600 }}>
-            आप ऑफ़लाइन हैं —{" "}
+            {t("system.offlineSaved")}{" "}
             <Link href="/archive/saved" style={{ color: "var(--jd-gold-soft)", fontWeight: 800 }}>
-              सहेजी सामग्री
+              {t("system.offlineSavedLink")}
             </Link>{" "}
-            उपलब्ध है
+            {t("system.offlineSavedSuffix")}
           </span>
         </div>
       ) : null}
@@ -107,7 +109,7 @@ export function NetworkGuards() {
         >
           <JdIcon name="wifi" size={17} stroke={1.9} color="var(--jd-amber)" />
           <span style={{ flex: 1, fontSize: 11.5, fontWeight: 700, color: "#7a5a12" }}>
-            धीमा नेटवर्क — टेक्स्ट पहले लोड हो रहा है
+            {t("system.slowBody")}
           </span>
           <button
             type="button"
@@ -123,7 +125,7 @@ export function NetworkGuards() {
               minHeight: 44,
             }}
           >
-            डेटा-बचत
+            {t("system.dataSavingCta")}
           </button>
         </div>
       ) : null}

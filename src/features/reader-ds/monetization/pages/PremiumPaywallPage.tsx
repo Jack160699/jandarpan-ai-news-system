@@ -1,9 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { Tag } from "../../components/primitives";
 import { JdIcon } from "../../components/icons";
 import { Byline } from "../../article/components/Byline";
+import { useJdDsT } from "../../i18n";
 
 type PaywallReport = {
   slug: string;
@@ -15,21 +18,20 @@ type PaywallReport = {
 
 /** E38 — preview + fade + paywall card for premium reports. */
 export function PremiumPaywallPage({ report }: { report: PaywallReport }) {
+  const { t } = useJdDsT();
   const price =
     typeof report.price_inr === "number" && report.price_inr > 0
       ? `₹${report.price_inr}`
-      : "₹49/माह";
+      : t("membership.defaultPrice");
 
-  const preview =
-    report.excerpt?.trim() ||
-    "यह गहन विश्लेषण सदस्य पाठकों के लिए उपलब्ध है। पूर्वावलोकन नीचे है।";
+  const preview = report.excerpt?.trim() || t("membership.previewFallback");
 
   return (
     <ReaderShell activeNav="home" hideBottomNav reserveMiniPlayer={false}>
       <Masthead back backHref="/" />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto" }}>
         <div style={{ padding: "12px 16px 0", position: "relative" }}>
-          <Tag>गहन विश्लेषण · प्रीमियम</Tag>
+          <Tag>{t("membership.deepTag")}</Tag>
           <h1
             className="jd-serif"
             style={{
@@ -43,8 +45,8 @@ export function PremiumPaywallPage({ report }: { report: PaywallReport }) {
             {report.title}
           </h1>
           <Byline
-            author={report.author?.trim() || "जनदर्पण प्रीमियम"}
-            role="विशेष रिपोर्ट"
+            author={report.author?.trim() || t("membership.premiumAuthor")}
+            role={t("membership.specialReport")}
           />
           <div style={{ position: "relative", maxHeight: 120, overflow: "hidden" }}>
             <p
@@ -87,10 +89,10 @@ export function PremiumPaywallPage({ report }: { report: PaywallReport }) {
             className="jd-serif"
             style={{ fontSize: 17, fontWeight: 700, margin: "8px 0 4px", color: "var(--jd-ink)" }}
           >
-            यह एक प्रीमियम लेख है
+            {t("membership.paywallTitle")}
           </div>
           <div className="jd-ui" style={{ fontSize: 12.5, color: "var(--jd-ink-3)", marginBottom: 14 }}>
-            पूरा विश्लेषण पढ़ने के लिए सदस्य बनें।
+            {t("membership.paywallBody")}
           </div>
           <Link
             href="/membership/plans"
@@ -107,12 +109,12 @@ export function PremiumPaywallPage({ report }: { report: PaywallReport }) {
               textDecoration: "none",
             }}
           >
-            {price} — सदस्य बनें
+            {t("membership.joinFor", { price })}
           </Link>
           <div className="jd-ui" style={{ fontSize: 12, color: "var(--jd-navy)" }}>
-            सदस्य हैं?{" "}
+            {t("membership.alreadyMember")}{" "}
             <Link href="/login" style={{ fontWeight: 700, textDecoration: "underline", color: "inherit" }}>
-              साइन इन करें
+              {t("membership.signIn")}
             </Link>
           </div>
         </div>

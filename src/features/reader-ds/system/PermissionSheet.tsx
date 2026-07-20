@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { JdIcon, type JdIconName } from "../components/icons";
+import { useJdDsT } from "../i18n";
 
 const NOTIFY_KEY = "jd-ds-perm-notify-v1";
 const LOC_KEY = "jd-ds-perm-loc-v1";
@@ -24,6 +25,7 @@ function readInitialKind(): SheetKind {
  * Shown once per browser until dismissed; never blocks reading.
  */
 export function PermissionSheet() {
+  const { t } = useJdDsT();
   const [kind, setKind] = useState<SheetKind>(null);
 
   useEffect(() => {
@@ -68,12 +70,12 @@ export function PermissionSheet() {
         icon="bell"
         iconBg="rgba(158,27,34,.1)"
         iconColor="var(--jd-red)"
-        title="ब्रेकिंग न्यूज़ सबसे पहले पाएँ"
-        body="हम केवल ज़रूरी अलर्ट भेजेंगे — आपके ज़िले की बड़ी ख़बरें व चुनी हुई अपडेट। कभी भी बंद कर सकते हैं।"
-        primaryLabel="सूचनाएँ चालू करें"
+        title={t("system.notifySheetTitle")}
+        body={t("system.notifySheetBody")}
+        primaryLabel={t("system.notifyEnable")}
         primaryTone="red"
         onPrimary={() => void enableNotify()}
-        secondaryLabel="अभी नहीं"
+        secondaryLabel={t("system.notNow")}
         onSecondary={() => dismiss("notify")}
       />
     );
@@ -84,10 +86,11 @@ export function PermissionSheet() {
       icon="pin"
       iconBg="rgba(10,37,80,.08)"
       iconColor="var(--jd-navy)"
-      title="अपने ज़िले की ख़बरें पाएँ"
-      body="स्थान से हम आपका ज़िला अपने-आप चुन लेंगे — स्थानीय ब्रेकिंग, मंडी भाव व मौसम शीर्ष पर।"
+      title={t("system.locationSheetTitle")}
+      body={t("system.locationSheetBody")}
       privacyNote
-      primaryLabel="स्थान चालू करें"
+      privacyLabel={t("system.locationPrivacy")}
+      primaryLabel={t("system.locationEnable")}
       primaryTone="navy"
       onPrimary={() => {
         if (typeof navigator !== "undefined" && navigator.geolocation) {
@@ -100,7 +103,7 @@ export function PermissionSheet() {
           dismiss("location");
         }
       }}
-      secondaryLabel="मैन्युअल रूप से ज़िला चुनें"
+      secondaryLabel={t("system.chooseDistrictManual")}
       secondaryHref="/district"
       onSecondary={() => dismiss("location")}
     />
@@ -114,6 +117,7 @@ function Sheet({
   title,
   body,
   privacyNote,
+  privacyLabel,
   primaryLabel,
   primaryTone,
   onPrimary,
@@ -127,6 +131,7 @@ function Sheet({
   title: string;
   body: string;
   privacyNote?: boolean;
+  privacyLabel?: string;
   primaryLabel: string;
   primaryTone: "red" | "navy";
   onPrimary: () => void;
@@ -206,7 +211,7 @@ function Sheet({
             }}
           >
             <JdIcon name="lock" size={13} stroke={1.9} color="var(--jd-green)" />
-            स्थान संग्रहीत नहीं किया जाता
+            {privacyLabel}
           </div>
         ) : null}
         <button

@@ -1,14 +1,19 @@
-import { JdIcon, type JdIconName } from "../../components/icons";
+"use client";
 
-const ITEMS: Array<{ icon: JdIconName; label: string; action: string }> = [
-  { icon: "headphone", label: "सुनें", action: "listen" },
-  { icon: "bookmark", label: "सहेजें", action: "save" },
-  { icon: "share", label: "शेयर", action: "share" },
-  { icon: "more", label: "और", action: "more" },
+import { JdIcon, type JdIconName } from "../../components/icons";
+import { useJdDsT, type JdDsStringKey } from "../../i18n";
+
+const ITEMS: Array<{ icon: JdIconName; labelKey: JdDsStringKey; action: string }> = [
+  { icon: "headphone", labelKey: "action.listen", action: "listen" },
+  { icon: "bookmark", labelKey: "action.save", action: "save" },
+  { icon: "share", labelKey: "action.share", action: "share" },
+  { icon: "more", labelKey: "action.more", action: "more" },
 ];
 
 /** Sticky bottom share bar — approved B11. */
 export function ArticleShareBar({ slug }: { slug?: string }) {
+  const { t } = useJdDsT();
+
   return (
     <div
       style={{
@@ -48,7 +53,7 @@ export function ArticleShareBar({ slug }: { slug?: string }) {
           }}
         >
           <JdIcon name={a.icon} size={20} stroke={1.8} color="var(--jd-ink-2)" />
-          <span style={{ fontSize: 9.5, color: "var(--jd-ink-3)", fontWeight: 600 }}>{a.label}</span>
+          <span style={{ fontSize: 9.5, color: "var(--jd-ink-3)", fontWeight: 600 }}>{t(a.labelKey)}</span>
         </button>
       ))}
     </div>

@@ -1,27 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon } from "../../components/icons";
-import { LANGUAGE_OPTIONS, type NewsroomLanguage } from "@/lib/i18n/languages";
-import { loadPreferences, savePreferences } from "@/lib/reader-preferences";
-import { saveStoredLanguage } from "@/lib/i18n/storage";
+import { useJdDsT } from "../../i18n";
+import { READER_LANGUAGE_OPTIONS, type ReaderLanguage } from "@/lib/i18n/reader-languages";
+import { useLanguage } from "@/providers/LanguageProvider";
+import { savePreferences } from "@/lib/reader-preferences";
 
 const COMING_SOON: Array<{ id: string; native: string; label: string }> = [
   { id: "or", native: "ଓଡ଼ିଆ", label: "Odia" },
 ];
 
-/** D26 — language selection. */
+function toReaderLang(value: string | null | undefined): ReaderLanguage {
+  return value === "en" ? "en" : "hi";
+}
+
+/** D26 — language selection. Persists via LanguageProvider + reader prefs. */
 export function LanguagePage({ continueHref = "/archive" }: { continueHref?: string }) {
   const router = useRouter();
-  const [selected, setSelected] = useState<NewsroomLanguage>("hi");
-
-  useEffect(() => {
-    setSelected(loadPreferences().language || "hi");
-  }, []);
-
-  const primary = LANGUAGE_OPTIONS.filter((l) => l.id === "hi" || l.id === "en" || l.id === "mr");
+  const { confirmLanguage, language } = useLanguage();
+  const { t } = useJdDsT();
+  const providerLang = toReaderLang(language);
+  const [override, setOverride] = useState<ReaderLanguage | null>(null);
+  const selected = override ?? providerLang;
 
   return (
     <ReaderShell activeNav="more" hideBottomNav>
@@ -35,20 +38,21 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
         }}
       >
         <div className="jd-brand" style={{ fontSize: 34, marginBottom: 6 }}>
-          जनदर्पण
+          {t("brand.name")}
         </div>
         <div className="jd-ui" style={{ fontSize: 13, color: "#8ea0c4" }}>
-          अपनी भाषा चुनें · Choose your language
+          {t("language.chooseTitle")} · {t("language.chooseSub")}
         </div>
       </div>
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "18px 16px" }}>
-        {primary.map((l) => {
+        {READER_LANGUAGE_OPTIONS.map((l) => {
           const on = selected === l.id;
           return (
             <button
               key={l.id}
               type="button"
-              onClick={() => setSelected(l.id)}
+              data-testid={`lang-option-${l.id}`}
+              onClick={() => setOverride(l.id as ReaderLanguage)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -91,19 +95,22 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
             }}
           >
             <div>
-              <div className="jd-serif" style={{ fontSize: 19, fontWeight: 700 }}>{l.native}</div>
+              <div className="jd-serif" style={{ fontSize: 19, fontWeight: 700 }}>
+                {l.native}
+              </div>
               <div className="jd-ui" style={{ fontSize: 11.5, color: "var(--jd-muted)" }}>
-                {l.label} · जल्द
+                {l.label} · {t("language.comingSoon")}
               </div>
             </div>
           </div>
         ))}
         <button
           type="button"
+          data-testid="lang-continue"
           className="jd-ui"
           onClick={() => {
+            confirmLanguage(selected);
             savePreferences({ language: selected, languageChosen: true });
-            saveStoredLanguage(selected, true);
             router.push(continueHref);
           }}
           style={{
@@ -120,7 +127,7 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
             cursor: "pointer",
           }}
         >
-          जारी रखें
+          {t("language.continue")}
         </button>
       </main>
     </ReaderShell>

@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useJdDsT } from "../i18n";
 import { JdIcon } from "./icons";
-import { PRIMARY_NAV_ITEMS, type PrimaryNavKey } from "./navItems";
+import { getPrimaryNavItems, type PrimaryNavKey } from "./navItems";
 
 /**
  * Tablet/desktop primary nav — editorial top rail replacing bottom tabs.
@@ -13,12 +16,16 @@ export function DesktopPrimaryNav({
   active?: PrimaryNavKey | null;
   dark?: boolean;
 }) {
+  const { t, locale } = useJdDsT();
+  const items = getPrimaryNavItems(locale);
+
   if (!active) return null;
 
   return (
     <nav
       className="jd-desktop-nav jd-ui"
-      aria-label="मुख्य नेविगेशन"
+      aria-label={t("nav.aria")}
+      data-jd-locale={locale}
       style={{
         flexShrink: 0,
         alignItems: "stretch",
@@ -39,7 +46,7 @@ export function DesktopPrimaryNav({
           margin: "0 auto",
         }}
       >
-        {PRIMARY_NAV_ITEMS.map((it) => {
+        {items.map((it) => {
           const on = it.key === active;
           const color = on
             ? "var(--jd-red)"

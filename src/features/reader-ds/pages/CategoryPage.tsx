@@ -1,3 +1,5 @@
+"use client";
+
 import type { HomeArticle } from "@/lib/homepage/types";
 import { Ad } from "../components/Ad";
 import { ArticleImage } from "../components/ArticleImage";
@@ -7,6 +9,7 @@ import { Masthead } from "../components/Masthead";
 import { ReaderShell } from "../components/ReaderShell";
 import { Tag } from "../components/primitives";
 import { SecondaryStory } from "../components/SecondaryStory";
+import { useJdDsT } from "../i18n";
 import { storyHref, toReaderStory } from "../utils";
 import Link from "next/link";
 
@@ -18,21 +21,23 @@ type Props = {
   chips?: Array<{ label: string; href?: string }>;
 };
 
-/** A3 — श्रेणी पेज + Phase 6 newspaper grid */
+/** A3 — category page (chrome i18n; category/story titles stay CMS). */
 export function CategoryPageView({ titleHi, titleEn, slug, articles, chips }: Props) {
+  const { t, locale } = useJdDsT();
   const lead = articles[0];
   const rest = articles.slice(1);
+  const pageTitle = locale === "en" ? titleEn || titleHi : titleHi || titleEn;
   const defaultChips = chips ?? [
-    { label: "सभी", href: `/category/${slug}` },
+    { label: locale === "en" ? "All" : "सभी", href: `/category/${slug}` },
     { label: "छत्तीसगढ़", href: "/category/chhattisgarh" },
-    { label: "राष्ट्रीय", href: "/category/politics" },
-    { label: "व्यापार", href: "/category/business" },
-    { label: "खेल", href: "/category/sports" },
+    { label: locale === "en" ? "National" : "राष्ट्रीय", href: "/category/politics" },
+    { label: locale === "en" ? "Business" : "व्यापार", href: "/category/business" },
+    { label: locale === "en" ? "Sports" : "खेल", href: "/category/sports" },
   ];
 
   return (
     <ReaderShell activeNav="home">
-      <Masthead back pageTitle={titleHi || titleEn} />
+      <Masthead back pageTitle={pageTitle} />
       <DesktopPrimaryNav active="home" />
       <ChipRow chips={defaultChips} activeIndex={0} bordered />
       <main id="main-content" role="main" className="jd-shell" style={{ flex: 1, background: "var(--jd-paper)" }}>
@@ -51,7 +56,7 @@ export function CategoryPageView({ titleHi, titleEn, slug, articles, chips }: Pr
                     tone="city"
                   />
                   <div style={{ margin: "8px 0 3px" }}>
-                    <Tag>{lead.categoryLabel || titleHi}</Tag>
+                    <Tag>{lead.categoryLabel || pageTitle}</Tag>
                   </div>
                   <h2
                     className="jd-serif jd-lead-title"
@@ -63,7 +68,7 @@ export function CategoryPageView({ titleHi, titleEn, slug, articles, chips }: Pr
               </div>
             ) : (
               <p className="jd-ui" style={{ padding: 16, color: "var(--jd-muted)" }}>
-                इस श्रेणी में अभी ख़बरें उपलब्ध नहीं हैं।
+                {t("home.categoryEmpty")}
               </p>
             )}
           </div>

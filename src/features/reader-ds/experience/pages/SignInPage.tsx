@@ -7,6 +7,7 @@ import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import { useSupabase } from "@/hooks/useSupabase";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
+import { useJdDsT } from "../../i18n";
 
 /**
  * D28 — Sign in / sign up (Plot-approved reader-ds composition).
@@ -61,6 +62,7 @@ function digitsOnly(value: string) {
 }
 
 export function SignInPage() {
+  const { t } = useJdDsT();
   const { signInWithGoogle, isLoggedIn, displayName, loading } = useReaderAccount();
   const { client } = useSupabase();
   const configured = isSupabaseConfigured();
@@ -79,7 +81,7 @@ export function SignInPage() {
     try {
       await signInWithGoogle();
     } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Google साइन-इन विफल रहा।");
+      setStatus(e instanceof Error ? e.message : t("signin.googleFailed"));
       setBusy(false);
     }
   }
@@ -93,20 +95,16 @@ export function SignInPage() {
       options: { emailRedirectTo: `${window.location.origin}/login` },
     });
     setBusy(false);
-    setStatus(
-      error
-        ? error.message
-        : "लॉगिन लिंक के लिए अपना ईमेल देखें।"
-    );
+    setStatus(error ? error.message : t("signin.emailSent"));
   }
 
   if (loading && !isLoggedIn) {
     return (
       <ReaderShell activeNav={null} hideBottomNav showPermissionSheets={false}>
-        <Masthead back pageTitle="जनदर्पण" />
+        <Masthead back pageTitle={t("brand.name")} />
         <main id="main-content" role="main" style={{ flex: 1, padding: 24 }}>
           <p className="jd-ui" style={{ color: "var(--jd-muted)" }}>
-            लोड हो रहा है…
+            {t("signin.loading")}
           </p>
         </main>
       </ReaderShell>
@@ -116,17 +114,17 @@ export function SignInPage() {
   if (isLoggedIn) {
     return (
       <ReaderShell activeNav={null} hideBottomNav showPermissionSheets={false}>
-        <Masthead back pageTitle="जनदर्पण" />
+        <Masthead back pageTitle={t("brand.name")} />
         <main
           id="main-content"
           role="main"
           style={{ flex: 1, overflow: "auto", padding: "28px 18px 40px", maxWidth: 430, margin: "0 auto", width: "100%" }}
         >
           <h1 className="jd-serif" style={{ fontSize: 26, fontWeight: 700, color: "var(--jd-navy)", margin: 0 }}>
-            आप साइन इन हैं
+            {t("signin.signedIn")}
           </h1>
           <p className="jd-ui" style={{ marginTop: 10, fontSize: 14, color: "var(--jd-ink-3)", lineHeight: 1.5 }}>
-            लॉगिन: {displayName}
+            {t("signin.signedInAs")} {displayName}
           </p>
           <Link
             href="/"
@@ -146,7 +144,7 @@ export function SignInPage() {
               borderRadius: 4,
             }}
           >
-            होम पर जाएँ
+            {t("signin.goHome")}
           </Link>
         </main>
       </ReaderShell>
@@ -155,7 +153,7 @@ export function SignInPage() {
 
   return (
     <ReaderShell activeNav={null} hideBottomNav showPermissionSheets={false}>
-      <Masthead back pageTitle="जनदर्पण" />
+      <Masthead back pageTitle={t("brand.name")} />
       <main
         id="main-content"
         role="main"
@@ -179,7 +177,7 @@ export function SignInPage() {
             margin: 0,
           }}
         >
-          जनदर्पण में आपका स्वागत है
+          {t("signin.welcome")}
         </h1>
         <p
           className="jd-ui"
@@ -191,8 +189,7 @@ export function SignInPage() {
             width: "100%",
           }}
         >
-
-          सहेजें, फ़ॉलो करें और अपनी पसंद के अनुसार खबरें पाएँ।
+          {t("signin.subtitle")}
         </p>
 
         <div style={{ marginTop: 28 }}>
@@ -207,7 +204,7 @@ export function SignInPage() {
               marginBottom: 8,
             }}
           >
-            मोबाइल नंबर
+            {t("signin.mobileLabel")}
           </label>
           <div
             style={{
@@ -243,7 +240,7 @@ export function SignInPage() {
               maxLength={10}
               value={mobile}
               onChange={(e) => setMobile(digitsOnly(e.target.value))}
-              placeholder="10 अंकों का नंबर"
+              placeholder={t("signin.mobilePlaceholder")}
               aria-describedby="jd-d28-otp-note"
               style={{
                 flex: 1,
@@ -263,7 +260,7 @@ export function SignInPage() {
             type="button"
             disabled
             aria-disabled="true"
-            title="मोबाइल OTP सत्यापन अभी उपलब्ध नहीं"
+            title={t("signin.otpTitle")}
             style={{
               marginTop: 14,
               width: "100%",
@@ -279,16 +276,15 @@ export function SignInPage() {
               cursor: "not-allowed",
             }}
           >
-            OTP भेजें
+            {t("signin.sendOtp")}
           </button>
           <p
             id="jd-d28-otp-note"
             className="jd-ui"
             style={{ marginTop: 8, fontSize: 11.5, lineHeight: 1.45, color: "var(--jd-ink-3)" }}
           >
-            मोबाइल OTP सत्यापन अभी उपलब्ध नहीं है। कृपया Google से साइन इन करें
-            {configured ? " या ईमेल लिंक उपयोग करें" : ""}।
-            {!mobileValid && mobile.length > 0 ? " · मान्य 10 अंक दर्ज करें।" : null}
+            {t("signin.otpUnavailable")}
+            {!mobileValid && mobile.length > 0 ? ` · ${t("signin.invalidMobile")}` : null}
           </p>
         </div>
 
@@ -303,7 +299,7 @@ export function SignInPage() {
         >
           <div style={{ flex: 1, height: 1, background: "var(--jd-line)" }} />
           <span className="jd-ui" style={{ fontSize: 12, color: "var(--jd-muted)" }}>
-            या
+            {t("signin.or")}
           </span>
           <div style={{ flex: 1, height: 1, background: "var(--jd-line)" }} />
         </div>
@@ -331,12 +327,12 @@ export function SignInPage() {
           }}
         >
           <GoogleGlyph />
-          Google से जारी रखें
+          {t("signin.google")}
         </button>
 
         {!configured ? (
           <p className="jd-ui" style={{ marginTop: 10, fontSize: 11.5, color: "var(--jd-amber)" }}>
-            Supabase कॉन्फ़िग नहीं — Google / ईमेल के लिए env keys चाहिए।
+            {t("signin.supabaseMissing")}
           </p>
         ) : null}
 
@@ -355,7 +351,7 @@ export function SignInPage() {
               minHeight: 44,
             }}
           >
-            मेहमान के रूप में जारी रखें
+            {t("signin.guest")}
           </Link>
         </div>
 
@@ -377,7 +373,7 @@ export function SignInPage() {
             }}
             aria-expanded={showEmail}
           >
-            {showEmail ? "ईमेल विकल्प छिपाएँ" : "ईमेल लिंक से साइन इन (वैकल्पिक)"}
+            {showEmail ? t("signin.emailHide") : t("signin.emailToggle")}
           </button>
           {showEmail ? (
             <div style={{ marginTop: 12 }}>
@@ -386,7 +382,7 @@ export function SignInPage() {
                 className="jd-ui"
                 style={{ display: "block", fontSize: 12, color: "var(--jd-ink-3)", marginBottom: 6 }}
               >
-                ईमेल
+                {t("signin.emailLabel")}
               </label>
               <input
                 id="jd-d28-email"
@@ -425,7 +421,7 @@ export function SignInPage() {
                   cursor: !configured || busy || !email.trim() ? "not-allowed" : "pointer",
                 }}
               >
-                ईमेल लिंक भेजें
+                {t("signin.emailSend")}
               </button>
             </div>
           ) : null}

@@ -4,23 +4,26 @@ import { useEffect, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { SectionLabel, SettingRow } from "../components/SettingRow";
+import { useJdDsT } from "../../i18n";
 import {
   loadExperiencePrefs,
   saveExperiencePrefs,
   type ExperiencePrefs,
 } from "../prefs";
 import type { FontScale } from "@/lib/reader-preferences";
+import type { JdDsStringKey } from "../../i18n/strings";
 
 const SCALES: FontScale[] = ["sm", "base", "lg", "xl"];
-const SCALE_LABEL: Record<FontScale, string> = {
-  sm: "छोटा",
-  base: "सामान्य",
-  lg: "बड़ा",
-  xl: "बहुत बड़ा",
+const SCALE_KEY: Record<FontScale, JdDsStringKey> = {
+  sm: "a11y.scaleSm",
+  base: "a11y.scaleBase",
+  lg: "a11y.scaleLg",
+  xl: "a11y.scaleXl",
 };
 
 /** D35 — accessibility + data-saving. */
 export function AccessibilityPage() {
+  const { t } = useJdDsT();
   const [prefs, setPrefs] = useState<ExperiencePrefs | null>(null);
 
   useEffect(() => {
@@ -30,7 +33,7 @@ export function AccessibilityPage() {
   if (!prefs) {
     return (
       <ReaderShell activeNav="more">
-        <Masthead back backHref="/archive" pageTitle="सुगम्यता" />
+        <Masthead back backHref="/archive" pageTitle={t("a11y.shortTitle")} />
       </ReaderShell>
     );
   }
@@ -44,31 +47,31 @@ export function AccessibilityPage() {
 
   return (
     <ReaderShell activeNav="more">
-      <Masthead back backHref="/archive" pageTitle="सुगम्यता" />
+      <Masthead back backHref="/archive" pageTitle={t("a11y.shortTitle")} />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto" }}>
-        <SectionLabel>डेटा-बचत</SectionLabel>
+        <SectionLabel>{t("a11y.dataSection")}</SectionLabel>
         <SettingRow
           icon="wifiOff"
-          label="डेटा-बचत मोड"
-          sub="इमेज मांग पर, हल्का पेलोड"
+          label={t("a11y.dataSaving")}
+          sub={t("a11y.dataSavingSub")}
           toggle={prefs.dataSaving}
           onToggle={(v) => set({ dataSaving: v })}
         />
         <SettingRow
           icon="download"
-          label="केवल वाई-फ़ाई पर ऑटो-डाउनलोड"
+          label={t("a11y.wifiOnly")}
           toggle={prefs.wifiOnlyDownload}
           onToggle={(v) => set({ wifiOnlyDownload: v })}
         />
 
-        <SectionLabel>पठनीयता</SectionLabel>
+        <SectionLabel>{t("a11y.readability")}</SectionLabel>
         <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--jd-line-2)" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
             <span className="jd-ui" style={{ fontSize: 14, fontWeight: 600, color: "var(--jd-ink)" }}>
-              टेक्स्ट आकार
+              {t("a11y.textSize")}
             </span>
             <span className="jd-ui" style={{ fontSize: 12, fontWeight: 800, color: "var(--jd-red)" }}>
-              {SCALE_LABEL[prefs.fontScale]}
+              {t(SCALE_KEY[prefs.fontScale])}
             </span>
           </div>
           <input
@@ -77,7 +80,7 @@ export function AccessibilityPage() {
             max={SCALES.length - 1}
             step={1}
             value={scaleIndex}
-            aria-label="टेक्स्ट आकार"
+            aria-label={t("a11y.textSize")}
             onChange={(e) => set({ fontScale: SCALES[Number(e.target.value)] })}
             style={{ width: "100%", accentColor: "var(--jd-navy)" }}
           />
@@ -99,14 +102,14 @@ export function AccessibilityPage() {
 
         <SettingRow
           icon="eye"
-          label="उच्च कंट्रास्ट"
+          label={t("a11y.highContrast")}
           toggle={prefs.highContrast}
           onToggle={(v) => set({ highContrast: v })}
         />
         <SettingRow
           icon="sun"
-          label="डार्क मोड"
-          sub="सिस्टम अनुसार"
+          label={t("a11y.darkMode")}
+          sub={t("a11y.darkModeSub")}
           right={
             <button
               type="button"
@@ -126,17 +129,17 @@ export function AccessibilityPage() {
               }}
             >
               {prefs.themeMode === "system"
-                ? "सिस्टम"
+                ? t("a11y.themeSystem")
                 : prefs.themeMode === "dark"
-                  ? "डार्क"
-                  : "लाइट"}
+                  ? t("a11y.themeDark")
+                  : t("a11y.themeLight")}
             </button>
           }
         />
         <SettingRow
           icon="globe"
-          label="स्क्रीन-रीडर अनुकूलन"
-          sub="ARIA लेबल व फ़ोकस-क्रम"
+          label={t("a11y.screenReader")}
+          sub={t("a11y.screenReaderSub")}
           toggle={prefs.screenReaderOptimized}
           onToggle={(v) => set({ screenReaderOptimized: v })}
         />

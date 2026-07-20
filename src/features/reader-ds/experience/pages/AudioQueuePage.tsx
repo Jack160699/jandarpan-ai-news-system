@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
 import { useReaderAudio } from "../audio/AudioProvider";
 import {
   loadExperiencePrefs,
@@ -16,6 +17,7 @@ import type { BriefingTrack } from "../audio/types";
 const SPEEDS: PlaybackSpeed[] = [0.75, 1, 1.25, 1.5, 1.75, 2];
 
 function QueueBody({ seed }: { seed: BriefingTrack[] }) {
+  const { t } = useJdDsT();
   const audio = useReaderAudio();
   const [autoplay, setAutoplay] = useState(true);
   const [wifiOnly, setWifiOnly] = useState(true);
@@ -41,7 +43,7 @@ function QueueBody({ seed }: { seed: BriefingTrack[] }) {
 
   return (
     <>
-      <Masthead back backHref="/listen" pageTitle="कतार" />
+      <Masthead back backHref="/listen" pageTitle={t("listen.queue")} />
       <div
         style={{
           flexShrink: 0,
@@ -51,16 +53,16 @@ function QueueBody({ seed }: { seed: BriefingTrack[] }) {
         }}
       >
         <Row
-          label="प्लेबैक गति"
+          label={t("listen.speed")}
           value={`${audio.speed.toFixed(2).replace(/\.00$/, ".0").replace(/(\.\d)0$/, "$1")}x`}
           onClick={cycleSpeed}
         />
         <Row
-          label="ऑटो-प्ले अगला"
+          label={t("listen.autoplayNext")}
           right={
             <Toggle
               on={autoplay}
-              label="ऑटो-प्ले"
+              label={t("listen.autoplayAria")}
               onChange={(v) => {
                 setAutoplay(v);
                 saveExperiencePrefs({ autoplayNext: v });
@@ -69,11 +71,11 @@ function QueueBody({ seed }: { seed: BriefingTrack[] }) {
           }
         />
         <Row
-          label="डाउनलोड केवल वाई-फ़ाई पर"
+          label={t("listen.wifiDownload")}
           right={
             <Toggle
               on={wifiOnly}
-              label="वाई-फ़ाई डाउनलोड"
+              label={t("listen.wifiDownloadAria")}
               onChange={(v) => {
                 setWifiOnly(v);
                 saveExperiencePrefs({ wifiOnlyDownload: v });
@@ -94,18 +96,18 @@ function QueueBody({ seed }: { seed: BriefingTrack[] }) {
             margin: "8px 0",
           }}
         >
-          आगे की कतार
+          {t("listen.upNext")}
         </div>
         {queue.length === 0 ? (
           <p className="jd-ui" style={{ color: "var(--jd-muted)", fontSize: 13 }}>
-            कतार खाली है — ब्रीफ़िंग से कोई आइटम चलाएँ।
+            {t("listen.queueEmpty")}
           </p>
         ) : (
-          queue.map((t, i) => {
+          queue.map((track, i) => {
             const absolute = audio.index + 1 + i;
             return (
               <div
-                key={t.id}
+                key={track.id}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -116,7 +118,7 @@ function QueueBody({ seed }: { seed: BriefingTrack[] }) {
               >
                 <button
                   type="button"
-                  aria-label="ऊपर ले जाएँ"
+                  aria-label={t("listen.moveUpAria")}
                   disabled={i === 0}
                   onClick={() => audio.reorderQueue(absolute, absolute - 1)}
                   style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}
@@ -136,11 +138,11 @@ function QueueBody({ seed }: { seed: BriefingTrack[] }) {
                   }}
                 >
                   <div className="jd-serif" style={{ fontSize: 14, fontWeight: 500, color: "var(--jd-ink)", lineHeight: 1.3 }}>
-                    {t.headline}
+                    {track.headline}
                   </div>
                 </button>
                 <span className="jd-ui" style={{ fontSize: 11, color: "var(--jd-muted)" }}>
-                  {t.durationLabel}
+                  {track.durationLabel}
                 </span>
               </div>
             );

@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
 
 /** E41 — failure / not-live checkout. Never claims a charge occurred. */
 export function PaymentFailurePage({
@@ -11,14 +14,15 @@ export function PaymentFailurePage({
   reason?: string | null;
   planSlug?: string | null;
 }) {
+  const { t } = useJdDsT();
   const code =
     reason === "checkout-not-live"
-      ? "चेकआउट अभी लाइव नहीं (पूर्वावलोकन)"
+      ? t("membership.failureCheckoutNotLive")
       : reason === "unverified"
-        ? "सदस्यता सत्यापित नहीं — भुगतान की पुष्टि नहीं मिली"
+        ? t("membership.failureUnverified")
         : reason
-          ? `त्रुटि: ${reason}`
-          : "भुगतान पूरा नहीं हो सका";
+          ? t("membership.failureError", { reason })
+          : t("membership.failureGeneric");
 
   const retryHref = planSlug
     ? `/membership/checkout?plan=${encodeURIComponent(planSlug)}`
@@ -55,13 +59,13 @@ export function PaymentFailurePage({
           <JdIcon name="alert" size={40} stroke={1.8} color="var(--jd-red)" />
         </div>
         <h1 className="jd-serif" style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 700 }}>
-          भुगतान पूरा नहीं हो सका
+          {t("membership.failureTitle")}
         </h1>
         <p
           className="jd-ui"
           style={{ margin: "0 0 8px", fontSize: 13, color: "var(--jd-ink-3)", lineHeight: 1.6 }}
         >
-          चिंता न करें — आपके खाते से कोई राशि नहीं काटी गई है। कृपया दोबारा प्रयास करें।
+          {t("membership.failureBody")}
         </p>
         <div className="jd-ui" style={{ fontSize: 11, color: "var(--jd-muted)", marginBottom: 22 }}>
           {code}
@@ -82,7 +86,7 @@ export function PaymentFailurePage({
             marginBottom: 10,
           }}
         >
-          पुनः प्रयास करें
+          {t("membership.retry")}
         </Link>
         <Link
           href="/membership/plans"
@@ -100,14 +104,14 @@ export function PaymentFailurePage({
             marginBottom: 16,
           }}
         >
-          दूसरी विधि चुनें
+          {t("membership.otherMethod")}
         </Link>
         <Link
           href="/contact"
           className="jd-ui"
           style={{ fontSize: 12, color: "var(--jd-navy)", textDecoration: "underline" }}
         >
-          सहायता से संपर्क करें
+          {t("membership.contactSupport")}
         </Link>
       </main>
     </ReaderShell>

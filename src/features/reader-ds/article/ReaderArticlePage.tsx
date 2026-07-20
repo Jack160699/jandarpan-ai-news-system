@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { LiveStoryJsonLd } from "@/components/seo/LiveStoryJsonLd";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { ArticleImage } from "../components/ArticleImage";
 import { DesktopPrimaryNav } from "../components/DesktopPrimaryNav";
 import { Masthead } from "../components/Masthead";
 import { ReaderShell } from "../components/ReaderShell";
 import { AiSummary, SectionHeader, Tag } from "../components/primitives";
 import { SecondaryStory } from "../components/SecondaryStory";
+import { jdDsT, toJdDsLocale, type JdDsStringKey } from "../i18n";
 import type { ReaderStory } from "../utils";
 import {
   BreakingBanner,
@@ -83,7 +85,17 @@ function relatedAsStories(
   }));
 }
 
-function AnalysisPlaceholder({ takeaways }: { takeaways: string[] }) {
+function AnalysisPlaceholder({
+  takeaways,
+  title,
+  emptyHint,
+  keyPointsTitle,
+}: {
+  takeaways: string[];
+  title: string;
+  emptyHint: string;
+  keyPointsTitle: string;
+}) {
   if (!takeaways.length) {
     return (
       <div
@@ -98,10 +110,10 @@ function AnalysisPlaceholder({ takeaways }: { takeaways: string[] }) {
           className="jd-ui"
           style={{ fontSize: 10.5, fontWeight: 800, color: "var(--jd-navy)", marginBottom: 8 }}
         >
-          गहन विश्लेषण
+          {title}
         </div>
         <p className="jd-ui" style={{ margin: 0, fontSize: 12.5, color: "var(--jd-ink-3)" }}>
-          सदस्य विश्लेषण चार्ट उपलब्ध होने पर यहाँ दिखेगा — बिना अनुमानित आँकड़ों के।
+          {emptyHint}
         </p>
       </div>
     );
@@ -119,15 +131,15 @@ function AnalysisPlaceholder({ takeaways }: { takeaways: string[] }) {
         className="jd-ui"
         style={{ fontSize: 10.5, fontWeight: 800, color: "var(--jd-navy)", marginBottom: 8 }}
       >
-        गहन विश्लेषण · मुख्य बिंदु
+        {keyPointsTitle}
       </div>
-      {takeaways.slice(0, 4).map((t, i) => (
+      {takeaways.slice(0, 4).map((point, i) => (
         <div key={i} style={{ display: "flex", gap: 8, marginBottom: i < 3 ? 6 : 0 }}>
           <span style={{ color: "var(--jd-red)", fontWeight: 800 }} aria-hidden>
             •
           </span>
           <span className="jd-ui" style={{ fontSize: 12.5, lineHeight: 1.4, color: "var(--jd-ink-2)" }}>
-            {t}
+            {point}
           </span>
         </div>
       ))}
@@ -139,7 +151,11 @@ function AnalysisPlaceholder({ takeaways }: { takeaways: string[] }) {
  * Shared editorial storytelling template for B11–B20.
  * Variant layout switches inside one page — no duplicate route trees.
  */
-export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
+export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
+  const locale = toJdDsLocale(await getServerReaderLanguage());
+  const t = (key: JdDsStringKey, vars?: Record<string, string | number>) =>
+    jdDsT(locale, key, vars);
+
   const {
     variant,
     headline,
@@ -187,7 +203,7 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
       <>
         <LiveStoryJsonLd article={article} imageMeta={editorialMeta?.image} />
         <ReaderShell activeNav="latest">
-          <Masthead back backHref="/live" pageTitle="लाइव ब्लॉग" />
+          <Masthead back backHref="/live" pageTitle={t("article.liveBlog")} />
           <DesktopPrimaryNav active="latest" />
           <div
             style={{
@@ -241,7 +257,7 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
   const isSponsored = variant === "sponsored";
   const showShareBar = variant === "standard";
   const hideBottomNav = showShareBar;
-  const pageTitle = variant === "explainer" ? "एक्सप्लेनर" : undefined;
+  const pageTitle = variant === "explainer" ? t("article.explainer") : undefined;
 
   const padStyle = {
     padding: isOpinionLike ? "16px 18px" : "12px 16px 8px",
@@ -346,7 +362,11 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
             ) : null}
 
             {variant === "standard" || variant === "premium" ? (
-              <AudioInline durationLabel={readTime ? `हिन्दी नैरेशन · ${readTime}` : "हिन्दी नैरेशन"} />
+              <AudioInline
+                durationLabel={
+                  readTime ? t("article.narrationWith", { time: readTime }) : t("article.narration")
+                }
+              />
             ) : null}
 
             {variant === "standard" ? (
@@ -368,7 +388,7 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
                     fontStyle: "italic",
                   }}
                 >
-                  {imageCaption || (imageUrl ? "फ़ोटो: जनदर्पण" : "दृश्य: संपादकीय प्लेसहोल्डर")}
+                  {imageCaption || (imageUrl ? t("article.photoCredit") : t("article.visualPlaceholder"))}
                 </div>
               </>
             ) : null}
@@ -385,7 +405,7 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
                     fontStyle: "italic",
                   }}
                 >
-                  फ़ोटो: उपलब्ध नहीं
+                  {t("article.photoUnavailable")}
                 </div>
               </>
             ) : null}
@@ -431,7 +451,12 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
             {variant === "premium" ? (
               <>
                 <BodyParas paragraphs={paragraphs.slice(0, 1)} />
-                <AnalysisPlaceholder takeaways={takeaways} />
+                <AnalysisPlaceholder
+                  takeaways={takeaways}
+                  title={t("article.deepAnalysis")}
+                  emptyHint={t("article.analysisHint")}
+                  keyPointsTitle={t("article.analysisKeyPoints")}
+                />
                 <BodyParas paragraphs={paragraphs.slice(1)} />
               </>
             ) : null}
@@ -472,7 +497,7 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
                     marginTop: 16,
                   }}
                 >
-                  {sponsored.ctaLabel?.trim() || "आवेदन करें"}
+                  {sponsored.ctaLabel?.trim() || t("article.apply")}
                 </Link>
               ) : (
                 <div
@@ -488,7 +513,7 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
                     marginTop: 16,
                   }}
                 >
-                  {sponsored?.ctaLabel?.trim() || "आवेदन करें"}
+                  {sponsored?.ctaLabel?.trim() || t("article.apply")}
                 </div>
               )
             ) : null}
@@ -497,12 +522,12 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
               {variant === "video" && relatedStories.length > 0 ? (
                 <>
                   <div style={{ paddingTop: 6 }}>
-                    <SectionHeader title="आगे देखें" />
+                    <SectionHeader title={t("article.watchNext")} />
                   </div>
                   {relatedStories.slice(0, 3).map((s, i) => (
                     <SecondaryStory
                       key={s.slug}
-                      story={{ ...s, kicker: s.kicker ?? "वीडियो" }}
+                      story={{ ...s, kicker: s.kicker ?? t("article.video") }}
                       last={i === Math.min(2, relatedStories.length - 1)}
                       toneIndex={i}
                     />
@@ -515,7 +540,7 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
               relatedStories.length > 0 ? (
                 <>
                   <div style={{ paddingTop: 4 }}>
-                    <SectionHeader title="संबंधित ख़बरें" />
+                    <SectionHeader title={t("article.related")} />
                   </div>
                   {relatedStories.slice(0, 4).map((s, i) => (
                     <SecondaryStory
@@ -532,16 +557,16 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
           </div>
 
           {relatedStories.length > 0 && variant !== "explainer" ? (
-            <aside className="jd-article-rail" aria-label="संबंधित ख़बरें">
+            <aside className="jd-article-rail" aria-label={t("article.related")}>
               <p className="jd-rail-title">
-                {variant === "video" ? "आगे देखें" : "संबंधित ख़बरें"}
+                {variant === "video" ? t("article.watchNext") : t("article.related")}
               </p>
               {relatedStories.slice(0, 5).map((s, i) => (
                 <SecondaryStory
                   key={`rail-${s.slug}`}
                   story={
                     variant === "video"
-                      ? { ...s, kicker: s.kicker ?? "वीडियो" }
+                      ? { ...s, kicker: s.kicker ?? t("article.video") }
                       : s
                   }
                   last={i === Math.min(4, relatedStories.length - 1)}

@@ -1,20 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useJdDsT } from "../i18n";
 import { JdIcon, type JdIconName } from "./icons";
 
 /** Listen / share / save action row — wired to listen hub, Web Share, bookmarks. */
 export function ActionRow({ slug, title }: { slug?: string; title?: string }) {
+  const { t } = useJdDsT();
   return (
     <div style={{ display: "flex", gap: 18, padding: "4px 0 2px" }} data-slug={slug}>
       <ActionButton
         icon="headphone"
-        label="सुनें"
+        label={t("action.listen")}
         href={slug ? `/listen?story=${encodeURIComponent(slug)}` : "/listen"}
       />
       <ActionButton
         icon="share"
-        label="शेयर"
+        label={t("action.share")}
         onClick={async () => {
           const url =
             typeof window !== "undefined" && slug
@@ -24,7 +26,7 @@ export function ActionRow({ slug, title }: { slug?: string; title?: string }) {
                 : "";
           try {
             if (navigator.share) {
-              await navigator.share({ title: title ?? "जनदर्पण", url });
+              await navigator.share({ title: title ?? t("brand.name"), url });
             } else if (navigator.clipboard && url) {
               await navigator.clipboard.writeText(url);
             }
@@ -35,7 +37,7 @@ export function ActionRow({ slug, title }: { slug?: string; title?: string }) {
       />
       <ActionButton
         icon="bookmark"
-        label="सहेजें"
+        label={t("action.save")}
         onClick={() => {
           if (!slug) return;
           void import("@/lib/reading-memory").then(({ loadReadingMemory, toggleBookmark }) => {

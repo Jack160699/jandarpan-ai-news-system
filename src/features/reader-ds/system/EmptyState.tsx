@@ -1,10 +1,13 @@
+"use client";
+
 import { StateBody } from "./StateBody";
+import { useJdDsT } from "../i18n";
 
 /** F47 — friendly empty guidance (saved / followed / etc.). */
 export function EmptyState({
-  title = "अभी तक कुछ सहेजा नहीं",
-  body = "किसी भी लेख पर सहेजें दबाएँ — वे यहाँ पढ़ने के लिए, ऑफ़लाइन भी, जमा होंगे।",
-  primaryLabel = "ख़बरें देखें",
+  title,
+  body,
+  primaryLabel,
   primaryHref = "/",
 }: {
   title?: string;
@@ -12,12 +15,13 @@ export function EmptyState({
   primaryLabel?: string;
   primaryHref?: string;
 }) {
+  const { t } = useJdDsT();
   return (
     <StateBody
       icon="bookmark"
-      title={title}
-      body={body}
-      primary={{ label: primaryLabel, href: primaryHref }}
+      title={title ?? t("system.empty")}
+      body={body ?? t("saved.emptyBody")}
+      primary={{ label: primaryLabel ?? t("saved.seeNews"), href: primaryHref }}
     />
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
+import { useJdDsT } from "../i18n";
 import { JdIcon } from "./icons";
 
 const RECENT_KEY = "jd-ds-recent-searches";
@@ -43,6 +44,7 @@ export function SearchOverlay({
   /** Called when the user dismisses the overlay (back / Esc). */
   onDismiss?: () => void;
 }) {
+  const { t, locale } = useJdDsT();
   const { searchOpen, setSearchOpen } = useReaderPreferences();
   const open = forceOpen || searchOpen;
   const router = useRouter();
@@ -63,7 +65,7 @@ export function SearchOverlay({
   useEffect(() => {
     if (!open) return;
     setRecent(readRecent());
-    const t = window.setTimeout(() => inputRef.current?.focus(), 40);
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 40);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") dismiss();
     };
@@ -87,7 +89,7 @@ export function SearchOverlay({
 
     return () => {
       cancelled = true;
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
       window.removeEventListener("keydown", onKey);
     };
   }, [open, forceOpen, setSearchOpen, trendingProp]);
@@ -115,7 +117,8 @@ export function SearchOverlay({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="खोज"
+      aria-label={t("masthead.searchAria")}
+      data-jd-locale={locale}
       style={{
         position: "fixed",
         inset: 0,
@@ -137,7 +140,7 @@ export function SearchOverlay({
       >
         <button
           type="button"
-          aria-label="बंद करें"
+          aria-label={t("masthead.closeAria")}
           onClick={dismiss}
           style={{
             display: "flex",
@@ -174,14 +177,14 @@ export function SearchOverlay({
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="खोजें…"
-            aria-label="खोज इनपुट"
+            placeholder={t("search.placeholder")}
+            aria-label={t("search.hint")}
             className="jd-ui"
             style={{
               flex: 1,
               border: "none",
               outline: "none",
-              fontSize: 14,
+              fontSize: locale === "en" ? 13 : 14,
               color: "var(--jd-ink)",
               background: "transparent",
               fontFamily: "inherit",
@@ -202,11 +205,11 @@ export function SearchOverlay({
             marginBottom: 10,
           }}
         >
-          हालिया खोजें
+          {t("search.recent")}
         </div>
         {recent.length === 0 ? (
           <p className="jd-ui" style={{ fontSize: 13, color: "var(--jd-muted)", margin: "0 0 8px" }}>
-            अभी कोई हालिया खोज नहीं
+            {t("search.recentEmpty")}
           </p>
         ) : (
           recent.map((s) => (
@@ -241,7 +244,7 @@ export function SearchOverlay({
               </button>
               <button
                 type="button"
-                aria-label={`${s} हटाएँ`}
+                aria-label={`${s} · ${t("search.clear")}`}
                 onClick={() => removeRecent(s)}
                 style={{
                   background: "none",
@@ -268,11 +271,11 @@ export function SearchOverlay({
             margin: "18px 0 10px",
           }}
         >
-          अभी ट्रेंडिंग
+          {t("search.trending")}
         </div>
         {trending.length === 0 ? (
           <p className="jd-ui" style={{ fontSize: 13, color: "var(--jd-muted)", margin: 0 }}>
-            ट्रेंडिंग सुझाव उपलब्ध होने पर यहाँ दिखेंगे
+            {t("search.trendingEmpty")}
           </p>
         ) : (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>

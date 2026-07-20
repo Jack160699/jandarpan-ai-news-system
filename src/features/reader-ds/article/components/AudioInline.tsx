@@ -1,7 +1,13 @@
-import { JdIcon } from "../../components/icons";
+"use client";
 
-/** Inline “यह लेख सुनें” control — approved B11 atom. */
-export function AudioInline({ durationLabel = "हिन्दी नैरेशन" }: { durationLabel?: string }) {
+import { JdIcon } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
+
+/** Inline “listen to this article” control — approved B11 atom. */
+export function AudioInline({ durationLabel }: { durationLabel?: string }) {
+  const { t } = useJdDsT();
+  const sub = durationLabel?.trim() || t("article.narration");
+
   return (
     <div
       style={{
@@ -17,7 +23,7 @@ export function AudioInline({ durationLabel = "हिन्दी नैरे�
     >
       <button
         type="button"
-        aria-label="यह लेख सुनें"
+        aria-label={t("article.listenThis")}
         data-action="headphone"
         style={{
           width: 36,
@@ -37,10 +43,10 @@ export function AudioInline({ durationLabel = "हिन्दी नैरे�
       </button>
       <div style={{ flex: 1 }}>
         <div className="jd-ui" style={{ fontSize: 12, fontWeight: 800, color: "var(--jd-ink)" }}>
-          यह लेख सुनें
+          {t("article.listenThis")}
         </div>
         <div className="jd-ui" style={{ fontSize: 10.5, color: "var(--jd-muted)" }}>
-          {durationLabel}
+          {sub}
         </div>
       </div>
       <JdIcon name="download" size={18} stroke={1.8} color="var(--jd-muted)" />

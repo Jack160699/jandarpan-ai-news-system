@@ -3,7 +3,9 @@ import { PageShell } from "@/components/layout/PageShell";
 import { HomepageLoadingView } from "@/components/loading";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { Masthead, ReaderShell } from "@/features/reader-ds/components";
 import { ReaderHomepage } from "@/features/reader-ds/homepage/ReaderHomepage";
+import { EmptyState } from "@/features/reader-ds/system";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { fetchMonetizationPayload } from "@/lib/monetization/fetch-payload";
 import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
@@ -62,10 +64,10 @@ async function ReaderDesignFeed() {
       {feed ? (
         <ReaderHomepage feed={feed} nativeAd={nativeAd} adsEnabled={adsEnabled} />
       ) : (
-        <>
-          <HomepageEmpty />
-          <Footer />
-        </>
+        <ReaderShell activeNav="home">
+          <Masthead />
+          <EmptyState />
+        </ReaderShell>
       )}
     </>
   );

@@ -3,20 +3,25 @@
 import Link from "next/link";
 import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon, type JdIconName } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
+import type { JdDsStringKey } from "../../i18n/strings";
 
-const BENEFITS: Array<{ icon: JdIconName; label: string }> = [
-  { icon: "star", label: "विज्ञापन-मुक्त पठन" },
-  { icon: "eye", label: "गहन विश्लेषण व एक्सक्लूसिव" },
-  { icon: "download", label: "दैनिक ई-पेपर व ऑफ़लाइन" },
-  { icon: "headphone", label: "असीमित ऑडियो ब्रीफ़िंग" },
+const BENEFITS: Array<{ icon: JdIconName; labelKey: JdDsStringKey }> = [
+  { icon: "star", labelKey: "membership.benefitAdFree" },
+  { icon: "eye", labelKey: "membership.benefitAnalysis" },
+  { icon: "download", labelKey: "membership.benefitEpaper" },
+  { icon: "headphone", labelKey: "membership.benefitAudio" },
 ];
 
 /** E36 — dark membership landing. */
 export function MembershipLandingPage({
-  fromPriceLabel = "सदस्य बनें",
+  fromPriceLabel,
 }: {
   fromPriceLabel?: string;
 }) {
+  const { t } = useJdDsT();
+  const cta = fromPriceLabel ?? t("membership.join");
+
   return (
     <ReaderShell activeNav="more" dark hideBottomNav reserveMiniPlayer={false}>
       <div
@@ -28,14 +33,14 @@ export function MembershipLandingPage({
           justifyContent: "space-between",
         }}
       >
-        <Link href="/archive" aria-label="बंद करें" style={{ display: "flex", color: "#e7edf6" }}>
+        <Link href="/archive" aria-label={t("membership.closeAria")} style={{ display: "flex", color: "#e7edf6" }}>
           <JdIcon name="close" size={22} stroke={2} color="#e7edf6" />
         </Link>
         <span
           className="jd-ui"
           style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "var(--jd-gold)" }}
         >
-          दर्पण प्रीमियम
+          {t("membership.landing")}
         </span>
         <span style={{ width: 22 }} aria-hidden />
       </div>
@@ -45,7 +50,7 @@ export function MembershipLandingPage({
         style={{ flex: 1, overflow: "auto", padding: "10px 20px 24px" }}
       >
         <div className="jd-brand" style={{ fontSize: 30, color: "#e7edf6", marginBottom: 6 }}>
-          दर्पण प्रीमियम
+          {t("membership.landing")}
         </div>
         <h1
           className="jd-serif"
@@ -57,11 +62,11 @@ export function MembershipLandingPage({
             lineHeight: 1.35,
           }}
         >
-          गहराई, भरोसा और शांति — बिना किसी विज्ञापन के।
+          {t("membership.tagline")}
         </h1>
         {BENEFITS.map((b) => (
           <div
-            key={b.label}
+            key={b.labelKey}
             style={{
               display: "flex",
               alignItems: "center",
@@ -84,7 +89,7 @@ export function MembershipLandingPage({
               <JdIcon name={b.icon} size={18} stroke={1.9} color="var(--jd-gold)" />
             </div>
             <span className="jd-serif" style={{ fontSize: 15, color: "#e7edf6", fontWeight: 500 }}>
-              {b.label}
+              {t(b.labelKey)}
             </span>
           </div>
         ))}
@@ -92,7 +97,7 @@ export function MembershipLandingPage({
           className="jd-ui"
           style={{ marginTop: 16, textAlign: "center", fontSize: 12, color: "#93a4c2" }}
         >
-          स्वतंत्र पत्रकारिता के लिए सदस्यता — चेकआउट चरणबद्ध रूप से खुल रहा है
+          {t("membership.checkoutComing")}
         </p>
       </main>
       <div
@@ -118,7 +123,7 @@ export function MembershipLandingPage({
             textDecoration: "none",
           }}
         >
-          {fromPriceLabel}
+          {cta}
         </Link>
       </div>
     </ReaderShell>

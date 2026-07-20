@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { Masthead } from "../components/Masthead";
 import { ReaderShell } from "../components/ReaderShell";
 import { SecondaryStory } from "../components/SecondaryStory";
+import { useJdDsT } from "../i18n";
 import type { ReaderStory } from "../utils";
 
 /** F54 — editorial 404 with paths forward. */
@@ -10,6 +13,7 @@ export function NotFoundStatePage({
 }: {
   trending?: ReaderStory[];
 }) {
+  const { t } = useJdDsT();
   return (
     <ReaderShell activeNav="home" reserveMiniPlayer={false} showPermissionSheets={false}>
       <Masthead back backHref="/" />
@@ -30,13 +34,13 @@ export function NotFoundStatePage({
           404
         </div>
         <h1 className="jd-serif" style={{ margin: "6px 0 8px", fontSize: 20, fontWeight: 700 }}>
-          यह पृष्ठ नहीं मिला
+          {t("system.notFound")}
         </h1>
         <p
           className="jd-ui"
           style={{ margin: "0 0 20px", fontSize: 13, color: "var(--jd-ink-3)", lineHeight: 1.6, maxWidth: 250 }}
         >
-          शायद कड़ी पुरानी हो गई या पृष्ठ हटा दिया गया। नीचे से आगे बढ़ें।
+          {t("system.notFoundHint")}
         </p>
         <div style={{ display: "flex", gap: 10, marginBottom: 22, flexWrap: "wrap", justifyContent: "center" }}>
           <Link
@@ -55,7 +59,7 @@ export function NotFoundStatePage({
               alignItems: "center",
             }}
           >
-            होम पर जाएँ
+            {t("system.goHome")}
           </Link>
           <Link
             href="/search"
@@ -73,7 +77,7 @@ export function NotFoundStatePage({
               alignItems: "center",
             }}
           >
-            खोजें
+            {t("system.search")}
           </Link>
         </div>
         {trending.length > 0 ? (
@@ -88,7 +92,7 @@ export function NotFoundStatePage({
                 marginBottom: 10,
               }}
             >
-              अभी ट्रेंडिंग
+              {t("system.trendingNow")}
             </div>
             {trending.slice(0, 3).map((s, i) => (
               <SecondaryStory key={s.slug} story={s} last={i === Math.min(2, trending.length - 1)} toneIndex={i} />

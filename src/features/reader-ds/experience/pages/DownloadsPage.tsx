@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
 import {
   estimateTrackBytes,
   formatBytes,
@@ -14,6 +15,7 @@ import type { BriefingTrack } from "../audio/types";
 import { useReaderAudio } from "../audio/AudioProvider";
 
 function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
+  const { t } = useJdDsT();
   const audio = useReaderAudio();
   const [prefs, setPrefs] = useState(loadExperiencePrefs());
 
@@ -27,16 +29,16 @@ function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
     setPrefs(loadExperiencePrefs());
   }, []);
 
-  const downloaded = tracks.filter((t) => prefs.downloadedIds.includes(t.id));
-  const used = downloaded.reduce((n, t) => n + estimateTrackBytes(t.durationSec), 0);
+  const downloaded = tracks.filter((track) => prefs.downloadedIds.includes(track.id));
+  const used = downloaded.reduce((n, track) => n + estimateTrackBytes(track.durationSec), 0);
   const budget = prefs.downloadBudgetBytes;
   const pct = Math.min(100, Math.round((used / budget) * 100));
 
   const markAll = () => {
-    const ids = tracks.slice(0, 3).map((t) => t.id);
+    const ids = tracks.slice(0, 3).map((track) => track.id);
     const bytes = tracks
       .slice(0, 3)
-      .reduce((n, t) => n + estimateTrackBytes(t.durationSec), 0);
+      .reduce((n, track) => n + estimateTrackBytes(track.durationSec), 0);
     setPrefs(saveExperiencePrefs({ downloadedIds: ids, downloadsBytes: bytes }));
   };
 
@@ -44,14 +46,11 @@ function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
     setPrefs(saveExperiencePrefs({ downloadedIds: [], downloadsBytes: 0 }));
   };
 
-  const items =
-    downloaded.length > 0
-      ? downloaded
-      : tracks.slice(0, 0);
+  const items = downloaded.length > 0 ? downloaded : tracks.slice(0, 0);
 
   return (
     <>
-      <Masthead back backHref="/listen" pageTitle="डाउनलोड" />
+      <Masthead back backHref="/listen" pageTitle={t("listen.downloads")} />
       <div
         style={{
           flexShrink: 0,
@@ -69,7 +68,7 @@ function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
           }}
         >
           <span className="jd-ui" style={{ fontSize: 12, fontWeight: 700, color: "var(--jd-ink-2)" }}>
-            संग्रहण · {formatBytes(used)} / {formatBytes(budget)}
+            {t("listen.storage", { used: formatBytes(used), budget: formatBytes(budget) })}
           </span>
           <button
             type="button"
@@ -85,7 +84,7 @@ function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
               minHeight: 44,
             }}
           >
-            सभी हटाएँ
+            {t("listen.clearAll")}
           </button>
         </div>
         <div style={{ height: 5, borderRadius: 5, background: "var(--jd-line)" }}>
@@ -103,7 +102,7 @@ function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
         {items.length === 0 ? (
           <div style={{ padding: "20px 0" }}>
             <p className="jd-ui" style={{ color: "var(--jd-muted)", fontSize: 13, marginBottom: 14 }}>
-              कोई ऑफ़लाइन ऑडियो नहीं। ब्रीफ़िंग से आइटम डाउनलोड करें (डिवाइस पर चिह्नित)।
+              {t("listen.noOffline")}
             </p>
             <button
               type="button"
@@ -121,7 +120,7 @@ function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
                 cursor: "pointer",
               }}
             >
-              आज की ब्रीफ़िंग चिह्नित करें
+              {t("listen.markBriefing")}
             </button>
           </div>
         ) : (
@@ -138,9 +137,9 @@ function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
             >
               <button
                 type="button"
-                aria-label="चलाएँ"
+                aria-label={t("listen.play")}
                 onClick={() => {
-                  const i = audio.tracks.findIndex((t) => t.id === a.id);
+                  const i = audio.tracks.findIndex((track) => track.id === a.id);
                   if (i >= 0) audio.playAt(i);
                 }}
                 style={{
@@ -178,7 +177,7 @@ function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
                 }}
               >
                 <JdIcon name="check" size={15} stroke={2.2} color="var(--jd-green)" />
-                तैयार
+                {t("listen.ready")}
               </div>
             </div>
           ))

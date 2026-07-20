@@ -7,6 +7,7 @@ import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon } from "../../components/icons";
 import { Toggle } from "../components/Toggle";
 import { SectionLabel } from "../components/SettingRow";
+import { useJdDsT } from "../../i18n";
 import { CG_DISTRICTS } from "@/lib/regional/districts";
 import { loadPreferences, savePreferences } from "@/lib/reader-preferences";
 import {
@@ -17,6 +18,7 @@ import { syncDistrictCookie } from "@/lib/personalization/cookies";
 
 /** D34 — primary + followed districts. */
 export function DistrictPrefsPage() {
+  const { t, locale } = useJdDsT();
   const [primary, setPrimary] = useState("raipur");
   const [others, setOthers] = useState<string[]>([]);
   const [autoLocate, setAutoLocate] = useState(false);
@@ -27,6 +29,9 @@ export function DistrictPrefsPage() {
     setPrimary(prefs.homeDistrict || "raipur");
     setOthers((layout.followedDistricts ?? []).filter((s) => s !== prefs.homeDistrict));
   }, []);
+
+  const districtName = (d: (typeof CG_DISTRICTS)[number]) =>
+    locale === "en" ? d.name : d.nameHi;
 
   const primaryDistrict = CG_DISTRICTS.find((d) => d.slug === primary);
   const otherDistricts = others
@@ -55,7 +60,7 @@ export function DistrictPrefsPage() {
 
   return (
     <ReaderShell activeNav="more">
-      <Masthead back backHref="/archive" pageTitle="मेरे ज़िले" />
+      <Masthead back backHref="/archive" pageTitle={t("districtPrefs.shortTitle")} />
       <div
         style={{
           flexShrink: 0,
@@ -70,12 +75,12 @@ export function DistrictPrefsPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <JdIcon name="pin" size={18} stroke={1.8} color="var(--jd-red)" />
           <span className="jd-ui" style={{ fontSize: 13, fontWeight: 700, color: "var(--jd-ink-2)" }}>
-            स्थान से स्वतः-पता करें
+            {t("districtPrefs.autoLocate")}
           </span>
         </div>
         <Toggle
           on={autoLocate}
-          label="स्वतः स्थान"
+          label={t("districtPrefs.autoLocateAria")}
           onChange={(v) => {
             setAutoLocate(v);
             if (v && typeof navigator !== "undefined" && navigator.geolocation) {
@@ -91,7 +96,7 @@ export function DistrictPrefsPage() {
         />
       </div>
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "6px 0" }}>
-        <SectionLabel>प्राथमिक ज़िला</SectionLabel>
+        <SectionLabel>{t("districtPrefs.primarySection")}</SectionLabel>
         <div
           style={{
             display: "flex",
@@ -104,14 +109,14 @@ export function DistrictPrefsPage() {
         >
           <JdIcon name="pin" size={20} stroke={1.9} color="var(--jd-red)" />
           <span className="jd-serif" style={{ flex: 1, fontSize: 15.5, fontWeight: 700 }}>
-            {primaryDistrict?.nameHi ?? primary}
+            {primaryDistrict ? districtName(primaryDistrict) : primary}
           </span>
           <span className="jd-ui" style={{ fontSize: 10.5, fontWeight: 800, color: "var(--jd-red)" }}>
-            प्राथमिक
+            {t("districtPrefs.primaryBadge")}
           </span>
         </div>
 
-        <SectionLabel>अन्य ज़िले</SectionLabel>
+        <SectionLabel>{t("districtPrefs.otherSection")}</SectionLabel>
         {otherDistricts.map((d) => (
           <div
             key={d.slug}
@@ -125,11 +130,11 @@ export function DistrictPrefsPage() {
           >
             <JdIcon name="list" size={18} stroke={1.7} color="var(--jd-muted)" />
             <span className="jd-serif" style={{ flex: 1, fontSize: 15, fontWeight: 500 }}>
-              {d.nameHi}
+              {districtName(d)}
             </span>
             <button
               type="button"
-              aria-label="हटाएँ"
+              aria-label={t("districtPrefs.removeAria")}
               onClick={() => removeOther(d.slug)}
               style={{ background: "none", border: "none", cursor: "pointer", padding: 6 }}
             >
@@ -153,10 +158,10 @@ export function DistrictPrefsPage() {
           }}
         >
           <JdIcon name="plus" size={18} stroke={2} color="var(--jd-red)" />
-          ज़िला जोड़ें / बदलें
+          {t("districtPrefs.addChange")}
         </Link>
 
-        <SectionLabel>शीघ्र प्राथमिक चुनें</SectionLabel>
+        <SectionLabel>{t("districtPrefs.quickPick")}</SectionLabel>
         <div style={{ padding: "0 16px 20px", display: "flex", flexWrap: "wrap", gap: 8 }}>
           {CG_DISTRICTS.filter((d) => d.priority === 1)
             .slice(0, 6)
@@ -177,7 +182,7 @@ export function DistrictPrefsPage() {
                   cursor: "pointer",
                 }}
               >
-                {d.nameHi}
+                {districtName(d)}
               </button>
             ))}
         </div>

@@ -20,6 +20,7 @@ import {
   NativeSponsoredCard,
   PremiumExclusiveStrip,
 } from "../monetization";
+import { useJdDsT, type JdDsStringKey } from "../i18n";
 
 function toStory(a: HomeArticle): ReaderStory {
   return {
@@ -56,7 +57,11 @@ function pickLead(feed: GeneratedHomepageFeed): HomeArticle | null {
   return withImage ?? candidates[0] ?? null;
 }
 
-function buildSections(feed: GeneratedHomepageFeed, excludeSlugs: Set<string>): HomeSection[] {
+function buildSections(
+  feed: GeneratedHomepageFeed,
+  excludeSlugs: Set<string>,
+  t: (key: JdDsStringKey) => string
+): HomeSection[] {
   const seen = new Set(excludeSlugs);
   const take = (pool: HomeArticle[] | undefined, n: number): ReaderStory[] => {
     const out: ReaderStory[] = [];
@@ -75,7 +80,7 @@ function buildSections(feed: GeneratedHomepageFeed, excludeSlugs: Set<string>): 
   if (regional.length) {
     sections.push({
       key: "regional",
-      title: "आपके जिले से",
+      title: t("home.district"),
       color: SECTION_COLORS[0],
       moreHref: "/district",
       stories: regional,
@@ -86,7 +91,7 @@ function buildSections(feed: GeneratedHomepageFeed, excludeSlugs: Set<string>): 
   if (trending.length) {
     sections.push({
       key: "trending",
-      title: "शीर्ष ख़बरें",
+      title: t("home.topStories"),
       color: SECTION_COLORS[0],
       moreHref: "/trending",
       stories: trending,
@@ -98,6 +103,7 @@ function buildSections(feed: GeneratedHomepageFeed, excludeSlugs: Set<string>): 
     if (stories.length) {
       sections.push({
         key: `cat-${stream.id}`,
+        // CMS category labels — not translated
         title: stream.labelHi || stream.label,
         color: SECTION_COLORS[sections.length % SECTION_COLORS.length],
         moreHref: `/category/${stream.id}`,
@@ -110,7 +116,7 @@ function buildSections(feed: GeneratedHomepageFeed, excludeSlugs: Set<string>): 
   if (live.length && !sections.some((s) => s.key === "trending")) {
     sections.push({
       key: "top",
-      title: "शीर्ष ख़बरें",
+      title: t("home.topStories"),
       color: SECTION_COLORS[0],
       moreHref: "/latest",
       stories: live,
@@ -136,6 +142,7 @@ export function ReaderHomepage({
   adsEnabled = true,
 }: ReaderHomepageProps) {
   const { isPremium } = useReaderAccount();
+  const { t } = useJdDsT();
   const showAds = adsEnabled && !isPremium;
 
   const leadArticle = pickLead(feed);
@@ -164,7 +171,8 @@ export function ReaderHomepage({
       ? `/story/${feed.localBreakingAlerts[0].slug}`
       : "#";
 
-  const sections = buildSections(feed, used).slice(0, 6);
+  const sections = buildSections(feed, used, t).slice(0, 6);
+  const seeAll = t("common.seeAll");
 
   return (
     <ReaderShell activeNav="home" bottomPad={showAds ? 128 : 72}>
@@ -185,7 +193,7 @@ export function ReaderHomepage({
         <div className="jd-home-hero">
           <div className="jd-home-lead">{lead ? <LeadStory story={lead} /> : null}</div>
           {secondary.length ? (
-            <aside className="jd-home-rail" aria-label="द्वितीयक ख़बरें">
+            <aside className="jd-home-rail" aria-label={t("home.secondaryAria")}>
               {secondary.map((s, i) => (
                 <SecondaryStory
                   key={s.slug}
@@ -224,7 +232,12 @@ export function ReaderHomepage({
         <div className="jd-home-sections">
           {sections.map((section, i) => (
             <section key={section.key}>
-              <SectionHeader title={section.title} color={section.color} moreHref={section.moreHref} />
+              <SectionHeader
+                title={section.title}
+                color={section.color}
+                moreHref={section.moreHref}
+                moreLabel={seeAll}
+              />
               <div className="jd-story-grid" style={{ padding: "0 14px" }}>
                 {section.stories.map((s, idx) => (
                   <SecondaryStory

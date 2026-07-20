@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { Tag } from "../../components/primitives";
+import { useJdDsT } from "../../i18n";
 import {
   loadReadingMemory,
   saveReadingMemory,
@@ -23,12 +24,9 @@ function dayBucket(ts: number): "today" | "yesterday" | "older" {
   return "older";
 }
 
-function timeLabel(ts: number) {
-  return new Date(ts).toLocaleTimeString("hi-IN", { hour: "2-digit", minute: "2-digit" });
-}
-
 /** D31 — reading history from device memory. */
 export function ReadingHistoryPage({ catalog }: { catalog: HomeArticle[] }) {
+  const { t, locale } = useJdDsT();
   const [articles, setArticles] = useState<Record<string, ArticleProgress>>({});
 
   useEffect(() => {
@@ -42,18 +40,24 @@ export function ReadingHistoryPage({ catalog }: { catalog: HomeArticle[] }) {
     .slice(0, 40);
 
   const groups: Array<{ key: string; label: string; items: typeof rows }> = [
-    { key: "today", label: "आज", items: [] },
-    { key: "yesterday", label: "कल", items: [] },
-    { key: "older", label: "पहले", items: [] },
+    { key: "today", label: t("history.today"), items: [] },
+    { key: "yesterday", label: t("history.yesterday"), items: [] },
+    { key: "older", label: t("history.older"), items: [] },
   ];
   for (const row of rows) {
     const b = dayBucket(row[1].lastRead);
     groups.find((g) => g.key === b)?.items.push(row);
   }
 
+  const timeLabel = (ts: number) =>
+    new Date(ts).toLocaleTimeString(locale === "en" ? "en-IN" : "hi-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
   return (
     <ReaderShell activeNav="more">
-      <Masthead back backHref="/archive" pageTitle="इतिहास" />
+      <Masthead back backHref="/archive" pageTitle={t("history.shortTitle")} />
       <div
         style={{
           flexShrink: 0,
@@ -66,7 +70,7 @@ export function ReadingHistoryPage({ catalog }: { catalog: HomeArticle[] }) {
         }}
       >
         <span className="jd-ui" style={{ fontSize: 11.5, color: "var(--jd-ink-3)" }}>
-          पिछले 30 दिन · केवल आपके डिवाइस पर
+          {t("history.deviceNote")}
         </span>
         <button
           type="button"
@@ -87,13 +91,13 @@ export function ReadingHistoryPage({ catalog }: { catalog: HomeArticle[] }) {
             minHeight: 44,
           }}
         >
-          साफ़ करें
+          {t("history.clear")}
         </button>
       </div>
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "6px 16px" }}>
         {rows.length === 0 ? (
           <p className="jd-ui" style={{ color: "var(--jd-muted)", padding: "16px 0" }}>
-            पढ़ने का इतिहास यहाँ दिखेगा।
+            {t("history.emptyHint")}
           </p>
         ) : (
           groups.map((g) =>
@@ -114,7 +118,7 @@ export function ReadingHistoryPage({ catalog }: { catalog: HomeArticle[] }) {
                 {g.items.map(([slug, prog]) => {
                   const art = bySlug.get(slug);
                   const title = art?.headline || prog.title || slug;
-                  const kicker = art?.categoryLabel || "ख़बर";
+                  const kicker = art?.categoryLabel || t("history.newsFallback");
                   return (
                     <Link
                       key={slug}

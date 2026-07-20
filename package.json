@@ -14,7 +14,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:a11y": "playwright test e2e/reader-ds-a11y.spec.ts",
-    "test:reader-ds": "playwright test e2e/reader-ds-smoke.spec.ts e2e/reader-ds-a11y.spec.ts",
+    "test:reader-ds": "playwright test e2e/reader-ds-smoke.spec.ts e2e/reader-ds-a11y.spec.ts e2e/reader-ds-language.spec.ts",
     "supabase:types": "npx supabase gen types typescript --linked > src/lib/supabase/database.generated.ts",
     "supabase:push": "npx supabase db push --linked",
     "schema:verify": "node scripts/verify-schema.mjs",

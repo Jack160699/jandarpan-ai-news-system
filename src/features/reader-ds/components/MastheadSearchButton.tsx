@@ -1,15 +1,17 @@
 "use client";
 
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
+import { useJdDsT } from "../i18n";
 import { JdIcon } from "./icons";
 
 /** Opens A6 search overlay (preferred over navigating away). */
 export function MastheadSearchButton() {
   const { setSearchOpen } = useReaderPreferences();
+  const { t } = useJdDsT();
   return (
     <button
       type="button"
-      aria-label="खोजें"
+      aria-label={t("masthead.searchAria")}
       onClick={() => setSearchOpen(true)}
       style={{
         display: "flex",

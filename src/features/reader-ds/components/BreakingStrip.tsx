@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useJdDsT } from "../i18n";
 
 type BreakingStripProps = {
   headline?: string | null;
@@ -6,15 +9,18 @@ type BreakingStripProps = {
 };
 
 /**
- * Conditional breaking strip — white “ब्रेकिंग” badge + red-dot + serif ellipsis
+ * Conditional breaking strip — white badge + red-dot + serif ellipsis
  * (approved A1 atom). Renders nothing when no real breaking headline.
+ * Headline text remains CMS content (untranslated).
  */
 export function BreakingStrip({ headline, href = "#" }: BreakingStripProps) {
+  const { t, locale } = useJdDsT();
   if (!headline || !headline.trim()) return null;
   return (
     <Link
       href={href}
       className="jd-ui jd-breaking-strip"
+      data-jd-locale={locale}
       style={{
         flexShrink: 0,
         display: "flex",
@@ -31,7 +37,7 @@ export function BreakingStrip({ headline, href = "#" }: BreakingStripProps) {
       <span
         style={{
           fontWeight: 800,
-          fontSize: 10,
+          fontSize: locale === "en" ? 9.5 : 10,
           letterSpacing: ".08em",
           background: "#fff",
           color: "var(--jd-red)",
@@ -41,6 +47,7 @@ export function BreakingStrip({ headline, href = "#" }: BreakingStripProps) {
           display: "flex",
           alignItems: "center",
           gap: 3,
+          whiteSpace: "nowrap",
         }}
       >
         <span
@@ -53,7 +60,7 @@ export function BreakingStrip({ headline, href = "#" }: BreakingStripProps) {
             display: "inline-block",
           }}
         />
-        ब्रेकिंग
+        {t("common.breaking")}
       </span>
       <span
         className="jd-serif"

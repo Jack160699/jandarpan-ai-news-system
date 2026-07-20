@@ -1,3 +1,5 @@
+"use client";
+
 import type { HomeArticle } from "@/lib/homepage/types";
 import { Ad } from "../components/Ad";
 import { DesktopPrimaryNav } from "../components/DesktopPrimaryNav";
@@ -8,6 +10,7 @@ import { ReaderShell } from "../components/ReaderShell";
 import { SectionHeader } from "../components/primitives";
 import { SecondaryStory } from "../components/SecondaryStory";
 import { JdIcon, type JdIconName } from "../components/icons";
+import { useJdDsT } from "../i18n";
 import { toReaderStory } from "../utils";
 
 type UtilityTile = {
@@ -24,30 +27,47 @@ type Props = {
   sponsorLabel?: string | null;
 };
 
-const DEFAULT_UTILS: UtilityTile[] = [
+const DEFAULT_UTILS_HI: UtilityTile[] = [
   { icon: "rupee", title: "मंडी भाव", subtitle: "आज की जानकारी" },
   { icon: "bolt", title: "बिजली", subtitle: "स्थानीय अपडेट" },
   { icon: "pin", title: "परिवहन", subtitle: "स्थानीय अपडेट" },
   { icon: "rain", title: "मौसम", subtitle: "ज़िला पूर्वानुमान" },
 ];
 
-/** A2 — ज़िला होमपेज + Phase 6 newspaper grid */
+const DEFAULT_UTILS_EN: UtilityTile[] = [
+  { icon: "rupee", title: "Mandi rates", subtitle: "Today's info" },
+  { icon: "bolt", title: "Power", subtitle: "Local updates" },
+  { icon: "pin", title: "Transport", subtitle: "Local updates" },
+  { icon: "rain", title: "Weather", subtitle: "District forecast" },
+];
+
+/** A2 — district homepage + Phase 6 newspaper grid (chrome i18n; stories stay CMS). */
 export function DistrictHomepage({
   districtName,
   districtNameHi,
   articles,
-  utilityTiles = DEFAULT_UTILS,
+  utilityTiles,
   sponsorLabel,
 }: Props) {
-  const lead = articles[0] ? toReaderStory(articles[0], `${districtNameHi} · स्थानीय`) : null;
+  const { t, locale } = useJdDsT();
+  const displayName = locale === "en" ? districtName || districtNameHi : districtNameHi || districtName;
+  const tiles = utilityTiles ?? (locale === "en" ? DEFAULT_UTILS_EN : DEFAULT_UTILS_HI);
+  const lead = articles[0]
+    ? toReaderStory(articles[0], `${displayName}`)
+    : null;
   const rest = articles.slice(1, 8).map((a) => toReaderStory(a));
-  const countLabel = articles.length > 0 ? `${articles.length} ख़बरें` : undefined;
+  const countLabel =
+    articles.length > 0 ? t("district.newsCount", { n: articles.length }) : undefined;
 
   return (
     <ReaderShell activeNav="district">
-      <Masthead pageTitle={districtNameHi || districtName} />
+      <Masthead pageTitle={displayName} />
       <DesktopPrimaryNav active="district" />
-      <DistrictContextBar nameHi={districtNameHi || districtName} newsCountLabel={countLabel} />
+      <DistrictContextBar
+        nameHi={districtNameHi || districtName}
+        nameEn={districtName || districtNameHi}
+        newsCountLabel={countLabel}
+      />
       <main id="main-content" role="main" className="jd-shell" style={{ flex: 1, background: "var(--jd-paper)" }}>
         <div className="jd-hub-layout">
           <div className="jd-hub-lead">
@@ -55,7 +75,7 @@ export function DistrictHomepage({
               <LeadStory story={lead} />
             ) : (
               <p className="jd-ui" style={{ padding: 16, color: "var(--jd-muted)", fontSize: 14 }}>
-                इस ज़िले की ख़बरें जल्द उपलब्ध होंगी।
+                {t("district.emptyFeed")}
               </p>
             )}
 
@@ -81,9 +101,10 @@ export function DistrictHomepage({
                     color: "var(--jd-amber)",
                     textTransform: "uppercase",
                     flexShrink: 0,
+                    whiteSpace: "nowrap",
                   }}
                 >
-                  ज़िला प्रायोजक
+                  {t("district.sponsor")}
                 </span>
                 <span className="jd-ui" style={{ fontSize: 12, color: "var(--jd-ink-2)", fontWeight: 600 }}>
                   {sponsorLabel}
@@ -91,7 +112,11 @@ export function DistrictHomepage({
               </div>
             ) : null}
 
-            <SectionHeader title="स्थानीय उपयोगिता" color="var(--jd-navy)" />
+            <SectionHeader
+              title={t("district.utilities")}
+              color="var(--jd-navy)"
+              moreLabel={t("common.seeAll")}
+            />
             <div
               style={{
                 margin: "0 14px",
@@ -100,7 +125,7 @@ export function DistrictHomepage({
                 gap: 8,
               }}
             >
-              {utilityTiles.map((u) => (
+              {tiles.map((u) => (
                 <div
                   key={u.title}
                   style={{
@@ -114,8 +139,18 @@ export function DistrictHomepage({
                   }}
                 >
                   <JdIcon name={u.icon} size={20} stroke={1.8} color="var(--jd-navy)" />
-                  <div>
-                    <div className="jd-ui" style={{ fontSize: 11, fontWeight: 800, color: "var(--jd-ink)" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      className="jd-ui"
+                      style={{
+                        fontSize: locale === "en" ? 10.5 : 11,
+                        fontWeight: 800,
+                        color: "var(--jd-ink)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {u.title}
                     </div>
                     <div className="jd-ui" style={{ fontSize: 10.5, color: "var(--jd-ink-3)" }}>
@@ -129,13 +164,14 @@ export function DistrictHomepage({
 
           <div>
             <SectionHeader
-              title={`${districtNameHi || districtName} की ख़बरें`}
-              moreHref={`/latest?district=${encodeURIComponent(districtNameHi)}`}
+              title={t("district.storiesTitle", { name: displayName })}
+              moreHref={`/latest?district=${encodeURIComponent(districtNameHi || districtName)}`}
+              moreLabel={t("common.seeAll")}
             />
             <div className="jd-hub-list" style={{ padding: "0 14px" }}>
               {rest.length === 0 ? (
                 <p className="jd-ui" style={{ color: "var(--jd-muted)", fontSize: 13, padding: "8px 0" }}>
-                  और स्थानीय ख़बरें जल्द जोड़ी जाएँगी।
+                  {t("district.emptyMore")}
                 </p>
               ) : (
                 rest.map((s, i) => (

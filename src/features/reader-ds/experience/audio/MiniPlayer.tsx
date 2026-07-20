@@ -1,10 +1,12 @@
 "use client";
 
 import { JdIcon } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
 import { useReaderAudioOptional, trackTimeLabel } from "./AudioProvider";
 
 /** C22 — sticky mini player above bottom nav. */
 export function MiniPlayer() {
+  const { t } = useJdDsT();
   const audio = useReaderAudioOptional();
   if (!audio?.visible || !audio.current || audio.fullOpen) return null;
 
@@ -13,7 +15,7 @@ export function MiniPlayer() {
   return (
     <div
       role="region"
-      aria-label="मिनी ऑडियो प्लेयर"
+      aria-label={t("listen.miniPlayerAria")}
       style={{
         position: "fixed",
         left: 0,
@@ -32,7 +34,7 @@ export function MiniPlayer() {
       <button
         type="button"
         onClick={openFull}
-        aria-label="फ़ुल प्लेयर खोलें"
+        aria-label={t("listen.openFullAria")}
         style={{
           display: "flex",
           alignItems: "center",
@@ -71,13 +73,13 @@ export function MiniPlayer() {
             {current.headline}
           </div>
           <div className="jd-ui" style={{ fontSize: 10, color: "#8ea0c4" }}>
-            आज की ब्रीफ़िंग · {trackTimeLabel(positionSec, current.durationSec)}
+            {t("listen.todayBriefingShort")} · {trackTimeLabel(positionSec, current.durationSec)}
           </div>
         </div>
       </button>
       <button
         type="button"
-        aria-label={playing ? "रोकें" : "चलाएँ"}
+        aria-label={playing ? t("listen.pause") : t("listen.play")}
         onClick={toggle}
         style={{ background: "none", border: "none", cursor: "pointer", padding: 6 }}
       >
@@ -85,7 +87,7 @@ export function MiniPlayer() {
       </button>
       <button
         type="button"
-        aria-label="अगला"
+        aria-label={t("listen.next")}
         onClick={next}
         style={{ background: "none", border: "none", cursor: "pointer", padding: 6 }}
       >

@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useJdDsT } from "../i18n";
 import { JdIcon } from "./icons";
-import { PRIMARY_NAV_ITEMS } from "./navItems";
+import { getPrimaryNavItems } from "./navItems";
 
 export type BottomNavKey = "home" | "district" | "latest" | "listen" | "more";
 
@@ -15,10 +18,14 @@ export function BottomNav({
   active?: BottomNavKey;
   dark?: boolean;
 }) {
+  const { t, locale } = useJdDsT();
+  const items = getPrimaryNavItems(locale);
+
   return (
     <nav
       className="jd-bottom-nav"
-      aria-label="मुख्य नेविगेशन"
+      aria-label={t("nav.aria")}
+      data-jd-locale={locale}
       style={{
         position: "fixed",
         left: 0,
@@ -32,7 +39,7 @@ export function BottomNav({
         padding: "7px 0 max(9px, env(safe-area-inset-bottom))",
       }}
     >
-      {PRIMARY_NAV_ITEMS.map((it) => {
+      {items.map((it) => {
         const on = it.key === active;
         const color = on ? "var(--jd-red)" : dark ? "#93a4c2" : "var(--jd-muted)";
         return (
@@ -46,13 +53,27 @@ export function BottomNav({
               alignItems: "center",
               gap: 3,
               minWidth: 56,
+              maxWidth: 72,
               minHeight: 44,
               justifyContent: "center",
               color,
+              padding: "0 2px",
             }}
           >
             <JdIcon name={it.icon} size={21} stroke={on ? 2.1 : 1.8} color={color} />
-            <span className="jd-ui" style={{ fontSize: 9.5, fontWeight: on ? 800 : 600 }}>
+            <span
+              className="jd-ui"
+              style={{
+                fontSize: locale === "en" ? 9 : 9.5,
+                fontWeight: on ? 800 : 600,
+                lineHeight: 1.1,
+                textAlign: "center",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                maxWidth: "100%",
+              }}
+            >
               {it.label}
             </span>
           </Link>

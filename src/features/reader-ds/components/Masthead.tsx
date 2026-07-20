@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useJdDsT } from "../i18n";
 import { JdIcon } from "./icons";
 import { MastheadSearchButton } from "./MastheadSearchButton";
 
@@ -8,7 +11,7 @@ type MastheadProps = {
   backHref?: string;
   /** Hide right-side actions (used on focused overlays). */
   hideActions?: boolean;
-  /** Gold “प्रीमियम” badge beside wordmark (E43 member home). */
+  /** Gold premium badge beside wordmark (E43 member home). */
   premiumBadge?: boolean;
   /** Replace back/brand with close control (E36 overlay). */
   closeHref?: string;
@@ -26,9 +29,12 @@ export function Masthead({
   premiumBadge = false,
   closeHref,
 }: MastheadProps) {
+  const { t, locale } = useJdDsT();
+
   return (
     <header
       className="jd-masthead"
+      data-jd-locale={locale}
       style={{
         position: "sticky",
         top: 0,
@@ -52,17 +58,25 @@ export function Masthead({
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
           {closeHref ? (
-            <Link href={closeHref} aria-label="बंद करें" style={{ display: "flex", color: "var(--jd-gold-soft)" }}>
+            <Link
+              href={closeHref}
+              aria-label={t("masthead.closeAria")}
+              style={{ display: "flex", color: "var(--jd-gold-soft)" }}
+            >
               <JdIcon name="close" size={22} stroke={2} color="var(--jd-gold-soft)" />
             </Link>
           ) : back ? (
-            <Link href={backHref} aria-label="वापस" style={{ display: "flex", color: "var(--jd-gold-soft)" }}>
+            <Link
+              href={backHref}
+              aria-label={t("masthead.backAria")}
+              style={{ display: "flex", color: "var(--jd-gold-soft)" }}
+            >
               <JdIcon name="arrowL" size={22} stroke={2} color="var(--jd-gold-soft)" />
             </Link>
           ) : (
             <Link
               href="/"
-              aria-label="जनदर्पण होम"
+              aria-label={t("masthead.homeAria")}
               style={{
                 width: 24,
                 height: 24,
@@ -88,9 +102,15 @@ export function Masthead({
               {pageTitle}
             </span>
           ) : (
-            <Link href="/" style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 8 }}>
-              <span className="jd-brand" style={{ fontSize: 22, lineHeight: 1, display: "block" }}>
-                जनदर्पण
+            <Link
+              href="/"
+              style={{ textDecoration: "none", color: "inherit", display: "flex", alignItems: "center", gap: 8 }}
+            >
+              <span
+                className={locale === "en" ? "jd-ui" : "jd-brand"}
+                style={{ fontSize: locale === "en" ? 18 : 22, lineHeight: 1, display: "block", fontWeight: 700 }}
+              >
+                {t("brand.name")}
               </span>
               {premiumBadge ? (
                 <span
@@ -105,7 +125,7 @@ export function Masthead({
                     borderRadius: 2,
                   }}
                 >
-                  प्रीमियम
+                  {t("masthead.premium")}
                 </span>
               ) : null}
             </Link>
@@ -113,12 +133,22 @@ export function Masthead({
         </div>
 
         {!hideActions ? (
-          <nav style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }} aria-label="शीर्ष क्रियाएँ">
+          <nav
+            style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }}
+            aria-label={t("masthead.actionsAria")}
+          >
             <MastheadSearchButton />
             <Link
               href="/notifications"
-              aria-label="सूचनाएँ"
-              style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center", position: "relative" }}
+              aria-label={t("masthead.notifyAria")}
+              style={{
+                display: "flex",
+                minWidth: 44,
+                minHeight: 44,
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+              }}
             >
               <JdIcon name="bell" size={21} stroke={1.9} color="var(--jd-gold-soft)" />
               <span
@@ -137,8 +167,14 @@ export function Masthead({
             </Link>
             <Link
               href="/archive"
-              aria-label="प्रोफ़ाइल"
-              style={{ display: "flex", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}
+              aria-label={t("masthead.profileAria")}
+              style={{
+                display: "flex",
+                minWidth: 44,
+                minHeight: 44,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
               <span
                 aria-hidden

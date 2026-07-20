@@ -5,13 +5,14 @@ import { useMemo, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon } from "../../components/icons";
+import { useJdDsT, type JdDsStringKey } from "../../i18n";
 import type { ReaderPlan } from "@/lib/monetization/types";
 
-const METHODS = [
-  { id: "upi", label: "UPI · GPay / PhonePe / Paytm" },
-  { id: "card", label: "क्रेडिट / डेबिट कार्ड" },
-  { id: "netbanking", label: "नेट बैंकिंग" },
-] as const;
+const METHOD_KEYS = [
+  { id: "upi", labelKey: "membership.methodUpi" },
+  { id: "card", labelKey: "membership.methodCard" },
+  { id: "netbanking", labelKey: "membership.methodNetbanking" },
+] as const satisfies ReadonlyArray<{ id: string; labelKey: JdDsStringKey }>;
 
 /** E39 — checkout shell. No live payment processor — preserves “opening soon”. */
 export function CheckoutPage({
@@ -23,23 +24,26 @@ export function CheckoutPage({
   planSlug?: string;
   interval?: string;
 }) {
+  const { t, locale } = useJdDsT();
   const plan = useMemo(() => {
     const match = plans.find((p) => p.slug === planSlug);
     if (match) return match;
     return plans.find((p) => p.billingInterval === (interval === "year" ? "year" : "month")) ?? plans[0];
   }, [plans, planSlug, interval]);
 
-  const [method, setMethod] = useState<(typeof METHODS)[number]["id"]>("upi");
+  const [method, setMethod] = useState<(typeof METHOD_KEYS)[number]["id"]>("upi");
 
   const price = plan?.priceInr ?? 0;
   const gst = Math.round(price * 0.18);
   const total = price + gst;
-  const name = plan?.nameHi?.trim() || plan?.nameEn || "प्रीमियम";
-  const intervalLabel = plan?.billingInterval === "year" ? "वार्षिक" : "मासिक";
+  const name =
+    (locale === "en" ? plan?.nameEn?.trim() || plan?.nameHi?.trim() : plan?.nameHi?.trim() || plan?.nameEn) ||
+    t("membership.premiumFallback");
+  const intervalLabel = plan?.billingInterval === "year" ? t("membership.yearly") : t("membership.monthly");
 
   return (
     <ReaderShell activeNav="more" hideBottomNav reserveMiniPlayer={false}>
-      <Masthead back backHref="/membership/plans" pageTitle="भुगतान" />
+      <Masthead back backHref="/membership/plans" pageTitle={t("membership.paymentTitle")} />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "14px 16px" }}>
         <div
           style={{
@@ -67,7 +71,7 @@ export function CheckoutPage({
               marginBottom: 4,
             }}
           >
-            <span>GST (18%)</span>
+            <span>{t("membership.gst")}</span>
             <span>{price ? `₹${gst}` : "—"}</span>
           </div>
           <div
@@ -80,7 +84,7 @@ export function CheckoutPage({
             }}
           >
             <span className="jd-ui" style={{ fontSize: 14, fontWeight: 800 }}>
-              कुल
+              {t("membership.total")}
             </span>
             <span className="jd-ui" style={{ fontSize: 16, fontWeight: 800, color: "var(--jd-red)" }}>
               {price ? `₹${total}` : "—"}
@@ -99,9 +103,9 @@ export function CheckoutPage({
             textTransform: "uppercase",
           }}
         >
-          भुगतान विधि
+          {t("membership.paymentMethod")}
         </div>
-        {METHODS.map((m) => {
+        {METHOD_KEYS.map((m) => {
           const on = method === m.id;
           return (
             <button
@@ -139,7 +143,7 @@ export function CheckoutPage({
                 ) : null}
               </span>
               <span className="jd-ui" style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: "var(--jd-ink)" }}>
-                {m.label}
+                {t(m.labelKey)}
               </span>
             </button>
           );
@@ -158,7 +162,7 @@ export function CheckoutPage({
           }}
         >
           <JdIcon name="lock" size={14} stroke={1.9} color="var(--jd-green)" />
-          256-बिट सुरक्षित भुगतान · लाइव चेकआउट जल्द
+          {t("membership.secureHint")}
         </div>
 
         {price > 0 ? (
@@ -177,7 +181,7 @@ export function CheckoutPage({
               textDecoration: "none",
             }}
           >
-            ₹{total} का भुगतान करें
+            {t("membership.payAmount", { amount: total })}
           </Link>
         ) : (
           <Link
@@ -195,11 +199,11 @@ export function CheckoutPage({
               textDecoration: "none",
             }}
           >
-            प्लान उपलब्ध होने पर लौटें
+            {t("membership.returnWhenPlans")}
           </Link>
         )}
         <p className="jd-ui" style={{ marginTop: 12, fontSize: 11.5, color: "var(--jd-muted)", textAlign: "center" }}>
-          कोई राशि नहीं काटी जाएगी जब तक लाइव भुगतान चालू नहीं होता।
+          {t("membership.noChargeUntilLive")}
         </p>
       </main>
     </ReaderShell>

@@ -6,17 +6,19 @@ import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon } from "../../components/icons";
 import { SettingRow } from "../../experience/components/SettingRow";
+import { useJdDsT } from "../../i18n";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 
 /** E42 — manage subscription from real isPremium; no cancel API invented. */
 export function ManageSubscriptionPage() {
+  const { t } = useJdDsT();
   const { isPremium, isLoggedIn } = useReaderAccount();
   const [autoRenew, setAutoRenew] = useState(true);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   return (
     <ReaderShell activeNav="more">
-      <Masthead back backHref="/archive" pageTitle="सदस्यता" />
+      <Masthead back backHref="/archive" pageTitle={t("membership.title")} />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto" }}>
         <div
           style={{
@@ -30,31 +32,40 @@ export function ManageSubscriptionPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
             <JdIcon name="star" size={18} stroke={1.8} color="var(--jd-gold)" />
             <span className="jd-ui" style={{ fontSize: 13, fontWeight: 800, color: "var(--jd-gold-soft)" }}>
-              {isPremium ? "प्रीमियम · सक्रिय" : "सदस्यता सक्रिय नहीं"}
+              {isPremium ? t("membership.active") : t("membership.inactive")}
             </span>
           </div>
           <div className="jd-ui" style={{ fontSize: 11.5, color: "#8ea0c4" }}>
             {isPremium
-              ? "अगली बिलिंग व रसीदें खाता से जुड़ने पर दिखेंगी।"
+              ? t("membership.activeHint")
               : isLoggedIn
-                ? "प्लान चुनकर सदस्यता शुरू करें — चेकआउट जल्द लाइव होगा।"
-                : "साइन इन करें या प्लान देखें।"}
+                ? t("membership.loggedInHint")
+                : t("membership.guestHint")}
           </div>
         </div>
 
-        <SettingRow icon="star" label="प्लान बदलें" sub="मासिक/वार्षिक में स्विच" href="/membership/plans" />
         <SettingRow
-          icon="download"
-          label="रसीदें व चालान"
-          sub={isPremium ? "उपलब्ध होने पर यहाँ" : "सदस्यता के बाद"}
+          icon="star"
+          label={t("membership.changePlan")}
+          sub={t("membership.changePlanSub")}
+          href="/membership/plans"
         />
         <SettingRow
-          label="ऑटो-रिन्यू"
-          sub="नवीनीकरण से पहले याद दिलाएँ"
+          icon="download"
+          label={t("membership.receipts")}
+          sub={isPremium ? t("membership.receiptsSub") : t("membership.receiptsSoon")}
+        />
+        <SettingRow
+          label={t("membership.autoRenew")}
+          sub={t("membership.autoRenewSub")}
           toggle={autoRenew}
           onToggle={setAutoRenew}
         />
-        <SettingRow icon="rupee" label="भुगतान विधि" sub="लाइव चेकआउट के बाद सेट होगी" />
+        <SettingRow
+          icon="rupee"
+          label={t("membership.paymentMethod")}
+          sub={t("membership.paymentMethodSub")}
+        />
 
         <div style={{ padding: 16, marginTop: 4 }}>
           {!confirmCancel ? (
@@ -75,19 +86,19 @@ export function ManageSubscriptionPage() {
                 minHeight: 44,
               }}
             >
-              सदस्यता रद्द करें
+              {t("membership.cancel")}
             </button>
           ) : (
             <div style={{ textAlign: "center" }}>
               <p className="jd-ui" style={{ fontSize: 13, color: "var(--jd-ink-2)", marginBottom: 12 }}>
-                रद्दीकरण अभी सर्वर पर उपलब्ध नहीं — सहायता से संपर्क करें।
+                {t("membership.cancelUnavailable")}
               </p>
               <Link
                 href="/contact"
                 className="jd-ui"
                 style={{ fontSize: 13, fontWeight: 700, color: "var(--jd-navy)" }}
               >
-                सहायता
+                {t("membership.help")}
               </Link>
               {" · "}
               <button
@@ -103,7 +114,7 @@ export function ManageSubscriptionPage() {
                   cursor: "pointer",
                 }}
               >
-                वापस
+                {t("common.back")}
               </button>
             </div>
           )}

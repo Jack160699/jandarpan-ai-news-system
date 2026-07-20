@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { SectionLabel, SettingRow } from "../components/SettingRow";
+import { useJdDsT } from "../../i18n";
 import {
   loadExperiencePrefs,
   saveExperiencePrefs,
@@ -14,19 +15,22 @@ import { CG_DISTRICTS } from "@/lib/regional/districts";
 
 /** D33 — notification preferences. */
 export function NotificationPrefsPage() {
+  const { t, locale } = useJdDsT();
   const [prefs, setPrefs] = useState<ExperiencePrefs | null>(null);
-  const [districtLabel, setDistrictLabel] = useState("रायपुर");
+  const [districtLabel, setDistrictLabel] = useState("");
 
   useEffect(() => {
     setPrefs(loadExperiencePrefs());
     const d = CG_DISTRICTS.find((x) => x.slug === loadPreferences().homeDistrict);
-    setDistrictLabel(d?.nameHi ?? d?.name ?? "रायपुर");
-  }, []);
+    setDistrictLabel(
+      locale === "en" ? (d?.name ?? "Raipur") : (d?.nameHi ?? d?.name ?? "रायपुर")
+    );
+  }, [locale]);
 
   if (!prefs) {
     return (
       <ReaderShell activeNav="more">
-        <Masthead back backHref="/archive" pageTitle="सूचनाएँ" />
+        <Masthead back backHref="/archive" pageTitle={t("notifications.shortTitle")} />
       </ReaderShell>
     );
   }
@@ -37,41 +41,41 @@ export function NotificationPrefsPage() {
 
   return (
     <ReaderShell activeNav="more">
-      <Masthead back backHref="/archive" pageTitle="सूचनाएँ" />
+      <Masthead back backHref="/archive" pageTitle={t("notifications.shortTitle")} />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto" }}>
-        <SectionLabel>पुश सूचनाएँ</SectionLabel>
+        <SectionLabel>{t("notify.pushSection")}</SectionLabel>
         <SettingRow
-          label="ब्रेकिंग न्यूज़"
-          sub="तुरंत अलर्ट"
+          label={t("notify.breaking")}
+          sub={t("notify.breakingSub")}
           toggle={prefs.notifyBreaking}
           onToggle={(v) => set({ notifyBreaking: v })}
         />
         <SettingRow
-          label="मेरे ज़िले की ख़बरें"
+          label={t("notify.district")}
           sub={districtLabel}
           toggle={prefs.notifyDistrict}
           onToggle={(v) => set({ notifyDistrict: v })}
         />
         <SettingRow
-          label="फ़ॉलो किए टॉपिक"
+          label={t("notify.followed")}
           toggle={prefs.notifyFollowed}
           onToggle={(v) => set({ notifyFollowed: v })}
         />
         <SettingRow
-          label="दैनिक ऑडियो ब्रीफ़िंग"
-          sub="सुबह 7:00"
+          label={t("notify.briefing")}
+          sub={t("notify.briefingSub")}
           toggle={prefs.notifyBriefing}
           onToggle={(v) => set({ notifyBriefing: v })}
         />
         <SettingRow
-          label="सदस्यता व ऑफ़र"
+          label={t("notify.offers")}
           toggle={prefs.notifyOffers}
           onToggle={(v) => set({ notifyOffers: v })}
         />
-        <SectionLabel>शांत घंटे</SectionLabel>
+        <SectionLabel>{t("notify.quietSection")}</SectionLabel>
         <SettingRow
-          label="रात में सूचनाएँ रोकें"
-          sub="रात 10:00 – सुबह 6:00"
+          label={t("notify.quiet")}
+          sub={t("notify.quietSub")}
           toggle={prefs.quietHours}
           onToggle={(v) => set({ quietHours: v })}
         />

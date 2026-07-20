@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import type { CgDistrict } from "@/lib/regional/districts";
+import { useJdDsT } from "../i18n";
 import { JdIcon } from "./icons";
 
 type DistrictSelectorProps = {
@@ -13,6 +14,7 @@ type DistrictSelectorProps = {
 
 /** A10 district selector — search + list; selection updates cookie and opens district home. */
 export function DistrictSelector({ districts, selectedSlug }: DistrictSelectorProps) {
+  const { t, locale } = useJdDsT();
   const { prefs, setHomeDistrict } = useReaderPreferences();
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -47,6 +49,7 @@ export function DistrictSelector({ districts, selectedSlug }: DistrictSelectorPr
           background: "#fff",
           borderBottom: "1px solid var(--jd-line)",
         }}
+        data-jd-locale={locale}
       >
         <label
           style={{
@@ -62,14 +65,14 @@ export function DistrictSelector({ districts, selectedSlug }: DistrictSelectorPr
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="ज़िला खोजें…"
-            aria-label="ज़िला खोजें"
+            placeholder={t("district.searchPlaceholder")}
+            aria-label={t("district.searchPlaceholder")}
             className="jd-ui"
             style={{
               flex: 1,
               border: "none",
               outline: "none",
-              fontSize: 13.5,
+              fontSize: locale === "en" ? 12.5 : 13.5,
               background: "transparent",
               color: "var(--jd-ink)",
               fontFamily: "inherit",
@@ -84,7 +87,7 @@ export function DistrictSelector({ districts, selectedSlug }: DistrictSelectorPr
             alignItems: "center",
             gap: 7,
             marginTop: 10,
-            fontSize: 13,
+            fontSize: locale === "en" ? 12 : 13,
             fontWeight: 700,
             color: "var(--jd-red)",
             background: "none",
@@ -92,6 +95,8 @@ export function DistrictSelector({ districts, selectedSlug }: DistrictSelectorPr
             padding: "8px 0",
             cursor: "pointer",
             minHeight: 44,
+            textAlign: "left",
+            maxWidth: "100%",
           }}
           onClick={() => {
             /* Geolocation is best-effort; fall back to current selection home. */
@@ -107,18 +112,27 @@ export function DistrictSelector({ districts, selectedSlug }: DistrictSelectorPr
           }}
         >
           <JdIcon name="pin" size={17} stroke={1.9} color="var(--jd-red)" />
-          मेरे पास के ज़िले (स्थान चालू करें)
+          <span
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {t("district.nearMe")}
+          </span>
         </button>
       </div>
 
       <div style={{ padding: "4px 0" }}>
         {filtered.length === 0 ? (
           <p className="jd-ui" style={{ padding: 16, color: "var(--jd-muted)", fontSize: 14 }}>
-            कोई ज़िला नहीं मिला
+            {t("district.empty")}
           </p>
         ) : (
           filtered.map((d) => {
             const on = d.slug === current;
+            const label = locale === "en" ? d.name : d.nameHi;
             return (
               <button
                 key={d.slug}
@@ -138,13 +152,20 @@ export function DistrictSelector({ districts, selectedSlug }: DistrictSelectorPr
                   textAlign: "left",
                 }}
               >
-                <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                   <JdIcon name="pin" size={17} stroke={1.8} color={on ? "var(--jd-red)" : "var(--jd-muted)"} />
                   <span
                     className="jd-serif"
-                    style={{ fontSize: 15.5, fontWeight: on ? 700 : 500, color: "var(--jd-ink)" }}
+                    style={{
+                      fontSize: 15.5,
+                      fontWeight: on ? 700 : 500,
+                      color: "var(--jd-ink)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
                   >
-                    {d.nameHi}
+                    {label}
                   </span>
                 </span>
                 {on ? <JdIcon name="check" size={20} stroke={2.2} color="var(--jd-red)" /> : null}

@@ -4,19 +4,29 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
+import { useJdDsT } from "../../i18n";
 import type { ReaderPlan } from "@/lib/monetization/types";
-import { buildDisplayPlans, yearlySavingsHint } from "../planHelpers";
+import { buildDisplayPlans } from "../planHelpers";
 
 /** E37 — plan comparison with monthly/yearly toggle. */
 export function PlanComparisonPage({ plans }: { plans: ReaderPlan[] }) {
+  const { t } = useJdDsT();
   const hasYear = plans.some((p) => p.billingInterval === "year");
   const [yearly, setYearly] = useState(false);
   const cards = useMemo(() => buildDisplayPlans(plans, yearly && hasYear), [plans, yearly, hasYear]);
-  const yearLabel = yearlySavingsHint(plans);
+  const yearToggleLabel = useMemo(() => {
+    const month = plans.find((p) => p.billingInterval === "month" && p.priceInr > 0);
+    const year = plans.find((p) => p.billingInterval === "year" && p.priceInr > 0);
+    if (!month || !year) return t("membership.yearly");
+    const full = month.priceInr * 12;
+    if (full <= year.priceInr) return t("membership.yearly");
+    const pct = Math.round(((full - year.priceInr) / full) * 100);
+    return t("membership.yearlySave", { pct });
+  }, [plans, t]);
 
   return (
     <ReaderShell activeNav="more">
-      <Masthead back backHref="/membership" pageTitle="प्लान चुनें" />
+      <Masthead back backHref="/membership" pageTitle={t("membership.choosePlan")} />
       <div
         style={{
           flexShrink: 0,
@@ -40,7 +50,7 @@ export function PlanComparisonPage({ plans }: { plans: ReaderPlan[] }) {
             cursor: "pointer",
           }}
         >
-          मासिक
+          {t("membership.monthly")}
         </button>
         <button
           type="button"
@@ -59,7 +69,7 @@ export function PlanComparisonPage({ plans }: { plans: ReaderPlan[] }) {
             opacity: !hasYear && plans.length > 0 ? 0.5 : 1,
           }}
         >
-          {yearLabel ?? "वार्षिक"}
+          {yearToggleLabel}
         </button>
       </div>
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "4px 16px 20px" }}>
@@ -91,7 +101,7 @@ export function PlanComparisonPage({ plans }: { plans: ReaderPlan[] }) {
                   borderRadius: 2,
                 }}
               >
-                अनुशंसित
+                {t("membership.recommended")}
               </div>
             ) : null}
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
@@ -104,7 +114,7 @@ export function PlanComparisonPage({ plans }: { plans: ReaderPlan[] }) {
                 </span>
                 {!p.comingSoon && !p.isFree ? (
                   <span className="jd-ui" style={{ fontSize: 11, color: "var(--jd-muted)" }}>
-                    /{p.interval === "year" ? "वर्ष" : "माह"}
+                    {p.interval === "year" ? t("membership.perYear") : t("membership.perMonth")}
                   </span>
                 ) : null}
               </span>
@@ -126,7 +136,7 @@ export function PlanComparisonPage({ plans }: { plans: ReaderPlan[] }) {
                   border: "1.5px solid var(--jd-navy)",
                 }}
               >
-                वर्तमान
+                {t("membership.current")}
               </div>
             ) : (
               <Link
@@ -150,14 +160,18 @@ export function PlanComparisonPage({ plans }: { plans: ReaderPlan[] }) {
                   border: p.recommended ? "none" : "1.5px solid var(--jd-navy)",
                 }}
               >
-                {p.comingSoon ? "जल्द उपलब्ध" : p.recommended ? "यह प्लान चुनें" : "चुनें"}
+                {p.comingSoon
+                  ? t("membership.comingSoon")
+                  : p.recommended
+                    ? t("membership.selectPlan")
+                    : t("membership.select")}
               </Link>
             )}
           </div>
         ))}
         {!plans.length ? (
           <p className="jd-ui" style={{ fontSize: 12, color: "var(--jd-muted)", textAlign: "center" }}>
-            सशुल्क प्लान डेटाबेस से लोड होंगे — अभी चेकआउट UI पूर्वावलोकन में है।
+            {t("membership.plansPreview")}
           </p>
         ) : null}
       </main>

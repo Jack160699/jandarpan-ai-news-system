@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArticleImage } from "../../components/ArticleImage";
 import { JdIcon } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
 import { formatDuration } from "./types";
 import { useReaderAudio, trackTimeLabel } from "./AudioProvider";
 import type { PlaybackSpeed } from "../prefs";
@@ -11,6 +12,7 @@ const SPEEDS: PlaybackSpeed[] = [0.75, 1, 1.25, 1.5, 1.75, 2];
 
 /** C23 — dark full-screen player. */
 export function FullPlayer() {
+  const { t } = useJdDsT();
   const audio = useReaderAudio();
   if (!audio.fullOpen || !audio.current) return null;
 
@@ -41,7 +43,7 @@ export function FullPlayer() {
       data-theme="dark"
       role="dialog"
       aria-modal="true"
-      aria-label="फ़ुल ऑडियो प्लेयर"
+      aria-label={t("listen.fullPlayerAria")}
       style={{
         position: "fixed",
         inset: 0,
@@ -63,7 +65,7 @@ export function FullPlayer() {
       >
         <button
           type="button"
-          aria-label="बंद करें"
+          aria-label={t("masthead.closeAria")}
           onClick={closeFull}
           style={{ background: "none", border: "none", cursor: "pointer", color: "#e7edf6" }}
         >
@@ -73,9 +75,9 @@ export function FullPlayer() {
           className="jd-ui"
           style={{ fontSize: 11.5, fontWeight: 700, color: "#93a4c2", letterSpacing: ".06em" }}
         >
-          अभी चल रहा है
+          {t("listen.nowPlaying")}
         </span>
-        <Link href="/listen/queue" aria-label="कतार" style={{ display: "flex", color: "#e7edf6" }}>
+        <Link href="/listen/queue" aria-label={t("listen.queue")} style={{ display: "flex", color: "#e7edf6" }}>
           <JdIcon name="more" size={22} stroke={2} color="#e7edf6" />
         </Link>
       </div>
@@ -102,7 +104,7 @@ export function FullPlayer() {
           {current.headline}
         </h1>
         <div className="jd-ui" style={{ fontSize: 12, color: "#93a4c2", marginBottom: 16 }}>
-          आज की ब्रीफ़िंग · खबर {index + 1}/{tracks.length}
+          {t("listen.briefingProgress", { n: index + 1, total: tracks.length })}
         </div>
 
         <div
@@ -145,17 +147,17 @@ export function FullPlayer() {
             marginBottom: 20,
           }}
         >
-          <button type="button" aria-label="पिछला" onClick={prev} style={ctrlBtn}>
+          <button type="button" aria-label={t("listen.prev")} onClick={prev} style={ctrlBtn}>
             <JdIcon name="prev" size={26} stroke={1.9} color="#e7edf6" />
           </button>
-          <button type="button" aria-label="15 सेकंड पीछे" onClick={() => seekBy(-15)} style={ctrlBtn}>
+          <button type="button" aria-label={t("listen.seekBack")} onClick={() => seekBy(-15)} style={ctrlBtn}>
             <span className="jd-ui" style={{ fontSize: 11, fontWeight: 800, color: "#93a4c2" }}>
               −15
             </span>
           </button>
           <button
             type="button"
-            aria-label={playing ? "रोकें" : "चलाएँ"}
+            aria-label={playing ? t("listen.pause") : t("listen.play")}
             onClick={toggle}
             style={{
               width: 64,
@@ -172,12 +174,12 @@ export function FullPlayer() {
           >
             <JdIcon name={playing ? "pause" : "play"} size={28} stroke={2} color="#fff" />
           </button>
-          <button type="button" aria-label="15 सेकंड आगे" onClick={() => seekBy(15)} style={ctrlBtn}>
+          <button type="button" aria-label={t("listen.seekForward")} onClick={() => seekBy(15)} style={ctrlBtn}>
             <span className="jd-ui" style={{ fontSize: 11, fontWeight: 800, color: "#93a4c2" }}>
               +15
             </span>
           </button>
-          <button type="button" aria-label="अगला" onClick={next} style={ctrlBtn}>
+          <button type="button" aria-label={t("listen.next")} onClick={next} style={ctrlBtn}>
             <JdIcon name="next" size={26} stroke={1.9} color="#e7edf6" />
           </button>
         </div>
@@ -193,23 +195,22 @@ export function FullPlayer() {
         >
           <button type="button" onClick={cycleSpeed} style={tabBtn}>
             <div style={{ fontWeight: 700 }}>{speed.toFixed(1).replace(/\.0$/, ".0")}x</div>
-            <div style={{ fontSize: 9, fontWeight: 500, opacity: 0.7 }}>गति</div>
+            <div style={{ fontSize: 9, fontWeight: 500, opacity: 0.7 }}>{t("listen.speedLabel")}</div>
           </button>
           <div style={tabBtn}>
-            <div style={{ fontWeight: 700 }}>15 मि</div>
-            <div style={{ fontSize: 9, fontWeight: 500, opacity: 0.7 }}>स्लीप</div>
+            <div style={{ fontWeight: 700 }}>{t("listen.sleepValue")}</div>
+            <div style={{ fontSize: 9, fontWeight: 500, opacity: 0.7 }}>{t("listen.sleep")}</div>
           </div>
           <Link href={`/story/${current.slug}`} style={tabBtn}>
-            प्रतिलेख
+            {t("listen.transcript")}
           </Link>
           <Link href="/listen/queue" style={tabBtn}>
-            कतार
+            {t("listen.queue")}
           </Link>
         </div>
 
         <p className="jd-ui" style={{ marginTop: 18, fontSize: 12, color: "#93a4c2", lineHeight: 1.5 }}>
-          {trackTimeLabel(positionSec, current.durationSec)} · वास्तविक आवाज़ उपलब्ध होने पर स्ट्रीम,
-          अन्यथा अवधि पाठ-लंबाई से अनुमानित।
+          {trackTimeLabel(positionSec, current.durationSec)} · {t("listen.audioHint")}
         </p>
       </div>
     </div>

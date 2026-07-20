@@ -6,11 +6,13 @@ import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { Tag } from "../../components/primitives";
 import { JdIcon } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
 import { useReaderAudio } from "../audio/AudioProvider";
 import { briefingMeta } from "../audio/tracksFromShorts";
 import type { BriefingTrack } from "../audio/types";
 
 function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: boolean }) {
+  const { t, locale } = useJdDsT();
   const audio = useReaderAudio();
   const { setTracks, playAt } = audio;
   const autoPlayed = useRef(false);
@@ -22,22 +24,22 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
   useEffect(() => {
     if (!autoPlay || autoPlayed.current || tracks.length === 0) return;
     autoPlayed.current = true;
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setTracks(tracks);
       playAt(0);
     }, 250);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [autoPlay, tracks, setTracks, playAt]);
 
   const meta = briefingMeta(tracks);
-  const dateLabel = new Date().toLocaleDateString("hi-IN", {
+  const dateLabel = new Date().toLocaleDateString(locale === "en" ? "en-IN" : "hi-IN", {
     day: "numeric",
     month: "long",
   });
 
   return (
     <>
-      <Masthead back backHref="/" pageTitle="सुनें" />
+      <Masthead back backHref="/" pageTitle={t("listen.title")} />
       <div
         style={{
           flexShrink: 0,
@@ -46,17 +48,17 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
           padding: "18px 16px 16px",
         }}
       >
-        <Tag color="var(--jd-gold)">आज की ब्रीफ़िंग · {dateLabel}</Tag>
+        <Tag color="var(--jd-gold)">{t("listen.todayBriefing", { date: dateLabel })}</Tag>
         <h1 className="jd-serif" style={{ margin: "6px 0 3px", fontSize: 23, fontWeight: 700 }}>
           {meta.totalLabel}
         </h1>
         <div className="jd-ui" style={{ fontSize: 11.5, color: "#8ea0c4", marginBottom: 14 }}>
-          हिन्दी वाचन · AI-सहायता, संपादक-सत्यापित
+          {t("listen.voiceNote")}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             type="button"
-            aria-label="सभी सुनें"
+            aria-label={t("listen.playAll")}
             onClick={() => {
               setTracks(tracks);
               audio.playAt(0);
@@ -92,15 +94,15 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
               cursor: "pointer",
             }}
           >
-            सभी सुनें
+            {t("listen.playAll")}
           </button>
           <div style={{ marginLeft: "auto", display: "flex", gap: 16 }}>
-            <Link href="/listen/downloads" aria-label="डाउनलोड" style={{ display: "flex" }}>
+            <Link href="/listen/downloads" aria-label={t("listen.downloads")} style={{ display: "flex" }}>
               <JdIcon name="download" size={22} stroke={1.8} color="var(--jd-gold-soft)" />
             </Link>
             <button
               type="button"
-              aria-label="शेयर"
+              aria-label={t("action.share")}
               data-action="share"
               style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
             >
@@ -113,14 +115,14 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "6px 16px" }}>
         {tracks.length === 0 ? (
           <p className="jd-ui" style={{ color: "var(--jd-muted)", padding: "16px 0" }}>
-            आज की ब्रीफ़िंग जल्द यहाँ उपलब्ध होगी।
+            {t("listen.emptyBriefing")}
           </p>
         ) : (
-          tracks.map((t, i) => {
+          tracks.map((track, i) => {
             const active = audio.index === i && audio.visible;
             return (
               <button
-                key={t.id}
+                key={track.id}
                 type="button"
                 onClick={() => audio.playAt(i)}
                 style={{
@@ -160,7 +162,7 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
                       lineHeight: 1.3,
                     }}
                   >
-                    {t.headline}
+                    {track.headline}
                   </div>
                   {active ? (
                     <div
@@ -183,7 +185,7 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
                   ) : null}
                 </div>
                 <span className="jd-ui" style={{ fontSize: 11, color: "var(--jd-muted)", fontWeight: 600 }}>
-                  {t.durationLabel}
+                  {track.durationLabel}
                 </span>
               </button>
             );
@@ -191,10 +193,10 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
         )}
         <div style={{ display: "flex", gap: 12, padding: "14px 0 8px" }}>
           <Link href="/listen/queue" className="jd-ui" style={linkChip}>
-            कतार व गति
+            {t("listen.queueSpeed")}
           </Link>
           <Link href="/listen/downloads" className="jd-ui" style={linkChip}>
-            डाउनलोड
+            {t("listen.downloads")}
           </Link>
         </div>
       </main>

@@ -5,6 +5,7 @@ import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { SecondaryStory } from "../../components/SecondaryStory";
 import { EmptyState } from "../../system/EmptyState";
+import { useJdDsT } from "../../i18n";
 import { loadReadingMemory, toggleBookmark } from "@/lib/reading-memory";
 import type { HomeArticle } from "@/lib/homepage/types";
 import { toReaderStory } from "../../utils";
@@ -13,6 +14,7 @@ type Filter = "all" | "article" | "audio" | "offline";
 
 /** D30 — saved stories from reading memory. */
 export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
+  const { t } = useJdDsT();
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -30,15 +32,15 @@ export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
     .filter((a): a is HomeArticle => Boolean(a));
 
   const chips = [
-    { label: `सभी · ${items.length}`, key: "all" as const },
-    { label: "लेख", key: "article" as const },
-    { label: "ऑडियो", key: "audio" as const },
-    { label: "ऑफ़लाइन", key: "offline" as const },
+    { label: t("saved.filterAll", { n: items.length }), key: "all" as const },
+    { label: t("saved.filterArticle"), key: "article" as const },
+    { label: t("saved.filterAudio"), key: "audio" as const },
+    { label: t("saved.filterOffline"), key: "offline" as const },
   ];
 
   return (
     <ReaderShell activeNav="more">
-      <Masthead back backHref="/archive" pageTitle="सहेजे" />
+      <Masthead back backHref="/archive" pageTitle={t("saved.shortTitle")} />
       <div style={{ display: "flex", gap: 8, padding: "9px 14px", borderBottom: "1px solid var(--jd-line)", background: "#fff", overflowX: "auto" }}>
         {chips.map((c) => (
           <button
@@ -75,7 +77,7 @@ export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
               />
               <button
                 type="button"
-                aria-label="सहेज से हटाएँ"
+                aria-label={t("saved.removeAria")}
                 onClick={() => {
                   const mem = toggleBookmark(loadReadingMemory(), a.slug);
                   setBookmarks(mem.bookmarks);
@@ -94,14 +96,14 @@ export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
                   minHeight: 32,
                 }}
               >
-                हटाएँ
+                {t("saved.remove")}
               </button>
             </div>
           ))
         )}
         {filter !== "all" && items.length > 0 ? (
           <p className="jd-ui" style={{ fontSize: 11, color: "var(--jd-muted)", padding: "8px 0 16px" }}>
-            फ़िल्टर दृश्य-केवल है — सहेजी सूची एक ही स्रोत से आती है।
+            {t("saved.filterHint")}
           </p>
         ) : null}
       </main>

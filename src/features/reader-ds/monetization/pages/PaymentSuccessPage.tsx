@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
 
 /** E40 — success. Only shows order/plan when provided by real claim/query. */
 export function PaymentSuccessPage({
@@ -13,6 +16,8 @@ export function PaymentSuccessPage({
   orderId?: string | null;
   validUntil?: string | null;
 }) {
+  const { t } = useJdDsT();
+
   return (
     <ReaderShell activeNav="more" hideBottomNav reserveMiniPlayer={false}>
       <Masthead hideActions />
@@ -56,15 +61,15 @@ export function PaymentSuccessPage({
           </div>
         </div>
         <h1 className="jd-serif" style={{ margin: "0 0 6px", fontSize: 23, fontWeight: 700 }}>
-          आप अब दर्पण प्रीमियम सदस्य हैं
+          {t("membership.successTitle")}
         </h1>
         <p
           className="jd-ui"
           style={{ margin: "0 0 20px", fontSize: 13, color: "var(--jd-ink-3)", lineHeight: 1.6 }}
         >
           {validUntil
-            ? `सदस्यता ${validUntil} तक मान्य।`
-            : "आपकी सदस्यता सक्रिय है। रसीद उपलब्ध होने पर SMS/ईमेल से भेजी जाएगी।"}
+            ? t("membership.successValidUntil", { date: validUntil })
+            : t("membership.successBody")}
         </p>
         {(planLabel || orderId) && (
           <div
@@ -82,13 +87,13 @@ export function PaymentSuccessPage({
                 className="jd-ui"
                 style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}
               >
-                <span style={{ color: "var(--jd-ink-3)" }}>प्लान</span>
+                <span style={{ color: "var(--jd-ink-3)" }}>{t("membership.planLabel")}</span>
                 <span style={{ fontWeight: 700 }}>{planLabel}</span>
               </div>
             ) : null}
             {orderId ? (
               <div className="jd-ui" style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                <span style={{ color: "var(--jd-ink-3)" }}>संदर्भ</span>
+                <span style={{ color: "var(--jd-ink-3)" }}>{t("membership.refLabel")}</span>
                 <span style={{ fontWeight: 700 }}>{orderId}</span>
               </div>
             ) : null}
@@ -109,7 +114,7 @@ export function PaymentSuccessPage({
             display: "block",
           }}
         >
-          प्रीमियम पढ़ना शुरू करें
+          {t("membership.startReading")}
         </Link>
       </main>
     </ReaderShell>
