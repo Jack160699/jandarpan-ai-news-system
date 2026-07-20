@@ -240,6 +240,12 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
         tier: "primary",
       },
       {
+        href: "/admin/verified-rates",
+        label: "Verified rates",
+        iconKey: "activity",
+        tier: "secondary",
+      },
+      {
         href: "/admin/system",
         label: "Pipeline",
         iconKey: "server",

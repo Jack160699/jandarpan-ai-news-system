@@ -77,6 +77,19 @@ See `.env.example` sections for full list. Key tunables:
 
 Also listed by name (no value) in local `.env.example` template and `docs/jandarpan-mandi-provider-audit.md`.
 
+### Verified rates — fuel / bullion (gated)
+
+| Variable | Scope | Description |
+|----------|-------|-------------|
+| `VERIFIED_RATES_FUEL_ENABLED` | Server | Set `1` to attempt fuel verification (still needs ULIP wiring) |
+| `ULIP_API_KEY` / `ULIP_CLIENT_ID` | Server | HPCL-via-ULIP credentials — never `NEXT_PUBLIC_` |
+| `VERIFIED_RATES_BULLION_ENABLED` | Server | Set `1` to attempt IBJA fetch |
+| `IBJA_ACCESS_TOKEN` | Server | IBJA Rates API token |
+| `IBJA_DISPLAY_CONSENT` | Server | Must be `1` only after **written** republication consent |
+| `IBJA_RATES_URL` | Server | Optional override endpoint |
+
+Without these gates, public pages show honest unavailable/blocked states. Do not invent prices. Prefer Preview-only until certified.
+
 ### SEO intelligence engines (server-side flags)
 
 All default **OFF**. Set to `true` to enable.

@@ -15,6 +15,10 @@ export default function robots(): MetadataRoute.Robots {
         "/membership/paywall-preview",
       ],
     },
-    sitemap: [`${SITE_URL}/sitemap.xml`, `${SITE_URL}/news-sitemap.xml`],
+    sitemap: [
+      `${SITE_URL}/sitemap.xml`,
+      `${SITE_URL}/news-sitemap.xml`,
+      `${SITE_URL}/sitemap-rates.xml`,
+    ],
   };
 }
