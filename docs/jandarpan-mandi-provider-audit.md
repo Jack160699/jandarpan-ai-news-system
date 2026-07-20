@@ -34,8 +34,8 @@
 
 | Environment | Variable name | Value present? |
 |-------------|---------------|----------------|
-| Preview | `DATA_GOV_IN_API_KEY` | **No** — name exists, value empty (`""`) |
-| Production | `DATA_GOV_IN_API_KEY` | **No** — name exists, value empty (must stay unset for Production per ship rules) |
+| Preview | `DATA_GOV_IN_API_KEY` | **Runtime non-empty** (Preview API returned `no_current_records`, not `missing_api_key`). `vercel env pull` may still show empty for Sensitive vars — treat Dashboard/runtime as source of truth. |
+| Production | `DATA_GOV_IN_API_KEY` | Name present; **must remain unset / unused** for Production until certified |
 | Development | — | not configured |
 | Local `.env.local` | — | not configured |
 
@@ -47,11 +47,12 @@ Unauthenticated probe:
 
 Invalid key probe returns HTTP **403** with an `error` field (body not logged here).
 
-**Live Chhattisgarh filter validation against a real key could not be completed in this audit** until Preview is given a non-empty `DATA_GOV_IN_API_KEY`. Implementation therefore:
+**Live notes (Preview deploy `bda229b`):**
 
-1. Treats missing/empty key as `status: "unavailable"`, `reason: "missing_api_key"`.
-2. Uses fixture-backed unit tests for schema/normalization/freshness.
-3. Remains ready for the canonical resource once the Preview secret is populated.
+1. Authenticated Preview `/api/utilities/mandi` responded without leaking key/URL.
+2. Initial filter-only path returned `no_current_records` (filters may be ignored or CG sparse in the first pages).
+3. Provider now includes an unfiltered page scan + in-memory Chhattisgarh filter as fallback.
+4. Unit fixtures cover snake_case + PascalCase schemas.
 
 ---
 

@@ -189,6 +189,35 @@ export async function fetchMandiRates(opts: FetchMandiOptions = {}): Promise<Man
     }
   }
 
+  /**
+   * Some data.gov.in deployments ignore filters[state] silently (0 rows).
+   * Scan recent unfiltered pages and keep Chhattisgarh rows only.
+   */
+  if (!raw.length) {
+    const scanned: RawMandiRecord[] = [];
+    for (let offset = 0; offset < 300 && scanned.length < 40; offset += 50) {
+      const page = await fetchPage({
+        apiKey,
+        filters: {},
+        limit: 50,
+        offset,
+        signal: opts.signal,
+        revalidateSec,
+        fetchImpl,
+      });
+      if (!page.ok) {
+        lastFail = page.reason;
+        break;
+      }
+      if (!page.records.length) break;
+      for (const row of page.records) {
+        const st = String(row.state ?? row.State ?? "");
+        if (/chhattisgarh|chattisgarh/i.test(st)) scanned.push(row);
+      }
+    }
+    raw = scanned;
+  }
+
   if (!raw.length) {
     return {
       status: "unavailable",
@@ -214,7 +243,13 @@ export async function fetchMandiRates(opts: FetchMandiOptions = {}): Promise<Man
     normalized.push(rate);
   }
 
-  const deduped = dedupeMandiRates(normalized);
+  // Prefer requested district when present among CG rows; else keep all CG
+  const districtMatched = normalized.filter(
+    (r) => r.district.toLowerCase() === districtName.toLowerCase()
+  );
+  const pool = districtMatched.length ? districtMatched : normalized;
+
+  const deduped = dedupeMandiRates(pool);
   // Sort by true reported date before selection
   deduped.sort((a, b) => {
     const da = parseMandiReportedDate(a.reportedAt)?.getTime() ?? 0;

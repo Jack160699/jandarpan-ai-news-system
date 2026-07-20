@@ -217,4 +217,51 @@ describe("fetchMandiRates provider", () => {
       expect(["no_current_records", "provider_error", "stale_records"]).toContain(result.reason);
     }
   });
+
+  it("scans unfiltered pages when state filters return empty", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
+      const u = String(input);
+      if (u.includes("filters")) {
+        return new Response(JSON.stringify({ records: [], count: 0 }), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({
+          records: [
+            {
+              state: "Maharashtra",
+              district: "Pune",
+              market: "Pune",
+              commodity: "Onion",
+              arrival_date: "21/07/2026",
+              modal_price: "1500",
+            },
+            {
+              state: "Chhattisgarh",
+              district: "Raipur",
+              market: "Raipur",
+              commodity: "Wheat",
+              arrival_date: "21/07/2026",
+              modal_price: "2500",
+              min_price: "2400",
+              max_price: "2600",
+            },
+          ],
+          count: 2,
+        }),
+        { status: 200 }
+      );
+    });
+    const result = await fetchMandiRates({
+      apiKey: "test-key-not-real",
+      districtSlug: "raipur",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      now: NOW,
+      revalidateSec: 0,
+    });
+    expect(result.status).toBe("available");
+    if (result.status === "available") {
+      expect(result.rates[0]?.providerCommodity).toBe("Wheat");
+      expect(result.rates[0]?.district).toBe("Raipur");
+    }
+  });
 });
