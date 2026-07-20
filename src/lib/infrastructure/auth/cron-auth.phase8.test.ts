@@ -44,6 +44,69 @@ describe("Phase 8 scoped cron secrets", () => {
     expect(result.authorized).toBe(true);
   });
 
+  it("rejects wrong scoped secret for a different capability", async () => {
+    vi.stubEnv("CRON_SECRET", "master-secret-value");
+    vi.stubEnv("CRON_INGEST_SECRET", "ingest-only-secret");
+    vi.stubEnv("CRON_OPS_SECRET", "ops-only-secret");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const req = new Request("https://example.com/api/fetch-news", {
+      headers: { authorization: "Bearer ops-only-secret" },
+    });
+    const result = await verifyCronRequest(req, { capability: "ingest" });
+    expect(result.authorized).toBe(false);
+  });
+
+  it("rejects missing bearer in production", async () => {
+    vi.stubEnv("CRON_SECRET", "master-secret-value");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const req = new Request("https://example.com/api/cron/x");
+    const result = await verifyCronRequest(req, { capability: "ops" });
+    expect(result.authorized).toBe(false);
+  });
+
+  it("rejects malformed bearer tokens in production", async () => {
+    vi.stubEnv("CRON_SECRET", "master-secret-value");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const req = new Request("https://example.com/api/cron/x", {
+      headers: { authorization: "Bearer" },
+    });
+    const result = await verifyCronRequest(req, { capability: "ops" });
+    expect(result.authorized).toBe(false);
+    expect(parseBearerToken("Bearer")).toBeNull();
+  });
+
+  it("rejects empty accepted secret configuration in production", async () => {
+    vi.stubEnv("CRON_SECRET", "");
+    vi.stubEnv("CRON_OPS_SECRET", "");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const req = new Request("https://example.com/api/cron/x", {
+      headers: { authorization: "Bearer anything" },
+    });
+    const result = await verifyCronRequest(req, { capability: "ops" });
+    expect(result.authorized).toBe(false);
+    expect(collectAcceptedSecrets("ops")).toEqual([]);
+  });
+
+  it("uses length-aware comparison so unequal lengths do not authorize", async () => {
+    vi.stubEnv("CRON_SECRET", "master-secret-value");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const req = new Request("https://example.com/api/cron/x", {
+      headers: { authorization: "Bearer master-secret" },
+    });
+    const result = await verifyCronRequest(req, { capability: "ops" });
+    expect(result.authorized).toBe(false);
+  });
+
   it("redacts bearer parsing helper does not expose tokens in parse", () => {
     expect(parseBearerToken("Bearer abc")).toBe("abc");
   });

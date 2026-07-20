@@ -1,0 +1,57 @@
+﻿name: Step4 Ops Probe
+
+# Read-only production probe for Step 4 hardening verification.
+# Does NOT invoke ingestion/generation cron workers.
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      APP_URL: ${{ secrets.PRODUCTION_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Normalize URL
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "Missing PRODUCTION_URL or CRON_SECRET"
+            exit 1
+          fi
+          case "$APP_URL" in
+            https://jandarpan.news|http://jandarpan.news|https://jandarpan.news/|http://jandarpan.news/)
+              echo "APP_URL=https://www.jandarpan.news" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "APP_URL=$APP_URL" >> "$GITHUB_ENV"
+              ;;
+          esac
+
+      - name: Authenticated health detail
+        run: |
+          set -euo pipefail
+          RESP=$(curl -sS -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Accept: application/json" \
+            "${APP_URL%/}/api/health")
+          CODE=$(echo "$RESP" | tail -n1)
+          BODY=$(echo "$RESP" | sed '$d')
+          echo "http_status=$CODE"
+          # Print only safe fields — never dump full secrets
+          echo "$BODY" | node -e '
+            let s=""; process.stdin.on("data",d=>s+=d); process.stdin.on("end",()=>{
+              const j=JSON.parse(s);
+              const out={
+                ok:j.ok,
+                status:j.status,
+                redisConfigured:j.infrastructure&&j.infrastructure.redis,
+                sentry:j.infrastructure&&j.infrastructure.sentry,
+                productionEnvReady:j.deployment&&j.deployment.productionEnvReady,
+                productionWarnings:j.deployment&&j.deployment.productionWarnings,
+                checks:(j.checks||[]).map(c=>({id:c.id,status:c.status,message:c.message})),
+              };
+              console.log(JSON.stringify(out,null,2));
+            });
+          '
+          test "$CODE" = "200"

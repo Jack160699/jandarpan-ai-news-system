@@ -8,16 +8,34 @@ import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 
 const APP_NAME = "Jan Darpan OS";
 
-function encryptionKey(): Buffer {
-  const secret =
-    process.env.SECURITY_2FA_ENCRYPTION_KEY ??
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    "dev-only-2fa-key-change-in-production";
+function deriveKey(secret: string): Buffer {
   return createHash("sha256").update(secret).digest();
 }
 
-function encryptSecret(plain: string): string {
-  const key = encryptionKey();
+/** Dedicated production key when set; otherwise legacy fallbacks for local/dev. */
+function primaryEncryptionSecret(): string {
+  return (
+    process.env.SECURITY_2FA_ENCRYPTION_KEY?.trim() ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() ||
+    "dev-only-2fa-key-change-in-production"
+  );
+}
+
+/**
+ * Read candidates: dedicated key first, then service-role legacy.
+ * Enables dual-key decryption during Case C rotation without invalidating users.
+ */
+function decryptionSecrets(): string[] {
+  const secrets: string[] = [];
+  const dedicated = process.env.SECURITY_2FA_ENCRYPTION_KEY?.trim();
+  if (dedicated) secrets.push(dedicated);
+  const legacy = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (legacy && legacy !== dedicated) secrets.push(legacy);
+  if (!secrets.length) secrets.push("dev-only-2fa-key-change-in-production");
+  return secrets;
+}
+
+function encryptWithKey(plain: string, key: Buffer): string {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", key, iv);
   const enc = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
@@ -25,15 +43,48 @@ function encryptSecret(plain: string): string {
   return Buffer.concat([iv, tag, enc]).toString("base64");
 }
 
-function decryptSecret(encoded: string): string {
+function decryptWithKey(encoded: string, key: Buffer): string {
   const buf = Buffer.from(encoded, "base64");
   const iv = buf.subarray(0, 12);
   const tag = buf.subarray(12, 28);
   const data = buf.subarray(28);
-  const key = encryptionKey();
   const decipher = createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
+}
+
+/** New writes always prefer the dedicated key when configured. */
+function encryptSecret(plain: string): string {
+  return encryptWithKey(plain, deriveKey(primaryEncryptionSecret()));
+}
+
+/** Try dedicated key, then legacy service-role key. */
+function decryptSecret(encoded: string): string {
+  let lastError: unknown;
+  for (const secret of decryptionSecrets()) {
+    try {
+      return decryptWithKey(encoded, deriveKey(secret));
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("2FA secret decryption failed");
+}
+
+/** Exported for rotation tooling / tests — never log return values. */
+export function encryptTotpSecretForStorage(plain: string): string {
+  return encryptSecret(plain);
+}
+
+/** Exported for rotation tooling / tests — never log return values. */
+export function decryptTotpSecretFromStorage(encoded: string): string {
+  return decryptSecret(encoded);
+}
+
+export function isDedicated2faKeyConfigured(): boolean {
+  return Boolean(process.env.SECURITY_2FA_ENCRYPTION_KEY?.trim());
 }
 
 export function generateTotpSecret(email: string): { secret: string; otpauthUrl: string } {
