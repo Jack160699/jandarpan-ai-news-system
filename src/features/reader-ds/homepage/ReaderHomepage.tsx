@@ -16,6 +16,7 @@ import {
   UtilityRow,
 } from "../components";
 import { UtilTiles } from "../components/UtilTiles";
+import { MandiRatesPanel } from "../utilities/MandiRatesPanel";
 import { ReservedAd } from "../components/ReservedAd";
 import { DismissibleAd } from "../components/DismissibleAd";
 import {
@@ -225,7 +226,8 @@ export function ReaderHomepage({
           </div>
 
           <aside className="jd-home-desk-rail" aria-label={t("home.latest")}>
-            {/* Market tiles omitted until honest live rates exist */}
+            {/* Gold/silver/fuel omitted — mandi only when AGMARKNET data is honest */}
+            <MandiRatesPanel />
             <UtilTiles />
             <div className="jd-home-side-module">
               <div
@@ -262,8 +264,9 @@ export function ReaderHomepage({
           </div>
         ) : null}
 
-        {/* Phone-only util tiles placement (desk rail hides this duplicate via structure) */}
+        {/* Phone-only util placement (desk rail hides this duplicate via structure) */}
         <div className="jd-home-phone-utils">
+          <MandiRatesPanel />
           <UtilTiles />
         </div>
 
