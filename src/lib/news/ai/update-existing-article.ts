@@ -192,7 +192,7 @@ export async function updateExistingPublishedArticle(
   // Prefer editorial_metadata.date_modified (no generated_articles.updated_at column).
   const { error: updateErr } = await supabase
     .from("generated_articles")
-    .update(patch)
+    .update(patch as never)
     .eq("id", article.id);
 
   if (updateErr) {
