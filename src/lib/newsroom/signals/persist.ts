@@ -151,7 +151,7 @@ export async function persistNewsSignals(
 
     const { data, error } = await supabase
       .from("news_signals")
-      .upsert(batch, {
+      .upsert(batch as never, {
         onConflict: "article_url",
         ignoreDuplicates: true,
       })
