@@ -2,7 +2,8 @@
 
 **Date:** 2026-07-21  
 **Branch:** `feat/jandarpan-reader-design-system`  
-**Implementation commit (verified):** `02c69d81a66b7c7896c3c8797a5de1edcda3a71c` (`02c69d8`)  
+**Implementation commit (verified on Ready Preview):** `02c69d81a66b7c7896c3c8797a5de1edcda3a71c` (`02c69d8`)  
+**Verification-workflow commit (docs/tests/testids only):** `6fb32a01fb128445690afc5eafb3a4590b20006d` (`6fb32a0`)  
 **Source of truth:** `docs/jandarpan-reader-redesign/source-designs/desktop-tablet/jandarpan-desktop-tablet-design-brief.html`  
 **Formal review:** `docs/jandarpan-reader-redesign/desktop-tablet-formal-visual-review.md`
 
