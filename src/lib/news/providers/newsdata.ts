@@ -153,22 +153,17 @@ export async function fetchNewsDataAll(): Promise<ProviderFetchResult> {
 
   const sourceKey = buildSourceKey("newsdata", "api");
   const state = await loadIngestionSourceState(sourceKey);
+  // NewsData /latest and /news reject from_date on this plan/endpoint (HTTP 422
+  // UnsupportedParameter). Keep incremental behaviour via client-side windowing.
   const publishedAfter = publishedAfterIsoFromCursor(
     state?.last_item_timestamp ?? null
   );
-  const fromDate = publishedAfter
-    ? publishedAfter.slice(0, 10)
-    : null;
 
-  const baseQueries = [
+  const queries = [
     { country: "in", language: "en,hi", category: "top" },
     { country: "in", language: "hi", category: "top" },
     { category: "world", language: "en" },
   ];
-
-  const queries = baseQueries.map((q) =>
-    fromDate ? { ...q, from_date: fromDate } : q
-  );
 
   const results = await Promise.all(
     queries.map((q) => fetchNewsDataQuery(q as Record<string, string>))
