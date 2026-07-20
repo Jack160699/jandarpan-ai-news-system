@@ -477,7 +477,7 @@ function applyHumanQualityAndEvidenceGate(input: {
     imagePresence: 0.4,
     headlineClarity: Math.min(
       1,
-      (input.quality.quality_breakdown.headline_quality ?? 0.6) || 0.6
+      input.quality.quality_breakdown.headline_quality ?? 0.6
     ),
     threshold: PUBLISH_THRESHOLD,
   });

@@ -398,7 +398,8 @@ export async function fetchGNewsGapFirst(
 
   const plan = planGnewsQuota({
     day,
-    requestsLimit: opts.requestsLimit ?? Number(env.GNEWS_DAILY_LIMIT ?? "100") || 100,
+    requestsLimit:
+      opts.requestsLimit ?? (Number(env.GNEWS_DAILY_LIMIT ?? "100") || 100),
     requestsUsed: opts.requestsUsed ?? 0,
     underCovered,
   });
