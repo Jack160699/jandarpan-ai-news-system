@@ -52,6 +52,7 @@ export function ReaderShell({
     <ExperienceChrome tracks={audioTracks}>
       <div
         className={`jd-ds jd-ds--stage ${readerDsFontClassName}`}
+        data-testid="jd-reader-ds"
         data-theme={dark ? "dark" : undefined}
         style={{
           minHeight: "100dvh",

@@ -197,7 +197,11 @@ export function SearchResultsPageView({
   }
 
   const filterPanel = (
-    <aside className="jd-search-filter-rail" aria-label={t("search.filter")}>
+    <aside
+      className="jd-search-filter-rail"
+      data-testid="jd-search-filter-rail"
+      aria-label={t("search.filter")}
+    >
       <div className="jd-search-filter-rail__head">
         <strong>{t("search.filter")}</strong>
         {applied.length ? (
@@ -258,7 +262,12 @@ export function SearchResultsPageView({
         <span>
           {t("search.resultsCount", { q: query, n: total })}
         </span>
-        <button type="button" className="jd-search-open-filters" onClick={() => setDrawerOpen(true)}>
+        <button
+          type="button"
+          className="jd-search-open-filters"
+          data-testid="jd-search-filter-trigger"
+          onClick={() => setDrawerOpen(true)}
+        >
           <JdIcon name="filter" size={15} stroke={1.8} color="var(--jd-navy)" />
           {t("search.filter")}
         </button>
@@ -267,7 +276,7 @@ export function SearchResultsPageView({
       <main id="main-content" role="main" className="jd-shell jd-search-layout">
         {filterPanel}
 
-        <div className="jd-search-main">
+        <div className="jd-search-main" data-testid="jd-search-results-column">
           <div className="jd-search-meta">
             <span>{t("search.resultsCount", { q: query, n: total })}</span>
             <span className="jd-search-sort">{t("search.sortRelevance")}</span>

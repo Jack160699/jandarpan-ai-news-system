@@ -116,7 +116,11 @@ export function CategoryPageView({ titleHi, titleEn, slug, articles, chips }: Pr
             </div>
           </div>
 
-          <aside className="jd-category-rail" aria-label={t("category.trending")}>
+          <aside
+            className="jd-category-rail"
+            data-testid="jd-category-side-rail"
+            aria-label={t("category.trending")}
+          >
             <div className="jd-category-rail__sticky">
               <div className="jd-category-module">
                 <div className="jd-category-module__title">{t("category.trending")}</div>

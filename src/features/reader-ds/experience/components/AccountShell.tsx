@@ -88,7 +88,11 @@ export function AccountShell({
       <DesktopPrimaryNav active="more" />
 
       <div className="jd-account-layout">
-        <nav className="jd-account-nav" aria-label={t("account.navAria")}>
+        <nav
+          className="jd-account-nav"
+          data-testid="jd-account-nav-rail"
+          aria-label={t("account.navAria")}
+        >
           <ul>
             {NAV.map((item) => {
               const on = item.key === current;

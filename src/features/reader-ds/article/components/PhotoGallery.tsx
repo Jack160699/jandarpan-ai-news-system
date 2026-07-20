@@ -43,7 +43,7 @@ export function PhotoGallery({ images, kicker, backHref = "/" }: PhotoGalleryPro
   }, [total]);
 
   return (
-    <div className="jd-ds jd-photo-story" data-theme="dark">
+    <div className="jd-ds jd-photo-story" data-testid="jd-reader-ds" data-theme="dark">
       <div className="jd-photo-story__chrome">
         <Link href={backHref} aria-label={t("masthead.backAria")} className="jd-photo-story__icon">
           <JdIcon name="arrowL" size={22} stroke={2} color="#e7edf6" />
@@ -106,7 +106,11 @@ export function PhotoGallery({ images, kicker, backHref = "/" }: PhotoGalleryPro
           </div>
         </div>
 
-        <aside className="jd-photo-story__thumbs" aria-label={t("photo.thumbs")}>
+        <aside
+          className="jd-photo-story__thumbs"
+          data-testid="jd-photo-thumbnail-rail"
+          aria-label={t("photo.thumbs")}
+        >
           <div className="jd-photo-story__thumbs-grid">
             {safe.map((img, i) => (
               <button

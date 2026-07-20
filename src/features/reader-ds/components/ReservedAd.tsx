@@ -57,6 +57,7 @@ export function ReservedAd({
   return (
     <aside
       className={`jd-reserved-ad jd-reserved-ad--${format}${sticky ? " jd-reserved-ad--sticky" : ""} ${className}`.trim()}
+      data-testid="jd-reserved-ad"
       data-jd-ad-placement={placementId ?? format}
       role="complementary"
       aria-label={locale === "en" ? "Advertisement" : "विज्ञापन"}

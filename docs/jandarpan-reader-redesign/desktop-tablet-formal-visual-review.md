@@ -2,10 +2,30 @@
 
 **Date:** 2026-07-21  
 **Branch:** `feat/jandarpan-reader-design-system`  
+**Verified implementation commit:** `02c69d81a66b7c7896c3c8797a5de1edcda3a71c` (`02c69d8`)  
 **SoT:** `docs/jandarpan-reader-redesign/source-designs/desktop-tablet/jandarpan-desktop-tablet-design-brief.html`  
 **Captures:** `docs/jandarpan-reader-redesign/desktop-tablet-screenshots/formal/`
 
 Scoring rubric (100): structure 20 · spacing/alignment 20 · typography 15 · proportions 15 · density 10 · responsive 10 · polish 10.
+
+---
+
+## Deployment / Preview verification notes
+
+| Item | Detail |
+|------|--------|
+| Ready deployment | `dpl_9YxAvDBHi6MFLUDjkh9VXZinXtef` |
+| Deployment URL | https://newspaper-motion-4jcmyqw76-jack160699s-projects.vercel.app |
+| Alias | https://newspaper-motion-git-feat-jandarpan-b9dd37-jack160699s-projects.vercel.app |
+| Deployed SHA | `02c69d8…` (exact match) |
+| Local smoke | **14/14 passed** |
+| Authenticated markup (`vercel curl`) | **All six gap marker groups OK** on Ready Preview (`home`, `search`, `login`, `category`, `photo`, `account`) |
+| Hardened SHA poll | Ready for `02c69d8` → `dpl_9YxAvDBHi6MFLUDjkh9VXZinXtef` |
+| Earlier deployment poll | **Timed out before Ready** — classified `deployment_readiness_polling_timeout` (infrastructure only; not a UI regression) |
+| Unauthenticated Preview Playwright | **Blocked by Vercel SSO** — classified `preview_authentication_sso_limitation` (missing `.jd-ds` on SSO HTML is not a product failure) |
+| Protected Preview Playwright suite | **3 skipped** as `BLOCKED_BY_VERCEL_SSO` (not counted as UI failures) |
+
+Do **not** claim unauthenticated Playwright passed. Formal scores below come from local DS-enabled captures, not anonymous Preview fetches.
 
 ---
 

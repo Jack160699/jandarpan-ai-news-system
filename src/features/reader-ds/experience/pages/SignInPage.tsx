@@ -155,8 +155,8 @@ export function SignInPage() {
     <ReaderShell activeNav={null} hideBottomNav showPermissionSheets={false}>
       <Masthead back pageTitle={t("brand.name")} />
       <main id="main-content" role="main" className="jd-signin-page">
-        <div className="jd-signin-card">
-          <aside className="jd-signin-brand-panel" aria-hidden={false}>
+        <div className="jd-signin-card" data-testid="jd-login-two-panel">
+          <aside className="jd-signin-brand-panel" data-testid="jd-login-brand-panel" aria-hidden={false}>
             <div className="jd-desk-mark jd-desk-mark--lg" aria-hidden>
               ज
             </div>
@@ -165,7 +165,7 @@ export function SignInPage() {
             <p className="jd-ui jd-signin-brand-panel__trust">{t("signin.privacyTrust")}</p>
           </aside>
 
-          <div className="jd-signin-form-panel">
+          <div className="jd-signin-form-panel" data-testid="jd-login-auth-panel">
         <h1
           className="jd-serif"
           style={{

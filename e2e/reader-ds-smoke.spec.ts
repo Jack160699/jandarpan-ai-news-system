@@ -104,32 +104,32 @@ test.describe("reader-ds smoke (Phase 7)", () => {
   test("search filter rail sticky on desktop; drawer on phone", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/search?q=रायपुर", { waitUntil: "domcontentloaded" });
-    await expect(page.locator(".jd-search-layout > .jd-search-filter-rail").first()).toBeVisible({
-      timeout: 30_000,
-    });
+    await expect(page.getByTestId("jd-reader-ds").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("jd-search-filter-rail").first()).toBeVisible();
+    await expect(page.getByTestId("jd-search-results-column").first()).toBeVisible();
     await expect(page.locator(".jd-search-hero").first()).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/search?q=रायपुर", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".jd-search-phone-bar").first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator(".jd-search-layout > .jd-search-filter-rail")).toBeHidden();
-    await page.locator(".jd-search-open-filters").click();
+    await expect(page.getByTestId("jd-search-filter-rail")).toBeHidden();
+    await page.getByTestId("jd-search-filter-trigger").click();
     await expect(page.locator(".jd-search-drawer").first()).toBeVisible();
   });
 
   test("category page exposes skyscraper rail on desktop", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/category/politics", { waitUntil: "domcontentloaded" });
-    await expect(page.locator(".jd-category-rail").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("jd-category-side-rail").first()).toBeVisible({ timeout: 30_000 });
     await expect(page.locator('[data-jd-ad-placement="category.skyscraper"]').first()).toBeVisible();
   });
 
   test("login uses two-panel layout on desktop", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/login", { waitUntil: "domcontentloaded" });
-    await expect(page.locator(".jd-signin-card").first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator(".jd-signin-brand-panel").first()).toBeVisible();
-    await expect(page.locator(".jd-signin-form-panel").first()).toBeVisible();
+    await expect(page.getByTestId("jd-login-two-panel").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("jd-login-brand-panel").first()).toBeVisible();
+    await expect(page.getByTestId("jd-login-auth-panel").first()).toBeVisible();
     await expect(page.locator("#jd-d28-mobile").first()).toBeVisible();
     await expect(page.getByRole("button", { name: /OTP|ओटीपी/i }).first()).toBeDisabled();
   });
@@ -137,19 +137,21 @@ test.describe("reader-ds smoke (Phase 7)", () => {
   test("account dual-rail collapses on tablet and expands on wide desktop", async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1024 });
     await page.goto("/archive", { waitUntil: "domcontentloaded" });
-    await expect(page.locator(".jd-account-nav").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("jd-account-nav-rail").first()).toBeVisible({ timeout: 20_000 });
     await expect(page.locator(".jd-account-utility").first()).toBeHidden();
 
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/archive", { waitUntil: "domcontentloaded" });
-    await expect(page.locator(".jd-account-nav").first()).toBeVisible();
+    await expect(page.getByTestId("jd-account-nav-rail").first()).toBeVisible();
     await expect(page.locator(".jd-account-utility").first()).toBeVisible();
   });
 
   test("reserved ad slots keep labelled no-fill dimensions", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const leader = page.locator('[data-jd-ad-placement="home.leaderboard"]').first();
+    const leader = page
+      .locator('[data-testid="jd-reserved-ad"][data-jd-ad-placement="home.leaderboard"]')
+      .first();
     await expect(leader).toBeVisible({ timeout: 30_000 });
     const box = await leader.boundingBox();
     expect(box?.height).toBeGreaterThanOrEqual(88);
@@ -167,7 +169,7 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/system/preview?state=photo", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".jd-photo-story").first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator(".jd-photo-story__thumbs").first()).toBeVisible();
+    await expect(page.getByTestId("jd-photo-thumbnail-rail").first()).toBeVisible();
     await expect(page.locator(".jd-photo-story__thumb").first()).toBeVisible();
     await page.locator(".jd-photo-story__thumb").nth(1).click();
     await expect(page.locator(".jd-photo-story__thumb").nth(1)).toHaveClass(/is-active/);
