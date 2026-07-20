@@ -189,34 +189,19 @@ export async function updateExistingPublishedArticle(
   };
   if (geoPatch) patch.geo_metadata = asJson(geoPatch);
 
-  // Prefer editorial_metadata.date_modified; optionally bump updated_at if present.
+  // Prefer editorial_metadata.date_modified (no generated_articles.updated_at column).
   const { error: updateErr } = await supabase
     .from("generated_articles")
-    .update({ ...patch, updated_at: nowIso })
+    .update(patch)
     .eq("id", article.id);
 
   if (updateErr) {
-    if (/updated_at|column/i.test(updateErr.message)) {
-      const { error: retryErr } = await supabase
-        .from("generated_articles")
-        .update(patch)
-        .eq("id", article.id);
-      if (retryErr) {
-        return {
-          ok: false,
-          skipped: false,
-          reason: retryErr.message,
-          articleId: article.id as string,
-        };
-      }
-    } else {
-      return {
-        ok: false,
-        skipped: false,
-        reason: updateErr.message,
-        articleId: article.id as string,
-      };
-    }
+    return {
+      ok: false,
+      skipped: false,
+      reason: updateErr.message,
+      articleId: article.id as string,
+    };
   }
 
   return {
