@@ -32,6 +32,7 @@ export function NativeAdBlock({
   }
 
   const creative = getNativeAdCreative(adIndex);
+  if (!creative) return null;
   const resolvedKind = kind ?? creative.kind;
   const slotId = nativeAdSlotId(feedId, adIndex);
 

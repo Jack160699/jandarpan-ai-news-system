@@ -39,6 +39,23 @@ let snapshot: AuthSnapshot = {
   error: null,
 };
 
+/** Stable empty snapshots — useSyncExternalStore requires referential equality. */
+const SERVER_SNAPSHOT: AuthSnapshot = {
+  client: null,
+  user: null,
+  session: null,
+  loading: false,
+  error: null,
+};
+
+const UNCONFIGURED_SNAPSHOT: AuthSnapshot = {
+  client: null,
+  user: null,
+  session: null,
+  loading: false,
+  error: null,
+};
+
 const listeners = new Set<() => void>();
 let initStarted = false;
 
@@ -125,14 +142,8 @@ export function useSupabase(): UseSupabaseState {
 
   const state = useSyncExternalStore(
     subscribe,
-    () => (configured ? getSnapshot() : { ...getSnapshot(), loading: false }),
-    () => ({
-      client: null,
-      user: null,
-      session: null,
-      loading: false,
-      error: null,
-    })
+    () => (configured ? getSnapshot() : UNCONFIGURED_SNAPSHOT),
+    () => SERVER_SNAPSHOT
   );
 
   return {

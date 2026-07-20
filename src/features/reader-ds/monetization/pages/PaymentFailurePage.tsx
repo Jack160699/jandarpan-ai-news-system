@@ -14,9 +14,11 @@ export function PaymentFailurePage({
   const code =
     reason === "checkout-not-live"
       ? "चेकआउट अभी लाइव नहीं (पूर्वावलोकन)"
-      : reason
-        ? `त्रुटि: ${reason}`
-        : "भुगतान पूरा नहीं हो सका";
+      : reason === "unverified"
+        ? "सदस्यता सत्यापित नहीं — भुगतान की पुष्टि नहीं मिली"
+        : reason
+          ? `त्रुटि: ${reason}`
+          : "भुगतान पूरा नहीं हो सका";
 
   const retryHref = planSlug
     ? `/membership/checkout?plan=${encodeURIComponent(planSlug)}`

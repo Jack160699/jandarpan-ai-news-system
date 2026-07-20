@@ -51,92 +51,13 @@ export function pickNativeAdSize(adIndex: number): NativeAdSize {
   return SIZES[adIndex % SIZES.length] ?? "300x250";
 }
 
-/** Demo creatives — replace via placement config / API when available */
-export function getNativeAdCreative(adIndex: number): NativeAdCreative {
-  const kind = pickNativeAdKind(adIndex);
-  const size = pickNativeAdSize(adIndex);
-
-  const base = {
-    size,
-    targetUrl: "/archive",
-    ctaLabel: "Learn more",
-  };
-
-  switch (kind) {
-    case "regional":
-      return {
-        ...base,
-        kind,
-        sponsorName: "Chhattisgarh Business Desk",
-        headline: "Support local shops in your district",
-        description:
-          "Discover trusted regional partners — curated for readers across Raipur, Bilaspur, and Durg.",
-        ctaLabel: "Explore partners",
-        imageUrl:
-          "https://images.unsplash.com/photo-1577412647305-991150c7d163?w=800&q=80&auto=format&fit=crop",
-      };
-    case "video":
-      return {
-        ...base,
-        kind,
-        size: adIndex % 2 === 0 ? "full-width" : size,
-        sponsorName: "Jan Darpan Video",
-        headline: "60-second briefing: today's top CG headlines",
-        description: "Watch a quick AI-narrated recap — built for mobile.",
-        ctaLabel: "Watch now",
-        targetUrl: "/shorts",
-        videoPosterUrl:
-          "https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=960&q=80&auto=format&fit=crop",
-      };
-    case "carousel":
-      return {
-        ...base,
-        kind,
-        size: "full-width",
-        sponsorName: "Partner carousel",
-        headline: "Featured from our region",
-        ctaLabel: "View offer",
-        slides: [
-          {
-            id: "c1",
-            title: "Raipur civic updates",
-            subtitle: "City desk",
-            targetUrl: "/category/raipur",
-            imageUrl:
-              "https://images.unsplash.com/photo-1587474260585-9bde22fbe946?w=640&q=80&auto=format&fit=crop",
-          },
-          {
-            id: "c2",
-            title: "Bhilai industry brief",
-            subtitle: "Business",
-            targetUrl: "/category/business",
-            imageUrl:
-              "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=640&q=80&auto=format&fit=crop",
-          },
-          {
-            id: "c3",
-            title: "Bastar heritage week",
-            subtitle: "Culture",
-            targetUrl: "/category/chhattisgarh",
-            imageUrl:
-              "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=640&q=80&auto=format&fit=crop",
-          },
-        ],
-      };
-    case "sponsored":
-    default:
-      return {
-        ...base,
-        kind: "sponsored",
-        sponsorName: "State Partner",
-        headline: "Premium regional coverage for Chhattisgarh",
-        description:
-          "Clear, trustworthy reporting for Chhattisgarh — with transparent sponsorship labels.",
-        ctaLabel: "See partnership",
-        imageUrl:
-          "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&q=80&auto=format&fit=crop",
-      };
-  }
+/**
+ * Native creatives — returns null until a real placement/config API is wired.
+ * Must not invent sponsor brands, Unsplash stock, or partnership copy.
+ */
+export function getNativeAdCreative(adIndex: number): NativeAdCreative | null {
+  void adIndex;
+  return null;
 }
 
 export type FeedSegment<T> =

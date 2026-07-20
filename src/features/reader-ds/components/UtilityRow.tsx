@@ -29,7 +29,7 @@ export function UtilityRow({
   district = "रायपुर",
   districtHref = "/district?select=1",
   dateLabel,
-  temp = "32°",
+  temp,
 }: UtilityRowProps) {
   const date = dateLabel ?? formatShortHindiDate();
   return (
@@ -63,10 +63,14 @@ export function UtilityRow({
         <JdIcon name="chevD" size={12} stroke={2} color="#8ea0c4" />
       </Link>
       <span style={{ color: "#8ea0c4" }}>{date}</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
-        <JdIcon name="rain" size={14} stroke={1.8} color="var(--jd-gold-soft)" />
-        <span>{temp}</span>
-      </div>
+      {temp ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+          <JdIcon name="rain" size={14} stroke={1.8} color="var(--jd-gold-soft)" />
+          <span>{temp}</span>
+        </div>
+      ) : (
+        <span aria-hidden style={{ width: 48 }} />
+      )}
     </div>
   );
 }

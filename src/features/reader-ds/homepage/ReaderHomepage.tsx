@@ -3,16 +3,13 @@
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
 import type { NativeAdCreative } from "@/lib/monetization/native-feed-ads";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
-import "../styles";
-import { readerDsFontClassName } from "../fonts";
 import type { ReaderStory } from "../utils";
 import {
-  BottomNav,
   BreakingStrip,
   DesktopPrimaryNav,
   LeadStory,
   Masthead,
-  SearchOverlay,
+  ReaderShell,
   SectionHeader,
   SecondaryStory,
   UtilityRow,
@@ -170,10 +167,7 @@ export function ReaderHomepage({
   const sections = buildSections(feed, used).slice(0, 6);
 
   return (
-    <div
-      className={`jd-ds jd-ds--stage ${readerDsFontClassName}`}
-      style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", background: "var(--jd-paper)" }}
-    >
+    <ReaderShell activeNav="home" bottomPad={showAds ? 128 : 72}>
       <Masthead premiumBadge={isPremium} />
       <DesktopPrimaryNav active="home" />
       <UtilityRow />
@@ -185,7 +179,6 @@ export function ReaderHomepage({
         className="jd-shell"
         style={{
           flex: 1,
-          paddingBottom: showAds ? 128 : 72,
           background: "var(--jd-paper)",
         }}
       >
@@ -205,6 +198,7 @@ export function ReaderHomepage({
           ) : null}
         </div>
 
+        {/* Rates only when a live feed supplies values — no placeholder prices */}
         <UtilTiles />
 
         {isPremium ? (
@@ -250,8 +244,6 @@ export function ReaderHomepage({
       </main>
 
       {showAds ? <DismissibleAd sticky label="स्टिकी बैनर · 320×50" /> : null}
-      <BottomNav active="home" />
-      <SearchOverlay />
-    </div>
+    </ReaderShell>
   );
 }

@@ -21,7 +21,14 @@ export function ErrorStatePage({
         iconColor="var(--jd-red)"
         title="कुछ ठीक नहीं चला"
         body="हम इस सामग्री को लोड नहीं कर सके। कृपया थोड़ी देर बाद पुनः प्रयास करें।"
-        primary={{ label: "पुनः प्रयास करें", onClick: reset }}
+        primary={{
+          label: "पुनः प्रयास करें",
+          onClick:
+            reset ??
+            (() => {
+              if (typeof window !== "undefined") window.location.reload();
+            }),
+        }}
         secondary={{ label: "समस्या रिपोर्ट करें", href: "/contact" }}
       >
         <p

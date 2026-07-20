@@ -138,8 +138,29 @@ export function AppChrome({ children }: AppChromeProps) {
   const pathname = usePathname();
   const minimal = MINIMAL_CHROME_PREFIXES.some((p) => pathname.startsWith(p));
 
-  if (minimal || (isReaderDesignSystemEnabled() && isReaderDsRoute(pathname))) {
+  if (minimal) {
     return <>{children}</>;
+  }
+
+  // DS routes own masthead/bottom nav, but must keep account + listen providers.
+  // Skip legacy onboarding on QA system galleries to avoid overlaying F-states.
+  if (isReaderDesignSystemEnabled() && isReaderDsRoute(pathname)) {
+    const skipOnboarding =
+      pathname.startsWith("/system/") || pathname === "/maintenance";
+    return (
+      <HeadlinesListenProvider>
+        <ArticleSpeechProvider>
+          <NavigationProvider>
+            <ReaderAccountProvider>
+              <NativeTouchLayer>
+                {skipOnboarding ? null : <OnboardingExperienceV3 />}
+                {children}
+              </NativeTouchLayer>
+            </ReaderAccountProvider>
+          </NavigationProvider>
+        </ArticleSpeechProvider>
+      </HeadlinesListenProvider>
+    );
   }
 
   if (pathname === "/shorts") {

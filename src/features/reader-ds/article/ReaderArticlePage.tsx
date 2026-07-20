@@ -30,12 +30,12 @@ import { ArticleInlineAd } from "../monetization";
 import type { ReaderArticleModel } from "./types";
 
 function storyAsLiveEntries(model: ReaderArticleModel): LiveBlogEntry[] {
-  const base = model.article.published_at || new Date().toISOString();
-  const baseMs = new Date(base).getTime() || Date.now();
+  // Use the article's real publish time only — do not invent staggered update clocks.
+  const publishedAt = model.article.published_at || new Date().toISOString();
   return model.paragraphs.slice(0, 8).map((p, i) => ({
     id: `${model.slug}-u-${i}`,
     headline: p,
-    publishedAt: new Date(baseMs - i * 5 * 60_000).toISOString(),
+    publishedAt,
     isBreaking: i === 0 && model.isBreaking,
   }));
 }
@@ -163,15 +163,16 @@ export function ReaderArticlePage({ model }: { model: ReaderArticleModel }) {
   } = model;
 
   if (variant === "photo") {
-    const captions = paragraphs.slice(0, 6);
-    const images = [
-      { src: imageUrl, caption: imageCaption || captions[0] || headline, alt: headline },
-      ...captions.slice(1).map((c) => ({
-        src: imageUrl,
-        caption: c,
-        alt: headline,
-      })),
-    ];
+    // Only real image assets — never fabricate a multi-slide gallery from one URL.
+    const images = imageUrl
+      ? [
+          {
+            src: imageUrl,
+            caption: imageCaption || paragraphs[0] || headline,
+            alt: headline,
+          },
+        ]
+      : [];
     return (
       <>
         <LiveStoryJsonLd article={article} imageMeta={editorialMeta?.image} />

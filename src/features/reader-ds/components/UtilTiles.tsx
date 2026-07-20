@@ -1,27 +1,28 @@
 /**
  * Gold / silver / diesel utility tiles — approved A1 homepage block.
- * Values are presentation placeholders until a live rates API exists;
- * they do not invent article content.
+ * Renders only when live rates are supplied. Never invents market prices.
  */
 export function UtilTiles({
-  gold = "₹73,240",
-  goldDelta = "▲ 0.4%",
-  silver = "₹92,800",
-  silverDelta = "▼ 0.2%",
-  diesel = "₹94.6",
-  dieselDelta = "— स्थिर",
+  gold,
+  goldDelta,
+  silver,
+  silverDelta,
+  diesel,
+  dieselDelta,
 }: {
-  gold?: string;
-  goldDelta?: string;
-  silver?: string;
-  silverDelta?: string;
-  diesel?: string;
-  dieselDelta?: string;
-}) {
+  gold?: string | null;
+  goldDelta?: string | null;
+  silver?: string | null;
+  silverDelta?: string | null;
+  diesel?: string | null;
+  dieselDelta?: string | null;
+} = {}) {
+  if (!gold || !silver || !diesel) return null;
+
   const tiles: Array<{ lb: string; val: string; sub: string; color: string }> = [
-    { lb: "सोना 24K", val: gold, sub: goldDelta, color: "var(--jd-navy)" },
-    { lb: "चांदी", val: silver, sub: silverDelta, color: "var(--jd-red)" },
-    { lb: "डीज़ल", val: diesel, sub: dieselDelta, color: "var(--jd-ink-3)" },
+    { lb: "सोना 24K", val: gold, sub: goldDelta ?? "—", color: "var(--jd-navy)" },
+    { lb: "चांदी", val: silver, sub: silverDelta ?? "—", color: "var(--jd-red)" },
+    { lb: "डीज़ल", val: diesel, sub: dieselDelta ?? "—", color: "var(--jd-ink-3)" },
   ];
 
   return (
