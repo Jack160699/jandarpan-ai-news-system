@@ -1,12 +1,18 @@
 export {
+  ACTIVE_DISTRICT_COUNT,
   CG_DISTRICTS,
   CG_STATE_SLUG,
+  assertThirtyThreeDistricts,
   districtPriorityBoost,
   getAllDistrictSlugs,
+  getDailyCoverageTargets,
   getDistrict,
+  getDistrictsByTier,
   getPrioritizedDistricts,
   type CgDistrict,
+  type DistrictDailyTarget,
   type DistrictPriorityTier,
+  type DistrictTierLabel,
 } from "@/lib/regional/districts";
 
 export {

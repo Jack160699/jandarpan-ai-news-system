@@ -1,5 +1,7 @@
 /**
- * Premium contextual fallback hierarchy — category + region aware
+ * Premium contextual fallback hierarchy — category + region aware.
+ * Canonical display/OG/mobile resolution: `canonical-image-resolver.ts`
+ * (this module remains the contextual fallback source of truth).
  */
 
 import { EDITORIAL_IMAGES } from "@/lib/editorial-images";

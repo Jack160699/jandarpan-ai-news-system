@@ -173,6 +173,18 @@ function publisherBlock() {
   };
 }
 
+/**
+ * Desk authorship node for AI-assisted / desk-bylined stories.
+ * Points to /how-we-report for honest methodology disclosure.
+ */
+export function janDarpanNewsDeskAuthor() {
+  return {
+    "@type": "Organization",
+    name: "Jan Darpan News Desk",
+    url: `${SITE_URL}/how-we-report`,
+  };
+}
+
 export type LiveNewsArticleJsonLdInput = {
   article: NewsArticleRow;
   url: string;
