@@ -106,6 +106,10 @@ export async function getLatestVerifiedRate(opts: {
   return rows.length ? rows[rows.length - 1]! : null;
 }
 
+/**
+ * Persist accepted consensus as a new immutable daily graph point.
+ * Prior accepted row with the same record_key is superseded (status only).
+ */
 export async function persistAcceptedDailySnapshot(
   point: IncomingVerifiedPoint
 ): Promise<{ ok: boolean; reason?: string; recordKey?: string }> {
@@ -120,6 +124,7 @@ export async function persistAcceptedDailySnapshot(
       .from("verified_rate_daily_snapshots")
       .select("id, session_label, status")
       .eq("record_key", insert.record_key)
+      .eq("status", "accepted")
       .maybeSingle();
 
     if (existing?.status === "accepted") {
@@ -131,18 +136,11 @@ export async function persistAcceptedDailySnapshot(
       if (!allow) {
         return { ok: false, reason: "session_not_preferred", recordKey: insert.record_key };
       }
-    }
-
-    if (existing) {
-      const { error } = await supabase
+      const { error: supErr } = await supabase
         .from("verified_rate_daily_snapshots")
-        .update({
-          ...insert,
-          status: "accepted",
-        })
-        .eq("record_key", insert.record_key);
-      if (error) return { ok: false, reason: error.message };
-      return { ok: true, recordKey: insert.record_key };
+        .update({ status: "superseded" })
+        .eq("id", existing.id);
+      if (supErr) return { ok: false, reason: supErr.message };
     }
 
     const { error } = await supabase.from("verified_rate_daily_snapshots").insert(insert);
@@ -162,28 +160,34 @@ export async function recordBlockedVerificationRun(opts: {
   taxBasis: string;
   errorCode: string;
   effectiveDate: string;
-}): Promise<void> {
+  status?: "blocked" | "unavailable" | "conflict" | "error";
+}): Promise<string | null> {
   try {
     const supabase = verifiedRatesDb();
-    await supabase.from("verified_rate_verification_runs").insert({
-      category: opts.category,
-      geo_scope: opts.geoScope,
-      city_slug: opts.citySlug ?? null,
-      state_code: "CG",
-      country_code: "IN",
-      purity: opts.purity,
-      unit: opts.unit,
-      tax_basis: opts.taxBasis,
-      status: "blocked",
-      source_count: 0,
-      participating_families: 0,
-      effective_date: opts.effectiveDate,
-      generated_at: new Date().toISOString(),
-      error_code: opts.errorCode,
-      redacted_notes: "Provider gated or externally blocked — no price invented",
-    });
+    const { data } = await supabase
+      .from("verified_rate_verification_runs")
+      .insert({
+        category: opts.category,
+        geo_scope: opts.geoScope,
+        city_slug: opts.citySlug ?? null,
+        state_code: "CG",
+        country_code: "IN",
+        purity: opts.purity,
+        unit: opts.unit,
+        tax_basis: opts.taxBasis,
+        status: opts.status ?? "blocked",
+        source_count: 0,
+        participating_families: 0,
+        effective_date: opts.effectiveDate,
+        generated_at: new Date().toISOString(),
+        error_code: opts.errorCode,
+        redacted_notes: "No invented price; verification incomplete",
+      })
+      .select("id")
+      .single();
+    return (data?.id as string | undefined) ?? null;
   } catch {
-    // non-fatal for public paths
+    return null;
   }
 }
 

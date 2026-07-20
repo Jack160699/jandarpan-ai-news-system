@@ -1,8 +1,8 @@
 # Release blocker — Market / rates
 
-**Branch:** `feat/jandarpan-reader-design-system`
-**Date:** 2026-07-21
-**Overall market/rates verdict:** **PARTIALLY CLOSED**
+**Branch:** `feat/jandarpan-reader-design-system`  
+**Date:** 2026-07-21  
+**Overall market/rates verdict:** **PARTIALLY CLOSED** (platform ready; feeds externally gated)
 
 ---
 
@@ -11,33 +11,37 @@
 | Feed | Status |
 |------|--------|
 | AGMARKNET mandi (data.gov.in) | **Implemented** (live-fetch; no DB history) |
-| Verified rates history platform (schema, APIs, graphs, SEO pages) | **Implemented** |
-| Gold / silver live numbers | **Externally gated** (IBJA consent + token) |
-| Diesel / petrol live numbers | **Externally gated** (ULIP license + adapter live wiring) |
+| Verified rates schema + hardening | **Applied** on `giiuqshoconjbpiueasp` |
+| Multi-family consensus + adapters | **Implemented** (gated) |
+| History APIs / graphs / SEO pages | **Implemented** (prior commit) |
+| Gold / silver live numbers | **DISPLAY_PERMISSION_REQUIRED** + credentials |
+| Diesel / petrol live numbers | **CREDENTIALS_REQUIRED** + second family |
 | Sensex / Nifty / FX | Omitted |
 | Weather (Open-Meteo) | Unchanged — still live |
 
 ---
 
-## Verified rates history
+## Category verdicts (activation phase)
 
-- Migration: `064_verified_rates_history.sql`
-- Pages: `/rates`, `/rates/chhattisgarh`, city fuel routes, state bullion routes
-- API: `/api/utilities/verified-rates/history`, dataset CSV when eligible
-- Sitemap: `/sitemap-rates.xml`
-- Admin: `/admin/verified-rates`
-- Reader DS: history links (no fake tiles)
-- Docs: `docs/jandarpan-rates-history-architecture.md`, graphing, SEO checklist, operations
+| Category | Verdict |
+|----------|---------|
+| Petrol | **CREDENTIALS_REQUIRED** (+ second family → else **INSUFFICIENT_ELIGIBLE_SOURCES**) |
+| Diesel | **CREDENTIALS_REQUIRED** (+ second family → else **INSUFFICIENT_ELIGIBLE_SOURCES**) |
+| Gold 24K | **DISPLAY_PERMISSION_REQUIRED** / **CREDENTIALS_REQUIRED** |
+| Gold 22K | **DISPLAY_PERMISSION_REQUIRED** / **CREDENTIALS_REQUIRED** |
+| Silver 999 | **DISPLAY_PERMISSION_REQUIRED** / **CREDENTIALS_REQUIRED** |
 
-History accumulates only from real accepted verifications. **No fabricated backfill.**
+Stability gate: **PENDING_STABILITY_GATE** (scheduler configured; seven genuine runs not yet elapsed).  
+Production Reader DS / rates: **unchanged / disabled**.
 
 ---
 
-## Remaining (keeps blocker PARTIAL)
+## Remaining external actions
 
-1. ULIP fuel credentials + live adapter validation for Raipur/Durg/Bhilai
-2. IBJA token + written display consent for gold/silver
-3. Seven-run stability gate once providers are live
-4. Natural accumulation of 7D/30D history after go-live
+1. ULIP credentials + enable on **Preview** only  
+2. Second licensed fuel family credentials  
+3. IBJA token + written republication consent  
+4. Two additional bullion families (or keep bullion unpublished)  
+5. Complete seven scheduled Preview runs before any Production consideration  
 
-Until then public rate pages correctly show blocked/unavailable + methodology content.
+Until then public rate pages correctly show blocked/unavailable + methodology. **No fabricated prices.**

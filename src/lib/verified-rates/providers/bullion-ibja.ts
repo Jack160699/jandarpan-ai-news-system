@@ -8,6 +8,11 @@ import { effectiveDateIst } from "@/lib/verified-rates/dates";
 
 const BULLION: RateCategory[] = ["gold_24k", "gold_22k", "silver_999"];
 
+const ALLOWED_HOSTS = new Set([
+  "www.indiagoldratesapi.com",
+  "indiagoldratesapi.com",
+]);
+
 type IbjaRow = {
   RateDate?: string;
   RateTime?: string;
@@ -69,69 +74,94 @@ export const bullionIbjaProvider: RateProvider = {
       process.env.IBJA_RATES_URL?.trim() ||
       "https://www.indiagoldratesapi.com/api/Rates";
 
+    let url: URL;
     try {
-      const url = new URL(endpoint);
-      url.searchParams.set("ACCESS_TOKEN", token);
-      const res = await fetch(url.toString(), {
-        signal: input.signal,
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-      });
-      if (!res.ok) {
-        return { status: "unavailable", code: `ibja_http_${res.status}`, series };
-      }
-      const payload = (await res.json()) as IbjaRow[] | IbjaRow;
-      const rows = Array.isArray(payload) ? payload : [payload];
-      if (!rows.length) {
-        return { status: "unavailable", code: "ibja_empty", series };
-      }
+      url = new URL(endpoint);
+    } catch {
+      return { status: "error", code: "ibja_bad_endpoint", series };
+    }
+    if (!ALLOWED_HOSTS.has(url.hostname)) {
+      return { status: "error", code: "ibja_host_not_allowlisted", series };
+    }
+    url.searchParams.set("ACCESS_TOKEN", token);
 
-      const purityWanted =
-        input.category === "gold_22k" ? "916" : input.category === "gold_24k" ? "999" : "999";
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 12_000);
+      const signal = input.signal ?? controller.signal;
+      try {
+        const res = await fetch(url.toString(), {
+          signal,
+          headers: { Accept: "application/json" },
+          redirect: "error",
+          cache: "no-store",
+        });
+        clearTimeout(timer);
+        if (!res.ok) {
+          if (attempt === 0 && res.status >= 500) continue;
+          return { status: "unavailable", code: `ibja_http_${res.status}`, series };
+        }
+        const payload = (await res.json()) as IbjaRow[] | IbjaRow;
+        const rows = Array.isArray(payload) ? payload : [payload];
+        if (!rows.length) {
+          return { status: "unavailable", code: "ibja_empty", series };
+        }
 
-      let chosen: IbjaRow | null = null;
-      for (const row of rows) {
-        if (input.category === "silver_999") {
-          if (row.SilverRate && isPositivePriceString(String(row.SilverRate))) {
+        const purityWanted =
+          input.category === "gold_22k" ? "916" : input.category === "gold_24k" ? "999" : "999";
+
+        let chosen: IbjaRow | null = null;
+        for (const row of rows) {
+          if (input.category === "silver_999") {
+            if (row.SilverRate && isPositivePriceString(String(row.SilverRate))) {
+              chosen = row;
+              break;
+            }
+          } else if (String(row.Purity ?? "") === purityWanted && row.GoldRate) {
             chosen = row;
             break;
           }
-        } else if (String(row.Purity ?? "") === purityWanted && row.GoldRate) {
-          chosen = row;
-          break;
         }
+        if (!chosen) {
+          return { status: "unavailable", code: "ibja_purity_miss", series };
+        }
+
+        const price =
+          input.category === "silver_999"
+            ? String(chosen.SilverRate)
+            : String(chosen.GoldRate);
+        if (!isPositivePriceString(price)) {
+          return { status: "unavailable", code: "ibja_invalid_price", series };
+        }
+
+        const rateTime = String(chosen.RateTime ?? "");
+        const sessionLabel =
+          /pm|18|evening|closing/i.test(rateTime)
+            ? "closing"
+            : /am|12|opening/i.test(rateTime)
+              ? "opening"
+              : "day";
+
+        const ymd = parseIbjaDate(chosen.RateDate) ?? effectiveDateIst();
+
+        return {
+          status: "ok",
+          series,
+          priceNumeric: price,
+          currency: "INR",
+          sourceId: "bullion_ibja",
+          sourceFamily: "ibja",
+          sourceReportedAt: `${ymd}T12:30:00+05:30`,
+          sessionLabel,
+          validUntil: null,
+        };
+      } catch {
+        clearTimeout(timer);
+        if (attempt === 0) continue;
+        return { status: "error", code: "ibja_fetch_failed", series };
       }
-      if (!chosen) {
-        return { status: "unavailable", code: "ibja_purity_miss", series };
-      }
-
-      const price =
-        input.category === "silver_999"
-          ? String(chosen.SilverRate)
-          : String(chosen.GoldRate);
-      if (!isPositivePriceString(price)) {
-        return { status: "unavailable", code: "ibja_invalid_price", series };
-      }
-
-      const rateTime = String(chosen.RateTime ?? "");
-      const sessionLabel =
-        /pm|18|evening|closing/i.test(rateTime) ? "closing" : /am|12|opening/i.test(rateTime) ? "opening" : "day";
-
-      const ymd = parseIbjaDate(chosen.RateDate) ?? effectiveDateIst();
-
-      return {
-        status: "ok",
-        series,
-        priceNumeric: price,
-        currency: "INR",
-        sourceId: "bullion_ibja",
-        sourceFamily: "ibja",
-        sourceReportedAt: `${ymd}T12:30:00+05:30`,
-        sessionLabel,
-        validUntil: null,
-      };
-    } catch {
-      return { status: "error", code: "ibja_fetch_failed", series };
     }
+
+    return { status: "unavailable", code: "ibja_adapter_exhausted", series };
   },
 };

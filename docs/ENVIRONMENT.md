@@ -81,14 +81,19 @@ Also listed by name (no value) in local `.env.example` template and `docs/jandar
 
 | Variable | Scope | Description |
 |----------|-------|-------------|
-| `VERIFIED_RATES_FUEL_ENABLED` | Server | Set `1` to attempt fuel verification (still needs ULIP wiring) |
+| `VERIFIED_RATES_FUEL_ENABLED` | Server | Set `1` to attempt ULIP fuel verification |
 | `ULIP_API_KEY` / `ULIP_CLIENT_ID` | Server | HPCL-via-ULIP credentials — never `NEXT_PUBLIC_` |
+| `ULIP_FUEL_RATES_URL` | Server | Optional allowlisted ULIP endpoint override |
+| `VERIFIED_RATES_FUEL_IOCL_ENABLED` | Server | Set `1` to attempt second fuel family (IOCL licensed) |
+| `IOCL_RATES_API_KEY` | Server | Licensed IOCL (or equivalent OMC) programmatic key |
 | `VERIFIED_RATES_BULLION_ENABLED` | Server | Set `1` to attempt IBJA fetch |
 | `IBJA_ACCESS_TOKEN` | Server | IBJA Rates API token |
 | `IBJA_DISPLAY_CONSENT` | Server | Must be `1` only after **written** republication consent |
-| `IBJA_RATES_URL` | Server | Optional override endpoint |
+| `IBJA_RATES_URL` | Server | Optional allowlisted IBJA endpoint override |
+| `VERIFIED_RATES_BULLION_SECONDARY_ENABLED` / `BULLION_SECONDARY_API_KEY` | Server | Second independent bullion family |
+| `VERIFIED_RATES_BULLION_TERTIARY_ENABLED` / `BULLION_TERTIARY_API_KEY` | Server | Third independent bullion family |
 
-Without these gates, public pages show honest unavailable/blocked states. Do not invent prices. Prefer Preview-only until certified.
+Consensus publishing requires **2** independent fuel families or **3** bullion families. Without gates/creds, pages stay unavailable/blocked. Do not invent prices. Prefer Preview-only until the seven-run stability gate passes.
 
 ### SEO intelligence engines (server-side flags)
 
