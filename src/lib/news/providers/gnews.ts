@@ -65,7 +65,7 @@ function mapCategory(gnewsCategory: GNewsCategory | "search"): string {
 function mapArticle(
   raw: GNewsArticle,
   gnewsCategory: GNewsCategory | "search",
-  regionHint?: string | null
+  regionHint?: "india" | "chhattisgarh" | "global" | null
 ): NormalizedArticle | null {
   const title = normalizeNewsEncoding(raw.title);
   const articleUrl = normalizeNewsEncoding(raw.url);
@@ -157,7 +157,7 @@ export async function fetchGNewsSearch(
     lang?: string;
     country?: string;
     max?: number;
-    regionHint?: string | null;
+    regionHint?: "india" | "chhattisgarh" | "global" | null;
   }
 ): Promise<{ articles: NormalizedArticle[]; error?: string; query: string }> {
   const apiKey = getApiKey();
