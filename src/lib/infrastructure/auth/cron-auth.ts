@@ -15,6 +15,7 @@
  * Vercel Cron (when CRON_SECRET is set) also sends x-vercel-cron: 1
  */
 
+import { timingSafeEqual } from "node:crypto";
 import { Receiver } from "@upstash/qstash";
 import { isProductionDeployment } from "@/lib/infrastructure/production";
 
@@ -99,6 +100,17 @@ export function cronSecretEnvKeysForCapability(
   return keys;
 }
 
+function secretsEqual(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  try {
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
 function matchesAcceptedSecret(
   bearerToken: string | null,
   cronHeader: string | null,
@@ -106,7 +118,9 @@ function matchesAcceptedSecret(
 ): boolean {
   if (!accepted.length) return false;
   return accepted.some(
-    (secret) => bearerToken === secret || cronHeader === secret
+    (secret) =>
+      (bearerToken !== null && secretsEqual(bearerToken, secret)) ||
+      (cronHeader !== null && secretsEqual(cronHeader, secret))
   );
 }
 
