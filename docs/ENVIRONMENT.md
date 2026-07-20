@@ -69,6 +69,14 @@ See `.env.example` sections for full list. Key tunables:
 | `LOG_LEVEL` | Log verbosity |
 | `PIPELINE_VERBOSE_LOGS=1` | Verbose pipeline logging |
 
+### Reader DS utilities — mandi (AGMARKNET)
+
+| Variable | Scope | Description |
+|----------|-------|-------------|
+| `DATA_GOV_IN_API_KEY` | Server only | data.gov.in API key for AGMARKNET mandi prices (`/api/utilities/mandi`). **Never** prefix with `NEXT_PUBLIC_`. Prefer **Preview** only; do not enable on Production until certified. |
+
+Also listed by name (no value) in local `.env.example` template and `docs/jandarpan-mandi-provider-audit.md`.
+
 ### SEO intelligence engines (server-side flags)
 
 All default **OFF**. Set to `true` to enable.
