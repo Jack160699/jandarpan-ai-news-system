@@ -184,13 +184,47 @@ export function getLanguageConfig(lang: NewsroomLanguage): LanguageConfig {
 export function normalizeArticleLanguage(
   raw: string | null | undefined
 ): NewsroomLanguage {
-  const v = raw?.toLowerCase().trim();
-  if (v === "en" || v === "english") return "en";
-  if (v === "cg" || v === "chhattisgarhi") return "cg";
-  if (v === "mr" || v === "marathi") return "mr";
-  if (v === "bn" || v === "bengali" || v === "bangla") return "bn";
-  if (v === "ta" || v === "tamil") return "ta";
-  if (v === "ur" || v === "urdu") return "ur";
+  const v = raw?.toLowerCase().trim().replace(/_/g, "-");
+  if (!v) return "hi";
+
+  if (
+    v === "en" ||
+    v === "english" ||
+    v === "en-in" ||
+    v === "en-us" ||
+    v === "en-gb" ||
+    v.startsWith("en-")
+  ) {
+    return "en";
+  }
+
+  if (
+    v === "cg" ||
+    v === "chhattisgarhi" ||
+    v === "hi-cg" ||
+    v === "hne" ||
+    v === "chg"
+  ) {
+    return "cg";
+  }
+
+  if (v === "mr" || v === "marathi" || v.startsWith("mr-")) return "mr";
+  if (v === "bn" || v === "bengali" || v === "bangla" || v.startsWith("bn-")) {
+    return "bn";
+  }
+  if (v === "ta" || v === "tamil" || v.startsWith("ta-")) return "ta";
+  if (v === "ur" || v === "urdu" || v.startsWith("ur-")) return "ur";
+
+  if (
+    v === "hi" ||
+    v === "hindi" ||
+    v === "hi-in" ||
+    v === "hin" ||
+    v.startsWith("hi-")
+  ) {
+    return "hi";
+  }
+
   return "hi";
 }
 

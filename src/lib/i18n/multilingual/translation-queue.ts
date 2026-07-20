@@ -13,6 +13,7 @@ import {
   computeSourceContentVersion,
   isActiveReaderTarget,
   isCgTranslationEnabled,
+  TRANSLATION_JOB_PRIORITY_DEFAULT,
 } from "@/lib/i18n/multilingual/translation-contract";
 import { isPlaceholderTitle } from "@/lib/news/ai/generated-article-validation";
 import { enqueueJob, enqueueJobs, countPendingJobs } from "@/lib/infrastructure/jobs/queue";
@@ -408,12 +409,13 @@ export async function findArticlesMissingTranslation(input: {
   let query = supabase
     .from("generated_articles")
     .select(
-      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, translations, published_at, tenant_id"
+      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, translations, published_at, editorial_status, workflow_status, tenant_id, created_at, event_id, hero_image_url"
     )
-    .not("published_at", "is", null)
-    .eq("editorial_status", "approved")
     .eq("language", input.source)
-    .order("published_at", { ascending: false })
+    .or(
+      "and(published_at.not.is.null,editorial_status.eq.approved),workflow_status.eq.scheduled,editorial_status.eq.pending"
+    )
+    .order("created_at", { ascending: false })
     .limit(Math.max(limit * 3, 120));
 
   if (input.afterPublishedAt) {
@@ -425,9 +427,9 @@ export async function findArticlesMissingTranslation(input: {
     throw new Error(`missing_scan_failed:${error.message}`);
   }
 
-  return (data ?? [])
-    .filter((row) => articleNeedsTranslation(row as GeneratedArticleRow, input.target))
-    .slice(0, limit) as GeneratedArticleRow[];
+  return ((data ?? []) as unknown as GeneratedArticleRow[])
+    .filter((row) => articleNeedsTranslation(row, input.target))
+    .slice(0, limit);
 }
 
 export async function enqueueArticleTranslation(
@@ -461,10 +463,10 @@ export async function enqueueArticleTranslation(
       targetLanguage: target,
       sourceContentVersion,
       reason: options?.reason ?? "publish_or_backfill",
-      priority: options?.priority ?? 6,
+      priority: options?.priority ?? TRANSLATION_JOB_PRIORITY_DEFAULT,
       urgencyScore: options?.urgencyScore,
     }),
-    priority: options?.priority ?? 6,
+    priority: options?.priority ?? TRANSLATION_JOB_PRIORITY_DEFAULT,
     maxAttempts: 5,
     timeoutMs: 120_000,
   });
@@ -504,9 +506,9 @@ export async function enqueueMissingTranslationJobs(input?: {
           targetLanguage: pair.target,
           sourceContentVersion,
           reason: "missing_backfill",
-          priority: input?.priority ?? 6,
+          priority: input?.priority ?? TRANSLATION_JOB_PRIORITY_DEFAULT,
         }),
-        priority: input?.priority ?? 6,
+        priority: input?.priority ?? TRANSLATION_JOB_PRIORITY_DEFAULT,
         maxAttempts: 5,
         timeoutMs: 120_000,
       });

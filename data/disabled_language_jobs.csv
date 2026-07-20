@@ -1,0 +1,7 @@
+job_id,status,target_lang,article_id,last_error
+8452a62b-c153-4f05-9b20-b6dfcb1b35ea,failed,cg,d5586def-71f1-4de0-8e30-b8bf77598ee9,[quarantined] disabled_language:cg
+933d3444-8d2f-4838-817a-527bf09ef3ba,failed,cg,c19b661e-2e93-4a06-b3dc-7b88b3d79d77,[quarantined] disabled_language:cg
+fa349a45-3f3d-47fd-a13b-c8d4b8644926,failed,cg,293a0d66-5e1c-4880-890e-af66f947b075,[quarantined] disabled_language:cg
+3e7e77d3-4af3-426f-abea-df227150789b,failed,cg,00aed619-2c04-4013-97b5-977afd93e7f8,[quarantined] disabled_language:cg
+51417118-4e04-49fc-96da-a9317654085d,failed,cg,c51c4336-71a6-45d7-b660-8f863817e75f,[quarantined] disabled_language:cg
+b2e355a8-a2a4-4bd4-8b4c-59971e5270d4,failed,cg,c50ba277-6026-422a-9084-93738791a413,[quarantined] disabled_language:cg

@@ -241,6 +241,7 @@ const translateArticle: JobHandler = async (job) => {
   const {
     computeSourceContentVersion,
     isActiveReaderTarget,
+    isArticleEligibleForAutoTranslation,
     normalizeTranslateArticlePayload,
     resolveTranslationUrgencyScore,
     bundleMatchesSourceVersion,
@@ -277,7 +278,7 @@ const translateArticle: JobHandler = async (job) => {
   const { data: row, error } = await supabase
     .from("generated_articles")
     .select(
-      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, translations, tenant_id, published_at, editorial_status, event_id"
+      "id, slug, headline, summary, article_body, seo_title, seo_description, reading_time, language, tags, editorial_metadata, translations, tenant_id, published_at, editorial_status, workflow_status, event_id"
     )
     .eq("id", articleId)
     .maybeSingle();
@@ -286,10 +287,15 @@ const translateArticle: JobHandler = async (job) => {
     return { ok: false, error: "article_not_found", retryable: false };
   }
 
-  if (!row.published_at || row.editorial_status !== "approved") {
+  const eligibility = isArticleEligibleForAutoTranslation(row);
+  if (!eligibility.eligible) {
+    // Permanent skip — do not burn retries on rejected/quarantined content.
     return {
       ok: true,
-      result: { skipped: true, reason: "not_published" },
+      result: {
+        skipped: true,
+        reason: eligibility.reason,
+      },
     };
   }
 

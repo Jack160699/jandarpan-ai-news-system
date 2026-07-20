@@ -23,7 +23,7 @@
     },
     {
       "path": "/api/cron/translation-backfill",
-      "schedule": "20 */6 * * *"
+      "schedule": "10,40 * * * *"
     },
     {
       "path": "/api/cron/cleanup",

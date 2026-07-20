@@ -28,7 +28,7 @@ export const CRON_STALE_THRESHOLD_BY_JOB_MS: Record<string, number> = {
   "gsc-intelligence": 36 * 60 * 60 * 1000,
   // Every 6h
   "seo-autonomous": 12 * 60 * 60 * 1000,
-  "translation-backfill": 18 * 60 * 60 * 1000,
+  "translation-backfill": 3 * 60 * 60 * 1000,
   // Daily
   cleanup: 36 * 60 * 60 * 1000,
   // Hourly health

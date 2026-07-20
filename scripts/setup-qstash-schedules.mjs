@@ -88,7 +88,7 @@ const schedules = [
   {
     scheduleId: "jandarpan-translation-backfill",
     destination: `${baseUrl}/api/cron/translation-backfill`,
-    cron: "20 */6 * * *",
+    cron: "10,40 * * * *",
     method: "POST",
     body: "{}",
   },

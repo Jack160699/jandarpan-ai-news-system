@@ -5,6 +5,7 @@ import {
   bundleMatchesSourceVersion,
   computeSourceContentVersion,
   isActiveReaderTarget,
+  isArticleEligibleForAutoTranslation,
   isCgTranslationEnabled,
   normalizeTranslateArticlePayload,
   resolveTranslationUrgencyScore,
@@ -154,6 +155,49 @@ describe("job contract + versioning", () => {
         { ...legacyBundle, source_content_version: v1 },
         v2
       )
+    ).toBe(false);
+  });
+
+  it("accepts hi-IN / en-IN aliases and rejects same-language", () => {
+    const legacy = normalizeTranslateArticlePayload({
+      articleId: "a1",
+      targetLanguage: "en-IN",
+      sourceLanguage: "hi-IN",
+    });
+    expect(legacy?.targetLanguage).toBe("en");
+    expect(legacy?.sourceLanguage).toBe("hi");
+    expect(
+      normalizeTranslateArticlePayload({
+        articleId: "a1",
+        targetLanguage: "hi",
+        sourceLanguage: "hi",
+      })
+    ).toBeNull();
+  });
+});
+
+describe("isArticleEligibleForAutoTranslation", () => {
+  it("allows published approved and scheduled pending stories", () => {
+    expect(
+      isArticleEligibleForAutoTranslation({
+        published_at: "2026-07-20T00:00:00Z",
+        editorial_status: "approved",
+      }).eligible
+    ).toBe(true);
+    expect(
+      isArticleEligibleForAutoTranslation({
+        published_at: null,
+        editorial_status: "pending",
+        workflow_status: "scheduled",
+      }).eligible
+    ).toBe(true);
+  });
+
+  it("rejects quarantined articles", () => {
+    expect(
+      isArticleEligibleForAutoTranslation({
+        editorial_status: "quarantined",
+      }).eligible
     ).toBe(false);
   });
 });

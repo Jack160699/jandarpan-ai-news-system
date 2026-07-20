@@ -1,0 +1,31 @@
+job_id,status,target_lang,article_id,last_error,class
+8da823b4-7405-4207-9e05-e5cea7d8e7c1,dead,hi,wire-gnews-696d09a17700,article_not_found,missing_article
+ebd23feb-1531-44a0-9436-d6a1bfbc1079,dead,hi,wire-gnews-281c9d4420cf,article_not_found,missing_article
+c2285f33-1a7d-4d36-b457-d5eefa35f49a,dead,hi,wire-gnews-c620ca957d21,article_not_found,missing_article
+d9a0ddf1-505b-4e03-b7cd-e7c4848b21f6,dead,hi,wire-gnews-d452ced1e5e6,article_not_found,missing_article
+6ff5836d-7283-4978-9e16-e4c723ca9a6d,dead,hi,wire-newsdata-8bb86ac0474c,article_not_found,missing_article
+e29e23e0-4ac5-4d10-a199-08d8062897d7,dead,hi,wire-newsdata-07d09e325256,article_not_found,missing_article
+e27b37be-225e-4a45-9afe-b6a6068daea6,dead,hi,wire-newsdata-0c649129857d,article_not_found,missing_article
+55269e6b-7f5b-4c09-b392-bca75a164fe0,dead,hi,wire-gnews-7332bfb309b1,article_not_found,missing_article
+b07f123e-b938-4bf8-98bb-6057cbd4eece,dead,hi,wire-gnews-6194500cda5c,article_not_found,missing_article
+de0e2cd1-d770-4f58-bdd3-1ea1d448ed12,dead,hi,wire-newsdata-88cb68a36336,article_not_found,missing_article
+c9148506-3afc-4cb7-a901-2f17d4fba3e5,dead,hi,wire-gnews-6071afefd009,article_not_found,missing_article
+4555b87b-b028-46e6-909b-e32ba28fc9da,dead,hi,wire-gnews-4d313c77e528,article_not_found,missing_article
+b8a0c2eb-5d06-4816-8500-b55d1c4e9cb7,dead,hi,wire-newsdata-a77c8d7f61a2,article_not_found,missing_article
+b31ba5c2-0dc3-46d3-9b29-81163741c7ee,dead,hi,wire-newsdata-02368d92c067,article_not_found,missing_article
+28080444-54fb-4896-b2c7-b6fbc415ede8,dead,hi,wire-newsdata-b31385126444,article_not_found,missing_article
+2852ef55-e68d-48f4-b891-2e9416395821,dead,hi,wire-newsdata-6d9721d024d5,article_not_found,missing_article
+2d836ba2-e304-4de0-808f-792fc8b33188,dead,hi,wire-newsdata-46f9919a2815,article_not_found,missing_article
+63f2972b-90ed-4b36-be2e-b2c8e7422ec4,dead,hi,wire-newsdata-8be8c0c14008,article_not_found,missing_article
+666be0ae-6493-456e-8a72-d4561b468500,dead,hi,wire-gnews-25033ad51d9e,article_not_found,missing_article
+6ac8a07e-13d3-4e29-8cf5-965c9a4086fb,dead,hi,wire-newsdata-b1f2cffb958b,article_not_found,missing_article
+944ecd9e-a1a8-4d9d-9cd8-0d3e4f4f9983,dead,hi,wire-newsdata-25a81f20f48c,article_not_found,missing_article
+78417f2e-51a3-4fe5-814a-761314f4ee14,dead,hi,wire-newsdata-84c67c648206,article_not_found,missing_article
+6a0cf137-66b3-49f5-9aba-6aa6cdbae43d,dead,hi,wire-newsdata-565b83a7eef5,article_not_found,missing_article
+5480240f-f8c2-4863-91a3-477352e6e471,dead,hi,wire-newsdata-68e22b7f33c7,article_not_found,missing_article
+8452a62b-c153-4f05-9b20-b6dfcb1b35ea,failed,cg,d5586def-71f1-4de0-8e30-b8bf77598ee9,[quarantined] disabled_language:cg,disabled_cg
+933d3444-8d2f-4838-817a-527bf09ef3ba,failed,cg,c19b661e-2e93-4a06-b3dc-7b88b3d79d77,[quarantined] disabled_language:cg,disabled_cg
+fa349a45-3f3d-47fd-a13b-c8d4b8644926,failed,cg,293a0d66-5e1c-4880-890e-af66f947b075,[quarantined] disabled_language:cg,disabled_cg
+3e7e77d3-4af3-426f-abea-df227150789b,failed,cg,00aed619-2c04-4013-97b5-977afd93e7f8,[quarantined] disabled_language:cg,disabled_cg
+51417118-4e04-49fc-96da-a9317654085d,failed,cg,c51c4336-71a6-45d7-b660-8f863817e75f,[quarantined] disabled_language:cg,disabled_cg
+b2e355a8-a2a4-4bd4-8b4c-59971e5270d4,failed,cg,c50ba277-6026-422a-9084-93738791a413,[quarantined] disabled_language:cg,disabled_cg

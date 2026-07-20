@@ -6,8 +6,9 @@
  * - scripts/setup-qstash-schedules.mjs (QStash destinations)
  * - docs/QSTASH_SCHEDULER_SETUP.md
  *
- * Canonical translation: publish → worker_jobs (translate_article) → job_processor.
- * `translation-backfill` QStash schedule enqueues gaps; Vercel daily cron is backup drain.
+ * Canonical translation: publish/schedule → worker_jobs(translate_article)
+ * → dedicated `/api/cron/translation-backfill` process lane (also enqueues gaps).
+ * job_processor remains a secondary drain.
  *
  * Job ids are normalized worker/route names, never URL paths.
  * (e.g. vercel path `/api/cron/workers/health` → job id `workers-health`)

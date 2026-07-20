@@ -1,8 +1,8 @@
 /**
- * POST /api/cron/translation-backfill — audit, enqueue gaps, optional job drain
+ * POST /api/cron/translation-backfill — audit, enqueue gaps, and drain translate jobs
  *
- * Normal operation: enqueue-only (job_processor via orchestrate executes translations).
- * Processing runs on Vercel daily backup, forceProcess body, or TRANSLATION_BACKFILL_PROCESS=true.
+ * Step 2: scheduled/vercel runs process a bounded translate_article batch by default
+ * (escape hatch: TRANSLATION_BACKFILL_ENQUEUE_ONLY=true).
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -75,7 +75,7 @@ async function handleBackfill(request: NextRequest) {
       body.enqueueLimit ?? process.env.TRANSLATION_ENQUEUE_BATCH ?? 40
     );
     const processLimit = Number(
-      body.processLimit ?? process.env.TRANSLATION_PROCESS_BATCH ?? 8
+      body.processLimit ?? process.env.TRANSLATION_PROCESS_BATCH ?? 12
     );
     const dryRun = body.dryRun === true;
 
@@ -127,6 +127,7 @@ async function handleBackfill(request: NextRequest) {
         limit: processLimit,
         jobTypes: ["translate_article", "translation_batch"],
         workerId: "translation_backfill",
+        oldestFirst: true,
       });
     }
 
@@ -169,6 +170,7 @@ async function handleBackfill(request: NextRequest) {
         enqueued: enqueue.enqueued,
         scanned: enqueue.scanned,
         processed,
+        performance,
       },
       { headers: noStoreHeaders() }
     );

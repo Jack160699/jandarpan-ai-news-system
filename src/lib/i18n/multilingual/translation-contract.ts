@@ -128,6 +128,59 @@ export function isActiveReaderTarget(target: NewsroomLanguage): boolean {
   return target === "hi" || target === "en";
 }
 
+/**
+ * Articles eligible for automatic HI↔EN translation.
+ * Includes scheduled/pending quality drafts approaching publication — not only
+ * live published+approved rows — so generation yield recovery stories can be
+ * translated before edition-publish sets published_at.
+ */
+export function isArticleEligibleForAutoTranslation(row: {
+  published_at?: string | null;
+  editorial_status?: string | null;
+  workflow_status?: string | null;
+}): { eligible: boolean; reason: string } {
+  const status = String(row.editorial_status ?? "")
+    .trim()
+    .toLowerCase();
+  const workflow = String(row.workflow_status ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (
+    status === "rejected" ||
+    status === "quarantined" ||
+    status === "killed" ||
+    workflow === "rejected" ||
+    workflow === "quarantined"
+  ) {
+    return { eligible: false, reason: "rejected_or_quarantined" };
+  }
+
+  if (row.published_at && (status === "approved" || status === "published")) {
+    return { eligible: true, reason: "published_approved" };
+  }
+
+  if (
+    workflow === "scheduled" ||
+    workflow === "ready" ||
+    workflow === "ready_for_publish" ||
+    workflow === "in_review" ||
+    workflow === "approved"
+  ) {
+    return { eligible: true, reason: "workflow_approaching_publish" };
+  }
+
+  if (status === "pending" || status === "approved" || status === "draft") {
+    return { eligible: true, reason: "editorial_pending_or_approved" };
+  }
+
+  return { eligible: false, reason: "not_ready_for_translation" };
+}
+
+/** Default queue priority — above intelligence_snapshot (5–8) starvation band. */
+export const TRANSLATION_JOB_PRIORITY_DEFAULT = 9;
+
+
 export function normalizeTranslateArticlePayload(
   raw: LegacyTranslatePayload | Record<string, unknown> | null | undefined,
   context?: {
@@ -147,20 +200,29 @@ export function normalizeTranslateArticlePayload(
 
   const targetRaw = String(
     payload.targetLanguage ?? payload.target ?? payload.language ?? ""
-  )
-    .trim()
-    .toLowerCase();
-  if (!isNewsroomLanguage(targetRaw)) return null;
+  ).trim();
+  if (!targetRaw) return null;
   const targetLanguage = normalizeArticleLanguage(targetRaw);
+  // Reject unknown tokens that normalizeArticleLanguage would otherwise default to hi.
+  const targetNormalizedToken = targetRaw.toLowerCase().replace(/_/g, "-");
+  const targetLooksValid =
+    isNewsroomLanguage(targetNormalizedToken) ||
+    /^(en|english|en-)|^(hi|hindi|hi-|hin$)|^(cg|chhattisgarhi|hi-cg|hne|chg)/.test(
+      targetNormalizedToken
+    ) ||
+    /^(mr|marathi|bn|bengali|bangla|ta|tamil|ur|urdu)/.test(
+      targetNormalizedToken
+    );
+  if (!targetLooksValid) return null;
 
   const sourceRaw = String(
     payload.sourceLanguage ?? payload.source_language ?? context?.sourceLanguage ?? ""
-  )
-    .trim()
-    .toLowerCase();
-  const sourceLanguage = isNewsroomLanguage(sourceRaw)
+  ).trim();
+  const sourceLanguage = sourceRaw
     ? normalizeArticleLanguage(sourceRaw)
     : context?.sourceLanguage ?? "hi";
+
+  if (sourceLanguage === targetLanguage) return null;
 
   const tenantId =
     (typeof payload.tenantId === "string" && payload.tenantId.trim()
@@ -186,7 +248,9 @@ export function normalizeTranslateArticlePayload(
     undefined;
 
   const priority =
-    coerceFiniteNumber(payload.priority) ?? context?.priority ?? 6;
+    coerceFiniteNumber(payload.priority) ??
+    context?.priority ??
+    TRANSLATION_JOB_PRIORITY_DEFAULT;
   const attempts =
     coerceFiniteNumber(payload.attempts) ?? context?.attempts ?? 0;
   const createdAt = String(
