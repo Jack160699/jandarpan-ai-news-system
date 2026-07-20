@@ -171,6 +171,9 @@ export default async function SearchPage({ searchParams }: PageProps) {
         query={q || district || category || "खोज"}
         total={serverResult?.total ?? 0}
         hits={serverResult?.hits ?? []}
+        activeCategory={category ?? null}
+        activeDistrict={district ?? null}
+        activeTime={timeScope ?? "all"}
         topicSuggestion={
           topic
             ? {

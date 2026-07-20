@@ -39,7 +39,7 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".jd-desk-chrome").first()).toBeVisible({ timeout: 30_000 });
     await expect(page.locator(".jd-desk-catnav").first()).toBeVisible();
-    await expect(page.locator(".jd-bottom-nav")).toHaveCount(0);
+    await expect(page.locator(".jd-bottom-nav").first()).toBeHidden();
   });
 
   test("desktop shows SoT editorial chrome and footer", async ({ page }) => {
@@ -48,7 +48,7 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await expect(page.locator(".jd-desk-chrome").first()).toBeVisible({ timeout: 30_000 });
     await expect(page.locator(".jd-desk-brand").first()).toBeVisible();
     await expect(page.locator(".jd-desk-footer").first()).toBeVisible();
-    await expect(page.locator(".jd-masthead")).toHaveCount(0);
+    await expect(page.locator(".jd-masthead").first()).toBeHidden();
   });
 
   test("membership landing remains labeled and gated", async ({ page }) => {
@@ -99,5 +99,77 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await expect(row).toBeVisible({ timeout: 30_000 });
     await expect(row).not.toContainText(/\d+°/);
     await expect(page.locator(".jd-util-tiles")).toHaveCount(0);
+  });
+
+  test("search filter rail sticky on desktop; drawer on phone", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/search?q=रायपुर", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-search-layout > .jd-search-filter-rail").first()).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.locator(".jd-search-hero").first()).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/search?q=रायपुर", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-search-phone-bar").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator(".jd-search-layout > .jd-search-filter-rail")).toBeHidden();
+    await page.locator(".jd-search-open-filters").click();
+    await expect(page.locator(".jd-search-drawer").first()).toBeVisible();
+  });
+
+  test("category page exposes skyscraper rail on desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/category/politics", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-category-rail").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('[data-jd-ad-placement="category.skyscraper"]').first()).toBeVisible();
+  });
+
+  test("login uses two-panel layout on desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-signin-card").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator(".jd-signin-brand-panel").first()).toBeVisible();
+    await expect(page.locator(".jd-signin-form-panel").first()).toBeVisible();
+    await expect(page.locator("#jd-d28-mobile").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /OTP|ओटीपी/i }).first()).toBeDisabled();
+  });
+
+  test("account dual-rail collapses on tablet and expands on wide desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await page.goto("/archive", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-account-nav").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator(".jd-account-utility").first()).toBeHidden();
+
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/archive", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-account-nav").first()).toBeVisible();
+    await expect(page.locator(".jd-account-utility").first()).toBeVisible();
+  });
+
+  test("reserved ad slots keep labelled no-fill dimensions", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const leader = page.locator('[data-jd-ad-placement="home.leaderboard"]').first();
+    await expect(leader).toBeVisible({ timeout: 30_000 });
+    const box = await leader.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(88);
+    await expect(leader).toContainText(/विज्ञापन|Advertisement/);
+  });
+
+  test("phone chrome remains active below 768", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-bottom-nav").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator(".jd-desk-chrome").first()).toBeHidden();
+  });
+
+  test("photo story thumb rail on tablet/desktop", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/system/preview?state=photo", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-photo-story").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator(".jd-photo-story__thumbs").first()).toBeVisible();
+    await expect(page.locator(".jd-photo-story__thumb").first()).toBeVisible();
+    await page.locator(".jd-photo-story__thumb").nth(1).click();
+    await expect(page.locator(".jd-photo-story__thumb").nth(1)).toHaveClass(/is-active/);
   });
 });

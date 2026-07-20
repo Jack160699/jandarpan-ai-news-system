@@ -1,20 +1,20 @@
 "use client";
 
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
-import { DismissibleAd } from "../../components/DismissibleAd";
+import { ReservedAd } from "../../components/ReservedAd";
+import { useJdDsT } from "../../i18n";
 
 /**
  * In-article display unit (story_in_article). Hidden for premium members.
- * Always labeled विज्ञापन — never styled as editorial.
+ * Always labeled विज्ञापन — never styled as editorial. Reserved 580×300 on desk.
  */
-export function ArticleInlineAd({
-  enabled = true,
-  label = "विज्ञापन · इनलाइन 300×250",
-}: {
-  enabled?: boolean;
-  label?: string;
-}) {
+export function ArticleInlineAd({ enabled = true }: { enabled?: boolean }) {
   const { isPremium } = useReaderAccount();
+  const { locale } = useJdDsT();
   if (!enabled || isPremium) return null;
-  return <DismissibleAd label={label} height={120} />;
+  return (
+    <div className="jd-article-inline-ad">
+      <ReservedAd format="inline" locale={locale} placementId="article.inline" />
+    </div>
+  );
 }

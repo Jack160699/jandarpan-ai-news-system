@@ -30,6 +30,7 @@ import { OpinionBody } from "./components/OpinionBody";
 import { PhotoGallery } from "./components/PhotoGallery";
 import { VideoPlayer } from "./components/VideoPlayer";
 import { ArticleInlineAd } from "../monetization";
+import { ReservedAd } from "../components/ReservedAd";
 import type { ReaderArticleModel } from "./types";
 
 function storyAsLiveEntries(model: ReaderArticleModel): LiveBlogEntry[] {
@@ -561,23 +562,30 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
           </article>
           </div>
 
-          {relatedStories.length > 0 && variant !== "explainer" ? (
+          {variant !== "explainer" ? (
             <aside className="jd-article-rail" aria-label={t("article.related")}>
-              <p className="jd-rail-title">
-                {variant === "video" ? t("article.watchNext") : t("article.related")}
-              </p>
-              {relatedStories.slice(0, 5).map((s, i) => (
-                <SecondaryStory
-                  key={`rail-${s.slug}`}
-                  story={
-                    variant === "video"
-                      ? { ...s, kicker: s.kicker ?? t("article.video") }
-                      : s
-                  }
-                  last={i === Math.min(4, relatedStories.length - 1)}
-                  toneIndex={i}
-                />
-              ))}
+              {relatedStories.length > 0 ? (
+                <>
+                  <p className="jd-rail-title">
+                    {variant === "video" ? t("article.watchNext") : t("article.related")}
+                  </p>
+                  {relatedStories.slice(0, 5).map((s, i) => (
+                    <SecondaryStory
+                      key={`rail-${s.slug}`}
+                      story={
+                        variant === "video"
+                          ? { ...s, kicker: s.kicker ?? t("article.video") }
+                          : s
+                      }
+                      last={i === Math.min(4, relatedStories.length - 1)}
+                      toneIndex={i}
+                    />
+                  ))}
+                </>
+              ) : null}
+              <div className="jd-article-rail__ad">
+                <ReservedAd format="sidebar" locale={locale} placementId="article.sidebar" sticky />
+              </div>
             </aside>
           ) : null}
         </div>

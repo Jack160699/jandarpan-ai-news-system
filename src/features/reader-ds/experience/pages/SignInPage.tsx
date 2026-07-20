@@ -154,19 +154,18 @@ export function SignInPage() {
   return (
     <ReaderShell activeNav={null} hideBottomNav showPermissionSheets={false}>
       <Masthead back pageTitle={t("brand.name")} />
-      <main
-        id="main-content"
-        role="main"
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "28px 18px 40px",
-          maxWidth: 430,
-          margin: "0 auto",
-          width: "100%",
-          boxSizing: "border-box",
-        }}
-      >
+      <main id="main-content" role="main" className="jd-signin-page">
+        <div className="jd-signin-card">
+          <aside className="jd-signin-brand-panel" aria-hidden={false}>
+            <div className="jd-desk-mark jd-desk-mark--lg" aria-hidden>
+              ज
+            </div>
+            <h2 className="jd-serif jd-signin-brand-panel__title">{t("signin.brandPanelTitle")}</h2>
+            <p className="jd-ui jd-signin-brand-panel__body">{t("signin.brandPanelBody")}</p>
+            <p className="jd-ui jd-signin-brand-panel__trust">{t("signin.privacyTrust")}</p>
+          </aside>
+
+          <div className="jd-signin-form-panel">
         <h1
           className="jd-serif"
           style={{
@@ -436,6 +435,10 @@ export function SignInPage() {
             {status}
           </p>
         ) : null}
+
+        <p className="jd-ui jd-signin-privacy-mobile">{t("signin.privacyTrust")}</p>
+          </div>
+        </div>
       </main>
     </ReaderShell>
   );

@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Masthead } from "../../components/Masthead";
-import { ReaderShell } from "../../components/ReaderShell";
 import { SecondaryStory } from "../../components/SecondaryStory";
 import { EmptyState } from "../../system/EmptyState";
 import { useJdDsT } from "../../i18n";
+import { AccountShell } from "../components/AccountShell";
 import { loadReadingMemory, toggleBookmark } from "@/lib/reading-memory";
 import type { HomeArticle } from "@/lib/homepage/types";
 import { toReaderStory } from "../../utils";
 
 type Filter = "all" | "article" | "audio" | "offline";
 
-/** D30 — saved stories from reading memory. */
+/** D30 / D15 — saved stories in account dual-rail. */
 export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
   const { t } = useJdDsT();
   const [bookmarks, setBookmarks] = useState<string[]>([]);
@@ -39,9 +38,17 @@ export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
   ];
 
   return (
-    <ReaderShell activeNav="more">
-      <Masthead back backHref="/archive" pageTitle={t("saved.shortTitle")} />
-      <div style={{ display: "flex", gap: 8, padding: "9px 14px", borderBottom: "1px solid var(--jd-line)", background: "#fff", overflowX: "auto" }}>
+    <AccountShell pageTitle={t("saved.shortTitle")} active="saved" backHref="/archive">
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          padding: "9px 14px",
+          borderBottom: "1px solid var(--jd-line)",
+          background: "#fff",
+          overflowX: "auto",
+        }}
+      >
         {chips.map((c) => (
           <button
             key={c.key}
@@ -64,7 +71,7 @@ export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
           </button>
         ))}
       </div>
-      <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "0 14px" }}>
+      <div style={{ padding: "0 14px" }}>
         {items.length === 0 ? (
           <EmptyState />
         ) : (
@@ -106,7 +113,7 @@ export function SavedStoriesPage({ catalog }: { catalog: HomeArticle[] }) {
             {t("saved.filterHint")}
           </p>
         ) : null}
-      </main>
-    </ReaderShell>
+      </div>
+    </AccountShell>
   );
 }

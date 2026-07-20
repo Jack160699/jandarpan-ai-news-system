@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArticleImage } from "../../components/ArticleImage";
 import { Tag } from "../../components/primitives";
 import { JdIcon } from "../../components/icons";
+import { useJdDsT } from "../../i18n";
 
 type PhotoGalleryProps = {
   images: Array<{ src?: string | null; caption?: string | null; alt: string }>;
@@ -12,117 +13,121 @@ type PhotoGalleryProps = {
   backHref?: string;
 };
 
-/** B14 — dark immersive photo story with swipe indicators. */
+/** B14 / D06 — photo story with desk thumb rail; phone keeps dots. */
 export function PhotoGallery({ images, kicker, backHref = "/" }: PhotoGalleryProps) {
+  const { t } = useJdDsT();
   const [index, setIndex] = useState(0);
   const safe = images.length ? images : [{ src: null, caption: null, alt: "फ़ोटो" }];
-  const current = safe[Math.min(index, safe.length - 1)];
   const total = safe.length;
+  const current = safe[Math.min(index, total - 1)];
+
+  const go = useCallback(
+    (next: number) => {
+      setIndex(((next % total) + total) % total);
+    },
+    [total]
+  );
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        setIndex((i) => ((i + 1) % total + total) % total);
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setIndex((i) => ((i - 1) % total + total) % total);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [total]);
 
   return (
-    <div
-      className="jd-ds"
-      data-theme="dark"
-      style={{
-        minHeight: "100dvh",
-        display: "flex",
-        flexDirection: "column",
-        background: "#0e1626",
-      }}
-    >
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "9px 16px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Link href={backHref} aria-label="वापस" style={{ display: "flex", color: "#e7edf6" }}>
+    <div className="jd-ds jd-photo-story" data-theme="dark">
+      <div className="jd-photo-story__chrome">
+        <Link href={backHref} aria-label={t("masthead.backAria")} className="jd-photo-story__icon">
           <JdIcon name="arrowL" size={22} stroke={2} color="#e7edf6" />
         </Link>
-        <span className="jd-ui" style={{ fontSize: 12, fontWeight: 700, color: "#e7edf6" }}>
-          फ़ोटो स्टोरी
-        </span>
-        <button
-          type="button"
-          aria-label="शेयर"
-          data-action="share"
-          style={{ background: "none", border: "none", display: "flex", cursor: "pointer" }}
-        >
+        <span className="jd-ui jd-photo-story__title">फ़ोटो स्टोरी</span>
+        <button type="button" aria-label="शेयर" data-action="share" className="jd-photo-story__icon">
           <JdIcon name="share" size={20} stroke={1.8} color="#e7edf6" />
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setIndex((i) => (i + 1) % total)}
-        style={{
-          flex: 1,
-          position: "relative",
-          margin: 0,
-          padding: 0,
-          border: "none",
-          background: "transparent",
-          cursor: "pointer",
-          minHeight: 420,
-        }}
-        aria-label="अगली फ़ोटो"
-      >
-        <ArticleImage
-          src={current.src}
-          alt={current.alt}
-          ratio="photo"
-          sizes="100vw"
-          tone="festival"
-          priority
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: "50%",
-            transform: "translateX(-50%)",
-            display: "flex",
-            gap: 4,
-          }}
-        >
-          {safe.slice(0, 5).map((_, i) => (
-            <span
-              key={i}
-              aria-hidden
-              style={{
-                width: i === index % Math.min(5, total) ? 18 : 6,
-                height: 6,
-                borderRadius: 6,
-                background: i === index % Math.min(5, total) ? "var(--jd-gold)" : "rgba(255,255,255,.4)",
-              }}
-            />
-          ))}
-        </div>
-      </button>
+      <div className="jd-photo-story__body">
+        <div className="jd-photo-story__stage">
+          <button
+            type="button"
+            className="jd-photo-story__nav jd-photo-story__nav--prev"
+            aria-label={t("photo.prev")}
+            onClick={() => go(index - 1)}
+          >
+            <JdIcon name="arrowL" size={20} stroke={2} color="#e7edf6" />
+          </button>
 
-      <div style={{ flexShrink: 0, padding: "14px 16px 16px", background: "#0e1626" }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 6,
-          }}
-        >
-          {kicker ? <Tag color="var(--jd-gold)">{kicker}</Tag> : <span />}
-          <span className="jd-ui" style={{ fontSize: 12, fontWeight: 700, color: "#93a4c2" }}>
-            {index + 1} / {total}
-          </span>
+          <button
+            type="button"
+            className="jd-photo-story__primary"
+            onClick={() => go(index + 1)}
+            aria-label={t("photo.next")}
+          >
+            <ArticleImage
+              src={current.src}
+              alt={current.alt}
+              ratio="photo"
+              sizes="(max-width: 767px) 100vw, (max-width: 1023px) 70vw, 900px"
+              tone="festival"
+              priority={index === 0}
+            />
+            <div className="jd-photo-story__dots" aria-hidden>
+              {safe.slice(0, 5).map((_, i) => (
+                <span key={i} className={i === index % Math.min(5, total) ? "is-active" : undefined} />
+              ))}
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className="jd-photo-story__nav jd-photo-story__nav--next"
+            aria-label={t("photo.next")}
+            onClick={() => go(index + 1)}
+          >
+            <JdIcon name="chevR" size={20} stroke={2} color="#e7edf6" />
+          </button>
+
+          <div className="jd-photo-story__caption">
+            <div className="jd-photo-story__caption-row">
+              {kicker ? <Tag color="var(--jd-gold)">{kicker}</Tag> : <span />}
+              <span className="jd-ui jd-photo-story__count">
+                {t("photo.count", { n: index + 1, total })}
+              </span>
+            </div>
+            <p className="jd-serif">{current.caption || current.alt}</p>
+          </div>
         </div>
-        <p
-          className="jd-serif"
-          style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "#e7edf6" }}
-        >
-          {current.caption || current.alt}
-        </p>
+
+        <aside className="jd-photo-story__thumbs" aria-label={t("photo.thumbs")}>
+          <div className="jd-photo-story__thumbs-grid">
+            {safe.map((img, i) => (
+              <button
+                key={`${img.alt}-${i}`}
+                type="button"
+                className={`jd-photo-story__thumb${i === index ? " is-active" : ""}`}
+                aria-current={i === index ? "true" : undefined}
+                aria-label={`${i + 1}: ${img.alt}`}
+                onClick={() => setIndex(i)}
+              >
+                <ArticleImage
+                  src={img.src}
+                  alt=""
+                  ratio="square"
+                  sizes="140px"
+                  tone="festival"
+                />
+              </button>
+            ))}
+          </div>
+        </aside>
       </div>
     </div>
   );

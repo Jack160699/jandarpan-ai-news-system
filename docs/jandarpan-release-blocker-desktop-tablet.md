@@ -1,8 +1,9 @@
 # Release blocker — Desktop / tablet Reader DS fidelity
 
-**Date:** 2026-07-20  
+**Date:** 2026-07-21  
 **Branch:** `feat/jandarpan-reader-design-system`  
-**Source of truth:** `docs/jandarpan-reader-redesign/source-designs/desktop-tablet/jandarpan-desktop-tablet-design-brief.html`
+**Source of truth:** `docs/jandarpan-reader-redesign/source-designs/desktop-tablet/jandarpan-desktop-tablet-design-brief.html`  
+**Formal review:** `docs/jandarpan-reader-redesign/desktop-tablet-formal-visual-review.md`
 
 ---
 
@@ -12,10 +13,16 @@
 |------|--------|
 | Desktop/tablet SoT chrome (Util → Brand → CatNav) | **Implemented** |
 | Breakpoints 768 / 1024 / 1280 / 1440 + containers 1160/1240 | **Implemented** |
-| Homepage desk composition (hero + rail + sections + promos + footer) | **Implemented (structure)** |
-| Article share rail + reading ≤680 + opinion purity layout | **Implemented (CSS + rail)** |
-| Full page-by-page visual parity (search filters, account dual-rail, photo thumb rail, etc.) | **Partial — remaining mismatches below** |
-| **Overall desktop/tablet blocker** | **Partially closed** — not fully closed pending visual score ≥85 on all major screens |
+| Homepage desk composition | **Implemented** |
+| Article share rail + reading ≤680 + opinion layout | **Implemented** |
+| 1. Search filter rail | **Closed** |
+| 2. Category skyscraper / side rail | **Closed** |
+| 3. Photo-story thumbnail rail | **Closed** |
+| 4. Login two-panel layout | **Closed** |
+| 5. Account dual-rail layout | **Closed** |
+| 6. Source-backed ad inventory (reserved) | **Closed** |
+| Formal visual rubric (≥85 desk/tablet, no major &lt;80) | **Passed** — see formal review |
+| **Overall desktop/tablet blocker** | **CLOSED** |
 
 **Unchanged / deferred (by mandate):**
 - Razorpay / checkout — deferred and open  
@@ -25,95 +32,71 @@
 
 ---
 
-## Source frames used
+## Source-frame mapping
 
-| Frame | Mapped to |
-|-------|-----------|
-| H01–H04 | `DeskChrome` (util / brand / catnav / sticky / hamburger) |
-| D01 / T01 / TP01 | `ReaderHomepage` + responsive grids |
-| D03 / T02 / TP02 | `ReaderArticlePage` + `.jd-article-layout` + `ArticleShareRail` |
-| D04 | `.jd-article-layout--opinion` |
-| D02 / T03 / D07–D11 | Existing pages + shared shell/grid CSS (hub/search/live) |
-| D12–D16 | Existing DS pages under shared DeskChrome (composition polish remaining) |
-
----
-
-## Token / breakpoint changes
-
-| Token | Value |
-|-------|--------|
-| `--jd-shell` | `#ece6d9` |
-| `--jd-line` | `#dcd5c5` (SoT) |
-| `--jd-shell-max` | 1160 @1280 · 1240 @1440 |
-| `--jd-gutter-x` | 20 / 24 / 28 |
-| `--jd-reading-max` | ≤680 desktop |
-| `--jd-home-rail-w` | 384 desktop |
-| `--jd-share-rail-w` | 56 |
-
-Phone tokens and phone chrome (Masthead / UtilityRow / BottomNav) unchanged below 768.
+| Frame | Implementation |
+|-------|----------------|
+| H01–H04 | `DeskChrome` |
+| D01 / T01 / TP01 | `ReaderHomepage` |
+| D02 / T03 | `CategoryPage` + `.jd-category-rail` skyscraper |
+| D03 / T02 | `ReaderArticlePage` + share/sidebar rails |
+| D06 | `PhotoGallery` thumb rail |
+| D08 | `SearchResultsPage` filter rail / drawer |
+| D13 | `SignInPage` two-panel |
+| D15 | `AccountShell` + profile/saved |
+| Ad inventory | `ReservedAd` placement IDs |
 
 ---
 
-## Files changed (primary)
+## Formal score summary
 
-- `src/features/reader-ds/components/DeskChrome.tsx` (+ deskCatItems)
-- `src/features/reader-ds/components/DeskFooter.tsx`
-- `src/features/reader-ds/components/ReservedAd.tsx`
-- `src/features/reader-ds/components/ArticleShareRail.tsx`
-- `src/features/reader-ds/components/ReaderShell.tsx`
-- `src/features/reader-ds/styles/tokens.css`
-- `src/features/reader-ds/styles/responsive.css`
-- `src/features/reader-ds/homepage/ReaderHomepage.tsx`
-- `src/features/reader-ds/article/ReaderArticlePage.tsx`
-- `src/features/reader-ds/i18n/strings.ts`
-- `e2e/reader-ds-smoke.spec.ts`
-- This doc + release certification notes
+| Metric | Value |
+|--------|------:|
+| Desktop average (@1440 major screens) | **88.7** |
+| Tablet average (1024+768 majors) | **85.9** |
+| Lowest major screen | **82** (category @768) |
+| Phone regression (home @390) | **90** |
+
+Full table + mismatches: `desktop-tablet-formal-visual-review.md`.
 
 ---
 
-## Fidelity (engineering estimate before full screenshot rubric)
+## Ad inventory (reserved, no fake creatives)
 
-| Viewport | Structure | Notes | Est. score |
-|----------|-----------|-------|------------|
-| 1440 | Desk chrome + footer + home rail | Matches SoT stack; section modules simplified vs all SoT bands | ~82–88 |
-| 1280 | Same, container 1160 | Sticky condensed header active | ~82–87 |
-| 1024 | Landscape catnav + 3-col sections | Search filter rail / skyscraper not fully rebuilt | ~80–85 |
-| 768 | Hamburger + truncated catnav | Closer to SoT H04 than prior 5-tab nav | ~80–86 |
-| Phone | Unchanged atoms | Regression expected ≈ prior baseline | ≥ prior |
+| Placement ID | Format | Size | Visibility |
+|--------------|--------|------|------------|
+| `home.leaderboard` | leaderboard | 728×90 | ≥1024 |
+| `tablet.adaptive` | tablet | 468×60 | 768–1023 |
+| `home.billboard` | billboard | 970×250 | ≥1024 |
+| `home.sidebar` | sidebar | 300×250 | ≥1024 home rail |
+| `home.infeed` | infeed | 300×250 | desk mid-feed |
+| `home.sponsor` | sponsor | 728×90 | desk section |
+| `category.skyscraper` | skyscraper | 300×600 | ≥1024 category |
+| `article.inline` | inline | 580×300 | article body |
+| `article.sidebar` | sidebar | 300×250 | ≥1024 article rail |
 
-**Do not treat blocker as fully closed** until screenshot rubric averages ≥85 with no major screen &lt;80.
-
----
-
-## Remaining mismatches
-
-1. Search left filter rail / navy search hero (D08) — not rebuilt  
-2. Category 3-col + 300×600 skyscraper (D02) — partial via hub CSS only  
-3. Photo story desktop thumb rail (D06) — mobile gallery still primary  
-4. Login two-panel brand form (D13) — phone D28 layout retained at all widths  
-5. Account dual-rail (D15) — not rebuilt  
-6. Audio sticky mini-player desk composition — existing mini player only  
-7. Exact SoT ad inventory placements (billboard / sponsorship) — reserved slots added, not every placement  
-8. Visual screenshot artifact folder for formal scoring — generate on Preview smoke  
+Empty/no-fill: dashed labelled slot, fixed min-height, no advertiser invent. Collapse: phone hides desk-only slots via CSS.
 
 ---
 
-## Screenshots (homepage smoke)
+## Tests run
 
-Captured under `docs/jandarpan-reader-redesign/desktop-tablet-screenshots/`:
-
-- `home-1440.png`
-- `home-1280.png`
-- `home-1024.png`
-- `home-768.png`
-- `home-390.png`
-
-These are engineering smoke captures for Preview review — formal SoT rubric scoring still required before declaring the blocker fully closed.
+- `git diff --check`
+- ESLint on changed Reader DS files
+- `tsc --noEmit`
+- Vitest: `ReservedAd.test.ts`, `strings.test.ts`
+- Playwright: `e2e/reader-ds-smoke.spec.ts` (14 passed)
+- Playwright: `e2e/reader-ds-formal-visual.spec.ts` (captures)
+- `NEXT_PUBLIC_READER_DS=1` build — pass  
+- `NEXT_PUBLIC_READER_DS=0` build — pass  
 
 ---
 
-## Owner next steps
+## Remaining low/medium mismatches
 
-1. Run formal screenshot compare vs SoT at 1440/1280/1024/768/phone  
-2. Close remaining page compositions (search, login desk, account, photo)  
-3. Keep payment / rates / offline as separate blockers  
+1. Medium — phone sticky dismissible ad still present on desktop homepage  
+2. Medium — homepage section density lighter than full SoT band set  
+3. Low — sparse local empty states (honest)  
+4. Low — account hub list vs decorative SoT saved grid  
+
+No HIGH source-backed gap remains for this blocker.

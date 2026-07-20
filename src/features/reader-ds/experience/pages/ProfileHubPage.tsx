@@ -2,17 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Masthead } from "../../components/Masthead";
-import { ReaderShell } from "../../components/ReaderShell";
 import { JdIcon } from "../../components/icons";
 import { useJdDsT } from "../../i18n";
 import { SettingRow } from "../components/SettingRow";
+import { AccountShell } from "../components/AccountShell";
 import { loadReadingMemory } from "@/lib/reading-memory";
 import { loadPreferences } from "@/lib/reader-preferences";
 import { loadHomepageLayout } from "@/lib/personalization/homepage-layout";
 import { CG_DISTRICTS } from "@/lib/regional/districts";
 
-/** D29 — reader profile / More hub. */
+/** D29 / D15 — reader profile hub inside account dual-rail. */
 export function ProfileHubPage() {
   const { t, locale } = useJdDsT();
   const [name, setName] = useState(() => t("profile.reader"));
@@ -36,9 +35,8 @@ export function ProfileHubPage() {
   }, [t, locale]);
 
   return (
-    <ReaderShell activeNav="more">
-      <Masthead pageTitle={t("profile.title")} />
-      <main id="main-content" role="main" style={{ flex: 1, overflow: "auto" }} data-jd-locale={locale}>
+    <AccountShell pageTitle={t("profile.title")} active="profile">
+      <div data-jd-locale={locale}>
         <div style={{ padding: "18px 16px", display: "flex", alignItems: "center", gap: 14 }}>
           <div
             aria-hidden
@@ -110,7 +108,7 @@ export function ProfileHubPage() {
         <SettingRow icon="pin" label={t("profile.districts")} href="/archive/districts" />
         <SettingRow icon="bell" label={t("profile.notifications")} href="/archive/notifications" />
         <SettingRow icon="user" label={t("profile.account")} href="/login" />
-      </main>
-    </ReaderShell>
+      </div>
+    </AccountShell>
   );
 }

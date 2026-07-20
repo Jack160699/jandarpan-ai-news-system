@@ -213,7 +213,13 @@ export function ReaderHomepage({
             ) : null}
             {showAds ? (
               <div className="jd-home-ad-leader">
-                <ReservedAd format="leaderboard" locale={locale} />
+                <ReservedAd format="leaderboard" locale={locale} placementId="home.leaderboard" />
+                <ReservedAd
+                  format="tablet"
+                  locale={locale}
+                  placementId="tablet.adaptive"
+                  className="jd-home-ad-tablet"
+                />
               </div>
             ) : null}
           </div>
@@ -244,9 +250,17 @@ export function ReaderHomepage({
                 />
               ))}
             </div>
-            {showAds ? <ReservedAd format="sidebar" locale={locale} /> : null}
+            {showAds ? (
+              <ReservedAd format="sidebar" locale={locale} placementId="home.sidebar" />
+            ) : null}
           </aside>
         </div>
+
+        {showAds ? (
+          <div className="jd-home-billboard">
+            <ReservedAd format="billboard" locale={locale} placementId="home.billboard" />
+          </div>
+        ) : null}
 
         {/* Phone-only util tiles placement (desk rail hides this duplicate via structure) */}
         <div className="jd-home-phone-utils">
@@ -298,8 +312,18 @@ export function ReaderHomepage({
               {i === 0 && showAds ? (
                 <>
                   <DismissibleAd label="विज्ञापन · मिड-फ़ीड 300×250" height={96} />
-                  <ReservedAd format="infeed" locale={locale} className="jd-home-desk-only-ad" />
+                  <ReservedAd
+                    format="infeed"
+                    locale={locale}
+                    placementId="home.infeed"
+                    className="jd-home-desk-only-ad"
+                  />
                 </>
+              ) : null}
+              {i === 1 && showAds ? (
+                <div className="jd-home-sponsor">
+                  <ReservedAd format="sponsor" locale={locale} placementId="home.sponsor" />
+                </div>
               ) : null}
             </section>
           ))}
@@ -317,6 +341,12 @@ export function ReaderHomepage({
             <Link href="/notifications">{t("common.seeAll")} →</Link>
           </div>
         </div>
+
+        {showAds ? (
+          <div className="jd-home-footer-ad">
+            <ReservedAd format="leaderboard" locale={locale} placementId="home.leaderboard" />
+          </div>
+        ) : null}
       </main>
 
       {showAds ? <DismissibleAd sticky label="स्टिकी बैनर · 320×50" /> : null}
