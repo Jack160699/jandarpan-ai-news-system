@@ -606,7 +606,7 @@ async function persistEvidenceLedgerOptional(
     }
 
     const supabase = createAdminServerClient();
-    await supabase.from("article_evidence_ledger").upsert(
+    await supabase.from("article_evidence_ledger" as never).upsert(
       {
         article_id: articleId,
         ledger: {
@@ -614,7 +614,7 @@ async function persistEvidenceLedgerOptional(
           updatedAt: ledger.updatedAt,
         },
         updated_at: new Date().toISOString(),
-      },
+      } as never,
       { onConflict: "article_id" }
     );
   } catch {

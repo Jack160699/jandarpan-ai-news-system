@@ -251,7 +251,7 @@ export async function loadUnderCoveredForIstDay(
     const supabase = createAdminServerClient();
 
     const { data: coverageRows, error: coverageErr } = await supabase
-      .from("district_coverage_daily")
+      .from("district_coverage_daily" as never)
       .select("district_slug, target, published, deficit, tier")
       .eq("day", istDay)
       .gt("deficit", 0)

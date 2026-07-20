@@ -103,7 +103,7 @@ export async function activateStage1(
     }
 
     const supabase = createAdminServerClient();
-    const { error } = await supabase.from("autonomous_rollout_state").upsert(
+    const { error } = await supabase.from("autonomous_rollout_state" as never).upsert(
       {
         id: 1,
         stage: "stage_1",
@@ -113,7 +113,7 @@ export async function activateStage1(
           activated_via: "activateStage1",
           at: new Date().toISOString(),
         },
-      },
+      } as never,
       { onConflict: "id" }
     );
 

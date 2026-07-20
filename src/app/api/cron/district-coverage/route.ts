@@ -147,8 +147,8 @@ async function persistCoverageDaily(
     }));
 
     const { error } = await supabase
-      .from("district_coverage_daily")
-      .upsert(rows, { onConflict: "district_slug,day" });
+      .from("district_coverage_daily" as never)
+      .upsert(rows as never, { onConflict: "district_slug,day" });
 
     if (error) return { upserted: 0, error: error.message };
     return { upserted: rows.length };
