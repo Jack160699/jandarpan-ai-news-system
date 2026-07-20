@@ -19,7 +19,25 @@ export function isValidHttpUrl(value: string): boolean {
 /** Strip tracking params and normalize host/path for dedupe */
 export function canonicalArticleUrl(raw: string): string {
   try {
-    const u = new URL(raw.trim());
+    let working = raw.trim();
+
+    // Google News / News wrapper redirectors → extract real article URL when present.
+    if (/news\.google\.com/i.test(working) || /news\.google\./i.test(working)) {
+      try {
+        const g = new URL(working);
+        const nested =
+          g.searchParams.get("url") ||
+          g.searchParams.get("q") ||
+          g.searchParams.get("u");
+        if (nested && /^https?:\/\//i.test(nested)) {
+          working = nested;
+        }
+      } catch {
+        // keep working
+      }
+    }
+
+    const u = new URL(working);
     u.hash = "";
     const stripParams = [
       "utm_source",
@@ -27,16 +45,59 @@ export function canonicalArticleUrl(raw: string): string {
       "utm_campaign",
       "utm_term",
       "utm_content",
+      "utm_id",
+      "utm_reader",
       "fbclid",
       "gclid",
-      "ref",
+      "gbraid",
+      "wbraid",
       "mc_cid",
       "mc_eid",
+      "ref",
+      "ref_src",
+      "source",
+      "s",
+      "si",
+      "spm",
+      "ncid",
+      "cmpid",
+      "icid",
+      "ocid",
+      "feature",
+      "ved",
+      "usg",
+      "client",
+      "sa",
+      "ei",
+      "gs_l",
+      "scid",
+      "mkt",
     ];
     for (const p of stripParams) u.searchParams.delete(p);
-    u.hostname = u.hostname.replace(/^www\./, "");
-    const path = u.pathname.replace(/\/+$/, "") || "/";
-    return `${u.protocol}//${u.hostname}${path}${u.search ? `?${u.searchParams.toString()}` : ""}`;
+
+    // Drop empty search leftover
+    const kept = [...u.searchParams.keys()].sort();
+    const cleaned = new URLSearchParams();
+    for (const key of kept) {
+      const values = u.searchParams.getAll(key);
+      for (const v of values) cleaned.append(key, v);
+    }
+
+    u.hostname = u.hostname.replace(/^www\./, "").toLowerCase();
+    // Normalize common AMP / mobile host prefixes when path is otherwise identical.
+    u.hostname = u.hostname
+      .replace(/^m\./, "")
+      .replace(/^amp\./, "")
+      .replace(/\.cdn\.ampproject\.org$/i, "");
+
+    let path = u.pathname.replace(/\/+$/, "") || "/";
+    // Strip trailing /amp path segment when it is only an AMP variant.
+    if (/\/amp$/i.test(path) && path.toLowerCase() !== "/amp") {
+      path = path.replace(/\/amp$/i, "") || "/";
+    }
+
+    const search = cleaned.toString();
+    return `${u.protocol}//${u.hostname}${path}${search ? `?${search}` : ""}`;
   } catch {
     return raw.trim().toLowerCase();
   }

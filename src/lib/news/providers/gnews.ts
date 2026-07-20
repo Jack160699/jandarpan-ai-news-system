@@ -145,14 +145,46 @@ export async function fetchGNewsAll(): Promise<ProviderFetchResult> {
     };
   }
 
+  // Respect persisted quota window before burning more category calls.
+  const {
+    buildSourceKey,
+    isSourceCurrentlyBlocked,
+    loadIngestionSourceState,
+    markProviderQuotaExhausted,
+    nextUtcMidnightIso,
+  } = await import("@/lib/news/ingestion/source-state");
+
+  const familyKey = buildSourceKey("gnews", "api");
+  const state = await loadIngestionSourceState(familyKey);
+  const blocked = isSourceCurrentlyBlocked(state);
+  if (blocked.blocked) {
+    return {
+      provider: "gnews",
+      label: "GNews (India)",
+      articles: [],
+      fetched: 0,
+      valid: 0,
+      errors: [`gnews_skipped:${blocked.reason}`],
+      durationMs: Date.now() - startedAt,
+    };
+  }
+
   const results: Array<{
     category: GNewsCategory;
     articles: NormalizedArticle[];
     error?: string;
   }> = [];
 
+  let quotaExhausted = false;
+  let requestsAfterQuota = 0;
+
   for (let i = 0; i < GNEWS_CATEGORIES.length; i += GNEWS_CATEGORY_BATCH_SIZE) {
-    const chunk = GNEWS_CATEGORIES.slice(i, i + GNEWS_CATEGORY_BATCH_SIZE);
+    if (quotaExhausted) {
+      requestsAfterQuota += GNEWS_CATEGORIES.length - i;
+      break;
+    }
+
+    const chunk = GNEWS_CATEGORIES.slice(i, GNEWS_CATEGORY_BATCH_SIZE + i);
     const settled = await Promise.allSettled(
       chunk.map(async (category) => {
         const result = await fetchGNewsCategory(category);
@@ -165,13 +197,31 @@ export async function fetchGNewsAll(): Promise<ProviderFetchResult> {
       const entry = settled[j];
       if (entry.status === "fulfilled") {
         results.push(entry.value);
+        const err = entry.value.error ?? "";
+        if (isGNewsQuotaError(err)) {
+          quotaExhausted = true;
+        }
       } else {
         const msg =
           entry.reason instanceof Error
             ? entry.reason.message
             : "category failed";
         results.push({ category, articles: [], error: msg });
+        if (isGNewsQuotaError(msg)) {
+          quotaExhausted = true;
+        }
       }
+    }
+
+    if (quotaExhausted) {
+      await markProviderQuotaExhausted({
+        sourceKey: familyKey,
+        providerFamily: "gnews",
+        untilIso: nextUtcMidnightIso(),
+        errorCategory: "quota_exhausted",
+      });
+      // Also mark per remaining categories as skipped without calling them.
+      break;
     }
 
     if (i + GNEWS_CATEGORY_BATCH_SIZE < GNEWS_CATEGORIES.length) {
@@ -189,6 +239,12 @@ export async function fetchGNewsAll(): Promise<ProviderFetchResult> {
     articles.push(...r.articles);
   }
 
+  if (quotaExhausted) {
+    errors.push(
+      `gnews_quota_abort: remaining_categories_skipped requestsAfterQuotaEstimate=${requestsAfterQuota}`
+    );
+  }
+
   const { unique, skipped } = dedupeArticles(articles, { fuzzy: true });
   if (skipped > 0) {
     console.log(`[gnews] deduped ${skipped} duplicate articles across categories`);
@@ -203,4 +259,10 @@ export async function fetchGNewsAll(): Promise<ProviderFetchResult> {
     errors,
     durationMs: Date.now() - startedAt,
   };
+}
+
+function isGNewsQuotaError(message: string): boolean {
+  return /quota|rate\s*limit|429|unauthorized\s*\(403\)|403|usage\s*limit|plan\s*limit/i.test(
+    message
+  );
 }

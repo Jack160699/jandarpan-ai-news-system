@@ -6,9 +6,17 @@ import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase";
 import {
   RSS_DISABLE_HOURS,
   RSS_MAX_CONSECUTIVE_FAILURES,
+  RSS_PERMANENT_DISABLE_YEARS,
+  RSS_PERMANENT_RETIRE_FAILURES,
   RSS_SOURCES,
   type RSSSource,
 } from "@/lib/news/providers/rss-sources";
+import {
+  buildSourceKey,
+  isSourceCurrentlyBlocked,
+  loadIngestionSourceState,
+  markSourcePermanentlyRetired,
+} from "@/lib/news/ingestion/source-state";
 
 export type SourceHealthRecord = {
   source_id: string;
@@ -71,6 +79,9 @@ export function isSourceSkipped(
   health: Map<string, SourceHealthRecord>
 ): boolean {
   const record = health.get(source.id);
+  if (record && record.consecutive_failures >= RSS_PERMANENT_RETIRE_FAILURES) {
+    return true;
+  }
   if (!record?.disabled_until) return false;
 
   const until = new Date(record.disabled_until).getTime();
@@ -78,6 +89,27 @@ export function isSourceSkipped(
     return true;
   }
   return false;
+}
+
+/** Async check including ingestion_source_state permanent retirement / long disable. */
+export async function isRssSourceBlocked(
+  source: RSSSource,
+  health: Map<string, SourceHealthRecord>
+): Promise<{ skipped: boolean; reason: string | null }> {
+  if (isSourceSkipped(source, health)) {
+    const record = health.get(source.id);
+    if (record && record.consecutive_failures >= RSS_PERMANENT_RETIRE_FAILURES) {
+      return { skipped: true, reason: "permanently_retired" };
+    }
+    return { skipped: true, reason: "temporarily_disabled" };
+  }
+
+  const state = await loadIngestionSourceState(buildSourceKey("rss", source.id));
+  const blocked = isSourceCurrentlyBlocked(state);
+  if (blocked.blocked) {
+    return { skipped: true, reason: blocked.reason };
+  }
+  return { skipped: false, reason: null };
 }
 
 export async function recordSourceSuccess(
@@ -118,8 +150,24 @@ export async function recordSourceFailure(
   const consecutive = (prev?.consecutive_failures ?? 0) + 1;
   const now = new Date().toISOString();
 
+  const permanent =
+    consecutive >= RSS_PERMANENT_RETIRE_FAILURES ||
+    isPermanentFeedError(errorMessage);
+
   let disabled_until: string | null = null;
-  if (consecutive >= RSS_MAX_CONSECUTIVE_FAILURES) {
+  if (permanent) {
+    const until = new Date();
+    until.setFullYear(until.getFullYear() + RSS_PERMANENT_DISABLE_YEARS);
+    disabled_until = until.toISOString();
+    console.warn(
+      `[rss-health] Permanently retired ${source.id}: ${errorMessage}`
+    );
+    await markSourcePermanentlyRetired({
+      sourceKey: buildSourceKey("rss", source.id),
+      providerFamily: "rss",
+      reason: errorMessage.slice(0, 240),
+    });
+  } else if (consecutive >= RSS_MAX_CONSECUTIVE_FAILURES) {
     const until = new Date();
     until.setHours(until.getHours() + RSS_DISABLE_HOURS);
     disabled_until = until.toISOString();
@@ -142,6 +190,12 @@ export async function recordSourceFailure(
 
   health.set(source.id, record);
   await persistHealth(record);
+}
+
+function isPermanentFeedError(message: string): boolean {
+  return /\b404\b|\b410\b|not found|gone|nxdomain|getaddrinfo|ENOTFOUND/i.test(
+    message
+  );
 }
 
 async function syncPlatformSourceMetrics(

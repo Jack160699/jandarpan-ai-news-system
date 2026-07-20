@@ -62,12 +62,21 @@ export function classifyHttpFailure(
   }
 
   if (status === 401 || status === 403) {
+    // GNews free-tier daily exhaustion commonly surfaces as HTTP 403 without
+    // the word "quota" in the body. Treat provider 403 as quota when the body
+    // hints at limits OR the provider is gnews.
+    const treatAsQuota =
+      RATE_LIMIT_RE.test(snippet) ||
+      /limit|exceed|usage|plan/i.test(snippet) ||
+      provider === "gnews";
     return new NewsFetchError(
       provider
-        ? `${provider}: unauthorized (${status})`
+        ? treatAsQuota
+          ? `${provider}: quota or unauthorized (${status})`
+          : `${provider}: unauthorized (${status})`
         : `Unauthorized (${status})`,
       {
-        code: "HTTP_ERROR",
+        code: treatAsQuota ? "QUOTA_EXCEEDED" : "HTTP_ERROR",
         status,
         retryable: false,
         provider,

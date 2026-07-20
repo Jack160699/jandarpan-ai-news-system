@@ -10,6 +10,11 @@ import { countPendingAiQueue } from "@/lib/news/ai/queue";
 import { logNewsroom } from "@/lib/newsroom";
 import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
 import {
+  emptyEarlyDedupMetrics,
+  mergeEarlyDedupMetrics,
+  type EarlyDedupMetrics,
+} from "@/lib/news/ingestion/early-dedup";
+import {
   ingestProviderArticles,
   mergeValidationStats,
 } from "@/lib/news/pipeline/ingest-provider-batch";
@@ -44,6 +49,8 @@ export type ScalableIngestResult = {
     duplicates: number;
     skipped?: boolean;
     error?: string;
+    earlyDuplicates?: number;
+    incrementalFiltered?: number;
   }>;
   healthySources: string[];
   failedSources: string[];
@@ -51,6 +58,7 @@ export type ScalableIngestResult = {
   imageAnalytics: ImageEnrichmentAnalytics | null;
   validationStats: ArticleValidationStats;
   normalized: number;
+  earlyDedup: EarlyDedupMetrics;
 };
 
 export async function runScalableIngestion(
@@ -72,6 +80,7 @@ export async function runScalableIngestion(
   let totalFetched = 0;
   let queuedForAI = 0;
   let imageAnalytics: ImageEnrichmentAnalytics | null = null;
+  let earlyDedup = emptyEarlyDedupMetrics();
   const insertedSignalIds: string[] = [];
   const validationStats: ArticleValidationStats = {
     total: 0,
@@ -94,6 +103,10 @@ export async function runScalableIngestion(
 
     if (!run.articles.length) {
       if (run.errors.length) skippedProviders.push(run.provider);
+      // Still count gnews skip-after-quota as completed-but-empty when intentional.
+      if (run.errors.some((e) => /gnews_skipped|quota/i.test(e))) {
+        skippedProviders.push(run.provider);
+      }
       continue;
     }
 
@@ -109,11 +122,16 @@ export async function runScalableIngestion(
     queuedForAI += ingested.queuedForAI;
     failures.push(...ingested.failures);
     imageAnalytics = ingested.imageAnalytics ?? imageAnalytics;
+    earlyDedup = mergeEarlyDedupMetrics(earlyDedup, ingested.earlyDedup);
     mergeValidationStats(validationStats, ingested.validationStats);
     Object.assign(categoryStats, ingested.categoryStats);
     providerStats[run.provider] =
-      (providerStats[run.provider] ?? 0) + ingested.inserted;
-    if (ingested.inserted > 0 || ingested.totalFetched > 0) {
+      (providerStats[run.provider] ?? 0) + ingested.signalsInserted;
+    if (
+      ingested.signalsInserted > 0 ||
+      ingested.totalFetched > 0 ||
+      ingested.earlyDedup.passed >= 0
+    ) {
       completedProviders.push(run.provider);
     }
   }
@@ -149,9 +167,10 @@ export async function runScalableIngestion(
         queuedForAI += ingested.queuedForAI;
         failures.push(...ingested.failures);
         imageAnalytics = ingested.imageAnalytics ?? imageAnalytics;
+        earlyDedup = mergeEarlyDedupMetrics(earlyDedup, ingested.earlyDedup);
         mergeValidationStats(validationStats, ingested.validationStats);
         Object.assign(categoryStats, ingested.categoryStats);
-        providerStats.rss = (providerStats.rss ?? 0) + ingested.inserted;
+        providerStats.rss = (providerStats.rss ?? 0) + ingested.signalsInserted;
       },
     });
 
@@ -178,7 +197,7 @@ export async function runScalableIngestion(
 
   const supabase = createAdminServerClient();
   const status =
-    inserted > 0
+    signalsInserted > 0 || inserted > 0
       ? deadline.timedOutSafely
         ? "partial_timeout"
         : "success"
@@ -186,13 +205,19 @@ export async function runScalableIngestion(
         ? "partial"
         : "empty";
 
+  const earlyDupTotal =
+    earlyDedup.earlyDuplicateKnownSignal +
+    earlyDedup.earlyDuplicateBatch +
+    earlyDedup.earlyDuplicateCanonicalUrl +
+    earlyDedup.earlyDuplicateProviderId;
+
   const { data: logRow } = await supabase
     .from("ingestion_logs")
     .insert({
       status,
       total_fetched: totalFetched,
       total_valid: totalFetched - failedValidation,
-      inserted,
+      inserted: signalsInserted,
       skipped_duplicates: skippedDuplicates,
       failed_validation: failedValidation,
       category_stats: categoryStats,
@@ -211,9 +236,14 @@ export async function runScalableIngestion(
         image_analytics: imageAnalytics,
         validation_stats: validationStats,
         signals_inserted: signalsInserted,
+        legacy_inserted: inserted,
         signal_ids_sample: insertedSignalIds.slice(0, 20),
         newsroom_layers: ["news_signals", "news_events"],
         scalable: true,
+        early_dedup: earlyDedup,
+        early_duplicates_total: earlyDupTotal,
+        image_enrichment_attempted: imageAnalytics?.total ?? 0,
+        metrics_contract_version: 1,
       },
     })
     .select("id")
@@ -280,10 +310,11 @@ export async function runScalableIngestion(
     skippedProviders,
     timedOutSafely: deadline.timedOutSafely,
     validationReasons: validationStats.reasons,
+    earlyDedup,
   });
 
   return {
-    ok: inserted > 0 || totalFetched > 0,
+    ok: inserted > 0 || signalsInserted > 0 || totalFetched > 0,
     inserted,
     signalsInserted,
     skippedDuplicates,
@@ -306,6 +337,7 @@ export async function runScalableIngestion(
     imageAnalytics,
     validationStats,
     normalized,
+    earlyDedup,
   };
 }
 
