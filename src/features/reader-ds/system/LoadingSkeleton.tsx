@@ -41,7 +41,7 @@ export function LoadingSkeleton() {
     >
       <Masthead hideActions />
       <DesktopPrimaryNav active="home" />
-      <UtilityRow />
+      <UtilityRow disableLiveWeather />
       <main id="main-content" role="main" className="jd-shell" style={{ flex: 1, padding: 14 }}>
         <Skel w="100%" h={180} style={{ marginBottom: 12, borderRadius: 2 }} />
         <Skel w="40%" h={10} />

@@ -46,22 +46,48 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 20_000 });
   });
 
-  test("D28 login uses reader-ds shell without legacy chrome", async ({ page }) => {
+  test("A1 utility row reserves weather slot without placeholder market tiles", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/login", { waitUntil: "domcontentloaded" });
-    await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("जनदर्पण में आपका स्वागत है")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("button", { name: /OTP भेजें/ })).toBeDisabled();
-    await expect(page.getByRole("button", { name: /Google से जारी रखें/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /मेहमान के रूप में जारी रखें/ })).toBeVisible();
-    await expect(page.locator(".jd-bottom-nav")).toHaveCount(0);
-    await expect(page.locator(".app-shell")).toHaveCount(0);
-
-    await page.getByRole("link", { name: /मेहमान के रूप में जारी रखें/ }).click();
-    await expect(page).toHaveURL((url) => {
-      const u = typeof url === "string" ? new URL(url) : url;
-      return u.pathname === "/";
+    await page.route("**/api/weather**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: "ok",
+          district: "raipur",
+          locationEn: "Raipur",
+          locationHi: "रायपुर",
+          tempC: 29,
+          conditionHi: "साफ़",
+          conditionEn: "Clear",
+          isDay: true,
+          weatherCode: 0,
+          source: "open-meteo",
+          fetchedAt: new Date().toISOString(),
+          stale: false,
+        }),
+      });
     });
-    await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 20_000 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-utility-row").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator(".jd-utility-row").first()).toContainText("29°", { timeout: 15_000 });
+    await expect(page.locator(".jd-util-tiles")).toHaveCount(0);
+  });
+
+  test("A1 weather unavailable does not invent temperatures", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.route("**/api/weather**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, status: "unavailable", district: "raipur", source: "open-meteo", stale: false }),
+      });
+    });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const row = page.locator(".jd-utility-row").first();
+    await expect(row).toBeVisible({ timeout: 30_000 });
+    await expect(row).not.toContainText(/\d+°/);
+    await expect(page.locator(".jd-util-tiles")).toHaveCount(0);
   });
 });

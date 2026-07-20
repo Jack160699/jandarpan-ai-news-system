@@ -16,7 +16,7 @@ The redesign is a **substantial Preview-quality RC**, not a production-safe read
 
 Gatekeeper remediation fixed those **critical integrity defects** locally (account providers restored, success gated to active subscription, homepage wrapped in `ReaderShell`, demo creatives removed, fake weather/rates removed, photo/live-blog fabrication reduced, `useSupabase` `getServerSnapshot` infinite-loop fixed). Engineering gates (typecheck, build, vitest, reader-ds Playwright smoke+a11y) pass after remediation.
 
-**Remaining release blockers are still HIGH.** Checkout is not live, D28 login is not DS, English UI is not applied across DS chrome, desktop layout is invented vs phone-only Plot, offline downloads are not real media, A1 is missing Plot utility tiles/weather without a live rates/weather feed, and gatekeeper fixes are **not yet on the latest Preview deployment**.
+**Remaining release blockers are still HIGH.** Checkout / Razorpay is **not live** and remains **explicitly deferred and open** (no payment implementation in the A1 utilities pass). D28 login fidelity improved on Preview after DS login work; English language switching was closed later on the feature branch. Desktop layout is still invented vs phone-only Plot. Offline downloads are not real media. **A1 weather is now honestly wired (Open-Meteo)**; **market rate tiles remain omitted** until a real feed exists (A1 utilities **partially closed**). Production Reader DS must stay disabled.
 
 ---
 
@@ -28,17 +28,17 @@ Gatekeeper remediation fixed those **critical integrity defects** locally (accou
 
 | Severity | Blocker | Evidence |
 |----------|---------|----------|
-| **HIGH** | Live checkout / payments not production-ready | `/membership/checkout` intentionally routes to failure (`checkout-not-live`). Cannot take money from millions of readers. |
-| **HIGH** | D28 login not redesigned to Plot DS | `/login` still legacy chrome + different bottom nav; local env shows Supabase unconfigured warning. |
-| **HIGH** | Language switching incomplete on DS chrome | Hindi strings hardcoded across DS; English preference does not restyle/re-copy DS shell. |
+| **HIGH** | Live checkout / payments not production-ready | `/membership/checkout` intentionally routes to failure (`checkout-not-live`). **Deferred — open.** No Razorpay work in A1 utilities pass. |
+| **HIGH** | D28 login not redesigned to Plot DS | Addressed on feature branch after certification; re-verify on latest Preview. |
+| **HIGH** | Language switching incomplete on DS chrome | Closed later on feature branch (`d48daf2` / follow-ups); re-verify on Preview. |
 | **HIGH** | Desktop/tablet grid not Plot-approved | Plot gallery is phone-first; Phase 6 grid is derived invention. Visual risk at ≥768. |
 | **HIGH** | Offline / downloads not real | C25 downloads are localStorage IDs, not offline media packages. |
-| **HIGH** | A1 Plot fidelity incomplete without inventing data | Weather temp and gold/silver/diesel tiles omitted after removing placeholders; Plot A1 expects them from live feeds that are not honestly wired. |
-| **HIGH** | Gatekeeper fixes not on Preview yet | Latest feature Preview still `e30a25c` docs deploy; production domain continues on `main` without DS flag — good — but certification of *deployed* Preview content lags local remediation. |
+| **HIGH** | A1 Plot fidelity incomplete without inventing data | **Partially closed:** weather via Open-Meteo in `UtilityRow`. **Still open:** gold/silver/diesel tiles omitted (no honest live rates feed). See `docs/jandarpan-release-blocker-a1-weather-market.md`. |
+| **MED** | Gatekeeper / A1 Preview lag | Confirm latest feature Preview SHA after push. |
 | **MED** | Placeholder lead imagery / empty image plane | A1 lead often shows striped placeholder — CLS and trust risk. |
 | **MED** | Duplicate nav landmarks in a11y tree | Desktop + phone nav both in DOM (CSS-hidden) — noisy for AT. |
 | **MED** | No full Lighthouse / axe / bundle gate in this pass | Playwright landmark suite only; no CI axe-core; no Lighthouse score artifact. |
-| **MED** | cg-rates API still invents jittered prices | Safe only because homepage no longer consumes it for UtilTiles. |
+| **MED** | cg-rates API still invents jittered prices | Safe only because homepage does not consume it for UtilTiles — do not reconnect. |
 
 Until every **HIGH** row is closed (or explicitly accepted by product with a production kill-switch plan), this must not be enabled for Production readers.
 
@@ -192,4 +192,4 @@ Homepage A1; district/latest/trending/search/live; category/topics; story templa
 
 # NO
 
-Remaining blockers: non-live checkout, unrebuilt login (D28), incomplete language application, non-Plot desktop grid, non-real offline downloads, A1 Plot gaps without honest live feeds, and Preview lag for gatekeeper integrity fixes. Critical integrity holes found in this review were patched locally; that does not make the product production-complete.
+Remaining blockers: **checkout / Razorpay deferred and open**; non-Plot desktop grid; non-real offline downloads; **A1 market tiles still open** (weather closed via Open-Meteo — see `docs/jandarpan-release-blocker-a1-weather-market.md`). Production Reader DS must stay off. No payment implementation in the A1 utilities pass.

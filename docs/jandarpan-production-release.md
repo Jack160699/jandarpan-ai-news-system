@@ -347,7 +347,10 @@ Dashboard → Deployments → prior Production READY deployment → **Promote to
 
 ### E. Data / payments
 
-- Checkout intentionally not live (`checkout-not-live`) — no payment rollback needed for DS.
+- Checkout intentionally not live (`checkout-not-live`) — **Razorpay checkout blocker remains deferred and open.**
+- No payment implementation was performed in the A1 weather/market utilities pass.
+- Production `NEXT_PUBLIC_READER_DS` must remain **unset / `0`**.
+- A1 weather: Open-Meteo (no API key). Market tiles: omitted until an honest feed exists — `docs/jandarpan-release-blocker-a1-weather-market.md`.
 - No Supabase schema migrations in this feature set.
 
 ---

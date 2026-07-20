@@ -206,7 +206,7 @@ export function ReaderHomepage({
           ) : null}
         </div>
 
-        {/* Rates only when a live feed supplies values — no placeholder prices */}
+        {/* Market rates omitted until an honest live feed exists (no cg-rates jitter). */}
         <UtilTiles />
 
         {isPremium ? (
