@@ -2,7 +2,11 @@
  * Geo-tagging — extract Chhattisgarh districts and state from text + region hints
  */
 
-import { CG_DISTRICTS, CG_STATE_SLUG } from "@/lib/regional/districts";
+import { CG_STATE_SLUG } from "@/lib/regional/districts";
+import {
+  classifyDistrictContent,
+  PRIMARY_MIN_CONFIDENCE,
+} from "@/lib/regional/district-classifier";
 import type { Json } from "@/types/supabase";
 import type { JsonObject } from "@/types/json";
 
@@ -13,6 +17,8 @@ export type RegionalGeoMetadata = {
   confidence: number;
   is_chhattisgarh: boolean;
   tagged_at: string;
+  classification_kind?: string;
+  classification_method?: string;
 };
 
 const CG_STATE_RE =
@@ -26,61 +32,146 @@ function normalizeBlob(parts: Array<string | null | undefined>): string {
 }
 
 export function matchDistrictsInText(blob: string): Array<{ slug: string; hits: number }> {
-  const matches: Array<{ slug: string; hits: number }> = [];
-
-  for (const district of CG_DISTRICTS) {
-    let hits = 0;
-    for (const alias of district.aliases) {
-      const re = new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
-      if (re.test(blob)) hits++;
-    }
-    if (hits > 0) matches.push({ slug: district.slug, hits });
+  const classification = classifyDistrictContent({ title: blob });
+  if (classification.kind === "district" && classification.districtSlug) {
+    return [
+      {
+        slug: classification.districtSlug,
+        hits: Math.max(1, classification.matchedTerms.length),
+      },
+      ...classification.alternatives
+        .filter((a) => a.slug !== classification.districtSlug)
+        .map((a) => ({ slug: a.slug, hits: a.terms.length || 1 })),
+    ];
   }
-
-  return matches.sort((a, b) => b.hits - a.hits);
+  if (classification.kind === "multi_district") {
+    return classification.alternatives.map((a) => ({
+      slug: a.slug,
+      hits: a.terms.length || 1,
+    }));
+  }
+  return [];
 }
 
+/**
+ * Tag geo from content using the district classifier.
+ * - kind=district + confidence ≥ 0.65 → primary_district set
+ * - multi → districts[] filled; primary = best if ≥0.65 else null
+ * - statewide → state=chhattisgarh, is_chhattisgarh=true, primary_district=null
+ * - Never forces Raipur for state-govt-only
+ */
 export function tagGeoFromContent(input: {
   title: string;
   body?: string | null;
   region?: string | null;
   category?: string | null;
 }): RegionalGeoMetadata {
+  const classification = classifyDistrictContent(input);
+  const tagged_at = new Date().toISOString();
+
+  if (classification.kind === "statewide") {
+    return {
+      state: CG_STATE_SLUG,
+      districts: [],
+      primary_district: null,
+      confidence: classification.confidence,
+      is_chhattisgarh: true,
+      tagged_at,
+      classification_kind: classification.kind,
+      classification_method: classification.method,
+    };
+  }
+
+  if (classification.kind === "multi_district") {
+    const districts = classification.alternatives.map((a) => a.slug);
+    const best = classification.alternatives[0];
+    const primary =
+      best && best.confidence >= PRIMARY_MIN_CONFIDENCE ? best.slug : null;
+    return {
+      state: CG_STATE_SLUG,
+      districts,
+      primary_district: primary,
+      confidence: classification.confidence,
+      is_chhattisgarh: true,
+      tagged_at,
+      classification_kind: classification.kind,
+      classification_method: classification.method,
+    };
+  }
+
+  if (classification.kind === "district" && classification.districtSlug) {
+    const primary =
+      classification.confidence >= PRIMARY_MIN_CONFIDENCE
+        ? classification.districtSlug
+        : null;
+    return {
+      state: CG_STATE_SLUG,
+      districts: [classification.districtSlug],
+      primary_district: primary,
+      confidence: classification.confidence,
+      is_chhattisgarh: true,
+      tagged_at,
+      classification_kind: classification.kind,
+      classification_method: classification.method,
+    };
+  }
+
+  if (classification.kind === "non_cg") {
+    return {
+      state: "india",
+      districts: [],
+      primary_district: null,
+      confidence: classification.confidence,
+      is_chhattisgarh: false,
+      tagged_at,
+      classification_kind: classification.kind,
+      classification_method: classification.method,
+    };
+  }
+
+  // unknown — light heuristic fallback for region/category hints
   const blob = normalizeBlob([input.title, input.body, input.region, input.category]);
-  const districtMatches = matchDistrictsInText(blob);
-  const districts = districtMatches.map((m) => m.slug);
-
-  let state: RegionalGeoMetadata["state"] = "unknown";
-  let confidence = 0.35;
-
   const regionCg =
     input.region?.toLowerCase() === "chhattisgarh" ||
     input.region?.toLowerCase() === "cg";
   const textCg = CG_STATE_RE.test(blob);
   const categoryLocal = input.category?.toLowerCase() === "local";
 
-  if (regionCg || textCg || categoryLocal || districts.length > 0) {
-    state = CG_STATE_SLUG;
-    confidence = 0.55;
-    if (regionCg) confidence += 0.2;
-    if (textCg) confidence += 0.15;
-    if (districts.length) confidence += Math.min(0.2, districts.length * 0.08);
-    if (categoryLocal) confidence += 0.1;
-  } else if (INDIA_NATIONAL_RE.test(blob)) {
-    state = "india";
-    confidence = 0.5;
+  if (regionCg || textCg || categoryLocal) {
+    return {
+      state: CG_STATE_SLUG,
+      districts: [],
+      primary_district: null,
+      confidence: Math.min(0.6, classification.confidence + 0.15),
+      is_chhattisgarh: true,
+      tagged_at,
+      classification_kind: "statewide",
+      classification_method: "unknown_cg_context",
+    };
   }
 
-  const primary_district = districts[0] ?? null;
-  confidence = Math.min(1, Math.round(confidence * 100) / 100);
+  if (INDIA_NATIONAL_RE.test(blob)) {
+    return {
+      state: "india",
+      districts: [],
+      primary_district: null,
+      confidence: 0.5,
+      is_chhattisgarh: false,
+      tagged_at,
+      classification_kind: "non_cg",
+      classification_method: "national_fallback",
+    };
+  }
 
   return {
-    state,
-    districts,
-    primary_district,
-    confidence,
-    is_chhattisgarh: state === CG_STATE_SLUG,
-    tagged_at: new Date().toISOString(),
+    state: "unknown",
+    districts: [],
+    primary_district: null,
+    confidence: classification.confidence,
+    is_chhattisgarh: false,
+    tagged_at,
+    classification_kind: classification.kind,
+    classification_method: classification.method,
   };
 }
 
@@ -101,23 +192,29 @@ export function mergeGeoMetadata(
   }
 
   const districts = [...districtSet];
+  // Prefer best.primary only when classifier-grade; never invent Raipur
   const primary =
     best.primary_district && districts.includes(best.primary_district)
       ? best.primary_district
-      : districts[0] ?? null;
+      : null;
 
   const isCg = valid.some((t) => t.is_chhattisgarh) || best.state === CG_STATE_SLUG;
+  const anyStatewide = valid.some(
+    (t) => t.classification_kind === "statewide" && !t.primary_district
+  );
 
   return {
     state: isCg ? CG_STATE_SLUG : best.state,
     districts,
-    primary_district: primary,
+    primary_district: anyStatewide && districts.length === 0 ? null : primary,
     confidence: Math.min(
       1,
       valid.reduce((max, t) => Math.max(max, t.confidence), 0)
     ),
     is_chhattisgarh: isCg,
     tagged_at: new Date().toISOString(),
+    classification_kind: best.classification_kind,
+    classification_method: best.classification_method,
   };
 }
 
@@ -153,3 +250,10 @@ export function geoFromRecord(
     category: row.category ?? row.tags?.[0] ?? null,
   });
 }
+
+// Re-export classifier for callers that import from geo-tagging
+export {
+  classifyDistrictContent,
+  type DistrictClassification,
+  type ClassifyDistrictInput,
+} from "@/lib/regional/district-classifier";

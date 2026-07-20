@@ -13,6 +13,21 @@ import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
 import { geoFromRecord, mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
+import {
+  createEmptyLedger,
+  recordClaim,
+} from "@/lib/autonomous/evidence-ledger";
+import {
+  decideQualityGate,
+  isHighRiskStory,
+  scoreHumanQuality,
+  PUBLISH_THRESHOLD,
+} from "@/lib/autonomous/human-quality-score";
+import {
+  factualPenaltyForUnsupportedNumbers,
+  scanUnsupportedNumbers,
+} from "@/lib/autonomous/claim-number-scan";
+import { updateExistingPublishedArticle } from "@/lib/news/ai/update-existing-article";
 import { optimizeSeoSlug } from "@/lib/seo/slug-optimize";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import { buildOptimizedFactPack } from "@/lib/news/ai/optimized-fact-pack";
@@ -118,6 +133,14 @@ type PendingCandidate = {
   repaired: boolean;
   usedFallback: boolean;
   intelligenceV2: EditorialIntelligenceV2 | null;
+  humanQualityMeta?: {
+    score: number;
+    decision: string;
+    highRisk: boolean;
+    holdReason: string | null;
+    evidenceSummary: Record<string, number>;
+    unsupportedNumbers: ReturnType<typeof scanUnsupportedNumbers>;
+  };
 };
 
 function logEditorial(message: string, context?: Record<string, unknown>): void {
@@ -333,22 +356,32 @@ async function loadExistingStoryIndex(): Promise<{
   headlines: string[];
   bodyFingerprints: string[];
   eventIds: string[];
+  /** Published event_id → article id */
+  eventToArticleId: Map<string, string>;
 }> {
   const supabase = createAdminServerClient();
   const { data } = await supabase
     .from("generated_articles")
-    .select("headline, article_body, event_id")
+    .select("id, headline, article_body, event_id, workflow_status, published_at")
     .order("created_at", { ascending: false })
     .limit(200);
   const headlines: string[] = [];
   const bodyFingerprints: string[] = [];
   const eventIds: string[] = [];
+  const eventToArticleId = new Map<string, string>();
   for (const row of data ?? []) {
     if (row.headline) headlines.push(row.headline);
     if (row.article_body) bodyFingerprints.push(fingerprintBody(row.article_body));
-    if (row.event_id) eventIds.push(row.event_id);
+    if (row.event_id) {
+      eventIds.push(row.event_id);
+      const isPublished =
+        row.workflow_status === "published" || Boolean(row.published_at);
+      if (isPublished && row.id && !eventToArticleId.has(row.event_id)) {
+        eventToArticleId.set(row.event_id, row.id as string);
+      }
+    }
   }
-  return { headlines, bodyFingerprints, eventIds };
+  return { headlines, bodyFingerprints, eventIds, eventToArticleId };
 }
 
 function evaluateDraft(input: {
@@ -382,6 +415,213 @@ function evaluateDraft(input: {
   });
 }
 
+/**
+ * Stage-1 human quality + unsupported-number scan.
+ * May force held_for_* by flipping publish_allowed.
+ */
+function applyHumanQualityAndEvidenceGate(input: {
+  draft: EditorialDraft;
+  event: NewsEventRow;
+  signals: NewsSignalRow[];
+  sourceTexts: string[];
+  quality: EditorialQualityReport;
+}): {
+  quality: EditorialQualityReport;
+  humanScore: ReturnType<typeof scoreHumanQuality>;
+  gate: ReturnType<typeof decideQualityGate>;
+  unsupportedNumbers: ReturnType<typeof scanUnsupportedNumbers>;
+  evidenceSummary: {
+    signal_count: number;
+    source_url_count: number;
+    claim_count: number;
+    unsupported_number_count: number;
+  };
+  holdReason: string | null;
+} {
+  const draftText = [
+    input.draft.headline,
+    input.draft.summary,
+    input.draft.article_body,
+  ].join("\n");
+
+  const highRisk = isHighRiskStory(draftText);
+
+  const unsupportedNumbers = scanUnsupportedNumbers({
+    draftText,
+    sourceTexts: input.sourceTexts,
+  });
+  const penalty = factualPenaltyForUnsupportedNumbers(unsupportedNumbers.length);
+
+  const geo = tagGeoFromContent({
+    title: input.draft.headline,
+    body: draftText,
+    region: input.event.region,
+    category: input.event.category,
+  });
+
+  const factualBase = Math.max(
+    0,
+    Math.min(1, input.quality.ai_confidence) - penalty
+  );
+
+  const humanScore = scoreHumanQuality({
+    factualGrounding: factualBase,
+    districtRelevance: geo.is_chhattisgarh
+      ? geo.primary_district
+        ? 0.9
+        : 0.55
+      : 0.25,
+    readability: Math.min(1, input.quality.quality_breakdown.readability ?? 0.6),
+    sourceDiversity: Math.min(1, input.signals.length / 3),
+    freshness: 0.7,
+    imagePresence: 0.4,
+    headlineClarity: Math.min(
+      1,
+      input.quality.quality_breakdown.headline_quality ?? 0.6
+    ),
+    threshold: PUBLISH_THRESHOLD,
+  });
+
+  const gate = decideQualityGate(humanScore.score, { isHighRisk: highRisk });
+  let quality = { ...input.quality };
+  let holdReason: string | null = null;
+
+  const rejectionJoined = quality.rejectionReasons.join(" ").toLowerCase();
+  const mentionsContradiction = /contradict/.test(rejectionJoined);
+  const mentionsDuplicate =
+    /duplicate/.test(rejectionJoined) ||
+    Boolean(quality.duplicate_cluster_id);
+
+  if (unsupportedNumbers.length > 0) {
+    holdReason = "held_for_evidence";
+    quality = {
+      ...quality,
+      publish_allowed: false,
+      publishDecision: "reject",
+      rejectionReasons: [
+        ...quality.rejectionReasons,
+        `unsupported_numbers:${unsupportedNumbers.length}`,
+        holdReason,
+      ],
+    };
+  } else if (highRisk && humanScore.score < 90) {
+    holdReason = "held_for_safety";
+    quality = {
+      ...quality,
+      publish_allowed: false,
+      publishDecision: gate.decision === "repair" ? "repair" : "reject",
+      should_repair: gate.decision === "repair",
+      borderline: gate.decision === "repair",
+      rejectionReasons: [
+        ...quality.rejectionReasons,
+        `human_quality:${humanScore.score}`,
+        "high_risk_story",
+        holdReason,
+      ],
+    };
+  } else if (mentionsContradiction && !quality.publish_allowed) {
+    holdReason = "held_for_contradiction";
+    quality = {
+      ...quality,
+      publish_allowed: false,
+      rejectionReasons: [...quality.rejectionReasons, holdReason],
+    };
+  } else if (mentionsDuplicate && !quality.publish_allowed) {
+    holdReason = "held_for_duplicate";
+    quality = {
+      ...quality,
+      publish_allowed: false,
+      rejectionReasons: [...quality.rejectionReasons, holdReason],
+    };
+  } else if (gate.decision === "hold") {
+    holdReason = "held_for_quality";
+    quality = {
+      ...quality,
+      publish_allowed: false,
+      publishDecision: "reject",
+      rejectionReasons: [
+        ...quality.rejectionReasons,
+        `human_quality:${humanScore.score}`,
+        holdReason,
+      ],
+    };
+  } else if (gate.decision === "repair") {
+    quality = {
+      ...quality,
+      should_repair: true,
+      borderline: true,
+      publish_allowed: false,
+      publishDecision: "repair",
+      rejectionReasons: [
+        ...quality.rejectionReasons,
+        `human_quality_repair_band:${humanScore.score}`,
+        "held_for_quality",
+      ],
+    };
+    holdReason = "held_for_quality";
+  }
+
+  const sourceUrls = input.signals
+    .map((s) => s.article_url)
+    .filter(Boolean);
+
+  return {
+    quality,
+    humanScore,
+    gate,
+    unsupportedNumbers,
+    evidenceSummary: {
+      signal_count: input.signals.length,
+      source_url_count: sourceUrls.length,
+      claim_count: unsupportedNumbers.length,
+      unsupported_number_count: unsupportedNumbers.length,
+    },
+    holdReason,
+  };
+}
+
+async function persistEvidenceLedgerOptional(
+  articleId: string,
+  signals: NewsSignalRow[],
+  unsupportedNumbers: ReturnType<typeof scanUnsupportedNumbers>
+): Promise<void> {
+  try {
+    let ledger = createEmptyLedger(articleId);
+    for (const s of signals) {
+      ledger = recordClaim(ledger, {
+        claimId: `signal_${s.id}`,
+        claimText: (s.title ?? "").slice(0, 200),
+        sourceUrls: s.article_url ? [s.article_url] : [],
+        supported: true,
+      });
+    }
+    for (const u of unsupportedNumbers) {
+      ledger = recordClaim(ledger, {
+        claimId: u.claimId,
+        claimText: u.claimText,
+        sourceUrls: [],
+        supported: false,
+        notes: "number_not_in_sources",
+      });
+    }
+
+    const supabase = createAdminServerClient();
+    await supabase.from("article_evidence_ledger" as never).upsert(
+      {
+        article_id: articleId,
+        ledger: {
+          claims: ledger.claims,
+          updatedAt: ledger.updatedAt,
+        },
+        updated_at: new Date().toISOString(),
+      } as never,
+      { onConflict: "article_id" }
+    );
+  } catch {
+    // optional — never fail generation on ledger write
+  }
+}
+
 async function persistGeneratedArticle(input: {
   event: NewsEventRow;
   draft: EditorialDraft;
@@ -392,6 +632,14 @@ async function persistGeneratedArticle(input: {
   usedFallback: boolean;
   batchRescue?: boolean;
   intelligenceV2?: EditorialIntelligenceV2 | null;
+  humanQualityMeta?: {
+    score: number;
+    decision: string;
+    highRisk: boolean;
+    holdReason: string | null;
+    evidenceSummary: Record<string, number>;
+    unsupportedNumbers: ReturnType<typeof scanUnsupportedNumbers>;
+  };
 }): Promise<EditorialGenerationResult> {
   const supabase = createAdminServerClient();
   const slug = optimizeSeoSlug(input.draft.headline, input.event.id);
@@ -579,6 +827,15 @@ async function persistGeneratedArticle(input: {
       ...(input.intelligenceV2
         ? { intelligence_v2: input.intelligenceV2 }
         : {}),
+      ...(input.humanQualityMeta
+        ? {
+            human_quality_score: input.humanQualityMeta.score,
+            human_quality_decision: input.humanQualityMeta.decision,
+            human_quality_high_risk: input.humanQualityMeta.highRisk,
+            hold_reason: input.humanQualityMeta.holdReason,
+            evidence_ledger_summary: input.humanQualityMeta.evidenceSummary,
+          }
+        : {}),
       image: {
         status: "queued",
         hero_url: hero_image_url,
@@ -616,6 +873,14 @@ async function persistGeneratedArticle(input: {
       skipped: false,
       reason: error.message,
     };
+  }
+
+  if (input.humanQualityMeta) {
+    await persistEvidenceLedgerOptional(
+      inserted.id,
+      input.signals,
+      input.humanQualityMeta.unsupportedNumbers
+    );
   }
 
   logEditorialDecision({
@@ -778,6 +1043,15 @@ async function prepareCandidate(
     });
   }
 
+  const hqGate = applyHumanQualityAndEvidenceGate({
+    draft,
+    event,
+    signals,
+    sourceTexts,
+    quality,
+  });
+  quality = hqGate.quality;
+
   return {
     candidate: {
       event,
@@ -788,6 +1062,14 @@ async function prepareCandidate(
       repaired,
       usedFallback,
       intelligenceV2,
+      humanQualityMeta: {
+        score: hqGate.humanScore.score,
+        decision: hqGate.gate.decision,
+        highRisk: hqGate.gate.highRisk,
+        holdReason: hqGate.holdReason,
+        evidenceSummary: hqGate.evidenceSummary,
+        unsupportedNumbers: hqGate.unsupportedNumbers,
+      },
     },
     skipped: false,
   };
@@ -957,6 +1239,7 @@ export async function generateEditorialFromEvent(
     repaired: candidate.repaired,
     usedFallback: candidate.usedFallback,
     intelligenceV2: candidate.intelligenceV2,
+    humanQualityMeta: candidate.humanQualityMeta,
   });
   if (persisted.ok && persisted.article) {
     logArticleGenerationPhase("article_generation_completed", {
@@ -1055,6 +1338,17 @@ export async function generateEditorialsFromEvents(options?: {
     (e) => isWithinAutoGenerationWindow(e) && !usedEventIds.has(e.id)
   );
 
+  // Bound update pass: already-published events that may have new signals (max 3).
+  const MAX_EXISTING_UPDATES = 3;
+  const updateCandidates = (events as NewsEventRow[])
+    .filter(
+      (e) =>
+        isWithinAutoGenerationWindow(e) &&
+        usedEventIds.has(e.id) &&
+        storyIndex.eventToArticleId.has(e.id)
+    )
+    .slice(0, MAX_EXISTING_UPDATES);
+
   const existingSignalIds = await loadExistingSignalIdSet(
     uniqueSignalIds(windowed)
   );
@@ -1083,12 +1377,34 @@ export async function generateEditorialsFromEvents(options?: {
   let rejected = 0;
   let repaired = 0;
   let skipped = 0;
+  let updates = 0;
   const errors: string[] = [];
   const results: BatchEditorialResult["results"] = [];
   const failedCandidates: PendingCandidate[] = [];
   const confidenceScores: number[] = [];
   let lastPublishedStory: { id: string; title: string; confidence: number } | null =
     null;
+
+  for (const event of updateCandidates) {
+    try {
+      const updated = await updateExistingPublishedArticle(event.id);
+      if (updated.ok && !updated.skipped) {
+        updates += 1;
+        results.push({
+          eventId: event.id,
+          ok: true,
+          updated: true,
+          reason: updated.reason,
+        });
+      } else if (!updated.ok && !updated.skipped) {
+        errors.push(`${event.id}:update:${updated.reason}`);
+      }
+    } catch (err) {
+      errors.push(
+        `${event.id}:update:${err instanceof Error ? err.message : "update_failed"}`
+      );
+    }
+  }
 
   const preparedList = await runWithConcurrency(
     pending,
@@ -1149,6 +1465,7 @@ export async function generateEditorialsFromEvents(options?: {
         repaired: candidate.repaired,
         usedFallback: candidate.usedFallback,
         intelligenceV2: candidate.intelligenceV2,
+        humanQualityMeta: candidate.humanQualityMeta,
       });
 
       results.push({
@@ -1315,6 +1632,7 @@ export async function generateEditorialsFromEvents(options?: {
         usedFallback: candidate.usedFallback,
         batchRescue: true,
         intelligenceV2: candidate.intelligenceV2,
+        humanQualityMeta: candidate.humanQualityMeta,
       });
 
       if (saved.ok && saved.article) {
@@ -1423,6 +1741,7 @@ export async function generateEditorialsFromEvents(options?: {
     rejected,
     repaired,
     skipped,
+    updates,
     avgConfidence,
     topStory,
     qualityPassRate: validationPassRate(qualityMetrics),
@@ -1436,6 +1755,7 @@ export async function generateEditorialsFromEvents(options?: {
     published,
     repaired,
     skipped,
+    updates,
     avgConfidence,
     topStory,
     errors,

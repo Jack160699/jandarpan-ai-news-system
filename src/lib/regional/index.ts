@@ -20,8 +20,19 @@ export {
   mergeGeoMetadata,
   matchDistrictsInText,
   tagGeoFromContent,
+  classifyDistrictContent,
   type RegionalGeoMetadata,
+  type DistrictClassification,
+  type ClassifyDistrictInput,
 } from "@/lib/regional/geo-tagging";
+
+export {
+  dryRunRepairArticles,
+  applyHighConfidenceRepairs,
+  REPAIR_MIN_CONFIDENCE,
+  type RepairArticleRow,
+  type DistrictRepairProposal,
+} from "@/lib/regional/district-repair";
 
 export {
   formatDistrictLabel,

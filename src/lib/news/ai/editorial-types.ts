@@ -36,6 +36,8 @@ export type BatchEditorialResult = {
   repaired: number;
   skipped: number;
   avgConfidence: number;
+  /** Material updates applied to already-published stories (not new publishes) */
+  updates?: number;
   topStory: {
     storyId: string | null;
     title: string;
@@ -66,6 +68,7 @@ export type BatchEditorialResult = {
     ok: boolean;
     published?: boolean;
     repaired?: boolean;
+    updated?: boolean;
     reason?: string;
     confidence?: number;
     readability?: number;

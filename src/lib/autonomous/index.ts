@@ -18,11 +18,28 @@ export type {
 } from "@/lib/autonomous/types";
 
 export {
+  activateStage1,
   describeRolloutState,
   getAutonomousRolloutStage,
   isAutonomousKillSwitchOn,
   isAutonomousPublishingEnabled,
+  type ActivateStage1Result,
 } from "@/lib/autonomous/rollout-state";
+
+export {
+  formatIstDay,
+  getIstDayBounds,
+  istWallTimeToUtcDate,
+  type IstDayBounds,
+} from "@/lib/autonomous/ist-day";
+
+export {
+  getSourcesForDistrict,
+  getVerifiedOfficialSources,
+  listOfficialSources,
+  type OfficialSource,
+  type OfficialSourceStatus,
+} from "@/lib/autonomous/official-sources";
 
 export {
   buildCoveragePlan,
@@ -58,10 +75,16 @@ export {
 export {
   HUMAN_QUALITY_WEIGHTS,
   PUBLISH_THRESHOLD,
+  REPAIR_THRESHOLD,
   REVIEW_THRESHOLD,
+  HIGH_RISK_THRESHOLD,
+  decideQualityGate,
+  isHighRiskStory,
   meetsPublishThreshold,
   scoreHumanQuality,
   type HumanQualityInput,
+  type QualityGateDecision,
+  type QualityGateResult,
 } from "@/lib/autonomous/human-quality-score";
 
 export {

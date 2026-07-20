@@ -32,6 +32,7 @@ import { getTenantConfig } from "@/lib/tenant/resolve";
 import { resolveStorySlug } from "@/lib/news/related-stories";
 import { bodySections } from "@/lib/news/story-markdown";
 import { SITE_URL } from "@/lib/seo/constants";
+import { resolveArticleDisplayImage } from "@/lib/news/images/resolve-article-display-image";
 
 export const revalidate = 60;
 
@@ -59,12 +60,10 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
 
   const generated = await getStoryArticleBySlug(slug);
   if (generated) {
-    const article = generatedToNewsArticle(generated);
-    const ogImage =
-      generated.editorial_metadata?.image?.og_url ?? article.image_url;
+    const ogImage = resolveArticleDisplayImage(generated).ogUrl;
     return buildLocalizedStoryMetadata(generated, {
       displayLanguage: displayLang,
-      ogImage: ogImage ?? undefined,
+      ogImage: ogImage || undefined,
     });
   }
 

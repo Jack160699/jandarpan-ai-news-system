@@ -53,6 +53,8 @@ export function normalizedToSignal(
     category: article.category,
     region: geo.is_chhattisgarh ? "chhattisgarh" : article.region,
     language: article.language,
+    // Column + ingestion_metadata.geo (migration 014)
+    geo_metadata: geo,
     ingestion_metadata: asJsonObject({
       author: article.author,
       title_hash: meta?.title_hash,
@@ -149,7 +151,7 @@ export async function persistNewsSignals(
 
     const { data, error } = await supabase
       .from("news_signals")
-      .upsert(batch, {
+      .upsert(batch as never, {
         onConflict: "article_url",
         ignoreDuplicates: true,
       })

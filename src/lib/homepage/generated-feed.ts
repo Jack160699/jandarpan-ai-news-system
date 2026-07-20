@@ -11,9 +11,11 @@ import {
   buildLocalBreakingAlerts,
 } from "@/lib/regional";
 import type { RankingPersonalization } from "@/lib/news/ai/ranking";
-import { buildOpenGraphImageUrl, optimizeCdnImageUrl } from "@/lib/news/ai/editorial-image-compress";
-import { resolveFallbackImage } from "@/lib/news/images/fallbacks";
-import { isDisplayableImage } from "@/lib/news/images/validate";
+import {
+  buildOpenGraphImageUrl,
+  optimizeCdnImageUrl,
+} from "@/lib/news/ai/editorial-image-compress";
+import { resolveArticleDisplayImage } from "@/lib/news/images/resolve-article-display-image";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import {
   resolveLocalizedFieldsStrict,
@@ -53,18 +55,17 @@ function hoursSince(iso: string | null): number {
 }
 
 function resolveImageUrls(row: GeneratedArticleRow): { hero: string; og: string } {
-  const meta = row.editorial_metadata?.image;
-  const heroRaw =
-    row.hero_image_url || meta?.og_url || meta?.hero_url || null;
+  const resolved = resolveArticleDisplayImage({
+    hero_image_url: row.hero_image_url,
+    editorial_metadata: row.editorial_metadata,
+    tags: row.tags,
+    headline: row.headline,
+    category: row.tags?.[0] ?? null,
+  });
 
-  const category = row.tags[0] ?? "world";
-  const hero =
-    heroRaw && isDisplayableImage(heroRaw)
-      ? optimizeCdnImageUrl(heroRaw, 1200)
-      : optimizeCdnImageUrl(resolveFallbackImage({ category }), 1200);
-
-  const og = meta?.og_url
-    ? optimizeCdnImageUrl(meta.og_url, 1200)
+  const hero = optimizeCdnImageUrl(resolved.displayUrl, 1200);
+  const og = resolved.ogUrl
+    ? optimizeCdnImageUrl(resolved.ogUrl, 1200)
     : buildOpenGraphImageUrl(hero);
 
   return { hero, og };
