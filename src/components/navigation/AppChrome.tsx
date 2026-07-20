@@ -66,6 +66,7 @@ const READER_DS_EXACT = new Set([
   "/archive",
   "/membership",
   "/maintenance",
+  "/login",
 ]);
 const READER_DS_PREFIXES = [
   "/district/",
@@ -146,7 +147,9 @@ export function AppChrome({ children }: AppChromeProps) {
   // Skip legacy onboarding on QA system galleries to avoid overlaying F-states.
   if (isReaderDesignSystemEnabled() && isReaderDsRoute(pathname)) {
     const skipOnboarding =
-      pathname.startsWith("/system/") || pathname === "/maintenance";
+      pathname.startsWith("/system/") ||
+      pathname === "/maintenance" ||
+      pathname === "/login";
     return (
       <HeadlinesListenProvider>
         <ArticleSpeechProvider>

@@ -45,4 +45,23 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await page.goto("/membership", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 20_000 });
   });
+
+  test("D28 login uses reader-ds shell without legacy chrome", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("जनदर्पण में आपका स्वागत है")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: /OTP भेजें/ })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /Google से जारी रखें/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /मेहमान के रूप में जारी रखें/ })).toBeVisible();
+    await expect(page.locator(".jd-bottom-nav")).toHaveCount(0);
+    await expect(page.locator(".app-shell")).toHaveCount(0);
+
+    await page.getByRole("link", { name: /मेहमान के रूप में जारी रखें/ }).click();
+    await expect(page).toHaveURL((url) => {
+      const u = typeof url === "string" ? new URL(url) : url;
+      return u.pathname === "/";
+    });
+    await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 20_000 });
+  });
 });

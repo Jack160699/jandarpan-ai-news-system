@@ -9,4 +9,5 @@ export { NotificationPrefsPage } from "./pages/NotificationPrefsPage";
 export { LanguagePage } from "./pages/LanguagePage";
 export { DistrictPrefsPage } from "./pages/DistrictPrefsPage";
 export { AccessibilityPage } from "./pages/AccessibilityPage";
+export { SignInPage } from "./pages/SignInPage";
 export { tracksFromShorts, tracksFromArticles } from "./audio/tracksFromShorts";

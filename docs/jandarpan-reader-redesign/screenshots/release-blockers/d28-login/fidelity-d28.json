@@ -1,0 +1,42 @@
+{
+  "preview": "http://127.0.0.1:3000",
+  "hasReaderDsShell": true,
+  "url": "http://127.0.0.1:3000/login",
+  "heading": "जनदर्पण में आपका स्वागत है",
+  "otpDisabled": true,
+  "googleVisible": true,
+  "guestVisible": true,
+  "fidelity": {
+    "scores": {
+      "composition": 16,
+      "typography": 14,
+      "spacingAndSizing": 13,
+      "colourAndSurface": 10,
+      "imageTreatment": 8,
+      "iconsAndControls": 8,
+      "responsiveBehaviour": 8,
+      "stateCompleteness": 7
+    },
+    "total": 84,
+    "classification": "close_with_minor_gaps",
+    "confidence": "high",
+    "mismatches": [
+      "Plot shows filled masked phone; implementation uses empty placeholder until typed"
+    ],
+    "contentVariance": [
+      "Optional email magic-link panel is retained below Plot composition (not in Plot)"
+    ],
+    "integrityNotes": [
+      "Mobile OTP verify flow not implemented — CTA disabled with honest Hindi note"
+    ],
+    "diffPercent": 21.94
+  },
+  "evidence": {
+    "approved": "approved-d28-390x844.png",
+    "corrected390": "corrected-d28-390x844.png",
+    "corrected430": "corrected-d28-430x932.png",
+    "sideBySide": "side-by-side-d28-390x844.png",
+    "overlay": "overlay-d28-390x844.png",
+    "diff": "diff-d28-390x844.png"
+  }
+}
