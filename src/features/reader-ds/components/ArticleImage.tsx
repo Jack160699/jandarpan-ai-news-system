@@ -1,7 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { optimizeCdnUrl } from "@/lib/news/images/cdn";
+import {
+  nextEditorialImageOnError,
+  resolveEditorialImage,
+  type EditorialImageResolveResult,
+} from "@/lib/news/images/editorial-image-resolver";
+import { isDisplayableImage } from "@/lib/news/images/validate";
 
 export type JdImageRatio = "lead" | "video" | "thumb" | "photo" | "square";
 
@@ -57,11 +63,19 @@ type ArticleImageProps = {
   sizes?: string;
   /** Scene tone for missing-image editorial fallback */
   tone?: keyof typeof TONES | string;
+  category?: string | null;
+  source?: string | null;
+  region?: string | null;
+  /**
+   * When true, alt is treated as a known photo description.
+   * When false/unknown, prefer neutral placeholder alt on synthetic frames.
+   */
+  altIsPhotoDescription?: boolean;
 };
 
 /**
- * Reader-DS image — fixed 190px lead height, CDN crop, design-style
- * tinted fallback (not a grey globe watermark).
+ * Reader-DS image — reserved aspect, CDN crop, tiered fallback, then text-only.
+ * Never shows a broken-image icon; never infinite-retries.
  */
 export function ArticleImage({
   src,
@@ -72,10 +86,41 @@ export function ArticleImage({
   priority = false,
   sizes,
   tone = "city",
+  category = "general",
+  source,
+  region,
+  altIsPhotoDescription = false,
 }: ArticleImageProps) {
-  const [failed, setFailed] = useState(false);
+  const srcKey = src ?? "";
+  const base = useMemo(
+    () =>
+      resolveEditorialImage({
+        heroUrl: src && isDisplayableImage(src) ? src : null,
+        sourceImageUrl: src && isDisplayableImage(src) ? src : null,
+        category: category ?? "general",
+        source,
+        region,
+        alt: altIsPhotoDescription ? alt : undefined,
+        title: altIsPhotoDescription ? undefined : alt,
+        aspect: CDN_ASPECT[ratio],
+        width: WIDTH[ratio],
+      }),
+    [src, category, source, region, ratio, alt, altIsPhotoDescription]
+  );
+
+  const [runtime, setRuntime] = useState<{
+    key: string;
+    display: EditorialImageResolveResult;
+    errors: number;
+  } | null>(null);
   const [forceLoad, setForceLoad] = useState(false);
+  const [forceKey, setForceKey] = useState(srcKey);
   const [dataSaving, setDataSaving] = useState(false);
+
+  const display =
+    runtime && runtime.key === srcKey ? runtime.display : base;
+  const errorCount = runtime && runtime.key === srcKey ? runtime.errors : 0;
+  const forceLoadActive = forceKey === srcKey && forceLoad;
   useEffect(() => {
     const read = () =>
       setDataSaving(document.documentElement.getAttribute("data-data-saving") === "1");
@@ -87,11 +132,12 @@ export function ArticleImage({
     });
     return () => obs.disconnect();
   }, []);
-  const raw = src && src.trim() ? src.trim() : "";
-  const blocked = dataSaving && !forceLoad && Boolean(raw);
-  const hasImage = Boolean(raw) && !failed && !blocked;
+
+  const blocked = dataSaving && !forceLoadActive && Boolean(display.optimizedUrl);
+  const textOnly = display.textOnly || !display.optimizedUrl;
+  const hasImage = !textOnly && !blocked;
   const optimized = hasImage
-    ? optimizeCdnUrl(raw, {
+    ? optimizeCdnUrl(display.optimizedUrl!, {
         width: WIDTH[ratio],
         aspect: CDN_ASPECT[ratio],
         quality: priority ? 82 : 74,
@@ -100,10 +146,33 @@ export function ArticleImage({
 
   const fixedH = FIXED_H[ratio];
   const [c0, c1] = TONES[tone] ?? TONES.city;
+  const safeAlt = display.alt || (altIsPhotoDescription ? alt : "Editorial visual placeholder");
 
+  const handleError = () => {
+    if (errorCount >= 2) {
+      setRuntime({
+        key: srcKey,
+        errors: errorCount + 1,
+        display: {
+          ...display,
+          url: null,
+          optimizedUrl: null,
+          fallbackUrl: null,
+          textOnly: true,
+          tier: "text_only",
+        },
+      });
+      return;
+    }
+    setRuntime({
+      key: srcKey,
+      errors: errorCount + 1,
+      display: nextEditorialImageOnError(display),
+    });
+  };
   return (
     <figure
-      className={`jd-img${className ? ` ${className}` : ""}`}
+      className={`jd-img${className ? ` ${className}` : ""}${textOnly ? " jd-img--text-only" : ""}`}
       style={{
         position: "relative",
         height: fixedH,
@@ -113,8 +182,9 @@ export function ArticleImage({
         margin: 0,
         background: `linear-gradient(135deg, ${c0}, ${c1})`,
       }}
+      data-image-tier={display.tier}
+      data-text-only={textOnly ? "1" : "0"}
     >
-      {/* hatch pattern matching design placeholders */}
       <span
         aria-hidden
         style={{
@@ -132,12 +202,12 @@ export function ArticleImage({
         <img
           className="jd-img-media"
           src={optimized}
-          alt={alt}
+          alt={safeAlt}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
           fetchPriority={priority ? "high" : "auto"}
           sizes={sizes}
-          onError={() => setFailed(true)}
+          onError={handleError}
           style={{
             position: "absolute",
             inset: 0,
@@ -149,10 +219,35 @@ export function ArticleImage({
         />
       ) : null}
 
+      {textOnly && !blocked ? (
+        <span
+          aria-hidden
+          className="jd-ui"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "rgba(255,255,255,.72)",
+            fontSize: ratio === "thumb" ? 10 : 12,
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            textTransform: "uppercase",
+          }}
+        >
+          {category ? String(category).slice(0, 2) : "JD"}
+        </span>
+      ) : null}
+
       {blocked ? (
         <button
           type="button"
-          onClick={() => setForceLoad(true)}
+          onClick={() => {
+            setForceKey(srcKey);
+            setForceLoad(true);
+          }}
           className="jd-ui"
           style={{
             position: "absolute",
@@ -193,8 +288,7 @@ export function ArticleImage({
         </figcaption>
       ) : null}
 
-      {/* sr-only alt when no real image */}
-      {!hasImage ? <span className="sr-only">{alt}</span> : null}
+      {!hasImage ? <span className="sr-only">{safeAlt}</span> : null}
     </figure>
   );
 }

@@ -54,6 +54,20 @@ function hoursSince(iso: string | null): number {
   return (Date.now() - new Date(iso).getTime()) / 3_600_000;
 }
 
+function pickFeedSource(row: GeneratedArticleRow): string | null {
+  const meta = row.editorial_metadata as {
+    source_attribution?: Array<{ name?: string; source?: string }>;
+    image?: { source?: string };
+  } | null;
+  const attr = meta?.source_attribution?.[0];
+  return attr?.name ?? attr?.source ?? meta?.image?.source ?? null;
+}
+
+function pickFeedRegion(row: GeneratedArticleRow): string | null {
+  const geo = row.geo_metadata as { district?: string; region?: string; state?: string } | null;
+  return geo?.district ?? geo?.region ?? geo?.state ?? null;
+}
+
 function resolveImageUrls(row: GeneratedArticleRow): { hero: string; og: string } {
   const resolved = resolveArticleDisplayImage({
     hero_image_url: row.hero_image_url,
@@ -61,7 +75,13 @@ function resolveImageUrls(row: GeneratedArticleRow): { hero: string; og: string 
     tags: row.tags,
     headline: row.headline,
     category: row.tags?.[0] ?? null,
+    source: pickFeedSource(row),
+    region: pickFeedRegion(row),
   });
+
+  if (resolved.textOnly || !resolved.displayUrl) {
+    return { hero: "", og: "" };
+  }
 
   const hero = optimizeCdnImageUrl(resolved.displayUrl, 1200);
   const og = resolved.ogUrl

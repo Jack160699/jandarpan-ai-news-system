@@ -35,6 +35,22 @@ export {
 } from "@/lib/news/images/display";
 
 export {
+  resolveEditorialImage,
+  nextEditorialImageOnError,
+  type EditorialImageResolveInput,
+  type EditorialImageResolveResult,
+  type EditorialImageTier,
+} from "@/lib/news/images/editorial-image-resolver";
+
+export {
+  isTrustedImageHost,
+  isTrustedImageUrl,
+  isSupabaseSignedUrl,
+  isExpiredSignedUrl,
+  TRUSTED_REMOTE_PATTERNS,
+} from "@/lib/news/images/trusted-remote-hosts";
+
+export {
   normalizeMediaAspect,
   aspectClassName,
   type MediaAspect,

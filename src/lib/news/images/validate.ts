@@ -3,6 +3,10 @@
  */
 
 import { isValidHttpUrl } from "@/lib/news/normalize";
+import {
+  isExpiredSignedUrl,
+  isSupabaseSignedUrl,
+} from "@/lib/news/images/trusted-remote-hosts";
 
 export type ImageCandidateSource =
   | "og"
@@ -28,7 +32,14 @@ const KNOWN_BROKEN_IMAGE_RE =
   /photo-1529107386315-e1a269ed48e0/i;
 
 const LOGO_ICON_RE =
-  /\/(logo|icon|favicon|avatar|badge|sprite|emoji|button|banner-ad|ads?|advert|promo-thumb|brand-mark)[\/._-]|logo\.|icon\.|favicon\.|\.svg(\?|$)|sprite|avatar-|profile-pic/i;
+  /\/(logo|icon|favicon|avatar|badge|sprite|emoji|button|banner-ad|ads?|advert|promo-thumb|brand-mark|app-icon|apple-touch)[\/._-]|logo\.|icon\.|favicon\.|\.svg(\?|$)|sprite|avatar-|profile-pic|apple-touch-icon/i;
+
+/** Jan Darpan brand / OG / social lockups must never be editorial story media. */
+const BRAND_ASSET_RE =
+  /\/brand\/|jan-darpan[-_](chhattisgarh[-_])?(logo|mark|og|icon)|jandarpan[-_](logo|mark|og)|social[-_]?lockup|transparency[-_]?preview|checkerboard|checkered[-_]?bg|alpha[-_]?preview/i;
+
+const TRACKING_PIXEL_RE =
+  /\/(pixel|beacon|track|analytics|collect)[\/._-]|1x1\.(gif|png|jpg)|spacer\.(gif|png)|tracking[-_]?pixel/i;
 
 const AD_RE =
   /\/ad[sx]?[\/._-]|doubleclick|googlesyndication|adserver|taboola|outbrain|sponsored/i;
@@ -60,14 +71,28 @@ export function parseDimensionsFromUrl(url: string): { width?: number; height?: 
 }
 
 export function isRejectedImageUrl(url: string): { rejected: boolean; reason?: string } {
-  if (!url?.trim() || !isValidHttpUrl(url)) {
+  if (!url?.trim()) {
     return { rejected: true, reason: "invalid_url" };
   }
 
-  const lower = url.toLowerCase();
+  const trimmed = url.trim();
+  const lower = trimmed.toLowerCase();
 
   if (lower.startsWith("data:")) {
     return { rejected: true, reason: "data_uri" };
+  }
+
+  if (!isValidHttpUrl(trimmed)) {
+    return { rejected: true, reason: "invalid_url" };
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "http:") {
+      return { rejected: true, reason: "http_not_https" };
+    }
+  } catch {
+    return { rejected: true, reason: "malformed_url" };
   }
 
   if (PLACEHOLDER_RE.test(lower)) {
@@ -78,15 +103,27 @@ export function isRejectedImageUrl(url: string): { rejected: boolean; reason?: s
     return { rejected: true, reason: "known_broken" };
   }
 
+  if (BRAND_ASSET_RE.test(lower)) {
+    return { rejected: true, reason: "brand_asset" };
+  }
+
   if (LOGO_ICON_RE.test(lower)) {
     return { rejected: true, reason: "logo_or_icon" };
+  }
+
+  if (TRACKING_PIXEL_RE.test(lower)) {
+    return { rejected: true, reason: "tracking_pixel" };
   }
 
   if (AD_RE.test(lower)) {
     return { rejected: true, reason: "advertisement" };
   }
 
-  const { width, height } = parseDimensionsFromUrl(url);
+  if (isSupabaseSignedUrl(trimmed) && isExpiredSignedUrl(trimmed)) {
+    return { rejected: true, reason: "expired_signed_url" };
+  }
+
+  const { width, height } = parseDimensionsFromUrl(trimmed);
   if (width && width < MIN_WIDTH) {
     return { rejected: true, reason: "too_narrow" };
   }

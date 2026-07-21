@@ -4,7 +4,7 @@ import { resolveCanonicalImage } from "@/lib/news/images/canonical-image-resolve
 describe("canonical-image-resolver", () => {
   it("uses hero when present and https", () => {
     const result = resolveCanonicalImage({
-      heroUrl: "https://cdn.example.com/hero.jpg",
+      heroUrl: "https://images.unsplash.com/photo-1504711434969-e33886168f5c",
       title: "Test story",
       category: "local",
     });
@@ -12,6 +12,7 @@ describe("canonical-image-resolver", () => {
     expect(result.fallbackState).toBe("none");
     expect(result.displayUrl).toContain("https://");
     expect(result.validationState).toBe("shape_ok");
+    expect(result.textOnly).toBe(false);
   });
 
   it("falls back when no hero/og/body", () => {
@@ -20,11 +21,12 @@ describe("canonical-image-resolver", () => {
       category: "local",
       region: "chhattisgarh",
     });
-    expect(result.sourceType).toBe("contextual_fallback");
-    expect(result.fallbackState).toBe("contextual");
-    expect(result.displayUrl.length).toBeGreaterThan(0);
-    expect(result.ogUrl.length).toBeGreaterThan(0);
-    expect(result.mobileUrl.length).toBeGreaterThan(0);
+    expect(["contextual_fallback", "text_only"]).toContain(result.sourceType);
+    if (!result.textOnly) {
+      expect(result.displayUrl.length).toBeGreaterThan(0);
+      expect(result.ogUrl.length).toBeGreaterThan(0);
+      expect(result.mobileUrl.length).toBeGreaterThan(0);
+    }
   });
 
   it("rejects http hero and falls back", () => {
@@ -32,6 +34,14 @@ describe("canonical-image-resolver", () => {
       heroUrl: "http://insecure.example.com/x.jpg",
       category: "politics",
     });
-    expect(result.sourceType).toBe("contextual_fallback");
+    expect(result.sourceType).not.toBe("hero");
+  });
+
+  it("rejects brand assets used as hero", () => {
+    const result = resolveCanonicalImage({
+      heroUrl: "https://www.jandarpan.news/brand/jan-darpan-mark.png",
+      category: "local",
+    });
+    expect(result.sourceType).not.toBe("hero");
   });
 });

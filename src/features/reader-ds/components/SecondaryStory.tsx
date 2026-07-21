@@ -67,9 +67,11 @@ export function SecondaryStory({
         <ArticleImage
           src={story.imageUrl}
           alt={story.headline}
+          altIsPhotoDescription={false}
           ratio="thumb"
           sizes="96px"
           tone={tone}
+          category={story.kicker ?? "general"}
         />
       </div>
     </Link>

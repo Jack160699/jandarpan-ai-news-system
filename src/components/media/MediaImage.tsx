@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { blurForCategory } from "@/lib/image-placeholder";
 import { widthFromSizes } from "@/lib/images/homepage-sizes";
 import {
@@ -107,11 +107,19 @@ export function MediaImage({
   const cropAspect = cropAspectFor(aspectNorm, cropAspectProp);
   const width = widthProp ?? (widthFromSizes(sizes) || MEDIA_IMAGE_DEFAULT_WIDTH);
   const height = heightProp ?? MEDIA_IMAGE_DEFAULT_HEIGHT;
-  const [tier, setTier] = useState<LoadTier>(0);
-  const [loaded, setLoaded] = useState(false);
+  const srcKey = `${src ?? ""}|${category ?? ""}|${source ?? ""}|${articleUrl ?? ""}|${cropAspect}`;
+
+  const [tierState, setTierState] = useState<{
+    key: string;
+    tier: LoadTier;
+    errors: number;
+  }>({ key: srcKey, tier: 0, errors: 0 });
+  const [loadedState, setLoadedState] = useState<{ key: string; loaded: boolean }>({
+    key: srcKey,
+    loaded: false,
+  });
 
   const media = useMemo(() => {
-    // Empty src + category still resolves via resolveMedia (contextual / placeholder).
     if (category) {
       return resolveMedia(
         {
@@ -124,7 +132,16 @@ export function MediaImage({
       );
     }
     const url = src?.trim();
-    if (!url) return null;
+    if (!url) {
+      return {
+        url: "",
+        optimizedUrl: "",
+        fallbackUrl: "",
+        placeholderUrl: "",
+        isSynthetic: true,
+        textOnly: true,
+      };
+    }
     const optimized = optimizeCdnUrl(url, {
       width,
       aspect: cropAspect,
@@ -136,49 +153,56 @@ export function MediaImage({
       fallbackUrl: optimized,
       placeholderUrl: optimized,
       isSynthetic: false,
+      textOnly: false,
     };
   }, [src, category, source, articleUrl, cropAspect, width, priority]);
 
+  const tier = tierState.key === srcKey ? tierState.tier : 0;
+  const errors = tierState.key === srcKey ? tierState.errors : 0;
+  const loaded = loadedState.key === srcKey ? loadedState.loaded : false;
+
   const displaySrc = media ? tierUrl(media, tier) : "";
-  const showImage = Boolean(displaySrc) && tier < 3;
+  const showImage = Boolean(displaySrc) && tier < 3 && !media?.textOnly;
   const blurData = blurForCategory(category);
   const fallbackBg =
     tier >= 2 && media?.placeholderUrl ? media.placeholderUrl : undefined;
 
-  useEffect(() => {
-    const id = window.setTimeout(() => {
-      setTier(0);
-      setLoaded(false);
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [displaySrc]);
-
   const handleError = useCallback(() => {
-    setLoaded(false);
-    setTier((t: LoadTier) => {
-      if (!media) return 3;
-      // Prefer stable category/branded placeholder over blanking the frame.
+    if (errors >= 3) {
+      setTierState({ key: srcKey, tier: 3, errors: errors + 1 });
+      return;
+    }
+    setLoadedState({ key: srcKey, loaded: false });
+    setTierState((prev) => {
+      const t = prev.key === srcKey ? prev.tier : 0;
+      const nextErrors = (prev.key === srcKey ? prev.errors : 0) + 1;
+      if (!media) return { key: srcKey, tier: 3, errors: nextErrors };
       if (t === 0) {
         if (media.placeholderUrl && media.placeholderUrl !== media.optimizedUrl) {
-          return 2;
+          return { key: srcKey, tier: 2, errors: nextErrors };
         }
-        if (media.fallbackUrl !== media.optimizedUrl) {
-          return 1;
+        if (media.fallbackUrl && media.fallbackUrl !== media.optimizedUrl) {
+          return { key: srcKey, tier: 1, errors: nextErrors };
         }
-        if (media.placeholderUrl) return 2;
-        return 3;
+        return { key: srcKey, tier: 3, errors: nextErrors };
       }
       if (t === 1) {
-        return media.placeholderUrl ? 2 : 3;
+        return {
+          key: srcKey,
+          tier:
+            media.placeholderUrl && media.placeholderUrl !== media.fallbackUrl
+              ? 2
+              : 3,
+          errors: nextErrors,
+        };
       }
-      // Placeholder already tried once → CSS fallback frame (keeps placeholderUrl bg).
-      return 3;
+      return { key: srcKey, tier: 3, errors: nextErrors };
     });
-  }, [media]);
+  }, [media, srcKey, errors]);
 
   const handleLoad = useCallback(() => {
-    setLoaded(true);
-  }, []);
+    setLoadedState({ key: srcKey, loaded: true });
+  }, [srcKey]);
 
   const frameClass =
     fillParent || aspectNorm === "fill"
@@ -215,7 +239,7 @@ export function MediaImage({
             <Image
               key={displaySrc}
               src={displaySrc}
-              alt={alt}
+              alt={alt || "Editorial visual placeholder"}
               fill
               priority={priority}
               fetchPriority={priority ? "high" : "auto"}
