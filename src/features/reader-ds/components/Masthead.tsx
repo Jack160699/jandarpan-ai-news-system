@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
 import { JdIcon } from "./icons";
+import { BrandMark } from "./BrandMark";
 
 type MastheadProps = {
   pageTitle?: string;
@@ -96,24 +97,9 @@ export function Masthead({
             <Link
               href="/"
               aria-label={t("masthead.homeAria")}
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 5,
-                background: "var(--jd-red)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                textDecoration: "none",
-              }}
+              style={{ display: "flex", flexShrink: 0, textDecoration: "none" }}
             >
-              <span
-                className="jd-brand"
-                style={{ fontSize: 15, color: "var(--jd-gold)", fontWeight: 700, lineHeight: 1 }}
-              >
-                ज
-              </span>
+              <BrandMark size={24} radius={5} />
             </Link>
           )}
           {pageTitle ? (

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { BrandMark } from "./BrandMark";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
@@ -69,7 +70,7 @@ export function DeskChrome() {
       <div className="jd-desk-sticky" aria-hidden={!condensed}>
         <div className="jd-desk-inner jd-desk-sticky__inner">
           <Link href="/" className="jd-desk-sticky__brand" aria-label={t("masthead.homeAria")}>
-            <span className="jd-desk-mark">ज</span>
+            <BrandMark size={22} radius={5} />
             <span className="jd-brand jd-desk-sticky__word">{t("brand.name")}</span>
           </Link>
           <nav className="jd-desk-sticky__nav" aria-label={t("nav.aria")}>
@@ -157,7 +158,7 @@ export function DeskChrome() {
             </button>
 
             <Link href="/" className="jd-desk-brand__logo" aria-label={t("masthead.homeAria")}>
-              <span className="jd-desk-mark jd-desk-mark--lg">ज</span>
+              <BrandMark size={36} radius={6} />
               <span>
                 <span className="jd-brand jd-desk-brand__word">{t("brand.name")}</span>
                 <span className="jd-desk-brand__tag">{t("desk.tagline")}</span>

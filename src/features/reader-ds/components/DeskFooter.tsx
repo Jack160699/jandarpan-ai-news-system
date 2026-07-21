@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
 import { filterFooterColumns, type FooterColumn } from "../homepage/footer-links";
+import { BrandMark } from "./BrandMark";
 
 /**
  * Site footer — desktop grid + compact phone ending above bottom nav.
@@ -70,7 +71,7 @@ export function DeskFooter() {
       <div className="jd-desk-inner jd-desk-footer__grid">
         <div className="jd-desk-footer__brand">
           <div className="jd-desk-footer__logo">
-            <span className="jd-desk-mark">ज</span>
+            <BrandMark size={22} radius={5} />
             <span className="jd-brand">{t("brand.name")}</span>
           </div>
           <p>{t("footer.blurb")}</p>
