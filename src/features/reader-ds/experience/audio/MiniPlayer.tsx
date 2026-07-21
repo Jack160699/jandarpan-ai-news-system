@@ -10,12 +10,29 @@ export function MiniPlayer() {
   const audio = useReaderAudioOptional();
   if (!audio?.visible || !audio.current || audio.fullOpen) return null;
 
-  const { current, playing, positionSec, toggle, next, openFull } = audio;
+  const {
+    current,
+    playing,
+    positionSec,
+    durationSec,
+    status,
+    toggle,
+    next,
+    openFull,
+    retry,
+    errorMessage,
+    canPlayCurrent,
+  } = audio;
+
+  const busy = status === "loading" || status === "buffering";
+  const failed = status === "failed" || status === "unavailable";
+  const duration = durationSec || current.durationSec;
 
   return (
     <div
       role="region"
       aria-label={t("listen.miniPlayerAria")}
+      aria-busy={busy || undefined}
       style={{
         position: "fixed",
         left: 0,
@@ -73,23 +90,77 @@ export function MiniPlayer() {
             {current.headline}
           </div>
           <div className="jd-ui" style={{ fontSize: 10, color: "#8ea0c4" }}>
-            {t("listen.todayBriefingShort")} · {trackTimeLabel(positionSec, current.durationSec)}
+            {failed
+              ? errorMessage || t("listen.unavailable")
+              : busy
+                ? status === "buffering"
+                  ? t("listen.buffering")
+                  : t("listen.loading")
+                : `${t("listen.todayBriefingShort")} · ${trackTimeLabel(positionSec, duration)}`}
           </div>
         </div>
       </button>
-      <button
-        type="button"
-        aria-label={playing ? t("listen.pause") : t("listen.play")}
-        onClick={toggle}
-        style={{ background: "none", border: "none", cursor: "pointer", padding: 6 }}
-      >
-        <JdIcon name={playing ? "pause" : "play"} size={24} stroke={2} color="var(--jd-gold-soft)" />
-      </button>
+      {failed ? (
+        <button
+          type="button"
+          aria-label={t("listen.retry")}
+          onClick={retry}
+          className="jd-ui"
+          style={{
+            background: "none",
+            border: "1px solid var(--jd-gold-soft)",
+            color: "var(--jd-gold-soft)",
+            cursor: "pointer",
+            padding: "6px 10px",
+            fontSize: 11,
+            fontWeight: 700,
+            minHeight: 44,
+          }}
+        >
+          {t("listen.retry")}
+        </button>
+      ) : (
+        <button
+          type="button"
+          aria-label={
+            !canPlayCurrent
+              ? t("listen.playUnavailableAria")
+              : playing
+                ? t("listen.pause")
+                : t("listen.play")
+          }
+          onClick={toggle}
+          disabled={!canPlayCurrent && !playing}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: canPlayCurrent || playing ? "pointer" : "not-allowed",
+            padding: 6,
+            minWidth: 44,
+            minHeight: 44,
+            opacity: busy ? 0.7 : 1,
+          }}
+        >
+          <JdIcon
+            name={busy ? "play" : playing ? "pause" : "play"}
+            size={24}
+            stroke={2}
+            color="var(--jd-gold-soft)"
+          />
+        </button>
+      )}
       <button
         type="button"
         aria-label={t("listen.next")}
         onClick={next}
-        style={{ background: "none", border: "none", cursor: "pointer", padding: 6 }}
+        style={{
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 6,
+          minWidth: 44,
+          minHeight: 44,
+        }}
       >
         <JdIcon name="next" size={22} stroke={1.9} color="var(--jd-gold-soft)" />
       </button>

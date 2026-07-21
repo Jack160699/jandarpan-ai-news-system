@@ -19,6 +19,7 @@ export function HeadlinesMiniPlayer() {
     track,
     playing,
     loading,
+    status,
     togglePlay,
     next,
     clearPlaylist,
@@ -26,34 +27,64 @@ export function HeadlinesMiniPlayer() {
     duration,
     index,
     tracks,
+    retry,
+    errorMessage,
   } = ctx;
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
   const hi = language !== "en";
-  // Story pages hide the bottom nav — dock the player flush to the bottom
   const flush = pathname.startsWith("/story/");
+  const failed = status === "failed" || status === "unavailable";
 
   return (
     <div
       className={cn("hl-mini", flush && "hl-mini--flush")}
       role="region"
       aria-label={hi ? "अभी चल रहा है" : "Now playing"}
+      aria-busy={loading || undefined}
     >
       <div className="hl-mini__progress" aria-hidden>
         <span style={{ width: `${progressPct}%` }} />
       </div>
       <div className="hl-mini__inner">
-        <button
-          type="button"
-          className="hl-mini__play tap-target"
-          onClick={togglePlay}
-          aria-label={
-            playing ? (hi ? "रोकें" : "Pause") : (hi ? "चलाएँ" : "Play")
-          }
-        >
-          {loading ? "…" : playing ? "❚❚" : "▶"}
-        </button>
+        {failed ? (
+          <button
+            type="button"
+            className="hl-mini__play tap-target"
+            onClick={retry}
+            aria-label={hi ? "फिर कोशिश करें" : "Retry"}
+          >
+            ↻
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="hl-mini__play tap-target"
+            onClick={togglePlay}
+            aria-label={
+              loading
+                ? hi
+                  ? "ऑडियो लोड हो रहा है"
+                  : "Loading audio"
+                : playing
+                  ? hi
+                    ? "रोकें"
+                    : "Pause"
+                  : hi
+                    ? "चलाएँ"
+                    : "Play"
+            }
+          >
+            {loading ? "…" : playing ? "❚❚" : "▶"}
+          </button>
+        )}
         <Link href="/listen" className="hl-mini__info tap-target">
-          <p className="hl-mini__label">{hi ? "अभी सुन रहे हैं" : "Now playing"}</p>
+          <p className="hl-mini__label">
+            {failed
+              ? errorMessage || (hi ? "ऑडियो उपलब्ध नहीं" : "Audio unavailable")
+              : hi
+                ? "अभी सुन रहे हैं"
+                : "Now playing"}
+          </p>
           <p
             className="hl-mini__title"
             lang={track.language === "hi" ? "hi" : undefined}

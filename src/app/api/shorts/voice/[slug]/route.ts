@@ -63,6 +63,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     status: 200,
     headers: {
       "Content-Type": "audio/mpeg",
+      "Content-Length": String(result.audio.byteLength),
+      // Same-origin <audio> — CORS not required. Do not claim Accept-Ranges
+      // unless Range requests are implemented (avoids seek quirks).
       "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
     },
   });

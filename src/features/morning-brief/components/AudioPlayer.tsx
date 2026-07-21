@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Headphones,
-  Pause,
-  Play,
   SkipBack,
   SkipForward,
 } from "lucide-react";
@@ -28,55 +26,14 @@ export type AudioPlayerProps = {
 };
 
 /**
- * Standalone brief audio player — UI-only playback simulation until TTS feed ships.
+ * Morning-brief teaser — does not simulate silent playback.
+ * Real audio lives on /listen; this surface points users there.
  */
-export function AudioPlayer({ tracks, listenHref = "/listen", autoPlay }: AudioPlayerProps) {
+export function AudioPlayer({ tracks, listenHref = "/listen" }: AudioPlayerProps) {
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(Boolean(autoPlay));
-  const [currentTime, setCurrentTime] = useState(0);
 
   const track = tracks[index];
   const duration = track?.durationSec ?? 0;
-  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
-
-  const togglePlay = useCallback(() => {
-    setPlaying((prev) => !prev);
-  }, []);
-
-  const next = useCallback(() => {
-    setIndex((i) => Math.min(i + 1, tracks.length - 1));
-    setCurrentTime(0);
-  }, [tracks.length]);
-
-  const prev = useCallback(() => {
-    setIndex((i) => Math.max(i - 1, 0));
-    setCurrentTime(0);
-  }, []);
-
-  useEffect(() => {
-    if (!playing || !track) return undefined;
-
-    const timer = window.setInterval(() => {
-      setCurrentTime((t) => {
-        if (t >= duration) {
-          if (index < tracks.length - 1) {
-            setIndex((i) => i + 1);
-            return 0;
-          }
-          setPlaying(false);
-          return duration;
-        }
-        return t + 1;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [playing, track, duration, index, tracks.length]);
-
-  useEffect(() => {
-    setCurrentTime(0);
-  }, [index]);
-
   const listenLink = useMemo(() => listenHref, [listenHref]);
 
   if (!track) {
@@ -106,38 +63,35 @@ export function AudioPlayer({ tracks, listenHref = "/listen", autoPlay }: AudioP
           <span>
             {index + 1} / {tracks.length}
           </span>
+          <span aria-hidden> · </span>
+          <span>{formatDuration(duration)}</span>
         </p>
 
-        <div className="mb-audio__progress" aria-hidden>
-          <div className="mb-audio__progress-bar" style={{ width: `${progressPct}%` }} />
-        </div>
-        <div className="mb-audio__time">
-          <span>{formatDuration(currentTime)}</span>
-          <span>{formatDuration(duration)}</span>
-        </div>
+        <p className="mb-audio__unavailable" role="status">
+          ऑडियो उपलब्ध नहीं — पूरा वाचन सुनें पर चलाएँ।
+        </p>
 
         <div className="mb-audio__controls">
           <button
             type="button"
             className="mb-audio__control"
-            onClick={prev}
+            onClick={() => setIndex((i) => Math.max(0, i - 1))}
             disabled={index === 0}
             aria-label="Previous track"
           >
             <SkipBack size={20} />
           </button>
-          <button
-            type="button"
+          <Link
+            href={`${listenLink}?play=1`}
             className={cn("mb-audio__control", "mb-audio__control--primary")}
-            onClick={togglePlay}
-            aria-label={playing ? "Pause" : "Play"}
+            aria-label="सुनें पर चलाएँ"
           >
-            {playing ? <Pause size={24} /> : <Play size={24} />}
-          </button>
+            <Headphones size={24} />
+          </Link>
           <button
             type="button"
             className="mb-audio__control"
-            onClick={next}
+            onClick={() => setIndex((i) => Math.min(tracks.length - 1, i + 1))}
             disabled={index >= tracks.length - 1}
             aria-label="Next track"
           >
@@ -146,7 +100,7 @@ export function AudioPlayer({ tracks, listenHref = "/listen", autoPlay }: AudioP
         </div>
 
         <p className="mb-placeholder-note">
-          Simulated playback — full audio on{" "}
+          Full Hindi audio on{" "}
           <Link href={listenLink} className="mb-link">
             Listen
           </Link>

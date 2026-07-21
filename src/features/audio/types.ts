@@ -24,6 +24,9 @@ export type AudioTrack = {
   categoryLabel: string;
   language: NewsroomLanguage;
   voiceId?: string;
+  /** On-demand voice stream path when available. */
+  streamPath?: string | null;
+  voiceStatus?: "ready" | "pending" | "failed" | "unavailable";
   subtitles?: AudioTranscriptCue[];
   placeholder?: boolean;
 };

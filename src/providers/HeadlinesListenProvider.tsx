@@ -12,6 +12,13 @@ import {
 } from "react";
 import type { HeadlineTrack, PlaybackSpeed } from "@/lib/listen/types";
 import { PLAYBACK_SPEEDS } from "@/lib/listen/types";
+import { ListenPlaybackController } from "@/lib/listen/playback-controller";
+import {
+  playerErrorMessage,
+  showsPlayingChrome,
+  type PlayerErrorCode,
+  type PlayerStatus,
+} from "@/lib/listen/player-state";
 import {
   ARTICLE_SPEECH_START_EVENT,
   articleSpeechController,
@@ -23,10 +30,13 @@ type HeadlinesListenContextValue = {
   index: number;
   playing: boolean;
   loading: boolean;
+  status: PlayerStatus;
   speed: PlaybackSpeed;
   currentTime: number;
   duration: number;
   hasPlaylist: boolean;
+  errorCode: PlayerErrorCode | null;
+  errorMessage: string | null;
   initPlaylist: (tracks: HeadlineTrack[], startIndex?: number) => void;
   clearPlaylist: () => void;
   togglePlay: () => void;
@@ -35,6 +45,7 @@ type HeadlinesListenContextValue = {
   next: () => void;
   prev: () => void;
   seek: (time: number) => void;
+  retry: () => void;
   cycleSpeed: () => void;
   setSpeed: (speed: PlaybackSpeed) => void;
 };
@@ -55,25 +66,90 @@ export function useHeadlinesListenOptional() {
   return useContext(HeadlinesListenContext);
 }
 
-function getAudio(ref: { current: HTMLAudioElement | null }) {
-  if (!ref.current) {
-    ref.current = new Audio();
-    ref.current.preload = "metadata";
-  }
-  return ref.current;
-}
-
 export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const controllerRef = useRef<ListenPlaybackController | null>(null);
   const [tracks, setTracks] = useState<HeadlineTrack[]>([]);
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<PlayerStatus>("idle");
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [errorCode, setErrorCode] = useState<PlayerErrorCode | null>(null);
+  const tracksRef = useRef(tracks);
+  const indexRef = useRef(index);
+  const playIndexRef = useRef<(i: number) => Promise<void>>(async () => undefined);
+
+  useEffect(() => {
+    tracksRef.current = tracks;
+    indexRef.current = index;
+  }, [tracks, index]);
 
   const track = tracks[index] ?? null;
+  const playing = showsPlayingChrome(status);
+  const loading = status === "loading" || status === "buffering";
+
+  useEffect(() => {
+    const controller = new ListenPlaybackController();
+    controllerRef.current = controller;
+    const unsub = controller.subscribe((snap) => {
+      setStatus(snap.status);
+      setCurrentTime(snap.currentTime);
+      setErrorCode(snap.errorCode);
+      const t = tracksRef.current[indexRef.current];
+      const dur = snap.duration > 0 ? snap.duration : (t?.durationSec ?? 0);
+      setDuration(dur);
+
+      if (snap.status === "ended") {
+        const i = indexRef.current;
+        const list = tracksRef.current;
+        if (i < list.length - 1) {
+          const next = i + 1;
+          setIndex(next);
+          queueMicrotask(() => {
+            void playIndexRef.current(next);
+          });
+        }
+      }
+    });
+    return () => {
+      unsub();
+      controller.dispose();
+      controllerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    controllerRef.current?.setSpeed(speed);
+  }, [speed]);
+
+  useEffect(() => {
+    const onArticleSpeech = () => {
+      controllerRef.current?.pause();
+    };
+    window.addEventListener(ARTICLE_SPEECH_START_EVENT, onArticleSpeech);
+    return () =>
+      window.removeEventListener(ARTICLE_SPEECH_START_EVENT, onArticleSpeech);
+  }, []);
+
+  const playIndex = useCallback(async (i: number) => {
+    const list = tracksRef.current;
+    const t = list[i];
+    if (!t) return;
+    articleSpeechController.cancel();
+    setIndex(i);
+    const controller = controllerRef.current;
+    if (!controller) return;
+    controller.setMediaSessionMeta({
+      title: t.headline,
+      artist: "जनदर्पण",
+      album: "सुनें",
+    });
+    await controller.play({ url: t.voiceStreamPath }, 0);
+  }, []);
+
+  useEffect(() => {
+    playIndexRef.current = playIndex;
+  }, [playIndex]);
 
   const initPlaylist = useCallback(
     (nextTracks: HeadlineTrack[], startIndex = 0) => {
@@ -81,140 +157,71 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
       articleSpeechController.cancel();
       const i = Math.min(Math.max(0, startIndex), nextTracks.length - 1);
       setTracks(nextTracks);
+      tracksRef.current = nextTracks;
       setIndex(i);
       setCurrentTime(0);
       setDuration(nextTracks[i]?.durationSec ?? 0);
+      setErrorCode(null);
+      const url = nextTracks[i]?.voiceStreamPath;
+      if (url) {
+        controllerRef.current?.loadSource({ url });
+      } else {
+        controllerRef.current?.loadSource({
+          url: null,
+          generationStatus: "unavailable",
+        });
+      }
     },
     []
   );
 
-  useEffect(() => {
-    const t = tracks[index];
-    if (!t) return;
-
-    const audio = getAudio(audioRef);
-    setLoading(true);
-    setCurrentTime(0);
-    setDuration(t.durationSec);
-
-    const onMeta = () => {
-      setDuration(audio.duration || t.durationSec);
-      setLoading(false);
-    };
-    const onErr = () => {
-      setLoading(false);
-      setPlaying(false);
-    };
-
-    audio.pause();
-    audio.src = t.voiceStreamPath;
-    audio.playbackRate = speed;
-    audio.addEventListener("loadedmetadata", onMeta, { once: true });
-    audio.addEventListener("error", onErr, { once: true });
-    audio.load();
-
-    return () => {
-      audio.removeEventListener("loadedmetadata", onMeta);
-      audio.removeEventListener("error", onErr);
-    };
-  }, [index, tracks, speed]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const onTime = () => setCurrentTime(audio.currentTime);
-    const onEnded = () => {
-      if (index < tracks.length - 1) {
-        setIndex((i) => i + 1);
-        setPlaying(true);
-      } else {
-        setPlaying(false);
-      }
-    };
-
-    audio.addEventListener("timeupdate", onTime);
-    audio.addEventListener("ended", onEnded);
-    return () => {
-      audio.removeEventListener("timeupdate", onTime);
-      audio.removeEventListener("ended", onEnded);
-    };
-  }, [index, tracks.length]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || loading) return;
-
-    if (playing) {
-      audio.playbackRate = speed;
-      void audio.play().catch(() => setPlaying(false));
-    } else {
-      audio.pause();
-    }
-  }, [playing, loading, speed]);
-
-  useEffect(() => {
-    const onArticleSpeech = () => {
-      const audio = audioRef.current;
-      audio?.pause();
-      setPlaying(false);
-    };
-    window.addEventListener(ARTICLE_SPEECH_START_EVENT, onArticleSpeech);
-    return () =>
-      window.removeEventListener(ARTICLE_SPEECH_START_EVENT, onArticleSpeech);
-  }, []);
-
-  const togglePlay = useCallback(() => {
-    if (!track) return;
-    setPlaying((p) => {
-      const next = !p;
-      if (next) articleSpeechController.cancel();
-      return next;
-    });
-  }, [track]);
-
-  const play = useCallback(() => {
-    articleSpeechController.cancel();
-    setPlaying(true);
-  }, []);
-  const pause = useCallback(() => setPlaying(false), []);
-
-  /** Close the player entirely — stop audio and drop the playlist */
   const clearPlaylist = useCallback(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-      audio.removeAttribute("src");
-    }
-    setPlaying(false);
+    controllerRef.current?.stop();
     setTracks([]);
+    tracksRef.current = [];
     setIndex(0);
     setCurrentTime(0);
     setDuration(0);
+    setErrorCode(null);
+    setStatus("idle");
   }, []);
+
+  const play = useCallback(() => {
+    void playIndex(indexRef.current);
+  }, [playIndex]);
+
+  const pause = useCallback(() => {
+    controllerRef.current?.pause();
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    if (!tracksRef.current[indexRef.current]) return;
+    if (showsPlayingChrome(status)) {
+      pause();
+    } else {
+      play();
+    }
+  }, [status, pause, play]);
 
   const next = useCallback(() => {
     if (index < tracks.length - 1) {
-      articleSpeechController.cancel();
-      setIndex((i) => i + 1);
-      setPlaying(true);
+      void playIndex(index + 1);
     }
-  }, [index, tracks.length]);
+  }, [index, tracks.length, playIndex]);
 
   const prev = useCallback(() => {
     if (index > 0) {
-      articleSpeechController.cancel();
-      setIndex((i) => i - 1);
-      setPlaying(true);
+      void playIndex(index - 1);
     }
-  }, [index]);
+  }, [index, playIndex]);
 
   const seek = useCallback((time: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = time;
-    setCurrentTime(time);
+    controllerRef.current?.seek(time);
   }, []);
+
+  const retry = useCallback(() => {
+    void playIndex(indexRef.current);
+  }, [playIndex]);
 
   const cycleSpeed = useCallback(() => {
     setSpeed((s) => {
@@ -230,10 +237,13 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
       index,
       playing,
       loading,
+      status,
       speed,
       currentTime,
       duration,
       hasPlaylist: tracks.length > 0,
+      errorCode,
+      errorMessage: errorCode ? playerErrorMessage(errorCode, "hi") : null,
       initPlaylist,
       clearPlaylist,
       togglePlay,
@@ -242,6 +252,7 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
       next,
       prev,
       seek,
+      retry,
       cycleSpeed,
       setSpeed,
     }),
@@ -251,9 +262,11 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
       index,
       playing,
       loading,
+      status,
       speed,
       currentTime,
       duration,
+      errorCode,
       initPlaylist,
       clearPlaylist,
       togglePlay,
@@ -262,6 +275,7 @@ export function HeadlinesListenProvider({ children }: { children: ReactNode }) {
       next,
       prev,
       seek,
+      retry,
       cycleSpeed,
     ]
   );
