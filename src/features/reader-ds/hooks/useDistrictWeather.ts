@@ -75,6 +75,65 @@ const UNAVAILABLE = (slug: string): ClientWeatherView => ({
   districtSlug: slug,
 });
 
+/** In-flight dedupe — DeskChrome + UtilityRow both mount on homepage. */
+const inflight = new Map<string, Promise<CacheEntry | null>>();
+
+function fetchWeather(slug: string): Promise<CacheEntry | null> {
+  const existing = inflight.get(slug);
+  if (existing) return existing;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+
+  const req = fetch(`/api/weather?district=${encodeURIComponent(slug)}`, {
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      if (!res.ok) return null;
+      return res.json() as Promise<Record<string, unknown>>;
+    })
+    .then((data) => {
+      if (
+        !data ||
+        data.ok !== true ||
+        typeof data.tempC !== "number" ||
+        !Number.isFinite(data.tempC) ||
+        typeof data.conditionHi !== "string" ||
+        typeof data.conditionEn !== "string"
+      ) {
+        return null;
+      }
+      const entry: CacheEntry = {
+        tempC: Math.round(data.tempC),
+        conditionHi: data.conditionHi,
+        conditionEn: data.conditionEn,
+        weatherCode: typeof data.weatherCode === "number" ? data.weatherCode : null,
+        isDay: typeof data.isDay === "boolean" ? data.isDay : null,
+        source: typeof data.source === "string" ? data.source : "open-meteo",
+        fetchedAt: typeof data.fetchedAt === "string" ? data.fetchedAt : new Date().toISOString(),
+        at: Date.now(),
+      };
+      writeCache(slug, {
+        tempC: entry.tempC,
+        conditionHi: entry.conditionHi,
+        conditionEn: entry.conditionEn,
+        weatherCode: entry.weatherCode,
+        isDay: entry.isDay,
+        source: entry.source,
+        fetchedAt: entry.fetchedAt,
+      });
+      return entry;
+    })
+    .catch(() => null)
+    .finally(() => {
+      clearTimeout(timeout);
+      inflight.delete(slug);
+    });
+
+  inflight.set(slug, req);
+  return req;
+}
+
 /**
  * Client weather for A1 UtilityRow — Open-Meteo via `/api/weather`.
  * Never invents temperatures; rejects stale session cache beyond WEATHER_MAX_AGE_MS.
@@ -122,48 +181,17 @@ export function useDistrictWeather(districtSlug: string | null | undefined): Cli
       });
     });
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8_000);
-
-    fetch(`/api/weather?district=${encodeURIComponent(slug)}`, { signal: controller.signal })
-      .then(async (res) => {
-        if (!res.ok) return null;
-        return res.json() as Promise<Record<string, unknown>>;
-      })
-      .then((data) => {
-        if (cancelled) return;
-        if (
-          !data ||
-          data.ok !== true ||
-          typeof data.tempC !== "number" ||
-          !Number.isFinite(data.tempC) ||
-          typeof data.conditionHi !== "string" ||
-          typeof data.conditionEn !== "string"
-        ) {
-          setView(UNAVAILABLE(slug));
-          return;
-        }
-        const entry: Omit<CacheEntry, "at"> = {
-          tempC: Math.round(data.tempC),
-          conditionHi: data.conditionHi,
-          conditionEn: data.conditionEn,
-          weatherCode: typeof data.weatherCode === "number" ? data.weatherCode : null,
-          isDay: typeof data.isDay === "boolean" ? data.isDay : null,
-          source: typeof data.source === "string" ? data.source : "open-meteo",
-          fetchedAt: typeof data.fetchedAt === "string" ? data.fetchedAt : new Date().toISOString(),
-        };
-        writeCache(slug, entry);
-        setView(toView(slug, { ...entry, at: Date.now() }));
-      })
-      .catch(() => {
-        if (!cancelled) setView(UNAVAILABLE(slug));
-      })
-      .finally(() => clearTimeout(timeout));
+    fetchWeather(slug).then((entry) => {
+      if (cancelled) return;
+      if (!entry) {
+        setView(UNAVAILABLE(slug));
+        return;
+      }
+      setView(toView(slug, entry));
+    });
 
     return () => {
       cancelled = true;
-      controller.abort();
-      clearTimeout(timeout);
     };
   }, [slug, enabled]);
 

@@ -103,12 +103,13 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
       permanentRedirect(`/story/${generatedRow.slug}`);
     }
 
-    const [localized, relatedResult, eventViewModel] = await Promise.all([
+    const [localized, relatedResult, eventViewModel, tenant] = await Promise.all([
       resolveStoryArticleFields(generatedRow, readerLang),
       getStoryRelatedArticles(generatedRow.slug ?? slug, readerLang),
       generatedRow.event_id
         ? getEventViewModel(generatedRow.event_id)
         : Promise.resolve(null),
+      getTenantConfig(),
     ]);
     if (!localized?.headline?.trim()) notFound();
 
@@ -136,7 +137,6 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
         localized.usedTranslation && !localized.usedSourceFallback,
     });
 
-    const tenant = await getTenantConfig();
     const sponsoredStory =
       tenant.monetization?.sponsoredStoriesEnabled !== false
         ? await fetchSponsoredStory(tenant.id, generatedRow.slug)
