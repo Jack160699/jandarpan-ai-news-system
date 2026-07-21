@@ -1,4 +1,4 @@
-# Manual external setup — reader Google OAuth (Agent 6)
+﻿# Manual external setup â€” reader Google OAuth (Agent 6)
 
 Application code is ready. **Do not invent credentials.** Confirm the following in Google Cloud + Supabase + Vercel (ops / Agent 7).
 
@@ -6,11 +6,11 @@ Application code is ready. **Do not invent credentials.** Confirm the following 
 
 1. **Google Cloud OAuth client** (Web application)
    - Authorized JavaScript origins: production origin + preview origins as needed
-   - Authorized redirect URIs: Supabase callback  
+   - Authorized redirect URIs: Supabase callback
      `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
 2. **OAuth consent screen** configured (External or Internal); add test users if app is in Testing
-3. **Supabase Auth → Providers → Google** enabled with Client ID + Client Secret (dashboard only)
-4. **Supabase Auth → URL configuration**
+3. **Supabase Auth â†’ Providers â†’ Google** enabled with Client ID + Client Secret (dashboard only)
+4. **Supabase Auth â†’ URL configuration**
    - Site URL: production domain
    - Redirect allowlist must include:
      - `https://<PRODUCTION_DOMAIN>/auth/callback`
