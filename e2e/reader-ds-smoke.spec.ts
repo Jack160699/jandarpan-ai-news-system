@@ -146,6 +146,22 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await expect(page.locator(".jd-account-utility").first()).toBeVisible();
   });
 
+  test("mobile More page shows guest account card with Google sign-in", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/archive", { waitUntil: "domcontentloaded" });
+    const card = page.getByTestId("jd-account-card").first();
+    await expect(card).toBeVisible({ timeout: 20_000 });
+    await expect(card).toHaveAttribute("data-state", /guest|loading/);
+    await expect(page.getByTestId("jd-account-google-signin").first()).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByTestId("jd-account-continue-guest").first()).toBeVisible();
+    await expect(page.getByTestId("jd-account-benefits").first()).toBeVisible();
+    // Login stays discoverable at top — not only buried in settings rows
+    const googleBox = await page.getByTestId("jd-account-google-signin").first().boundingBox();
+    expect(googleBox?.y ?? 9999).toBeLessThan(520);
+  });
+
   test("reserved ad slots keep labelled no-fill dimensions", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto("/", { waitUntil: "domcontentloaded" });

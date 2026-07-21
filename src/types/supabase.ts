@@ -2827,6 +2827,51 @@ export type Database = {
           },
         ]
       }
+      reader_profiles: {
+        Row: {
+          user_id: string
+          display_name: string | null
+          avatar_url: string | null
+          provider_display_name: string | null
+          provider_avatar_url: string | null
+          display_name_customized: boolean
+          avatar_customized: boolean
+          home_district: string | null
+          language: string | null
+          district_explicit: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          display_name?: string | null
+          avatar_url?: string | null
+          provider_display_name?: string | null
+          provider_avatar_url?: string | null
+          display_name_customized?: boolean
+          avatar_customized?: boolean
+          home_district?: string | null
+          language?: string | null
+          district_explicit?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          display_name?: string | null
+          avatar_url?: string | null
+          provider_display_name?: string | null
+          provider_avatar_url?: string | null
+          display_name_customized?: boolean
+          avatar_customized?: boolean
+          home_district?: string | null
+          language?: string | null
+          district_explicit?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reader_subscriptions: {
         Row: {
           created_at: string

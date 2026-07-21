@@ -59,12 +59,17 @@ export function hasAuthSessionCookies(request: NextRequest): boolean {
   );
 }
 
+function isReaderAuthCallback(pathname: string): boolean {
+  return pathname === "/auth/callback" || pathname.startsWith("/auth/callback/");
+}
+
 /**
  * Whether middleware should call updateSupabaseSession (auth.getUser).
  *
  * Public reader pages, SEO routes, and public APIs are excluded.
  * Protected desk pages always validate. Login pages validate only when
  * session cookies are present (redirect already-authenticated users).
+ * Reader OAuth callback always refreshes so PKCE cookies land correctly.
  *
  * Authenticated API routes self-validate in route handlers — no duplicate
  * middleware getUser.
@@ -73,6 +78,10 @@ export function requiresMiddlewareSupabaseAuth(
   pathname: string,
   request: NextRequest
 ): boolean {
+  if (isReaderAuthCallback(pathname)) {
+    return true;
+  }
+
   if (
     isProtectedPrefix(pathname, ADMIN_PREFIX, ADMIN_PUBLIC) ||
     isProtectedPrefix(pathname, DASHBOARD_PREFIX, DASHBOARD_PUBLIC)
