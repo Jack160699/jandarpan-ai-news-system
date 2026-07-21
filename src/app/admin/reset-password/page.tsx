@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
-const LOGO_SRC = "/brand/jan-darpan-mark.png";
+const LOGO_SRC = "/brand/jan-darpan/mark/raster/mark-512.png";
 
 type Phase = "loading" | "ready" | "invalid" | "success";
 
