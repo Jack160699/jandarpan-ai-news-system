@@ -50,6 +50,14 @@ export type ProviderIngestResult = {
   earlyDedup: EarlyDedupMetrics;
   /** In-memory URL/title dups before DB early filter */
   memoryDuplicates: number;
+  /** Rows attempted for news_signals upsert */
+  attemptedInserts: number;
+  failedBatches: number;
+  failedRows: number;
+  persistenceErrors: string[];
+  allBatchesFailed: boolean;
+  partialPersistence: boolean;
+  persistenceFailed: boolean;
 };
 
 export async function ingestProviderArticles(
@@ -83,6 +91,13 @@ export async function ingestProviderArticles(
     },
     earlyDedup: emptyEarlyDedupMetrics(),
     memoryDuplicates: 0,
+    attemptedInserts: 0,
+    failedBatches: 0,
+    failedRows: 0,
+    persistenceErrors: [],
+    allBatchesFailed: false,
+    partialPersistence: false,
+    persistenceFailed: false,
   };
 
   if (!rawArticles.length) return result;
@@ -176,8 +191,69 @@ export async function ingestProviderArticles(
   result.signalsInserted = signalResult.inserted;
   result.signalsSkipped = signalResult.skippedDuplicates;
   result.signalIds = signalResult.signalIds;
+  result.attemptedInserts = signalResult.attempted;
+  result.failedBatches = signalResult.failedBatches;
+  result.failedRows = signalResult.failedRows;
+  result.persistenceErrors = signalResult.persistenceErrors;
+  result.allBatchesFailed = signalResult.allBatchesFailed;
+  result.partialPersistence = signalResult.partialPersistence;
+  result.persistenceFailed =
+    signalResult.allBatchesFailed ||
+    (signalResult.failedBatches > 0 && signalResult.inserted === 0);
   // Preserve early + upsert duplicates honestly (do not overwrite early count).
   result.skippedDuplicates += signalResult.skippedDuplicates;
+
+  // Advance source cursors only after successful persistence (never after
+  // failed_persistence). Group by ingestion_source_key stamped at fetch.
+  if (
+    !result.persistenceFailed &&
+    !signalResult.allBatchesFailed &&
+    signalResult.failedBatches === 0 &&
+    postEnrich.length > 0
+  ) {
+    try {
+      const { advanceSourceCursorSafe } = await import(
+        "@/lib/news/ingestion/source-state"
+      );
+      const byKey = new Map<
+        string,
+        { expected: string | null; newest: string | null; count: number; family: string }
+      >();
+      for (const a of postEnrich) {
+        const key = a.ingestion_source_key?.trim();
+        if (!key) continue;
+        const family = key.includes(":")
+          ? key.split(":")[0]
+          : provider;
+        const prev = byKey.get(key) ?? {
+          expected: a.ingestion_cursor_expected ?? null,
+          newest: null as string | null,
+          count: 0,
+          family,
+        };
+        prev.count += 1;
+        if (
+          a.published_at &&
+          (!prev.newest || a.published_at > prev.newest)
+        ) {
+          prev.newest = a.published_at;
+        }
+        byKey.set(key, prev);
+      }
+      for (const [sourceKey, info] of byKey) {
+        if (!info.newest) continue;
+        await advanceSourceCursorSafe({
+          sourceKey,
+          providerFamily: info.family,
+          expectedPrevious: info.expected,
+          nextTimestamp: info.newest,
+          newItemCount: info.count,
+        });
+      }
+    } catch {
+      // Cursor advance is best-effort; never mask persist success.
+    }
+  }
 
   const legacyResult = await publishToLegacyArticles(postEnrich);
   result.inserted = legacyResult.inserted;

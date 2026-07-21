@@ -51,10 +51,14 @@ const DEFAULT_PIPELINE: WorkerId[] = INTELLIGENCE_PIPELINE;
 
 const HEAVY_WORKERS = new Set<WorkerId>(["editorial_images"]);
 
+/** Minimum remaining budget (ms) to still attempt one editorial_images job. */
+const EDITORIAL_IMAGES_MIN_BUDGET_MS = 8_000;
+
 function shouldSkipHeavyWorker(
   workerId: WorkerId,
   deadline: ReturnType<typeof createExecutionDeadline>,
-  bonusBudgetMs = 0
+  bonusBudgetMs = 0,
+  options?: { editorialPending?: number }
 ): { skip: boolean; reason?: string } {
   if (!HEAVY_WORKERS.has(workerId)) {
     if (!deadline.hasBudgetFor(INFRA_CONFIG.workerDeadlineReserveMs)) {
@@ -63,10 +67,23 @@ function shouldSkipHeavyWorker(
     return { skip: false };
   }
 
-  const effectiveThreshold = Math.max(
-    8_000,
+  const pending = options?.editorialPending;
+
+  // Prefer empty_queue over deadline_budget when there is nothing to process.
+  if (pending === 0) {
+    return { skip: true, reason: "empty_queue" };
+  }
+
+  // When work is pending, allow a tighter ~8s floor so one job can still run
+  // even if remaining budget is below the normal editorial threshold.
+  const nominalThreshold = Math.max(
+    EDITORIAL_IMAGES_MIN_BUDGET_MS,
     INFRA_CONFIG.editorialImagesDeadlineThresholdMs - bonusBudgetMs
   );
+  const effectiveThreshold =
+    typeof pending === "number" && pending > 0
+      ? EDITORIAL_IMAGES_MIN_BUDGET_MS
+      : nominalThreshold;
 
   if (!deadline.hasBudgetFor(effectiveThreshold)) {
     return { skip: true, reason: "deadline_budget" };
@@ -126,10 +143,15 @@ export async function runCronOrchestration(
 
   for (const id of workerIds) {
     const workerStarted = Date.now();
-    const budgetCheck = shouldSkipHeavyWorker(id, deadline, bonusBudgetMs);
+    const budgetCheck = shouldSkipHeavyWorker(id, deadline, bonusBudgetMs, {
+      editorialPending: id === "editorial_images" ? editorialPending : undefined,
+    });
 
     if (budgetCheck.skip) {
-      degraded = true;
+      // empty_queue is a healthy skip — do not mark the orchestrate run degraded.
+      if (budgetCheck.reason !== "empty_queue") {
+        degraded = true;
+      }
       results.push(
         buildSkippedResult(id, workerStarted, deadline, budgetCheck.reason!)
       );
@@ -140,6 +162,8 @@ export async function runCronOrchestration(
           reason: budgetCheck.reason,
           deadlineRemaining: deadline.remainingMs(),
           bonusBudgetMs,
+          editorialPending:
+            id === "editorial_images" ? editorialPending : undefined,
         },
       });
       continue;

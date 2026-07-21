@@ -21,6 +21,13 @@ export type NormalizedArticle = {
   provider: NewsProviderId;
   language: string | null;
   region: NewsRegion;
+  /**
+   * Ingestion source-state key (e.g. rss:haribhoomi). Used to advance cursors
+   * only after successful news_signals persistence.
+   */
+  ingestion_source_key?: string | null;
+  /** CAS expected previous cursor at fetch time */
+  ingestion_cursor_expected?: string | null;
 };
 
 export type RssSourceAnalytics = {
