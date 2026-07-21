@@ -41,7 +41,7 @@ const STORY_CACHE_TAGS = [
 function getCachedStoryArticleBySlugBuild(slug: string) {
   return unstable_cache(
     () => getGeneratedArticleBySlug(slug),
-    ["story-article-v1", slug],
+    ["story-article-v2", slug],
     {
       revalidate: INFRA_CONFIG.homepageCacheSeconds,
       tags: [...STORY_CACHE_TAGS, `story:${slug}`],

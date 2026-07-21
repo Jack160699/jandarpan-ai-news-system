@@ -14,8 +14,12 @@ import {
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
 import { AudioPageClient } from "@/features/audio/AudioPageClient";
 import { isAudioV3Enabled } from "@/features/audio/config";
+import { ListenBriefingPage } from "@/features/reader-ds/experience";
+import { loadListenTracks } from "@/features/reader-ds/experience/loadListenTracks";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { Footer } from "@/sections/Footer";
 import { ListenPageClient } from "@/sections/listen/ListenPageClient";
+import type { NewsShortCard } from "@/lib/news/shorts/types";
 
 export const revalidate = 60;
 
@@ -56,6 +60,34 @@ export async function generateMetadata({
 
 export default async function ListenPage({ searchParams }: ListenPageProps) {
   const params = await searchParams;
+  const autoPlay = params.play === "1";
+
+  if (isReaderDesignSystemEnabled()) {
+    const tracks = await loadListenTracks();
+    return (
+      <>
+        <JsonLdScript
+          data={[
+            collectionPageJsonLd({
+              name: "Listen to Today's Headlines",
+              description: BASE_DESCRIPTION,
+              path: BASE_PATH,
+              items: tracks.slice(0, 20).map((t) => ({
+                url: `/story/${t.slug}`,
+                name: t.headline,
+              })),
+            }),
+            breadcrumbListJsonLd([
+              buildHomeBreadcrumb(),
+              { name: "Listen", href: BASE_PATH },
+            ]),
+          ]}
+        />
+        <ListenBriefingPage tracks={tracks} autoPlay={autoPlay} />
+      </>
+    );
+  }
+
   const displayLanguage = await getServerReaderLanguage();
   const homepageFeed = await getCachedGeneratedHomepageFeed();
   const reservedIds = homepageFeed
@@ -69,14 +101,18 @@ export default async function ListenPage({ searchParams }: ListenPageProps) {
       ])
     : undefined;
 
-  const shorts = await fetchShortsPool(20, displayLanguage, {
-    preferredArticleIds: homepageFeed?.listenArticleIds,
-    reservedIds,
-    maxHomepageOverlap: 2,
-  });
-  const autoPlay = params.play === "1";
-  const audioV3 = isAudioV3Enabled();
+  let shorts: NewsShortCard[] = [];
+  try {
+    shorts = await fetchShortsPool(20, displayLanguage, {
+      preferredArticleIds: homepageFeed?.listenArticleIds,
+      reservedIds,
+      maxHomepageOverlap: 2,
+    });
+  } catch {
+    shorts = [];
+  }
 
+  const audioV3 = isAudioV3Enabled();
   const jsonLd = [
     collectionPageJsonLd({
       name: "Listen to Today's Headlines",

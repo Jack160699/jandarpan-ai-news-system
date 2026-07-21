@@ -5,8 +5,14 @@ import {
   JAN_DARPAN_LOGO_INTRINSIC,
 } from "@/lib/brand/assets";
 import { JAN_DARPAN_CHHATTISGARH_TENANT } from "@/lib/tenant/presets/jan-darpan-chhattisgarh";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { LoadingSkeleton } from "@/features/reader-ds/system";
 
 export default function RootLoading() {
+  if (isReaderDesignSystemEnabled()) {
+    return <LoadingSkeleton />;
+  }
+
   const name = JAN_DARPAN_CHHATTISGARH_TENANT.branding.nameHi;
 
   return (

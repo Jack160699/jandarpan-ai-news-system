@@ -69,6 +69,35 @@ See `.env.example` sections for full list. Key tunables:
 | `LOG_LEVEL` | Log verbosity |
 | `PIPELINE_VERBOSE_LOGS=1` | Verbose pipeline logging |
 
+### Reader DS utilities — mandi (AGMARKNET)
+
+| Variable | Scope | Description |
+|----------|-------|-------------|
+| `DATA_GOV_IN_API_KEY` | Server only | data.gov.in API key for AGMARKNET mandi prices (`/api/utilities/mandi`). **Never** prefix with `NEXT_PUBLIC_`. Prefer **Preview** only; do not enable on Production until certified. |
+
+Also listed by name (no value) in local `.env.example` template and `docs/jandarpan-mandi-provider-audit.md`.
+
+### Verified rates — fuel / bullion (gated)
+
+| Variable | Scope | Description |
+|----------|-------|-------------|
+| `VERIFIED_RATES_FUEL_ENABLED` | Server | Set `1` to attempt ULIP fuel verification |
+| `ULIP_API_KEY` / `ULIP_CLIENT_ID` | Server | HPCL-via-ULIP credentials — never `NEXT_PUBLIC_` |
+| `ULIP_FUEL_RATES_URL` | Server | Optional allowlisted ULIP endpoint override |
+| `VERIFIED_RATES_FUEL_IOCL_ENABLED` | Server | Set `1` to attempt second fuel family (IOCL licensed) |
+| `IOCL_RATES_API_KEY` | Server | Licensed IOCL (or equivalent OMC) programmatic key |
+| `VERIFIED_RATES_BULLION_ENABLED` | Server | Set `1` to attempt IBJA fetch |
+| `IBJA_ACCESS_TOKEN` | Server | IBJA Rates API token |
+| `IBJA_DISPLAY_CONSENT` | Server | Must be `1` only after **written** republication consent |
+| `IBJA_RATES_URL` | Server | Optional allowlisted IBJA endpoint override |
+| `VERIFIED_RATES_BULLION_SECONDARY_ENABLED` / `BULLION_SECONDARY_API_KEY` | Server | Second independent bullion family |
+| `VERIFIED_RATES_BULLION_TERTIARY_ENABLED` / `BULLION_TERTIARY_API_KEY` | Server | Third independent bullion family |
+| `VERIFIED_RATES_PUBLIC_NAV` | Server | Optional. `0` forces hide homepage rates links; links also stay hidden until accepted snapshots exist |
+
+Consensus publishing requires **2** independent fuel families or **3** bullion families. Without gates/creds, pages stay unavailable/blocked. Empty detail pages are **noindex** and omitted from `sitemap-rates.xml` until accepted snapshots exist. Do not invent prices. Prefer Preview-only provider flags until the seven-run stability gate passes.
+
+**Production launch:** leave `NEXT_PUBLIC_READER_DS` unset/`0` until staged enablement after smoke tests.
+
 ### SEO intelligence engines (server-side flags)
 
 All default **OFF**. Set to `true` to enable.

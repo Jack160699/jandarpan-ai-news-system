@@ -1,0 +1,78 @@
+---
+description: Platform-wide SEO & discoverability quality gate — required for every page/feature before COMPLETE
+alwaysApply: true
+---
+
+# SEO & Discoverability (mandatory release gate)
+
+SEO is **not** a separate feature. It is a **release requirement** for every route, page, template, and API-backed surface in this repo.
+
+Do **not** mark a feature COMPLETE until functional tests, typecheck, build, responsive checks, a11y, **and** SEO validation pass.
+
+## Before finishing any new page / route / template
+
+Review and satisfy where appropriate:
+
+- Technical SEO, on-page SEO, semantic/entity SEO
+- Internal linking & discoverability (no orphans)
+- Indexing (robots, canonical, sitemap `lastmod`)
+- Structured data (JSON-LD) where it fits the page type
+- Core Web Vitals targets: **LCP &lt; 2.5s**, **INP &lt; 200ms**, **CLS &lt; 0.1**
+- Accessibility + mobile-first
+- Multilingual SEO: **Hindi-first**; English where appropriate; correct hreflang; **no mixed-language metadata**
+
+## Page must include (when appropriate)
+
+- Unique **title** + unique **meta description** (never duplicates)
+- Canonical URL, Open Graph, Twitter Card, robots directives
+- Breadcrumbs, proper heading hierarchy, semantic HTML
+- Descriptive image alt, sized images, lazy-load (preload only when justified)
+- JSON-LD where appropriate (Article, BreadcrumbList, FAQPage, WebSite, Organization, etc.)
+- Internal links + related content; FAQ only when it genuinely helps
+- Human-readable URLs; sitemap inclusion with accurate lastmod
+- hreflang when multiple languages exist
+
+Use existing helpers: `src/lib/seo/metadata.ts` (`buildPageMetadata`, `buildUtilityPageMetadata`), `src/lib/seo/json-ld.ts`, sitemap builders under `src/lib/seo/`.
+
+## Content
+
+Write for users first. One primary intent per page. Avoid keyword stuffing, hidden keywords, doorway pages, thin auto-pages, filler, or duplicated paragraphs. Every page needs useful unique information.
+
+## Programmatic SEO
+
+Only generate district/city/category/rates pages when **meaningful content exists**. Each generated page needs unique title, description, intro, FAQ (if useful), related links, structured data, breadcrumbs. Never mass-generate empty pages.
+
+## Internal linking
+
+Connect Story → Category → District → Topic → Related → Market/Weather/Live/Author/Tags where relevant. Important pages must be reachable via contextual links.
+
+## Backlink readiness
+
+Prefer pages worth citing: original datasets, local stats, explainers, timelines, archives, calculators, dashboards (mandi, weather, elections), verified rates, district profiles. Do **not** artificially manufacture backlinks.
+
+## Performance / rendering
+
+Prefer Server Components; SSR/ISR when appropriate; avoid unnecessary client JS.
+
+## Indexing exceptions
+
+Utility/account/offline-device pages may be `noindex` when they are personal or non-public — still give unique titles/descriptions and correct robots. Public editorial hubs must be indexable.
+
+**Do not** force `/admin`, `/api`, `/dashboard`, `/debug`, or other non-public surfaces into the public sitemap. Keep them disallowed / noindex per existing `robots.ts` and layout metadata. Sitemap entries are only for intentionally indexable URLs.
+
+This gate improves discoverability hygiene. It does **not** guarantee backlinks, rankings, or Search Console outcomes.
+
+## Quality gate checklist (all required for COMPLETE)
+
+- [ ] Functional tests pass
+- [ ] Typecheck passes
+- [ ] Build passes
+- [ ] Responsive checks pass
+- [ ] Accessibility checks pass
+- [ ] SEO audit passes (metadata, headings, links, CWV posture)
+- [ ] Structured data validates (when present)
+- [ ] Sitemap updated / included when indexable
+- [ ] Internal links verified
+- [ ] Metadata verified (unique title + description + canonical)
+
+Full policy: `docs/jandarpan-seo-quality-gate.md`

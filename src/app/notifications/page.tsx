@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { Footer } from "@/sections/Footer";
@@ -7,6 +7,7 @@ import {
   NotificationCenterPage,
   isNotificationCenterV3Enabled,
 } from "@/features/notifications";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { BRAND } from "@/lib/brand";
 import {
   buildHubPageMetadata,
@@ -40,6 +41,9 @@ export const metadata: Metadata = buildHubPageMetadata({
  * Gated by NEXT_PUBLIC_NOTIFICATION_CENTER_V3=1 (default OFF).
  */
 export default function NotificationsRoutePage() {
+  if (isReaderDesignSystemEnabled()) {
+    redirect("/archive/notifications");
+  }
   if (!isNotificationCenterV3Enabled()) {
     notFound();
   }

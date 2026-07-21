@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { AdSlot } from "@/components/monetization/AdSlot";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { SkipLink } from "@/components/ui/SkipLink";
@@ -48,6 +49,43 @@ type AppChromeProps = {
 };
 
 const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library"];
+
+/**
+ * Reader Design System routes render their own masthead + bottom navigation,
+ * so they opt out of the legacy app chrome entirely (flag-gated).
+ * Exact routes + dynamic prefixes for hubs.
+ */
+const READER_DS_EXACT = new Set([
+  "/",
+  "/district",
+  "/latest",
+  "/trending",
+  "/search",
+  "/live",
+  "/listen",
+  "/archive",
+  "/membership",
+  "/maintenance",
+  "/login",
+  "/offline-unavailable",
+]);
+const READER_DS_PREFIXES = [
+  "/district/",
+  "/category/",
+  "/topics/",
+  "/live/",
+  "/story/",
+  "/premium/",
+  "/listen/",
+  "/archive/",
+  "/membership/",
+  "/system/",
+];
+
+function isReaderDsRoute(pathname: string): boolean {
+  if (READER_DS_EXACT.has(pathname)) return true;
+  return READER_DS_PREFIXES.some((p) => pathname.startsWith(p));
+}
 
 function ShortsLanguageShell({ children }: AppChromeProps) {
   const { contentLocked } = useLanguage();
@@ -104,6 +142,29 @@ export function AppChrome({ children }: AppChromeProps) {
 
   if (minimal) {
     return <>{children}</>;
+  }
+
+  // DS routes own masthead/bottom nav, but must keep account + listen providers.
+  // Skip legacy onboarding on QA system galleries to avoid overlaying F-states.
+  if (isReaderDesignSystemEnabled() && isReaderDsRoute(pathname)) {
+    const skipOnboarding =
+      pathname.startsWith("/system/") ||
+      pathname === "/maintenance" ||
+      pathname === "/login";
+    return (
+      <HeadlinesListenProvider>
+        <ArticleSpeechProvider>
+          <NavigationProvider>
+            <ReaderAccountProvider>
+              <NativeTouchLayer>
+                {skipOnboarding ? null : <OnboardingExperienceV3 />}
+                {children}
+              </NativeTouchLayer>
+            </ReaderAccountProvider>
+          </NavigationProvider>
+        </ArticleSpeechProvider>
+      </HeadlinesListenProvider>
+    );
   }
 
   if (pathname === "/shorts") {

@@ -8,6 +8,8 @@ import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { InternalSeoLinks } from "@/components/seo/InternalSeoLinks";
 import { TrendingKeywordsBar } from "@/components/seo/TrendingKeywordsBar";
 import { StoryCard } from "@/components/homepage/StoryCard";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { CategoryPageView } from "@/features/reader-ds/pages";
 import { getCachedCategoryHubData } from "@/lib/category/get-category-hub";
 import {
   buildCategoryMetadata,
@@ -63,6 +65,20 @@ export default async function CategoryPage({ params }: PageProps) {
     ),
     breadcrumbListJsonLd(breadcrumbs),
   ];
+
+  if (isReaderDesignSystemEnabled()) {
+    return (
+      <>
+        <JsonLdScript data={jsonLd} />
+        <CategoryPageView
+          titleHi={config.titleHi}
+          titleEn={config.titleEn}
+          slug={slug}
+          articles={homeArticles}
+        />
+      </>
+    );
+  }
 
   return (
     <PageShell variant="news">

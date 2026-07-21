@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./assets/support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tiro+Devanagari+Hindi:ital@0;1&family=Noto+Serif+Devanagari:wght@400;500;600;700&family=Mukta:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#e4ded0;font-family:'Mukta',system-ui,sans-serif;color:#16130d;-webkit-font-smoothing:antialiased}
+  .hi-serif{font-family:'Noto Serif Devanagari',serif}
+  .tiro{font-family:'Tiro Devanagari Hindi',serif}
+  ::selection{background:#c19a3e;color:#fff}
+  a{color:#9e1b22}a:hover{color:#7a1319}
+  .sec-label{display:flex;align-items:baseline;gap:14px}
+  .sec-label .k{font-family:'Mukta';font-weight:800;font-size:13px;letter-spacing:.2em;color:#9e1b22}
+  .sec-label .r{flex:1;height:1px;background:#c1b8a4}
+</style>
+</helmet>
+<div style="padding:0 0 160px">
+
+<!-- MASTHEAD -->
+<div style="background:linear-gradient(160deg,#0a2550,#081b3a);color:#f7f4ec;padding:60px 64px 50px;position:relative;overflow:hidden;border-bottom:5px solid #c19a3e">
+  <div style="position:absolute;inset:0;background:radial-gradient(circle at 86% 16%,rgba(193,154,62,.22),transparent 46%);pointer-events:none"></div>
+  <div style="position:relative;max-width:1500px;margin:0 auto">
+    <div style="font-family:'Mukta';font-weight:700;letter-spacing:.32em;font-size:12px;color:#c19a3e;text-transform:uppercase">Jandarpan.news · Desktop & Tablet Visual Source of Truth</div>
+    <div style="display:flex;align-items:flex-end;gap:18px;margin-top:14px;flex-wrap:wrap">
+      <div class="tiro" style="font-size:64px;line-height:.92;font-weight:700">जनदर्पण</div>
+      <div class="tiro" style="font-size:24px;color:#e7d6a4;padding-bottom:12px">छत्तीसगढ़</div>
+    </div>
+    <div style="height:1px;background:linear-gradient(90deg,#c19a3e,transparent);margin:24px 0 20px"></div>
+    <h1 class="hi-serif" style="font-size:30px;line-height:1.3;margin:0 0 10px;font-weight:600;max-width:860px">डेस्कटॉप व टैबलेट डिज़ाइन सिस्टम — मोबाइल पहचान का बुद्धिमान विस्तार</h1>
+    <p style="font-size:15px;line-height:1.65;margin:0;color:#c7d0e2;max-width:780px">स्वीकृत मोबाइल Jan Darpan सिस्टम की वही दृश्य-भाषा (नैवी · सिंदूर लाल · सोना, तिरो/नोटो सेरिफ़/मुक्ता, तीक्ष्ण 2px रेडियस, संपादकीय रूल्स) — 1440 / 1280 / 1024 / 768 के लिए 12/8/4-कॉलम संपादकीय ग्रिड पर पुनर्रचित। डेस्कटॉप = विस्तृत मोबाइल नहीं; टैबलेट = संकुचित डेस्कटॉप नहीं।</p>
+    <div style="display:flex;gap:30px;margin-top:26px;flex-wrap:wrap;font-family:'Mukta'">
+      <div><div style="font-size:24px;font-weight:800;color:#fff">4</div><div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#8ea0c4">ब्रेकपॉइंट</div></div>
+      <div><div style="font-size:24px;font-weight:800;color:#fff">28+</div><div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#8ea0c4">हाई-फ़ाई फ़्रेम</div></div>
+      <div><div style="font-size:24px;font-weight:800;color:#fff">12/8/4</div><div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#8ea0c4">कॉलम ग्रिड</div></div>
+      <div><div style="font-size:24px;font-weight:800;color:#fff">Hindi-first</div><div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#8ea0c4">देवनागरी प्राथमिक</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PART 1: RESPONSIVE SYSTEM -->
+<div style="padding:52px 64px 6px"><div class="sec-label"><span class="k">भाग 01</span><div class="r"></div></div>
+  <h2 class="hi-serif" style="font-size:28px;margin:16px 0 4px;font-weight:700">रिस्पॉन्सिव डिज़ाइन सिस्टम</h2>
+  <p style="margin:0;font-family:'Mukta';color:#6a6250;font-size:14px">ग्रिड, ब्रेकपॉइंट, टाइप-स्केल, स्पेसिंग, इमेज-अनुपात व विज्ञापन-आयाम — सभी फ़्रेम में एकसमान।</p></div>
+<div style="padding:24px 64px 0" id="system">{{ system }}</div>
+
+<!-- PART 2: HEADER -->
+<div style="padding:56px 64px 6px"><div class="sec-label"><span class="k">भाग 02</span><div class="r"></div></div>
+  <h2 class="hi-serif" style="font-size:28px;margin:16px 0 4px;font-weight:700">हेडर व शीर्ष क्षेत्र — प्रीमियम, व्यवस्थित</h2>
+  <p style="margin:0;font-family:'Mukta';color:#6a6250;font-size:14px">तीन-पंक्ति डेस्कटॉप हेडर (यूटिलिटी · ब्रांड · श्रेणी-नेविगेशन), स्टिकी-स्क्रॉल संघनन, टैबलेट अनुकूलन।</p></div>
+<div style="padding:24px 64px 0;display:flex;flex-direction:column;gap:40px" id="headers">{{ headers }}</div>
+
+<!-- PART 3: DESKTOP 1440 -->
+<div style="padding:56px 64px 6px"><div class="sec-label"><span class="k">भाग 03</span><div class="r"></div></div>
+  <h2 class="hi-serif" style="font-size:28px;margin:16px 0 4px;font-weight:700">डेस्कटॉप फ़्रेम · 1440</h2>
+  <p style="margin:0;font-family:'Mukta';color:#6a6250;font-size:14px">केंद्रित 1240px कंटेंट-कंटेनर, 12-कॉलम संपादकीय ग्रिड, विविध रचना — एक ही कार्ड-लेआउट की पुनरावृत्ति नहीं।</p></div>
+<div style="padding:24px 0 0 64px;display:flex;flex-direction:column;gap:48px" id="desktop">{{ desktop }}</div>
+
+<!-- PART 4: TABLET LANDSCAPE 1024 -->
+<div style="padding:56px 64px 6px"><div class="sec-label"><span class="k">भाग 04</span><div class="r"></div></div>
+  <h2 class="hi-serif" style="font-size:28px;margin:16px 0 4px;font-weight:700">टैबलेट लैंडस्केप · 1024</h2>
+  <p style="margin:0;font-family:'Mukta';color:#6a6250;font-size:14px">8-कॉलम, नियंत्रित सिडबार-कमी, दो-कॉलम लेआउट जहाँ उपयोगी — संकुचित डेस्कटॉप नहीं।</p></div>
+<div style="padding:24px 0 0 64px;display:flex;flex-direction:column;gap:48px" id="tabletL">{{ tabletL }}</div>
+
+<!-- PART 5: TABLET PORTRAIT 768 -->
+<div style="padding:56px 64px 6px"><div class="sec-label"><span class="k">भाग 05</span><div class="r"></div></div>
+  <h2 class="hi-serif" style="font-size:28px;margin:16px 0 4px;font-weight:700">टैबलेट पोर्ट्रेट · 768</h2>
+  <p style="margin:0;font-family:'Mukta';color:#6a6250;font-size:14px">4-कॉलम, मुख्यतः एकल-कॉलम प्रवाह, चयनित दो-कॉलम कार्ड-समूह — मोबाइल-आकार नहीं।</p></div>
+<div style="padding:24px 0 0 64px;display:flex;flex-direction:column;gap:48px" id="tabletP">{{ tabletP }}</div>
+
+<!-- PART 6: COMPONENTS + HANDOFF -->
+<div style="padding:56px 64px 6px"><div class="sec-label"><span class="k">भाग 06</span><div class="r"></div></div>
+  <h2 class="hi-serif" style="font-size:28px;margin:16px 0 4px;font-weight:700">घटक सूची व डेवलपर हैंडऑफ़</h2></div>
+<div style="padding:24px 64px 0" id="handoff">{{ handoff }}</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  T(){ return {
+    navy:'#0a2550', navyDeep:'#081b3a', navy2:'#13315f', red:'#9e1b22', redDeep:'#7a1319',
+    gold:'#c19a3e', goldSoft:'#e7d6a4', paper:'#f7f4ec', paper2:'#f2ede1', shell:'#ece6d9',
+    ink:'#16130d', ink2:'#3f3a2e', ink3:'#6a6250', muted:'#9a917d', line:'#dcd5c5', line2:'#e6e0d2',
+    green:'#2f7d52', amber:'#c07a1e', dBg:'#0e1626', dSurf:'#16233b', dLine:'rgba(150,175,215,.16)', dText:'#e7edf6', dMuted:'#93a4c2'
+  };}
+
+  icon(name,size,color,sw){ const R=React.createElement; size=size||20; color=color||'currentColor'; sw=sw||1.8;
+    const P={
+      home:'M3 11.2 12 4l9 7.2M5 9.6V20h5v-6h4v6h5V9.6', pin:'M12 21c4.5-4.2 7-7.3 7-10.5A7 7 0 0 0 5 10.5C5 13.7 7.5 16.8 12 21z',
+      bolt:'M13 2 4.5 13.2H10l-1 8.8L20 9.6h-6z', headphone:'M4 13v-1a8 8 0 0 1 16 0v1M4 13h2.5a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1zM20 13h-2.5a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1H19a1 1 0 0 0 1-1z',
+      search:'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', user:'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM4 20c0-3.6 3.6-6 8-6s8 2.4 8 6',
+      bell:'M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6zM10 20a2 2 0 0 0 4 0', bookmark:'M6 3h12v18l-6-4-6 4z',
+      share:'M15 8a3 3 0 1 0-2.8-4M15 8 9 11m0 2 6 3M9 13a3 3 0 1 0-2.8-1.6M17.9 17.4A3 3 0 1 0 15 16',
+      play:'M8 5v14l11-7z', pause:'M8 5v14M16 5v14', prev:'M18 5v14L8 12zM6 5v14', next:'M6 5v14l10-7zM18 5v14',
+      close:'M6 6l12 12M18 6 6 18', chevR:'M9 5l7 7-7 7', chevD:'M5 9l7 7 7-7', chevL:'M15 5l-7 7 7 7',
+      clock:'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM12 7.5V12l3 2', eye:'M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z',
+      download:'M12 4v11m0 0 4-4m-4 4-4-4M5 20h14', check:'M5 12.5 10 17 19 7', wifiOff:'M3 3l18 18M8.5 12.5A6 6 0 0 1 14 11M5 9a11 11 0 0 1 4-2.3M19 9a11 11 0 0 0-6-2.7M12 18h.01',
+      globe:'M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM4 12h16M12 4c2.5 2.2 2.5 13.6 0 16M12 4c-2.5 2.2-2.5 13.6 0 16',
+      grid:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', list:'M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01',
+      filter:'M4 5h16l-6 7v6l-4 2v-8z', fire:'M12 3c1 3-2 4-2 7a2 2 0 0 0 4 0c0-1 0-1 .5-2 1.5 2 2.5 3 2.5 5a5 5 0 0 1-10 0c0-3.5 3-5 5-10z',
+      rupee:'M7 5h10M7 9h10M16 5c0 5-4 6-7 6l6 8', lock:'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3',
+      star:'M12 4l2.3 5 5.2.5-4 3.6 1.2 5.1L12 20.9 7.3 18.2l1.2-5.1-4-3.6 5.2-.5z', flag:'M6 4v16M6 5h11l-2 3 2 3H6',
+      plus:'M12 5v14M5 12h14', alert:'M12 4 2 20h20zM12 10v4M12 17h.01', cloud:'M7 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.3A3.8 3.8 0 0 1 18 18z',
+      rain:'M7 15a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.3A3.8 3.8 0 0 1 17 15M8 18l-1 2M12 18l-1 2M16 18l-1 2',
+      refresh:'M4 9a8 8 0 0 1 13.7-3.3L20 8M20 4v4h-4M20 15a8 8 0 0 1-13.7 3.3L4 16M4 20v-4h4',
+      video:'M4 6h11v12H4zM15 10l5-3v10l-5-3z', camera:'M4 8h3l1.5-2h7L17 8h3v11H4zM12 10.5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+      mail:'M3 6h18v12H3zM3 7l9 6 9-6', whatsapp:'M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.3A9 9 0 1 0 12 3zM8.5 8.5c.3 3 3.8 6.5 6.8 6.8'
+    };
+    return R('svg',{width:size,height:size,viewBox:'0 0 24 24',fill:name==='play'?color:'none',stroke:color,strokeWidth:sw,strokeLinecap:'round',strokeLinejoin:'round',style:{display:'block',flexShrink:0}},
+      (P[name]||'').split('M').filter(Boolean).map((d,i)=>R('path',{key:i,d:'M'+d})));
+  }
+
+  img(h,label,tone,r){ const R=React.createElement;
+    const tones={city:['#2c3e5c','#4a5f80'],rally:['#5c2c33','#8a4550'],field:['#2f4a35','#4d6b52'],market:['#5c4a2c','#8a7145'],sport:['#2c4a5c','#457185'],court:['#3d3a4a','#5a5670'],portrait:['#4a3f3a','#6b5c52'],night:['#1a2438','#2c3a55'],festival:['#5c3a2c','#8a5a45'],edu:['#33455c','#516a82']};
+    const c=tones[tone]||['#3a4258','#586178'];
+    return R('div',{style:{height:h,width:'100%',borderRadius:r||2,background:'linear-gradient(135deg,'+c[0]+','+c[1]+')',position:'relative',overflow:'hidden',display:'flex',alignItems:'flex-end'}},
+      R('div',{style:{position:'absolute',inset:0,background:'repeating-linear-gradient(115deg,rgba(255,255,255,.05) 0 2px,transparent 2px 24px)'}}),
+      label?R('div',{style:{position:'relative',fontFamily:'ui-monospace,monospace',fontSize:9,color:'rgba(255,255,255,.82)',background:'rgba(0,0,0,.4)',padding:'2px 7px',margin:8,borderRadius:2}},'▣ '+label):null);
+  }
+
+  // frame wrapper with label
+  frame(o,children){ const R=React.createElement; const t=this.T();
+    return R('div',{style:{display:'flex',flexDirection:'column',gap:12,width:o.w,flexShrink:0}},
+      R('div',{style:{display:'flex',alignItems:'baseline',gap:10,flexWrap:'wrap'}},
+        R('span',{style:{fontFamily:'ui-monospace,monospace',fontWeight:700,fontSize:11,letterSpacing:'.04em',color:'#fff',background:t.navy,borderRadius:3,padding:'3px 9px'}},o.id),
+        R('span',{className:'hi-serif',style:{fontSize:17,fontWeight:700,color:t.ink}},o.title),
+        R('span',{style:{fontFamily:'ui-monospace,monospace',fontSize:11,color:t.muted}},o.w+'px'+(o.note?' · '+o.note:''))),
+      R('div',{style:{width:o.w,background:o.bg||t.shell,border:'1px solid '+t.line,boxShadow:'0 14px 40px rgba(10,37,80,.16)',overflow:'hidden',borderRadius:o.round||3}},...children),
+      o.anno?R('div',{style:{width:o.w,fontFamily:'Mukta',fontSize:12,lineHeight:1.55,color:t.ink3,background:'#fbf8f1',border:'1px solid '+t.line,borderLeft:'3px solid '+t.gold,borderRadius:'0 6px 6px 0',padding:'10px 14px'}},
+        R('span',{style:{fontWeight:800,color:t.navy}},'रिस्पॉन्सिव · '),o.anno):null);
+  }
+
+  // ============ SHARED DESKTOP ATOMS ============
+  utilStrip(o){ o=o||{}; const R=React.createElement; const t=this.T();
+    const dot=()=>R('span',{style:{width:3,height:3,borderRadius:3,background:'#5f7098'}});
+    const L=(ic,txt,extra)=>R('div',{style:{display:'flex',alignItems:'center',gap:6,fontFamily:'Mukta',fontSize:12.5,color:'#c7d0e2'}},ic?this.icon(ic,14,t.gold,1.8):null,R('span',null,txt),extra||null);
+    return R('div',{style:{background:t.navyDeep,color:'#c7d0e2',height:o.compact?34:38,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 '+(o.pad||28)+'px'}},
+      R('div',{style:{display:'flex',alignItems:'center',gap:16}},
+        L('clock','शनि, 20 जुलाई 2026 · 8:41 AM'),
+        !o.compact?dot():null,
+        !o.compact?L('rain','रायपुर 32° · वर्षा',R('span',{style:{fontSize:10,color:'#7f8fb3'}},'')):null),
+      R('div',{style:{display:'flex',alignItems:'center',gap:16}},
+        R('div',{style:{display:'flex',alignItems:'center',gap:6,fontFamily:'Mukta',fontSize:12.5,fontWeight:700,color:t.goldSoft}},this.icon('pin',14,t.gold,1.8),'रायपुर',this.icon('chevD',12,'#7f8fb3',2)),
+        dot(),
+        R('div',{style:{display:'flex',gap:2,fontFamily:'Mukta',fontSize:12,fontWeight:700}},R('span',{style:{color:t.goldSoft}},'हिं'),R('span',{style:{color:'#5f7098'}},'/'),R('span',{style:{color:'#8ea0c4'}},'EN')),
+        dot(),
+        L('user','साइन इन')));
+  }
+  brandRow(o){ o=o||{}; const R=React.createElement; const t=this.T();
+    return R('div',{style:{background:t.paper,borderBottom:'1px solid '+t.line,height:o.h||88,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 '+(o.pad||28)+'px'}},
+      R('div',{style:{display:'flex',alignItems:'center',gap:16}},
+        R('div',{style:{width:o.small?42:52,height:o.small?42:52,borderRadius:8,background:t.navy,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},R('span',{className:'tiro',style:{fontSize:o.small?26:32,color:t.gold,fontWeight:700}},'ज')),
+        R('div',null,
+          R('div',{className:'tiro',style:{fontSize:o.small?34:44,lineHeight:.9,color:t.navy,fontWeight:700}},'जनदर्पण'),
+          R('div',{style:{fontFamily:'Mukta',fontSize:11,letterSpacing:'.14em',color:t.ink3,textTransform:'uppercase',marginTop:2}},'छत्तीसगढ़ · भारत · विश्वसनीय समाचार'))),
+      R('div',{style:{display:'flex',alignItems:'center',gap:16}},
+        R('div',{style:{display:'flex',alignItems:'center',gap:10,background:'#fff',border:'1px solid '+t.line,borderRadius:3,padding:'0 14px',height:44,width:o.small?280:340}},this.icon('search',18,t.muted,1.9),R('span',{style:{fontFamily:'Mukta',fontSize:14,color:t.muted}},'ख़बरें, विषय या ज़िला खोजें…')),
+        R('div',{style:{display:'flex',alignItems:'center',gap:8,background:t.gold,color:t.navy,fontFamily:'Mukta',fontWeight:800,fontSize:13.5,padding:'0 20px',height:44,borderRadius:3}},this.icon('star',17,t.navy,1.9),'सदस्य बनें')));
+  }
+  catNav(o){ o=o||{}; const R=React.createElement; const t=this.T();
+    const items=o.items||['होम','ताज़ा','छत्तीसगढ़','ज़िले','भारत','विश्व','राजनीति','व्यापार','खेल','मनोरंजन','टेक्नोलॉजी','जीवनशैली','ओपिनियन'];
+    return R('div',{style:{background:t.navy,height:o.h||46,display:'flex',alignItems:'stretch',justifyContent:'space-between',padding:'0 '+(o.pad||28)+'px'}},
+      R('div',{style:{display:'flex',alignItems:'stretch',gap:0,overflow:'hidden'}},...items.map((it,i)=>{const on=i===(o.active==null?0:o.active);
+        return R('div',{key:i,style:{display:'flex',alignItems:'center',padding:'0 15px',fontFamily:'Mukta',fontSize:13.5,fontWeight:on?800:600,color:on?'#fff':'#b9c4db',borderBottom:on?'3px solid '+t.gold:'3px solid transparent',whiteSpace:'nowrap'}},it);})),
+      R('div',{style:{display:'flex',alignItems:'center',gap:16,paddingLeft:16,borderLeft:'1px solid rgba(255,255,255,.12)'}},
+        R('div',{style:{display:'flex',alignItems:'center',gap:6,fontFamily:'Mukta',fontSize:13,fontWeight:800,color:'#e05a63'}},R('span',{style:{width:7,height:7,borderRadius:7,background:'#e05a63',boxShadow:'0 0 7px #e05a63'}}),'लाइव'),
+        this.icon('headphone',19,t.goldSoft,1.9)));
+  }
+  ticker(text){ const R=React.createElement; const t=this.T();
+    return R('div',{style:{background:t.red,color:'#fff',height:40,display:'flex',alignItems:'center',gap:12,padding:'0 28px'}},
+      R('span',{style:{fontFamily:'Mukta',fontWeight:800,fontSize:11,letterSpacing:'.08em',background:'#fff',color:t.red,padding:'3px 9px',borderRadius:2,flexShrink:0,display:'flex',alignItems:'center',gap:4}},R('span',{style:{width:5,height:5,borderRadius:5,background:t.red}}),'ब्रेकिंग'),
+      R('span',{className:'hi-serif',style:{fontSize:14,fontWeight:600,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}},text),
+      R('div',{style:{marginLeft:'auto',display:'flex',gap:6,flexShrink:0}},this.icon('chevL',16,'rgba(255,255,255,.7)',2),this.icon('chevR',16,'rgba(255,255,255,.7)',2)));
+  }
+  kicker(text,c){ const R=React.createElement; const t=this.T();
+    return R('span',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.09em',color:c||t.red,textTransform:'uppercase'}},text); }
+  meta(text){ const R=React.createElement; const t=this.T();
+    return R('div',{style:{display:'flex',alignItems:'center',gap:5,fontFamily:'Mukta',fontSize:11.5,color:t.muted,marginTop:6}},this.icon('clock',12,t.muted,1.7),text); }
+  aiChip(o){ o=o||{}; const R=React.createElement; const t=this.T();
+    return R('div',{style:{borderLeft:'3px solid '+t.gold,paddingLeft:12,margin:o.m||'10px 0'}},
+      R('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},R('span',{style:{fontFamily:'Mukta',fontSize:10,fontWeight:800,color:t.gold,letterSpacing:'.1em'}},'✦ संक्षेप में'),R('span',{style:{fontFamily:'Mukta',fontSize:9.5,color:t.muted}},'· AI-सहायता, संपादक-सत्यापित')),
+      R('p',{style:{margin:0,fontFamily:'Mukta',fontSize:o.fs||13.5,lineHeight:1.6,color:t.ink2}},o.text));
+  }
+  hcard(o){ o=o||{}; const R=React.createElement; const t=this.T(); // headline list item
+    return R('div',{style:{display:'flex',gap:12,padding:'12px 0',borderBottom:o.last?'none':'1px solid '+t.line2,alignItems:'flex-start'}},
+      o.rank?R('div',{style:{fontFamily:'Tiro Devanagari Hindi',fontSize:26,fontWeight:700,color:o.rank<=3?t.red:t.line,width:26,textAlign:'center',flexShrink:0,lineHeight:1}},o.rank):null,
+      R('div',{style:{flex:1,minWidth:0}},this.kicker(o.kicker||'जिला'),R('div',{className:'hi-serif',style:{fontSize:o.fs||15,lineHeight:1.34,fontWeight:600,color:t.ink,marginTop:3}},o.title),o.time?this.meta(o.time):null),
+      o.thumb?R('div',{style:{width:o.tw||88,flexShrink:0}},this.img(o.th||60,null,o.tone||'city')):null);
+  }
+  sideModule(title,children,o){ o=o||{}; const R=React.createElement; const t=this.T();
+    return R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,marginBottom:20}},
+      R('div',{style:{display:'flex',alignItems:'center',gap:8,padding:'12px 16px',borderBottom:'2px solid '+t.navy}},R('div',{style:{width:4,height:15,background:o.color||t.red}}),R('h3',{className:'hi-serif',style:{margin:0,fontSize:15,fontWeight:700,color:t.navy}},title)),
+      R('div',{style:{padding:'6px 16px 12px'}},...children));
+  }
+  sectionBand(title,c){ const R=React.createElement; const t=this.T();
+    return R('div',{style:{display:'flex',alignItems:'center',gap:12,margin:'0 0 16px'}},
+      R('div',{style:{width:5,height:24,background:c||t.red}}),
+      R('h2',{className:'hi-serif',style:{margin:0,fontSize:23,fontWeight:700,color:t.ink}},title),
+      R('div',{style:{flex:1,height:2,background:t.line}}),
+      R('span',{style:{fontFamily:'Mukta',fontSize:12.5,fontWeight:700,color:t.red,display:'flex',alignItems:'center',gap:3}},'सभी देखें',this.icon('chevR',14,t.red,2)));
+  }
+  adBox(o){ o=o||{}; const R=React.createElement; const t=this.T();
+    return R('div',{style:{width:'100%'}},
+      R('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}},R('span',{style:{fontFamily:'Mukta',fontSize:8.5,fontWeight:800,letterSpacing:'.14em',color:t.muted,textTransform:'uppercase'}},'विज्ञापन'),o.close?this.icon('close',13,t.muted,2):null),
+      R('div',{style:{height:o.h||90,borderRadius:2,border:'1px dashed '+t.muted,background:t.paper2,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3,fontFamily:'ui-monospace,monospace',fontSize:11,color:t.muted}},R('span',null,o.label||'Leaderboard'),R('span',{style:{fontSize:10}},o.size||'728×90')));
+  }
+  weatherW(o){ o=o||{}; const R=React.createElement; const t=this.T();
+    return R('div',{style:{background:'linear-gradient(150deg,'+t.navy+','+t.navy2+')',color:t.paper,borderRadius:3,padding:'16px 18px'}},
+      R('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between'}},
+        R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:12,color:'#9fb0d0',fontWeight:600}},'रायपुर, छत्तीसगढ़'),R('div',{style:{fontFamily:'Mukta',fontSize:34,fontWeight:800,lineHeight:1.1}},'32°',R('span',{style:{fontSize:15,color:'#c7d0e2',fontWeight:600}},' वर्षा')),),
+        this.icon('rain',44,t.goldSoft,1.6)),
+      R('div',{style:{display:'flex',justifyContent:'space-between',borderTop:'1px solid rgba(255,255,255,.12)',marginTop:12,paddingTop:10,fontFamily:'Mukta',fontSize:11,color:'#9fb0d0'}},R('span',null,'अधि. 34° · न्यून. 26°'),R('span',null,'अपडेट अभी')));
+  }
+  marketTiles(){ const R=React.createElement; const t=this.T();
+    return R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3}},
+      R('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:'1px solid '+t.line2}},R('span',{style:{fontFamily:'Mukta',fontSize:12.5,fontWeight:800,color:t.navy}},'बाज़ार भाव'),R('span',{style:{fontFamily:'Mukta',fontSize:9.5,color:t.amber,fontWeight:700,background:'#fbf3e6',padding:'2px 7px',borderRadius:2}},'स्रोत जोड़ा जाना बाकी')),
+      ...[['सोना 24K','rupee'],['चांदी','rupee'],['डीज़ल','rupee']].map((m,i)=>R('div',{key:i,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 14px',borderBottom:i<2?'1px solid '+t.line2:'none'}},
+        R('div',{style:{display:'flex',alignItems:'center',gap:8}},this.icon(m[1],15,t.muted,1.8),R('span',{style:{fontFamily:'Mukta',fontSize:13,fontWeight:600,color:t.ink2}},m[0])),
+        R('span',{style:{fontFamily:'Mukta',fontSize:13,fontWeight:700,color:t.muted}},'डेटा उपलब्ध होने पर —'))));
+  }
+  footer(o){ o=o||{}; const R=React.createElement; const t=this.T();
+    const col=(h,items)=>R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:800,letterSpacing:'.06em',color:t.goldSoft,marginBottom:10,textTransform:'uppercase'}},h),...items.map((x,i)=>R('div',{key:i,style:{fontFamily:'Mukta',fontSize:13,color:'#a9b6cf',padding:'4px 0'}},x)));
+    return R('div',{style:{background:t.navyDeep,color:'#a9b6cf',padding:o.pad||'40px 28px 26px'}},
+      R('div',{style:{display:'grid',gridTemplateColumns:o.cols||'1.4fr 1fr 1fr 1fr 1fr',gap:28,paddingBottom:26,borderBottom:'1px solid rgba(255,255,255,.1)'}},
+        R('div',null,R('div',{className:'tiro',style:{fontSize:34,color:t.paper,fontWeight:700}},'जनदर्पण'),R('p',{style:{fontFamily:'Mukta',fontSize:12.5,lineHeight:1.6,color:'#8ea0c4',maxWidth:240,marginTop:6}},'छत्तीसगढ़ का विश्वसनीय हिन्दी समाचार मंच — भरोसा, गहराई और स्थानीय पकड़।')),
+        col('अनुभाग',['छत्तीसगढ़','भारत','राजनीति','व्यापार','खेल']),
+        col('ज़िले',['रायपुर','दुर्ग','बिलासपुर','बस्तर','कोरबा']),
+        col('कंपनी',['हमारे बारे में','संपादकीय नीति','संपर्क','विज्ञापन','करियर']),
+        col('जुड़ें',['सदस्यता','न्यूज़लेटर','WhatsApp','ई-पेपर','ऐप'])),
+      R('div',{style:{display:'flex',justifyContent:'space-between',paddingTop:16,fontFamily:'Mukta',fontSize:11.5,color:'#7f8fb3',flexWrap:'wrap',gap:8}},R('span',null,'© 2026 जनदर्पण मीडिया · सर्वाधिकार सुरक्षित'),R('span',null,'गोपनीयता · नियम व शर्तें · कुकी सेटिंग्स')));
+  }
+
+  // full desktop header stack (reused by frames)
+  deskHeader(o){ o=o||{}; const R=React.createElement;
+    const rows=[this.utilStrip({}),this.brandRow({}),this.catNav({active:o.active==null?0:o.active})];
+    if(o.ticker!==false) rows.push(this.ticker(o.ticker||'रायपुर में कैबिनेट विस्तार — तीन नए मंत्री शपथ लेंगे · मानसून सत्र आज से'));
+    return rows;
+  }
+
+  system(){
+    const R=React.createElement; const t=this.T();
+    const card=(title,children,span)=>R('div',{style:{gridColumn:span?'span '+span:'auto',background:'#fff',border:'1px solid '+t.line,borderRadius:8,padding:'18px 20px'}},R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.12em',color:t.red,textTransform:'uppercase',marginBottom:14}},title),...children);
+    const bp=(w,cols,gut,cw,note)=>R('div',{style:{display:'flex',alignItems:'center',gap:14,padding:'9px 0',borderBottom:'1px solid '+t.line2}},
+      R('div',{style:{width:64,fontFamily:'ui-monospace,monospace',fontSize:13,fontWeight:700,color:t.navy}},w),
+      R('div',{style:{flex:1,display:'flex',gap:2}},...Array.from({length:cols}).map((_,i)=>R('div',{key:i,style:{flex:1,height:26,background:'rgba(10,37,80,.1)',borderRadius:1}}))),
+      R('div',{style:{width:150,fontFamily:'Mukta',fontSize:11.5,color:t.ink3,textAlign:'right'}},note));
+    const typeRow=(label,px,role,cls)=>R('div',{style:{display:'flex',alignItems:'baseline',justifyContent:'space-between',gap:12,padding:'8px 0',borderBottom:'1px solid '+t.line2}},
+      R('span',{className:cls,style:{fontSize:Math.min(px,34),lineHeight:1.1,color:t.ink}},label),R('span',{style:{fontFamily:'ui-monospace,monospace',fontSize:10.5,color:t.muted,whiteSpace:'nowrap'}},px+'px · '+role));
+    const sw=(c,name,val)=>R('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:8}},R('div',{style:{width:32,height:32,borderRadius:5,background:c,border:'1px solid rgba(0,0,0,.08)',flexShrink:0}}),R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:12.5,fontWeight:700}},name),R('div',{style:{fontFamily:'ui-monospace,monospace',fontSize:10,color:t.muted}},val)));
+    return R('div',{style:{maxWidth:1500,margin:'0 auto',display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:20}},
+      card('ब्रेकपॉइंट व ग्रिड',[
+        bp('1440',12,'','','12-कॉल · कंटेनर 1240'),
+        bp('1280',12,'','','12-कॉल · कंटेनर 1160'),
+        bp('1024',8,'','','8-कॉल · गटर 24'),
+        bp('768',4,'','','4-कॉल · गटर 20'),
+        bp('≤600',1,'','','मोबाइल (मौजूदा)'),
+        R('div',{style:{fontFamily:'Mukta',fontSize:11.5,color:t.ink3,marginTop:8,lineHeight:1.6}},'अधिकतम कंटेंट-चौड़ाई 1240px · बाहरी गटर 28px (डेस्कटॉप), 24 (टै-लैं), 20 (टै-पो) · कॉलम-गैप 24px · सेक्शन-स्पेसिंग 48px।')
+      ],1),
+      card('कंटेंट कॉलम',[
+        R('div',{style:{fontFamily:'Mukta',fontSize:13,lineHeight:2,color:t.ink2}},
+          R('div',null,R('b',null,'मुख्य कॉलम: '),'8 कॉल (~792px)'),
+          R('div',null,R('b',null,'सिडबार: '),'4 कॉल (~384px)'),
+          R('div',null,R('b',null,'लेख-पठन चौड़ाई: '),'680px अधिकतम'),
+          R('div',null,R('b',null,'हेडर ऊँचाई: '),'यूटिलिटी 38 · ब्रांड 88 · नेव 46'),
+          R('div',null,R('b',null,'स्टिकी: '),'स्क्रॉल पर नेव 52px बार में संघनित'),
+          R('div',null,R('b',null,'कार्ड-गैप: '),'20–24px'),
+          R('div',null,R('b',null,'रेडियस: '),'2–3px (संपादकीय, तीक्ष्ण)'),
+          R('div',null,R('b',null,'शैडो: '),'0 1px 3px rgba(10,37,80,.08) संयमित'))
+      ]),
+      card('रंग टोकन',[R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 14px'}},
+        R('div',null,sw(t.navy,'नैवी इंक','#0a2550'),sw(t.red,'सिंदूर लाल','#9e1b22'),sw(t.gold,'सोना','#c19a3e')),
+        R('div',null,sw(t.paper,'न्यूज़प्रिंट','#f7f4ec'),sw(t.ink,'इंक ब्लैक','#16130d'),sw(t.green,'सफलता','#2f7d52')))]),
+      card('टाइप-स्केल (डेस्कटॉप)',[
+        typeRow('हीरो शीर्षक',40,'Noto Serif 700','hi-serif'),
+        typeRow('सेक्शन शीर्षक',23,'Noto Serif 700','hi-serif'),
+        typeRow('कार्ड शीर्षक',18,'Noto Serif 600','hi-serif'),
+        typeRow('मुख्य पाठ',18,'Noto Serif 400 · lh 1.75','hi-serif'),
+        typeRow('मेटा/लेबल',12,'Mukta 700','')
+      ]),
+      card('इमेज अनुपात',[R('div',{style:{fontFamily:'Mukta',fontSize:13,lineHeight:2,color:t.ink2}},
+        R('div',null,R('b',null,'16:9 '),'— हीरो, वीडियो'),
+        R('div',null,R('b',null,'3:2 '),'— लीड व लेख इमेज'),
+        R('div',null,R('b',null,'4:3 '),'— सेक्शन कार्ड'),
+        R('div',null,R('b',null,'1:1 '),'— हेडलाइन थंब, ट्रेंडिंग'),
+        R('div',null,R('b',null,'4:5 '),'— फ़ोटो स्टोरी'),
+        R('div',{style:{marginTop:8,fontSize:11.5,color:t.ink3,lineHeight:1.6}},'सभी इमेज next/image · AVIF/WebP · लेआउट-स्पेस आरक्षित (CLS शून्य)।'))
+      ]),
+      card('विज्ञापन आयाम',[R('div',{style:{fontFamily:'ui-monospace,monospace',fontSize:12,lineHeight:1.9,color:t.ink2}},
+        R('div',null,'Leaderboard 728×90 / 970×90'),
+        R('div',null,'Billboard 970×250'),
+        R('div',null,'Sidebar Rectangle 300×250 / 300×600'),
+        R('div',null,'In-feed 300×250 (native भी)'),
+        R('div',null,'Article inline 580×300'),
+        R('div',null,'Tablet 468×60 / 300×250'),
+        R('div',{style:{fontFamily:'Mukta',marginTop:8,fontSize:11.5,color:t.ink3,lineHeight:1.6}},'सभी "विज्ञापन" लेबल के साथ · स्थान आरक्षित · लीड के ऊपर कभी नहीं।'))
+      ]));
+  }
+
+  headers(){
+    const R=React.createElement; const t=this.T();
+    // H1 desktop full header (3 rows + ticker)
+    const f1=this.frame({id:'H01',title:'डेस्कटॉप हेडर · पूर्ण',w:1240,note:'यूटिलिटी + ब्रांड + नेव + ब्रेकिंग',anno:'तीन पंक्तियाँ भरी-पूरी व संपादकीय; लोगो व खोज के बीच खाली जगह नहीं — खोज-फ़ील्ड व सदस्यता-CTA दायाँ भाग भरते हैं।'},this.deskHeader({active:0}));
+    // H2 sticky condensed
+    const f2=this.frame({id:'H02',title:'डेस्कटॉप हेडर · स्टिकी (स्क्रॉल्ड)',w:1240,note:'संघनित एक-पंक्ति',anno:'स्क्रॉल पर यूटिलिटी-स्ट्रिप व ब्रांड-पंक्ति सिमटकर एक 56px बार बनती हैं — छोटा लोगो + नेव + खोज-आइकन; ब्रेकिंग-टिकर छिपता है।'},[
+      R('div',{style:{background:t.navy,height:56,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 28px'}},
+        R('div',{style:{display:'flex',alignItems:'center',gap:20}},
+          R('div',{style:{display:'flex',alignItems:'center',gap:9}},R('div',{style:{width:32,height:32,borderRadius:6,background:t.red,display:'flex',alignItems:'center',justifyContent:'center'}},R('span',{className:'tiro',style:{fontSize:19,color:t.gold,fontWeight:700}},'ज')),R('span',{className:'tiro',style:{fontSize:24,color:t.paper}},'जनदर्पण')),
+          R('div',{style:{display:'flex',gap:16}},...['होम','छत्तीसगढ़','भारत','राजनीति','व्यापार','खेल','ओपिनियन'].map((it,i)=>R('span',{key:i,style:{fontFamily:'Mukta',fontSize:13.5,fontWeight:i===0?800:600,color:i===0?'#fff':'#b9c4db'}},it)))),
+        R('div',{style:{display:'flex',alignItems:'center',gap:18}},this.icon('search',20,t.goldSoft,1.9),R('div',{style:{display:'flex',alignItems:'center',gap:6,fontFamily:'Mukta',fontSize:12,fontWeight:800,color:'#e05a63'}},R('span',{style:{width:6,height:6,borderRadius:6,background:'#e05a63'}}),'लाइव'),R('div',{style:{background:t.gold,color:t.navy,fontFamily:'Mukta',fontWeight:800,fontSize:12.5,padding:'7px 14px',borderRadius:3}},'सदस्य बनें')))
+    ]);
+    // H3 tablet landscape header
+    const f3=this.frame({id:'H03',title:'टैबलेट लैंडस्केप हेडर · 1024',w:1024,note:'यूटिलिटी सिमटी, नेव स्क्रॉलेबल',anno:'ज़िला/मौसम/भाषा यूटिलिटी बनी रहती है; श्रेणी-नेविगेशन क्षैतिज-स्क्रॉलेबल हो जाती है (सभी 13 आइटम एक साथ नहीं)। खोज-फ़ील्ड छोटी।'},[
+      this.utilStrip({compact:false,pad:24}),this.brandRow({small:true,pad:24}),
+      R('div',{style:{background:t.navy,height:44,display:'flex',alignItems:'center',padding:'0 24px',gap:0,overflow:'hidden'}},...['होम','ताज़ा','छत्तीसगढ़','ज़िले','भारत','राजनीति','व्यापार','खेल','मनोरंजन','ओपिनियन'].map((it,i)=>R('span',{key:i,style:{fontFamily:'Mukta',fontSize:13,fontWeight:i===0?800:600,color:i===0?'#fff':'#b9c4db',padding:'0 13px',borderBottom:i===0?'3px solid '+t.gold:'none',display:'flex',alignItems:'center',height:44,whiteSpace:'nowrap'}},it)),R('div',{style:{marginLeft:'auto',paddingLeft:12,display:'flex',alignItems:'center'}},this.icon('chevR',18,'#8ea0c4',2)))
+    ]);
+    // H4 tablet portrait header
+    const f4=this.frame({id:'H04',title:'टैबलेट पोर्ट्रेट हेडर · 768',w:768,note:'हैमबर्गर + संघनित',anno:'श्रेणी-नेविगेशन हैमबर्गर-मेन्यू में जाती है (पर मोबाइल हेडर नहीं); ब्रांड केंद्रित रह सकता है, यूटिलिटी की मुख्य जानकारी (ज़िला · मौसम) बनी रहती है।'},[
+      R('div',{style:{background:t.navyDeep,height:34,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',fontFamily:'Mukta',fontSize:12,color:'#c7d0e2'}},R('span',null,'शनि, 20 जुलाई · 8:41'),R('div',{style:{display:'flex',alignItems:'center',gap:6,color:t.goldSoft,fontWeight:700}},this.icon('pin',13,t.gold,1.8),'रायपुर 32° वर्षा')),
+      R('div',{style:{background:t.paper,height:70,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',borderBottom:'1px solid '+t.line}},
+        this.icon('list',24,t.navy,2),
+        R('div',{style:{display:'flex',alignItems:'center',gap:10}},R('div',{style:{width:34,height:34,borderRadius:6,background:t.navy,display:'flex',alignItems:'center',justifyContent:'center'}},R('span',{className:'tiro',style:{fontSize:20,color:t.gold,fontWeight:700}},'ज')),R('span',{className:'tiro',style:{fontSize:30,color:t.navy,fontWeight:700}},'जनदर्पण')),
+        R('div',{style:{display:'flex',gap:16}},this.icon('search',22,t.navy,1.9),this.icon('user',22,t.navy,1.9))),
+      R('div',{style:{background:t.navy,height:42,display:'flex',alignItems:'center',padding:'0 20px',gap:0,overflow:'hidden'}},...['होम','ताज़ा','छत्तीसगढ़','भारत','खेल','ओपिनियन'].map((it,i)=>R('span',{key:i,style:{fontFamily:'Mukta',fontSize:13,fontWeight:i===0?800:600,color:i===0?'#fff':'#b9c4db',padding:'0 12px',display:'flex',alignItems:'center',height:42,borderBottom:i===0?'3px solid '+t.gold:'none'}},it)),R('div',{style:{marginLeft:'auto'}},this.icon('chevR',16,'#8ea0c4',2)))
+    ]);
+    return [f1,f2,f3,f4];
+  }
+  pad(children,p){ const R=React.createElement; return R('div',{style:{padding:p||'28px'}},...children); }
+  container(children,o){ o=o||{}; const R=React.createElement; return R('div',{style:{maxWidth:1240,margin:'0 auto',padding:o.pad||'28px'}},...children); }
+
+  desktop(){
+    const R=React.createElement; const t=this.T(); const F=[];
+
+    // ============ D01 HOMEPAGE 1440 ============
+    F.push(this.frame({id:'D01_Desktop_Home_1440',title:'होमपेज',w:1240,bg:t.shell,
+      anno:'1440→1280: कंटेनर 1240→1160, हीरो-ग्रिड वही। 1024: दायाँ सिडबार हीरो के नीचे जाता है, सेक्शन 3→2 कॉलम। 768: सब एकल-कॉलम, हेडलाइन-सूचियाँ पूरी चौड़ाई।'},[
+      ...this.deskHeader({active:0}),
+      // hero band: lead (8) + sidebar (4)
+      R('div',{style:{maxWidth:1240,margin:'0 auto',padding:'24px 28px 0',display:'grid',gridTemplateColumns:'1fr 384px',gap:28}},
+        // main col
+        R('div',null,
+          // lead
+          R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden',marginBottom:24}},
+            this.img(360,'रायपुर · विधानसभा सत्र (16:9)','city'),
+            this.pad([
+              R('div',{style:{display:'flex',gap:8,alignItems:'center',marginBottom:6}},this.kicker('प्रमुख · राजनीति'),this.meta('12 मिनट पहले · रमेश साहू')),
+              R('h1',{className:'hi-serif',style:{margin:'0 0 8px',fontSize:36,lineHeight:1.22,fontWeight:700,color:t.ink}},'विधानसभा में नई औद्योगिक नीति पेश, दस लाख रोज़गार का लक्ष्य'),
+              this.aiChip({fs:15,text:'सरकार ने इस्पात, खनन व सौर ऊर्जा पर केंद्रित नीति पेश की — पाँच वर्षों में ₹80,000 करोड़ निवेश और ग्रामीण रोज़गार का दावा। विपक्ष ने क्रियान्वयन पर सवाल उठाए।'}),
+              R('div',{style:{display:'flex',gap:20,marginTop:10}},...[['headphone','सुनें'],['share','शेयर'],['bookmark','सहेजें']].map((a,i)=>R('div',{key:i,style:{display:'flex',alignItems:'center',gap:6,fontFamily:'Mukta',fontSize:13,fontWeight:600,color:t.ink3}},this.icon(a[0],17,t.ink3,1.8),a[1])))
+            ],'20px 22px 22px')),
+          // two secondary leads
+          R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,marginBottom:24}},
+            ...[['जिला · दुर्ग','स्मार्ट सिटी परियोजना का दूसरा चरण शुरू, ₹640 करोड़ मंज़ूर','city'],['व्यापार','राज्य का GST संग्रह रिकॉर्ड 18% बढ़ा, उद्योग जगत उत्साहित','market']].map((s,i)=>
+              R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},this.img(160,null,s[2]),this.pad([this.kicker(s[0]),R('h2',{className:'hi-serif',style:{margin:'6px 0 0',fontSize:19,lineHeight:1.32,fontWeight:700,color:t.ink}},s[1]),this.meta('34 मिनट पहले')],'14px 16px 16px')))),
+          // leaderboard ad
+          this.adBox({h:90,label:'Leaderboard विज्ञापन',size:'728×90'})),
+        // sidebar
+        R('div',null,
+          this.weatherW({}),
+          R('div',{style:{height:16}}),
+          this.marketTiles(),
+          R('div',{style:{height:20}}),
+          this.sideModule('ताज़ा ख़बरें',[
+            this.hcard({kicker:'राजनीति',title:'कैबिनेट विस्तार पर हाईकमान से मंथन',time:'10:42 AM'}),
+            this.hcard({kicker:'खेल',title:'रणजी: राज्य टीम सेमीफ़ाइनल में पहुँची',time:'10:15 AM'}),
+            this.hcard({kicker:'अपराध',title:'बिलासपुर में साइबर ठगी गिरोह पकड़ा गया',time:'09:50 AM',last:true})
+          ],{color:t.red}))),
+      // Chhattisgarh section band (full width container)
+      this.container([
+        this.sectionBand('छत्तीसगढ़',t.red),
+        R('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:20}},...[['रायपुर','नगर निगम की नई पार्किंग नीति पर व्यापारियों का विरोध','city'],['बस्तर','आदिवासी महोत्सव की तैयारियाँ ज़ोरों पर','festival'],['बिलासपुर','रेल मंडल में नई मेमू ट्रेन को हरी झंडी','night'],['कोरबा','ताप विद्युत संयंत्र में उत्पादन रिकॉर्ड स्तर पर','field']].map((s,i)=>
+          R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},this.img(130,null,s[2]),this.pad([this.kicker(s[0]),R('h3',{className:'hi-serif',style:{margin:'5px 0 0',fontSize:16,lineHeight:1.35,fontWeight:600,color:t.ink}},s[1])],'12px 14px 14px')))) ],{pad:'40px 28px 0'}),
+      // India + Trending split
+      this.container([
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 384px',gap:28}},
+          R('div',null,this.sectionBand('भारत',t.navy),
+            R('div',{style:{display:'grid',gridTemplateColumns:'1.3fr 1fr',gap:24}},
+              R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},this.img(210,'संसद · नई दिल्ली','court'),this.pad([this.kicker('राष्ट्रीय'),R('h3',{className:'hi-serif',style:{margin:'6px 0 6px',fontSize:21,lineHeight:1.3,fontWeight:700}},'मानसून सत्र: आर्थिक सुधार विधेयक पर चर्चा शुरू'),R('p',{style:{margin:0,fontFamily:'Noto Serif Devanagari',fontSize:14,lineHeight:1.65,color:t.ink3}},'केंद्र सरकार ने नए विधेयक में राज्यों को अधिक वित्तीय स्वायत्तता का प्रस्ताव रखा है।')],'14px 16px 16px')),
+              R('div',null,...[['अर्थव्यवस्था','महँगाई दर में मामूली गिरावट, राहत के संकेत'],['शिक्षा','नई शिक्षा नीति के तहत कौशल पाठ्यक्रम शुरू'],['स्वास्थ्य','ग्रामीण अस्पतालों में टेली-मेडिसिन विस्तार']].map((s,i)=>this.hcard({kicker:s[0],title:s[1],time:i+1+' घंटे पहले',thumb:true,tone:'edu',last:i===2}))))),
+          R('div',null,
+            this.sideModule('सर्वाधिक पढ़ी गईं',[
+              this.hcard({rank:1,kicker:'राजनीति',title:'नई औद्योगिक नीति की पूरी जानकारी'}),
+              this.hcard({rank:2,kicker:'खेल',title:'रणजी सेमीफ़ाइनल: लाइव स्कोर'}),
+              this.hcard({rank:3,kicker:'मौसम',title:'बस्तर में बाढ़ की स्थिति पर अपडेट'}),
+              this.hcard({rank:4,kicker:'व्यापार',title:'सोने के दाम में उतार-चढ़ाव',last:true})
+            ],{color:t.gold}),
+            this.adBox({h:250,label:'Sidebar Rectangle',size:'300×250'}))) ],{pad:'40px 28px 0'}),
+      // WhatsApp / support strip
+      this.container([
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}},
+          R('div',{style:{background:'linear-gradient(135deg,'+t.navy+','+t.navyDeep+')',borderRadius:3,padding:'22px 24px',color:t.paper,display:'flex',alignItems:'center',gap:16}},this.icon('star',30,t.gold,1.7),R('div',{style:{flex:1}},R('div',{style:{fontFamily:'Mukta',fontSize:13,fontWeight:800,color:t.goldSoft,marginBottom:3}},'स्थानीय पत्रकारिता का समर्थन करें'),R('div',{style:{fontFamily:'Mukta',fontSize:12.5,color:'#a9b6cf'}},'दर्पण प्रीमियम — विज्ञापन-मुक्त, गहन विश्लेषण, ई-पेपर')),R('div',{style:{background:t.gold,color:t.navy,fontFamily:'Mukta',fontWeight:800,fontSize:13,padding:'10px 18px',borderRadius:3,whiteSpace:'nowrap'}},'सदस्य बनें')),
+          R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,padding:'22px 24px',display:'flex',alignItems:'center',gap:16}},this.icon('whatsapp',30,t.green,1.8),R('div',{style:{flex:1}},R('div',{className:'hi-serif',style:{fontSize:17,fontWeight:700,color:t.ink,marginBottom:2}},'WhatsApp पर ख़बरें पाएँ'),R('div',{style:{fontFamily:'Mukta',fontSize:12.5,color:t.ink3}},'रोज़ सुबह अपने ज़िले की मुख्य ख़बरें')),R('div',{style:{border:'1.5px solid '+t.navy,color:t.navy,fontFamily:'Mukta',fontWeight:800,fontSize:13,padding:'9px 18px',borderRadius:3,whiteSpace:'nowrap'}},'जुड़ें'))) ],{pad:'40px 28px 40px'}),
+      this.footer({})
+    ]));
+
+    // ============ D02 CATEGORY 1440 ============
+    F.push(this.frame({id:'D02_Desktop_Category_1440',title:'श्रेणी पेज · छत्तीसगढ़',w:1240,bg:t.shell,
+      anno:'1024: सिडबार नीचे; ग्रिड 3→2 कॉलम। 768: एकल-कॉलम, फ़िल्टर-बार क्षैतिज-स्क्रॉलेबल; "और लोड करें" बटन पूरी चौड़ाई।'},[
+      ...this.deskHeader({active:2,ticker:false}),
+      this.container([
+        // section identity
+        R('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',borderBottom:'3px solid '+t.navy,paddingBottom:14,marginBottom:8}},
+          R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:12,color:t.muted,marginBottom:4}},R('span',null,'होम'),R('span',{style:{margin:'0 6px'}},'›'),R('span',{style:{color:t.red,fontWeight:700}},'छत्तीसगढ़')),R('h1',{className:'tiro',style:{margin:0,fontSize:40,fontWeight:700,color:t.navy,lineHeight:1}},'छत्तीसगढ़')),
+          R('div',{style:{display:'flex',gap:8}},...['सभी','रायपुर','दुर्ग','बस्तर','बिलासपुर'].map((c,i)=>R('div',{key:i,style:{fontFamily:'Mukta',fontSize:13,fontWeight:i===0?800:600,padding:'7px 14px',borderRadius:2,background:i===0?t.navy:'#fff',color:i===0?'#fff':t.ink2,border:'1px solid '+(i===0?t.navy:t.line)}},c))))
+      ],{pad:'26px 28px 0'}),
+      R('div',{style:{maxWidth:1240,margin:'0 auto',padding:'20px 28px 40px',display:'grid',gridTemplateColumns:'1fr 384px',gap:28}},
+        R('div',null,
+          // lead
+          R('div',{style:{display:'grid',gridTemplateColumns:'1.2fr 1fr',gap:20,background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden',marginBottom:24}},this.img(240,'रायपुर (3:2)','city'),this.pad([this.kicker('रायपुर · प्रमुख'),R('h2',{className:'hi-serif',style:{margin:'6px 0 8px',fontSize:24,lineHeight:1.28,fontWeight:700}},'नगर निगम की नई पार्किंग नीति, व्यापारियों का तीन-दिवसीय बंद'),R('p',{style:{margin:0,fontFamily:'Noto Serif Devanagari',fontSize:14,lineHeight:1.7,color:t.ink3}},'मुख्य बाज़ारों में सशुल्क पार्किंग लागू; व्यापारी संघ ने विरोध का ऐलान किया।'),this.meta('20 मिनट पहले')],'16px 18px')),
+          // grid
+          R('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20,marginBottom:24}},...[['दुर्ग','स्मार्ट सिटी परियोजना का दूसरा चरण','city'],['बस्तर','आदिवासी महोत्सव की तैयारियाँ','festival'],['बिलासपुर','नई मेमू ट्रेन को हरी झंडी','night'],['कोरबा','ताप संयंत्र उत्पादन रिकॉर्ड पर','field'],['राजनांदगांव','किसानों को ब्याज़-मुक्त ऋण','market'],['रायगढ़','औद्योगिक क्षेत्र में नया निवेश','court']].map((s,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},this.img(120,null,s[2]),this.pad([this.kicker(s[0]),R('h3',{className:'hi-serif',style:{margin:'5px 0 0',fontSize:15.5,lineHeight:1.35,fontWeight:600}},s[1])],'12px 14px 14px')))),
+          R('div',{style:{textAlign:'center'}},R('div',{style:{display:'inline-block',border:'1.5px solid '+t.navy,color:t.navy,fontFamily:'Mukta',fontWeight:800,fontSize:14,padding:'12px 40px',borderRadius:3}},'और ख़बरें लोड करें'))),
+        R('div',null,this.sideModule('ट्रेंडिंग',[this.hcard({rank:1,kicker:'रायपुर',title:'पार्किंग नीति पर बवाल'}),this.hcard({rank:2,kicker:'बस्तर',title:'महोत्सव का कार्यक्रम जारी'}),this.hcard({rank:3,kicker:'दुर्ग',title:'स्मार्ट सिटी का नक्शा',last:true})]),this.adBox({h:600,label:'Sidebar Skyscraper',size:'300×600'}))),
+      this.footer({})
+    ]));
+
+    // ============ D03 ARTICLE STANDARD 1440 ============
+    F.push(this.frame({id:'D03_Desktop_Article_1440',title:'लेख पेज · मानक',w:1240,bg:'#fff',
+      anno:'पठन-चौड़ाई 680px केंद्रित — पूरी स्क्रीन पर नहीं खिंचता। बायाँ स्टिकी शेयर-रेल + दायाँ सिडबार। 1024: शेयर-रेल इनलाइन ऊपर आती है, सिडबार नीचे। 768: सब एकल-कॉलम।'},[
+      ...this.deskHeader({active:6,ticker:false}),
+      R('div',{style:{maxWidth:1240,margin:'0 auto',padding:'26px 28px 40px',display:'grid',gridTemplateColumns:'56px 680px 1fr',gap:28,justifyContent:'center'}},
+        // sticky share rail
+        R('div',null,R('div',{style:{display:'flex',flexDirection:'column',gap:14,position:'sticky',top:20,alignItems:'center'}},...[['bookmark'],['share'],['headphone'],['whatsapp']].map((a,i)=>R('div',{key:i,style:{width:44,height:44,borderRadius:44,border:'1px solid '+t.line,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff'}},this.icon(a[0],19,t.ink2,1.8))))),
+        // article body
+        R('div',null,
+          R('div',{style:{fontFamily:'Mukta',fontSize:12,color:t.muted,marginBottom:12}},R('span',null,'होम'),R('span',{style:{margin:'0 6px'}},'›'),R('span',null,'राजनीति'),R('span',{style:{margin:'0 6px'}},'›'),R('span',{style:{color:t.red}},'औद्योगिक नीति')),
+          this.kicker('राजनीति · विश्लेषण'),
+          R('h1',{className:'hi-serif',style:{margin:'8px 0 12px',fontSize:38,lineHeight:1.22,fontWeight:700,color:t.ink}},'विधानसभा में नई औद्योगिक नीति पेश, दस लाख रोज़गार का लक्ष्य'),
+          R('p',{style:{margin:'0 0 16px',fontFamily:'Noto Serif Devanagari',fontSize:19,lineHeight:1.6,color:t.ink2,fontWeight:500}},'सरकार का दावा — पाँच वर्षों में ₹80,000 करोड़ का निवेश और ग्रामीण क्षेत्रों में प्राथमिकता से रोज़गार।'),
+          R('div',{style:{display:'flex',alignItems:'center',gap:12,padding:'14px 0',borderTop:'1px solid '+t.line2,borderBottom:'1px solid '+t.line2,marginBottom:18}},R('div',{style:{width:44,height:44,borderRadius:44,background:'linear-gradient(135deg,'+t.navy+','+t.red+')'}}),R('div',{style:{flex:1}},R('div',{style:{fontFamily:'Mukta',fontSize:13.5,fontWeight:800}},'रमेश साहू'),R('div',{style:{fontFamily:'Mukta',fontSize:11.5,color:t.muted}},'वरिष्ठ संवाददाता · रायपुर · प्रकाशित 20 जुलाई, 8:20 AM')),R('div',{style:{display:'flex',alignItems:'center',gap:6,fontFamily:'Mukta',fontSize:12,color:t.ink3}},this.icon('clock',14,t.ink3,1.7),'5 मिनट')),
+          this.img(390,'रायपुर · विधानसभा सत्र (3:2)','city'),
+          R('div',{style:{fontFamily:'Mukta',fontSize:11.5,color:t.muted,margin:'6px 0 20px',fontStyle:'italic'}},'मुख्यमंत्री ने सदन में नीति दस्तावेज़ प्रस्तुत किया। · फ़ोटो: जनदर्पण'),
+          R('div',{style:{background:t.paper2,border:'1px solid '+t.line,borderRadius:3,padding:'16px 18px',marginBottom:20}},this.aiChip({m:'0',fs:15,text:'नई नीति इस्पात, खनन व सौर ऊर्जा पर केंद्रित। सरकार ने स्थानीय युवाओं को प्राथमिकता व कौशल प्रशिक्षण का वादा किया; विपक्ष ने क्रियान्वयन पर सवाल उठाए।'})),
+          R('p',{style:{margin:'0 0 16px',fontFamily:'Noto Serif Devanagari',fontSize:18,lineHeight:1.78,color:t.ink2}},R('span',{style:{float:'left',fontFamily:'Tiro Devanagari Hindi',fontSize:58,lineHeight:.8,paddingRight:10,color:t.red}},'रा'),'यपुर। विधानसभा के मानसून सत्र में सरकार ने नई औद्योगिक नीति पेश की, जिसमें इस्पात, खनन और नवीकरणीय ऊर्जा को केंद्र में रखा गया है। मुख्यमंत्री ने कहा कि यह नीति प्रदेश के ग्रामीण क्षेत्रों में रोज़गार के नए द्वार खोलेगी।'),
+          R('h2',{className:'hi-serif',style:{margin:'8px 0 10px',fontSize:24,fontWeight:700,color:t.ink}},'नीति के मुख्य प्रावधान'),
+          R('p',{style:{margin:'0 0 16px',fontFamily:'Noto Serif Devanagari',fontSize:18,lineHeight:1.78,color:t.ink2}},'नीति में सूक्ष्म व लघु उद्योगों के लिए विशेष प्रोत्साहन, एकल-खिड़की मंज़ूरी और स्थानीय रोज़गार पर ज़ोर दिया गया है। सौर ऊर्जा परियोजनाओं को भूमि-आवंटन में प्राथमिकता मिलेगी।'),
+          R('blockquote',{style:{margin:'22px 0',borderLeft:'4px solid '+t.gold,paddingLeft:18,fontFamily:'Noto Serif Devanagari',fontSize:22,lineHeight:1.5,fontStyle:'italic',color:t.navy,fontWeight:600}},'"यह नीति केवल निवेश नहीं, प्रदेश के हर ज़िले तक अवसर पहुँचाने का संकल्प है।"',R('div',{style:{fontFamily:'Mukta',fontSize:13,fontWeight:700,color:t.ink3,fontStyle:'normal',marginTop:8}},'— उद्योग मंत्री, छत्तीसगढ़')),
+          // fact box
+          R('div',{style:{background:t.navy,color:t.paper,borderRadius:3,padding:'18px 20px',margin:'0 0 22px'}},R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.1em',color:t.gold,marginBottom:12}},'एक नज़र में'),R('div',{style:{display:'flex',justifyContent:'space-between'}},...[['₹80K Cr','निवेश लक्ष्य'],['10 लाख','रोज़गार'],['5 वर्ष','अवधि'],['33','ज़िले']].map((x,i)=>R('div',{key:i,style:{textAlign:'center'}},R('div',{style:{fontFamily:'Mukta',fontSize:22,fontWeight:800}},x[0]),R('div',{style:{fontFamily:'Mukta',fontSize:11,color:'#8ea0c4',marginTop:2}},x[1]))))),
+          // inline ad
+          this.adBox({h:250,label:'Article Inline विज्ञापन',size:'580×300'}),
+          R('p',{style:{margin:'20px 0 16px',fontFamily:'Noto Serif Devanagari',fontSize:18,lineHeight:1.78,color:t.ink2}},'विश्लेषकों का मानना है कि नीति की सफलता ज़मीनी क्रियान्वयन और उद्योगों की भागीदारी पर निर्भर करेगी। अगले कुछ महीनों में पहले चरण की परियोजनाओं की घोषणा संभावित है।'),
+          // tags
+          R('div',{style:{display:'flex',flexWrap:'wrap',gap:8,margin:'20px 0'}},...['#औद्योगिकनीति','#रायपुर','#रोज़गार','#विधानसभा','#छत्तीसगढ़'].map((tg,i)=>R('span',{key:i,style:{fontFamily:'Mukta',fontSize:12.5,fontWeight:600,color:t.navy,border:'1px solid '+t.line,borderRadius:2,padding:'6px 12px'}},tg))),
+          // author box
+          R('div',{style:{display:'flex',gap:16,background:t.paper2,border:'1px solid '+t.line,borderRadius:3,padding:'18px 20px',margin:'8px 0 24px'}},R('div',{style:{width:56,height:56,borderRadius:56,background:'linear-gradient(135deg,'+t.navy+','+t.red+')',flexShrink:0}}),R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:15,fontWeight:800}},'रमेश साहू'),R('div',{style:{fontFamily:'Mukta',fontSize:12.5,color:t.ink3,margin:'2px 0 6px'}},'वरिष्ठ राजनीतिक संवाददाता'),R('p',{style:{margin:0,fontFamily:'Noto Serif Devanagari',fontSize:13.5,lineHeight:1.6,color:t.ink2}},'रायपुर से 12 वर्षों से राज्य की राजनीति व नीति-निर्माण पर रिपोर्टिंग।'))),
+          // membership support
+          R('div',{style:{background:'linear-gradient(135deg,'+t.navy+','+t.navyDeep+')',borderRadius:3,padding:'22px 24px',color:t.paper,display:'flex',alignItems:'center',gap:18}},this.icon('star',34,t.gold,1.7),R('div',{style:{flex:1}},R('div',{className:'hi-serif',style:{fontSize:19,fontWeight:700,color:t.goldSoft}},'स्वतंत्र पत्रकारिता का समर्थन करें'),R('div',{style:{fontFamily:'Mukta',fontSize:13,color:'#a9b6cf',marginTop:3}},'दर्पण प्रीमियम — विज्ञापन-मुक्त, गहन विश्लेषण व ई-पेपर')),R('div',{style:{background:t.gold,color:t.navy,fontFamily:'Mukta',fontWeight:800,fontSize:14,padding:'12px 22px',borderRadius:3,whiteSpace:'nowrap'}},'सदस्य बनें'))),
+        // right sidebar
+        R('div',null,R('div',{style:{position:'sticky',top:20}},
+          this.sideModule('संबंधित ख़बरें',[this.hcard({kicker:'राजनीति',title:'कैबिनेट विस्तार पर मंथन'}),this.hcard({kicker:'व्यापार',title:'GST संग्रह रिकॉर्ड स्तर पर'}),this.hcard({kicker:'जिला',title:'दुर्ग में नया औद्योगिक पार्क',last:true})]),
+          this.adBox({h:250,label:'Sidebar Rectangle',size:'300×250'}),
+          R('div',{style:{height:20}}),
+          this.sideModule('आगे पढ़ें',[this.hcard({kicker:'एक्सप्लेनर',title:'नई नीति आपके ज़िले को कैसे बदलेगी',last:true})],{color:t.gold})))),
+      this.footer({})
+    ]));
+
+    // ============ D04 ARTICLE OPINION 1440 ============
+    F.push(this.frame({id:'D04_Desktop_Opinion_1440',title:'लेख पेज · ओपिनियन/संपादकीय',w:1240,bg:'#fff',
+      anno:'विशिष्ट सेरिफ़ टाइपसेटिंग व "राय" पारदर्शिता-लेबल। केंद्रित 700px, कोई सिडबार-विज्ञापन नहीं (संपादकीय शुद्धता)। 768: लेखक-कार्ड ऊपर, पूरी चौड़ाई।'},[
+      ...this.deskHeader({active:12,ticker:false}),
+      R('div',{style:{maxWidth:760,margin:'0 auto',padding:'34px 28px 44px'}},
+        R('div',{style:{display:'inline-flex',alignItems:'center',gap:7,fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.1em',color:t.amber,border:'1px solid '+t.gold,padding:'5px 12px',borderRadius:2,marginBottom:16}},this.icon('flag',14,t.amber,1.8),'राय · संपादकीय दृष्टिकोण'),
+        R('h1',{className:'hi-serif',style:{margin:'0 0 14px',fontSize:40,lineHeight:1.24,fontWeight:700,textAlign:'center'}},'विकास की गति और ज़मीनी हक़ीक़त के बीच'),
+        R('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:10,padding:'14px 0',borderTop:'1px solid '+t.line2,borderBottom:'1px solid '+t.line2,marginBottom:24}},R('div',{style:{width:38,height:38,borderRadius:38,background:'linear-gradient(135deg,'+t.navy+','+t.red+')'}}),R('div',{style:{fontFamily:'Mukta',fontSize:13}},R('b',null,'संपादक मंडल'),R('span',{style:{color:t.muted}},' · जनदर्पण · 20 जुलाई')),),
+        R('p',{style:{margin:'0 0 16px',fontFamily:'Noto Serif Devanagari',fontSize:20,lineHeight:1.85,color:t.ink2}},R('span',{style:{float:'left',fontFamily:'Tiro Devanagari Hindi',fontSize:64,lineHeight:.78,paddingRight:10,color:t.red}},'नी'),'तियाँ तभी सार्थक हैं जब उनका लाभ अंतिम पंक्ति तक पहुँचे। घोषणाओं और क्रियान्वयन के बीच की दूरी ही असली परीक्षा है। नई औद्योगिक नीति के आँकड़े प्रभावशाली हैं, पर उनका असली मूल्य गाँव की चौपाल तक पहुँचकर ही सिद्ध होगा।'),
+        R('blockquote',{style:{margin:'24px 0',borderLeft:'4px solid '+t.gold,paddingLeft:18,fontFamily:'Noto Serif Devanagari',fontSize:24,lineHeight:1.5,fontStyle:'italic',color:t.navy,fontWeight:600}},'"आँकड़े तब जीवंत होते हैं जब वे रोज़गार बनकर घर तक पहुँचें।"'),
+        R('p',{style:{margin:'0 0 16px',fontFamily:'Noto Serif Devanagari',fontSize:18,lineHeight:1.8,color:t.ink2}},'सरकार के दावों की कसौटी अगले कुछ महीनों में दिखेगी, जब ज़मीनी स्तर पर परियोजनाएँ आकार लेंगी। पारदर्शिता और नियमित समीक्षा ही इस नीति को नारे से नतीजे में बदल सकती है।')),
+      this.footer({})
+    ]));
+
+    // ============ D05 LIVE ARTICLE 1440 ============
+    F.push(this.frame({id:'D05_Desktop_LiveArticle_1440',title:'लाइव आर्टिकल / लाइव ब्लॉग',w:1240,bg:t.shell,
+      anno:'बाएँ लाइव-टाइमलाइन (नवीनतम ऊपर), दाएँ स्कोर/मुख्य-बिंदु पिन + संबंधित। 1024: स्कोर-बार क्षैतिज ऊपर, टाइमलाइन नीचे। 768: सब एकल-कॉलम, "नई प्रविष्टियाँ" फ़्लोटिंग पिल।'},[
+      ...this.deskHeader({active:8}),
+      this.container([
+        R('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:14}},R('span',{style:{width:9,height:9,borderRadius:9,background:'#e05a63',boxShadow:'0 0 8px #e05a63'}}),R('span',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:800,color:'#e05a63',letterSpacing:'.08em'}},'LIVE · 8.2K देख रहे हैं'),R('span',{style:{fontFamily:'Mukta',fontSize:12,color:t.muted}},'· अपडेट 30 सेकंड पहले')),
+        R('h1',{className:'hi-serif',style:{margin:'0 0 20px',fontSize:34,lineHeight:1.24,fontWeight:700}},'रणजी ट्रॉफ़ी सेमीफ़ाइनल — छत्तीसगढ़ बनाम मुंबई, दिन 2'),
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 384px',gap:28}},
+          R('div',null,this.img(300,'लाइव · मैदान (16:9)','sport'),
+            R('div',{style:{marginTop:20}},...[['अभी','चौका! कप्तान का शानदार कवर ड्राइव, स्कोर 284/6','#e05a63',true],['5 मिनट','विकेट गिरा — तेज़ गेंदबाज़ ने दिलाई सफलता','#c19a3e',false],['18 मिनट','ड्रिंक्स ब्रेक, छत्तीसगढ़ मज़बूत स्थिति में','#93a4c2',false],['32 मिनट','शतकीय साझेदारी टूटी, नया बल्लेबाज़ क्रीज़ पर','#93a4c2',false]].map((e,i)=>
+              R('div',{key:i,style:{display:'flex',gap:16,paddingBottom:18}},R('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',flexShrink:0,width:70}},R('span',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,color:e[2]}},e[0]),i<3?R('div',{style:{width:2,flex:1,background:t.line,marginTop:6}}):null),R('div',{style:{flex:1,background:'#fff',border:'1px solid '+t.line,borderLeft:'3px solid '+e[2],borderRadius:'0 3px 3px 0',padding:'12px 16px'}},R('div',{className:'hi-serif',style:{fontSize:16,lineHeight:1.45,color:t.ink,fontWeight:e[3]?700:500}},e[1])))))),
+          R('div',null,R('div',{style:{position:'sticky',top:20}},
+            R('div',{style:{background:t.navy,color:t.paper,borderRadius:3,padding:'16px 18px',marginBottom:20}},R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.08em',color:t.gold,marginBottom:12}},'स्कोरबोर्ड'),R('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:8}},...[['छत्तीसगढ़','284/6'],['ओवर','78.2'],['बढ़त','+42']].map((x,i)=>R('div',{key:i,style:{textAlign:'center'}},R('div',{style:{fontFamily:'Mukta',fontSize:10.5,color:'#8ea0c4'}},x[0]),R('div',{style:{fontFamily:'Mukta',fontSize:18,fontWeight:800}},x[1]))))),
+            this.sideModule('संबंधित',[this.hcard({kicker:'खेल',title:'रणजी अंक तालिका में बदलाव'}),this.hcard({kicker:'विश्लेषण',title:'सेमीफ़ाइनल का समीकरण',last:true})]),
+            this.adBox({h:250,label:'Sidebar Rectangle',size:'300×250'})))) ],{pad:'26px 28px 40px'}),
+      this.footer({})
+    ]));
+
+    // ============ D06 PHOTO STORY 1440 ============
+    F.push(this.frame({id:'D06_Desktop_PhotoStory_1440',title:'फ़ोटो स्टोरी',w:1240,bg:t.dBg,round:3,
+      anno:'गहरा इमर्सिव कैनवास। बड़ा 4:5/16:9 फ़्रेम + थंब-रेल। 1024: थंब-रेल नीचे क्षैतिज। 768: एकल फ़्रेम + स्वाइप-डॉट, कैप्शन नीचे।'},[
+      R('div',{style:{padding:'16px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid '+t.dLine}},R('div',{style:{display:'flex',alignItems:'center',gap:10}},R('span',{className:'tiro',style:{fontSize:24,color:t.dText}},'जनदर्पण'),R('span',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:700,color:t.dMuted,letterSpacing:'.06em'}},'फ़ोटो स्टोरी')),R('div',{style:{display:'flex',gap:18}},this.icon('share',20,t.dText,1.8),this.icon('close',22,t.dText,2))),
+      R('div',{style:{padding:'24px 28px',display:'grid',gridTemplateColumns:'1fr 300px',gap:24}},
+        R('div',null,this.img(460,'बस्तर · आदिवासी महोत्सव (16:9)','festival'),
+          R('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:16}},R('div',null,this.kicker('बस्तर · महोत्सव',t.gold),R('h2',{className:'hi-serif',style:{margin:'6px 0 0',fontSize:22,fontWeight:700,color:t.dText}},'रंग, नृत्य और परंपरा: बस्तर दशहरा की झलकियाँ')),R('span',{style:{fontFamily:'Mukta',fontSize:14,fontWeight:700,color:t.dMuted}},'3 / 12')),
+          R('p',{style:{margin:'10px 0 0',fontFamily:'Noto Serif Devanagari',fontSize:16,lineHeight:1.65,color:t.dText,maxWidth:720}},'पारंपरिक वेशभूषा में नर्तक दल ने शोभायात्रा में हिस्सा लिया। यह उत्सव 75 दिनों तक चलता है और देश के सबसे लंबे उत्सवों में गिना जाता है।')),
+        R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.08em',color:t.dMuted,marginBottom:10}},'गैलरी · 12 तस्वीरें'),R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},...['festival','portrait','night','field','city','festival'].map((tn,i)=>R('div',{key:i,style:{border:i===2?'2px solid '+t.gold:'2px solid transparent',borderRadius:2,overflow:'hidden'}},this.img(72,null,tn)))))),
+    ]));
+
+    // ============ D07 DISTRICT LANDING 1440 ============
+    F.push(this.frame({id:'D07_Desktop_District_1440',title:'ज़िला लैंडिंग · रायपुर',w:1240,bg:t.shell,
+      anno:'ज़िला-पहचान बैनर + चयनकर्ता + स्थानीय मौसम/उपयोगिता। सरकारी-पोर्टल जैसा नहीं — संपादकीय कार्ड-लेआउट। 1024: उपयोगिता-टाइल्स 4→2 कॉलम। 768: एकल-कॉलम।'},[
+      ...this.deskHeader({active:3,ticker:false}),
+      // district hero banner
+      R('div',{style:{background:'linear-gradient(120deg,'+t.navy+','+t.navy2+')',color:t.paper,padding:'28px 0'}},R('div',{style:{maxWidth:1240,margin:'0 auto',padding:'0 28px',display:'flex',alignItems:'center',justifyContent:'space-between'}},
+        R('div',null,R('div',{style:{display:'flex',alignItems:'center',gap:8,fontFamily:'Mukta',fontSize:12,color:'#9fb0d0',marginBottom:6}},this.icon('pin',15,t.gold,1.9),'मेरा ज़िला'),R('h1',{className:'tiro',style:{margin:0,fontSize:44,fontWeight:700,lineHeight:1}},'रायपुर'),R('div',{style:{fontFamily:'Mukta',fontSize:13,color:'#c7d0e2',marginTop:8}},'राजधानी ज़िला · 42 नई ख़बरें आज')),
+        R('div',{style:{display:'flex',gap:16,alignItems:'center'}},R('div',{style:{background:'rgba(255,255,255,.08)',border:'1px solid rgba(255,255,255,.15)',borderRadius:3,padding:'12px 18px',display:'flex',alignItems:'center',gap:12}},this.icon('rain',34,t.goldSoft,1.6),R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:26,fontWeight:800}},'32°'),R('div',{style:{fontFamily:'Mukta',fontSize:11,color:'#9fb0d0'}},'वर्षा · अपडेट अभी'))),R('div',{style:{background:t.gold,color:t.navy,fontFamily:'Mukta',fontWeight:800,fontSize:13,padding:'11px 18px',borderRadius:3,display:'flex',alignItems:'center',gap:8}},'ज़िला बदलें',this.icon('chevD',14,t.navy,2))))),
+      this.container([
+        // utility tiles
+        R('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:32}},...[['rupee','मंडी भाव','धान · स्रोत जोड़ा जाना बाकी'],['bolt','बिजली','शाम 6–8 कटौती संभावित'],['pin','परिवहन','बस डिपो सामान्य'],['rain','बाढ़ अलर्ट','खारुन नदी स्थिर']].map((u,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderTop:'3px solid '+t.navy,borderRadius:3,padding:'16px 18px',display:'flex',gap:12,alignItems:'center'}},this.icon(u[0],24,t.navy,1.8),R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:13,fontWeight:800,color:t.ink}},u[1]),R('div',{style:{fontFamily:'Mukta',fontSize:11.5,color:t.ink3,marginTop:1}},u[2]))))),
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 384px',gap:28}},
+          R('div',null,this.sectionBand('रायपुर की मुख्य ख़बरें',t.red),
+            R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}},...[['नगर','पार्किंग नीति पर व्यापारियों का विरोध','city'],['शिक्षा','40 स्कूलों में स्मार्ट क्लास शुरू','edu'],['स्वास्थ्य','ज़िला अस्पताल में नई ICU इकाई','portrait'],['अपराध','साइबर सेल ने ठगी गिरोह पकड़ा','court']].map((s,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},this.img(140,null,s[2]),this.pad([this.kicker(s[0]),R('h3',{className:'hi-serif',style:{margin:'5px 0 0',fontSize:16,lineHeight:1.35,fontWeight:600}},s[1])],'12px 14px 14px'))))),
+          R('div',null,this.sideModule('आस-पास के ज़िले',[...['दुर्ग','बिलासपुर','राजनांदगांव','महासमुंद'].map((d,i)=>R('div',{key:i,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'11px 0',borderBottom:i<3?'1px solid '+t.line2:'none'}},R('div',{style:{display:'flex',alignItems:'center',gap:8}},this.icon('pin',15,t.muted,1.8),R('span',{className:'hi-serif',style:{fontSize:15,fontWeight:600}},d)),this.icon('chevR',16,t.muted,1.8)))]),this.adBox({h:250,label:'Sidebar Rectangle',size:'300×250'}))) ],{pad:'28px 28px 40px'}),
+      this.footer({})
+    ]));
+
+    // ============ D08 SEARCH 1440 ============
+    F.push(this.frame({id:'D08_Desktop_Search_1440',title:'खोज परिणाम',w:1240,bg:t.shell,
+      anno:'प्रमुख खोज-फ़ील्ड, परिणाम-गणना, फ़िल्टर बायाँ रेल + सॉर्ट। 1024: फ़िल्टर ड्रॉपडाउन में। 768: फ़िल्टर बॉटम-शीट, परिणाम एकल-कॉलम।'},[
+      ...this.deskHeader({active:0,ticker:false}),
+      R('div',{style:{background:t.navy,padding:'26px 0'}},R('div',{style:{maxWidth:900,margin:'0 auto',padding:'0 28px'}},R('div',{style:{background:'#fff',borderRadius:3,display:'flex',alignItems:'center',gap:12,padding:'0 18px',height:56}},this.icon('search',22,t.muted,1.9),R('span',{style:{flex:1,fontFamily:'Noto Serif Devanagari',fontSize:19,color:t.ink}},'औद्योगिक नीति'),R('div',{style:{background:t.red,color:'#fff',fontFamily:'Mukta',fontWeight:800,fontSize:13,padding:'9px 20px',borderRadius:2}},'खोजें')))),
+      this.container([
+        R('div',{style:{display:'grid',gridTemplateColumns:'240px 1fr',gap:28}},
+          R('div',null,R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,padding:'16px 18px'}},R('div',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:800,color:t.navy,marginBottom:12}},'फ़िल्टर'),...[['प्रकार',['सभी','लेख','वीडियो','ऑडियो','फ़ोटो']],['अवधि',['कभी भी','24 घंटे','सप्ताह','माह']],['श्रेणी',['सभी','राजनीति','व्यापार','जिला']]].map((g,gi)=>R('div',{key:gi,style:{marginBottom:14}},R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:700,color:t.muted,marginBottom:6}},g[0]),...g[1].map((o,oi)=>R('div',{key:oi,style:{display:'flex',alignItems:'center',gap:8,padding:'5px 0'}},R('div',{style:{width:15,height:15,borderRadius:3,border:'1.5px solid '+(oi===0?t.red:t.line),background:oi===0?t.red:'#fff',display:'flex',alignItems:'center',justifyContent:'center'}},oi===0?this.icon('check',11,'#fff',3):null),R('span',{style:{fontFamily:'Mukta',fontSize:13,color:t.ink2}},o))))))),
+          R('div',null,
+            R('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}},R('span',{style:{fontFamily:'Mukta',fontSize:13,color:t.ink3}},R('b',{style:{color:t.ink}},'"औद्योगिक नीति"'),' के लिए 248 परिणाम'),R('div',{style:{display:'flex',alignItems:'center',gap:6,fontFamily:'Mukta',fontSize:12.5,fontWeight:700,color:t.navy}},'क्रमबद्ध: प्रासंगिकता',this.icon('chevD',14,t.navy,2))),
+            R('div',{style:{background:'#fbf3e6',border:'1px solid '+t.gold,borderRadius:3,padding:'14px 16px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between'}},R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:11,color:t.amber,fontWeight:800}},'टॉपिक'),R('div',{className:'hi-serif',style:{fontSize:17,fontWeight:700}},'नई औद्योगिक नीति 2026')),R('div',{style:{background:t.red,color:'#fff',fontFamily:'Mukta',fontWeight:800,fontSize:12.5,padding:'8px 16px',borderRadius:2}},'फ़ॉलो करें')),
+            ...[['लेख · राजनीति','विधानसभा में नई औद्योगिक नीति पेश','court'],['एक्सप्लेनर','नई नीति आपके ज़िले को कैसे बदलेगी','field'],['वीडियो · 4 मिनट','नीति की मुख्य बातें सरल भाषा में','city']].map((s,i)=>R('div',{key:i,style:{display:'flex',gap:16,background:'#fff',border:'1px solid '+t.line,borderRadius:3,padding:'14px',marginBottom:12}},R('div',{style:{width:150,flexShrink:0}},this.img(90,null,s[2])),R('div',null,this.kicker(s[0]),R('h3',{className:'hi-serif',style:{margin:'5px 0 6px',fontSize:18,lineHeight:1.32,fontWeight:700}},s[1]),R('p',{style:{margin:0,fontFamily:'Noto Serif Devanagari',fontSize:13.5,lineHeight:1.6,color:t.ink3}},'…नीति में इस्पात, खनन व सौर ऊर्जा पर ज़ोर दिया गया है…'),this.meta('2 घंटे पहले'))))))
+      ],{pad:'28px 28px 40px'}),
+      this.footer({})
+    ]));
+
+    // ============ D09 LATEST 1440 ============
+    F.push(this.frame({id:'D09_Desktop_Latest_1440',title:'ताज़ा ख़बरें',w:1240,bg:t.shell,
+      anno:'समयक्रम टाइमलाइन, समय-मुहर बायाँ। दायाँ लाइव/ट्रेंडिंग सिडबार। 1024: सिडबार नीचे। 768: एकल-कॉलम, समय इनलाइन।'},[
+      ...this.deskHeader({active:1,ticker:false}),
+      this.container([
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 360px',gap:28}},
+          R('div',null,
+            R('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}},R('h1',{className:'hi-serif',style:{margin:0,fontSize:28,fontWeight:700}},'ताज़ा ख़बरें'),R('div',{style:{display:'flex',alignItems:'center',gap:8,fontFamily:'Mukta',fontSize:12.5,color:t.ink3}},this.icon('refresh',15,t.green,2),'अभी अपडेट किया गया')),
+            ...[['10:42 AM','राजनीति','कैबिनेट में तीन नए मंत्री शामिल किए गए',t.red],['10:20 AM','व्यापार','सेंसेक्स नई ऊँचाई पर, धातु शेयरों में तेज़ी',t.navy],['09:55 AM','मौसम','बस्तर संभाग में 24 घंटे भारी वर्षा का अलर्ट',t.amber],['09:30 AM','खेल','रणजी: राज्य टीम ने पहली पारी में बढ़त ली',t.navy],['09:05 AM','अपराध','बिलासपुर में साइबर ठगी गिरोह का पर्दाफ़ाश',t.red],['08:40 AM','शिक्षा','राज्य के 40 स्कूलों में स्मार्ट क्लास शुरू',t.navy]].map((s,i)=>R('div',{key:i,style:{display:'flex',gap:18,padding:'14px 0',borderBottom:'1px solid '+t.line2}},R('div',{style:{width:80,flexShrink:0,textAlign:'right'}},R('div',{style:{fontFamily:'Mukta',fontSize:13,fontWeight:800,color:s[3]}},s[0])),R('div',{style:{width:2,background:s[3],flexShrink:0}}),R('div',null,this.kicker(s[1]),R('div',{className:'hi-serif',style:{fontSize:18,lineHeight:1.34,fontWeight:600,color:t.ink,marginTop:3}},s[2]))))),
+          R('div',null,R('div',{style:{background:t.navy,color:t.paper,borderRadius:3,padding:'14px 16px',marginBottom:20,display:'flex',alignItems:'center',gap:8}},R('span',{style:{width:8,height:8,borderRadius:8,background:'#e05a63',boxShadow:'0 0 7px #e05a63'}}),R('span',{style:{fontFamily:'Mukta',fontSize:13,fontWeight:800,color:'#e05a63'}},'लाइव'),R('span',{style:{fontFamily:'Mukta',fontSize:13}},'विधानसभा मानसून सत्र')),this.sideModule('सर्वाधिक पढ़ी गईं',[this.hcard({rank:1,kicker:'राजनीति',title:'नई औद्योगिक नीति की पूरी जानकारी'}),this.hcard({rank:2,kicker:'खेल',title:'रणजी सेमीफ़ाइनल: लाइव'}),this.hcard({rank:3,kicker:'मौसम',title:'बस्तर बाढ़ अपडेट',last:true})]))) ],{pad:'28px 28px 40px'}),
+      this.footer({})
+    ]));
+
+    // ============ D10 TRENDING 1440 ============
+    F.push(this.frame({id:'D10_Desktop_Trending_1440',title:'ट्रेंडिंग / सर्वाधिक पढ़ी',w:1240,bg:t.shell,
+      anno:'बड़े रैंक-अंक, पढ़ने-गिनती व वृद्धि। समय व श्रेणी फ़िल्टर। 1024: 2-कॉलम रैंक-सूची। 768: एकल-कॉलम।'},[
+      ...this.deskHeader({active:1,ticker:false}),
+      this.container([
+        R('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8,borderBottom:'3px solid '+t.navy,paddingBottom:14}},R('div',{style:{display:'flex',alignItems:'center',gap:12}},this.icon('fire',30,t.red,1.9),R('h1',{className:'hi-serif',style:{margin:0,fontSize:32,fontWeight:700}},'ट्रेंडिंग')),R('div',{style:{display:'flex',gap:8}},...['24 घंटे','सप्ताह','माह'].map((c,i)=>R('div',{key:i,style:{fontFamily:'Mukta',fontSize:13,fontWeight:i===0?800:600,padding:'7px 16px',borderRadius:2,background:i===0?t.navy:'#fff',color:i===0?'#fff':t.ink2,border:'1px solid '+(i===0?t.navy:t.line)}},c)))),
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 40px',marginTop:12}},...[['1','राजनीति','नई औद्योगिक नीति की पूरी जानकारी','2.4L','▲ 320%'],['2','खेल','रणजी सेमीफ़ाइनल: लाइव स्कोर','1.8L','▲ 210%'],['3','मौसम','बस्तर में बाढ़ की स्थिति','1.1L','▲ 140%'],['4','व्यापार','सोने के दाम फिर बढ़े','86K','▲ 90%'],['5','अपराध','साइबर ठगी से बचने के 7 तरीक़े','72K','▲ 65%'],['6','शिक्षा','स्मार्ट क्लास से बदलती पढ़ाई','61K','▲ 48%']].map((s,i)=>R('div',{key:i,style:{display:'flex',gap:16,alignItems:'flex-start',padding:'16px 0',borderBottom:'1px solid '+t.line2}},R('div',{style:{fontFamily:'Tiro Devanagari Hindi',fontSize:44,fontWeight:700,color:i<3?t.red:t.line,width:44,textAlign:'center',flexShrink:0,lineHeight:.9}},s[0]),R('div',{style:{flex:1}},this.kicker(s[1]),R('h3',{className:'hi-serif',style:{margin:'5px 0 8px',fontSize:19,lineHeight:1.3,fontWeight:600}},s[2]),R('div',{style:{display:'flex',gap:16,fontFamily:'Mukta',fontSize:12,color:t.muted}},R('span',{style:{display:'flex',alignItems:'center',gap:4}},this.icon('eye',13,t.muted,1.7),s[3],' पढ़ा'),R('span',{style:{color:t.green,fontWeight:700}},s[4]))))))
+      ],{pad:'28px 28px 40px'}),
+      this.footer({})
+    ]));
+
+    // ============ D11 LIVE NEWS 1440 ============
+    F.push(this.frame({id:'D11_Desktop_LiveNews_1440',title:'लाइव न्यूज़ हब',w:1240,bg:t.dBg,round:3,
+      anno:'डार्क लाइव-कैनवास केवल इसी हब में। बड़ा प्लेयर + लाइव-टाइमलाइन + संबंधित। 1024: प्लेयर पूरी चौड़ाई, टाइमलाइन नीचे। 768: एकल-कॉलम।'},[
+      R('div',{style:{padding:'16px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid '+t.dLine}},R('div',{style:{display:'flex',alignItems:'center',gap:12}},R('span',{className:'tiro',style:{fontSize:24,color:t.dText}},'जनदर्पण'),R('span',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:800,color:'#e05a63',letterSpacing:'.08em',display:'flex',alignItems:'center',gap:6}},R('span',{style:{width:7,height:7,borderRadius:7,background:'#e05a63',boxShadow:'0 0 8px #e05a63'}}),'लाइव हब')),R('div',{style:{display:'flex',gap:18,color:t.dMuted}},this.icon('search',20,t.dMuted,1.8),this.icon('user',20,t.dMuted,1.8))),
+      R('div',{style:{padding:'24px 28px',display:'grid',gridTemplateColumns:'1fr 360px',gap:28}},
+        R('div',null,R('div',{style:{position:'relative'}},this.img(420,null,'night'),R('div',{style:{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}},R('div',{style:{width:72,height:72,borderRadius:72,background:'rgba(158,27,34,.92)',display:'flex',alignItems:'center',justifyContent:'center'}},this.icon('play',32,'#fff',1.9))),R('div',{style:{position:'absolute',top:14,left:14,fontFamily:'Mukta',fontSize:12,fontWeight:800,color:'#fff',background:'#e05a63',padding:'4px 10px',borderRadius:2}},'● LIVE · 8.2K')),
+          R('h1',{className:'hi-serif',style:{margin:'16px 0 8px',fontSize:26,fontWeight:700,color:t.dText,lineHeight:1.3}},'विधानसभा मानसून सत्र — पल-पल की कार्यवाही'),
+          R('div',{style:{display:'flex',gap:16}},...[['share','शेयर'],['bookmark','सहेजें']].map((a,i)=>R('div',{key:i,style:{display:'flex',alignItems:'center',gap:6,fontFamily:'Mukta',fontSize:13,color:t.dMuted}},this.icon(a[0],17,t.dMuted,1.8),a[1])))),
+        R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:800,letterSpacing:'.08em',color:t.dMuted,marginBottom:12}},'लाइव अपडेट'),...[['11:05','सदन में मुख्यमंत्री का जवाब शुरू','#e05a63'],['10:48','विपक्ष का वॉकआउट, हंगामा','#c19a3e'],['10:30','प्रश्नकाल में किसान मुद्दे पर बहस','#93a4c2']].map((e,i)=>R('div',{key:i,style:{display:'flex',gap:12,paddingBottom:16}},R('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',flexShrink:0}},R('span',{style:{width:9,height:9,borderRadius:9,background:e[2],marginTop:4}}),i<2?R('div',{style:{width:2,flex:1,background:t.dLine,marginTop:4}}):null),R('div',null,R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,color:e[2],marginBottom:3}},e[0]+' AM'),R('div',{className:'hi-serif',style:{fontSize:15,lineHeight:1.4,color:t.dText}},e[1])))))),
+    ]));
+
+    // ============ D12 MEMBERSHIP 1440 ============
+    F.push(this.frame({id:'D12_Desktop_Membership_1440',title:'सदस्यता पेज',w:1240,bg:t.shell,
+      anno:'मूल्य-प्रस्ताव हीरो + 3 प्लान-कार्ड + लाभ + भरोसा + FAQ। चेकआउट फ़िलहाल निष्क्रिय ("जल्द उपलब्ध")। 1024: प्लान 3→स्क्रॉल/2। 768: प्लान स्टैक।'},[
+      ...this.deskHeader({active:0,ticker:false}),
+      R('div',{style:{background:'linear-gradient(150deg,'+t.navy+','+t.navyDeep+')',color:t.paper,padding:'44px 0'}},R('div',{style:{maxWidth:900,margin:'0 auto',padding:'0 28px',textAlign:'center'}},R('div',{className:'tiro',style:{fontSize:30,color:t.goldSoft,marginBottom:8}},'दर्पण प्रीमियम'),R('h1',{className:'hi-serif',style:{margin:'0 0 12px',fontSize:36,fontWeight:700,lineHeight:1.25}},'गहराई, भरोसा और शांति — बिना किसी विज्ञापन के'),R('p',{style:{margin:0,fontFamily:'Mukta',fontSize:15,color:'#c7d0e2'}},'छत्तीसगढ़ की स्वतंत्र पत्रकारिता का समर्थन करें'))),
+      this.container([
+        R('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:24,marginBottom:36}},...[['बेसिक','₹0','विज्ञापन सहित · मूल ख़बरें · सीमित ऑडियो',false,'वर्तमान प्लान'],['प्रीमियम','₹49','विज्ञापन-मुक्त · ई-पेपर · असीमित ऑडियो · गहन विश्लेषण',true,'जल्द उपलब्ध'],['प्रीमियम+','₹99','प्रीमियम की सभी सुविधाएँ + परिवार (4 सदस्य)',false,'जल्द उपलब्ध']].map((p,i)=>R('div',{key:i,style:{background:p[3]?'#fff':'#fff',border:'1.5px solid '+(p[3]?t.gold:t.line),borderRadius:4,padding:'26px 24px',position:'relative',boxShadow:p[3]?'0 12px 30px rgba(193,154,62,.18)':'none'}},p[3]?R('div',{style:{position:'absolute',top:-11,left:'50%',transform:'translateX(-50%)',fontFamily:'Mukta',fontSize:10.5,fontWeight:800,letterSpacing:'.08em',background:t.gold,color:t.navy,padding:'3px 14px',borderRadius:2}},'अनुशंसित'):null,R('div',{className:'hi-serif',style:{fontSize:22,fontWeight:700,color:t.ink,marginBottom:8}},p[0]),R('div',{style:{marginBottom:14}},R('span',{style:{fontFamily:'Mukta',fontSize:38,fontWeight:800,color:t.navy}},p[1]),R('span',{style:{fontFamily:'Mukta',fontSize:14,color:t.muted}},'/माह')),R('p',{style:{margin:'0 0 20px',fontFamily:'Mukta',fontSize:13.5,lineHeight:1.6,color:t.ink3,minHeight:60}},p[2]),R('div',{style:{textAlign:'center',fontFamily:'Mukta',fontWeight:800,fontSize:14,padding:'13px 0',borderRadius:3,background:p[3]?t.line:'transparent',color:p[3]?t.ink3:t.navy,border:p[3]?'none':'1.5px solid '+(i===0?t.line:t.navy),cursor:p[3]?'not-allowed':'pointer'}},p[4])))),
+        // benefits + trust
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24,marginBottom:32}},
+          R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,padding:'22px 24px'}},R('h3',{className:'hi-serif',style:{margin:'0 0 14px',fontSize:19,fontWeight:700}},'सदस्यता के लाभ'),...[['star','विज्ञापन-मुक्त, तेज़ पठन'],['eye','गहन विश्लेषण व एक्सक्लूसिव रिपोर्ट'],['download','दैनिक ई-पेपर व ऑफ़लाइन पठन'],['headphone','असीमित ऑडियो ब्रीफ़िंग']].map((b,i)=>R('div',{key:i,style:{display:'flex',alignItems:'center',gap:12,padding:'9px 0',borderBottom:i<3?'1px solid '+t.line2:'none'}},this.icon(b[0],20,t.gold,1.9),R('span',{style:{fontFamily:'Noto Serif Devanagari',fontSize:15,color:t.ink2}},b[1])))),
+          R('div',{style:{background:t.navy,color:t.paper,borderRadius:3,padding:'22px 24px',display:'flex',flexDirection:'column',justifyContent:'center'}},R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.1em',color:t.gold,marginBottom:10}},'भरोसा'),R('p',{style:{margin:'0 0 14px',fontFamily:'Noto Serif Devanagari',fontSize:17,lineHeight:1.6}},'छत्तीसगढ़ के 40,000+ पाठकों का भरोसा। हर सदस्यता स्वतंत्र, स्थानीय पत्रकारिता को मज़बूत करती है।'),R('div',{style:{display:'flex',alignItems:'center',gap:8,fontFamily:'Mukta',fontSize:12,color:'#9fb0d0'}},this.icon('lock',15,t.goldSoft,1.9),'सुरक्षित भुगतान · कभी भी रद्द करें'))),
+        // FAQ
+        R('div',null,R('h3',{className:'hi-serif',style:{margin:'0 0 12px',fontSize:20,fontWeight:700}},'अक्सर पूछे जाने वाले प्रश्न'),...[['क्या मैं कभी भी रद्द कर सकता हूँ?','हाँ — प्रबंधन स्क्रीन से दो टैप में, बिना किसी शुल्क के।'],['भुगतान कैसे होगा?','UPI, कार्ड व नेट-बैंकिंग समर्थित (भुगतान गेटवे जल्द सक्रिय)।'],['क्या परिवार के लिए योजना है?','हाँ, प्रीमियम+ में चार सदस्यों तक की पहुँच शामिल है।']].map((q,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,padding:'14px 18px',marginBottom:10,display:'flex',alignItems:'center',justifyContent:'space-between'}},R('span',{className:'hi-serif',style:{fontSize:16,fontWeight:600}},q[0]),this.icon('chevD',18,t.muted,2))))
+      ],{pad:'36px 28px 40px'}),
+      this.footer({})
+    ]));
+
+    // ============ D13 LOGIN 1440 ============
+    F.push(this.frame({id:'D13_Desktop_Login_1440',title:'साइन इन / साइन अप (D28 विस्तार)',w:1240,bg:t.shell,
+      anno:'दो-पैनल: बायाँ ब्रांड-कथन, दायाँ फ़ॉर्म। मोबाइल-OTP प्रथम। 1024: पैनल संकरे। 768: ब्रांड-पैनल ऊपर छोटा, फ़ॉर्म नीचे। OTP-स्टेट इनसेट दिखाया।'},[
+      ...this.deskHeader({active:0,ticker:false}),
+      R('div',{style:{maxWidth:980,margin:'0 auto',padding:'40px 28px'}},R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',background:'#fff',border:'1px solid '+t.line,borderRadius:4,overflow:'hidden',boxShadow:'0 14px 40px rgba(10,37,80,.12)'}},
+        R('div',{style:{background:'linear-gradient(150deg,'+t.navy+','+t.navyDeep+')',color:t.paper,padding:'40px 36px',display:'flex',flexDirection:'column',justifyContent:'center'}},R('div',{className:'tiro',style:{fontSize:40,marginBottom:14}},'जनदर्पण'),R('h2',{className:'hi-serif',style:{margin:'0 0 12px',fontSize:26,fontWeight:700,color:t.goldSoft,lineHeight:1.3}},'सहेजें, फ़ॉलो करें और अपनी फ़ीड पाएँ'),R('p',{style:{margin:0,fontFamily:'Mukta',fontSize:14,lineHeight:1.7,color:'#a9b6cf'}},'एक खाता — सभी डिवाइस पर आपकी पसंद, सहेजी कहानियाँ व ज़िला-प्राथमिकताएँ सुरक्षित।'),R('div',{style:{display:'flex',alignItems:'center',gap:8,marginTop:20,fontFamily:'Mukta',fontSize:12,color:'#8ea0c4'}},this.icon('lock',15,t.goldSoft,1.9),'आपकी जानकारी सुरक्षित व निजी है')),
+        R('div',{style:{padding:'40px 36px'}},R('h2',{className:'hi-serif',style:{margin:'0 0 6px',fontSize:24,fontWeight:700}},'साइन इन / साइन अप'),R('p',{style:{margin:'0 0 22px',fontFamily:'Mukta',fontSize:13,color:t.ink3}},'मोबाइल नंबर से शुरू करें'),
+          R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:700,color:t.ink3,marginBottom:6}},'मोबाइल नंबर'),
+          R('div',{style:{display:'flex',alignItems:'center',gap:10,border:'1.5px solid '+t.line,borderRadius:3,padding:'12px 14px',marginBottom:16}},R('span',{style:{fontFamily:'Mukta',fontSize:15,fontWeight:700,color:t.ink,borderRight:'1px solid '+t.line,paddingRight:10}},'+91'),R('span',{style:{fontFamily:'Mukta',fontSize:15,color:t.ink}},'98••••• 210'),R('span',{style:{marginLeft:'auto',width:2,height:18,background:t.red}})),
+          // OTP inset state
+          R('div',{style:{background:t.paper2,border:'1px dashed '+t.line,borderRadius:3,padding:'14px',marginBottom:16}},R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:700,color:t.ink3,marginBottom:8}},'OTP दर्ज करें (स्टेट)'),R('div',{style:{display:'flex',gap:8}},...[4,2,7,1,'',''].map((d,i)=>R('div',{key:i,style:{width:40,height:46,borderRadius:3,border:'1.5px solid '+(i<4?t.navy:t.line),display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'Mukta',fontSize:20,fontWeight:800,color:t.ink}},d))),R('div',{style:{fontFamily:'Mukta',fontSize:11.5,color:t.muted,marginTop:8}},'00:24 में दोबारा भेजें')),
+          R('div',{style:{textAlign:'center',background:t.red,color:'#fff',fontFamily:'Mukta',fontWeight:800,fontSize:14,padding:'13px 0',borderRadius:3,marginBottom:16}},'सत्यापित करें व जारी रखें'),
+          R('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:16}},R('div',{style:{flex:1,height:1,background:t.line}}),R('span',{style:{fontFamily:'Mukta',fontSize:11,color:t.muted}},'या'),R('div',{style:{flex:1,height:1,background:t.line}})),
+          R('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:10,border:'1.5px solid '+t.line,borderRadius:3,padding:'11px 0',marginBottom:12}},this.icon('globe',19,t.navy,1.8),R('span',{style:{fontFamily:'Mukta',fontSize:13.5,fontWeight:700,color:t.ink}},'Google से जारी रखें')),
+          R('div',{style:{textAlign:'center',fontFamily:'Mukta',fontSize:13,fontWeight:700,color:t.navy,textDecoration:'underline'}},'मेहमान के रूप में जारी रखें')))),
+      this.footer({})
+    ]));
+
+    // ============ D14 AUDIO 1440 ============
+    F.push(this.frame({id:'D14_Desktop_Audio_1440',title:'ऑडियो अनुभव · विस्तृत प्लेयर',w:1240,bg:t.shell,
+      anno:'बायाँ अभी-चल-रहा + नियंत्रण, दायाँ टॉप-10 कतार। नीचे स्टिकी मिनी-प्लेयर पूरी चौड़ाई। 1024: कतार नीचे। 768: मिनी-प्लेयर स्टिकी, टैप पर फ़ुल।'},[
+      ...this.deskHeader({active:0,ticker:false}),
+      this.container([
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 380px',gap:28}},
+          R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,padding:'28px',display:'flex',gap:24}},
+            R('div',{style:{width:200,flexShrink:0}},this.img(200,'ब्रीफ़िंग कवर (1:1)','city')),
+            R('div',{style:{flex:1}},this.kicker('आज की ब्रीफ़िंग · 20 जुलाई',t.gold),R('h1',{className:'hi-serif',style:{margin:'8px 0 4px',fontSize:26,fontWeight:700}},'नई औद्योगिक नीति पेश'),R('div',{style:{fontFamily:'Mukta',fontSize:12.5,color:t.muted,marginBottom:18}},'हिन्दी वाचन · खबर 1/10 · AI-सहायता, संपादक-सत्यापित'),
+              R('div',{style:{height:5,borderRadius:5,background:t.line2,marginBottom:8}},R('div',{style:{width:'38%',height:5,borderRadius:5,background:t.red}})),
+              R('div',{style:{display:'flex',justifyContent:'space-between',fontFamily:'Mukta',fontSize:12,color:t.muted,marginBottom:20}},R('span',null,'0:27'),R('span',null,'1:12')),
+              R('div',{style:{display:'flex',alignItems:'center',gap:22}},this.icon('prev',26,t.ink2,1.9),R('div',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:800,color:t.ink3}},'−15'),R('div',{style:{width:60,height:60,borderRadius:60,background:t.red,display:'flex',alignItems:'center',justifyContent:'center'}},this.icon('pause',26,'#fff',2)),R('div',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:800,color:t.ink3}},'+15'),this.icon('next',26,t.ink2,1.9),R('div',{style:{marginLeft:'auto',display:'flex',gap:16,alignItems:'center'}},R('span',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:800,color:t.navy}},'1.0x'),this.icon('download',20,t.ink2,1.8))))),
+          R('div',null,this.sideModule('टॉप-10 कतार · 8 मिनट',[...[['1','नई औद्योगिक नीति पेश','1:12',true],['2','कैबिनेट विस्तार, तीन नए मंत्री','0:54',false],['3','GST संग्रह में रिकॉर्ड वृद्धि','0:48',false],['4','बस्तर में भारी वर्षा का अलर्ट','0:41',false]].map((a,i)=>R('div',{key:i,style:{display:'flex',alignItems:'center',gap:12,padding:'11px 0',borderBottom:i<3?'1px solid '+t.line2:'none'}},R('div',{style:{width:22,textAlign:'center',fontFamily:'Tiro Devanagari Hindi',fontSize:18,fontWeight:700,color:a[3]?t.red:t.muted}},a[0]),R('div',{style:{flex:1}},R('div',{className:'hi-serif',style:{fontSize:14.5,fontWeight:a[3]?700:500,lineHeight:1.3}},a[1])),R('span',{style:{fontFamily:'Mukta',fontSize:11,color:t.muted}},a[2])))]))),
+      ],{pad:'28px 28px 20px'}),
+      // sticky mini player full width
+      R('div',{style:{background:t.navy,color:t.paper,borderTop:'2px solid '+t.gold,padding:'12px 28px',display:'flex',alignItems:'center',gap:16}},R('div',{style:{width:44,height:44,borderRadius:2,background:'linear-gradient(135deg,#586178,#3a4258)'}}),R('div',{style:{width:220}},R('div',{className:'hi-serif',style:{fontSize:14,fontWeight:600}},'नई औद्योगिक नीति पेश'),R('div',{style:{fontFamily:'Mukta',fontSize:11,color:'#8ea0c4'}},'आज की ब्रीफ़िंग · 0:27 / 1:12')),R('div',{style:{display:'flex',alignItems:'center',gap:18}},this.icon('prev',20,t.goldSoft,1.9),this.icon('pause',26,t.goldSoft,2),this.icon('next',20,t.goldSoft,1.9)),R('div',{style:{flex:1,height:4,borderRadius:4,background:'rgba(255,255,255,.16)'}},R('div',{style:{width:'38%',height:4,borderRadius:4,background:t.gold}})),R('div',{style:{display:'flex',gap:16}},this.icon('list',20,t.goldSoft,1.8),this.icon('close',20,t.goldSoft,2))),
+      this.footer({})
+    ]));
+
+    // ============ D15 ACCOUNT 1440 ============
+    F.push(this.frame({id:'D15_Desktop_Account_1440',title:'खाता · सहेजी कहानियाँ',w:1240,bg:t.shell,
+      anno:'बायाँ खाता-नेविगेशन रेल, दायाँ सामग्री (यहाँ सहेजे)। 1024: रेल आइकन-only। 768: रेल क्षैतिज टैब बन जाती है।'},[
+      ...this.deskHeader({active:0,ticker:false}),
+      this.container([
+        R('div',{style:{display:'grid',gridTemplateColumns:'260px 1fr',gap:28}},
+          R('div',null,R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,padding:'20px',marginBottom:16}},R('div',{style:{display:'flex',alignItems:'center',gap:12,marginBottom:8}},R('div',{style:{width:48,height:48,borderRadius:48,background:'linear-gradient(135deg,'+t.navy+','+t.red+')'}}),R('div',null,R('div',{className:'hi-serif',style:{fontSize:17,fontWeight:700}},'अनिल कुमार'),R('div',{style:{fontFamily:'Mukta',fontSize:11.5,color:t.muted}},'रायपुर · सदस्य नहीं'))),R('div',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:700,color:t.red}},'प्रोफ़ाइल संपादित करें')),
+            R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},...[['bookmark','सहेजी कहानियाँ',true],['clock','पढ़ने का इतिहास',false],['star','फ़ॉलो किए टॉपिक',false],['globe','भाषा',false],['pin','ज़िला प्राथमिकताएँ',false],['bell','सूचनाएँ',false],['user','खाता व साइन-आउट',false]].map((m,i)=>R('div',{key:i,style:{display:'flex',alignItems:'center',gap:12,padding:'13px 18px',borderBottom:i<6?'1px solid '+t.line2:'none',background:m[2]?'#fbf3e6':'transparent',borderLeft:m[2]?'3px solid '+t.red:'3px solid transparent'}},this.icon(m[0],19,m[2]?t.red:t.navy,1.8),R('span',{style:{fontFamily:'Mukta',fontSize:13.5,fontWeight:m[2]?800:600,color:t.ink}},m[1]))))),
+          R('div',null,R('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}},R('h1',{className:'hi-serif',style:{margin:0,fontSize:26,fontWeight:700}},'सहेजी कहानियाँ'),R('div',{style:{display:'flex',gap:8}},...['सभी 24','ऑफ़लाइन 5'].map((c,i)=>R('div',{key:i,style:{fontFamily:'Mukta',fontSize:12.5,fontWeight:i===0?800:600,padding:'6px 14px',borderRadius:2,background:i===0?t.navy:'#fff',color:i===0?'#fff':t.ink2,border:'1px solid '+(i===0?t.navy:t.line)}},c)))),
+            R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}},...[['राजनीति','विधानसभा में नई औद्योगिक नीति पेश','city'],['व्यापार','GST संग्रह में रिकॉर्ड 18% वृद्धि','market'],['खेल','रणजी: राज्य टीम सेमीफ़ाइनल में','sport'],['जिला','दुर्ग स्मार्ट सिटी का दूसरा चरण','court']].map((s,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},this.img(140,null,s[2]),this.pad([this.kicker(s[0]),R('h3',{className:'hi-serif',style:{margin:'5px 0 0',fontSize:16,lineHeight:1.35,fontWeight:600}},s[1]),this.meta('सहेजा 2 दिन पहले')],'12px 14px 14px'))))))
+      ],{pad:'28px 28px 40px'}),
+      this.footer({})
+    ]));
+
+    // ============ D16 SYSTEM STATES 1440 ============
+    F.push(this.frame({id:'D16_Desktop_States_1440',title:'सिस्टम स्टेट्स · 404 / 500 / ऑफ़लाइन / खाली',w:1240,bg:t.shell,
+      anno:'सभी स्टेट्स केंद्रित, ब्रांडेड, मृत-अंत नहीं — आगे का रास्ता हमेशा। 1024/768: केंद्रित लेआउट वही, चौड़ाई घटती है।'},[
+      ...this.deskHeader({active:0,ticker:false}),
+      this.container([R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}},
+        ...[
+          {big:'404',ic:null,title:'यह पृष्ठ नहीं मिला',body:'शायद कड़ी पुरानी हो गई। होम या खोज से आगे बढ़ें।',pri:'होम पर जाएँ'},
+          {big:'500',ic:null,title:'सर्वर त्रुटि',body:'हमारे सिरे पर कुछ गड़बड़ हुई। हम जल्द ठीक कर रहे हैं।',pri:'पुनः प्रयास करें'},
+          {ic:'wifiOff',title:'आप ऑफ़लाइन हैं',body:'सहेजी कहानियाँ व डाउनलोड ऑडियो अब भी उपलब्ध हैं।',pri:'ऑफ़लाइन सामग्री देखें'},
+          {ic:'bookmark',title:'अभी तक कुछ सहेजा नहीं',body:'किसी लेख पर सहेजें दबाएँ — वे यहाँ जमा होंगे।',pri:'ख़बरें देखें'}
+        ].map((s,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,padding:'40px 28px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center'}},
+          s.big?R('div',{className:'tiro',style:{fontSize:72,fontWeight:700,color:t.red,lineHeight:1}},s.big):R('div',{style:{width:70,height:70,borderRadius:70,background:'rgba(10,37,80,.07)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:14}},this.icon(s.ic,32,t.navy,1.7)),
+          R('h3',{className:'hi-serif',style:{margin:'10px 0 8px',fontSize:21,fontWeight:700}},s.title),
+          R('p',{style:{margin:'0 0 18px',fontFamily:'Mukta',fontSize:13.5,color:t.ink3,lineHeight:1.6,maxWidth:300}},s.body),
+          R('div',{style:{background:t.red,color:'#fff',fontFamily:'Mukta',fontWeight:800,fontSize:13.5,padding:'11px 26px',borderRadius:3}},s.pri)))
+      )],{pad:'28px 28px 40px'}),
+      this.footer({})
+    ]));
+
+    return F;
+  }
+  tabHeader(o){ o=o||{}; const R=React.createElement; const t=this.T();
+    return [this.utilStrip({compact:true,pad:24}),this.brandRow({small:true,pad:24}),
+      R('div',{style:{background:t.navy,height:44,display:'flex',alignItems:'center',padding:'0 24px',overflow:'hidden'}},...['होम','ताज़ा','छत्तीसगढ़','ज़िले','भारत','राजनीति','व्यापार','खेल','मनोरंजन','ओपिनियन'].map((it,i)=>R('span',{key:i,style:{fontFamily:'Mukta',fontSize:13,fontWeight:i===(o.active||0)?800:600,color:i===(o.active||0)?'#fff':'#b9c4db',padding:'0 13px',borderBottom:i===(o.active||0)?'3px solid '+t.gold:'none',display:'flex',alignItems:'center',height:44,whiteSpace:'nowrap'}},it)),R('div',{style:{marginLeft:'auto',paddingLeft:12,display:'flex',alignItems:'center'}},this.icon('chevR',18,'#8ea0c4',2)))];
+  }
+
+  tabletL(){
+    const R=React.createElement; const t=this.T(); const F=[];
+
+    // T01 HOME 1024
+    F.push(this.frame({id:'T01_Tablet_Home_1024',title:'होमपेज',w:1024,bg:t.shell,
+      anno:'डेस्कटॉप से: 8-कॉलम; हीरो पूरी चौड़ाई, सिडबार-मॉड्यूल हीरो के नीचे दो-कॉलम पट्टी में आते हैं। सेक्शन-ग्रिड 4→3 कॉलम। नेव क्षैतिज-स्क्रॉलेबल।'},[
+      ...this.tabHeader({active:0}),
+      this.ticker('रायपुर में कैबिनेट विस्तार — तीन नए मंत्री शपथ लेंगे'),
+      R('div',{style:{padding:'20px 24px 0'}},
+        // hero full width
+        R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden',marginBottom:20,display:'grid',gridTemplateColumns:'1.3fr 1fr'}},this.img(280,'रायपुर · विधानसभा (16:9)','city'),this.pad([this.kicker('प्रमुख · राजनीति'),R('h1',{className:'hi-serif',style:{margin:'6px 0 8px',fontSize:28,lineHeight:1.24,fontWeight:700}},'विधानसभा में नई औद्योगिक नीति पेश, दस लाख रोज़गार का लक्ष्य'),this.aiChip({fs:13.5,text:'इस्पात, खनन व सौर ऊर्जा पर केंद्रित नीति — ₹80,000 करोड़ निवेश व ग्रामीण रोज़गार का दावा।'}),this.meta('12 मिनट पहले')],'18px 20px')),
+        // weather + market row (sidebar modules become horizontal)
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:20}},this.weatherW({}),this.marketTiles()),
+        this.adBox({h:90,label:'Adaptive Leaderboard',size:'728×90'})),
+      R('div',{style:{padding:'24px'}},this.sectionBand('छत्तीसगढ़',t.red),R('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:18}},...[['रायपुर','पार्किंग नीति पर व्यापारियों का विरोध','city'],['बस्तर','आदिवासी महोत्सव की तैयारियाँ','festival'],['बिलासपुर','नई मेमू ट्रेन को हरी झंडी','night']].map((s,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},this.img(120,null,s[2]),this.pad([this.kicker(s[0]),R('h3',{className:'hi-serif',style:{margin:'5px 0 0',fontSize:15,lineHeight:1.35,fontWeight:600}},s[1])],'12px 14px 14px'))))),
+      this.footer({pad:'32px 24px 22px',cols:'1.4fr 1fr 1fr 1fr'})
+    ]));
+
+    // T02 ARTICLE 1024
+    F.push(this.frame({id:'T02_Tablet_Article_1024',title:'लेख पेज · मानक',w:1024,bg:'#fff',
+      anno:'शेयर-रेल इनलाइन (बाइलाइन के पास) आ जाती है; दायाँ सिडबार बना रहता है पर संकरा। पठन-चौड़ाई ~600px। 768 पर सिडबार पूरी तरह नीचे जाता है।'},[
+      ...this.tabHeader({active:5}),
+      R('div',{style:{padding:'24px',display:'grid',gridTemplateColumns:'1fr 300px',gap:24}},
+        R('div',{style:{maxWidth:620}},
+          R('div',{style:{fontFamily:'Mukta',fontSize:12,color:t.muted,marginBottom:10}},'होम › राजनीति › औद्योगिक नीति'),
+          this.kicker('राजनीति · विश्लेषण'),
+          R('h1',{className:'hi-serif',style:{margin:'8px 0 10px',fontSize:32,lineHeight:1.24,fontWeight:700}},'विधानसभा में नई औद्योगिक नीति पेश, दस लाख रोज़गार का लक्ष्य'),
+          R('p',{style:{margin:'0 0 14px',fontFamily:'Noto Serif Devanagari',fontSize:17,lineHeight:1.6,color:t.ink2,fontWeight:500}},'सरकार का दावा — पाँच वर्षों में ₹80,000 करोड़ का निवेश और ग्रामीण रोज़गार।'),
+          R('div',{style:{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderTop:'1px solid '+t.line2,borderBottom:'1px solid '+t.line2,marginBottom:16}},R('div',{style:{width:40,height:40,borderRadius:40,background:'linear-gradient(135deg,'+t.navy+','+t.red+')'}}),R('div',{style:{flex:1}},R('div',{style:{fontFamily:'Mukta',fontSize:13,fontWeight:800}},'रमेश साहू'),R('div',{style:{fontFamily:'Mukta',fontSize:11,color:t.muted}},'वरिष्ठ संवाददाता · 20 जुलाई')),R('div',{style:{display:'flex',gap:12}},...[['bookmark'],['share'],['headphone']].map((a,i)=>R('div',{key:i},this.icon(a[0],19,t.ink2,1.8))))),
+          this.img(320,'रायपुर · विधानसभा (3:2)','city'),
+          R('div',{style:{background:t.paper2,border:'1px solid '+t.line,borderRadius:3,padding:'14px 16px',margin:'14px 0'}},this.aiChip({m:'0',fs:14,text:'नई नीति इस्पात, खनन व सौर ऊर्जा पर केंद्रित; स्थानीय युवाओं को प्राथमिकता।'})),
+          R('p',{style:{margin:'0 0 14px',fontFamily:'Noto Serif Devanagari',fontSize:17,lineHeight:1.78,color:t.ink2}},'रायपुर। विधानसभा के मानसून सत्र में सरकार ने नई औद्योगिक नीति पेश की, जिसमें इस्पात, खनन और नवीकरणीय ऊर्जा को केंद्र में रखा गया है।'),
+          R('p',{style:{margin:'0 0 14px',fontFamily:'Noto Serif Devanagari',fontSize:17,lineHeight:1.78,color:t.ink2}},'मुख्यमंत्री ने कहा कि यह नीति ग्रामीण क्षेत्रों में रोज़गार के नए द्वार खोलेगी।')),
+        R('div',null,this.sideModule('संबंधित',[this.hcard({kicker:'राजनीति',title:'कैबिनेट विस्तार पर मंथन'}),this.hcard({kicker:'व्यापार',title:'GST संग्रह रिकॉर्ड पर',last:true})]),this.adBox({h:250,label:'Rectangle',size:'300×250'}))),
+      this.footer({pad:'32px 24px 22px',cols:'1.4fr 1fr 1fr 1fr'})
+    ]));
+
+    // T03 CATEGORY 1024
+    F.push(this.frame({id:'T03_Tablet_Category_1024',title:'श्रेणी पेज · खेल',w:1024,bg:t.shell,
+      anno:'सिडबार हीरो के नीचे जाता है; स्टोरी-ग्रिड 3→2 कॉलम। फ़िल्टर-चिप्स एक पंक्ति में। "और लोड करें" केंद्रित।'},[
+      ...this.tabHeader({active:7}),
+      R('div',{style:{padding:'24px'}},
+        R('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between',borderBottom:'3px solid '+t.navy,paddingBottom:12,marginBottom:20}},R('h1',{className:'tiro',style:{margin:0,fontSize:36,fontWeight:700,color:t.navy,lineHeight:1}},'खेल'),R('div',{style:{display:'flex',gap:8}},...['सभी','क्रिकेट','फ़ुटबॉल','हॉकी'].map((c,i)=>R('div',{key:i,style:{fontFamily:'Mukta',fontSize:12.5,fontWeight:i===0?800:600,padding:'6px 14px',borderRadius:2,background:i===0?t.navy:'#fff',color:i===0?'#fff':t.ink2,border:'1px solid '+(i===0?t.navy:t.line)}},c)))),
+        R('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:20,marginBottom:24}},...[['क्रिकेट','रणजी सेमीफ़ाइनल: राज्य टीम मज़बूत स्थिति में','sport'],['क्रिकेट','कप्तान का शतक, प्रशंसकों में उत्साह','sport'],['हॉकी','राज्य हॉकी लीग का फ़ाइनल कल','field'],['फ़ुटबॉल','युवा अकादमी से निकले नए सितारे','night']].map((s,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden',display:'grid',gridTemplateColumns:'1fr 1.4fr'}},this.img(130,null,s[2]),this.pad([this.kicker(s[0]),R('h3',{className:'hi-serif',style:{margin:'5px 0 0',fontSize:16,lineHeight:1.34,fontWeight:600}},s[1]),this.meta((i+1)+' घंटे पहले')],'14px 16px')))),
+        R('div',{style:{textAlign:'center'}},R('div',{style:{display:'inline-block',border:'1.5px solid '+t.navy,color:t.navy,fontFamily:'Mukta',fontWeight:800,fontSize:14,padding:'11px 36px',borderRadius:3}},'और ख़बरें लोड करें'))),
+      this.footer({pad:'32px 24px 22px',cols:'1.4fr 1fr 1fr 1fr'})
+    ]));
+
+    return F;
+  }
+  tpHeader(o){ o=o||{}; const R=React.createElement; const t=this.T();
+    return [
+      R('div',{style:{background:t.navyDeep,height:34,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',fontFamily:'Mukta',fontSize:12,color:'#c7d0e2'}},R('span',null,'शनि, 20 जुलाई · 8:41'),R('div',{style:{display:'flex',alignItems:'center',gap:6,color:t.goldSoft,fontWeight:700}},this.icon('pin',13,t.gold,1.8),'रायपुर 32° वर्षा')),
+      R('div',{style:{background:t.paper,height:70,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 20px',borderBottom:'1px solid '+t.line}},this.icon('list',24,t.navy,2),R('div',{style:{display:'flex',alignItems:'center',gap:10}},R('div',{style:{width:34,height:34,borderRadius:6,background:t.navy,display:'flex',alignItems:'center',justifyContent:'center'}},R('span',{className:'tiro',style:{fontSize:20,color:t.gold,fontWeight:700}},'ज')),R('span',{className:'tiro',style:{fontSize:30,color:t.navy,fontWeight:700}},'जनदर्पण')),R('div',{style:{display:'flex',gap:16}},this.icon('search',22,t.navy,1.9),this.icon('user',22,t.navy,1.9))),
+      R('div',{style:{background:t.navy,height:42,display:'flex',alignItems:'center',padding:'0 20px',overflow:'hidden'}},...['होम','ताज़ा','छत्तीसगढ़','भारत','खेल','ओपिनियन'].map((it,i)=>R('span',{key:i,style:{fontFamily:'Mukta',fontSize:13,fontWeight:i===(o.active||0)?800:600,color:i===(o.active||0)?'#fff':'#b9c4db',padding:'0 12px',display:'flex',alignItems:'center',height:42,borderBottom:i===(o.active||0)?'3px solid '+t.gold:'none'}},it)),R('div',{style:{marginLeft:'auto'}},this.icon('chevR',16,'#8ea0c4',2)))
+    ];
+  }
+
+  tabletP(){
+    const R=React.createElement; const t=this.T(); const F=[];
+
+    // TP01 HOME 768
+    F.push(this.frame({id:'TP01_TabletPortrait_Home_768',title:'होमपेज',w:768,bg:t.shell,
+      anno:'मुख्यतः एकल-कॉलम प्रवाह; हीरो पूरी चौड़ाई। मौसम+बाज़ार दो-कॉलम पट्टी। सेक्शन-ग्रिड 2-कॉलम। सिडबार-मॉड्यूल इनलाइन बैंड बनते हैं। मोबाइल-आकार नहीं।'},[
+      ...this.tpHeader({active:0}),
+      this.ticker('रायपुर में कैबिनेट विस्तार — तीन नए मंत्री शपथ लेंगे'),
+      R('div',{style:{padding:'20px'}},
+        R('div',{style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden',marginBottom:20}},this.img(300,'रायपुर · विधानसभा (16:9)','city'),this.pad([this.kicker('प्रमुख · राजनीति'),R('h1',{className:'hi-serif',style:{margin:'6px 0 8px',fontSize:28,lineHeight:1.24,fontWeight:700}},'विधानसभा में नई औद्योगिक नीति पेश, दस लाख रोज़गार का लक्ष्य'),this.aiChip({fs:14,text:'इस्पात, खनन व सौर ऊर्जा पर केंद्रित नीति — ₹80,000 करोड़ निवेश व ग्रामीण रोज़गार का दावा।'}),R('div',{style:{display:'flex',gap:18,marginTop:8}},...[['headphone','सुनें'],['share','शेयर'],['bookmark','सहेजें']].map((a,i)=>R('div',{key:i,style:{display:'flex',alignItems:'center',gap:5,fontFamily:'Mukta',fontSize:12.5,fontWeight:600,color:t.ink3}},this.icon(a[0],16,t.ink3,1.8),a[1])))],'16px 18px')),
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:20}},this.weatherW({}),this.marketTiles()),
+        R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:20}},...[['जिला · दुर्ग','स्मार्ट सिटी परियोजना का दूसरा चरण','city'],['व्यापार','GST संग्रह रिकॉर्ड 18% बढ़ा','market']].map((s,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},this.img(120,null,s[2]),this.pad([this.kicker(s[0]),R('h3',{className:'hi-serif',style:{margin:'5px 0 0',fontSize:15.5,lineHeight:1.34,fontWeight:600}},s[1])],'12px 14px 14px')))),
+        this.adBox({h:90,label:'Adaptive Leaderboard',size:'468×60 / 728×90'}),
+        R('div',{style:{marginTop:24}},this.sectionBand('छत्तीसगढ़',t.red),R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}},...[['रायपुर','पार्किंग नीति पर विरोध','city'],['बस्तर','महोत्सव की तैयारियाँ','festival']].map((s,i)=>R('div',{key:i,style:{background:'#fff',border:'1px solid '+t.line,borderRadius:3,overflow:'hidden'}},this.img(110,null,s[2]),this.pad([this.kicker(s[0]),R('h3',{className:'hi-serif',style:{margin:'5px 0 0',fontSize:15,lineHeight:1.35,fontWeight:600}},s[1])],'12px 14px 14px')))))),
+      this.footer({pad:'30px 20px 20px',cols:'1fr 1fr'})
+    ]));
+
+    // TP02 ARTICLE 768
+    F.push(this.frame({id:'TP02_TabletPortrait_Article_768',title:'लेख पेज · मानक',w:768,bg:'#fff',
+      anno:'एकल-कॉलम; शेयर-रेल बाइलाइन में इनलाइन। सिडबार-मॉड्यूल लेख के अंत में बैंड बनते हैं। पठन-चौड़ाई ~600px केंद्रित।'},[
+      ...this.tpHeader({active:4}),
+      R('div',{style:{maxWidth:620,margin:'0 auto',padding:'24px 20px 32px'}},
+        R('div',{style:{fontFamily:'Mukta',fontSize:12,color:t.muted,marginBottom:10}},'होम › राजनीति › औद्योगिक नीति'),
+        this.kicker('राजनीति · विश्लेषण'),
+        R('h1',{className:'hi-serif',style:{margin:'8px 0 10px',fontSize:30,lineHeight:1.24,fontWeight:700}},'विधानसभा में नई औद्योगिक नीति पेश, दस लाख रोज़गार का लक्ष्य'),
+        R('p',{style:{margin:'0 0 14px',fontFamily:'Noto Serif Devanagari',fontSize:17,lineHeight:1.6,color:t.ink2,fontWeight:500}},'सरकार का दावा — पाँच वर्षों में ₹80,000 करोड़ का निवेश और ग्रामीण रोज़गार।'),
+        R('div',{style:{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderTop:'1px solid '+t.line2,borderBottom:'1px solid '+t.line2,marginBottom:16}},R('div',{style:{width:40,height:40,borderRadius:40,background:'linear-gradient(135deg,'+t.navy+','+t.red+')'}}),R('div',{style:{flex:1}},R('div',{style:{fontFamily:'Mukta',fontSize:13,fontWeight:800}},'रमेश साहू'),R('div',{style:{fontFamily:'Mukta',fontSize:11,color:t.muted}},'वरिष्ठ संवाददाता · 20 जुलाई')),R('div',{style:{display:'flex',gap:12}},...[['bookmark'],['share'],['headphone']].map((a,i)=>R('div',{key:i},this.icon(a[0],19,t.ink2,1.8))))),
+        this.img(300,'रायपुर · विधानसभा (3:2)','city'),
+        R('div',{style:{background:t.paper2,border:'1px solid '+t.line,borderRadius:3,padding:'14px 16px',margin:'14px 0'}},this.aiChip({m:'0',fs:14,text:'नई नीति इस्पात, खनन व सौर ऊर्जा पर केंद्रित; स्थानीय युवाओं को प्राथमिकता।'})),
+        R('p',{style:{margin:'0 0 14px',fontFamily:'Noto Serif Devanagari',fontSize:17.5,lineHeight:1.8,color:t.ink2}},R('span',{style:{float:'left',fontFamily:'Tiro Devanagari Hindi',fontSize:52,lineHeight:.8,paddingRight:9,color:t.red}},'रा'),'यपुर। विधानसभा के मानसून सत्र में सरकार ने नई औद्योगिक नीति पेश की, जिसमें इस्पात, खनन और नवीकरणीय ऊर्जा को केंद्र में रखा गया है।'),
+        R('div',{style:{background:t.navy,color:t.paper,borderRadius:3,padding:'16px 18px',margin:'8px 0 16px'}},R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.1em',color:t.gold,marginBottom:10}},'एक नज़र में'),R('div',{style:{display:'flex',justifyContent:'space-between'}},...[['₹80K Cr','निवेश'],['10 लाख','रोज़गार'],['5 वर्ष','अवधि']].map((x,i)=>R('div',{key:i,style:{textAlign:'center'}},R('div',{style:{fontFamily:'Mukta',fontSize:19,fontWeight:800}},x[0]),R('div',{style:{fontFamily:'Mukta',fontSize:10.5,color:'#8ea0c4'}},x[1]))))),
+        R('p',{style:{margin:0,fontFamily:'Noto Serif Devanagari',fontSize:17.5,lineHeight:1.8,color:t.ink2}},'मुख्यमंत्री ने कहा कि यह नीति ग्रामीण क्षेत्रों में रोज़गार के नए द्वार खोलेगी और स्थानीय युवाओं को प्राथमिकता मिलेगी।')),
+      this.footer({pad:'30px 20px 20px',cols:'1fr 1fr'})
+    ]));
+
+    return F;
+  }
+
+  handoff(){
+    const R=React.createElement; const t=this.T();
+    const invGroups=[
+      ['हेडर व शेल',['UtilStrip (यूटिलिटी पट्टी)','BrandRow (लोगो+खोज+CTA)','CatNav (श्रेणी नेविगेशन)','StickyHeader (संघनित)','Ticker (ब्रेकिंग)','Footer (5-कॉलम)']],
+      ['स्टोरी',['LeadStory','SecondaryCard','SectionCard','HeadlineListItem','RankedItem','SectionBand (शीर्षक+रूल)']],
+      ['सामग्री',['AISummary "संक्षेप में"','Byline','PullQuote','FactBox','TagList','AuthorBox','InlineAudio']],
+      ['सिडबार',['WeatherWidget','MarketTiles (डेटा-निर्भर)','SideModule','RelatedList']],
+      ['वाणिज्य',['AdBox (सभी आयाम)','ShareRail','MembershipStrip','PlanCard','PaywallCard']],
+      ['उपयोगिता',['SearchField','FilterRail','Breadcrumb','LiveTimeline','MiniPlayer','StateView']]
+    ];
+    const inv=R('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:18,marginBottom:32}},...invGroups.map((g,gi)=>R('div',{key:gi,style:{background:'#fff',border:'1px solid '+t.line,borderTop:'3px solid '+t.navy,borderRadius:8,padding:'16px 18px'}},R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.1em',color:t.red,textTransform:'uppercase',marginBottom:12}},g[0]),...g[1].map((c,ci)=>R('div',{key:ci,style:{fontFamily:'ui-monospace,monospace',fontSize:12,fontWeight:600,color:t.navy,padding:'5px 0',borderBottom:ci<g[1].length-1?'1px solid '+t.line2:'none'}},'‹'+c+'›')))));
+    const block=(head,items)=>R('div',{style:{marginBottom:18}},R('div',{style:{fontFamily:'Mukta',fontSize:12,fontWeight:800,letterSpacing:'.08em',color:t.red,textTransform:'uppercase',marginBottom:8}},head),R('div',{style:{fontFamily:'ui-monospace,monospace',fontSize:12,lineHeight:1.9,color:t.ink2,background:'#fff',border:'1px solid '+t.line,borderRadius:6,padding:'12px 16px'}},...items.map((x,i)=>R('div',{key:i},x))));
+    const notes=R('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:24}},
+      R('div',null,
+        block('ब्रेकपॉइंट → लेआउट',['@media ≥1440  12-कॉल · कंटेनर 1240','@media ≥1280  12-कॉल · कंटेनर 1160','@media ≥1024  8-कॉल · सिडबार नीचे','@media ≥768   4-कॉल · एकल-कॉलम प्रवाह','@media ≤600   मौजूदा मोबाइल (अपरिवर्तित)']),
+        block('रिस्पॉन्सिव नियम',['3-कॉल → 2-कॉल @1024, → 1-कॉल @768','दायाँ सिडबार → कंटेंट के नीचे @1024','शेयर-रेल → इनलाइन @1024','नेव → क्षैतिज-स्क्रॉल @1024, हैमबर्गर @768','हीरो 16:9 → 3:2 @768','स्टिकी मिनी-प्लेयर सभी ब्रेकपॉइंट पर'])),
+      R('div',null,
+        block('स्टैक (Cursor हेतु)',['Next.js App Router + RSC · TypeScript','Tailwind — टोकन theme.extend में','next/font: Tiro, Noto Serif, Mukta (देवनागरी सबसेट)','next/image AVIF/WebP · लेआउट-स्पेस आरक्षित','next-intl: hi (डिफ़ॉल्ट) / en']),
+        block('गुणवत्ता गेट',['पठन-चौड़ाई ≤680px — पूरी स्क्रीन पर नहीं','कोई नकली मौसम/बाज़ार मान — प्लेसहोल्डर','हर विज्ञापन लेबल + स्थान आरक्षित (CLS 0)','Hindi प्राथमिक; देवनागरी lh ≥1.7','मोबाइल कार्यान्वयन अपरिवर्तित रह सकता है','a11y: टच ≥44px, कंट्रास्ट ≥4.5:1, ARIA'])));
+    return R('div',{style:{maxWidth:1500,margin:'0 auto'}},
+      R('h3',{className:'hi-serif',style:{fontSize:20,fontWeight:700,margin:'0 0 16px',color:t.ink}},'पुन:प्रयोज्य घटक सूची'),inv,
+      R('h3',{className:'hi-serif',style:{fontSize:20,fontWeight:700,margin:'8px 0 16px',color:t.ink}},'डेवलपर हैंडऑफ़ नोट्स'),notes,
+      R('div',{style:{marginTop:24,background:t.navy,color:t.paper,borderRadius:8,padding:'22px 26px'}},R('div',{style:{fontFamily:'Mukta',fontSize:11,fontWeight:800,letterSpacing:'.1em',color:t.gold,marginBottom:8}},'फ़्रेम नामकरण परंपरा'),R('div',{style:{fontFamily:'ui-monospace,monospace',fontSize:12.5,lineHeight:1.9,color:'#c7d0e2'}},R('div',null,'D01–D16  Desktop 1440  (Home, Category, Article, Opinion, LiveArticle, PhotoStory, District, Search, Latest, Trending, LiveNews, Membership, Login, Audio, Account, States)'),R('div',null,'T01–T03  Tablet Landscape 1024  (Home, Article, Category)'),R('div',null,'TP01–TP02  Tablet Portrait 768  (Home, Article)'),R('div',null,'H01–H04  Header states (Full, Sticky, Tablet-L, Tablet-P)'))));
+  }
+
+  renderVals(){
+    return { system:this.system(), headers:this.headers(), desktop:this.desktop(), tabletL:this.tabletL(), tabletP:this.tabletP(), handoff:this.handoff() };
+  }
+}
+</script>
+</body>
+</html>

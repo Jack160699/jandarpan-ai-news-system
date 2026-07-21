@@ -2,6 +2,8 @@ import { PageShell } from "@/components/layout/PageShell";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { LiveV3Page } from "@/features/live-v3";
 import { isLiveV3Enabled } from "@/features/live-v3/config";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { LiveNewsPageView } from "@/features/reader-ds/pages";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { BRAND } from "@/lib/brand";
 import {
@@ -64,6 +66,25 @@ export default async function LivePage() {
       { name: "Live Desk", href: BASE_PATH },
     ]),
   ];
+
+  if (isReaderDesignSystemEnabled()) {
+    const articles = [...feed.breakingTicker, ...feed.liveWire].slice(0, 20);
+    const isLiveActive =
+      feed.breakingTicker.length > 0 ||
+      articles.some((a) => a.isLive) ||
+      feed.liveWire.length > 0;
+
+    return (
+      <>
+        <JsonLdScript data={jsonLd} />
+        <LiveNewsPageView
+          articles={articles}
+          isLiveActive={isLiveActive}
+          heroTitle={articles[0]?.headline}
+        />
+      </>
+    );
+  }
 
   if (isLiveV3Enabled()) {
     return (

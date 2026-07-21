@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageShell } from "@/components/layout/PageShell";
+import { ReaderPremiumReportPage } from "@/features/reader-ds/article";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { PremiumPaywallPage } from "@/features/reader-ds/monetization";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { buildPageMetadata } from "@/lib/seo";
 import { getTenantConfig } from "@/lib/tenant/resolve";
@@ -52,6 +55,21 @@ export default async function PremiumReportPage({ params }: PageProps) {
     .maybeSingle();
 
   if (!report) notFound();
+
+  if (isReaderDesignSystemEnabled()) {
+    const reportModel = {
+      slug: report.slug,
+      title: report.title,
+      excerpt: report.excerpt,
+      is_paywalled: report.is_paywalled,
+      price_inr: report.price_inr,
+      content_path: report.content_path,
+    };
+    if (report.is_paywalled) {
+      return <PremiumPaywallPage report={reportModel} />;
+    }
+    return <ReaderPremiumReportPage report={reportModel} />;
+  }
 
   return (
     <PageShell variant="news">

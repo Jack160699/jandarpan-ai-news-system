@@ -17,6 +17,7 @@
 @import "./newsroom-platform.css";
 
 /* Feature surfaces (content preserved) */
+@import "../features/reader-ds/styles/tokens.css";
 @import "./design-system.css";
 @import "../design-system/styles/index.css";
 @import "./media-system.css";

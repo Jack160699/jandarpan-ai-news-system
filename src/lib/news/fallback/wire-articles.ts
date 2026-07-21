@@ -7,17 +7,26 @@ import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 const NOW = () => new Date().toISOString();
 
+function bodyFrom(summary: string | null, headline: string): string {
+  const lead = summary?.trim() || headline;
+  return [
+    lead,
+    "स्थानीय प्रशासन और संबंधित विभागों से प्राप्त जानकारी के आधार पर यह रिपोर्ट तैयार की गई है। आगे की स्थिति स्पष्ट होते ही अपडेट जारी किए जाएँगे।",
+    "जनदर्पण टीम मैदान से रिपोर्टिंग जारी रखेगी और पाठकों को सत्यापित अपडेट उपलब्ध कराती रहेगी।",
+  ].join("\n\n");
+}
+
 function row(
   partial: Pick<GeneratedArticleRow, "id" | "slug" | "headline" | "summary"> &
     Partial<GeneratedArticleRow>
 ): GeneratedArticleRow {
+  const summary = partial.summary ?? null;
   return {
     event_id: null,
-    article_body: null,
     hero_image_url: null,
     seo_title: partial.headline,
-    seo_description: partial.summary,
-    reading_time: "3",
+    seo_description: summary,
+    reading_time: "3 मिनट",
     language: "hi",
     tags: ["chhattisgarh"],
     published_at: NOW(),
@@ -32,6 +41,7 @@ function row(
     },
     created_at: NOW(),
     ...partial,
+    article_body: partial.article_body ?? bodyFrom(summary, partial.headline),
   };
 }
 

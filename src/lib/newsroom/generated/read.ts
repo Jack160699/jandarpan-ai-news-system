@@ -321,7 +321,12 @@ export async function fetchGoogleNewsArticlePool(
 export async function getGeneratedArticleBySlug(
   slug: string
 ): Promise<GeneratedArticleRow | null> {
-  if (!isSupabaseConfigured()) return null;
+  if (!isSupabaseConfigured()) {
+    const { getStaticFallbackArticlePool } = await import(
+      "@/lib/news/fallback/wire-articles"
+    );
+    return getStaticFallbackArticlePool().find((r) => r.slug === slug) ?? null;
+  }
 
   const supabase = createAnonServerClient();
   return fetchPublicGeneratedRow(supabase, slug);

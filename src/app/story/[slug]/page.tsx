@@ -4,6 +4,12 @@ import { ArticleView } from "@/sections/ArticleView";
 import { ImmersiveStoryPage } from "@/sections/story/ImmersiveStoryPage";
 import { ArticleExperienceV3 } from "@/features/article-v3";
 import { isArticleV3Enabled } from "@/features/article-v3/config";
+import {
+  buildReaderArticleModel,
+  ReaderArticlePage,
+} from "@/features/reader-ds/article";
+import { isArticleVariant } from "@/features/reader-ds/article/types";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { getAllArticleSlugs, getArticle } from "@/lib/articles";
 import { generatedToNewsArticle } from "@/lib/homepage/generated-adapter";
 import {
@@ -38,7 +44,7 @@ export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ lang?: string }>;
+  searchParams: Promise<{ lang?: string; dsVariant?: string }>;
 };
 
 export async function generateStaticParams() {
@@ -82,7 +88,7 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
 
 export default async function StoryPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
-  const { lang: langParam } = await searchParams;
+  const { lang: langParam, dsVariant } = await searchParams;
   const readerLang = isNewsroomLanguage(langParam)
     ? langParam
     : await getServerReaderLanguage();
@@ -143,6 +149,21 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     const aiSummary = liveArticle.ai_summary?.trim() || null;
     const shareSummary = aiSummary ?? plainParagraphs.slice(0, 2).join(" ");
     const contentSections = bodySections(parsed.sections);
+
+    if (isReaderDesignSystemEnabled()) {
+      const model = buildReaderArticleModel({
+        article: liveArticle,
+        paragraphs: plainParagraphs,
+        related: relatedResult.articles,
+        intelligence,
+        editorialMeta: generatedRow.editorial_metadata,
+        generatedRow,
+        sponsored: sponsoredStory,
+        tags: generatedRow.tags ?? [],
+        forceVariant: isArticleVariant(dsVariant) ? dsVariant : null,
+      });
+      return <ReaderArticlePage model={model} />;
+    }
 
     if (articleV3) {
       return (

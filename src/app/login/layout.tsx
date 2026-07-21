@@ -5,7 +5,7 @@ import { buildUtilityPageMetadata } from "@/lib/seo/metadata";
 export const metadata: Metadata = buildUtilityPageMetadata({
   title: `Reader Account · ${BRAND.nameEn}`,
   description:
-    "Sign in to personalize your Chhattisgarh news feed — Google, email link, or phone OTP.",
+    "जनदर्पण में साइन इन करें — Google, ईमेल लिंक, या मेहमान के रूप में जारी रखें।",
   path: "/login",
 });
 

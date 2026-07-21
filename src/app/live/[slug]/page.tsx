@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { PageShell } from "@/components/layout/PageShell";
+import { ReaderLiveBlogPage } from "@/features/reader-ds/article";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import {
   buildLiveCoverageMetadata,
   EvolvingStoryPage,
@@ -35,6 +37,10 @@ export default async function LiveCoveragePage({ params }: PageProps) {
   const { slug } = await params;
   const bundle = await getEvolvingCoverageBySlug(slug);
   if (!bundle) notFound();
+
+  if (isReaderDesignSystemEnabled()) {
+    return <ReaderLiveBlogPage bundle={bundle} />;
+  }
 
   return (
     <PageShell variant="news">
