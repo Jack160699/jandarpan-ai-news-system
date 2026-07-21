@@ -1,5 +1,6 @@
 /**
- * Resolve display URLs with tiered fallbacks — generated_articles compatible
+ * Resolve display URLs with tiered fallbacks — generated_articles compatible.
+ * Delegates rejection / brand rules to validate + editorial-image-resolver.
  */
 
 import {
@@ -9,7 +10,7 @@ import {
 } from "@/lib/news/images/fallbacks";
 import { optimizeCdnUrl } from "@/lib/news/images/cdn";
 import { normalizeImageUrl } from "@/lib/news/images/extract";
-import { isDisplayableImage } from "@/lib/news/images/validate";
+import { isDisplayableImage, isRejectedImageUrl } from "@/lib/news/images/validate";
 import type { MediaAspect } from "@/lib/news/images/aspects";
 
 export type ResolveMediaInput = {
@@ -21,47 +22,61 @@ export type ResolveMediaInput = {
 };
 
 export type ResolvedMedia = {
-  /** Primary URL (article or contextual fallback) */
+  /** Primary URL (article or contextual fallback); empty string when text-only */
   url: string;
   /** URL after CDN optimization */
   optimizedUrl: string;
   /** Tier-2 fallback if primary fails to load */
   fallbackUrl: string;
-  /** Final branded placeholder */
+  /** Final curated placeholder (never brand logo) */
   placeholderUrl: string;
   isSynthetic: boolean;
+  /** When true, UI should render text-only frame (no img) */
+  textOnly: boolean;
 };
 
 function rawArticleUrl(input: ResolveMediaInput): string | null {
   if (!input.imageUrl?.trim()) return null;
   if (!isDisplayableImage(input.imageUrl)) return null;
-  return normalizeImageUrl(input.imageUrl, input.articleUrl);
+  const normalized = normalizeImageUrl(input.imageUrl, input.articleUrl);
+  if (!normalized || !isDisplayableImage(normalized)) return null;
+  return normalized;
+}
+
+function safeCurated(url: string): string | null {
+  if (!url?.trim()) return null;
+  if (isRejectedImageUrl(url).rejected) return null;
+  return url;
 }
 
 /**
- * Resolve image chain without failing — always returns valid URLs
+ * Resolve image chain without failing — always returns usable URLs or textOnly.
  */
 export function resolveMedia(input: ResolveMediaInput, aspect: MediaAspect = "16:9"): ResolvedMedia {
   const article = rawArticleUrl(input);
-  const contextual = resolveFallbackImage({
+  const contextualRaw = resolveFallbackImage({
     category: input.category,
     source: input.source,
     region: input.region,
   });
-  const categoryOnly = getCategoryFallback(input.category);
-  const branded = NEWSROOM_PLACEHOLDER;
+  const categoryRaw = getCategoryFallback(input.category);
+  const contextual = safeCurated(contextualRaw);
+  const categoryOnly = safeCurated(categoryRaw);
+  const branded = safeCurated(NEWSROOM_PLACEHOLDER);
 
-  const primary = article ?? contextual;
+  const primary = article ?? contextual ?? categoryOnly ?? branded ?? "";
   const isSynthetic = !article;
+  const textOnly = !primary;
 
   const fallbackUrl = article
-    ? contextual
-    : contextual !== categoryOnly
+    ? contextual ?? categoryOnly ?? branded ?? ""
+    : contextual && categoryOnly && contextual !== categoryOnly
       ? categoryOnly
-      : branded;
+      : branded ?? "";
 
-  const optimize = (url: string) =>
-    optimizeCdnUrl(url, {
+  const optimize = (url: string) => {
+    if (!url) return "";
+    return optimizeCdnUrl(url, {
       aspect: aspect === "fill" ? "16:9" : aspect,
       width:
         aspect === "4:5"
@@ -72,13 +87,15 @@ export function resolveMedia(input: ResolveMediaInput, aspect: MediaAspect = "16
               ? 560
               : 720,
     });
+  };
 
   return {
     url: primary,
     optimizedUrl: optimize(primary),
     fallbackUrl: optimize(fallbackUrl),
-    placeholderUrl: optimize(branded),
+    placeholderUrl: optimize(branded ?? ""),
     isSynthetic,
+    textOnly,
   };
 }
 
@@ -89,6 +106,7 @@ export function resolveCardImage(
   aspect: MediaAspect = "16:9"
 ): string {
   const media = resolveMedia(input, aspect);
+  if (media.textOnly || !media.url) return "";
   return optimizeCdnUrl(media.url, { width, aspect });
 }
 

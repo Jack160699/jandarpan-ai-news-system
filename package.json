@@ -39,6 +39,9 @@
     "ops:translation-coverage": "npx tsx scripts/translation-recovery.ts --coverage-only",
     "ops:tenant-job-repair": "npx tsx scripts/tenant-job-repair.ts",
     "ops:tenant-job-repair-execute": "npx tsx scripts/tenant-job-repair.ts --execute",
+    "ops:audit-editorial-images": "npx tsx scripts/audit-editorial-images.ts",
+    "ops:repair-editorial-images": "npx tsx scripts/repair-editorial-images.ts",
+    "ops:repair-editorial-images-apply": "npx tsx scripts/repair-editorial-images.ts --apply",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {

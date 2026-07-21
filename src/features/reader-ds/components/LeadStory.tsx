@@ -12,11 +12,13 @@ export function LeadStory({ story, priority = true }: { story: ReaderStory; prio
         <ArticleImage
           src={story.imageUrl}
           alt={story.headline}
+          altIsPhotoDescription={false}
           ratio="lead"
           caption={story.kicker ?? undefined}
           priority={priority}
           sizes="(max-width: 640px) 100vw, 620px"
           tone="city"
+          category={story.kicker ?? "general"}
         />
         <div style={{ display: "flex", gap: 7, alignItems: "center", margin: "9px 0 4px", flexWrap: "wrap" }}>
           <Tag>{story.kicker ?? "प्रमुख"}</Tag>

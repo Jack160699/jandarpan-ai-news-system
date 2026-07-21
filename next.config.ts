@@ -1,15 +1,15 @@
 import type { NextConfig } from "next";
 import { LEGACY_DASHBOARD_REDIRECTS } from "./src/lib/admin-platform/legacy-redirects";
+import { TRUSTED_REMOTE_PATTERNS } from "./src/lib/news/images/trusted-remote-hosts";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@stratxcel/platform"],
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "**.supabase.co" },
-      { protocol: "https", hostname: "**.supabase.in" },
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "**.jandarpan.news" },
-    ],
+    remotePatterns: TRUSTED_REMOTE_PATTERNS.map((p) => ({
+      protocol: p.protocol,
+      hostname: p.hostname,
+      ...(p.pathname ? { pathname: p.pathname } : {}),
+    })),
   },
   async redirects() {
     return [

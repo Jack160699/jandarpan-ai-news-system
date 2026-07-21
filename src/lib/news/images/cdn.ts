@@ -1,9 +1,11 @@
 /**
  * CDN / remote image optimization for Next/Image
- * Keeps mobile payloads small while preserving crop quality
+ * Keeps mobile payloads small while preserving crop quality.
+ * Never mutates signed URLs or unknown hosts with arbitrary query params.
  */
 
 import { cdnCropForAspect, type MediaAspect } from "@/lib/news/images/aspects";
+import { isSupabaseSignedUrl } from "@/lib/news/images/trusted-remote-hosts";
 
 const MAX_WIDTH = 1280;
 const MIN_WIDTH = 160;
@@ -19,7 +21,9 @@ type OptimizeOpts = {
 };
 
 /**
- * Apply provider-specific resize/crop params
+ * Apply provider-specific resize/crop params.
+ * Unknown hosts and signed URLs are returned unchanged (avoids breaking
+ * signatures / static asset servers that reject extra query keys).
  */
 export function optimizeCdnUrl(
   url: string,
@@ -34,6 +38,10 @@ export function optimizeCdnUrl(
   const q = opts.quality ?? 75;
 
   try {
+    if (isSupabaseSignedUrl(url)) {
+      return url;
+    }
+
     const lower = url.toLowerCase();
 
     if (lower.includes("images.unsplash.com")) {
@@ -79,7 +87,8 @@ export function optimizeCdnUrl(
     if (
       lower.includes("wp-content/uploads") ||
       lower.includes("i0.wp.com") ||
-      lower.includes("cdn.")
+      lower.includes("i1.wp.com") ||
+      lower.includes("i2.wp.com")
     ) {
       const u = new URL(url);
       if (!u.searchParams.has("w") && !u.searchParams.has("width")) {
@@ -88,11 +97,8 @@ export function optimizeCdnUrl(
       return u.toString();
     }
 
-    const u = new URL(url);
-    if (!u.searchParams.has("w") && !u.searchParams.has("width")) {
-      u.searchParams.set("w", String(w));
-    }
-    return u.toString();
+    // Do not append speculative ?w= to arbitrary hosts (breaks static files / CDNs).
+    return url;
   } catch {
     return url;
   }
