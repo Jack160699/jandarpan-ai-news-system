@@ -6,21 +6,22 @@ import { JdIcon } from "../../components/icons";
 import { useJdDsT } from "../../i18n";
 import { SettingRow } from "../components/SettingRow";
 import { AccountShell } from "../components/AccountShell";
+import { ReaderAccountCard } from "../components/ReaderAccountCard";
 import { loadReadingMemory } from "@/lib/reading-memory";
 import { loadPreferences } from "@/lib/reader-preferences";
 import { loadHomepageLayout } from "@/lib/personalization/homepage-layout";
 import { CG_DISTRICTS } from "@/lib/regional/districts";
+import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 
 /** D29 / D15 — reader profile hub inside account dual-rail. */
 export function ProfileHubPage() {
   const { t, locale } = useJdDsT();
-  const [name, setName] = useState(() => t("profile.reader"));
+  const { isLoggedIn } = useReaderAccount();
   const [saved, setSaved] = useState(0);
   const [followed, setFollowed] = useState(0);
   const [district, setDistrict] = useState("");
 
   useEffect(() => {
-    setName(t("profile.reader"));
     const mem = loadReadingMemory();
     setSaved(mem.bookmarks.length);
     const prefs = loadPreferences();
@@ -32,31 +33,12 @@ export function ProfileHubPage() {
         ? d?.name ?? d?.nameHi ?? "Raipur"
         : d?.nameHi ?? d?.name ?? "रायपुर"
     );
-  }, [t, locale]);
+  }, [locale]);
 
   return (
     <AccountShell pageTitle={t("profile.title")} active="profile">
-      <div data-jd-locale={locale}>
-        <div style={{ padding: "18px 16px", display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            aria-hidden
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 56,
-              background: "linear-gradient(135deg, var(--jd-navy), var(--jd-red))",
-              flexShrink: 0,
-            }}
-          />
-          <div>
-            <div className="jd-serif" style={{ fontSize: 19, fontWeight: 700, color: "var(--jd-ink)" }}>
-              {name}
-            </div>
-            <div className="jd-ui" style={{ fontSize: 12, color: "var(--jd-muted)" }}>
-              {district} · {t("profile.onDevice")}
-            </div>
-          </div>
-        </div>
+      <div data-jd-locale={locale} data-testid="jd-profile-hub">
+        <ReaderAccountCard districtLabel={district} />
 
         <Link
           href="/membership"
@@ -113,7 +95,15 @@ export function ProfileHubPage() {
         <SettingRow icon="globe" label={t("profile.language")} href="/archive/language" />
         <SettingRow icon="pin" label={t("profile.districts")} href="/archive/districts" />
         <SettingRow icon="bell" label={t("profile.notifications")} href="/archive/notifications" />
-        <SettingRow icon="user" label={t("profile.account")} href="/login" />
+        {!isLoggedIn ? (
+          <SettingRow icon="user" label={t("profile.account")} href="/login" />
+        ) : (
+          <SettingRow
+            icon="user"
+            label={t("accountCard.editProfile")}
+            href="/archive/edit-profile"
+          />
+        )}
       </div>
     </AccountShell>
   );

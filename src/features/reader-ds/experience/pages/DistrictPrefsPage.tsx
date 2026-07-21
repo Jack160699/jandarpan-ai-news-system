@@ -9,16 +9,18 @@ import { Toggle } from "../components/Toggle";
 import { SectionLabel } from "../components/SettingRow";
 import { useJdDsT } from "../../i18n";
 import { CG_DISTRICTS } from "@/lib/regional/districts";
-import { loadPreferences, savePreferences } from "@/lib/reader-preferences";
+import { loadPreferences } from "@/lib/reader-preferences";
 import {
   loadHomepageLayout,
   saveHomepageLayout,
 } from "@/lib/personalization/homepage-layout";
-import { syncDistrictCookie } from "@/lib/personalization/cookies";
+import { setExplicitLocalDistrict } from "@/lib/auth/district-sync";
+import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 
 /** D34 — primary + followed districts. */
 export function DistrictPrefsPage() {
   const { t, locale } = useJdDsT();
+  const { isLoggedIn, user } = useReaderAccount();
   const [primary, setPrimary] = useState("raipur");
   const [others, setOthers] = useState<string[]>([]);
   const [autoLocate, setAutoLocate] = useState(false);
@@ -40,12 +42,25 @@ export function DistrictPrefsPage() {
 
   const setPrimaryDistrict = (slug: string) => {
     setPrimary(slug);
-    savePreferences({ homeDistrict: slug });
-    syncDistrictCookie(slug);
+    // Explicit manual choice is authoritative (Agent 3 district ranking hook).
+    setExplicitLocalDistrict(slug);
     const layout = loadHomepageLayout();
     const followed = [slug, ...(layout.followedDistricts ?? []).filter((s) => s !== slug)];
     saveHomepageLayout({ ...layout, followedDistricts: followed });
     setOthers(followed.filter((s) => s !== slug));
+
+    if (isLoggedIn && user) {
+      void fetch("/api/reader/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          homeDistrict: slug,
+          districtExplicit: true,
+        }),
+      }).catch(() => {
+        /* local remains authoritative if remote sync fails */
+      });
+    }
   };
 
   const removeOther = (slug: string) => {

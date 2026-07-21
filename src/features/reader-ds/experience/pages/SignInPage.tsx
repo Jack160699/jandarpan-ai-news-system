@@ -63,7 +63,14 @@ function digitsOnly(value: string) {
 
 export function SignInPage() {
   const { t } = useJdDsT();
-  const { signInWithGoogle, isLoggedIn, displayName, loading } = useReaderAccount();
+  const {
+    signInWithGoogle,
+    isLoggedIn,
+    displayName,
+    loading,
+    authError,
+    clearAuthError,
+  } = useReaderAccount();
   const { client } = useSupabase();
   const configured = isSupabaseConfigured();
 
@@ -77,9 +84,12 @@ export function SignInPage() {
 
   async function onGoogle() {
     setStatus(null);
+    clearAuthError();
     setBusy(true);
     try {
-      await signInWithGoogle();
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next");
+      await signInWithGoogle(next || "/archive");
     } catch (e) {
       setStatus(e instanceof Error ? e.message : t("signin.googleFailed"));
       setBusy(false);
@@ -92,7 +102,9 @@ export function SignInPage() {
     setStatus(null);
     const { error } = await client.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/login` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/archive")}`,
+      },
     });
     setBusy(false);
     setStatus(error ? error.message : t("signin.emailSent"));
@@ -426,13 +438,14 @@ export function SignInPage() {
           ) : null}
         </div>
 
-        {status ? (
+        {(status || authError) ? (
           <p
-            role="status"
+            role="alert"
+            data-testid="jd-signin-auth-error"
             className="jd-ui"
-            style={{ marginTop: 16, fontSize: 13, color: "var(--jd-ink-2)", lineHeight: 1.45 }}
+            style={{ marginTop: 16, fontSize: 13, color: "var(--jd-red)", lineHeight: 1.45 }}
           >
-            {status}
+            {status || authError}
           </p>
         ) : null}
 

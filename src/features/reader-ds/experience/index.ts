@@ -2,6 +2,7 @@ export { ListenBriefingPage } from "./pages/ListenBriefingPage";
 export { AudioQueuePage } from "./pages/AudioQueuePage";
 export { DownloadsPage } from "./pages/DownloadsPage";
 export { ProfileHubPage } from "./pages/ProfileHubPage";
+export { EditProfilePage } from "./pages/EditProfilePage";
 export { SavedStoriesPage } from "./pages/SavedStoriesPage";
 export { ReadingHistoryPage } from "./pages/ReadingHistoryPage";
 export { FollowedTopicsPage } from "./pages/FollowedTopicsPage";
