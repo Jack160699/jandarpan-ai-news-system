@@ -27,9 +27,10 @@ function baseInput(
 }
 
 describe("classifyIngestionOutcome", () => {
-  it("all providers healthy → success", () => {
+  it("all providers healthy with inserts → healthy_new_content", () => {
     const o = classifyIngestionOutcome(baseInput());
     expect(o.status).toBe("success");
+    expect(o.classification).toBe("healthy_new_content");
     expect(o.ok).toBe(true);
     expect(o.degraded).toBe(false);
     expect(o.durationMs).toBe(2_000);
@@ -39,12 +40,12 @@ describe("classifyIngestionOutcome", () => {
     const o = classifyIngestionOutcome(
       baseInput({ errors: ["rss: etv-cg failed", "rss: zee-mpcg failed"] })
     );
-    // Individual dead feeds are tolerated — family still completed.
     expect(o.status).toBe("success");
+    expect(o.classification).toBe("healthy_new_content");
     expect(o.ok).toBe(true);
   });
 
-  it("GNews quota exhausted (gnews skipped) → degraded, not failed", () => {
+  it("GNews quota exhausted (gnews skipped) → degraded_quota", () => {
     const o = classifyIngestionOutcome(
       baseInput({
         completedProviders: ["newsdata", "rss"],
@@ -53,13 +54,14 @@ describe("classifyIngestionOutcome", () => {
       })
     );
     expect(o.status).toBe("degraded");
+    expect(o.classification).toBe("degraded_quota");
     expect(o.ok).toBe(true);
     expect(o.degraded).toBe(true);
     expect(o.optionalProviderFailures).toContain("gnews");
     expect(o.requiredProviderFailures).toHaveLength(0);
   });
 
-  it("GNews 429 while NewsData + RSS work → degraded", () => {
+  it("GNews 429 while NewsData + RSS work → degraded_quota", () => {
     const o = classifyIngestionOutcome(
       baseInput({
         completedProviders: ["newsdata", "rss"],
@@ -68,10 +70,11 @@ describe("classifyIngestionOutcome", () => {
       })
     );
     expect(o.status).toBe("degraded");
+    expect(o.classification).toBe("degraded_quota");
     expect(o.optionalProviderFailures).toEqual(["gnews"]);
   });
 
-  it("NewsData unavailable but RSS working → degraded (preferred failure)", () => {
+  it("NewsData unavailable but RSS working → degraded_provider_failure", () => {
     const o = classifyIngestionOutcome(
       baseInput({
         completedProviders: ["gnews", "rss"],
@@ -80,6 +83,7 @@ describe("classifyIngestionOutcome", () => {
       })
     );
     expect(o.status).toBe("degraded");
+    expect(o.classification).toBe("degraded_provider_failure");
     expect(o.optionalProviderFailures).toContain("newsdata");
   });
 
@@ -88,10 +92,11 @@ describe("classifyIngestionOutcome", () => {
       baseInput({ timedOutSafely: true, errors: ["rss: batch skipped"] })
     );
     expect(o.status).toBe("degraded");
+    expect(o.classification).toBe("degraded_provider_failure");
     expect(o.timedOutSafely).toBe(true);
   });
 
-  it("all providers unavailable, nothing fetched → failed", () => {
+  it("all providers unavailable, nothing fetched → failed_all_providers", () => {
     const o = classifyIngestionOutcome(
       baseInput({
         fetched: 0,
@@ -105,18 +110,32 @@ describe("classifyIngestionOutcome", () => {
       })
     );
     expect(o.status).toBe("failed");
+    expect(o.classification).toBe("failed_all_providers");
     expect(o.ok).toBe(false);
     expect(o.failureReason).toBe("all_source_families_failed");
   });
 
-  it("database persistence failure → failed even with inserts reported", () => {
+  it("database persistence failure → failed_persistence", () => {
     const o = classifyIngestionOutcome(
       baseInput({ persistenceSucceeded: false })
     );
     expect(o.status).toBe("failed");
+    expect(o.classification).toBe("failed_persistence");
     expect(o.ok).toBe(false);
     expect(o.failureReason).toBe("persistence_failed");
     expect(o.requiredProviderFailures).toContain("persistence");
+  });
+
+  it("failed_persistence even when inserts were falsely reported", () => {
+    const o = classifyIngestionOutcome(
+      baseInput({
+        inserted: 20,
+        signalsInserted: 0,
+        persistenceSucceeded: false,
+      })
+    );
+    expect(o.classification).toBe("failed_persistence");
+    expect(o.status).toBe("failed");
   });
 
   it("useful ingestion reaching safe deadline → degraded", () => {
@@ -127,18 +146,76 @@ describe("classifyIngestionOutcome", () => {
     expect(o.ok).toBe(true);
   });
 
-  it("zero new content because everything was duplicate → success", () => {
+  it("zero new content because everything was duplicate → healthy_no_novel_content", () => {
     const o = classifyIngestionOutcome(
-      baseInput({ inserted: 0, signalsInserted: 0, duplicates: 100, queuedForAI: 0 })
+      baseInput({
+        inserted: 0,
+        signalsInserted: 0,
+        duplicates: 100,
+        queuedForAI: 0,
+      })
     );
     expect(o.status).toBe("success");
+    expect(o.classification).toBe("healthy_no_novel_content");
     expect(o.ok).toBe(true);
     expect(o.degraded).toBe(false);
   });
 
+  it("healthy_no_novel_content is not failed_persistence", () => {
+    const healthy = classifyIngestionOutcome(
+      baseInput({
+        inserted: 0,
+        signalsInserted: 0,
+        duplicates: 50,
+        queuedForAI: 0,
+        persistenceSucceeded: true,
+      })
+    );
+    const failed = classifyIngestionOutcome(
+      baseInput({
+        inserted: 0,
+        signalsInserted: 0,
+        duplicates: 0,
+        persistenceSucceeded: false,
+      })
+    );
+    expect(healthy.classification).toBe("healthy_no_novel_content");
+    expect(failed.classification).toBe("failed_persistence");
+    expect(healthy.status).not.toBe(failed.status);
+  });
+
+  it("skipped_backpressure classification", () => {
+    const o = classifyIngestionOutcome(
+      baseInput({
+        fetched: 0,
+        inserted: 0,
+        signalsInserted: 0,
+        skippedBackpressure: true,
+      })
+    );
+    expect(o.classification).toBe("skipped_backpressure");
+    expect(o.ok).toBe(true);
+    expect(o.degraded).toBe(true);
+  });
+
+  it("failed_configuration classification", () => {
+    const o = classifyIngestionOutcome(
+      baseInput({
+        fetched: 0,
+        inserted: 0,
+        configurationFailed: true,
+      })
+    );
+    expect(o.classification).toBe("failed_configuration");
+    expect(o.status).toBe("failed");
+    expect(o.ok).toBe(false);
+  });
+
   it("never marks failed solely because errors.length > 0", () => {
     const o = classifyIngestionOutcome(
-      baseInput({ errors: Array.from({ length: 12 }, (_, i) => `rss: feed-${i} failed`) })
+      baseInput({
+        errors: Array.from({ length: 12 }, (_, i) => `rss: feed-${i} failed`),
+      })
     );
     expect(o.status).not.toBe("failed");
   });
@@ -161,9 +238,21 @@ describe("describeIngestionOutcome", () => {
 
   it("does not say 'Cron failed' for a degraded run", () => {
     const o = classifyIngestionOutcome(
-      baseInput({ completedProviders: ["newsdata", "rss"], skippedProviders: ["gnews"] })
+      baseInput({
+        completedProviders: ["newsdata", "rss"],
+        skippedProviders: ["gnews"],
+      })
     );
     const msg = describeIngestionOutcome(o);
     expect(msg.title.toLowerCase()).not.toContain("cron failed");
   });
+
+  it("describes failed_persistence clearly", () => {
+    const o = classifyIngestionOutcome(
+      baseInput({ persistenceSucceeded: false })
+    );
+    const msg = describeIngestionOutcome(o);
+    expect(msg.detail.toLowerCase()).toContain("persistence");
+  });
 });
+

@@ -1512,6 +1512,7 @@ export type Database = {
           article_url: string
           category: string
           created_at: string
+          geo_metadata: Json | null
           id: string
           image_url: string | null
           ingestion_metadata: Json
@@ -1528,6 +1529,7 @@ export type Database = {
           article_url: string
           category?: string
           created_at?: string
+          geo_metadata?: Json | null
           id?: string
           image_url?: string | null
           ingestion_metadata?: Json
@@ -1544,6 +1546,7 @@ export type Database = {
           article_url?: string
           category?: string
           created_at?: string
+          geo_metadata?: Json | null
           id?: string
           image_url?: string | null
           ingestion_metadata?: Json

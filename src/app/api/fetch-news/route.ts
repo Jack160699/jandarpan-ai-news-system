@@ -32,6 +32,7 @@ import { pipelineLog } from "@/lib/observability/production-log";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { trackOpsError } from "@/lib/observability/errors";
 import { buildQueueHealthSnapshot } from "@/lib/infrastructure/queue/health-manager";
+import { asJsonObject } from "@/types/json";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -46,10 +47,57 @@ export async function POST(request: Request) {
   return handleFetchNews(request);
 }
 
+function resolveSchedulerIdentity(auth: {
+  vercelCron: boolean;
+  qstashVerified?: boolean;
+}): "vercel_cron" | "qstash" | "bearer_unknown" {
+  if (auth.vercelCron) return "vercel_cron";
+  if (auth.qstashVerified) return "qstash";
+  return "bearer_unknown";
+}
+
+function extractGnewsMode(errors: string[]): string | null {
+  const hit = errors.find((e) => /gnews_mode:/i.test(e));
+  if (!hit) return null;
+  const m = hit.match(/gnews_mode:([^\s,]+)/i);
+  return m?.[1] ?? null;
+}
+
+function buildIngestTelemetry(input: {
+  runId: string;
+  schedulerIdentity: string;
+  result: Awaited<ReturnType<typeof runScalableIngestion>>;
+  outcome: IngestionOutcome;
+}): Record<string, unknown> {
+  const { runId, schedulerIdentity, result, outcome } = input;
+  return {
+    runId,
+    schedulerIdentity,
+    fetched: result.totalFetched,
+    normalized: result.normalized,
+    inserted: result.inserted,
+    signalsInserted: result.signalsInserted,
+    duplicates: result.skippedDuplicates,
+    failedBatches: result.failedBatches,
+    persistenceErrors: result.persistenceErrors.slice(0, 8).map((e) => e.slice(0, 240)),
+    attemptedInserts: result.attemptedInserts,
+    allBatchesFailed: result.allBatchesFailed,
+    partialPersistence: result.partialPersistence,
+    persistenceFailed: result.persistenceFailed,
+    classification: outcome.classification,
+    status: outcome.status,
+    gnewsMode: extractGnewsMode(result.errors),
+    providerCounts: result.providerStats,
+    completedProviders: result.completedProviders,
+    skippedProviders: result.skippedProviders,
+  };
+}
+
 async function handleFetchNews(request: Request) {
   const startedAt = Date.now();
   const deadline = createExecutionDeadline();
   const userAgent = request.headers.get("user-agent")?.slice(0, 80) ?? "unknown";
+  const runId = crypto.randomUUID();
 
   const auth = await verifyCronRequest(request, { capability: "ingest" });
   if (!auth.authorized) {
@@ -69,39 +117,122 @@ async function handleFetchNews(request: Request) {
       { status: 401, headers: noStoreHeaders() }
     );
   }
+
+  const schedulerIdentity = resolveSchedulerIdentity(auth);
+
   pipelineLog("[cron_triggered]", {
     job: "fetch-news",
     path: new URL(request.url).pathname,
     ts: new Date().toISOString(),
+    runId,
+    schedulerIdentity,
   });
 
   if (!isSupabaseConfigured()) {
     logIngestFailure({ reason: "supabase_not_configured", durationMs: 0 });
+    const outcome = classifyIngestionOutcome({
+      fetched: 0,
+      inserted: 0,
+      duplicates: 0,
+      rejected: 0,
+      queuedForAI: 0,
+      completedProviders: [],
+      skippedProviders: [],
+      errors: ["supabase_not_configured"],
+      timedOutSafely: false,
+      persistenceSucceeded: false,
+      configurationFailed: true,
+      startedAt,
+      completedAt: Date.now(),
+    });
+    await recordCronRun({
+      job: "fetch-news",
+      ok: false,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs: Date.now() - startedAt,
+      error: "supabase_not_configured",
+      metadata: {
+        runId,
+        schedulerIdentity,
+        classification: outcome.classification,
+      },
+    });
     return NextResponse.json(
-      { ok: false, error: "Supabase is not configured" },
+      {
+        ok: false,
+        error: "Supabase is not configured",
+        classification: outcome.classification,
+      },
       { status: 500, headers: noStoreHeaders() }
     );
   }
 
   if (!hasAnyNewsProviderConfigured()) {
     logIngestFailure({ reason: "no_providers_configured", durationMs: 0 });
+    const outcome = classifyIngestionOutcome({
+      fetched: 0,
+      inserted: 0,
+      duplicates: 0,
+      rejected: 0,
+      queuedForAI: 0,
+      completedProviders: [],
+      skippedProviders: [],
+      errors: ["no_providers_configured"],
+      timedOutSafely: false,
+      persistenceSucceeded: true,
+      configurationFailed: true,
+      startedAt,
+      completedAt: Date.now(),
+    });
+    await recordCronRun({
+      job: "fetch-news",
+      ok: false,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs: Date.now() - startedAt,
+      error: "no_providers_configured",
+      metadata: {
+        runId,
+        schedulerIdentity,
+        classification: outcome.classification,
+      },
+    });
     return NextResponse.json(
       {
         ok: false,
         error: "No news providers configured (GNEWS_API_KEY or NEWSDATA_API_KEY)",
+        classification: outcome.classification,
       },
       { status: 500, headers: noStoreHeaders() }
     );
   }
 
   logIngestStart({
-    trigger: auth.vercelCron ? "vercel_cron" : "bearer",
+    trigger: auth.vercelCron
+      ? "vercel_cron"
+      : auth.qstashVerified
+        ? "qstash"
+        : "bearer",
     userAgent,
   });
 
   const lockResult = await runWorkerEndpoint("fetch-news", 1700, async () => {
     const health = await buildQueueHealthSnapshot().catch(() => null);
     if (health?.pauseIngestion) {
+      const outcome = classifyIngestionOutcome({
+        fetched: 0,
+        inserted: 0,
+        duplicates: 0,
+        rejected: 0,
+        queuedForAI: 0,
+        completedProviders: [],
+        skippedProviders: [],
+        errors: [],
+        timedOutSafely: false,
+        persistenceSucceeded: true,
+        skippedBackpressure: true,
+        startedAt: Date.now(),
+        completedAt: Date.now(),
+      });
       return {
         ok: true,
         degraded: true,
@@ -111,6 +242,7 @@ async function handleFetchNews(request: Request) {
           skipped: true,
           reason: "queue_backpressure",
           queueHealth: health,
+          outcome,
         },
       };
     }
@@ -122,13 +254,14 @@ async function handleFetchNews(request: Request) {
     const providerCount = result.completedProviders.length;
     const quota = detectQuotaStatus(result.errors);
 
-    if (result.inserted > 0) {
+    if (result.inserted > 0 && !result.persistenceFailed) {
       await revalidateNewsroomCaches();
     }
 
-    // Canonical ingestion outcome — the single source of truth for how this run
-    // should be classified (success | degraded | failed). Soft provider errors
-    // never fail the run on their own.
+    // Canonical ingestion outcome — persistenceSucceeded MUST reflect real persist.
+    const persistenceSucceeded = !(
+      result.allBatchesFailed || result.persistenceFailed
+    );
     const outcome = classifyIngestionOutcome({
       fetched: result.totalFetched,
       inserted: result.inserted,
@@ -140,9 +273,7 @@ async function handleFetchNews(request: Request) {
       skippedProviders: result.skippedProviders,
       errors: result.errors,
       timedOutSafely: result.timedOutSafely,
-      // A completed result object means the persistence pipeline ran; hard DB
-      // failures throw and are handled by the catch branch below.
-      persistenceSucceeded: true,
+      persistenceSucceeded,
       startedAt: workerStartedAt,
       completedAt: Date.now(),
     });
@@ -164,6 +295,7 @@ async function handleFetchNews(request: Request) {
       startedAt: new Date(startedAt).toISOString(),
       durationMs: Date.now() - startedAt,
       degraded: true,
+      metadata: { runId, schedulerIdentity, reason: "overlap_lock" },
     });
     return NextResponse.json(
       {
@@ -171,6 +303,7 @@ async function handleFetchNews(request: Request) {
         skipped: true,
         reason: "overlap_lock",
         durationMs: Date.now() - startedAt,
+        runId,
       },
       { headers: noStoreHeaders() }
     );
@@ -179,19 +312,28 @@ async function handleFetchNews(request: Request) {
   // Ingestion intentionally skipped this cycle (queue backpressure). This is a
   // healthy protective skip, not a failure.
   if (lockResult.details?.skipped) {
+    const outcome = lockResult.details.outcome as IngestionOutcome | undefined;
     await recordCronRun({
       job: "fetch-news",
       ok: true,
       startedAt: new Date(startedAt).toISOString(),
       durationMs: Date.now() - startedAt,
       degraded: true,
+      metadata: {
+        runId,
+        schedulerIdentity,
+        reason: String(lockResult.details.reason ?? "skipped"),
+        classification: outcome?.classification ?? "skipped_backpressure",
+      },
     });
     return NextResponse.json(
       {
         ok: true,
         skipped: true,
         reason: String(lockResult.details.reason ?? "skipped"),
+        classification: outcome?.classification ?? "skipped_backpressure",
         durationMs: Date.now() - startedAt,
+        runId,
       },
       { headers: noStoreHeaders() }
     );
@@ -207,9 +349,10 @@ async function handleFetchNews(request: Request) {
       startedAt: new Date(startedAt).toISOString(),
       durationMs: Date.now() - startedAt,
       error: message,
+      metadata: { runId, schedulerIdentity },
     });
     return NextResponse.json(
-      { ok: false, error: message, durationMs: Date.now() - startedAt },
+      { ok: false, error: message, durationMs: Date.now() - startedAt, runId },
       { status: 500, headers: noStoreHeaders() }
     );
   }
@@ -223,6 +366,12 @@ async function handleFetchNews(request: Request) {
     const outcome = lockResult.details.outcome as IngestionOutcome;
     const durationMs = Date.now() - startedAt;
     const incident = describeIngestionOutcome(outcome);
+    const telemetry = buildIngestTelemetry({
+      runId,
+      schedulerIdentity,
+      result,
+      outcome,
+    });
 
     // ---- GENUINE FAILURE: every source family failed / persistence failed ----
     if (outcome.status === "failed") {
@@ -237,18 +386,33 @@ async function handleFetchNews(request: Request) {
         preservedExistingDb: true,
       });
 
+      const telemetryJson = asJsonObject(telemetry);
       await recordCronRun({
         job: "fetch-news",
         ok: false,
         startedAt: new Date(startedAt).toISOString(),
         durationMs,
         error: outcome.failureReason ?? "ingestion_failed",
+        metadata: telemetry,
+        workers: [
+          {
+            worker: "ingest",
+            ok: false,
+            durationMs,
+            skipped: false,
+            metadata: telemetryJson,
+          },
+        ],
       });
+
+      const httpStatus =
+        outcome.classification === "failed_persistence" ? 500 : 502;
 
       return NextResponse.json(
         {
           ok: false,
           status: outcome.status,
+          classification: outcome.classification,
           error: incident.title,
           detail: incident.detail,
           failureReason: outcome.failureReason,
@@ -258,17 +422,21 @@ async function handleFetchNews(request: Request) {
           requiredProviderFailures: outcome.requiredProviderFailures,
           validationStats: result.validationStats,
           errors: result.errors,
+          failedBatches: result.failedBatches,
+          persistenceErrors: result.persistenceErrors.slice(0, 8),
           durationMs,
           timedOutSafely: result.timedOutSafely,
           rateLimited: quota.rateLimited,
+          runId,
         },
-        { status: 502, headers: noStoreHeaders() }
+        { status: httpStatus, headers: noStoreHeaders() }
       );
     }
 
     const payload = {
       ok: true as const,
       status: outcome.status,
+      classification: outcome.classification,
       degraded: outcome.degraded,
       incident: outcome.degraded ? incident : undefined,
       inserted: result.inserted,
@@ -298,6 +466,10 @@ async function handleFetchNews(request: Request) {
       imageAnalytics: result.imageAnalytics,
       cacheRevalidated: result.inserted > 0,
       scalable: true,
+      attemptedInserts: result.attemptedInserts,
+      failedBatches: result.failedBatches,
+      partialPersistence: result.partialPersistence,
+      runId,
     };
 
     if (payload.degraded) {
@@ -329,6 +501,16 @@ async function handleFetchNews(request: Request) {
       startedAt: new Date(startedAt).toISOString(),
       durationMs,
       degraded: payload.degraded,
+      metadata: telemetry,
+      workers: [
+        {
+          worker: "ingest",
+          ok: true,
+          durationMs,
+          skipped: false,
+          metadata: asJsonObject(telemetry),
+        },
+      ],
     });
 
     return NextResponse.json(payload, { headers: noStoreHeaders() });
@@ -347,6 +529,7 @@ async function handleFetchNews(request: Request) {
       startedAt: new Date(startedAt).toISOString(),
       durationMs,
       error: message,
+      metadata: { runId, schedulerIdentity },
     });
     logIngestFailure({
       reason: "fatal",
@@ -361,8 +544,10 @@ async function handleFetchNews(request: Request) {
         durationMs,
         timedOutSafely: deadline.timedOutSafely,
         preservedExistingDb: true,
+        runId,
       },
       { status: 500, headers: noStoreHeaders() }
     );
   }
 }
+

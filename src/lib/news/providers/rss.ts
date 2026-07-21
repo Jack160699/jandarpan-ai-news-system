@@ -31,7 +31,6 @@ import {
 } from "@/lib/news/rss-health";
 import { filterKnownSignalDuplicates } from "@/lib/news/ingestion/early-dedup";
 import {
-  advanceSourceCursorSafe,
   buildSourceKey,
   filterArticlesByPublishedAfter,
   loadIngestionSourceState,
@@ -193,11 +192,16 @@ export async function fetchRssSourceBatch(
     // Incremental window: drop items older than last cursor − overlap.
     const sourceKey = buildSourceKey("rss", source.id);
     const state = await loadIngestionSourceState(sourceKey);
-    const publishedAfter = publishedAfterIsoFromCursor(
-      state?.last_item_timestamp ?? null
-    );
+    const cursorExpected = state?.last_item_timestamp ?? null;
+    const publishedAfter = publishedAfterIsoFromCursor(cursorExpected);
     const { kept: windowed, filtered: incrementalFiltered } =
       filterArticlesByPublishedAfter(mapped, publishedAfter);
+
+    // Stamp source-key + CAS expected cursor for post-persist advance only.
+    for (const a of windowed) {
+      a.ingestion_source_key = sourceKey;
+      a.ingestion_cursor_expected = cursorExpected;
+    }
 
     // Early DB dedup BEFORE page enrichment (largest RSS waste reduction).
     const early = await filterKnownSignalDuplicates(windowed);
@@ -208,7 +212,12 @@ export async function fetchRssSourceBatch(
       await enrichRssArticlesBatch(early.novel, RSS_PAGE_ENRICH_LIMIT);
 
     const priority = sourceEffectivePriority(source);
-    const enriched = enrichedRaw.map((a) => ({ ...a, _priority: priority }));
+    const enriched = enrichedRaw.map((a) => ({
+      ...a,
+      _priority: priority,
+      ingestion_source_key: sourceKey,
+      ingestion_cursor_expected: cursorExpected,
+    }));
 
     const validated: (NormalizedArticle & { _priority: number })[] = [];
     for (const a of enriched) {
@@ -216,34 +225,26 @@ export async function fetchRssSourceBatch(
         rejected++;
         continue;
       }
-      validated.push({ ...a, _priority: priority });
+      validated.push({
+        ...a,
+        _priority: priority,
+        ingestion_source_key: sourceKey,
+        ingestion_cursor_expected: cursorExpected,
+      });
     }
 
     const { unique, skipped } = dedupeArticles(validated, { fuzzy: true });
 
     if (unique.length > 0) {
       await recordSourceSuccess(source, health, unique.length);
-      const newest = unique
-        .map((a) => a.published_at)
-        .filter((v): v is string => Boolean(v))
-        .sort()
-        .at(-1);
-      if (newest) {
-        await advanceSourceCursorSafe({
-          sourceKey,
-          providerFamily: "rss",
-          expectedPrevious: state?.last_item_timestamp ?? null,
-          nextTimestamp: newest,
-          newItemCount: unique.length,
-        });
-      } else {
-        await upsertIngestionSourceState({
-          source_key: sourceKey,
-          provider_family: "rss",
-          last_successful_at: new Date().toISOString(),
-          health_state: "healthy",
-        });
-      }
+      // Cursor advances ONLY after successful news_signals persistence
+      // (see ingest-provider-batch). Do not advance here.
+      await upsertIngestionSourceState({
+        source_key: sourceKey,
+        provider_family: "rss",
+        last_successful_at: new Date().toISOString(),
+        health_state: "healthy",
+      });
     } else if (mapped.length > 0 && early.novel.length === 0) {
       // Feed had items but all known — still record success / empty-new run.
       await recordSourceSuccess(source, health, 0);

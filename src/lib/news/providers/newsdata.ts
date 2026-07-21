@@ -144,7 +144,6 @@ export async function fetchNewsDataAll(): Promise<ProviderFetchResult> {
   }
 
   const {
-    advanceSourceCursorSafe,
     buildSourceKey,
     filterArticlesByPublishedAfter,
     loadIngestionSourceState,
@@ -192,27 +191,19 @@ export async function fetchNewsDataAll(): Promise<ProviderFetchResult> {
     console.log(`[newsdata] deduped ${skipped} duplicate articles across queries`);
   }
 
-  const newest = unique
-    .map((a) => a.published_at)
-    .filter((v): v is string => Boolean(v))
-    .sort()
-    .at(-1);
-  if (newest) {
-    await advanceSourceCursorSafe({
-      sourceKey,
-      providerFamily: "newsdata",
-      expectedPrevious: state?.last_item_timestamp ?? null,
-      nextTimestamp: newest,
-      newItemCount: unique.length,
-    });
-  }
+  // Stamp cursor metadata; advance ONLY after successful persist.
+  const stamped = unique.map((a) => ({
+    ...a,
+    ingestion_source_key: sourceKey,
+    ingestion_cursor_expected: state?.last_item_timestamp ?? null,
+  }));
 
   return {
     provider: "newsdata",
     label: "NewsData.io (India + Global)",
-    articles: unique,
+    articles: stamped,
     fetched,
-    valid: unique.length,
+    valid: stamped.length,
     errors,
     durationMs: Date.now() - startedAt,
   };

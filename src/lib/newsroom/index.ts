@@ -12,6 +12,9 @@ export { logNewsroom, logNewsroomError } from "@/lib/newsroom/logger";
 export {
   persistNewsSignals,
   normalizedToSignal,
+  assertPersistenceOk,
+  derivePersistFlags,
+  emptySignalPersistResult,
   type SignalPersistResult,
 } from "@/lib/newsroom/signals/persist";
 export {
