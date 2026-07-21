@@ -75,8 +75,13 @@ export default async function DistrictPage({ params }: PageProps) {
   const district = getDistrict(slug);
   if (!district) notFound();
 
+  const readerDs = isReaderDesignSystemEnabled();
   const displayLanguage = await getServerReaderLanguage();
-  const pool = await fetchGeneratedArticlePool(120, { select: "homepage" });
+  // Overlap pool fetch with tenant config when DS needs monetization next.
+  const [pool, tenant] = await Promise.all([
+    fetchGeneratedArticlePool(120, { select: "homepage" }),
+    readerDs ? getTenantConfig() : Promise.resolve(null),
+  ]);
   const langPool = filterPoolByLanguage(pool, displayLanguage);
   const filtered = filterRowsForDistrict(langPool, slug);
   const personalization = buildRegionalRankingPersonalization({
@@ -119,8 +124,7 @@ export default async function DistrictPage({ params }: PageProps) {
     ]),
   ];
 
-  if (isReaderDesignSystemEnabled()) {
-    const tenant = await getTenantConfig();
+  if (readerDs && tenant) {
     const monetization = await fetchMonetizationPayload(tenant);
     // Only show district sponsor when a real affiliate/house partner exists — never invent a brand.
     const sponsorLabel =

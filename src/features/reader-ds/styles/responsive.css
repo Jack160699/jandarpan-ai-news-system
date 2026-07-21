@@ -825,15 +825,40 @@
     grid-template-columns: 1fr 1fr 1fr 1fr;
   }
 
-  /* Sticky condensed header on scroll */
-  .jd-desk-chrome[data-condensed="1"] .jd-desk-full {
-    display: none;
+  /*
+   * Sticky condensed header on scroll.
+   * Do NOT display:none the full header — that collapsed ~117px of sticky
+   * layout, yanked scrollY toward 0, and oscillated data-condensed.
+   * Full chrome stays in normal flow (root becomes relative here so it can
+   * scroll away); condensed bar is a fixed overlay with stable document height.
+   */
+  .jd-desk-chrome-root {
+    position: relative;
+  }
+
+  .jd-desk-sticky {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    background: var(--jd-navy);
+    min-height: var(--jd-sticky-h);
+    transform: translateY(-100%);
+    visibility: hidden;
+    pointer-events: none;
   }
 
   .jd-desk-chrome[data-condensed="1"] .jd-desk-sticky {
-    display: block;
-    background: var(--jd-navy);
-    min-height: var(--jd-sticky-h);
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .jd-desk-chrome[data-condensed="1"] .jd-desk-full {
+    /* Keep in document flow for stable scroll geometry; inert under the overlay. */
+    pointer-events: none;
   }
 
   .jd-desk-sticky__inner {

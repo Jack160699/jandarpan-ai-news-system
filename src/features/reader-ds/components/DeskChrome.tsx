@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { getDistrict } from "@/lib/regional/districts";
 import { useJdDsT } from "../i18n";
+import { useDeskChromeCondensed } from "../hooks/useDeskChromeCondensed";
 import { useDistrictWeather } from "../hooks/useDistrictWeather";
 import { JdIcon } from "./icons";
 import {
@@ -19,6 +20,7 @@ import {
 /**
  * Desktop / tablet editorial chrome (SoT H01–H04).
  * Mounted from ReaderShell; phone masthead stays for <768 via CSS.
+ * Condensed sticky mode uses hysteresis + fixed overlay (no layout collapse).
  */
 export function DeskChrome() {
   const { t, locale } = useJdDsT();
@@ -28,15 +30,8 @@ export function DeskChrome() {
   const active = resolveDeskCatActive(pathname);
   const districtSlug = prefs.homeDistrict?.trim() || "raipur";
   const weather = useDistrictWeather(districtSlug);
-  const [condensed, setCondensed] = useState(false);
+  const condensed = useDeskChromeCondensed();
   const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setCondensed(window.scrollY > 72);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   const district = getDistrict(districtSlug);
   const districtLabel = district

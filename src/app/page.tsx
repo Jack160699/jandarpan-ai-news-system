@@ -50,13 +50,16 @@ async function HomeFeed() {
 
 /** Approved navy/red/gold reader design (flag-gated, preview only). */
 async function ReaderDesignFeed() {
-  const feed = await getCachedGeneratedHomepageFeed();
-  const tenant = await getTenantConfig();
+  // Parallel independent fetches — do not serialize feed behind tenant/rates.
+  const [feed, tenant, verifiedRatesNavEnabled] = await Promise.all([
+    getCachedGeneratedHomepageFeed(),
+    getTenantConfig(),
+    isVerifiedRatesPublicNavEnabled(),
+  ]);
   const monetization = await fetchMonetizationPayload(tenant);
   const adsEnabled = monetization.settings.enabled && monetization.settings.adsEnabled;
   // No demo/native brand creatives — only real placement payloads when wired.
   const nativeAd = null;
-  const verifiedRatesNavEnabled = await isVerifiedRatesPublicNavEnabled();
   const trending = buildTrendingKeywords({ limit: 12 });
   const storyCount = feed ? feed.trending.length + feed.liveWire.length + 1 : 0;
 
