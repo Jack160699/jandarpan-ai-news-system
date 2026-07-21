@@ -5,6 +5,9 @@
 
 import type { RolloutStage } from "@/lib/autonomous/types";
 
+/** Loose env bag for tests + process.env compatibility. */
+export type EnvLike = { readonly [key: string]: string | undefined };
+
 const VALID_STAGES: readonly RolloutStage[] = [
   "shadow",
   "stage_1",
@@ -13,7 +16,7 @@ const VALID_STAGES: readonly RolloutStage[] = [
 ] as const;
 
 export function getAutonomousRolloutStage(
-  env: NodeJS.ProcessEnv = process.env
+  env: EnvLike = process.env
 ): RolloutStage {
   const raw = (env.AUTONOMOUS_ROLLOUT_STAGE ?? "shadow").trim().toLowerCase();
   if ((VALID_STAGES as readonly string[]).includes(raw)) {
@@ -23,7 +26,7 @@ export function getAutonomousRolloutStage(
 }
 
 export function isAutonomousKillSwitchOn(
-  env: NodeJS.ProcessEnv = process.env
+  env: EnvLike = process.env
 ): boolean {
   const v = (env.AUTONOMOUS_KILL_SWITCH ?? "").trim();
   return v === "1" || v.toLowerCase() === "true";
@@ -34,14 +37,14 @@ export function isAutonomousKillSwitchOn(
  * and when the kill switch is on. Stage 1+ may publish only when switch is off.
  */
 export function isAutonomousPublishingEnabled(
-  env: NodeJS.ProcessEnv = process.env
+  env: EnvLike = process.env
 ): boolean {
   if (isAutonomousKillSwitchOn(env)) return false;
   const stage = getAutonomousRolloutStage(env);
   return stage !== "shadow";
 }
 
-export function describeRolloutState(env: NodeJS.ProcessEnv = process.env): {
+export function describeRolloutState(env: EnvLike = process.env): {
   stage: RolloutStage;
   killSwitch: boolean;
   publishingEnabled: boolean;

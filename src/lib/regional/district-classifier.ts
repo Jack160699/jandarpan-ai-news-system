@@ -33,18 +33,43 @@ export type ClassifyDistrictInput = {
 /** Aliases too weak to assign a primary district alone */
 const WEAK_ALIASES = new Set(["capital"]);
 
-const CG_STATE_RE =
-  /\b(chhattisgarh|chattisgarh|छत्तीसगढ|छत्तीसगढ़|cg\b)\b/i;
+const CG_STATE_TERMS = [
+  "chhattisgarh",
+  "chattisgarh",
+  "छत्तीसगढ",
+  "छत्तीसगढ़",
+  "cg",
+] as const;
 
-/** State institutions — do NOT imply Raipur unless a district term also matches */
-const STATEWIDE_INSTITUTION_RE =
-  /\b(secretariat|cabinet|vidhan\s*sabha|विधान\s*सभा|mantralaya|मंत्रालय|chief\s*minister|मुख्यमंत्री|\bcm\b|state\s+government|राज्य\s*सरकार|cg\s+government|chhattisgarh\s+government|governor|राज्यपाल|assembly\s+session|legislative\s+assembly|mahanadi\s+bhawan|atal\s+nagar)\b/i;
+const STATEWIDE_INSTITUTION_TERMS = [
+  "secretariat",
+  "cabinet",
+  "vidhan sabha",
+  "vidhan  sabha",
+  "विधान सभा",
+  "mantralaya",
+  "मंत्रालय",
+  "chief minister",
+  "मुख्यमंत्री",
+  "cm",
+  "state government",
+  "राज्य सरकार",
+  "cg government",
+  "chhattisgarh government",
+  "governor",
+  "राज्यपाल",
+  "assembly session",
+  "legislative assembly",
+  "mahanadi bhawan",
+  "atal nagar",
+] as const;
 
 const INDIA_NATIONAL_RE =
   /\b(delhi|mumbai|kolkata|parliament|lok\s*sabha|rajya\s*sabha|modi|centre|center\s+government|national\s+capital|maharashtra|uttar\s+pradesh|madhya\s+pradesh|bihar|rajasthan|gujarat|karnataka|tamil\s+nadu|west\s+bengal)\b/i;
 
 const PRIMARY_MIN_CONFIDENCE = 0.65;
-const STRONG_HIT_WEIGHT = 0.42;
+/** One official-name/alias hit → 0.45 + 0.20 base = 0.65 (geo primary threshold). */
+const STRONG_HIT_WEIGHT = 0.45;
 const WEAK_HIT_WEIGHT = 0.12;
 
 function normalizeBlob(parts: Array<string | null | undefined>): string {
@@ -53,6 +78,20 @@ function normalizeBlob(parts: Array<string | null | undefined>): string {
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** ASCII uses \\b; Devanagari/etc. use Unicode letter edges (JS \\b is ASCII-only). */
+function matchesTerm(blob: string, term: string): boolean {
+  const t = term.trim().toLowerCase();
+  if (!t) return false;
+  if (/^[\x00-\x7f]+$/.test(t)) {
+    return new RegExp(`\\b${escapeRe(t)}\\b`, "i").test(blob);
+  }
+  return new RegExp(`(?<!\\p{L})${escapeRe(t)}(?!\\p{L})`, "iu").test(blob);
+}
+
+function hasAnyTerm(blob: string, terms: readonly string[]): boolean {
+  return terms.some((t) => matchesTerm(blob, t));
 }
 
 type DistrictHit = {
@@ -72,8 +111,7 @@ function scoreDistrictHits(blob: string): DistrictHit[] {
     const terms: string[] = [];
 
     for (const alias of district.aliases) {
-      const re = new RegExp(`\\b${escapeRe(alias)}\\b`, "i");
-      if (!re.test(blob)) continue;
+      if (!matchesTerm(blob, alias)) continue;
       terms.push(alias);
       if (WEAK_ALIASES.has(alias.toLowerCase())) {
         weakHits++;
@@ -84,11 +122,10 @@ function scoreDistrictHits(blob: string): DistrictHit[] {
 
     // Always treat official name + Hindi name as strong if present
     for (const term of [district.name, district.nameHi, district.slug.replace(/-/g, " ")]) {
-      const re = new RegExp(`\\b${escapeRe(term)}\\b`, "i");
-      if (re.test(blob) && !terms.some((t) => t.toLowerCase() === term.toLowerCase())) {
-        terms.push(term);
-        strongHits++;
-      }
+      if (!matchesTerm(blob, term)) continue;
+      if (terms.some((t) => t.toLowerCase() === term.toLowerCase())) continue;
+      terms.push(term);
+      strongHits++;
     }
 
     if (strongHits === 0 && weakHits === 0) continue;
@@ -122,11 +159,11 @@ export function classifyDistrictContent(
   const blob = normalizeBlob([input.title, input.body, input.region, input.category]);
   const hits = scoreDistrictHits(blob);
   const strongHits = hits.filter((h) => h.strongHits > 0);
-  const textCg = CG_STATE_RE.test(blob);
+  const textCg = hasAnyTerm(blob, CG_STATE_TERMS);
   const regionCg =
     input.region?.toLowerCase() === "chhattisgarh" ||
     input.region?.toLowerCase() === "cg";
-  const statewideInstitution = STATEWIDE_INSTITUTION_RE.test(blob);
+  const statewideInstitution = hasAnyTerm(blob, STATEWIDE_INSTITUTION_TERMS);
   const categoryLocal = input.category?.toLowerCase() === "local";
   const isCgContext = textCg || regionCg || categoryLocal || strongHits.length > 0;
 

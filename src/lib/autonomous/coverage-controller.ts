@@ -11,6 +11,7 @@ import {
   getAutonomousRolloutStage,
   isAutonomousKillSwitchOn,
   isAutonomousPublishingEnabled,
+  type EnvLike,
 } from "@/lib/autonomous/rollout-state";
 import type { CoveragePlan, CoveragePlanItem } from "@/lib/autonomous/types";
 
@@ -19,7 +20,7 @@ export type PublishedCountByDistrict = Record<string, number>;
 export type BuildCoveragePlanInput = {
   day: string;
   publishedByDistrict: PublishedCountByDistrict;
-  env?: NodeJS.ProcessEnv;
+  env?: EnvLike;
 };
 
 function tierPriorityBonus(tier: DistrictTierLabel): number {

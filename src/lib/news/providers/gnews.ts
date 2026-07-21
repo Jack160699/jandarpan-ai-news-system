@@ -94,7 +94,7 @@ function mapArticle(
 }
 
 export function isGNewsGapFirstEnabled(
-  env: NodeJS.ProcessEnv = process.env
+  env: { readonly [key: string]: string | undefined } = process.env
 ): boolean {
   const kill =
     (env.AUTONOMOUS_KILL_SWITCH ?? "").trim() === "1" ||
@@ -219,7 +219,7 @@ export type FetchGNewsGapFirstOpts = {
   queries?: GnewsDistrictQuery[];
   /** Max search queries to execute */
   maxQueries?: number;
-  env?: NodeJS.ProcessEnv;
+  env?: { readonly [key: string]: string | undefined };
 };
 
 /**

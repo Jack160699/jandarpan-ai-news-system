@@ -36,6 +36,8 @@ describe("Phase 8 environment validation", () => {
     process.env.AI_LOCAL_ENRICH_ENABLED = "false";
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.GOOGLE_CSE_API_KEY;
+    delete process.env.ENABLE_E2E_AUTH;
+    delete process.env.ADMIN_EMERGENCY_MODE;
 
     const issues = validateProductionEnv();
     const errors = issues.filter((i) => i.severity === "error");

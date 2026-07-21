@@ -4,13 +4,22 @@
 
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 
+type QueryResult = { data: unknown; error: unknown };
+
+/** Loose Postgrest-style builder — avoids coupling to generated Database types. */
+type UntypedQuery = PromiseLike<QueryResult> & {
+  select: (cols?: string) => UntypedQuery;
+  upsert: (values: unknown, opts?: unknown) => UntypedQuery;
+  update: (values: unknown) => UntypedQuery;
+  insert: (values: unknown) => UntypedQuery;
+  eq: (column: string, value: unknown) => UntypedQuery;
+  is: (column: string, value: unknown) => UntypedQuery;
+  limit: (count: number) => UntypedQuery;
+  maybeSingle: () => PromiseLike<QueryResult>;
+};
+
 type UntypedClient = {
-  from: (relation: string) => {
-    select: (cols?: string) => any;
-    upsert: (values: unknown, opts?: unknown) => any;
-    update: (values: unknown) => any;
-    insert: (values: unknown) => any;
-  };
+  from: (relation: string) => UntypedQuery;
 };
 
 function db(): UntypedClient {
@@ -202,7 +211,8 @@ export async function upsertIngestionSourceState(
       existingQ = tenantId
         ? existingQ.eq("tenant_id", tenantId)
         : existingQ.is("tenant_id", null);
-      const { data: existing } = await existingQ.maybeSingle();
+      const { data: existingRaw } = await existingQ.maybeSingle();
+      const existing = existingRaw as { id?: string } | null;
       if (existing?.id) {
         await supabase
           .from("ingestion_source_state")

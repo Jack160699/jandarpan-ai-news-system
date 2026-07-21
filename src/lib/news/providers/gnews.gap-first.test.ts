@@ -29,7 +29,7 @@ describe("gnews gap-first selection", () => {
       isGNewsGapFirstEnabled({
         AUTONOMOUS_KILL_SWITCH: "",
         GNEWS_GAP_FIRST: "",
-      } as NodeJS.ProcessEnv)
+      })
     ).toBe(true);
   });
 
@@ -37,7 +37,7 @@ describe("gnews gap-first selection", () => {
     expect(
       isGNewsGapFirstEnabled({
         AUTONOMOUS_KILL_SWITCH: "true",
-      } as NodeJS.ProcessEnv)
+      })
     ).toBe(false);
   });
 
@@ -53,13 +53,15 @@ describe("gnews gap-first selection", () => {
           },
         ],
       },
+      status: 200,
+      durationMs: 1,
     });
 
     const result = await fetchGNewsGapFirst({
       env: {
         AUTONOMOUS_ROLLOUT_STAGE: "shadow",
         GNEWS_API_KEY: "test-key",
-      } as NodeJS.ProcessEnv,
+      },
       queries: [
         {
           districtSlug: "raipur",
@@ -92,13 +94,15 @@ describe("gnews gap-first selection", () => {
   it("stage_1 runs full planned query list (no sample cap)", async () => {
     vi.mocked(fetchJson).mockResolvedValue({
       data: { articles: [] },
+      status: 200,
+      durationMs: 1,
     });
 
     const result = await fetchGNewsGapFirst({
       env: {
         AUTONOMOUS_ROLLOUT_STAGE: "stage_1",
         GNEWS_API_KEY: "test-key",
-      } as NodeJS.ProcessEnv,
+      },
       queries: [
         {
           districtSlug: "raipur",

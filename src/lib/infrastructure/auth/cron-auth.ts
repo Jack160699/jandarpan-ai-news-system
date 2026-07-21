@@ -52,10 +52,11 @@ function isDeployedEnvironment(): boolean {
 export function parseBearerToken(authorization: string | null): string | null {
   if (!authorization) return null;
   const raw = authorization.trim();
-
-  const normalized = raw.replace(/^Bearer\s+/i, "").replace(/^Bearer\s+/i, "");
-  const withoutColon = normalized.replace(/^:\s*/, "");
-  const token = withoutColon.trim();
+  // Scheme-only "Bearer" (no token) is malformed — never treat the word as a secret.
+  if (/^Bearer$/i.test(raw)) return null;
+  const match = /^Bearer\s+(.+)$/i.exec(raw);
+  if (!match) return null;
+  const token = match[1]!.replace(/^:\s*/, "").trim();
   return token.length > 0 ? token : null;
 }
 
