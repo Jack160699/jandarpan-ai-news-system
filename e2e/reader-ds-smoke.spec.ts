@@ -114,7 +114,7 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await expect(page.locator(".jd-search-phone-bar").first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("jd-search-filter-rail")).toBeHidden();
     await page.getByTestId("jd-search-filter-trigger").click();
-    await expect(page.locator(".jd-search-drawer").first()).toBeVisible();
+    await expect(page.getByTestId("jd-search-drawer")).toBeVisible({ timeout: 10_000 });
   });
 
   test("category page exposes skyscraper rail on desktop", async ({ page }) => {
@@ -170,8 +170,9 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await page.goto("/system/preview?state=photo", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".jd-photo-story").first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("jd-photo-thumbnail-rail").first()).toBeVisible();
-    await expect(page.locator(".jd-photo-story__thumb").first()).toBeVisible();
-    await page.locator(".jd-photo-story__thumb").nth(1).click();
-    await expect(page.locator(".jd-photo-story__thumb").nth(1)).toHaveClass(/is-active/);
+    await expect(page.getByTestId("jd-photo-thumb-0")).toBeVisible();
+    await page.getByTestId("jd-photo-thumb-1").click();
+    await expect(page.getByTestId("jd-photo-thumb-1")).toHaveClass(/is-active/);
+    await expect(page.getByTestId("jd-photo-thumb-1")).toHaveAttribute("aria-current", "true");
   });
 });

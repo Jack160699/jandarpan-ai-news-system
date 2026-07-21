@@ -203,16 +203,21 @@ export type PublicRateRoute = {
   indexable: boolean;
 };
 
-/** Supported indexable public routes (permanent useful hubs + detail pages). */
+/**
+ * Supported public routes.
+ * Hubs + methodology stay indexable (Option C).
+ * Detail/dataset routes are listed with indexable=false until snapshot eligibility
+ * is applied in sitemap / generateMetadata.
+ */
 export function listSupportedRateRoutes(): PublicRateRoute[] {
   const routes: PublicRateRoute[] = [
     { path: "/rates", category: "petrol", citySlug: null, indexable: true },
     { path: "/rates/chhattisgarh", category: "petrol", citySlug: null, indexable: true },
     { path: "/rates/methodology", category: "petrol", citySlug: null, indexable: true },
-    { path: "/rates/chhattisgarh/gold-price-today", category: "gold_24k", citySlug: null, indexable: true },
-    { path: "/rates/chhattisgarh/gold-22k-price-today", category: "gold_22k", citySlug: null, indexable: true },
-    { path: "/rates/chhattisgarh/silver-price-today", category: "silver_999", citySlug: null, indexable: true },
-    { path: "/rates/chhattisgarh/dataset", category: "petrol", citySlug: null, indexable: true },
+    { path: "/rates/chhattisgarh/gold-price-today", category: "gold_24k", citySlug: null, indexable: false },
+    { path: "/rates/chhattisgarh/gold-22k-price-today", category: "gold_22k", citySlug: null, indexable: false },
+    { path: "/rates/chhattisgarh/silver-price-today", category: "silver_999", citySlug: null, indexable: false },
+    { path: "/rates/chhattisgarh/dataset", category: "petrol", citySlug: null, indexable: false },
   ];
 
   for (const city of FUEL_CITY_SLUGS) {
@@ -220,13 +225,13 @@ export function listSupportedRateRoutes(): PublicRateRoute[] {
       path: `/rates/chhattisgarh/${city}/petrol-price-today`,
       category: "petrol",
       citySlug: city,
-      indexable: true,
+      indexable: false,
     });
     routes.push({
       path: `/rates/chhattisgarh/${city}/diesel-price-today`,
       category: "diesel",
       citySlug: city,
-      indexable: true,
+      indexable: false,
     });
   }
   return routes;

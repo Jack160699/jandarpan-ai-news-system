@@ -5,8 +5,11 @@ import Link from "next/link";
 /**
  * Compact Reader DS entry to verified rate history pages.
  * Does not show fake prices or trend arrows.
+ * Hidden until at least one accepted verified snapshot exists (server-gated).
  */
-export function VerifiedRatesLinks() {
+export function VerifiedRatesLinks({ enabled = false }: { enabled?: boolean }) {
+  if (!enabled) return null;
+
   return (
     <aside
       className="jd-ui jd-verified-rates-links"

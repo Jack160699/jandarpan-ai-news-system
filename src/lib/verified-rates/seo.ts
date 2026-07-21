@@ -15,6 +15,8 @@ export function ratePageMetadata(opts: {
   category: RateCategory;
   citySlug?: string | null;
   path: string;
+  /** Empty detail pages must pass true until accepted snapshots exist. */
+  noindex?: boolean;
 }) {
   const meta = getCategoryMeta(opts.category);
   const cityHi =
@@ -22,13 +24,19 @@ export function ratePageMetadata(opts: {
       ? cityDisplay(opts.citySlug, "hi")
       : "छत्तीसगढ़";
 
-  const title =
-    meta.group === "fuel"
+  const title = opts.noindex
+    ? meta.group === "fuel"
+      ? `${cityHi} ${meta.labelHi} भाव इतिहास — सत्यापन के बाद उपलब्ध | जन दर्पण`
+      : `छत्तीसगढ़ ${meta.labelHi} संकेतात्मक इतिहास — सत्यापन के बाद उपलब्ध | जन दर्पण`
+    : meta.group === "fuel"
       ? `${cityHi} ${meta.labelHi} की कीमत आज – 7 दिन का भाव और इतिहास | जन दर्पण`
       : `छत्तीसगढ़ ${meta.labelHi} कीमत आज – संकेतात्मक इतिहास | जन दर्पण`;
 
-  const description =
-    meta.group === "fuel"
+  const description = opts.noindex
+    ? meta.group === "fuel"
+      ? `${cityHi} ${meta.labelHi} की सत्यापित कीमत अभी प्रकाशित नहीं। जन दर्पण केवल सहमति-प्राप्त वास्तविक अवलोकन प्रकाशित करता है — काल्पनिक भाव नहीं।`
+      : `छत्तीसगढ़/भारत संकेतात्मक ${meta.labelHi} बेंचमार्क अभी सत्यापित श्रृंखला के बिना प्रकाशित नहीं। शहर-विशेष आधिकारिक MRP नहीं।`
+    : meta.group === "fuel"
       ? `आज ${cityHi} में ${meta.labelHi} की सत्यापित कीमत, ${meta.unitLabelHi} दर, अपडेट समय, पिछले दिनों का ग्राफ और हाल का बदलाव देखें।`
       : `छत्तीसगढ़/भारत संकेतात्मक ${meta.labelHi} बेंचमार्क, ${meta.unitLabelHi}, सत्यापन समय और उपलब्ध ऐतिहासिक श्रृंखला। शहर-विशेष आधिकारिक MRP नहीं।`;
 
@@ -38,7 +46,8 @@ export function ratePageMetadata(opts: {
     path: opts.path,
     locale: "hi_IN",
     section: "rates",
-    keywords: [meta.labelHi, cityHi, "कीमत आज", "छत्तीसगढ़", "जन दर्पण"],
+    keywords: [meta.labelHi, cityHi, "छत्तीसगढ़", "जन दर्पण", "सत्यापित दर"],
+    noindex: opts.noindex === true,
   });
 }
 
@@ -116,7 +125,7 @@ export function rateDatasetJsonLd(opts: {
   };
 }
 
-export function buildRatesSitemapEntries(latestByPath: Map<string, Date>): PublicRateRoute[] {
+export function buildRatesSitemapEntries(): PublicRateRoute[] {
   return listSupportedRateRoutes().filter((r) => r.indexable);
 }
 

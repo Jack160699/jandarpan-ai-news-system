@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Masthead } from "../../components/Masthead";
 import { ReaderShell } from "../../components/ReaderShell";
-import { JdIcon } from "../../components/icons";
 import { useJdDsT, type JdDsStringKey } from "../../i18n";
 import type { ReaderPlan } from "@/lib/monetization/types";
 
@@ -161,7 +160,6 @@ export function CheckoutPage({
             margin: "6px 0 12px",
           }}
         >
-          <JdIcon name="lock" size={14} stroke={1.9} color="var(--jd-green)" />
           {t("membership.secureHint")}
         </div>
 
@@ -172,7 +170,7 @@ export function CheckoutPage({
             style={{
               display: "block",
               textAlign: "center",
-              background: "var(--jd-red)",
+              background: "var(--jd-navy)",
               color: "#fff",
               fontWeight: 800,
               fontSize: 14.5,
@@ -181,7 +179,7 @@ export function CheckoutPage({
               textDecoration: "none",
             }}
           >
-            {t("membership.payAmount", { amount: total })}
+            {t("membership.checkoutNotLiveCta")}
           </Link>
         ) : (
           <Link

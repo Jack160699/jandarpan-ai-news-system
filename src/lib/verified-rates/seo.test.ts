@@ -34,6 +34,22 @@ describe("rates SEO helpers", () => {
     );
   });
 
+  it("noindexes empty detail pages while hubs stay indexable by catalog", () => {
+    const empty = ratePageMetadata({
+      category: "petrol",
+      citySlug: "raipur",
+      path: "/rates/chhattisgarh/raipur/petrol-price-today",
+      noindex: true,
+    });
+    expect(empty.robots).toEqual({ index: false, follow: false });
+    expect(String(empty.title)).toContain("सत्यापन के बाद");
+    const routes = listSupportedRateRoutes();
+    expect(routes.find((r) => r.path === "/rates/methodology")?.indexable).toBe(true);
+    expect(routes.find((r) => r.path === "/rates/chhattisgarh/raipur/petrol-price-today")?.indexable).toBe(
+      false
+    );
+  });
+
   it("Dataset JSON-LD only when eligible", () => {
     expect(
       rateDatasetJsonLd({

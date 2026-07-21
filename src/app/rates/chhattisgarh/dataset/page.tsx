@@ -6,14 +6,24 @@ import { FUEL_CITY_SLUGS, cityDisplay } from "@/lib/verified-rates/catalog";
 import { rateDatasetJsonLd } from "@/lib/verified-rates/seo";
 import { webPageJsonLd } from "@/lib/seo/json-ld";
 
-export const metadata: Metadata = buildPageMetadata({
-  title: "सत्यापित दर डेटासेट — छत्तीसगढ़ | जन दर्पण",
-  description:
-    "जन दर्पण सत्यापित दर श्रृंखला का उद्धरण-योग्य विवरण — कवरेज, आवृत्ति, पद्धति और सुरक्षित निर्यात। बैकलिंक की गारंटी नहीं।",
-  path: "/rates/chhattisgarh/dataset",
-  locale: "hi_IN",
-  section: "rates",
-});
+export async function generateMetadata(): Promise<Metadata> {
+  const samples = await Promise.all([
+    getDatasetMetadata({ category: "petrol", citySlug: "raipur" }),
+    getDatasetMetadata({ category: "gold_24k", citySlug: null }),
+  ]);
+  const anyEligible = samples.some((s) => s.datasetExportEligible);
+  return buildPageMetadata({
+    title: anyEligible
+      ? "सत्यापित दर डेटासेट — छत्तीसगढ़ | जन दर्पण"
+      : "सत्यापित दर डेटासेट — सत्यापन के बाद उपलब्ध | जन दर्पण",
+    description:
+      "जन दर्पण सत्यापित दर श्रृंखला का उद्धरण-योग्य विवरण — कवरेज, आवृत्ति, पद्धति और सुरक्षित निर्यात। बैकलिंक की गारंटी नहीं। काल्पनिक भाव नहीं।",
+    path: "/rates/chhattisgarh/dataset",
+    locale: "hi_IN",
+    section: "rates",
+    noindex: !anyEligible,
+  });
+}
 
 export default async function RatesDatasetPage() {
   const samples = await Promise.all([

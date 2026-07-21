@@ -196,47 +196,50 @@ export function SearchResultsPageView({
     return (activeTime ?? "all") === (opt.value ?? "all");
   }
 
-  const filterPanel = (
-    <aside
-      className="jd-search-filter-rail"
-      data-testid="jd-search-filter-rail"
-      aria-label={t("search.filter")}
-    >
-      <div className="jd-search-filter-rail__head">
-        <strong>{t("search.filter")}</strong>
-        {applied.length ? (
-          <Link href={buildHref({ q: query })} className="jd-search-clear">
-            {t("search.clearFilters")}
-          </Link>
-        ) : null}
-      </div>
-      <SearchFilterGroup
-        title={t("search.filterType")}
-        options={typeOptions}
-        locale={locale}
-        isActive={isActive}
-        optionHref={optionHref}
-        onSelect={() => setDrawerOpen(false)}
-      />
-      <SearchFilterGroup
-        title={t("search.filterTime")}
-        options={timeOptions}
-        locale={locale}
-        isActive={isActive}
-        optionHref={optionHref}
-        onSelect={() => setDrawerOpen(false)}
-      />
-      <SearchFilterGroup
-        title={t("search.filterDistrict")}
-        options={districtOptions}
-        locale={locale}
-        isActive={isActive}
-        optionHref={optionHref}
-        onSelect={() => setDrawerOpen(false)}
-      />
-      <p className="jd-search-filter-note">{t("search.filterNote")}</p>
-    </aside>
-  );
+  function renderFilterPanel(key: string) {
+    return (
+      <aside
+        key={key}
+        className="jd-search-filter-rail"
+        data-testid={key === "rail" ? "jd-search-filter-rail" : undefined}
+        aria-label={t("search.filter")}
+      >
+        <div className="jd-search-filter-rail__head">
+          <strong>{t("search.filter")}</strong>
+          {applied.length ? (
+            <Link href={buildHref({ q: query })} className="jd-search-clear">
+              {t("search.clearFilters")}
+            </Link>
+          ) : null}
+        </div>
+        <SearchFilterGroup
+          title={t("search.filterType")}
+          options={typeOptions}
+          locale={locale}
+          isActive={isActive}
+          optionHref={optionHref}
+          onSelect={() => setDrawerOpen(false)}
+        />
+        <SearchFilterGroup
+          title={t("search.filterTime")}
+          options={timeOptions}
+          locale={locale}
+          isActive={isActive}
+          optionHref={optionHref}
+          onSelect={() => setDrawerOpen(false)}
+        />
+        <SearchFilterGroup
+          title={t("search.filterDistrict")}
+          options={districtOptions}
+          locale={locale}
+          isActive={isActive}
+          optionHref={optionHref}
+          onSelect={() => setDrawerOpen(false)}
+        />
+        <p className="jd-search-filter-note">{t("search.filterNote")}</p>
+      </aside>
+    );
+  }
 
   return (
     <ReaderShell activeNav="home">
@@ -266,6 +269,8 @@ export function SearchResultsPageView({
           type="button"
           className="jd-search-open-filters"
           data-testid="jd-search-filter-trigger"
+          aria-expanded={drawerOpen}
+          aria-controls="jd-search-filter-drawer"
           onClick={() => setDrawerOpen(true)}
         >
           <JdIcon name="filter" size={15} stroke={1.8} color="var(--jd-navy)" />
@@ -274,7 +279,7 @@ export function SearchResultsPageView({
       </div>
 
       <main id="main-content" role="main" className="jd-shell jd-search-layout">
-        {filterPanel}
+        {renderFilterPanel("rail")}
 
         <div className="jd-search-main" data-testid="jd-search-results-column">
           <div className="jd-search-meta">
@@ -327,7 +332,14 @@ export function SearchResultsPageView({
       </main>
 
       {drawerOpen ? (
-        <div className="jd-search-drawer" role="dialog" aria-modal="true" aria-label={t("search.filter")}>
+        <div
+          id="jd-search-filter-drawer"
+          className="jd-search-drawer"
+          data-testid="jd-search-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("search.filter")}
+        >
           <div className="jd-search-drawer__sheet">
             <div className="jd-search-drawer__bar">
               <strong>{t("search.filter")}</strong>
@@ -335,7 +347,7 @@ export function SearchResultsPageView({
                 <JdIcon name="close" size={20} stroke={2} color="var(--jd-ink)" />
               </button>
             </div>
-            {filterPanel}
+            {renderFilterPanel("drawer")}
           </div>
           <button type="button" className="jd-search-drawer__scrim" aria-label={t("masthead.closeAria")} onClick={() => setDrawerOpen(false)} />
         </div>

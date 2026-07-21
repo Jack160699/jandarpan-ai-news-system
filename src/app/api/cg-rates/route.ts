@@ -1,14 +1,25 @@
 import { NextResponse } from "next/server";
-import { getCachedCgDailyRates } from "@/lib/super-menu/cg-rates";
 
-/** ~4 refreshes per day */
-export const revalidate = 21600;
+/**
+ * Legacy inventing CG rates endpoint — permanently disabled.
+ * Use verified-rates APIs only when accepted consensus snapshots exist.
+ */
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const snapshot = getCachedCgDailyRates();
-  return NextResponse.json(snapshot, {
-    headers: {
-      "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=1800",
+  return NextResponse.json(
+    {
+      status: "unavailable",
+      error: "cg_rates_retired",
+      message:
+        "Invented market jitter is disabled. Verified rates require licensed providers and consensus.",
+      methodology: "/rates/methodology",
     },
-  });
+    {
+      status: 503,
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
+  );
 }

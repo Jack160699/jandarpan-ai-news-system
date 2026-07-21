@@ -119,7 +119,12 @@ export function PhotoGallery({ images, kicker, backHref = "/" }: PhotoGalleryPro
                 className={`jd-photo-story__thumb${i === index ? " is-active" : ""}`}
                 aria-current={i === index ? "true" : undefined}
                 aria-label={`${i + 1}: ${img.alt}`}
-                onClick={() => setIndex(i)}
+                data-testid={`jd-photo-thumb-${i}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIndex(i);
+                }}
               >
                 <ArticleImage
                   src={img.src}

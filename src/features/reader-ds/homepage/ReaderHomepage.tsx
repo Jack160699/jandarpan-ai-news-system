@@ -133,6 +133,8 @@ type ReaderHomepageProps = {
   feed: GeneratedHomepageFeed;
   nativeAd?: NativeAdCreative | null;
   adsEnabled?: boolean;
+  /** Server-gated: only true when accepted verified rate snapshots exist. */
+  verifiedRatesNavEnabled?: boolean;
 };
 
 /**
@@ -143,6 +145,7 @@ export function ReaderHomepage({
   feed,
   nativeAd = null,
   adsEnabled = true,
+  verifiedRatesNavEnabled = false,
 }: ReaderHomepageProps) {
   const { isPremium } = useReaderAccount();
   const { t, locale } = useJdDsT();
@@ -229,7 +232,7 @@ export function ReaderHomepage({
           <aside className="jd-home-desk-rail" aria-label={t("home.latest")}>
             {/* Gold/silver/fuel omitted — mandi only when AGMARKNET data is honest */}
             <MandiRatesPanel />
-            <VerifiedRatesLinks />
+            <VerifiedRatesLinks enabled={verifiedRatesNavEnabled} />
             <UtilTiles />
             <div className="jd-home-side-module">
               <div
@@ -269,7 +272,7 @@ export function ReaderHomepage({
         {/* Phone-only util placement (desk rail hides this duplicate via structure) */}
         <div className="jd-home-phone-utils">
           <MandiRatesPanel />
-          <VerifiedRatesLinks />
+          <VerifiedRatesLinks enabled={verifiedRatesNavEnabled} />
           <UtilTiles />
         </div>
 

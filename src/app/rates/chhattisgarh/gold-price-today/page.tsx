@@ -6,10 +6,12 @@ import {
 
 const PATH = "/rates/chhattisgarh/gold-price-today";
 
-export const metadata: Metadata = buildRateMetadata({
-  category: "gold_24k",
-  path: PATH,
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return buildRateMetadata({
+    category: "gold_24k",
+    path: PATH,
+  });
+}
 
 export default function Gold24kPage() {
   return <RateDetailPage category="gold_24k" path={PATH} />;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { FUEL_CITY_SLUGS, RATE_CATEGORIES } from "@/lib/verified-rates";
+import { areVerifiedRatesProvidersConfigured } from "@/lib/verified-rates/public-gate";
 import { runVerification } from "@/lib/verified-rates/verify";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
@@ -11,6 +12,7 @@ export const maxDuration = 60;
 /**
  * Scheduled verification — persists observations; publishes snapshots only on consensus.
  * Auth: shared cron verifier (CRON_SECRET / QStash).
+ * No-ops (authorized) when no provider credentials are configured — avoids Production noise.
  */
 export async function GET(request: Request) {
   return handle(request);
@@ -25,6 +27,25 @@ async function handle(request: Request) {
   const auth = await verifyCronRequest(request, { capability: "ops" });
   if (!auth.authorized) {
     return cronAuthFailureResponse(auth);
+  }
+
+  if (!areVerifiedRatesProvidersConfigured()) {
+    const durationMs = Date.now() - startedAt;
+    await recordCronRun({
+      job: "verified-rates",
+      ok: true,
+      startedAt: new Date(startedAt).toISOString(),
+      durationMs,
+      degraded: true,
+    });
+    return NextResponse.json({
+      ok: true,
+      skipped: true,
+      reason: "providers_not_configured",
+      ranAt: new Date().toISOString(),
+      timezone: "Asia/Kolkata",
+      durationMs,
+    });
   }
 
   const results: Array<Record<string, unknown>> = [];

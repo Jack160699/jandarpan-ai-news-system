@@ -10,6 +10,7 @@ import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { fetchMonetizationPayload } from "@/lib/monetization/fetch-payload";
 import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
 import { getTenantConfig } from "@/lib/tenant/resolve";
+import { isVerifiedRatesPublicNavEnabled } from "@/lib/verified-rates/public-gate";
 import { Footer } from "@/sections/Footer";
 import { HomepageEmpty } from "@/sections/homepage";
 import { HomepageLiveView } from "@/sections/homepage/HomepageLiveView";
@@ -55,6 +56,7 @@ async function ReaderDesignFeed() {
   const adsEnabled = monetization.settings.enabled && monetization.settings.adsEnabled;
   // No demo/native brand creatives — only real placement payloads when wired.
   const nativeAd = null;
+  const verifiedRatesNavEnabled = await isVerifiedRatesPublicNavEnabled();
   const trending = buildTrendingKeywords({ limit: 12 });
   const storyCount = feed ? feed.trending.length + feed.liveWire.length + 1 : 0;
 
@@ -62,7 +64,12 @@ async function ReaderDesignFeed() {
     <>
       <JsonLdScript data={homepageJsonLd({ storyCount, trendingKeywords: trending })} />
       {feed ? (
-        <ReaderHomepage feed={feed} nativeAd={nativeAd} adsEnabled={adsEnabled} />
+        <ReaderHomepage
+          feed={feed}
+          nativeAd={nativeAd}
+          adsEnabled={adsEnabled}
+          verifiedRatesNavEnabled={verifiedRatesNavEnabled}
+        />
       ) : (
         <ReaderShell activeNav="home">
           <Masthead />

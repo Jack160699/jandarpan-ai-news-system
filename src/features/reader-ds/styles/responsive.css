@@ -1494,6 +1494,9 @@
     cursor: pointer;
     border-radius: 2px;
     overflow: hidden;
+    position: relative;
+    z-index: 1;
+    pointer-events: auto;
   }
 
   .jd-photo-story__thumb.is-active {

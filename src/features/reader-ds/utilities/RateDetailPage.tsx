@@ -12,12 +12,18 @@ import { RateHistoryTable } from "@/features/reader-ds/utilities/RateHistoryTabl
 import { RateDetailClient } from "@/features/reader-ds/utilities/RateDetailClient";
 import { districtHrefForCity, isFuelCitySlug } from "@/lib/verified-rates/catalog";
 
-export function buildRateMetadata(opts: {
+export async function buildRateMetadata(opts: {
   category: RateCategory;
   citySlug?: string | null;
   path: string;
 }) {
-  return ratePageMetadata(opts);
+  const { isRatePathIndexable } = await import("@/lib/verified-rates/public-gate");
+  const indexable = await isRatePathIndexable({
+    path: opts.path,
+    category: opts.category,
+    citySlug: opts.citySlug,
+  });
+  return ratePageMetadata({ ...opts, noindex: !indexable });
 }
 
 export async function RateDetailPage(opts: {

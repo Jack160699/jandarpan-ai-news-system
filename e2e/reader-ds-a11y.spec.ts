@@ -39,7 +39,9 @@ test.describe("reader-ds accessibility (Phase 7)", () => {
 
   test("error state exposes retry control", async ({ page }) => {
     await page.goto("/system/preview?state=error", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("button", { name: /पुनः प्रयास/ })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /फिर कोशिश|Try again|पुनः प्रयास/ })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test("permission dialog is labelled", async ({ page }) => {
