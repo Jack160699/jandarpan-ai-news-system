@@ -214,3 +214,35 @@ git reset --hard backup/pre-jan-darpan-brand-implementation   # if merged locall
 # or simply do not merge feat/jan-darpan-brand-implementation
 git worktree remove .claude/worktrees/jan-darpan-brand
 ```
+
+---
+
+## 14. Production release record (2026-07-21)
+
+**Shipped LIVE to www.jandarpan.news** (Vercel project `newspaper-motion`).
+
+| Item | Value |
+| --- | --- |
+| Baseline | `f4792e82` (rollback: `backup/pre-jan-darpan-brand-implementation`) |
+| Brand PR | **#39** → merge `d33907f` → prod deploy `dpl_…ewqxjdze4` (READY) |
+| Reader-DS mark fix PR | **#40** → merge `12d3b2f` → prod deploy `dpl_…eday7b2tt` (READY) |
+| Rebases | onto `1ac1ac3`, then `97e1de01` (concurrent agent moved main twice); only `editorial-images.ts` conflicted — took main's stock-image version |
+
+**Reader-DS mark fix:** the reader-ds masthead / desktop chrome / footer rendered
+the mark as an inline **"ज" glyph** (not an image), so the asset swap missed it —
+this was the most visible live surface. Added `src/features/reader-ds/components/
+BrandMark.tsx` (one canonical approved-mark SVG) and used it in `Masthead`,
+`DeskChrome` (22 + 36 px), `DeskFooter`. Verified legible at 22/24/36 px on navy.
+
+**Live verification (production, public domain):**
+- Desktop + mobile masthead + footer render the approved sunrise-mirror mark;
+  **0** standalone "ज" marks in live HTML; 5 approved mark SVG instances.
+- Old paths `/brand/jan-darpan-chhattisgarh-logo.png`, `…-mark.png`, `…-og.png`
+  return **200, byte-identical to the approved assets** (compatibility aliases).
+- favicon.ico / icon.svg / apple-icon.png / site.webmanifest / OG all 200.
+- JSON-LD publisher logo resolves to approved lockup; login uses approved lockup.
+- No brand-asset 404s; no brand-related console errors.
+
+**Verdict: production verified.** Deferred (documented in §4): repoint the shared
+Supabase DB rows (tenant branding, org settings, 38 article `hero_image_url`) to the
+canonical `/brand/jan-darpan/**` paths, then remove the 3 alias files.
