@@ -145,7 +145,8 @@ function isCgArticleLocal(article: HomeArticle, row?: GeneratedArticleRow): bool
 function scoreHeroCandidate(
   article: HomeArticle,
   row: GeneratedArticleRow | undefined,
-  index: DuplicateIndex
+  index: DuplicateIndex,
+  homeDistrict?: string | null
 ): number {
   if (isRoundupArticle(article)) return -10_000;
 
@@ -165,6 +166,15 @@ function scoreHeroCandidate(
   if (clusterId) score -= 5;
 
   if (article.section === "india" || article.section === "world") score -= 15;
+
+  if (homeDistrict) {
+    const geo = row ? geoFromRecord(row) : null;
+    if (geo?.primary_district === homeDistrict) {
+      score += article.ranking.isBreaking || article.urgency === "high" ? 80 : 55;
+    } else if (geo?.districts.includes(homeDistrict)) {
+      score += 25;
+    }
+  }
 
   return score;
 }
@@ -475,6 +485,7 @@ export function composeHomepageSlots(
   rankedOutputs: RankedArticleOutput[],
   options?: {
     pinnedLead?: HomeArticle;
+    homeDistrict?: string | null;
   }
 ): HomepageComposition {
   const rowsById = rowsByIdFromRanked(rankedOutputs);
@@ -482,7 +493,7 @@ export function composeHomepageSlots(
   const reserved = new Set<string>();
 
   const scoreHero = (a: HomeArticle) =>
-    scoreHeroCandidate(a, rowsById.get(a.id), index);
+    scoreHeroCandidate(a, rowsById.get(a.id), index, options?.homeDistrict);
 
   const nonRoundup = ranked.filter((a) => !isRoundupArticle(a));
   const heroPool = nonRoundup.length ? nonRoundup : ranked;

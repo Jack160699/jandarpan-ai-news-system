@@ -101,6 +101,8 @@ export function HomeExperienceV3({ feed }: HomeExperienceV3Props) {
             districtName={data.districtName}
             districtNameHi={data.districtNameHi}
             districtNews={data.districtNews}
+            nearbyNews={data.nearbyNews}
+            usedNearbyFallback={data.usedNearbyFallback}
           />
         </LazyV3Section>
       </HomeSectionErrorBoundary>

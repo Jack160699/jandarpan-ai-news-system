@@ -80,7 +80,13 @@ export function scoreRegionalTopic(input: {
   const primary = geo.primary_district;
   if (primary) districtBoost = districtPriorityBoost(primary);
 
-  if (input.homeDistrict && geo.districts.includes(input.homeDistrict)) {
+  if (input.homeDistrict && geo.primary_district === input.homeDistrict) {
+    districtBoost += 14;
+    topicSignals.push("home_district_primary");
+  } else if (
+    input.homeDistrict &&
+    geo.districts.includes(input.homeDistrict)
+  ) {
     districtBoost += 6;
     topicSignals.push("home_district_match");
   }

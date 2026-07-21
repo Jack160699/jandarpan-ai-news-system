@@ -25,6 +25,7 @@ import {
   loadStoredLanguage,
 } from "@/lib/i18n/storage";
 import type { ReaderLanguage } from "@/lib/reader-preferences";
+import { writeDistrictSource } from "@/lib/district-intelligence";
 
 type ReaderPreferencesContextValue = {
   prefs: ReaderPreferences;
@@ -157,7 +158,11 @@ export function ReaderPreferencesProvider({
   }, [update, prefs.fontScale]);
 
   const setHomeDistrict = useCallback(
-    (homeDistrict: string | null) => update({ homeDistrict }),
+    (homeDistrict: string | null) => {
+      update({ homeDistrict });
+      // Manual/explicit choice locks out later geolocation overwrites
+      writeDistrictSource(homeDistrict ? "explicit" : "default_raipur");
+    },
     [update]
   );
 

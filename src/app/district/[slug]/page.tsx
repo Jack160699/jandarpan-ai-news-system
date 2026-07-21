@@ -18,6 +18,7 @@ import {
   filterRowsForDistrict,
   getAllDistrictSlugs,
   getDistrict,
+  prioritizePrimaryDistrict,
 } from "@/lib/regional";
 import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
 import {
@@ -83,7 +84,10 @@ export default async function DistrictPage({ params }: PageProps) {
     readerDs ? getTenantConfig() : Promise.resolve(null),
   ]);
   const langPool = filterPoolByLanguage(pool, displayLanguage);
-  const filtered = filterRowsForDistrict(langPool, slug);
+  const filtered = prioritizePrimaryDistrict(
+    filterRowsForDistrict(langPool, slug),
+    slug
+  );
   const personalization = buildRegionalRankingPersonalization({
     homeDistrict: slug,
     regionBoostMultiplier: 1.3,

@@ -52,6 +52,7 @@ export {
 export {
   buildHyperlocalFeedBundle,
   filterRowsForDistrict,
+  prioritizePrimaryDistrict,
   routeArticlesByDistrict,
   type HyperlocalFeedBlock,
   type HyperlocalFeedBundle,
