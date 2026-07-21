@@ -14,6 +14,8 @@ type NearYouSectionProps = {
   districtName: string;
   districtNameHi: string;
   districtNews: HomeArticle[];
+  nearbyNews?: HomeArticle[];
+  usedNearbyFallback?: boolean;
 };
 
 export function NearYouSection({
@@ -21,9 +23,16 @@ export function NearYouSection({
   districtName,
   districtNameHi,
   districtNews,
+  nearbyNews = [],
+  usedNearbyFallback = false,
 }: NearYouSectionProps) {
   const { language } = useLanguage();
   const districtLabel = pickBilingualLabel(language, districtName, districtNameHi);
+  const nearbyLabel = pickBilingualLabel(
+    language,
+    "Nearby news",
+    "आसपास की खबरें"
+  );
 
   return (
     <section
@@ -77,6 +86,39 @@ export function NearYouSection({
           icon="📍"
         />
       )}
+
+      {usedNearbyFallback && nearbyNews.length > 0 ? (
+        <div className="home-v31-nearby" style={{ marginTop: 20 }}>
+          <h3
+            className="jd-ui"
+            style={{
+              fontSize: 13,
+              fontWeight: 800,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              color: "var(--jd-ink-3, #5c6570)",
+              margin: "0 0 10px",
+            }}
+          >
+            {nearbyLabel}
+          </h3>
+          <div className="home-v31-feed home-v31-feed--near">
+            {nearbyNews.map((article) => (
+              <CompactCard
+                key={`nearby-${article.id}`}
+                headline={article.headline}
+                excerpt={article.summary}
+                imageUrl={article.imageUrl || article.ogImageUrl}
+                imageAlt={article.headline}
+                district={nearbyLabel}
+                publishedAt={formatHomeTime(article.publishedAt, language)}
+                readTime={article.readingTime}
+                href={`/story/${article.slug}`}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

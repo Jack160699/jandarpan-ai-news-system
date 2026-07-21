@@ -34,8 +34,9 @@ export function securityHeaders(): Record<string, string> {
     "X-Frame-Options": "SAMEORIGIN",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
+    // geolocation=(self) required for district personalization; never forced on load
     "Permissions-Policy":
-      "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+      "camera=(), microphone=(), geolocation=(self), payment=(), usb=()",
     "X-DNS-Prefetch-Control": "on",
     "X-Permitted-Cross-Domain-Policies": "none",
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",

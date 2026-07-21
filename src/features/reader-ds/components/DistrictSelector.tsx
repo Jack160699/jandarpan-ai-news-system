@@ -6,6 +6,11 @@ import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import type { CgDistrict } from "@/lib/regional/districts";
 import { useJdDsT } from "../i18n";
 import { JdIcon } from "./icons";
+import {
+  requestDistrictFromBrowserLocation,
+  writeDistrictSource,
+  writeLocationPermission,
+} from "@/lib/district-intelligence";
 
 type DistrictSelectorProps = {
   districts: Array<Pick<CgDistrict, "slug" | "name" | "nameHi">>;
@@ -99,14 +104,17 @@ export function DistrictSelector({ districts, selectedSlug }: DistrictSelectorPr
             maxWidth: "100%",
           }}
           onClick={() => {
-            /* Geolocation is best-effort; fall back to current selection home. */
             if (typeof navigator !== "undefined" && navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                () => select(current),
-                () => select(current),
-                { timeout: 4000 }
-              );
+              void requestDistrictFromBrowserLocation().then((result) => {
+                if (result.ok) {
+                  writeDistrictSource("geo");
+                  select(result.slug);
+                } else {
+                  select(current);
+                }
+              });
             } else {
+              writeLocationPermission("unavailable");
               select(current);
             }
           }}

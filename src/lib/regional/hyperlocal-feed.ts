@@ -185,8 +185,25 @@ export function filterRowsForDistrict(
   return rows.filter((r) => {
     const geo = geoFromRecord(r);
     return (
-      geo.districts.includes(districtSlug) ||
-      geo.primary_district === districtSlug
+      geo.primary_district === districtSlug ||
+      geo.districts.includes(districtSlug)
     );
+  });
+}
+
+/**
+ * Sort district hub rows so primary_district matches lead over multi-geo tags.
+ */
+export function prioritizePrimaryDistrict(
+  rows: GeneratedArticleRow[],
+  districtSlug: string
+): GeneratedArticleRow[] {
+  return [...rows].sort((a, b) => {
+    const ga = geoFromRecord(a);
+    const gb = geoFromRecord(b);
+    const ap = ga.primary_district === districtSlug ? 1 : 0;
+    const bp = gb.primary_district === districtSlug ? 1 : 0;
+    if (bp !== ap) return bp - ap;
+    return 0;
   });
 }

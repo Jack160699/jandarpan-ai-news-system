@@ -9,6 +9,7 @@ import {
   ONBOARDING_COOKIE,
   RECENT_READS_COOKIE,
 } from "@/lib/personalization/cookies";
+import { resolveServerDistrict } from "@/lib/district-intelligence";
 
 export type ReaderPersonalizationPrefs = {
   interestSections: HomeSectionId[];
@@ -76,8 +77,11 @@ export async function getServerHomeDistrict(): Promise<string | null> {
   try {
     const jar = await cookies();
     const slug = jar.get(DISTRICT_COOKIE)?.value?.trim().toLowerCase();
+    const resolved = resolveServerDistrict({ cookieSlug: slug });
+    // Return null only when cookie absent so callers can distinguish default;
+    // resolveServerDistrict always yields Raipur when empty.
     if (!slug || !getDistrict(slug)) return null;
-    return slug;
+    return resolved.slug;
   } catch {
     return null;
   }

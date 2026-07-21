@@ -4,6 +4,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { JdIcon, type JdIconName } from "../components/icons";
 import { useJdDsT } from "../i18n";
+import { useReaderPreferencesOptional } from "@/providers/ReaderPreferencesProvider";
+import {
+  isManualDistrictLocked,
+  requestDistrictFromBrowserLocation,
+  shouldAskForLocation,
+  writeDistrictSource,
+  writeLocationPermission,
+} from "@/lib/district-intelligence";
 
 const NOTIFY_KEY = "jd-ds-perm-notify-v1";
 const LOC_KEY = "jd-ds-perm-loc-v1";
@@ -13,7 +21,10 @@ type SheetKind = "notify" | "location" | null;
 function readInitialKind(): SheetKind {
   try {
     if (!localStorage.getItem(NOTIFY_KEY)) return "notify";
-    if (!localStorage.getItem(LOC_KEY)) return "location";
+    // Respect prior location decision — never re-prompt after deny/dismiss
+    if (!localStorage.getItem(LOC_KEY) && shouldAskForLocation()) {
+      return "location";
+    }
   } catch {
     /* private mode */
   }
@@ -23,9 +34,12 @@ function readInitialKind(): SheetKind {
 /**
  * F51/F52 — value-first permission pre-prompts.
  * Shown once per browser until dismissed; never blocks reading.
+ * Location allow maps coords → nearest district HQ (bundled lat/lng).
+ * Does not overwrite an existing manual district choice.
  */
 export function PermissionSheet() {
   const { t } = useJdDsT();
+  const prefsCtx = useReaderPreferencesOptional();
   const [kind, setKind] = useState<SheetKind>(null);
 
   useEffect(() => {
@@ -42,7 +56,11 @@ export function PermissionSheet() {
     }
     if (k === "notify") {
       try {
-        setKind(!localStorage.getItem(LOC_KEY) ? "location" : null);
+        setKind(
+          !localStorage.getItem(LOC_KEY) && shouldAskForLocation()
+            ? "location"
+            : null
+        );
       } catch {
         setKind(null);
       }
@@ -60,6 +78,17 @@ export function PermissionSheet() {
       /* unsupported */
     }
     dismiss("notify");
+  };
+
+  const enableLocation = async () => {
+    const result = await requestDistrictFromBrowserLocation();
+    if (result.ok && prefsCtx && !isManualDistrictLocked()) {
+      prefsCtx.setHomeDistrict(result.slug);
+      writeDistrictSource("geo");
+    } else if (!result.ok) {
+      writeLocationPermission(result.state);
+    }
+    dismiss("location");
   };
 
   if (!kind) return null;
@@ -92,20 +121,13 @@ export function PermissionSheet() {
       privacyLabel={t("system.locationPrivacy")}
       primaryLabel={t("system.locationEnable")}
       primaryTone="navy"
-      onPrimary={() => {
-        if (typeof navigator !== "undefined" && navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            () => dismiss("location"),
-            () => dismiss("location"),
-            { maximumAge: 600_000, timeout: 8_000 }
-          );
-        } else {
-          dismiss("location");
-        }
-      }}
+      onPrimary={() => void enableLocation()}
       secondaryLabel={t("system.chooseDistrictManual")}
       secondaryHref="/district"
-      onSecondary={() => dismiss("location")}
+      onSecondary={() => {
+        writeLocationPermission("denied");
+        dismiss("location");
+      }}
     />
   );
 }
@@ -181,7 +203,13 @@ function Sheet({
         <h2
           id="jd-perm-title"
           className="jd-serif"
-          style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, textAlign: "center", color: "var(--jd-ink)" }}
+          style={{
+            margin: "0 0 8px",
+            fontSize: 20,
+            fontWeight: 700,
+            textAlign: "center",
+            color: "var(--jd-ink)",
+          }}
         >
           {title}
         </h2>

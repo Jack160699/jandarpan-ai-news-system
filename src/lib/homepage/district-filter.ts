@@ -1,9 +1,14 @@
 /**
  * Featured homepage districts — filter pool without changing APIs.
+ * Exact district matching only (no hash bucketing into unrelated districts).
  */
 
 import { CG_DISTRICTS, type CgDistrict } from "@/lib/regional/districts";
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
+import {
+  articleMatchesDistrict,
+  resolveArticleDistrictSlug,
+} from "@/lib/district-intelligence/match";
 
 export const FEATURED_DISTRICT_SLUGS = [
   "bilaspur",
@@ -84,17 +89,19 @@ export function resolveFeaturedDistrictSlug(
   return null;
 }
 
-/** Stable fallback so feeds stay populated when district metadata is missing */
+/**
+ * @deprecated Prefer resolveFeaturedDistrictSlug / articleMatchesDistrict.
+ * Kept for call sites that need a featured tab id — returns null-safe
+ * resolved slug or "raipur" only when used for display fallbacks, NOT for
+ * filtering unrelated articles into a district pool.
+ */
 export function assignFeaturedDistrictSlug(
   article: HomeArticle
 ): FeaturedDistrictSlug {
   const resolved = resolveFeaturedDistrictSlug(article);
   if (resolved) return resolved;
-  let hash = 0;
-  for (let i = 0; i < article.id.length; i++) {
-    hash = (hash + article.id.charCodeAt(i)) | 0;
-  }
-  return FEATURED_DISTRICT_SLUGS[Math.abs(hash) % FEATURED_DISTRICT_SLUGS.length];
+  // Do NOT hash-bucket into unrelated districts (was causing Rajnandgaon → Durg).
+  return "raipur";
 }
 
 export function buildDistrictArticlePool(
@@ -115,13 +122,25 @@ export function buildDistrictArticlePool(
   return source.filter((a) => !reserved.has(a.id));
 }
 
+/**
+ * Exact district filter — supports any CG district slug, not only featured tabs.
+ * Never includes nearby/unrelated stories via hash assignment.
+ */
 export function filterArticlesByDistrict(
   articles: HomeArticle[],
-  slug: FeaturedDistrictSlug
+  slug: string
 ): HomeArticle[] {
-  return articles.filter(
-    (article) => assignFeaturedDistrictSlug(article) === slug
-  );
+  const normalized =
+    slug === "jagdalpur" ? "bastar" : slug;
+  return articles.filter((article) => {
+    if (slug === "jagdalpur" || slug === "bastar") {
+      return (
+        articleMatchesDistrict(article, "bastar") ||
+        resolveFeaturedDistrictSlug(article) === "jagdalpur"
+      );
+    }
+    return articleMatchesDistrict(article, normalized);
+  });
 }
 
 export function countArticlesByDistrict(
@@ -132,7 +151,8 @@ export function countArticlesByDistrict(
   ) as Record<FeaturedDistrictSlug, number>;
 
   for (const article of articles) {
-    counts[assignFeaturedDistrictSlug(article)] += 1;
+    const resolved = resolveFeaturedDistrictSlug(article);
+    if (resolved) counts[resolved] += 1;
   }
   return counts;
 }
@@ -150,3 +170,5 @@ export function defaultFeaturedDistrict(
   }
   return best;
 }
+
+export { resolveArticleDistrictSlug };

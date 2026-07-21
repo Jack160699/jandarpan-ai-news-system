@@ -46,6 +46,7 @@ const LIVE_WINDOW_HOURS = 8;
 const HIGH_URGENCY_HOURS = 3;
 
 import { inferSection, REGIONAL_SECTIONS } from "@/lib/homepage/infer-section";
+import { classifyForChhattisgarhSection } from "@/lib/district-intelligence";
 
 export { inferSection, REGIONAL_SECTIONS };
 
@@ -153,10 +154,43 @@ function pickCategoryStreams(
 ): RegionalSectionBlock[] {
   const dict = getDictionary(displayLanguage);
   const sectionStreams = REGIONAL_SECTIONS.map((def) => {
-    const articles = ranked
-      .filter((a) => a.section === def.id && !usedIds.has(a.id))
-      .sort((a, b) => b.priorityScore - a.priorityScore)
-      .slice(0, perSection);
+    let candidates = ranked.filter(
+      (a) => a.section === def.id && !usedIds.has(a.id)
+    );
+
+    if (def.id === "chhattisgarh") {
+      // Prefer state-level stories; demote routine hyperlocal from state lead
+      candidates = [...candidates].sort((a, b) => {
+        const ca = classifyForChhattisgarhSection({
+          title: a.headline,
+          body: a.summary,
+          category: a.categoryLabel,
+        });
+        const cb = classifyForChhattisgarhSection({
+          title: b.headline,
+          body: b.summary,
+          category: b.categoryLabel,
+        });
+        const sa =
+          (ca.isStateLeadEligible ? 100 : 0) +
+          ca.confidence * 20 +
+          a.priorityScore * 0.2 -
+          (ca.isHyperlocal ? 40 : 0);
+        const sb =
+          (cb.isStateLeadEligible ? 100 : 0) +
+          cb.confidence * 20 +
+          b.priorityScore * 0.2 -
+          (cb.isHyperlocal ? 40 : 0);
+        if (sb !== sa) return sb - sa;
+        return a.id.localeCompare(b.id);
+      });
+    } else {
+      candidates = [...candidates].sort(
+        (a, b) => b.priorityScore - a.priorityScore
+      );
+    }
+
+    const articles = candidates.slice(0, perSection);
     const label = getSectionLabel(def.id, dict, displayLanguage);
     return {
       id: def.id,
@@ -209,8 +243,13 @@ export function buildGeneratedHomepageFeed(
   const hyperlocalBundle = buildHyperlocalFeedBundle(rows, {
     maxDistricts: 6,
     displayLanguage,
+    homeDistrict: options?.personalization?.homeDistrict ?? null,
   });
-  const localAlerts = buildLocalBreakingAlerts(rows, { cgOnly: true, limit: 8 });
+  const localAlerts = buildLocalBreakingAlerts(rows, {
+    cgOnly: true,
+    limit: 8,
+    homeDistrict: options?.personalization?.homeDistrict ?? null,
+  });
   const ranked = rankedOutputs
     .map((r) =>
       toHomeArticle(
@@ -243,6 +282,7 @@ export function buildGeneratedHomepageFeed(
 
   const slots = composeHomepageSlots(ranked, rankedOutputs, {
     pinnedLead: pinnedArticle,
+    homeDistrict: options?.personalization?.homeDistrict ?? null,
   });
 
   const usedIds = new Set(slots.reservedIds);

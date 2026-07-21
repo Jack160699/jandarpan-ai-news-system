@@ -25,6 +25,11 @@ import {
   PremiumExclusiveStrip,
 } from "../monetization";
 import { useJdDsT, type JdDsStringKey } from "../i18n";
+import { useReaderPreferencesOptional } from "@/providers/ReaderPreferencesProvider";
+import {
+  DEFAULT_DISTRICT_SLUG,
+  rankDistrictStories,
+} from "@/lib/district-intelligence";
 
 function toStory(a: HomeArticle): ReaderStory {
   return {
@@ -48,14 +53,21 @@ type HomeSection = {
   stories: ReaderStory[];
 };
 
-function pickLead(feed: GeneratedHomepageFeed): HomeArticle | null {
+function pickLead(
+  feed: GeneratedHomepageFeed,
+  homeDistrict: string
+): HomeArticle | null {
   const candidates = [
     feed.editorsPicks?.lead,
     ...(feed.editorsPicks?.supporting ?? []),
     ...(feed.trending ?? []),
     ...(feed.regionalHighlights ?? []),
     ...(feed.liveWire ?? []),
+    ...(feed.breakingTicker ?? []),
   ].filter(Boolean) as HomeArticle[];
+
+  const ranked = rankDistrictStories(candidates, homeDistrict, { limit: 1 });
+  if (ranked.lead) return ranked.lead.article;
 
   const withImage = candidates.find((a) => a.imageUrl && a.imageUrl.trim());
   return withImage ?? candidates[0] ?? null;
@@ -149,9 +161,12 @@ export function ReaderHomepage({
 }: ReaderHomepageProps) {
   const { isPremium } = useReaderAccount();
   const { t, locale } = useJdDsT();
+  const prefsCtx = useReaderPreferencesOptional();
+  const homeDistrict =
+    prefsCtx?.prefs.homeDistrict ?? DEFAULT_DISTRICT_SLUG;
   const showAds = adsEnabled && !isPremium;
 
-  const leadArticle = pickLead(feed);
+  const leadArticle = pickLead(feed, homeDistrict);
   const lead = leadArticle ? toStory(leadArticle) : null;
 
   const used = new Set<string>(leadArticle?.slug ? [leadArticle.slug] : []);
