@@ -957,7 +957,8 @@
   .jd-desk-footer {
     display: block !important;
     margin-top: 16px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    /* Clear fixed .jd-bottom-nav (~56px) + safe area when scrolled into view */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
   .jd-desk-footer__grid {

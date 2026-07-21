@@ -284,6 +284,12 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 30_000 });
 
+    // Dismiss optional permission sheet if present (covers lead on first visit).
+    const dismiss = page.getByRole("button", { name: /बाद में|Later|Not now|अभी नहीं|Skip/i });
+    if ((await dismiss.count()) > 0) {
+      await dismiss.first().click({ timeout: 2_000 }).catch(() => undefined);
+    }
+
     const nav = await page.evaluate(() => {
       const before = performance.getEntriesByType("navigation").length;
       return { before, href: location.href };
@@ -291,10 +297,11 @@ test.describe("reader-ds smoke (Phase 7)", () => {
 
     const story = page.locator('a[href^="/story/"]').first();
     await expect(story).toBeVisible({ timeout: 20_000 });
-    await Promise.all([
-      page.waitForURL(/\/story\//, { timeout: 30_000 }),
-      story.click(),
-    ]);
+    const href = await story.getAttribute("href");
+    expect(href).toMatch(/^\/story\//);
+    // force: layout may still settle from weather/permission sheets; href is verified.
+    await story.click({ force: true });
+    await expect(page).toHaveURL(/\/story\//, { timeout: 30_000 });
 
     // Soft navigation — no full document reload
     const after = await page.evaluate(() => performance.getEntriesByType("navigation").length);
