@@ -9,7 +9,7 @@ import { JdIcon } from "../../components/icons";
 import { useJdDsT } from "../../i18n";
 import { useReaderAudio } from "../audio/AudioProvider";
 import { briefingMeta } from "../audio/tracksFromShorts";
-import type { BriefingTrack } from "../audio/types";
+import { trackHasPlayableSource, type BriefingTrack } from "../audio/types";
 
 function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: boolean }) {
   const { t, locale } = useJdDsT();
@@ -23,15 +23,18 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
 
   useEffect(() => {
     if (!autoPlay || autoPlayed.current || tracks.length === 0) return;
+    const firstPlayable = tracks.findIndex((tr) => trackHasPlayableSource(tr));
+    if (firstPlayable < 0) return;
     autoPlayed.current = true;
     const timer = window.setTimeout(() => {
       setTracks(tracks);
-      playAt(0);
+      playAt(firstPlayable);
     }, 250);
     return () => window.clearTimeout(timer);
   }, [autoPlay, tracks, setTracks, playAt]);
 
   const meta = briefingMeta(tracks);
+  const hasAnyPlayable = meta.playableCount > 0;
   const dateLabel = new Date().toLocaleDateString(locale === "en" ? "en-IN" : "hi-IN", {
     day: "numeric",
     month: "long",
@@ -56,46 +59,59 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
           {t("listen.voiceNote")}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button
-            type="button"
-            aria-label={t("listen.playAll")}
-            onClick={() => {
-              setTracks(tracks);
-              audio.playAt(0);
-            }}
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 52,
-              background: "var(--jd-red)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "none",
-              cursor: "pointer",
-              color: "#fff",
-            }}
-          >
-            <JdIcon name="play" size={26} stroke={1.9} color="#fff" />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setTracks(tracks);
-              audio.playAt(0);
-            }}
-            className="jd-ui"
-            style={{
-              fontSize: 14,
-              fontWeight: 800,
-              background: "none",
-              border: "none",
-              color: "inherit",
-              cursor: "pointer",
-            }}
-          >
-            {t("listen.playAll")}
-          </button>
+          {hasAnyPlayable ? (
+            <>
+              <button
+                type="button"
+                aria-label={t("listen.playAll")}
+                onClick={() => {
+                  setTracks(tracks);
+                  audio.playAll();
+                }}
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 52,
+                  background: "var(--jd-red)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#fff",
+                }}
+              >
+                <JdIcon name="play" size={26} stroke={1.9} color="#fff" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTracks(tracks);
+                  audio.playAll();
+                }}
+                className="jd-ui"
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  background: "none",
+                  border: "none",
+                  color: "inherit",
+                  cursor: "pointer",
+                  minHeight: 44,
+                }}
+              >
+                {t("listen.playAll")}
+              </button>
+            </>
+          ) : (
+            <div
+              className="jd-ui"
+              role="status"
+              style={{ fontSize: 14, fontWeight: 700, color: "#f0c9c9" }}
+            >
+              {t("listen.unavailable")}
+            </div>
+          )}
           <div style={{ marginLeft: "auto", display: "flex", gap: 16 }}>
             <Link href="/listen/downloads" aria-label={t("listen.downloads")} style={{ display: "flex" }}>
               <JdIcon name="download" size={22} stroke={1.8} color="var(--jd-gold-soft)" />
@@ -110,6 +126,38 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
             </button>
           </div>
         </div>
+        {audio.status === "failed" || audio.status === "unavailable" ? (
+          <div
+            className="jd-ui"
+            role="alert"
+            style={{ marginTop: 12, fontSize: 12.5, color: "#f0c9c9", display: "flex", gap: 10, alignItems: "center" }}
+          >
+            <span>{audio.errorMessage || t("listen.unavailable")}</span>
+            {audio.status === "failed" ? (
+              <button
+                type="button"
+                onClick={audio.retry}
+                aria-label={t("listen.retry")}
+                style={{
+                  background: "none",
+                  border: "1px solid var(--jd-gold-soft)",
+                  color: "var(--jd-gold-soft)",
+                  cursor: "pointer",
+                  padding: "6px 10px",
+                  fontWeight: 700,
+                  minHeight: 44,
+                }}
+              >
+                {t("listen.retry")}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {audio.status === "loading" || audio.status === "buffering" ? (
+          <div className="jd-ui" role="status" style={{ marginTop: 10, fontSize: 12, color: "#8ea0c4" }}>
+            {audio.status === "buffering" ? t("listen.buffering") : t("listen.loading")}
+          </div>
+        ) : null}
       </div>
 
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "6px 16px" }}>
@@ -120,11 +168,21 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
         ) : (
           tracks.map((track, i) => {
             const active = audio.index === i && audio.visible;
+            const playable = trackHasPlayableSource(track);
             return (
               <button
                 key={track.id}
                 type="button"
-                onClick={() => audio.playAt(i)}
+                onClick={() => {
+                  if (!playable) return;
+                  audio.playAt(i);
+                }}
+                disabled={!playable}
+                aria-label={
+                  playable
+                    ? `${t("listen.play")} — ${track.headline}`
+                    : `${t("listen.unavailable")} — ${track.headline}`
+                }
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -136,8 +194,10 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
                   borderLeft: "none",
                   borderRight: "none",
                   borderTop: "none",
-                  cursor: "pointer",
+                  cursor: playable ? "pointer" : "default",
                   textAlign: "left",
+                  opacity: playable ? 1 : 0.55,
+                  minHeight: 48,
                 }}
               >
                 <div
@@ -164,6 +224,11 @@ function ListenBody({ tracks, autoPlay }: { tracks: BriefingTrack[]; autoPlay?: 
                   >
                     {track.headline}
                   </div>
+                  {!playable ? (
+                    <div className="jd-ui" style={{ fontSize: 11, color: "var(--jd-muted)", marginTop: 4 }}>
+                      {t("listen.unavailable")}
+                    </div>
+                  ) : null}
                   {active ? (
                     <div
                       style={{

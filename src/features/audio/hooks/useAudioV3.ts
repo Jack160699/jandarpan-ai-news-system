@@ -1,7 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PlaybackSpeed } from "@/lib/listen/types";
+import { ListenPlaybackController } from "@/lib/listen/playback-controller";
+import {
+  playerErrorMessage,
+  showsPlayingChrome,
+  type PlayerErrorCode,
+  type PlayerStatus,
+} from "@/lib/listen/player-state";
 import { AUDIO_VOICES_PLACEHOLDER } from "../data/placeholders";
 import type { AudioTrack } from "../types";
 
@@ -11,10 +18,19 @@ export type UseAudioV3Options = {
   initialIndex?: number;
 };
 
+function trackPlayable(track: AudioTrack | null | undefined): boolean {
+  if (!track?.streamPath?.trim()) return false;
+  if (track.voiceStatus === "failed" || track.voiceStatus === "unavailable") {
+    return false;
+  }
+  return true;
+}
+
 export function useAudioV3({ tracks, autoPlay = false, initialIndex = 0 }: UseAudioV3Options) {
   const [index, setIndex] = useState(initialIndex);
-  const [playing, setPlaying] = useState(autoPlay);
+  const [status, setStatus] = useState<PlayerStatus>("idle");
   const [currentTime, setCurrentTime] = useState(0);
+  const [mediaDuration, setMediaDuration] = useState(0);
   const [speed, setSpeed] = useState<PlaybackSpeed>(1);
   const [sleepTimerMinutes, setSleepTimerMinutes] = useState<number | null>(null);
   const [sleepRemainingSec, setSleepRemainingSec] = useState<number | null>(null);
@@ -22,43 +38,137 @@ export function useAudioV3({ tracks, autoPlay = false, initialIndex = 0 }: UseAu
   const [fullPlayerOpen, setFullPlayerOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const [transcriptOpen, setTranscriptOpen] = useState(true);
+  const [errorCode, setErrorCode] = useState<PlayerErrorCode | null>(null);
+
+  const controllerRef = useRef<ListenPlaybackController | null>(null);
+  const tracksRef = useRef(tracks);
+  const indexRef = useRef(index);
+  const playAtRef = useRef<(trackIndex: number) => Promise<void>>(async () => undefined);
+
+  useEffect(() => {
+    tracksRef.current = tracks;
+    indexRef.current = index;
+  }, [tracks, index]);
 
   const track = tracks[index] ?? null;
-  const duration = track?.durationSec ?? 0;
+  const duration = mediaDuration > 0 ? mediaDuration : track?.durationSec ?? 0;
+  const playing = showsPlayingChrome(status);
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  const togglePlay = useCallback(() => {
-    setPlaying((prev) => !prev);
+  useEffect(() => {
+    const controller = new ListenPlaybackController();
+    controllerRef.current = controller;
+    const unsub = controller.subscribe((snap) => {
+      setStatus(snap.status);
+      setCurrentTime(snap.currentTime);
+      setErrorCode(snap.errorCode);
+      const t = tracksRef.current[indexRef.current];
+      setMediaDuration(snap.duration > 0 ? snap.duration : (t?.durationSec ?? 0));
+
+      if (snap.status === "ended") {
+        const i = indexRef.current;
+        const list = tracksRef.current;
+        if (i < list.length - 1) {
+          const next = i + 1;
+          setIndex(next);
+          queueMicrotask(() => {
+            void playAtRef.current(next);
+          });
+        }
+      }
+    });
+    return () => {
+      unsub();
+      controller.dispose();
+      controllerRef.current = null;
+    };
   }, []);
 
-  const play = useCallback(() => setPlaying(true), []);
-  const pause = useCallback(() => setPlaying(false), []);
+  useEffect(() => {
+    controllerRef.current?.setSpeed(speed);
+  }, [speed]);
+
+  const playAt = useCallback(async (trackIndex: number) => {
+    const list = tracksRef.current;
+    if (trackIndex < 0 || trackIndex >= list.length) return;
+    const nextTrack = list[trackIndex];
+    if (!nextTrack) return;
+    setIndex(trackIndex);
+    const controller = controllerRef.current;
+    if (!controller) return;
+
+    if (!trackPlayable(nextTrack)) {
+      controller.loadSource({
+        url: nextTrack.streamPath,
+        generationStatus: nextTrack.voiceStatus ?? "unavailable",
+      });
+      return;
+    }
+
+    controller.setMediaSessionMeta({
+      title: nextTrack.headline,
+      artist: "जनदर्पण",
+      album: "सुनें",
+    });
+    await controller.play(
+      {
+        url: nextTrack.streamPath,
+        generationStatus:
+          nextTrack.voiceStatus === "failed" ||
+          nextTrack.voiceStatus === "unavailable"
+            ? nextTrack.voiceStatus
+            : undefined,
+      },
+      0
+    );
+  }, []);
+
+  useEffect(() => {
+    playAtRef.current = playAt;
+  }, [playAt]);
+
+  useEffect(() => {
+    if (!autoPlay || !tracks.length) return;
+    const first = tracks.findIndex((t) => trackPlayable(t));
+    if (first < 0) return;
+    void playAt(first);
+    // intentionally only when autoPlay mounts
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlay]);
+
+  const togglePlay = useCallback(() => {
+    if (playing) {
+      controllerRef.current?.pause();
+      return;
+    }
+    void playAt(indexRef.current);
+  }, [playing, playAt]);
+
+  const play = useCallback(() => {
+    void playAt(indexRef.current);
+  }, [playAt]);
+
+  const pause = useCallback(() => {
+    controllerRef.current?.pause();
+  }, []);
 
   const next = useCallback(() => {
-    setIndex((i) => Math.min(i + 1, tracks.length - 1));
-    setCurrentTime(0);
-  }, [tracks.length]);
+    void playAt(Math.min(indexRef.current + 1, tracksRef.current.length - 1));
+  }, [playAt]);
 
   const prev = useCallback(() => {
-    setIndex((i) => Math.max(i - 1, 0));
-    setCurrentTime(0);
-  }, []);
+    void playAt(Math.max(indexRef.current - 1, 0));
+  }, [playAt]);
 
-  const seekTo = useCallback(
-    (seconds: number) => {
-      setCurrentTime(Math.max(0, Math.min(seconds, duration)));
-    },
-    [duration],
-  );
+  const seekTo = useCallback((seconds: number) => {
+    controllerRef.current?.seek(seconds);
+  }, []);
 
   const playTrackAt = useCallback(
     (trackIndex: number) => {
-      if (trackIndex < 0 || trackIndex >= tracks.length) return;
-      setIndex(trackIndex);
-      setCurrentTime(0);
-      setPlaying(true);
+      void playAt(trackIndex);
     },
-    [tracks.length],
+    [playAt]
   );
 
   const playTrackById = useCallback(
@@ -66,8 +176,12 @@ export function useAudioV3({ tracks, autoPlay = false, initialIndex = 0 }: UseAu
       const trackIndex = tracks.findIndex((t) => t.id === trackId);
       if (trackIndex >= 0) playTrackAt(trackIndex);
     },
-    [tracks, playTrackAt],
+    [tracks, playTrackAt]
   );
+
+  const retry = useCallback(() => {
+    void playAt(indexRef.current);
+  }, [playAt]);
 
   const clearSleepTimer = useCallback(() => {
     setSleepTimerMinutes(null);
@@ -80,37 +194,12 @@ export function useAudioV3({ tracks, autoPlay = false, initialIndex = 0 }: UseAu
   }, []);
 
   useEffect(() => {
-    if (!playing || !track) return undefined;
-
-    const intervalMs = 1000 / speed;
-    const timer = window.setInterval(() => {
-      setCurrentTime((t) => {
-        if (t >= duration) {
-          if (index < tracks.length - 1) {
-            setIndex((i) => i + 1);
-            return 0;
-          }
-          setPlaying(false);
-          return duration;
-        }
-        return t + 1;
-      });
-    }, intervalMs);
-
-    return () => window.clearInterval(timer);
-  }, [playing, track, duration, index, tracks.length, speed]);
-
-  useEffect(() => {
-    setCurrentTime(0);
-  }, [index]);
-
-  useEffect(() => {
     if (sleepRemainingSec == null || sleepRemainingSec <= 0) return undefined;
 
     const timer = window.setInterval(() => {
       setSleepRemainingSec((prev) => {
         if (prev == null || prev <= 1) {
-          setPlaying(false);
+          controllerRef.current?.pause();
           setSleepTimerMinutes(null);
           return null;
         }
@@ -123,7 +212,7 @@ export function useAudioV3({ tracks, autoPlay = false, initialIndex = 0 }: UseAu
 
   const selectedVoice = useMemo(
     () => AUDIO_VOICES_PLACEHOLDER.find((v) => v.id === voiceId) ?? AUDIO_VOICES_PLACEHOLDER[0],
-    [voiceId],
+    [voiceId]
   );
 
   return {
@@ -131,6 +220,7 @@ export function useAudioV3({ tracks, autoPlay = false, initialIndex = 0 }: UseAu
     track,
     index,
     playing,
+    status,
     currentTime,
     duration,
     progressPct,
@@ -157,6 +247,10 @@ export function useAudioV3({ tracks, autoPlay = false, initialIndex = 0 }: UseAu
     seekTo,
     playTrackAt,
     playTrackById,
+    retry,
+    errorCode,
+    errorMessage: errorCode ? playerErrorMessage(errorCode, "hi") : null,
+    canPlayCurrent: trackPlayable(track),
   };
 }
 

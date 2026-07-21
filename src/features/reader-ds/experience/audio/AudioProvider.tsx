@@ -10,23 +10,40 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { ListenPlaybackController } from "@/lib/listen/playback-controller";
+import {
+  playerErrorMessage,
+  showsPlayingChrome,
+  type PlayerErrorCode,
+  type PlayerStatus,
+} from "@/lib/listen/player-state";
+import {
+  ARTICLE_SPEECH_START_EVENT,
+  articleSpeechController,
+} from "@/lib/speech/article-speech-controller";
 import {
   loadExperiencePrefs,
   saveExperiencePrefs,
   type PlaybackSpeed,
 } from "../prefs";
-import { formatDuration, type BriefingTrack } from "./types";
+import { formatDuration, trackHasPlayableSource, type BriefingTrack } from "./types";
 
 type AudioContextValue = {
   tracks: BriefingTrack[];
   index: number;
   current: BriefingTrack | null;
+  /** True only after media `playing` (or buffering mid-play). */
   playing: boolean;
+  status: PlayerStatus;
   progress: number;
   positionSec: number;
+  durationSec: number;
   speed: PlaybackSpeed;
   visible: boolean;
   fullOpen: boolean;
+  errorCode: PlayerErrorCode | null;
+  errorMessage: string | null;
+  canPlayCurrent: boolean;
   setTracks: (tracks: BriefingTrack[]) => void;
   playAll: () => void;
   playAt: (index: number) => void;
@@ -34,7 +51,9 @@ type AudioContextValue = {
   next: () => void;
   prev: () => void;
   seekBy: (delta: number) => void;
+  seekTo: (sec: number) => void;
   setSpeed: (speed: PlaybackSpeed) => void;
+  retry: () => void;
   closeMini: () => void;
   openFull: () => void;
   closeFull: () => void;
@@ -62,16 +81,26 @@ export function AudioProvider({
 }) {
   const [tracks, setTracksState] = useState<BriefingTrack[]>(initialTracks);
   const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [status, setStatus] = useState<PlayerStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [positionSec, setPositionSec] = useState(0);
+  const [durationSec, setDurationSec] = useState(0);
   const [visible, setVisible] = useState(false);
   const [fullOpen, setFullOpen] = useState(false);
   const [speed, setSpeedState] = useState<PlaybackSpeed>(1);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const tickRef = useRef<number | null>(null);
+  const [errorCode, setErrorCode] = useState<PlayerErrorCode | null>(null);
+
+  const controllerRef = useRef<ListenPlaybackController | null>(null);
   const tracksRef = useRef(tracks);
-  tracksRef.current = tracks;
+  const indexRef = useRef(index);
+  const startTrackRef = useRef<(i: number, fromSec?: number) => Promise<void>>(
+    async () => undefined
+  );
+
+  useEffect(() => {
+    tracksRef.current = tracks;
+    indexRef.current = index;
+  }, [tracks, index]);
 
   useEffect(() => {
     const prefs = loadExperiencePrefs();
@@ -84,118 +113,131 @@ export function AudioProvider({
     }
   }, [initialTracks]);
 
+  useEffect(() => {
+    const controller = new ListenPlaybackController();
+    controllerRef.current = controller;
+    const unsub = controller.subscribe((snap) => {
+      setStatus(snap.status);
+      setPositionSec(snap.currentTime);
+      setErrorCode(snap.errorCode);
+      const track = tracksRef.current[indexRef.current];
+      const dur =
+        snap.duration > 0 ? snap.duration : (track?.durationSec ?? 0);
+      setDurationSec(dur);
+      setProgress(dur > 0 ? Math.min(1, snap.currentTime / dur) : 0);
+
+      if (snap.status === "ended") {
+        const prefs = loadExperiencePrefs();
+        const i = indexRef.current;
+        const list = tracksRef.current;
+        if (prefs.autoplayNext && i < list.length - 1) {
+          const nextIndex = i + 1;
+          setIndex(nextIndex);
+          queueMicrotask(() => {
+            void startTrackRef.current(nextIndex, 0);
+          });
+        }
+      }
+    });
+
+    return () => {
+      unsub();
+      controller.dispose();
+      controllerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    controllerRef.current?.setSpeed(speed);
+  }, [speed]);
+
+  useEffect(() => {
+    const onArticleSpeech = () => {
+      controllerRef.current?.pause();
+    };
+    window.addEventListener(ARTICLE_SPEECH_START_EVENT, onArticleSpeech);
+    return () =>
+      window.removeEventListener(ARTICLE_SPEECH_START_EVENT, onArticleSpeech);
+  }, []);
+
   const current = tracks[index] ?? null;
+  const playing = showsPlayingChrome(status);
+  const canPlayCurrent = trackHasPlayableSource(current);
 
   const setTracks = useCallback((next: BriefingTrack[]) => {
     tracksRef.current = next;
     setTracksState(next);
   }, []);
 
-  const clearTick = () => {
-    if (tickRef.current != null) {
-      window.clearInterval(tickRef.current);
-      tickRef.current = null;
-    }
-  };
+  const startTrack = useCallback(async (i: number, fromSec = 0) => {
+    const list = tracksRef.current;
+    if (!list.length) return;
+    const clamped = Math.max(0, Math.min(i, list.length - 1));
+    const track = list[clamped];
+    if (!track) return;
 
-  const stopAudioEl = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-  };
+    articleSpeechController.cancel();
+    setIndex(clamped);
+    setVisible(true);
 
-  const startSim = useCallback(
-    (track: BriefingTrack, fromSec = 0) => {
-      clearTick();
-      stopAudioEl();
-      let pos = fromSec;
-      const duration = Math.max(1, track.durationSec);
-      tickRef.current = window.setInterval(() => {
-        pos += 0.25 * speed;
-        if (pos >= duration) {
-          clearTick();
-          setProgress(1);
-          setPositionSec(duration);
-          setPlaying(false);
-          setIndex((i) => {
-            const prefs = loadExperiencePrefs();
-            if (prefs.autoplayNext && i < tracks.length - 1) {
-              setPlaying(true);
-              return i + 1;
-            }
-            return i;
-          });
-          return;
-        }
-        setPositionSec(pos);
-        setProgress(pos / duration);
-      }, 250);
-    },
-    [speed, tracks.length]
-  );
+    const controller = controllerRef.current;
+    if (!controller) return;
 
-  const startRealOrSim = useCallback(
-    (track: BriefingTrack, fromSec = 0) => {
-      clearTick();
-      stopAudioEl();
-      if (track.streamPath) {
-        const el = new Audio(track.streamPath);
-        el.playbackRate = speed;
-        el.currentTime = fromSec;
-        audioRef.current = el;
-        el.ontimeupdate = () => {
-          const dur = el.duration || track.durationSec;
-          setPositionSec(el.currentTime);
-          setProgress(dur ? el.currentTime / dur : 0);
-        };
-        el.onended = () => {
-          setPlaying(false);
-          setIndex((i) => {
-            const prefs = loadExperiencePrefs();
-            if (prefs.autoplayNext && i < tracks.length - 1) {
-              queueMicrotask(() => setPlaying(true));
-              return i + 1;
-            }
-            return i;
-          });
-        };
-        void el.play().catch(() => startSim(track, fromSec));
-        return;
-      }
-      startSim(track, fromSec);
-    },
-    [speed, startSim, tracks.length]
-  );
-
-  useEffect(() => {
-    if (!playing || !current) {
-      clearTick();
-      if (audioRef.current) audioRef.current.pause();
+    if (!trackHasPlayableSource(track)) {
+      controller.loadSource({
+        url: track.streamPath,
+        generationStatus: track.voiceStatus ?? "unavailable",
+      });
       return;
     }
-    startRealOrSim(current, positionSec > 0 && progress < 0.99 ? positionSec : 0);
-    return () => {
-      clearTick();
-      stopAudioEl();
-    };
-    // intentionally re-run when index/playing/speed/current changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, index, speed, current?.id]);
 
-  const playAt = useCallback((i: number) => {
-    if (!tracksRef.current.length) return;
-    setIndex(Math.max(0, Math.min(i, tracksRef.current.length - 1)));
-    setProgress(0);
-    setPositionSec(0);
-    setVisible(true);
-    setPlaying(true);
+    controller.setMediaSessionMeta({
+      title: track.headline,
+      artist: "जनदर्पण",
+      album: "सुनें",
+      artworkUrl: track.imageUrl,
+    });
+
+    await controller.play(
+      {
+        url: track.streamPath,
+        generationStatus:
+          track.voiceStatus === "failed" || track.voiceStatus === "unavailable"
+            ? track.voiceStatus
+            : undefined,
+      },
+      fromSec
+    );
   }, []);
+
+  useEffect(() => {
+    startTrackRef.current = startTrack;
+  }, [startTrack]);
+
+  const playAt = useCallback(
+    (i: number) => {
+      void startTrack(i, 0);
+    },
+    [startTrack]
+  );
 
   const playAll = useCallback(() => {
     if (!tracksRef.current.length) return;
-    playAt(0);
+    const firstPlayable = tracksRef.current.findIndex((t) =>
+      trackHasPlayableSource(t)
+    );
+    playAt(firstPlayable >= 0 ? firstPlayable : 0);
   }, [playAt]);
+
+  const retry = useCallback(() => {
+    const controller = controllerRef.current;
+    if (!controller) return;
+    if (current && trackHasPlayableSource(current)) {
+      void startTrack(index, 0);
+      return;
+    }
+    controller.retry();
+  }, [current, index, startTrack]);
 
   const value = useMemo<AudioContextValue>(
     () => ({
@@ -203,11 +245,16 @@ export function AudioProvider({
       index,
       current,
       playing,
+      status,
       progress,
       positionSec,
+      durationSec: durationSec || current?.durationSec || 0,
       speed,
       visible,
       fullOpen,
+      errorCode,
+      errorMessage: errorCode ? playerErrorMessage(errorCode, "hi") : null,
+      canPlayCurrent,
       setTracks,
       playAll,
       playAt,
@@ -217,52 +264,62 @@ export function AudioProvider({
           return;
         }
         setVisible(true);
-        setPlaying((p) => !p);
+        const controller = controllerRef.current;
+        if (!controller) return;
+        if (playing) {
+          controller.pause();
+          return;
+        }
+        if (!trackHasPlayableSource(current)) {
+          controller.loadSource({
+            url: current.streamPath,
+            generationStatus: current.voiceStatus ?? "unavailable",
+          });
+          return;
+        }
+        void startTrack(
+          index,
+          positionSec > 0 && progress < 0.99 ? positionSec : 0
+        );
       },
       next: () => {
         if (index < tracks.length - 1) {
-          setIndex(index + 1);
-          setProgress(0);
-          setPositionSec(0);
-          setPlaying(true);
-          setVisible(true);
+          void startTrack(index + 1, 0);
         }
       },
       prev: () => {
         if (index > 0) {
-          setIndex(index - 1);
-          setProgress(0);
-          setPositionSec(0);
-          setPlaying(true);
+          void startTrack(index - 1, 0);
         }
       },
       seekBy: (delta) => {
-        if (!current) return;
-        const nextPos = Math.max(
-          0,
-          Math.min(current.durationSec, positionSec + delta)
-        );
-        setPositionSec(nextPos);
-        setProgress(nextPos / current.durationSec);
-        if (audioRef.current) audioRef.current.currentTime = nextPos;
+        controllerRef.current?.seekBy(delta);
+      },
+      seekTo: (sec) => {
+        controllerRef.current?.seek(sec);
       },
       setSpeed: (s) => {
         setSpeedState(s);
         saveExperiencePrefs({ playbackSpeed: s });
-        if (audioRef.current) audioRef.current.playbackRate = s;
+        controllerRef.current?.setSpeed(s);
       },
+      retry,
       closeMini: () => {
-        setPlaying(false);
+        controllerRef.current?.stop();
         setVisible(false);
         setFullOpen(false);
-        clearTick();
-        stopAudioEl();
       },
       openFull: () => setFullOpen(true),
       closeFull: () => setFullOpen(false),
       reorderQueue: (from, to) => {
         setTracksState((list) => {
-          if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) {
+          if (
+            from === to ||
+            from < 0 ||
+            to < 0 ||
+            from >= list.length ||
+            to >= list.length
+          ) {
             return list;
           }
           const next = [...list];
@@ -280,14 +337,20 @@ export function AudioProvider({
       index,
       current,
       playing,
+      status,
       progress,
       positionSec,
+      durationSec,
       speed,
       visible,
       fullOpen,
+      errorCode,
+      canPlayCurrent,
       playAll,
       playAt,
       setTracks,
+      startTrack,
+      retry,
     ]
   );
 

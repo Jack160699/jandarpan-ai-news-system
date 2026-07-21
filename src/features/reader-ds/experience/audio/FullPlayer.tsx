@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { CSSProperties, KeyboardEvent } from "react";
 import { ArticleImage } from "../../components/ArticleImage";
 import { JdIcon } from "../../components/icons";
 import { useJdDsT } from "../../i18n";
@@ -23,18 +24,40 @@ export function FullPlayer() {
     playing,
     progress,
     positionSec,
+    durationSec,
     speed,
+    status,
     toggle,
     next,
     prev,
     seekBy,
     setSpeed,
     closeFull,
+    retry,
+    errorMessage,
+    canPlayCurrent,
   } = audio;
+
+  const busy = status === "loading" || status === "buffering";
+  const failed = status === "failed" || status === "unavailable";
+  const duration = durationSec || current.durationSec;
 
   const cycleSpeed = () => {
     const i = SPEEDS.indexOf(speed);
     setSpeed(SPEEDS[(i + 1) % SPEEDS.length]);
+  };
+
+  const onSeekBarKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      seekBy(5);
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      seekBy(-5);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      seekBy(-positionSec);
+    }
   };
 
   return (
@@ -44,6 +67,7 @@ export function FullPlayer() {
       role="dialog"
       aria-modal="true"
       aria-label={t("listen.fullPlayerAria")}
+      aria-busy={busy || undefined}
       style={{
         position: "fixed",
         inset: 0,
@@ -67,7 +91,7 @@ export function FullPlayer() {
           type="button"
           aria-label={t("masthead.closeAria")}
           onClick={closeFull}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#e7edf6" }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "#e7edf6", minWidth: 44, minHeight: 44 }}
         >
           <JdIcon name="chevD" size={24} stroke={2} color="#e7edf6" />
         </button>
@@ -75,9 +99,13 @@ export function FullPlayer() {
           className="jd-ui"
           style={{ fontSize: 11.5, fontWeight: 700, color: "#93a4c2", letterSpacing: ".06em" }}
         >
-          {t("listen.nowPlaying")}
+          {busy
+            ? status === "buffering"
+              ? t("listen.buffering")
+              : t("listen.loading")
+            : t("listen.nowPlaying")}
         </span>
-        <Link href="/listen/queue" aria-label={t("listen.queue")} style={{ display: "flex", color: "#e7edf6" }}>
+        <Link href="/listen/queue" aria-label={t("listen.queue")} style={{ display: "flex", color: "#e7edf6", minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" }}>
           <JdIcon name="more" size={22} stroke={2} color="#e7edf6" />
         </Link>
       </div>
@@ -108,6 +136,14 @@ export function FullPlayer() {
         </div>
 
         <div
+          role="slider"
+          tabIndex={0}
+          aria-label={t("listen.nowPlaying")}
+          aria-valuemin={0}
+          aria-valuemax={Math.max(1, Math.round(duration))}
+          aria-valuenow={Math.round(positionSec)}
+          aria-valuetext={trackTimeLabel(positionSec, duration)}
+          onKeyDown={onSeekBarKeyDown}
           style={{
             height: 4,
             borderRadius: 4,
@@ -121,7 +157,9 @@ export function FullPlayer() {
               height: 4,
               borderRadius: 4,
               background: "var(--jd-gold)",
+              transition: "width 0.2s linear",
             }}
+            className="jd-listen-progress"
           />
         </div>
         <div
@@ -135,8 +173,42 @@ export function FullPlayer() {
           }}
         >
           <span>{formatDuration(positionSec)}</span>
-          <span>{formatDuration(current.durationSec)}</span>
+          <span>{formatDuration(duration)}</span>
         </div>
+
+        {failed ? (
+          <div
+            className="jd-ui"
+            role="alert"
+            style={{
+              textAlign: "center",
+              marginBottom: 20,
+              color: "#f0c9c9",
+              fontSize: 13,
+            }}
+          >
+            <p style={{ margin: "0 0 12px" }}>
+              {errorMessage || t("listen.unavailable")}
+            </p>
+            <button
+              type="button"
+              onClick={retry}
+              aria-label={t("listen.retry")}
+              style={{
+                minHeight: 44,
+                padding: "10px 18px",
+                borderRadius: 2,
+                border: "1px solid var(--jd-gold)",
+                background: "transparent",
+                color: "var(--jd-gold-soft)",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {t("listen.retry")}
+            </button>
+          </div>
+        ) : null}
 
         <div
           style={{
@@ -157,8 +229,15 @@ export function FullPlayer() {
           </button>
           <button
             type="button"
-            aria-label={playing ? t("listen.pause") : t("listen.play")}
+            aria-label={
+              !canPlayCurrent && !playing
+                ? t("listen.playUnavailableAria")
+                : playing
+                  ? t("listen.pause")
+                  : t("listen.play")
+            }
             onClick={toggle}
+            disabled={!canPlayCurrent && !playing && !failed}
             style={{
               width: 64,
               height: 64,
@@ -168,8 +247,9 @@ export function FullPlayer() {
               alignItems: "center",
               justifyContent: "center",
               border: "none",
-              cursor: "pointer",
+              cursor: canPlayCurrent || playing || failed ? "pointer" : "not-allowed",
               color: "#fff",
+              opacity: busy ? 0.75 : 1,
             }}
           >
             <JdIcon name={playing ? "pause" : "play"} size={28} stroke={2} color="#fff" />
@@ -210,14 +290,20 @@ export function FullPlayer() {
         </div>
 
         <p className="jd-ui" style={{ marginTop: 18, fontSize: 12, color: "#93a4c2", lineHeight: 1.5 }}>
-          {trackTimeLabel(positionSec, current.durationSec)} · {t("listen.audioHint")}
+          {trackTimeLabel(positionSec, duration)}
+          {busy ? ` · ${t("listen.loading")}` : ` · ${t("listen.audioHint")}`}
         </p>
       </div>
+      <style>{`
+        @media (prefers-reduced-motion: reduce) {
+          .jd-listen-progress { transition: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
 
-const ctrlBtn: React.CSSProperties = {
+const ctrlBtn: CSSProperties = {
   background: "none",
   border: "none",
   cursor: "pointer",
@@ -229,7 +315,7 @@ const ctrlBtn: React.CSSProperties = {
   justifyContent: "center",
 };
 
-const tabBtn: React.CSSProperties = {
+const tabBtn: CSSProperties = {
   textAlign: "center",
   fontFamily: "inherit",
   fontSize: 12,
@@ -240,4 +326,9 @@ const tabBtn: React.CSSProperties = {
   cursor: "pointer",
   textDecoration: "none",
   minWidth: 56,
+  minHeight: 44,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
 };
