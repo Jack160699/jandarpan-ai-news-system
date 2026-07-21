@@ -2,31 +2,36 @@
 
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
+import { filterFooterColumns, type FooterColumn } from "../homepage/footer-links";
 
 /**
- * Desktop/tablet footer — 5-col SoT composition (collapses via CSS).
+ * Site footer — desktop grid + compact phone ending above bottom nav.
+ * Only known-valid routes are rendered (dead links filtered).
  */
 export function DeskFooter() {
   const { t, locale } = useJdDsT();
   const year = new Date().getFullYear();
 
-  const cols: Array<{ title: string; links: Array<{ href: string; label: string }> }> = [
+  const cols: FooterColumn[] = [
     {
       title: t("footer.news"),
       links: [
         { href: "/latest", label: t("nav.latest") },
-        { href: "/trending", label: t("home.trending") },
+        { href: "/trending", label: t("home.mostRead") },
         { href: "/district", label: t("nav.district") },
-        { href: "/live", label: "Live" },
+        { href: "/live", label: locale === "en" ? "Live" : "लाइव" },
       ],
     },
     {
       title: t("footer.sections"),
       links: [
+        { href: "/category/chhattisgarh", label: locale === "en" ? "Chhattisgarh" : "छत्तीसगढ़" },
         { href: "/category/politics", label: locale === "en" ? "Politics" : "राजनीति" },
+        { href: "/category/india", label: locale === "en" ? "India" : "भारत" },
+        { href: "/category/world", label: locale === "en" ? "World" : "दुनिया" },
         { href: "/category/business", label: locale === "en" ? "Business" : "व्यापार" },
         { href: "/category/sports", label: locale === "en" ? "Sports" : "खेल" },
-        { href: "/category/opinion", label: locale === "en" ? "Opinion" : "ओपिनियन" },
+        { href: "/category/education", label: locale === "en" ? "Education" : "शिक्षा" },
       ],
     },
     {
@@ -36,21 +41,32 @@ export function DeskFooter() {
         { href: "/listen", label: t("nav.listen") },
         { href: "/contact", label: t("footer.contact") },
         { href: "/about", label: t("footer.about") },
+        { href: "/rates", label: t("footer.rates") },
+        // Careers omitted — no public route
+        // Social omitted — not configured
       ],
     },
     {
       title: t("footer.legal"),
       links: [
+        { href: "/editorial-policy", label: t("footer.editorial") },
+        { href: "/corrections", label: t("footer.corrections") },
         { href: "/privacy", label: t("footer.privacy") },
         { href: "/terms", label: t("footer.terms") },
-        { href: "/corrections", label: t("footer.corrections") },
         { href: "/ads-policy", label: t("footer.ads") },
+        { href: "/sitemap.xml", label: t("footer.sitemap") },
       ],
     },
   ];
 
+  const visible = filterFooterColumns(cols);
+
   return (
-    <footer className="jd-desk-footer jd-ui" data-jd-locale={locale}>
+    <footer
+      className="jd-desk-footer jd-ui"
+      data-jd-locale={locale}
+      data-testid="jd-desk-footer"
+    >
       <div className="jd-desk-inner jd-desk-footer__grid">
         <div className="jd-desk-footer__brand">
           <div className="jd-desk-footer__logo">
@@ -59,7 +75,7 @@ export function DeskFooter() {
           </div>
           <p>{t("footer.blurb")}</p>
         </div>
-        {cols.map((col) => (
+        {visible.map((col) => (
           <div key={col.title} className="jd-desk-footer__col">
             <h3>{col.title}</h3>
             <ul>

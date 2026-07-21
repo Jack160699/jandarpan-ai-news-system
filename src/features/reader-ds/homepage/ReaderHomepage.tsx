@@ -4,7 +4,6 @@ import Link from "next/link";
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
 import type { NativeAdCreative } from "@/lib/monetization/native-feed-ads";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
-import type { ReaderStory } from "../utils";
 import {
   BreakingStrip,
   DesktopPrimaryNav,
@@ -24,29 +23,9 @@ import {
   NativeSponsoredCard,
   PremiumExclusiveStrip,
 } from "../monetization";
-import { useJdDsT, type JdDsStringKey } from "../i18n";
-
-function toStory(a: HomeArticle): ReaderStory {
-  return {
-    slug: a.slug,
-    headline: a.headline,
-    kicker: a.categoryLabel || a.desk?.nameHi || a.desk?.name,
-    summary: a.summary,
-    imageUrl: a.imageUrl,
-    publishedAt: a.publishedAt,
-    isLive: a.isLive,
-  };
-}
-
-const SECTION_COLORS = ["var(--jd-red)", "var(--jd-navy)", "var(--jd-gold)", "var(--jd-ok)"];
-
-type HomeSection = {
-  key: string;
-  title: string;
-  color: string;
-  moreHref: string;
-  stories: ReaderStory[];
-};
+import { useJdDsT } from "../i18n";
+import { pickBreakingItems } from "./breaking";
+import { buildHomeSections, toStory } from "./build-home-sections";
 
 function pickLead(feed: GeneratedHomepageFeed): HomeArticle | null {
   const candidates = [
@@ -61,74 +40,6 @@ function pickLead(feed: GeneratedHomepageFeed): HomeArticle | null {
   return withImage ?? candidates[0] ?? null;
 }
 
-function buildSections(
-  feed: GeneratedHomepageFeed,
-  excludeSlugs: Set<string>,
-  t: (key: JdDsStringKey) => string
-): HomeSection[] {
-  const seen = new Set(excludeSlugs);
-  const take = (pool: HomeArticle[] | undefined, n: number): ReaderStory[] => {
-    const out: ReaderStory[] = [];
-    for (const a of pool ?? []) {
-      if (!a?.slug || seen.has(a.slug)) continue;
-      seen.add(a.slug);
-      out.push(toStory(a));
-      if (out.length >= n) break;
-    }
-    return out;
-  };
-
-  const sections: HomeSection[] = [];
-
-  const regional = take(feed.regionalHighlights, 4);
-  if (regional.length) {
-    sections.push({
-      key: "regional",
-      title: t("home.district"),
-      color: SECTION_COLORS[0],
-      moreHref: "/district",
-      stories: regional,
-    });
-  }
-
-  const trending = take(feed.trending, 4);
-  if (trending.length) {
-    sections.push({
-      key: "trending",
-      title: t("home.topStories"),
-      color: SECTION_COLORS[0],
-      moreHref: "/trending",
-      stories: trending,
-    });
-  }
-
-  for (const stream of feed.categoryStreams ?? []) {
-    const stories = take(stream.articles, 4);
-    if (stories.length) {
-      sections.push({
-        key: `cat-${stream.id}`,
-        title: stream.labelHi || stream.label,
-        color: SECTION_COLORS[sections.length % SECTION_COLORS.length],
-        moreHref: `/category/${stream.id}`,
-        stories,
-      });
-    }
-  }
-
-  const live = take(feed.liveWire, 4);
-  if (live.length && !sections.some((s) => s.key === "trending")) {
-    sections.push({
-      key: "top",
-      title: t("home.topStories"),
-      color: SECTION_COLORS[0],
-      moreHref: "/latest",
-      stories: live,
-    });
-  }
-
-  return sections;
-}
-
 type ReaderHomepageProps = {
   feed: GeneratedHomepageFeed;
   nativeAd?: NativeAdCreative | null;
@@ -139,7 +50,7 @@ type ReaderHomepageProps = {
 
 /**
  * A1 homepage + SoT desktop/tablet editorial composition.
- * Phone layout stays the approved single column — never stretched.
+ * Journalism first; mandi/utilities sit in a lower utility block.
  */
 export function ReaderHomepage({
   feed,
@@ -167,30 +78,47 @@ export function ReaderHomepage({
     return toStory(a);
   });
 
-  const latestSidebar = secondaryPool.slice(2, 7).map((a) => {
-    used.add(a.slug);
-    return toStory(a);
-  });
+  // Sections claim stories next so phone (no desk rail) still gets full coverage.
+  const breakingItems = pickBreakingItems(feed);
+  const sections = buildHomeSections(feed, used, t);
+  for (const section of sections) {
+    for (const s of section.stories) used.add(s.slug);
+  }
 
-  const breaking =
-    feed.breakingTicker?.[0]?.headline ??
-    feed.localBreakingAlerts?.[0]?.headline ??
-    null;
-  const breakingHref = feed.breakingTicker?.[0]?.slug
-    ? `/story/${feed.breakingTicker[0].slug}`
-    : feed.localBreakingAlerts?.[0]?.slug
-      ? `/story/${feed.localBreakingAlerts[0].slug}`
-      : "#";
+  const latestSidebar = secondaryPool
+    .filter((a) => !used.has(a.slug))
+    .slice(0, 5)
+    .map((a) => {
+      used.add(a.slug);
+      return toStory(a);
+    });
 
-  const sections = buildSections(feed, used, t).slice(0, 6);
+  const mostReadSidebar = (feed.trending ?? [])
+    .filter((a) => a && !used.has(a.slug))
+    .slice(0, 4)
+    .map((a) => {
+      used.add(a.slug);
+      return toStory(a);
+    });
+
   const seeAll = t("common.seeAll");
+
+  const endingLinks = [
+    { href: "/latest", label: t("home.latest") },
+    { href: "/trending", label: t("home.mostRead") },
+    { href: "/district", label: t("nav.district") },
+    { href: "/category/chhattisgarh", label: locale === "en" ? "Chhattisgarh" : "छत्तीसगढ़" },
+    { href: "/category/india", label: locale === "en" ? "India" : "भारत" },
+    { href: "/listen", label: t("nav.listen") },
+    { href: "/membership", label: t("home.supportJournalism") },
+  ];
 
   return (
     <ReaderShell activeNav="home" bottomPad={showAds ? 128 : 72}>
       <Masthead premiumBadge={isPremium} />
       <DesktopPrimaryNav active="home" />
       <UtilityRow />
-      <BreakingStrip headline={breaking} href={breakingHref} />
+      <BreakingStrip items={breakingItems} />
 
       <main
         id="main-content"
@@ -229,11 +157,8 @@ export function ReaderHomepage({
             ) : null}
           </div>
 
-          <aside className="jd-home-desk-rail" aria-label={t("home.latest")}>
-            {/* Gold/silver/fuel omitted — mandi only when AGMARKNET data is honest */}
-            <MandiRatesPanel />
-            <VerifiedRatesLinks enabled={verifiedRatesNavEnabled} />
-            <UtilTiles />
+          {/* Editorial right rail — news first; mandi lives in lower utility */}
+          <aside className="jd-home-desk-rail" aria-label={t("home.latest")} data-jd-rail="editorial">
             <div className="jd-home-side-module">
               <div
                 className="jd-ui"
@@ -257,6 +182,31 @@ export function ReaderHomepage({
                 />
               ))}
             </div>
+            {mostReadSidebar.length ? (
+              <div className="jd-home-side-module">
+                <div
+                  className="jd-ui"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "var(--jd-muted)",
+                    marginBottom: 8,
+                  }}
+                >
+                  {t("home.mostRead")}
+                </div>
+                {mostReadSidebar.map((s, i, arr) => (
+                  <SecondaryStory
+                    key={`most-${s.slug}`}
+                    story={s}
+                    last={i === arr.length - 1}
+                    toneIndex={i}
+                  />
+                ))}
+              </div>
+            ) : null}
             {showAds ? (
               <ReservedAd format="sidebar" locale={locale} placementId="home.sidebar" />
             ) : null}
@@ -268,13 +218,6 @@ export function ReaderHomepage({
             <ReservedAd format="billboard" locale={locale} placementId="home.billboard" />
           </div>
         ) : null}
-
-        {/* Phone-only util placement (desk rail hides this duplicate via structure) */}
-        <div className="jd-home-phone-utils">
-          <MandiRatesPanel />
-          <VerifiedRatesLinks enabled={verifiedRatesNavEnabled} />
-          <UtilTiles />
-        </div>
 
         {isPremium ? (
           <PremiumExclusiveStrip
@@ -301,7 +244,7 @@ export function ReaderHomepage({
 
         <div className="jd-home-sections">
           {sections.map((section, i) => (
-            <section key={section.key}>
+            <section key={section.key} data-jd-home-section={section.key}>
               <SectionHeader
                 title={section.title}
                 color={section.color}
@@ -338,6 +281,21 @@ export function ReaderHomepage({
           ))}
         </div>
 
+        {/* Lower utility — mandi / rates / tiles (not in primary viewport rail) */}
+        <section
+          className="jd-home-utility"
+          data-testid="jd-home-utility"
+          aria-label={t("home.utilityTitle")}
+        >
+          <h2 className="jd-ui jd-home-utility__title">{t("home.utilityTitle")}</h2>
+          <MandiRatesPanel />
+          <VerifiedRatesLinks enabled={verifiedRatesNavEnabled} />
+          <UtilTiles />
+          <p className="jd-ui" style={{ margin: "4px 14px 0", fontSize: 12 }}>
+            <Link href="/rates">{t("home.utilityRatesLink")} →</Link>
+          </p>
+        </section>
+
         <div className="jd-home-promo-row">
           <div className="jd-home-promo">
             <h3 className="jd-serif">{t("home.supportJournalism")}</h3>
@@ -350,6 +308,17 @@ export function ReaderHomepage({
             <Link href="/notifications">{t("common.seeAll")} →</Link>
           </div>
         </div>
+
+        <nav className="jd-home-ending" aria-label={t("home.endingAria")} data-testid="jd-home-ending">
+          <h2 className="jd-serif jd-home-ending__title">{t("home.endingTitle")}</h2>
+          <ul className="jd-home-ending__links jd-ui">
+            {endingLinks.map((l) => (
+              <li key={l.href}>
+                <Link href={l.href}>{l.label}</Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         {showAds ? (
           <div className="jd-home-footer-ad">

@@ -201,11 +201,200 @@ html[data-font-scale="xl"] .jd-ds {
   animation: jd-skel 1.2s ease-in-out infinite;
 }
 
+/* ---------- Breaking strip ---------- */
+.jd-breaking-strip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 14px;
+  background: var(--jd-red);
+  color: #fff;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.jd-breaking-strip__badge {
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  background: #fff;
+  color: var(--jd-red);
+  padding: 3px 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  min-width: 5.5rem;
+  justify-content: center;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+.jd-breaking-strip__pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--jd-red);
+  flex-shrink: 0;
+  animation: jd-breaking-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes jd-breaking-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+}
+
+.jd-breaking-strip__label {
+  color: var(--jd-red);
+}
+
+.jd-breaking-strip__item {
+  color: #fff !important;
+  text-decoration: none;
+  display: block;
+  min-width: 0;
+}
+
+.jd-breaking-strip__item--solo {
+  flex: 1;
+  min-width: 0;
+}
+
+.jd-breaking-strip__headline {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.35;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  display: block;
+  word-break: break-word;
+}
+
+.jd-breaking-strip__track-wrap {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent);
+}
+
+.jd-breaking-strip__track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  width: max-content;
+  animation: jd-breaking-ticker 48s linear infinite;
+}
+
+.jd-breaking-strip__track:hover,
+.jd-breaking-strip__track-wrap:focus-within .jd-breaking-strip__track {
+  animation-play-state: paused;
+}
+
+.jd-breaking-strip__track .jd-breaking-strip__headline {
+  white-space: nowrap;
+}
+
+@keyframes jd-breaking-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Home utility block (mandi / rates — below news) */
+.jd-home-utility {
+  margin: 8px 0 4px;
+  padding: 4px 0 12px;
+  border-top: 1px solid var(--jd-line);
+}
+
+.jd-home-utility__title {
+  margin: 0 14px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--jd-muted);
+}
+
+.jd-home-ending {
+  margin: 12px 14px 20px;
+  padding: 14px 0 8px;
+  border-top: 1px solid var(--jd-line);
+}
+
+.jd-home-ending__title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--jd-navy);
+}
+
+.jd-home-ending__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.jd-home-ending__links a {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--jd-red);
+}
+
+.jd-home-ending__links a:focus-visible {
+  outline: 2px solid var(--jd-gold);
+  outline-offset: 2px;
+}
+
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .jd-ds *,
   .jd-ds .jd-skel {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
+  }
+
+  .jd-breaking-strip__pulse {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .jd-breaking-strip__track {
+    animation: none !important;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    gap: 8px 16px;
+  }
+
+  .jd-breaking-strip__track li[aria-hidden="true"] {
+    display: none;
+  }
+
+  .jd-breaking-strip__track .jd-breaking-strip__headline {
+    white-space: normal;
   }
 }
