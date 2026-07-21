@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { traceAdminEmergency } from "@/lib/admin/emergency-mode";
 
-const LOGO_SRC = "/brand/jan-darpan-mark.svg";
+const LOGO_SRC = "/brand/jan-darpan/mark/raster/mark-512.png";
 
 /**
  * Zero-bootstrap login — no session probe, no redirects, no providers.
