@@ -2,79 +2,82 @@
 
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
+import type { BreakingItem } from "../homepage/breaking";
 
 type BreakingStripProps = {
+  /** @deprecated Prefer `items` — single headline kept for callers. */
   headline?: string | null;
   href?: string;
+  items?: BreakingItem[];
 };
 
 /**
- * Conditional breaking strip — white badge + red-dot + serif ellipsis
- * (approved A1 atom). Renders nothing when no real breaking headline.
- * Headline text remains CMS content (untranslated).
+ * Live breaking strip — pulsing indicator, stable Hindi label, full headline
+ * (no premature ellipsis). Multi-item tracks use CSS motion only.
  */
-export function BreakingStrip({ headline, href = "#" }: BreakingStripProps) {
+export function BreakingStrip({ headline, href = "#", items }: BreakingStripProps) {
   const { t, locale } = useJdDsT();
-  if (!headline || !headline.trim()) return null;
+
+  const list: BreakingItem[] =
+    items && items.length
+      ? items
+      : headline?.trim()
+        ? [{ slug: "legacy", headline: headline.trim(), href }]
+        : [];
+
+  if (!list.length) return null;
+
+  const primary = list[0];
+  const multi = list.length > 1;
+
   return (
-    <Link
-      href={href}
+    <div
       className="jd-ui jd-breaking-strip"
       data-jd-locale={locale}
-      style={{
-        flexShrink: 0,
-        display: "flex",
-        alignItems: "center",
-        gap: 9,
-        padding: "7px 14px",
-        background: "var(--jd-red)",
-        color: "#fff",
-        textDecoration: "none",
-        width: "100%",
-        boxSizing: "border-box",
-      }}
+      data-testid="jd-breaking-strip"
+      role="region"
+      aria-label={t("common.breaking")}
     >
-      <span
-        style={{
-          fontWeight: 800,
-          fontSize: locale === "en" ? 9.5 : 10,
-          letterSpacing: ".08em",
-          background: "#fff",
-          color: "var(--jd-red)",
-          padding: "2px 7px",
-          borderRadius: 2,
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          gap: 3,
-          whiteSpace: "nowrap",
-        }}
-      >
-        <span
-          aria-hidden
-          style={{
-            width: 5,
-            height: 5,
-            borderRadius: 5,
-            background: "var(--jd-red)",
-            display: "inline-block",
-          }}
-        />
-        {t("common.breaking")}
+      <span className="jd-breaking-strip__badge" aria-hidden={false}>
+        <span className="jd-breaking-strip__pulse" aria-hidden />
+        <span className="jd-breaking-strip__label">{t("common.breaking")}</span>
       </span>
-      <span
-        className="jd-serif"
-        style={{
-          fontSize: 13,
-          fontWeight: 600,
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          color: "#fff",
-        }}
-      >
-        {headline}
-      </span>
-    </Link>
+
+      {multi ? (
+        <div className="jd-breaking-strip__track-wrap">
+          <ul className="jd-breaking-strip__track">
+            {/* Duplicate once for seamless CSS loop; aria-hidden on clone */}
+            {[0, 1].map((copy) =>
+              list.map((item) => (
+                <li key={`${copy}-${item.slug}`} aria-hidden={copy === 1 ? true : undefined}>
+                  <Link
+                    href={item.href}
+                    className="jd-breaking-strip__item"
+                    tabIndex={copy === 1 ? -1 : undefined}
+                    title={item.headline}
+                  >
+                    <span className="jd-serif jd-breaking-strip__headline">{item.headline}</span>
+                  </Link>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+      ) : (
+        <Link
+          href={primary.href}
+          className="jd-breaking-strip__item jd-breaking-strip__item--solo"
+          title={primary.headline}
+        >
+          <span className="jd-serif jd-breaking-strip__headline">{primary.headline}</span>
+        </Link>
+      )}
+
+      {multi ? (
+        <span className="sr-only">
+          {t("common.breaking")}: {primary.headline}
+        </span>
+      ) : null}
+    </div>
   );
 }

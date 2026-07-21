@@ -17,7 +17,10 @@
 }
 
 .jd-desk-footer {
-  display: none;
+  display: block;
+  margin-top: 24px;
+  background: var(--jd-navy-deep);
+  color: #c7d0e2;
 }
 
 .jd-share-rail {
@@ -40,6 +43,10 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
+}
+
+.jd-home-phone-utils {
+  display: none;
 }
 
 /* ---------- Tablet portrait+ (≥768) ---------- */
@@ -90,6 +97,8 @@
     margin-top: 40px;
     background: var(--jd-navy-deep);
     color: #c7d0e2;
+    /* Reset phone safe-area padding on tablet+ */
+    padding-bottom: 0;
   }
 
   .jd-ds .jd-shell {
@@ -904,7 +913,7 @@
 /* ---------- Phone: keep atoms ---------- */
 @media (max-width: 767px) {
   .jd-home-phone-utils {
-    display: block;
+    display: none !important;
   }
 
   .jd-home-ad-leader,
@@ -913,11 +922,49 @@
   }
 
   .jd-desk-chrome-root,
-  .jd-desk-footer,
   .jd-share-rail,
   .jd-home-desk-rail,
   .jd-home-promo-row {
     display: none !important;
+  }
+
+  /* Compact footer above bottom nav — do not overlap */
+  .jd-desk-footer {
+    display: block !important;
+    margin-top: 16px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .jd-desk-footer__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 12px;
+    padding: 18px 14px 8px;
+  }
+
+  .jd-desk-footer__brand {
+    grid-column: 1 / -1;
+  }
+
+  .jd-desk-footer__brand p {
+    font-size: 12px;
+    line-height: 1.4;
+    margin: 6px 0 0;
+  }
+
+  .jd-desk-footer__col h3 {
+    font-size: 11px;
+    margin: 0 0 6px;
+  }
+
+  .jd-desk-footer__col a {
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .jd-desk-footer__bar {
+    font-size: 11px;
+    padding: 10px 14px 4px;
   }
 
   .jd-ds .jd-shell {
@@ -946,6 +993,14 @@
   .jd-ds .jd-home-lead {
     border-right: none !important;
     padding-right: 0 !important;
+  }
+
+  .jd-breaking-strip {
+    align-items: flex-start;
+  }
+
+  .jd-masthead__inner {
+    overflow: hidden;
   }
 }
 

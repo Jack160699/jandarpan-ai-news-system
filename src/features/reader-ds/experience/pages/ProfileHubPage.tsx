@@ -85,6 +85,18 @@ export function ProfileHubPage() {
         </Link>
 
         <SettingRow
+          icon="search"
+          label={t("search.submit")}
+          sub={t("profile.searchSub")}
+          href="/search"
+        />
+        <SettingRow
+          icon="bell"
+          label={t("masthead.notifyAria")}
+          sub={t("profile.notifyInboxSub")}
+          href="/notifications"
+        />
+        <SettingRow
           icon="star"
           label={t("profile.manageMembership")}
           sub={t("profile.manageSub")}
