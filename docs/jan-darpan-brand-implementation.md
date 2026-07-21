@@ -96,20 +96,43 @@ integrated into it rather than adding a parallel design system:
 | JSON-LD publisher logo | approved mark | `PUBLISHER_LOGO_URL` = SITE_URL + registry `mark` |
 | Article share fallback image | approved OG card | `editorial-images.ts` |
 
-## 4. Old assets removed (confirmed obsolete Jan Darpan identities)
+## 4. Old assets removed + database-backed identity handling
 
+**Old assets removed (8 — confirmed dead, no code/DB/content reference):**
 ```
-public/brand/jan-darpan-chhattisgarh-logo.png      public/brand/jan-darpan-mark.png
-public/brand/jan-darpan-chhattisgarh-logo.svg      public/brand/jan-darpan-mark.svg
-public/brand/jan-darpan-chhattisgarh-og.png        public/brand/cg-bhaskar-logo.svg
-public/brand/jan-darpan-chhattisgarh-og.svg        public/brand/cg-bhaskar-mark.svg
-public/brand/hamar-chhattisgarh-og.svg             public/brand/hamar-chhattisgarh-logo.svg
-                                                    public/brand/hamar-chhattisgarh-mark.svg
+public/brand/jan-darpan-chhattisgarh-logo.svg   public/brand/jan-darpan-mark.svg
+public/brand/jan-darpan-chhattisgarh-og.svg     public/brand/cg-bhaskar-logo.svg
+public/brand/hamar-chhattisgarh-og.svg          public/brand/cg-bhaskar-mark.svg
+public/brand/hamar-chhattisgarh-logo.svg        public/brand/hamar-chhattisgarh-mark.svg
 ```
-The `cg-bhaskar-*` and `hamar-chhattisgarh-*` files are old Jan Darpan **alias**
-identities — their tenant presets `...spread` the Jan Darpan preset and never
-referenced these SVGs, so they were dead. A repo-wide search confirms **no
-reference to any old Jan Darpan logo path remains**.
+The `cg-bhaskar-*` / `hamar-chhattisgarh-*` files are old Jan Darpan **alias**
+identities — their presets `...spread` the Jan Darpan preset and never referenced
+these SVGs, and no DB tenant row exists for those slugs, so they were dead.
+
+**Compatibility aliases — 3 old `.png` paths retained, now serving APPROVED content:**
+```
+public/brand/jan-darpan-chhattisgarh-logo.png  ← approved horizontal lockup
+public/brand/jan-darpan-mark.png               ← approved mark
+public/brand/jan-darpan-chhattisgarh-og.png    ← approved OG card
+```
+**Why:** the live identity is **database-backed**. `newsroom_tenants.config.branding`
+(logoUrl / logoMarkUrl / faviconUrl / ogImageUrl), `platform_config[organization_settings].logoUrl`,
+and stored article `og_image` fields all point at these `.png` paths (Supabase
+project `giiuqshoconjbpiueasp`, shared by preview + production). Because the DB is
+shared, repointing it to the canonical `/brand/jan-darpan/**` paths *before* the
+new assets are live would 404 the current production masthead/OG. The zero-downtime
+fix is to keep these 3 paths resolving to the **approved** images. The old visual
+identity is fully gone; only the path strings remain, serving approved assets.
+
+**Exact DB references covered by the aliases (Supabase `giiuqshoconjbpiueasp`):**
+- `newsroom_tenants` — 1 row (`jan-darpan-chhattisgarh`): `config.branding.{logoUrl,logoMarkUrl,faviconUrl,ogImageUrl}`
+- `platform_config` — 1 row (`organization_settings`): `config_value.logoUrl`
+- `generated_articles` — 38 of 902 rows: `hero_image_url` = old OG path
+
+**Deferred safe follow-up (post-deploy, optional):** repoint those DB rows to the
+canonical `/brand/jan-darpan/**` paths (snapshot the tenant `config` jsonb + org
+`config_value` first), then remove the 3 alias files in a follow-up deploy. Doing
+this before the canonical assets are live would 404 production (shared DB).
 
 ## 5. Preserved third-party / tenant assets (NOT touched)
 
