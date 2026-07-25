@@ -304,5 +304,6 @@ describe("masthead / breaking presentation contracts", () => {
     expect(css).toContain("prefers-reduced-motion");
     expect(css).toContain("jd-breaking-strip__headline");
     expect(css).not.toMatch(/jd-breaking-strip__headline[^{]*text-overflow:\s*ellipsis/);
+    expect(css).toMatch(/overflow-y:\s*visible/);
   });
 });

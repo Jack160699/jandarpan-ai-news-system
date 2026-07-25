@@ -52,20 +52,18 @@ export function Ad({
           }}
         >
           <span
-            className="jd-ui"
+            className="jd-ui jd-type-caption"
             style={{
-              fontSize: 8.5,
               fontWeight: 800,
-              letterSpacing: ".14em",
+              letterSpacing: ".08em",
               color: "var(--jd-muted)",
-              textTransform: "uppercase",
             }}
           >
             विज्ञापन
           </span>
           {close ? (
             <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button type="button" className="jd-ui" style={reportBtn}>
+              <button type="button" className="jd-ui jd-type-caption" style={reportBtn}>
                 रिपोर्ट
               </button>
               <button
@@ -83,17 +81,19 @@ export function Ad({
         children
       ) : mode === "preview" ? (
         <div
-          className="jd-ui"
+          className="jd-ui jd-type-meta"
           style={{
-            height,
+            minHeight: Math.max(height, 48),
+            height: "auto",
+            padding: "10px 8px",
             borderRadius: 2,
             border: "1px dashed var(--jd-line)",
             background: "var(--jd-paper-2)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 10,
             color: "var(--jd-muted)",
+            textAlign: "center",
           }}
         >
           {label ?? `विज्ञापन · ${size}`}
@@ -113,9 +113,10 @@ export function Ad({
 }
 
 const reportBtn = {
-  fontSize: 8.5,
   color: "var(--jd-muted)",
   background: "none",
   border: "none",
   cursor: "pointer",
+  lineHeight: 1.4,
+  paddingBlock: "0.1em",
 } as const;

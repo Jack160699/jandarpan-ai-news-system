@@ -40,7 +40,7 @@ export function BreakingStrip({ headline, href = "#", items }: BreakingStripProp
     >
       <span className="jd-breaking-strip__badge" aria-hidden={false}>
         <span className="jd-breaking-strip__pulse" aria-hidden />
-        <span className="jd-breaking-strip__label">{t("common.breaking")}</span>
+        <span className="jd-breaking-strip__label jd-type-breaking-label">{t("common.breaking")}</span>
       </span>
 
       {multi ? (
@@ -56,7 +56,9 @@ export function BreakingStrip({ headline, href = "#", items }: BreakingStripProp
                     tabIndex={copy === 1 ? -1 : undefined}
                     title={item.headline}
                   >
-                    <span className="jd-serif jd-breaking-strip__headline">{item.headline}</span>
+                    <span className="jd-serif jd-breaking-strip__headline jd-type-breaking-headline">
+                      {item.headline}
+                    </span>
                   </Link>
                 </li>
               ))
@@ -69,7 +71,9 @@ export function BreakingStrip({ headline, href = "#", items }: BreakingStripProp
           className="jd-breaking-strip__item jd-breaking-strip__item--solo"
           title={primary.headline}
         >
-          <span className="jd-serif jd-breaking-strip__headline">{primary.headline}</span>
+          <span className="jd-serif jd-breaking-strip__headline jd-type-breaking-headline">
+            {primary.headline}
+          </span>
         </Link>
       )}
 

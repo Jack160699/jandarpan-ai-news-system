@@ -1,0 +1,208 @@
+/*
+ * Reader DS — Hindi-safe typography scale.
+ *
+ * Devanagari glyphs (matras, anusvara, chandrabindu) extend above the Latin
+ * em-box. Line-heights below ~1.35 with overflow:hidden clip those marks.
+ * These tokens keep a premium newspaper feel without cartoon sizing.
+ */
+
+.jd-ds {
+  /* Absolute mobile scale (px) — responsive clamps below */
+  --jd-type-masthead: 1.375rem; /* 22 */
+  --jd-type-breaking-label: 0.75rem; /* 12 */
+  --jd-type-breaking-headline: 0.875rem; /* 14 */
+  --jd-type-lead: clamp(1.75rem, 5.6vw, 2.125rem); /* 28–34 */
+  --jd-type-card: clamp(1.1875rem, 3.6vw, 1.375rem); /* 19–22 */
+  --jd-type-card-sm: clamp(1.0625rem, 3.2vw, 1.1875rem); /* 17–19 */
+  --jd-type-section: 1.125rem; /* 18 */
+  --jd-type-body: 1.125rem; /* 18 */
+  --jd-type-summary: 1.0625rem; /* 17 */
+  --jd-type-meta: 0.8125rem; /* 13 */
+  --jd-type-button: 0.8125rem; /* 13 */
+  --jd-type-nav: 0.75rem; /* 12 */
+  --jd-type-caption: 0.75rem; /* 12 */
+  --jd-type-footer-h: 0.75rem; /* 12 */
+  --jd-type-footer-link: 0.8125rem; /* 13 */
+  --jd-type-tag: 0.6875rem; /* 11 */
+
+  /* Devanagari-safe leading — never use 1.0–1.2 on Hindi UI text */
+  --jd-lh-display: 1.35;
+  --jd-lh-headline: 1.38;
+  --jd-lh-body: 1.62;
+  --jd-lh-ui: 1.45;
+  --jd-lh-meta: 1.45;
+  --jd-lh-label: 1.4;
+
+  /* Glyph safety padding (matra breathing room) */
+  --jd-type-pad-y: 0.12em;
+  --jd-type-pad-block: 0.15em;
+
+  /* Hindi-first stacks with English-capable fallbacks */
+  --jd-ff-brand: var(--jd-font-brand), "Tiro Devanagari Hindi", "Noto Serif Devanagari",
+    Georgia, "Times New Roman", serif;
+  --jd-ff-serif: var(--font-hindi), "Noto Serif Devanagari", "Tiro Devanagari Hindi", Georgia,
+    "Times New Roman", serif;
+  --jd-ff-ui: var(--jd-font-ui), Mukta, "Noto Sans Devanagari", system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+}
+
+@media (min-width: 768px) {
+  .jd-ds {
+    --jd-type-masthead: 1.625rem;
+    --jd-type-lead: clamp(2rem, 2.4vw, 2.375rem);
+    --jd-type-card: 1.375rem;
+    --jd-type-card-sm: 1.1875rem;
+    --jd-type-section: 1.25rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .jd-ds {
+    --jd-type-lead: clamp(2.125rem, 2.2vw, 2.375rem);
+  }
+}
+
+/* Role utilities — prefer these over one-off inline sizes */
+.jd-ds .jd-type-masthead {
+  font-family: var(--jd-ff-brand);
+  font-size: var(--jd-type-masthead);
+  line-height: var(--jd-lh-display);
+  font-weight: 700;
+  padding-block: var(--jd-type-pad-y);
+  overflow: visible;
+}
+
+.jd-ds .jd-type-breaking-label {
+  font-family: var(--jd-ff-ui);
+  font-size: var(--jd-type-breaking-label);
+  line-height: var(--jd-lh-label);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding-block: 0.1em;
+}
+
+.jd-ds .jd-type-breaking-headline {
+  font-family: var(--jd-ff-serif);
+  font-size: var(--jd-type-breaking-headline);
+  line-height: var(--jd-lh-ui);
+  font-weight: 600;
+  padding-block: var(--jd-type-pad-block);
+}
+
+.jd-ds .jd-type-lead {
+  font-family: var(--jd-ff-serif);
+  font-size: var(--jd-type-lead);
+  line-height: var(--jd-lh-headline);
+  font-weight: 700;
+}
+
+.jd-ds .jd-type-card {
+  font-family: var(--jd-ff-serif);
+  font-size: var(--jd-type-card);
+  line-height: var(--jd-lh-headline);
+  font-weight: 600;
+}
+
+.jd-ds .jd-type-card-sm {
+  font-family: var(--jd-ff-serif);
+  font-size: var(--jd-type-card-sm);
+  line-height: var(--jd-lh-headline);
+  font-weight: 600;
+}
+
+.jd-ds .jd-type-section {
+  font-family: var(--jd-ff-serif);
+  font-size: var(--jd-type-section);
+  line-height: var(--jd-lh-ui);
+  font-weight: 700;
+}
+
+.jd-ds .jd-type-summary {
+  font-family: var(--jd-ff-ui);
+  font-size: var(--jd-type-summary);
+  line-height: var(--jd-lh-body);
+  font-weight: 400;
+}
+
+.jd-ds .jd-type-meta {
+  font-family: var(--jd-ff-ui);
+  font-size: var(--jd-type-meta);
+  line-height: var(--jd-lh-meta);
+  font-weight: 600;
+}
+
+.jd-ds .jd-type-button {
+  font-family: var(--jd-ff-ui);
+  font-size: var(--jd-type-button);
+  line-height: var(--jd-lh-ui);
+  font-weight: 600;
+}
+
+.jd-ds .jd-type-nav {
+  font-family: var(--jd-ff-ui);
+  font-size: var(--jd-type-nav);
+  line-height: var(--jd-lh-label);
+  font-weight: 600;
+  padding-block: 0.08em;
+  overflow: visible;
+}
+
+.jd-ds .jd-type-caption {
+  font-family: var(--jd-ff-ui);
+  font-size: var(--jd-type-caption);
+  line-height: var(--jd-lh-meta);
+}
+
+.jd-ds .jd-type-tag {
+  font-family: var(--jd-ff-ui);
+  font-size: var(--jd-type-tag);
+  line-height: var(--jd-lh-label);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding-block: 0.08em;
+  /* Uppercase harms Devanagari shaping — only Latin kickers may opt in */
+  text-transform: none;
+}
+
+.jd-ds .jd-type-tag[data-script="latn"] {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.jd-ds .jd-type-footer-h {
+  font-family: var(--jd-ff-ui);
+  font-size: var(--jd-type-footer-h);
+  line-height: var(--jd-lh-ui);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jd-ds .jd-type-footer-link {
+  font-family: var(--jd-ff-ui);
+  font-size: var(--jd-type-footer-link);
+  line-height: 1.7;
+}
+
+/* Safe clamp: keep overflow for multi-line clamps but pad glyph box */
+.jd-ds .jd-lead-title,
+.jd-ds .jd-sec-title {
+  padding-block: 0.06em;
+  overflow-wrap: anywhere;
+}
+
+/* Prevent Latin-metric line boxes from cropping Devanagari before font swap */
+.jd-ds .jd-brand,
+.jd-ds .jd-serif,
+.jd-ds .jd-ui {
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* Hindi locale: slightly open UI leading */
+.jd-ds[data-jd-locale="hi"] .jd-type-nav,
+.jd-ds[data-jd-locale="hi"] .jd-type-meta,
+.jd-ds[data-jd-locale="hi"] .jd-type-breaking-label,
+.jd-ds[data-jd-locale="hi"] .jd-type-tag {
+  line-height: 1.5;
+}
