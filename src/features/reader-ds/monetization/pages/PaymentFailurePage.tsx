@@ -29,7 +29,7 @@ export function PaymentFailurePage({
     : "/membership/checkout";
 
   return (
-    <ReaderShell activeNav="more" hideBottomNav reserveMiniPlayer={false}>
+    <ReaderShell activeNav={null} hideBottomNav reserveMiniPlayer={false}>
       <Masthead hideActions />
       <main
         id="main-content"

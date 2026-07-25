@@ -32,7 +32,7 @@ export function AccessibilityPage() {
 
   if (!prefs) {
     return (
-      <ReaderShell activeNav="more">
+      <ReaderShell activeNav={null}>
         <Masthead back backHref="/archive" pageTitle={t("a11y.shortTitle")} />
       </ReaderShell>
     );
@@ -46,7 +46,7 @@ export function AccessibilityPage() {
   const pct = ((scaleIndex + 0.5) / SCALES.length) * 100;
 
   return (
-    <ReaderShell activeNav="more">
+    <ReaderShell activeNav={null}>
       <Masthead back backHref="/archive" pageTitle={t("a11y.shortTitle")} />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto" }}>
         <SectionLabel>{t("a11y.dataSection")}</SectionLabel>

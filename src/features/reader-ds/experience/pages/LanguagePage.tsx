@@ -27,7 +27,7 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
   const selected = override ?? providerLang;
 
   return (
-    <ReaderShell activeNav="more" hideBottomNav>
+    <ReaderShell activeNav={null} hideBottomNav>
       <div
         style={{
           flexShrink: 0,

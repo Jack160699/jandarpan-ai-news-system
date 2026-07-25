@@ -23,7 +23,7 @@ export function MembershipLandingPage({
   const cta = fromPriceLabel ?? t("membership.join");
 
   return (
-    <ReaderShell activeNav="more" dark hideBottomNav reserveMiniPlayer={false}>
+    <ReaderShell activeNav={null} dark hideBottomNav reserveMiniPlayer={false}>
       <div
         style={{
           flexShrink: 0,

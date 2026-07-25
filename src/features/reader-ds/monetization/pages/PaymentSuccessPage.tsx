@@ -19,7 +19,7 @@ export function PaymentSuccessPage({
   const { t } = useJdDsT();
 
   return (
-    <ReaderShell activeNav="more" hideBottomNav reserveMiniPlayer={false}>
+    <ReaderShell activeNav={null} hideBottomNav reserveMiniPlayer={false}>
       <Masthead hideActions />
       <main
         id="main-content"

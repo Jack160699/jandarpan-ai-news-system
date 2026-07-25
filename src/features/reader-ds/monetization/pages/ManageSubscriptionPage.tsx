@@ -17,7 +17,7 @@ export function ManageSubscriptionPage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   return (
-    <ReaderShell activeNav="more">
+    <ReaderShell activeNav={null}>
       <Masthead back backHref="/archive" pageTitle={t("membership.title")} />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto" }}>
         <div
