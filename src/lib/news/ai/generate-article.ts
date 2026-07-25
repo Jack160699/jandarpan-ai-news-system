@@ -109,6 +109,7 @@ import { logNewsroom } from "@/lib/newsroom/logger";
 import { EDITORIAL_CAPACITY } from "@/lib/newsroom/editorial-capacity";
 import { selectEditorialCandidates } from "@/lib/infrastructure/workers/editorial-priority";
 import { prepareEditorialCandidateWaves } from "./editorial-candidate-waves";
+import { isSafeBatchRescueCandidate } from "./editorial-batch-rescue";
 import {
   AUTO_GENERATION_MAX_AGE_HOURS,
   classifyNoSignalsForEvent,
@@ -1421,7 +1422,7 @@ async function prepareCandidate(
     });
   }
 
-  const hqGate = applyHumanQualityAndEvidenceGate({
+  let hqGate = applyHumanQualityAndEvidenceGate({
     draft,
     event,
     signals,
@@ -1430,6 +1431,46 @@ async function prepareCandidate(
     freshness,
   });
   quality = hqGate.quality;
+
+  if (
+    quality.publishDecision === "repair" &&
+    !quality.hard_reject &&
+    !usedFallback
+  ) {
+    draft = await repairBorderlineDraft({
+      draft,
+      event,
+      factPackText,
+      language,
+    });
+    repaired = true;
+    quality = evaluateDraft({
+      draft,
+      event,
+      signals,
+      factPackText,
+      sourceTexts,
+      existingHeadlines,
+      existingBodyFingerprints: storyIndex?.bodyFingerprints,
+      existingEventIds: storyIndex?.eventIds,
+      articleType: articleTypeClassification.type,
+      evidenceSufficient: articleTypeClassification.evidenceSufficient,
+    });
+    hqGate = applyHumanQualityAndEvidenceGate({
+      draft,
+      event,
+      signals,
+      sourceTexts,
+      quality,
+      freshness,
+    });
+    quality = hqGate.quality;
+    logEditorial("human_quality_repaired", {
+      eventId: event.id,
+      score: hqGate.humanScore.score,
+      decision: quality.publishDecision,
+    });
+  }
 
   return {
     candidate: {
@@ -2016,7 +2057,7 @@ export async function generateEditorialsFromEvents(options?: {
 
   if (generated === 0 && failedCandidates.length > 0) {
     const rescuable = failedCandidates
-      .filter((c) => !c.quality.hard_reject)
+      .filter((c) => isSafeBatchRescueCandidate(c.quality))
       .sort((a, b) => b.quality.ai_confidence - a.quality.ai_confidence)
       .slice(0, BATCH_RESCUE_COUNT);
 
@@ -2033,10 +2074,11 @@ export async function generateEditorialsFromEvents(options?: {
         factPackText,
         sourceTexts,
         existingHeadlines,
-        forcePublish: true,
         articleType: candidate.articleType,
         evidenceSufficient: candidate.articleTypeClassification.evidenceSufficient,
       });
+
+      if (!isSafeBatchRescueCandidate(quality)) continue;
 
       const saved = await persistGeneratedArticle({
         event: candidate.event,

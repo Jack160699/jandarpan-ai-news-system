@@ -66,7 +66,10 @@ export function resolveDeskTemplateFromCategory(
   category?: string | null,
   options?: { region?: string | null; urgencyScore?: number | null }
 ): AiDeskTemplate {
-  if (options?.urgencyScore != null && options.urgencyScore >= 0.75) {
+  const rawUrgency = options?.urgencyScore;
+  const normalizedUrgency =
+    rawUrgency == null ? null : rawUrgency > 1 ? rawUrgency / 100 : rawUrgency;
+  if (normalizedUrgency != null && normalizedUrgency >= 0.75) {
     return "breaking_news";
   }
 
