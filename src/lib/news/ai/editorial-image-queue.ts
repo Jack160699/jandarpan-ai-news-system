@@ -48,11 +48,49 @@ function getDefaultMaxAttempts(): number {
   return getRetryConfig().maxQueueAttempts;
 }
 
+export type EnqueueEditorialImageResult = {
+  enqueued: boolean;
+  reason:
+    | "created"
+    | "requeued"
+    | "already_pending"
+    | "already_processing"
+    | "already_completed"
+    | "error";
+  error?: string;
+};
+
+/**
+ * Idempotent enqueue — skips duplicate pending/processing jobs and
+ * completed jobs unless `force` is set (admin regenerate / explicit backfill).
+ */
 export async function enqueueEditorialImage(
   generatedArticleId: string,
-  options?: { customPrompt?: string; priority?: number }
+  options?: { customPrompt?: string; priority?: number; force?: boolean }
 ): Promise<boolean> {
+  const result = await enqueueEditorialImageDetailed(generatedArticleId, options);
+  return result.enqueued;
+}
+
+export async function enqueueEditorialImageDetailed(
+  generatedArticleId: string,
+  options?: { customPrompt?: string; priority?: number; force?: boolean }
+): Promise<EnqueueEditorialImageResult> {
   const supabase = createAdminServerClient();
+  const existing = await getQueueRowForArticle(generatedArticleId);
+
+  if (existing && !options?.force) {
+    if (existing.status === "pending") {
+      return { enqueued: false, reason: "already_pending" };
+    }
+    if (existing.status === "processing") {
+      return { enqueued: false, reason: "already_processing" };
+    }
+    if (existing.status === "completed") {
+      return { enqueued: false, reason: "already_completed" };
+    }
+  }
+
   const { error } = await supabase.from("editorial_image_queue").upsert(
     {
       generated_article_id: generatedArticleId,
@@ -72,9 +110,12 @@ export async function enqueueEditorialImage(
 
   if (error) {
     console.warn("[editorial-image-queue] enqueue:", error.message);
-    return false;
+    return { enqueued: false, reason: "error", error: error.message };
   }
-  return true;
+  return {
+    enqueued: true,
+    reason: existing ? "requeued" : "created",
+  };
 }
 
 export async function countPendingEditorialImages(): Promise<number> {

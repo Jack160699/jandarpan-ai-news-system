@@ -1,8 +1,13 @@
 /**
- * Intelligent editorial image prompt builder — uses full article context
+ * Intelligent editorial image prompt builder — uses full article context + brief
  */
 
 import { createHash } from "crypto";
+import {
+  briefToPromptFragment,
+  buildEditorialImageBrief,
+  type EditorialImageBrief,
+} from "@/lib/news/ai/editorial-image-brief";
 import {
   summarizeContextForPrompt,
   type EditorialImageContext,
@@ -27,15 +32,17 @@ export function buildIntelligentEditorialPrompt(input: {
   context: EditorialImageContext;
   moderation: ModerationResult;
   repairAttempt?: number;
+  brief?: EditorialImageBrief;
 }): string {
   const { context, moderation, repairAttempt = 0 } = input;
+  const brief = input.brief ?? buildEditorialImageBrief(context);
 
   if (context.customPrompt?.trim()) {
     return [
       context.customPrompt.trim(),
       BRAND_VISUAL.palette,
       hindiFriendlyCompositionNotes(),
-      "Forbidden: photorealism, logos, embedded text, identifiable real people.",
+      "Forbidden: photorealism, logos, embedded text, identifiable real people, western cityscapes for local CG news.",
     ].join(" ");
   }
 
@@ -55,14 +62,15 @@ export function buildIntelligentEditorialPrompt(input: {
         : "Pan-India civic context: diverse community silhouettes (non-identifiable)";
 
   const contextBlock = summarizeContextForPrompt(context);
+  const briefBlock = briefToPromptFragment(brief);
 
   const safetyBlock = moderation.forceSymbolicOnly
-    ? "ONLY abstract symbolic shapes, maps, icons, silhouettes without identifiable faces. No humans resembling real people."
-    : "No identifiable real people, no politician likeness, no photorealism, no fake disaster photography.";
+    ? "ONLY abstract symbolic shapes, maps, icons, silhouettes without identifiable faces. No humans resembling real people. This is labeled editorial illustration — not documentary evidence."
+    : "No identifiable real people, no politician likeness, no photorealism, no fake disaster photography. Clearly editorial illustration, not proof of the event.";
 
   const repairNote =
     repairAttempt > 0
-      ? `Repair pass ${repairAttempt}: simplify composition, strengthen single metaphor matching headline theme.`
+      ? `Repair pass ${repairAttempt}: simplify composition, strengthen single metaphor matching headline theme, avoid repeating prior composition.`
       : "";
 
   const peopleNote =
@@ -70,25 +78,32 @@ export function buildIntelligentEditorialPrompt(input: {
       ? `Public figures mentioned — use generic civic silhouettes only, never likeness of: ${context.entities.people.join(", ")}.`
       : "";
 
+  // Story-specific salt so unrelated stories do not share identical prompts
+  const uniquenessSalt = hashImagePrompt(
+    `${context.headline}|${context.location.district ?? ""}|${context.theme}|${context.entities.keywords.slice(0, 3).join(",")}`
+  );
+
   return [
     BRAND_VISUAL.style,
     `Create a ${urgencyTier} hero illustration for ${BRAND_VISUAL.name}.`,
     `Story theme: ${context.theme}. ${style.artisticDirection}`,
     `Headline context: ${moderation.sanitizedHeadline}.`,
     contextBlock,
+    briefBlock,
+    `Composition uniqueness token: ${uniquenessSalt} — do not reuse stock compositions from unrelated stories.`,
     `Category: ${context.category}. ${categoryTemplate.motifs}`,
     `Mood: ${style.mood}. Category mood: ${categoryTemplate.mood}.`,
-    `Composition: ${style.composition}. ${categoryTemplate.composition}.`,
+    `Composition: ${style.composition}. ${categoryTemplate.composition}. Mobile-safe focal point in central third.`,
     `Color: ${style.colorNotes}. ${BRAND_VISUAL.palette}.`,
     `Regional setting: ${locationCues}.`,
     peopleNote,
     BRAND_VISUAL.typographySpace,
     hindiFriendlyCompositionNotes(),
     "Visual language: premium editorial illustration — soft gradients, symbolic storytelling, credible Indian newsroom art direction.",
-    `Avoid: ${[...style.avoid, "photographs", "photorealism", "logos", "watermarks", "embedded text"].join(", ")}.`,
+    `Avoid: ${[...style.avoid, "photographs", "photorealism", "logos", "watermarks", "embedded text", "fake mastheads", "western skylines for local news", "duplicate generic compositions"].join(", ")}.`,
     safetyBlock,
     repairNote,
-    "Output: single cohesive 16:9 hero illustration optimized for mobile and OpenGraph crop.",
+    "Output: single cohesive 16:9 hero illustration optimized for mobile card and OpenGraph crop.",
   ]
     .filter(Boolean)
     .join(" ");
