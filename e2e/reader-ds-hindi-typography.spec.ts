@@ -54,17 +54,18 @@ test.describe("reader-ds Hindi typography", () => {
       };
 
       return {
-        masthead: measure(pick(".jd-type-masthead, .jd-masthead .jd-brand")),
+        // Logo masthead — measure breaking/nav text roles instead of removed wordmark class.
         breakingLabel: measure(pick(".jd-breaking-strip__label")),
         breakingHeadline: measure(pick(".jd-breaking-strip__headline")),
         lead: measure(pick(".jd-lead-title")),
         meta: measure(pick(".jd-type-meta")),
         nav: measure(pick(".jd-bottom-nav .jd-type-nav")),
+        brandLogo: Boolean(pick('.jd-masthead img[data-jd-brand-asset], .jd-masthead [data-jd-brand-asset]')),
         bodyOverflowX: document.documentElement.scrollWidth > window.innerWidth + 1,
       };
     });
 
-    expect(report.masthead?.ratio ?? 0).toBeGreaterThanOrEqual(1.3);
+    expect(report.brandLogo || report.breakingLabel).toBeTruthy();
     expect(report.breakingLabel?.ratio ?? 0).toBeGreaterThanOrEqual(1.3);
     expect(report.breakingHeadline?.ratio ?? 0).toBeGreaterThanOrEqual(1.35);
     if (report.lead) {

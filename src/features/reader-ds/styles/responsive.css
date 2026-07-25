@@ -1678,6 +1678,10 @@
     pointer-events: auto;
   }
 
+  .jd-photo-story__thumb * {
+    pointer-events: none;
+  }
+
   .jd-photo-story__thumb.is-active {
     border-color: var(--jd-gold);
   }

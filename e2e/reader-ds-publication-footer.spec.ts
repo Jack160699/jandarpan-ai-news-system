@@ -91,11 +91,13 @@ test.describe("reader-ds publication footer (Agent 3)", () => {
 
     const footer = page.getByTestId("jd-desk-footer");
     await footer.scrollIntoViewIfNeeded();
-    const footerBox = await footer.boundingBox();
+    const footerContent = footer.locator(".jd-desk-footer__grid").first();
+    const contentBox = await footerContent.boundingBox();
     const navBox = await page.locator(".jd-bottom-nav").boundingBox();
-    expect(footerBox && navBox).toBeTruthy();
-    if (footerBox && navBox) {
-      expect(footerBox.y + footerBox.height).toBeLessThanOrEqual(navBox.y + 4);
+    expect(contentBox && navBox).toBeTruthy();
+    if (contentBox && navBox) {
+      // Footer shell may use padding-bottom to clear the fixed nav; assert content itself.
+      expect(contentBox.y + contentBox.height).toBeLessThanOrEqual(navBox.y + 4);
     }
   });
 

@@ -123,7 +123,7 @@ export function PhotoGallery({ images, kicker, backHref = "/" }: PhotoGalleryPro
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setIndex(i);
+                  go(i);
                 }}
               >
                 <ArticleImage

@@ -110,6 +110,7 @@ describe("reader-ds Hindi typography component contracts", () => {
     const src = await readFile(path.join(__dirname, "components/BottomNav.tsx"), "utf8");
     expect(src).toContain("jd-type-nav");
     expect(src).not.toMatch(/fontSize:\s*9(?:\.5)?/);
+    expect(src).not.toMatch(/fontSize:\s*1[01](?!\d)/);
     expect(src).not.toMatch(/lineHeight:\s*1\.1(?!\d)/);
   });
 

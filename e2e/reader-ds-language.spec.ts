@@ -24,9 +24,11 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     const nav = page.locator(".jd-bottom-nav");
     await expect(nav).toBeVisible({ timeout: 45_000 });
     await expect(nav.getByText("होम", { exact: true })).toBeVisible();
-    await expect(nav.getByText("अधिक", { exact: true })).toBeVisible();
+    await expect(nav.getByText("वीडियो", { exact: true })).toBeVisible();
     await expect(nav.getByText("Home", { exact: true })).toHaveCount(0);
     await expect(nav).toHaveAttribute("data-jd-locale", "hi");
+    // Profile/More lives in the masthead after header-nav refinement.
+    await expect(page.getByRole("link", { name: /प्रोफ़ाइल|Profile/i }).first()).toBeVisible();
   });
 
   test("D26 English selection updates chrome and persists after reload", async ({
@@ -42,16 +44,16 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     // Profile hub always mounts bottom nav (does not depend on homepage feed).
     await expect(page.locator(".jd-bottom-nav")).toBeVisible({ timeout: 45_000 });
     await expect(page.locator(".jd-bottom-nav")).toHaveAttribute("data-jd-locale", "en");
-    await expect(page.locator(".jd-bottom-nav").getByText("More", { exact: true })).toBeVisible();
+    await expect(page.locator(".jd-bottom-nav").getByText("Videos", { exact: true })).toBeVisible();
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const nav = page.locator(".jd-bottom-nav");
     await expect(nav).toBeVisible({ timeout: 45_000 });
     await expect(nav).toHaveAttribute("data-jd-locale", "en");
     await expect(nav.getByText("Home", { exact: true })).toBeVisible();
-    await expect(nav.getByText("More", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Videos", { exact: true })).toBeVisible();
     await expect(nav.getByText("होम", { exact: true })).toHaveCount(0);
-    await expect(nav.getByText("अधिक", { exact: true })).toHaveCount(0);
+    await expect(nav.getByText("वीडियो", { exact: true })).toHaveCount(0);
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(nav).toHaveAttribute("data-jd-locale", "en");

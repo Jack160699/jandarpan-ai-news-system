@@ -77,9 +77,7 @@ export function BottomNav({
             <span
               className="jd-ui jd-type-nav"
               style={{
-                fontSize: locale === "en" ? 10 : 11,
                 fontWeight: on ? 800 : 650,
-                lineHeight: 1.15,
                 textAlign: "center",
                 whiteSpace: "nowrap",
                 overflowX: "hidden",
