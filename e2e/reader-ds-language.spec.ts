@@ -21,7 +21,7 @@ test.describe("reader-ds language switching (blocker #3)", () => {
 
   test("defaults to Hindi chrome on first visit", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const nav = page.locator(".jd-bottom-nav");
+    const nav = page.getByTestId("jd-bottom-nav").first();
     await expect(nav).toBeVisible({ timeout: 45_000 });
     await expect(nav.getByText("होम", { exact: true })).toBeVisible();
     await expect(nav.getByText("वीडियो", { exact: true })).toBeVisible();
@@ -45,13 +45,13 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
 
     // Profile hub always mounts bottom nav (does not depend on homepage feed).
-    const archiveNav = page.locator(".jd-bottom-nav");
+    const archiveNav = page.getByTestId("jd-bottom-nav").first();
     await expect(archiveNav).toBeVisible({ timeout: 45_000 });
     await expect(archiveNav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
     await expect(archiveNav.getByText("Videos", { exact: true })).toBeVisible();
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const nav = page.locator(".jd-bottom-nav");
+    const nav = page.getByTestId("jd-bottom-nav").first();
     await expect(nav).toBeVisible({ timeout: 45_000 });
     await expect(nav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
     await expect(nav.getByText("Home", { exact: true })).toBeVisible();
@@ -82,7 +82,7 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     });
     await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
-    await expect(page.locator(".jd-bottom-nav")).toHaveAttribute("data-jd-locale", "en", {
+    await expect(page.getByTestId("jd-bottom-nav").first()).toHaveAttribute("data-jd-locale", "en", {
       timeout: 30_000,
     });
 
@@ -96,7 +96,7 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const nav = page.locator(".jd-bottom-nav");
+    const nav = page.getByTestId("jd-bottom-nav").first();
     await expect(nav).toBeVisible({ timeout: 45_000 });
     await expect(nav).toHaveAttribute("data-jd-locale", "hi", { timeout: 30_000 });
     await expect(nav.getByText("होम", { exact: true })).toBeVisible();

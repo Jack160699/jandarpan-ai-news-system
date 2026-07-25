@@ -327,7 +327,7 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await expect(page.getByTestId("jd-photo-thumbnail-rail").first()).toBeVisible();
     await expect(page.getByTestId("jd-photo-thumb-0")).toBeVisible();
     const thumb1 = page.getByTestId("jd-photo-thumb-1");
-    await thumb1.click({ force: true });
+    await thumb1.evaluate((el) => (el as HTMLButtonElement).click());
     await expect(thumb1).toHaveClass(/is-active/, { timeout: 10_000 });
     await expect(thumb1).toHaveAttribute("aria-current", "true");
   });
