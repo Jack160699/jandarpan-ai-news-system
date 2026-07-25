@@ -45,22 +45,32 @@ function hindiParagraphs(n: number, wordsPer = 40): string {
 }
 
 describe("article-type classification", () => {
-  it("classifies breaking alerts as concise", () => {
+  it("uses developing-story depth for urgent events with rich evidence", () => {
     const c = classifyArticleType({
       urgencyScore: 90,
       signalCount: 2,
       factPackChars: 2000,
       category: "breaking",
     });
+    expect(c.type).toBe("developing_story");
+    expect(ARTICLE_DEPTH_RULES.breaking_alert.maxWords).toBeLessThanOrEqual(450);
+  });
+
+  it("reserves breaking alerts for urgent events with thin evidence", () => {
+    const c = classifyArticleType({
+      urgencyScore: 90,
+      signalCount: 1,
+      factPackChars: 350,
+      category: "breaking",
+    });
     expect(c.type).toBe("breaking_alert");
-    expect(ARTICLE_DEPTH_RULES.breaking_alert.maxWords).toBeLessThanOrEqual(280);
   });
 
   it("keeps breaking alert depth floor concise", () => {
     const body = hindiParagraphs(2, 50);
     const floor = meetsDepthFloor(body, "breaking_alert");
-    expect(floor.minWords).toBeLessThanOrEqual(80);
-    expect(depthRejectThreshold("breaking_alert")).toBe(80);
+    expect(floor.minWords).toBeGreaterThanOrEqual(220);
+    expect(depthRejectThreshold("breaking_alert")).toBe(220);
   });
 
   it("targets standard report depth when evidence is rich", () => {
