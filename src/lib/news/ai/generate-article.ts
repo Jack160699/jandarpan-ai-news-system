@@ -107,6 +107,7 @@ import type {
 import { logNewsroom } from "@/lib/newsroom/logger";
 import { EDITORIAL_CAPACITY } from "@/lib/newsroom/editorial-capacity";
 import { selectEditorialCandidates } from "@/lib/infrastructure/workers/editorial-priority";
+import { prepareEditorialCandidateWaves } from "./editorial-candidate-waves";
 import {
   AUTO_GENERATION_MAX_AGE_HOURS,
   classifyNoSignalsForEvent,
@@ -1731,13 +1732,7 @@ export async function generateEditorialsFromEvents(options?: {
   }
 
   const eligible = resolvable;
-  const pending = selectEditorialCandidates(eligible, limit);
-  const candidatePool = {
-    windowed: windowed.length,
-    resolvable: resolvable.length,
-    filteredNoSignals,
-    selected: pending.length,
-  };
+  const rankedPending = selectEditorialCandidates(eligible, eligible.length);
 
   let generated = 0;
   let published = 0;
@@ -1773,10 +1768,11 @@ export async function generateEditorialsFromEvents(options?: {
     }
   }
 
-  const preparedList = await runWithConcurrency(
-    pending,
-    INFRA_CONFIG.editorialConcurrency,
-    (event) =>
+  const candidateWaves = await prepareEditorialCandidateWaves({
+    ranked: rankedPending,
+    limit,
+    concurrency: INFRA_CONFIG.editorialConcurrency,
+    prepare: (event) =>
       prepareCandidate(
         event,
         [
@@ -1787,8 +1783,18 @@ export async function generateEditorialsFromEvents(options?: {
           bodyFingerprints: existingBodyFingerprints,
           eventIds: [...usedEventIds],
         }
-      )
-  );
+      ),
+    isCandidate: (prepared) => Boolean(prepared.candidate),
+  });
+  const pending = candidateWaves.attempted;
+  const preparedList = candidateWaves.prepared;
+  const candidatePool = {
+    windowed: windowed.length,
+    resolvable: resolvable.length,
+    filteredNoSignals,
+    selected: pending.length,
+    prepared: candidateWaves.candidateCount,
+  };
 
   for (let i = 0; i < pending.length; i++) {
     const event = pending[i];
