@@ -28,7 +28,8 @@ export function normalizeMandiRecord(
   row: RawMandiRecord,
   fetchedAt: string,
   unitHi = "₹/क्विंटल",
-  unitEn = "₹/quintal"
+  unitEn = "₹/quintal",
+  now: Date = new Date()
 ): MandiRate | null {
   const state = pickString(row, ["state", "State"]);
   const district = pickString(row, ["district", "District"]);
@@ -49,7 +50,7 @@ export function normalizeMandiRecord(
   if (!state || !district || !market || !providerCommodity || !reportedAt) return null;
   if (modalPrice == null || modalPrice < 0) return null;
 
-  const freshness = classifyMandiFreshness(reportedAt);
+  const freshness = classifyMandiFreshness(reportedAt, now);
   if (freshness === "stale" || freshness === "invalid") return null;
 
   const labels = localizeCommodity(providerCommodity);

@@ -111,7 +111,8 @@ async function fetchPage(opts: {
  * Server-only AGMARKNET mandi fetch. Never returns the API key or provider URL.
  */
 export async function fetchMandiRates(opts: FetchMandiOptions = {}): Promise<MandiProviderResult> {
-  const fetchedAt = (opts.now ?? new Date()).toISOString();
+  const now = opts.now ?? new Date();
+  const fetchedAt = now.toISOString();
   const apiKey = readApiKey(opts.apiKey);
   const fetchImpl = opts.fetchImpl ?? fetch;
   const revalidateSec = opts.revalidateSec ?? MANDI_REVALIDATE_SEC;
@@ -234,7 +235,7 @@ export async function fetchMandiRates(opts: FetchMandiOptions = {}): Promise<Man
 
   const normalized: MandiRate[] = [];
   for (const row of raw) {
-    const rate = normalizeMandiRecord(row, fetchedAt);
+    const rate = normalizeMandiRecord(row, fetchedAt, undefined, undefined, now);
     if (!rate) continue;
     if (!rate.state.toLowerCase().includes("chhattisgarh") && !rate.state.toLowerCase().includes("chattisgarh")) {
       continue;

@@ -68,7 +68,10 @@ describe("mandi normalize + freshness", () => {
         max_price: "2400",
         modal_price: "2300",
       },
-      NOW.toISOString()
+      NOW.toISOString(),
+      undefined,
+      undefined,
+      NOW
     );
     expect(ok?.modalPrice).toBe(2300);
     expect(ok?.commodity).toBe("धान");
@@ -82,7 +85,10 @@ describe("mandi normalize + freshness", () => {
         arrival_date: "20/07/2026",
         modal_price: "",
       },
-      NOW.toISOString()
+      NOW.toISOString(),
+      undefined,
+      undefined,
+      NOW
     );
     expect(bad).toBeNull();
   });
@@ -100,7 +106,10 @@ describe("mandi normalize + freshness", () => {
         "Max Price": "1200",
         "Modal Price": "1000",
       },
-      NOW.toISOString()
+      NOW.toISOString(),
+      undefined,
+      undefined,
+      NOW
     );
     expect(ok?.modalPrice).toBe(1000);
     expect(ok?.commodity).toBe("टमाटर");
