@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { resolveAdRenderMode } from "../ads/ad-display";
 import { JdIcon } from "./icons";
 
 type AdProps = {
@@ -7,37 +8,80 @@ type AdProps = {
   height?: number;
   close?: boolean;
   children?: ReactNode;
+  reserveWhenEmpty?: boolean;
+  forcePreview?: boolean;
 };
 
 /**
- * Advertisement container with the approved "विज्ञापन" label and optional
- * report/close controls. Renders a labelled empty slot (ad-unavailable state)
- * when no ad creative is provided — never fabricates ad content.
+ * Advertisement container with approved "विज्ञापन" labelling.
+ * Empty slots: preview shows dimensions; production hides or uses subtle reserve.
+ * Never fabricates ad content.
  */
-export function Ad({ label, size = "320×64", height = 64, close = false, children }: AdProps) {
+export function Ad({
+  label,
+  size = "320×64",
+  height = 64,
+  close = false,
+  children,
+  reserveWhenEmpty = false,
+  forcePreview,
+}: AdProps) {
+  const hasCreative = Boolean(children);
+  const mode = resolveAdRenderMode({
+    hasCreative,
+    reserveWhenEmpty,
+    forcePreview,
+  });
+
+  if (mode === "hidden") return null;
+
   return (
-    <aside style={{ margin: "12px 14px 0" }} aria-label="विज्ञापन">
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
-        <span
-          className="jd-ui"
-          style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: ".14em", color: "var(--jd-muted)", textTransform: "uppercase" }}
+    <aside
+      style={{ margin: "12px 14px 0" }}
+      aria-label="विज्ञापन"
+      data-jd-ad-mode={mode}
+      data-testid="jd-ad-slot"
+    >
+      {mode !== "subtle" ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 3,
+          }}
         >
-          विज्ञापन
-        </span>
-        {close ? (
-          <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button type="button" className="jd-ui" style={reportBtn}>
-              रिपोर्ट
-            </button>
-            <button type="button" aria-label="बंद करें" style={{ ...reportBtn, padding: 0, display: "flex" }}>
-              <JdIcon name="close" size={12} stroke={2} color="var(--jd-muted)" />
-            </button>
+          <span
+            className="jd-ui"
+            style={{
+              fontSize: 8.5,
+              fontWeight: 800,
+              letterSpacing: ".14em",
+              color: "var(--jd-muted)",
+              textTransform: "uppercase",
+            }}
+          >
+            विज्ञापन
           </span>
-        ) : null}
-      </div>
-      {children ? (
+          {close ? (
+            <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button type="button" className="jd-ui" style={reportBtn}>
+                रिपोर्ट
+              </button>
+              <button
+                type="button"
+                aria-label="बंद करें"
+                style={{ ...reportBtn, padding: 0, display: "flex" }}
+              >
+                <JdIcon name="close" size={12} stroke={2} color="var(--jd-muted)" />
+              </button>
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      {mode === "creative" ? (
         children
-      ) : (
+      ) : mode === "preview" ? (
         <div
           className="jd-ui"
           style={{
@@ -54,6 +98,15 @@ export function Ad({ label, size = "320×64", height = 64, close = false, childr
         >
           {label ?? `विज्ञापन · ${size}`}
         </div>
+      ) : (
+        <div
+          aria-hidden
+          style={{
+            height: Math.min(height, 48),
+            borderRadius: 2,
+            background: "var(--jd-paper-2)",
+          }}
+        />
       )}
     </aside>
   );

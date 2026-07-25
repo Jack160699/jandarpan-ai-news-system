@@ -2,71 +2,69 @@
 
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
-import { filterFooterColumns, type FooterColumn } from "../homepage/footer-links";
+import {
+  buildPublicationFooterColumns,
+  type FooterLink,
+} from "../homepage/footer-links";
 import { BrandMark } from "./BrandMark";
 
+type DeskFooterProps = {
+  /** Configured social profiles only — never invent handles. */
+  socialLinks?: FooterLink[];
+  /** Optional ownership / publisher line already configured upstream. */
+  publisherLine?: string | null;
+};
+
 /**
- * Site footer — desktop grid + compact phone ending above bottom nav.
- * Only known-valid routes are rendered (dead links filtered).
+ * Publication-grade site footer — navy Reader DS identity.
+ * Only known-valid routes render (dead links filtered).
  */
-export function DeskFooter() {
+export function DeskFooter({ socialLinks, publisherLine }: DeskFooterProps = {}) {
   const { t, locale } = useJdDsT();
   const year = new Date().getFullYear();
 
-  const cols: FooterColumn[] = [
+  const cols = buildPublicationFooterColumns(
     {
-      title: t("footer.news"),
-      links: [
-        { href: "/latest", label: t("nav.latest") },
-        { href: "/trending", label: t("home.mostRead") },
-        { href: "/district", label: t("nav.district") },
-        { href: "/live", label: locale === "en" ? "Live" : "लाइव" },
-      ],
+      newsNav: t("footer.newsNav"),
+      districts: t("footer.districts"),
+      allDistricts: t("footer.allDistricts"),
+      publication: t("footer.publication"),
+      utilities: t("footer.utilities"),
+      topHeadlines: t("footer.topHeadlines"),
+      chhattisgarh: locale === "en" ? "Chhattisgarh" : "छत्तीसगढ़",
+      india: locale === "en" ? "India" : "भारत",
+      politics: locale === "en" ? "Politics" : "राजनीति",
+      business: locale === "en" ? "Business" : "व्यापार",
+      education: locale === "en" ? "Education" : "शिक्षा",
+      health: locale === "en" ? "Health" : "स्वास्थ्य",
+      sports: locale === "en" ? "Sports" : "खेल",
+      entertainment: locale === "en" ? "Entertainment" : "मनोरंजन",
+      technology: locale === "en" ? "Technology" : "टेक्नोलॉजी",
+      about: t("footer.about"),
+      contact: t("footer.contact"),
+      editorial: t("footer.editorial"),
+      corrections: t("footer.corrections"),
+      privacy: t("footer.privacy"),
+      terms: t("footer.terms"),
+      ads: t("footer.ads"),
+      sitemap: t("footer.sitemap"),
+      rss: t("footer.rss"),
+      listen: t("nav.listen"),
+      saved: t("footer.saved"),
+      notifications: t("footer.notifications"),
+      support: t("home.supportJournalism"),
+      rates: t("footer.rates"),
     },
-    {
-      title: t("footer.sections"),
-      links: [
-        { href: "/category/chhattisgarh", label: locale === "en" ? "Chhattisgarh" : "छत्तीसगढ़" },
-        { href: "/category/politics", label: locale === "en" ? "Politics" : "राजनीति" },
-        { href: "/category/india", label: locale === "en" ? "India" : "भारत" },
-        { href: "/category/world", label: locale === "en" ? "World" : "दुनिया" },
-        { href: "/category/business", label: locale === "en" ? "Business" : "व्यापार" },
-        { href: "/category/sports", label: locale === "en" ? "Sports" : "खेल" },
-        { href: "/category/education", label: locale === "en" ? "Education" : "शिक्षा" },
-      ],
-    },
-    {
-      title: t("footer.support"),
-      links: [
-        { href: "/membership", label: t("desk.becomeMember") },
-        { href: "/listen", label: t("nav.listen") },
-        { href: "/contact", label: t("footer.contact") },
-        { href: "/about", label: t("footer.about") },
-        { href: "/rates", label: t("footer.rates") },
-        // Careers omitted — no public route
-        // Social omitted — not configured
-      ],
-    },
-    {
-      title: t("footer.legal"),
-      links: [
-        { href: "/editorial-policy", label: t("footer.editorial") },
-        { href: "/corrections", label: t("footer.corrections") },
-        { href: "/privacy", label: t("footer.privacy") },
-        { href: "/terms", label: t("footer.terms") },
-        { href: "/ads-policy", label: t("footer.ads") },
-        { href: "/sitemap.xml", label: t("footer.sitemap") },
-      ],
-    },
-  ];
-
-  const visible = filterFooterColumns(cols);
+    { locale, socialLinks }
+  );
 
   return (
     <footer
       className="jd-desk-footer jd-ui"
       data-jd-locale={locale}
       data-testid="jd-desk-footer"
+      role="contentinfo"
+      aria-label={t("footer.aria")}
     >
       <div className="jd-desk-inner jd-desk-footer__grid">
         <div className="jd-desk-footer__brand">
@@ -74,24 +72,36 @@ export function DeskFooter() {
             <BrandMark size={22} radius={5} />
             <span className="jd-brand">{t("brand.name")}</span>
           </div>
-          <p>{t("footer.blurb")}</p>
+          <p className="jd-desk-footer__tagline">{t("desk.tagline")}</p>
+          <p className="jd-desk-footer__blurb">{t("footer.blurb")}</p>
         </div>
-        {visible.map((col) => (
-          <div key={col.title} className="jd-desk-footer__col">
-            <h3>{col.title}</h3>
-            <ul>
-              {col.links.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href}>{l.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+
+        <div className="jd-desk-footer__cols" data-testid="jd-desk-footer-cols">
+          {cols.map((col) => (
+            <div
+              key={col.id ?? col.title}
+              className="jd-desk-footer__col"
+              data-jd-footer-col={col.id}
+            >
+              <h3>{col.title}</h3>
+              <ul className="jd-desk-footer__list">
+                {col.links.map((l) => (
+                  <li key={`${col.id ?? col.title}-${l.href}`}>
+                    <Link href={l.href}>{l.label}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       </div>
+
       <div className="jd-desk-footer__bar">
-        <div className="jd-desk-inner">
-          © {year} {t("brand.name")} · {t("footer.rights")}
+        <div className="jd-desk-inner jd-desk-footer__bar-inner">
+          <span>
+            © {year} {t("brand.name")}
+            {publisherLine ? ` · ${publisherLine}` : ""} · {t("footer.rights")}
+          </span>
         </div>
       </div>
     </footer>
