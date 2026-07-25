@@ -170,8 +170,7 @@ describe("footer link allowlist", () => {
 });
 
 describe("masthead / breaking presentation contracts", () => {
-  it("documents that masthead actions are removed (reachability via More)", () => {
-    // Reachable destinations after header cleanup:
+  it("keeps Search / Notifications / Profile destinations reachable from masthead", () => {
     expect("/search").toMatch(/^\/search$/);
     expect("/notifications").toMatch(/^\/notifications$/);
     expect("/archive").toMatch(/^\/archive$/);

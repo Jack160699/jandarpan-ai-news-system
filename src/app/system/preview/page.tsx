@@ -28,7 +28,7 @@ export default async function SystemPreviewPage({
   switch (state) {
     case "empty":
       return (
-        <ReaderShell activeNav="more" showPermissionSheets={false}>
+        <ReaderShell activeNav={null} showPermissionSheets={false}>
           <Masthead back backHref="/" pageTitle="सहेजे" />
           <EmptyState />
         </ReaderShell>

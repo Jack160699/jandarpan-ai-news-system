@@ -186,6 +186,24 @@ html[data-font-scale="xl"] .jd-ds {
   outline-offset: 2px;
 }
 
+/* Phone masthead action hit targets */
+.jd-ds .jd-masthead__action:focus-visible {
+  outline: 2px solid var(--jd-gold-soft);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+.jd-ds .jd-masthead__actions {
+  flex-shrink: 0;
+}
+.jd-ds .jd-masthead__inner {
+  overflow: hidden;
+}
+.jd-ds .jd-bottom-nav a:focus-visible {
+  outline: 2px solid var(--jd-gold);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
 /* F46 skeleton shimmer */
 @keyframes jd-skel {
   0% {

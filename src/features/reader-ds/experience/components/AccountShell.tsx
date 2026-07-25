@@ -83,13 +83,13 @@ export function AccountShell({
   }
 
   return (
-    <ReaderShell activeNav="more">
+    <ReaderShell activeNav={null}>
       <Masthead
         pageTitle={pageTitle}
         back={Boolean(backHref)}
         backHref={backHref}
       />
-      <DesktopPrimaryNav active="more" />
+      <DesktopPrimaryNav active={null} />
 
       <div className="jd-account-layout">
         <nav

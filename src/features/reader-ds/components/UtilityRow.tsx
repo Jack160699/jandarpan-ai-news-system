@@ -31,9 +31,9 @@ function formatShortDate(localeTag: string): string {
 }
 
 /**
- * Compact utility row under masthead — navyDeep, three clusters:
- * district+chev · date · weather+temp (approved A1).
- * Weather is live Open-Meteo only — never invents temperatures.
+ * Compact utility row under masthead — three balanced clusters:
+ * district (tappable) · date (center) · weather (end).
+ * Long district names ellipsize; no horizontal overflow.
  */
 export function UtilityRow({
   district: districtProp,
@@ -71,17 +71,19 @@ export function UtilityRow({
           alignItems: "center",
           gap: 4,
           fontWeight: 600,
-          minWidth: 56,
           justifyContent: "flex-end",
+          minWidth: 0,
         }}
         aria-label={tempProp}
       >
         <JdIcon name="sun" size={14} stroke={1.8} color="var(--jd-gold-soft)" />
-        <span>{tempProp}</span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {tempProp}
+        </span>
       </div>
     );
   } else if (disableLiveWeather) {
-    weatherNode = <span aria-hidden style={{ minWidth: 56, display: "inline-block" }} />;
+    weatherNode = <span aria-hidden style={{ display: "inline-block", minHeight: 14 }} />;
   } else if (weather.status === "loading") {
     weatherNode = (
       <div
@@ -90,9 +92,9 @@ export function UtilityRow({
           alignItems: "center",
           gap: 4,
           fontWeight: 600,
-          minWidth: 72,
           justifyContent: "flex-end",
           opacity: 0.55,
+          minWidth: 0,
         }}
         aria-busy="true"
         aria-label={t("util.weatherLoading")}
@@ -103,10 +105,17 @@ export function UtilityRow({
             height: 14,
             borderRadius: 2,
             background: "rgba(142,160,196,0.35)",
+            flexShrink: 0,
           }}
         />
         <span
-          style={{ width: 36, height: 10, borderRadius: 2, background: "rgba(142,160,196,0.35)" }}
+          style={{
+            width: 28,
+            height: 10,
+            borderRadius: 2,
+            background: "rgba(142,160,196,0.35)",
+            flexShrink: 0,
+          }}
         />
       </div>
     );
@@ -120,9 +129,8 @@ export function UtilityRow({
           alignItems: "center",
           gap: 4,
           fontWeight: 600,
-          minWidth: 72,
           justifyContent: "flex-end",
-          maxWidth: "38%",
+          minWidth: 0,
         }}
         title={
           weather.fetchedAt
@@ -144,9 +152,9 @@ export function UtilityRow({
           display: "flex",
           alignItems: "center",
           justifyContent: "flex-end",
-          minWidth: 56,
           color: "#8ea0c4",
           fontWeight: 600,
+          minWidth: 0,
         }}
         aria-label={t("util.weatherUnavailable")}
       >
@@ -160,21 +168,25 @@ export function UtilityRow({
       className="jd-ui jd-utility-row"
       data-jd-locale={locale}
       data-jd-weather={tempProp ? "override" : weather.status}
+      data-testid="jd-utility-row"
       style={{
         flexShrink: 0,
         background: "var(--jd-navy-deep)",
         width: "100%",
         color: "#c7d0e2",
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
         alignItems: "center",
-        justifyContent: "space-between",
+        columnGap: 8,
         padding: "6px 14px",
         fontSize: locale === "en" ? 10.5 : 11.5,
-        gap: 8,
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
       <Link
         href={districtHref}
+        data-testid="jd-utility-district"
         style={{
           display: "flex",
           alignItems: "center",
@@ -182,8 +194,10 @@ export function UtilityRow({
           fontWeight: 700,
           color: "var(--jd-gold-soft)",
           textDecoration: "none",
-          maxWidth: "42%",
           minWidth: 0,
+          minHeight: 32,
+          maxWidth: "100%",
+          justifySelf: "start",
         }}
       >
         <JdIcon name="pin" size={13} stroke={2} color="var(--jd-gold)" />
@@ -192,14 +206,26 @@ export function UtilityRow({
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            minWidth: 0,
           }}
         >
           {districtLabel}
         </span>
         <JdIcon name="chevD" size={12} stroke={2} color="#8ea0c4" />
       </Link>
-      <span style={{ color: "#8ea0c4", whiteSpace: "nowrap", flexShrink: 0 }}>{date}</span>
-      {weatherNode}
+      <span
+        data-testid="jd-utility-date"
+        style={{
+          color: "#8ea0c4",
+          whiteSpace: "nowrap",
+          flexShrink: 0,
+          textAlign: "center",
+          justifySelf: "center",
+        }}
+      >
+        {date}
+      </span>
+      <div style={{ justifySelf: "end", minWidth: 0, maxWidth: "100%" }}>{weatherNode}</div>
     </div>
   );
 }

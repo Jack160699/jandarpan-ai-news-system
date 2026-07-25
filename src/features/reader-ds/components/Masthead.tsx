@@ -2,41 +2,47 @@
 
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
-import { JdIcon } from "./icons";
 import { BrandMark } from "./BrandMark";
+import { JdIcon } from "./icons";
+import { MastheadBrandLogo } from "./MastheadBrandLogo";
+import { MastheadNotifyButton } from "./MastheadNotifyButton";
+import { MastheadProfileButton } from "./MastheadProfileButton";
+import { MastheadSearchButton } from "./MastheadSearchButton";
 
 type MastheadProps = {
   pageTitle?: string;
   back?: boolean;
   backHref?: string;
-  /** @deprecated Mobile header no longer shows Search/Notify/Profile; kept for API compat. */
+  /** Hide Search / Notifications / Profile (focused overlays). */
   hideActions?: boolean;
-  /** Gold premium badge beside wordmark (E43 member home). */
+  /** Gold premium badge beside brand (E43 member home). */
   premiumBadge?: boolean;
   /** Replace back/brand with close control (E36 overlay). */
   closeHref?: string;
 };
 
 /**
- * Compact sticky masthead — brand + optional back/close only.
- * Search / Notifications / Profile live in bottom nav More (/archive)
- * and desktop DeskChrome — not duplicated here.
+ * Compact sticky phone masthead:
+ * Left — approved compact-dark lockup on home; mark + title on inner pages.
+ * Right — Search · Notifications · Profile/More.
  */
 export function Masthead({
   pageTitle,
   back,
   backHref = "/",
+  hideActions = false,
   premiumBadge = false,
   closeHref,
 }: MastheadProps) {
   const { t, locale } = useJdDsT();
+  const isHomeBrand = !closeHref && !back && !pageTitle;
 
   return (
     <header
       className="jd-masthead"
       data-jd-locale={locale}
       data-testid="jd-masthead"
-      data-jd-masthead-actions="none"
+      data-jd-masthead-actions={hideActions ? "hidden" : "search-notify-profile"}
       style={{
         position: "sticky",
         top: 0,
@@ -44,7 +50,7 @@ export function Masthead({
         flexShrink: 0,
         background: "var(--jd-navy)",
         color: "var(--jd-paper)",
-        padding: "7px 14px 8px",
+        padding: "6px 10px 6px 12px",
       }}
     >
       <div
@@ -52,19 +58,28 @@ export function Masthead({
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "flex-start",
-          gap: 8,
+          justifyContent: "space-between",
+          gap: 6,
           maxWidth: 900,
           margin: "0 auto",
           width: "100%",
-          minHeight: 32,
+          minHeight: 44,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            minWidth: 0,
+            flex: "1 1 auto",
+          }}
+        >
           {closeHref ? (
             <Link
               href={closeHref}
               aria-label={t("masthead.closeAria")}
+              className="jd-masthead__action"
               style={{
                 display: "flex",
                 minWidth: 44,
@@ -72,7 +87,7 @@ export function Masthead({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "var(--jd-gold-soft)",
-                margin: "-6px 0 -6px -6px",
+                marginLeft: -6,
               }}
             >
               <JdIcon name="close" size={22} stroke={2} color="var(--jd-gold-soft)" />
@@ -81,6 +96,7 @@ export function Masthead({
             <Link
               href={backHref}
               aria-label={t("masthead.backAria")}
+              className="jd-masthead__action"
               style={{
                 display: "flex",
                 minWidth: 44,
@@ -88,10 +104,43 @@ export function Masthead({
                 alignItems: "center",
                 justifyContent: "center",
                 color: "var(--jd-gold-soft)",
-                margin: "-6px 0 -6px -6px",
+                marginLeft: -6,
               }}
             >
               <JdIcon name="arrowL" size={22} stroke={2} color="var(--jd-gold-soft)" />
+            </Link>
+          ) : isHomeBrand ? (
+            <Link
+              href="/"
+              aria-label={t("masthead.homeAria")}
+              data-testid="jd-masthead-brand"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                flexShrink: 1,
+                minWidth: 0,
+                textDecoration: "none",
+                gap: 8,
+              }}
+            >
+              <MastheadBrandLogo alt={t("brand.name")} />
+              {premiumBadge ? (
+                <span
+                  className="jd-ui"
+                  style={{
+                    fontSize: 8.5,
+                    fontWeight: 800,
+                    letterSpacing: ".06em",
+                    color: "var(--jd-navy)",
+                    background: "var(--jd-gold)",
+                    padding: "2px 6px",
+                    borderRadius: 2,
+                    flexShrink: 0,
+                  }}
+                >
+                  {t("masthead.premium")}
+                </span>
+              ) : null}
             </Link>
           ) : (
             <Link
@@ -112,56 +161,32 @@ export function Masthead({
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
+                minWidth: 0,
               }}
             >
               {pageTitle}
             </span>
-          ) : (
-            <Link
-              href="/"
-              style={{
-                textDecoration: "none",
-                color: "inherit",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                minWidth: 0,
-              }}
-            >
-              <span
-                className={locale === "en" ? "jd-ui" : "jd-brand"}
-                style={{
-                  fontSize: locale === "en" ? 17 : 20,
-                  lineHeight: 1.1,
-                  display: "block",
-                  fontWeight: 700,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {t("brand.name")}
-              </span>
-              {premiumBadge ? (
-                <span
-                  className="jd-ui"
-                  style={{
-                    fontSize: 8.5,
-                    fontWeight: 800,
-                    letterSpacing: ".06em",
-                    color: "var(--jd-navy)",
-                    background: "var(--jd-gold)",
-                    padding: "2px 6px",
-                    borderRadius: 2,
-                    flexShrink: 0,
-                  }}
-                >
-                  {t("masthead.premium")}
-                </span>
-              ) : null}
-            </Link>
-          )}
+          ) : null}
         </div>
+
+        {!hideActions ? (
+          <nav
+            className="jd-masthead__actions"
+            aria-label={t("masthead.actionsAria")}
+            data-testid="jd-masthead-actions"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 0,
+              flexShrink: 0,
+            }}
+          >
+            <MastheadSearchButton />
+            <MastheadNotifyButton />
+            <MastheadProfileButton />
+          </nav>
+        ) : null}
       </div>
     </header>
   );

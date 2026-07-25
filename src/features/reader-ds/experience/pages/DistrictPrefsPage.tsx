@@ -74,7 +74,7 @@ export function DistrictPrefsPage() {
   };
 
   return (
-    <ReaderShell activeNav="more">
+    <ReaderShell activeNav={null}>
       <Masthead back backHref="/archive" pageTitle={t("districtPrefs.shortTitle")} />
       <div
         style={{

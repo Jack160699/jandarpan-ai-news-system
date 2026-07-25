@@ -49,7 +49,7 @@ export function FollowedTopicsPage() {
   const suggestions = SUGGESTIONS.filter((s) => !interests.includes(s.id));
 
   return (
-    <ReaderShell activeNav="more">
+    <ReaderShell activeNav={null}>
       <Masthead back backHref="/archive" pageTitle={t("followed.shortTitle")} />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "6px 0" }}>
         <SectionLabel>{t("followed.yourTopics")}</SectionLabel>

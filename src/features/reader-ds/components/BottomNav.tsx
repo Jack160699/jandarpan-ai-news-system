@@ -3,19 +3,21 @@
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
 import { JdIcon } from "./icons";
-import { getPrimaryNavItems } from "./navItems";
+import { getPrimaryNavItems, type PrimaryNavKey } from "./navItems";
 
-export type BottomNavKey = "home" | "district" | "latest" | "listen" | "more";
+export type BottomNavKey = PrimaryNavKey;
 
 /**
- * 5-destination bottom navigation (phone). Hidden at tablet+ via CSS —
- * replaced by DesktopPrimaryNav so the mobile column is never stretched.
+ * Phone bottom navigation — primary reading destinations only.
+ * Profile/More lives in the masthead; Search is header-only.
+ * Hidden at tablet+ via CSS (DeskChrome replaces phone chrome).
  */
 export function BottomNav({
-  active = "home",
+  active,
   dark = false,
 }: {
-  active?: BottomNavKey;
+  /** When omitted/null, no item is marked current (e.g. account hub). */
+  active?: BottomNavKey | null;
   dark?: boolean;
 }) {
   const { t, locale } = useJdDsT();
@@ -25,7 +27,9 @@ export function BottomNav({
     <nav
       className="jd-bottom-nav"
       aria-label={t("nav.aria")}
+      data-testid="jd-bottom-nav"
       data-jd-locale={locale}
+      data-jd-nav-count={String(items.length)}
       style={{
         position: "fixed",
         left: 0,
@@ -36,42 +40,51 @@ export function BottomNav({
         borderTop: dark ? "1px solid rgba(150,175,215,0.16)" : "1px solid var(--jd-line)",
         display: "flex",
         justifyContent: "space-around",
-        padding: "7px 0 max(9px, env(safe-area-inset-bottom))",
+        alignItems: "stretch",
+        padding: "6px 4px max(8px, env(safe-area-inset-bottom))",
       }}
     >
       {items.map((it) => {
-        const on = it.key === active;
-        const color = on ? "var(--jd-red)" : dark ? "#93a4c2" : "var(--jd-muted)";
+        const on = active != null && it.key === active;
+        const color = on
+          ? "var(--jd-red)"
+          : dark
+            ? "#c7d0e2"
+            : "var(--jd-ink-2)";
         return (
           <Link
             key={it.key}
             href={it.href}
             aria-current={on ? "page" : undefined}
+            data-jd-nav-key={it.key}
             style={{
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               gap: 3,
-              minWidth: 56,
-              maxWidth: 72,
-              minHeight: 44,
+              flex: "1 1 0",
+              minWidth: 0,
+              maxWidth: 88,
+              minHeight: 48,
               justifyContent: "center",
               color,
-              padding: "0 2px",
+              padding: "2px 4px",
+              textDecoration: "none",
             }}
           >
-            <JdIcon name={it.icon} size={21} stroke={on ? 2.1 : 1.8} color={color} />
+            <JdIcon name={it.icon} size={22} stroke={on ? 2.2 : 1.85} color={color} />
             <span
               className="jd-ui"
               style={{
-                fontSize: locale === "en" ? 9 : 9.5,
-                fontWeight: on ? 800 : 600,
-                lineHeight: 1.1,
+                fontSize: locale === "en" ? 10 : 11,
+                fontWeight: on ? 800 : 650,
+                lineHeight: 1.15,
                 textAlign: "center",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 maxWidth: "100%",
+                color,
               }}
             >
               {it.label}
