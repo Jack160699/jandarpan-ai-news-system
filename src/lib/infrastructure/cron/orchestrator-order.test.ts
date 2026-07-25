@@ -6,6 +6,9 @@ describe("orchestrator worker ordering", () => {
     const images = INTELLIGENCE_PIPELINE.indexOf("editorial_images");
     expect(images).toBeGreaterThan(-1);
     expect(images).toBeLessThan(
+      INTELLIGENCE_PIPELINE.indexOf("job_processor")
+    );
+    expect(images).toBeLessThan(
       INTELLIGENCE_PIPELINE.indexOf("intelligence_embed")
     );
     expect(images).toBeLessThan(

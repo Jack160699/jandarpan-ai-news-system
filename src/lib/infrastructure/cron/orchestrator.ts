@@ -40,8 +40,8 @@ export type OrchestrateResult = {
 /** Core newsroom work precedes lower-priority intelligence maintenance. */
 export const INTELLIGENCE_PIPELINE: WorkerId[] = [
   "ai_enrich",
-  "job_processor",
   "editorial_images",
+  "job_processor",
   "intelligence_embed",
   "intelligence_snapshot",
   "analytics_aggregate",
