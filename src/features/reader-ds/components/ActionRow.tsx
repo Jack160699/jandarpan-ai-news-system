@@ -64,26 +64,31 @@ function ActionButton({
     display: "flex" as const,
     alignItems: "center",
     gap: 5,
-    fontSize: 11.5,
     fontWeight: 600,
     color: "var(--jd-ink-3)",
     background: "none",
     border: "none",
-    padding: "6px 2px",
-    minHeight: 40,
+    padding: "7px 2px",
+    minHeight: 44,
     cursor: "pointer",
     textDecoration: "none",
   };
   if (href) {
     return (
-      <Link href={href} className="jd-ui" style={style} data-action={icon}>
+      <Link href={href} className="jd-ui jd-type-button" style={style} data-action={icon}>
         <JdIcon name={icon} size={16} stroke={1.8} />
         {label}
       </Link>
     );
   }
   return (
-    <button type="button" className="jd-ui" style={style} data-action={icon} onClick={onClick}>
+    <button
+      type="button"
+      className="jd-ui jd-type-button"
+      style={style}
+      data-action={icon}
+      onClick={onClick}
+    >
       <JdIcon name={icon} size={16} stroke={1.8} />
       {label}
     </button>

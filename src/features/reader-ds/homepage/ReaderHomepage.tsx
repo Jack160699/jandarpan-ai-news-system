@@ -29,8 +29,10 @@ import {
   DEFAULT_DISTRICT_SLUG,
   rankDistrictStories,
 } from "@/lib/district-intelligence";
+import { isAdPreviewMode, shouldMountStickyAd } from "../ads/ad-display";
 import { pickBreakingItems } from "./breaking";
 import { buildHomeSections, toStory } from "./build-home-sections";
+import { PageEndingModules } from "./PageEndingModules";
 
 function pickLead(
   feed: GeneratedHomepageFeed,
@@ -117,19 +119,35 @@ export function ReaderHomepage({
     });
 
   const seeAll = t("common.seeAll");
+  const adPreview = isAdPreviewMode();
+  /** Sticky only with creative or preview — never empty 320×50 chrome in production. */
+  const showStickyAd =
+    showAds &&
+    shouldMountStickyAd({
+      hasCreative: false,
+      forcePreview: adPreview,
+    });
 
-  const endingLinks = [
-    { href: "/latest", label: t("home.latest") },
-    { href: "/trending", label: t("home.mostRead") },
-    { href: "/district", label: t("nav.district") },
+  const endingLatest = (feed.liveWire ?? [])
+    .filter((a) => a?.slug && a.headline?.trim())
+    .map(toStory);
+  const endingMostRead = (feed.trending ?? [])
+    .filter((a) => a?.slug && a.headline?.trim())
+    .map(toStory);
+  const endingCategories = [
     { href: "/category/chhattisgarh", label: locale === "en" ? "Chhattisgarh" : "छत्तीसगढ़" },
-    { href: "/category/india", label: locale === "en" ? "India" : "भारत" },
-    { href: "/listen", label: t("nav.listen") },
-    { href: "/membership", label: t("home.supportJournalism") },
+    { href: "/news/national", label: locale === "en" ? "India" : "भारत" },
+    { href: "/category/politics", label: locale === "en" ? "Politics" : "राजनीति" },
+    { href: "/category/business", label: locale === "en" ? "Business" : "व्यापार" },
+    { href: "/category/education", label: locale === "en" ? "Education" : "शिक्षा" },
+    { href: "/category/health", label: locale === "en" ? "Health" : "स्वास्थ्य" },
+    { href: "/category/sports", label: locale === "en" ? "Sports" : "खेल" },
+    { href: "/category/entertainment", label: locale === "en" ? "Entertainment" : "मनोरंजन" },
+    { href: "/category/technology", label: locale === "en" ? "Technology" : "टेक्नोलॉजी" },
   ];
 
   return (
-    <ReaderShell activeNav="home" bottomPad={showAds ? 128 : 72}>
+    <ReaderShell activeNav="home" bottomPad={showStickyAd ? 128 : 72}>
       <Masthead premiumBadge={isPremium} />
       <DesktopPrimaryNav active="home" />
       <UtilityRow />
@@ -317,23 +335,22 @@ export function ReaderHomepage({
             <p className="jd-ui">{t("home.supportJournalismSub")}</p>
             <Link href="/membership">{t("desk.becomeMember")} →</Link>
           </div>
-          <div className="jd-home-promo jd-home-promo--wa">
-            <h3 className="jd-serif">{t("home.joinWhatsapp")}</h3>
-            <p className="jd-ui">{t("home.joinWhatsappSub")}</p>
-            <Link href="/notifications">{t("common.seeAll")} →</Link>
-          </div>
         </div>
 
-        <nav className="jd-home-ending" aria-label={t("home.endingAria")} data-testid="jd-home-ending">
-          <h2 className="jd-serif jd-home-ending__title">{t("home.endingTitle")}</h2>
-          <ul className="jd-home-ending__links jd-ui">
-            {endingLinks.map((l) => (
-              <li key={l.href}>
-                <Link href={l.href}>{l.label}</Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <div data-testid="jd-home-ending">
+          <PageEndingModules
+            latest={endingLatest}
+            mostRead={endingMostRead}
+            categories={endingCategories}
+            excludeSlugs={
+              new Set(
+                [leadArticle?.slug, ...secondary.map((s) => s.slug)].filter(
+                  (s): s is string => Boolean(s)
+                )
+              )
+            }
+          />
+        </div>
 
         {showAds ? (
           <div className="jd-home-footer-ad">
@@ -342,7 +359,9 @@ export function ReaderHomepage({
         ) : null}
       </main>
 
-      {showAds ? <DismissibleAd sticky label="स्टिकी बैनर · 320×50" /> : null}
+      {showStickyAd ? (
+        <DismissibleAd sticky label="स्टिकी बैनर · 320×50" forcePreview={adPreview} />
+      ) : null}
     </ReaderShell>
   );
 }

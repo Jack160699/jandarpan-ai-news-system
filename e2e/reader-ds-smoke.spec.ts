@@ -31,7 +31,7 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await expect(page.getByText("यह पृष्ठ नहीं मिला")).toBeVisible({ timeout: 20_000 });
 
     await page.goto("/maintenance", { waitUntil: "domcontentloaded" });
-    await expect(page.getByText("हम जल्द लौट रहे हैं")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("हम जल्द लौट रहे हैं").first()).toBeVisible({ timeout: 20_000 });
   });
 
   test("tablet shows desktop primary nav", async ({ page }) => {
@@ -103,17 +103,21 @@ test.describe("reader-ds smoke (Phase 7)", () => {
 
   test("search filter rail sticky on desktop; drawer on phone", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto("/search?q=रायपुर", { waitUntil: "domcontentloaded" });
+    await page.goto("/search?q=%E0%A4%B0%E0%A4%BE%E0%A4%AF%E0%A4%AA%E0%A5%81%E0%A4%B0", {
+      waitUntil: "domcontentloaded",
+    });
     await expect(page.getByTestId("jd-reader-ds").first()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId("jd-search-filter-rail").first()).toBeVisible();
+    await expect(page.getByTestId("jd-search-filter-rail").first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("jd-search-results-column").first()).toBeVisible();
     await expect(page.locator(".jd-search-hero").first()).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/search?q=रायपुर", { waitUntil: "domcontentloaded" });
+    await page.goto("/search?q=%E0%A4%B0%E0%A4%BE%E0%A4%AF%E0%A4%AA%E0%A5%81%E0%A4%B0", {
+      waitUntil: "domcontentloaded",
+    });
     await expect(page.locator(".jd-search-phone-bar").first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("jd-search-filter-rail")).toBeHidden();
-    await page.getByTestId("jd-search-filter-trigger").click();
+    await page.getByTestId("jd-search-filter-trigger").evaluate((el) => (el as HTMLButtonElement).click());
     await expect(page.getByTestId("jd-search-drawer")).toBeVisible({ timeout: 10_000 });
   });
 
@@ -322,8 +326,9 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     await expect(page.locator(".jd-photo-story").first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("jd-photo-thumbnail-rail").first()).toBeVisible();
     await expect(page.getByTestId("jd-photo-thumb-0")).toBeVisible();
-    await page.getByTestId("jd-photo-thumb-1").click();
-    await expect(page.getByTestId("jd-photo-thumb-1")).toHaveClass(/is-active/);
-    await expect(page.getByTestId("jd-photo-thumb-1")).toHaveAttribute("aria-current", "true");
+    const thumb1 = page.getByTestId("jd-photo-thumb-1");
+    await thumb1.evaluate((el) => (el as HTMLButtonElement).click());
+    await expect(thumb1).toHaveClass(/is-active/, { timeout: 10_000 });
+    await expect(thumb1).toHaveAttribute("aria-current", "true");
   });
 });

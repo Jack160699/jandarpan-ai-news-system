@@ -32,7 +32,7 @@ export function OfflineReaderPage({ slug }: { slug: string }) {
 
   if (row === undefined) {
     return (
-      <ReaderShell activeNav="more">
+      <ReaderShell activeNav={null}>
         <Masthead back backHref="/archive/offline" pageTitle={t("offline.library")} />
         <p className="jd-ui" style={{ padding: 16, color: "var(--jd-muted)" }}>
           {t("offline.loading")}
@@ -43,9 +43,9 @@ export function OfflineReaderPage({ slug }: { slug: string }) {
 
   if (!row) {
     return (
-      <ReaderShell activeNav="more">
+      <ReaderShell activeNav={null}>
         <Masthead back backHref="/archive/offline" pageTitle={t("offline.notAvailable")} />
-        <DesktopPrimaryNav active="more" />
+        <DesktopPrimaryNav active={null} />
         <div data-testid="jd-offline-unavailable" style={{ padding: "28px 18px", textAlign: "center" }}>
           <JdIcon name="wifiOff" size={28} stroke={1.8} color="var(--jd-amber)" />
           <h1 className="jd-serif" style={{ fontSize: 22, margin: "12px 0 8px" }}>
@@ -68,7 +68,7 @@ export function OfflineReaderPage({ slug }: { slug: string }) {
   }
 
   return (
-    <ReaderShell activeNav="more" hideBottomNav>
+    <ReaderShell activeNav={null} hideBottomNav>
       <div
         role="status"
         aria-live="polite"
@@ -90,7 +90,7 @@ export function OfflineReaderPage({ slug }: { slug: string }) {
         {t("offline.modeBanner")}
       </div>
       <Masthead back backHref="/archive/offline" pageTitle={t("offline.modeBanner")} />
-      <DesktopPrimaryNav active="more" />
+      <DesktopPrimaryNav active={null} />
 
       <article data-testid="jd-offline-reader" style={{ padding: "12px 16px 40px", flex: 1, overflow: "auto" }}>
         <Tag>{row.kicker || row.category}</Tag>

@@ -41,7 +41,7 @@ export function CheckoutPage({
   const intervalLabel = plan?.billingInterval === "year" ? t("membership.yearly") : t("membership.monthly");
 
   return (
-    <ReaderShell activeNav="more" hideBottomNav reserveMiniPlayer={false}>
+    <ReaderShell activeNav={null} hideBottomNav reserveMiniPlayer={false}>
       <Masthead back backHref="/membership/plans" pageTitle={t("membership.paymentTitle")} />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto", padding: "14px 16px" }}>
         <div

@@ -33,10 +33,11 @@ export function TrendingRankRow({
           fontSize: 30,
           fontWeight: 700,
           color: top ? "var(--jd-red)" : "var(--jd-line)",
-          width: 26,
+          width: 28,
           textAlign: "center",
           flexShrink: 0,
-          lineHeight: 1,
+          lineHeight: 1.15,
+          paddingBlock: "0.05em",
         }}
       >
         {rank}
@@ -45,13 +46,17 @@ export function TrendingRankRow({
         <div style={{ marginBottom: 2 }}>
           <Tag>{story.kicker ?? "ट्रेंडिंग"}</Tag>
         </div>
-        <div className="jd-serif" style={{ fontSize: 15, lineHeight: 1.32, fontWeight: 600, color: "var(--jd-ink)" }}>
+        <div
+          className="jd-serif jd-type-card-sm"
+          style={{ color: "var(--jd-ink)" }}
+          title={story.headline}
+        >
           {story.headline}
         </div>
         {(story.viewCountLabel || story.growthLabel) && (
           <div
-            className="jd-ui"
-            style={{ display: "flex", gap: 12, marginTop: 5, fontSize: 10.5, color: "var(--jd-muted)" }}
+            className="jd-ui jd-type-meta"
+            style={{ display: "flex", gap: 12, marginTop: 6, color: "var(--jd-muted)" }}
           >
             {story.viewCountLabel ? (
               <span style={{ display: "flex", alignItems: "center", gap: 3 }}>

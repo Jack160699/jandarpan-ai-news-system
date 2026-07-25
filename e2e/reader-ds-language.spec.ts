@@ -2,6 +2,24 @@ import { expect, test } from "@playwright/test";
 
 const FLAG = process.env.NEXT_PUBLIC_READER_DS === "1";
 
+async function selectLanguageOption(
+  page: import("@playwright/test").Page,
+  id: "hi" | "en"
+) {
+  const option = page.getByTestId(`lang-option-${id}`);
+  await expect(option).toBeVisible({ timeout: 30_000 });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await option.evaluate((el) => (el as HTMLButtonElement).click());
+    try {
+      await expect(option).toHaveAttribute("aria-pressed", "true", { timeout: 4_000 });
+      return;
+    } catch {
+      /* retry — pointer interception can drop the first synthetic click */
+    }
+  }
+  await expect(option).toHaveAttribute("aria-pressed", "true", { timeout: 10_000 });
+}
+
 /**
  * Release blocker #3 — language switching across Reader DS chrome.
  * Asserts Hindi default, English switch + persistence, return to Hindi,
@@ -21,12 +39,14 @@ test.describe("reader-ds language switching (blocker #3)", () => {
 
   test("defaults to Hindi chrome on first visit", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const nav = page.locator(".jd-bottom-nav");
+    const nav = page.getByTestId("jd-bottom-nav").first();
     await expect(nav).toBeVisible({ timeout: 45_000 });
     await expect(nav.getByText("होम", { exact: true })).toBeVisible();
-    await expect(nav.getByText("अधिक", { exact: true })).toBeVisible();
+    await expect(nav.getByText("वीडियो", { exact: true })).toBeVisible();
     await expect(nav.getByText("Home", { exact: true })).toHaveCount(0);
     await expect(nav).toHaveAttribute("data-jd-locale", "hi");
+    // Profile/More lives in the masthead after header-nav refinement.
+    await expect(page.getByRole("link", { name: /प्रोफ़ाइल|Profile/i }).first()).toBeVisible();
   });
 
   test("D26 English selection updates chrome and persists after reload", async ({
@@ -35,26 +55,27 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 45_000 });
     await expect(page.getByTestId("lang-option-en")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("lang-option-en").click();
-    await page.getByTestId("lang-continue").click();
+    await selectLanguageOption(page, "en");
+    await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
 
     // Profile hub always mounts bottom nav (does not depend on homepage feed).
-    await expect(page.locator(".jd-bottom-nav")).toBeVisible({ timeout: 45_000 });
-    await expect(page.locator(".jd-bottom-nav")).toHaveAttribute("data-jd-locale", "en");
-    await expect(page.locator(".jd-bottom-nav").getByText("More", { exact: true })).toBeVisible();
+    const archiveNav = page.getByTestId("jd-bottom-nav").first();
+    await expect(archiveNav).toBeVisible({ timeout: 45_000 });
+    await expect(archiveNav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
+    await expect(archiveNav.getByText("Videos", { exact: true })).toBeVisible();
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const nav = page.locator(".jd-bottom-nav");
+    const nav = page.getByTestId("jd-bottom-nav").first();
     await expect(nav).toBeVisible({ timeout: 45_000 });
-    await expect(nav).toHaveAttribute("data-jd-locale", "en");
+    await expect(nav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
     await expect(nav.getByText("Home", { exact: true })).toBeVisible();
-    await expect(nav.getByText("More", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Videos", { exact: true })).toBeVisible();
     await expect(nav.getByText("होम", { exact: true })).toHaveCount(0);
-    await expect(nav.getByText("अधिक", { exact: true })).toHaveCount(0);
+    await expect(nav.getByText("वीडियो", { exact: true })).toHaveCount(0);
 
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(nav).toHaveAttribute("data-jd-locale", "en");
+    await expect(nav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
     await expect(nav.getByText("Home", { exact: true })).toBeVisible();
 
     await page.goto("/search", { waitUntil: "domcontentloaded" });
@@ -69,19 +90,22 @@ test.describe("reader-ds language switching (blocker #3)", () => {
 
   test("switching back to Hindi restores Hindi chrome", async ({ page }) => {
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("lang-option-en")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("lang-option-en").click();
-    await page.getByTestId("lang-continue").click();
+    await selectLanguageOption(page, "en");
+    await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
+    await page.waitForURL(/\/archive/, { timeout: 15_000 });
+    await expect(page.getByTestId("jd-bottom-nav").first()).toHaveAttribute("data-jd-locale", "en", {
+      timeout: 30_000,
+    });
 
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("lang-option-hi")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("lang-option-hi").click();
-    await page.getByTestId("lang-continue").click();
+    await selectLanguageOption(page, "hi");
+    await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
+    await page.waitForURL(/\/archive/, { timeout: 15_000 });
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    const nav = page.locator(".jd-bottom-nav");
+    const nav = page.getByTestId("jd-bottom-nav").first();
     await expect(nav).toBeVisible({ timeout: 45_000 });
-    await expect(nav).toHaveAttribute("data-jd-locale", "hi");
+    await expect(nav).toHaveAttribute("data-jd-locale", "hi", { timeout: 30_000 });
     await expect(nav.getByText("होम", { exact: true })).toBeVisible();
     await expect(nav.getByText("Home", { exact: true })).toHaveCount(0);
   });

@@ -29,7 +29,7 @@ export function NotificationPrefsPage() {
 
   if (!prefs) {
     return (
-      <ReaderShell activeNav="more">
+      <ReaderShell activeNav={null}>
         <Masthead back backHref="/archive" pageTitle={t("notifications.shortTitle")} />
       </ReaderShell>
     );
@@ -40,7 +40,7 @@ export function NotificationPrefsPage() {
   };
 
   return (
-    <ReaderShell activeNav="more">
+    <ReaderShell activeNav={null}>
       <Masthead back backHref="/archive" pageTitle={t("notifications.shortTitle")} />
       <main id="main-content" role="main" style={{ flex: 1, overflow: "auto" }}>
         <SectionLabel>{t("notify.pushSection")}</SectionLabel>

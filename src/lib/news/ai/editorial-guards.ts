@@ -13,6 +13,11 @@ import {
   applyStructuralHardReject,
   validateGeneratedArticle,
 } from "@/lib/news/ai/generated-article-validation";
+import {
+  validateEditorialDepth,
+  type DepthQualityResult,
+} from "@/lib/news/ai/editorial-depth-quality";
+import type { ArticleType } from "@/lib/news/ai/article-type";
 import { normalizeTitle, titleSimilarity } from "@/lib/news/normalize";
 import type { NewsEventRow } from "@/lib/types/newsroom";
 
@@ -74,6 +79,8 @@ export type EditorialQualityReport = {
   strict_mode: boolean;
   intelligence: EditorialIntelligenceResult;
   duplicate_cluster_id: string | null;
+  article_type?: ArticleType | null;
+  depth_quality?: DepthQualityResult | null;
 };
 
 export type EditorialDecisionLog = {
@@ -223,15 +230,15 @@ function detectHardRejects(input: {
   if (!input.summary?.trim() || input.summary.trim().length < 12) {
     reasons.push("empty_summary");
   }
-  if (bodyWords < 35 && body.length < 80) {
+  if (bodyWords < 55 && body.length < 160) {
     reasons.push("empty_content");
   }
 
   if (input.thresholds.strictMode) {
-    if (!body.includes("##") && bodyWords < 120) {
+    if (bodyWords < 120) {
       reasons.push("malformed_structure");
     }
-  } else if (bodyWords < 25 && body.length < 50) {
+  } else if (bodyWords < 45 && body.length < 120) {
     reasons.push("malformed_structure");
   }
 
@@ -300,6 +307,8 @@ export function runEditorialQualityChecks(input: {
   existingEventIds?: string[];
   forcePublish?: boolean;
   event?: NewsEventRow | null;
+  articleType?: ArticleType | null;
+  evidenceSufficient?: boolean;
 }): EditorialQualityReport {
   const thresholds = getEditorialThresholds();
   const draftText = [
@@ -322,6 +331,16 @@ export function runEditorialQualityChecks(input: {
     existingBodyFingerprints: input.existingBodyFingerprints,
     existingEventIds: input.existingEventIds,
     stage: "draft",
+  });
+
+  const articleType = input.articleType ?? "standard_report";
+  const depth_quality = validateEditorialDepth({
+    articleBody: input.articleBody,
+    summary: input.summary,
+    articleType,
+    factPackText: input.factPackText,
+    language: input.language,
+    evidenceSufficient: input.evidenceSufficient,
   });
 
   const duplicate_phrasing = findDuplicatePhrasing(draftText, input.sourceTexts);
@@ -364,6 +383,9 @@ export function runEditorialQualityChecks(input: {
   ai_confidence -= duplicate_phrasing.length * (thresholds.strictMode ? 0.06 : 0.025);
   ai_confidence -= hallucination_flags.filter((f) => !f.includes("clickbait")).length *
     (thresholds.strictMode ? 0.08 : 0.03);
+  if (!depth_quality.ok) {
+    ai_confidence -= 0.08 * Math.min(3, depth_quality.issues.length);
+  }
   ai_confidence = Math.max(0, Math.min(1, Math.round(ai_confidence * 1000) / 1000));
 
   const duplicateStory =
@@ -383,6 +405,26 @@ export function runEditorialQualityChecks(input: {
     }),
     structural
   );
+
+  // Depth / factual-safety gates — hard reject for missing body, equals excerpt, quotes, artifacts
+  const depthHardCodes = new Set([
+    "missing_body",
+    "body_equals_excerpt",
+    "unsupported_quote",
+    "placeholder_text",
+    "unresolved_template_token",
+    "null_undefined_artifact",
+    "markdown_artifact",
+    "duplicated_paragraphs",
+    "insufficient_evidence_for_longform",
+  ]);
+  for (const d of depth_quality.issues) {
+    if (depthHardCodes.has(d.code) || d.code === "body_too_short_for_type") {
+      if (!hard_reject_reasons.includes(d.code)) {
+        hard_reject_reasons.push(d.code);
+      }
+    }
+  }
 
   const hard_reject = hard_reject_reasons.length > 0;
   const rejectionReasons: string[] = [...hard_reject_reasons];
@@ -412,6 +454,11 @@ export function runEditorialQualityChecks(input: {
     if (intelligence.headlineQuality < 0.32) {
       rejectionReasons.push("weak_headline");
     }
+    for (const d of depth_quality.issues) {
+      if (!rejectionReasons.includes(d.code)) {
+        rejectionReasons.push(d.code);
+      }
+    }
   }
 
   const borderline =
@@ -425,6 +472,8 @@ export function runEditorialQualityChecks(input: {
       rejectionReasons.includes("low_readability") ||
       rejectionReasons.includes("weak_headline") ||
       rejectionReasons.includes("low_seo_quality") ||
+      rejectionReasons.includes("body_too_short_for_type") ||
+      rejectionReasons.includes("insufficient_paragraphs") ||
       (ai_confidence < thresholds.minConfidence &&
         ai_confidence >= thresholds.minConfidence - BORDERLINE_WINDOW));
 
@@ -433,7 +482,8 @@ export function runEditorialQualityChecks(input: {
     ai_confidence >= thresholds.minConfidence &&
     duplicate_phrasing.length <= thresholds.maxDuplicatePhrases &&
     source_overlap_score <= thresholds.maxSourceOverlap &&
-    !intelligence.isSpam;
+    !intelligence.isSpam &&
+    depth_quality.ok;
 
   if (thresholds.strictMode) {
     publish_allowed =
@@ -470,6 +520,7 @@ export function runEditorialQualityChecks(input: {
       "numeric_fact_alignment",
       "hard_reject_gate",
       "phase5_structural_validation",
+      "editorial_depth_quality",
       thresholds.strictMode ? "strict_mode" : "production_tolerant",
     ],
     rejectionReasons,
@@ -484,6 +535,8 @@ export function runEditorialQualityChecks(input: {
     strict_mode: thresholds.strictMode,
     intelligence: { ...intelligence, confidence: ai_confidence },
     duplicate_cluster_id: intelligence.duplicateCluster?.clusterId ?? null,
+    article_type: articleType,
+    depth_quality,
   };
 
   logQualityBreakdown({

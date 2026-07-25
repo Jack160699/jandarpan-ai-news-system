@@ -27,7 +27,7 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
   const selected = override ?? providerLang;
 
   return (
-    <ReaderShell activeNav="more" hideBottomNav>
+    <ReaderShell activeNav={null} hideBottomNav>
       <div
         style={{
           flexShrink: 0,
@@ -52,7 +52,12 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
               key={l.id}
               type="button"
               data-testid={`lang-option-${l.id}`}
+              aria-pressed={on}
               onClick={() => setOverride(l.id as ReaderLanguage)}
+              onPointerUp={(e) => {
+                if (e.button !== 0) return;
+                setOverride(l.id as ReaderLanguage);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -65,6 +70,8 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
                 width: "100%",
                 cursor: "pointer",
                 minHeight: 44,
+                position: "relative",
+                zIndex: 1,
               }}
             >
               <div style={{ textAlign: "left" }}>
@@ -111,7 +118,10 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
           onClick={() => {
             confirmLanguage(selected);
             savePreferences({ language: selected, languageChosen: true });
-            router.push(continueHref);
+            // Defer navigation so LanguageProvider state + storage flush before route chrome mounts.
+            queueMicrotask(() => {
+              router.push(continueHref);
+            });
           }}
           style={{
             marginTop: 8,

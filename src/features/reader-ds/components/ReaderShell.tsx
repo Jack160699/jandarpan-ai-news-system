@@ -47,7 +47,8 @@ export function ReaderShell({
   showDeskFooter = true,
 }: ReaderShellProps) {
   const pad = bottomPad + (reserveMiniPlayer ? 52 : 0);
-  const showNav = !hideBottomNav && activeNav;
+  /** null activeNav still shows bottom nav (no current item) — used on account hub. */
+  const showNav = !hideBottomNav;
 
   return (
     <ExperienceChrome tracks={audioTracks}>

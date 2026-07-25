@@ -3,11 +3,14 @@ import { Mukta, Tiro_Devanagari_Hindi } from "next/font/google";
 /**
  * Reader Design System typefaces.
  *
- * - Mukta — UI, labels, metadata (weights 300–800)
+ * - Mukta — UI, labels, metadata (weights 300–800); Devanagari + Latin
  * - Tiro Devanagari Hindi — masthead wordmark / brand
  *
  * Noto Serif Devanagari (headlines & body) is already loaded globally as
  * `--font-hindi` in `src/lib/fonts/reader-fonts.ts` and is reused here.
+ *
+ * `adjustFontFallback: true` + preloading reduces FOUT metric mismatch that
+ * temporarily clips Devanagari matras under tight line-boxes on Android Chrome.
  */
 
 export const mukta = Mukta({
@@ -16,7 +19,7 @@ export const mukta = Mukta({
   weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
   adjustFontFallback: true,
-  preload: false,
+  preload: true,
 });
 
 export const tiroDevanagari = Tiro_Devanagari_Hindi({
@@ -25,7 +28,7 @@ export const tiroDevanagari = Tiro_Devanagari_Hindi({
   weight: ["400"],
   display: "swap",
   adjustFontFallback: true,
-  preload: false,
+  preload: true,
 });
 
 /** Combined variable class applied on the reader-DS root wrapper. */

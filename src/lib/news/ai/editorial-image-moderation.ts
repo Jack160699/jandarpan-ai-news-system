@@ -32,12 +32,25 @@ export type ModerationResult = {
 
 export { hashImagePrompt };
 
+export { assessStorySensitivity } from "@/lib/news/ai/editorial-image-sensitivity";
+export type { StorySensitivity } from "@/lib/news/ai/editorial-image-sensitivity";
+
 export function moderateEditorialImageContext(input: {
   headline: string;
   eventSummary?: string | null;
   category?: string | null;
+  bodyExcerpt?: string | null;
+  theme?: string | null;
+  people?: string[];
 }): ModerationResult {
-  const combined = `${input.headline} ${input.eventSummary ?? ""}`;
+  const combined = [
+    input.headline,
+    input.eventSummary ?? "",
+    input.bodyExcerpt ?? "",
+    input.category ?? "",
+    input.theme ?? "",
+    ...(input.people ?? []),
+  ].join(" ");
   const flags: string[] = [];
 
   if (PHOTOREAL_BAN_RE.test(combined)) flags.push("photorealistic_language");
@@ -45,6 +58,7 @@ export function moderateEditorialImageContext(input: {
   if (MISLEADING_INCIDENT_RE.test(combined)) flags.push("misleading_incident");
   if (DISASTER_PHOTO_RE.test(combined)) flags.push("disaster_photo_intent");
   if (SENSATIONAL_RE.test(combined)) flags.push("sensational_imagery");
+  if ((input.people?.length ?? 0) > 0) flags.push("named_people");
 
   const forceSymbolicOnly =
     flags.includes("politician_reference") ||

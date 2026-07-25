@@ -2,7 +2,11 @@ import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 import { JdIcon } from "./icons";
 
-/** Kicker / category tag — uppercase Mukta 800, red by default. */
+function scriptHint(text: string): "deva" | "latn" {
+  return /[\u0900-\u097F]/.test(text) ? "deva" : "latn";
+}
+
+/** Kicker / category tag — Mukta 800; uppercase only for Latin script. */
 export function Tag({
   children,
   color = "var(--jd-red)",
@@ -12,15 +16,13 @@ export function Tag({
   color?: string;
   style?: CSSProperties;
 }) {
+  const label = typeof children === "string" ? children : "";
   return (
     <span
-      className="jd-ui"
+      className="jd-ui jd-type-tag"
+      data-script={label ? scriptHint(label) : "deva"}
       style={{
-        fontSize: 9.5,
-        fontWeight: 800,
-        letterSpacing: ".09em",
         color,
-        textTransform: "uppercase",
         ...style,
       }}
     >
@@ -47,31 +49,28 @@ export function SectionHeader({
         display: "flex",
         alignItems: "center",
         gap: 9,
-        padding: "16px 14px 9px",
+        padding: "16px 14px 10px",
       }}
     >
       <span
         aria-hidden="true"
-        style={{ width: 4, height: 16, background: color, borderRadius: 1, flexShrink: 0 }}
+        style={{ width: 4, height: 18, background: color, borderRadius: 1, flexShrink: 0 }}
       />
-      <h2
-        className="jd-serif"
-        style={{ margin: 0, fontSize: 16, lineHeight: "22px", fontWeight: 700, color: "var(--jd-ink)" }}
-      >
+      <h2 className="jd-serif jd-type-section" style={{ margin: 0, color: "var(--jd-ink)" }}>
         {title}
       </h2>
       <span style={{ flex: 1, height: 1, background: "var(--jd-line)" }} />
       {moreHref ? (
         <Link
           href={moreHref}
-          className="jd-ui"
+          className="jd-ui jd-type-button"
           style={{
-            fontSize: 11.5,
             fontWeight: 700,
             color: "var(--jd-red)",
             display: "flex",
             alignItems: "center",
             gap: 2,
+            paddingBlock: "0.1em",
           }}
         >
           {moreLabel}
@@ -85,19 +84,19 @@ export function SectionHeader({
 /** Mandatory AI transparency summary — gold left rule. */
 export function AiSummary({ children }: { children: ReactNode }) {
   return (
-    <div style={{ borderLeft: "3px solid var(--jd-gold)", paddingLeft: 11, margin: "9px 0" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, flexWrap: "wrap" }}>
+    <div style={{ borderLeft: "3px solid var(--jd-gold)", paddingLeft: 11, margin: "10px 0" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
         <span
-          className="jd-ui"
-          style={{ fontSize: 9.5, fontWeight: 800, color: "var(--jd-gold)", letterSpacing: ".1em" }}
+          className="jd-ui jd-type-meta"
+          style={{ fontWeight: 800, color: "var(--jd-gold)", letterSpacing: ".06em" }}
         >
           <span aria-hidden="true">✦ </span>संक्षेप में
         </span>
-        <span className="jd-ui" style={{ fontSize: 9, color: "var(--jd-muted)" }}>
+        <span className="jd-ui jd-type-caption" style={{ color: "var(--jd-ink-3)" }}>
           · AI-सहायता, संपादक-सत्यापित
         </span>
       </div>
-      <p className="jd-ui" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, color: "var(--jd-ink-2)" }}>
+      <p className="jd-ui jd-type-summary" style={{ margin: 0, color: "var(--jd-ink-2)" }}>
         {children}
       </p>
     </div>

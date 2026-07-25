@@ -25,7 +25,7 @@ export function PlanComparisonPage({ plans }: { plans: ReaderPlan[] }) {
   }, [plans, t]);
 
   return (
-    <ReaderShell activeNav="more">
+    <ReaderShell activeNav={null}>
       <Masthead back backHref="/membership" pageTitle={t("membership.choosePlan")} />
       <div
         style={{

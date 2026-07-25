@@ -20,7 +20,7 @@ export default async function OfflineUnavailablePage() {
   const t = (key: Parameters<typeof jdDsT>[1]) => jdDsT(locale, key);
 
   return (
-    <ReaderShell activeNav="more">
+    <ReaderShell activeNav={null}>
       <Masthead back backHref="/archive/offline" pageTitle={t("offline.notAvailable")} />
       <div style={{ padding: "28px 18px", textAlign: "center" }}>
         <h1 className="jd-serif" style={{ fontSize: 22, margin: "0 0 8px" }}>

@@ -45,7 +45,7 @@ export function ChronoStory({
           {parts.time}
         </div>
         {parts.ampm ? (
-          <div className="jd-ui" style={{ fontSize: 9, color: "var(--jd-muted)" }}>
+          <div className="jd-ui" style={{ fontSize: 11, lineHeight: 1.4, color: "var(--jd-muted)" }}>
             {parts.ampm}
           </div>
         ) : null}
@@ -55,7 +55,7 @@ export function ChronoStory({
         <div style={{ marginBottom: 2 }}>
           <Tag>{story.kicker ?? "ख़बर"}</Tag>
         </div>
-        <div className="jd-serif" style={{ fontSize: 15, lineHeight: 1.34, fontWeight: 600, color: "var(--jd-ink)" }}>
+        <div className="jd-serif jd-type-card-sm" style={{ color: "var(--jd-ink)" }} title={story.headline}>
           {story.headline}
         </div>
       </div>

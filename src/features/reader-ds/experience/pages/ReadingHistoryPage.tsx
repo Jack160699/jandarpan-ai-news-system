@@ -56,7 +56,7 @@ export function ReadingHistoryPage({ catalog }: { catalog: HomeArticle[] }) {
     });
 
   return (
-    <ReaderShell activeNav="more">
+    <ReaderShell activeNav={null}>
       <Masthead back backHref="/archive" pageTitle={t("history.shortTitle")} />
       <div
         style={{

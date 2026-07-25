@@ -72,8 +72,9 @@ export function CategoryPageView({ titleHi, titleEn, slug, articles, chips }: Pr
                         <Tag>{lead.categoryLabel || pageTitle}</Tag>
                       </div>
                       <h2
-                        className="jd-serif jd-lead-title"
-                        style={{ margin: 0, fontSize: 20, lineHeight: 1.3, fontWeight: 700 }}
+                        className="jd-serif jd-lead-title jd-type-card"
+                        style={{ margin: 0, fontWeight: 700 }}
+                        title={lead.headline}
                       >
                         {lead.headline}
                       </h2>

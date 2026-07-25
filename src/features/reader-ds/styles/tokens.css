@@ -57,10 +57,11 @@
   --jd-d-text: #e7edf6;
   --jd-d-muted: #93a4c2;
 
-  /* Typography — next/font vars from readerDsFontClassName + root --font-hindi */
-  --jd-ff-brand: var(--jd-font-brand), "Tiro Devanagari Hindi", Georgia, serif;
-  --jd-ff-serif: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
-  --jd-ff-ui: var(--jd-font-ui), "Mukta", system-ui, -apple-system, sans-serif;
+  /* Typography stacks — overridden/extended in typography.css for Hindi safety */
+  --jd-ff-brand: var(--jd-font-brand), "Tiro Devanagari Hindi", "Noto Serif Devanagari", Georgia,
+    serif;
+  --jd-ff-serif: var(--font-hindi), "Noto Serif Devanagari", "Tiro Devanagari Hindi", Georgia, serif;
+  --jd-ff-ui: var(--jd-font-ui), Mukta, "Noto Sans Devanagari", system-ui, -apple-system, sans-serif;
 
   /* Spacing scale: 2 4 8 12 14 18 24 32 */
   --jd-s1: 2px;
@@ -186,6 +187,26 @@ html[data-font-scale="xl"] .jd-ds {
   outline-offset: 2px;
 }
 
+/* Phone masthead action hit targets */
+.jd-ds .jd-masthead__action:focus-visible {
+  outline: 2px solid var(--jd-gold-soft);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+.jd-ds .jd-masthead__actions {
+  flex-shrink: 0;
+}
+.jd-ds .jd-masthead__inner {
+  /* Clip horizontal overflow from actions; keep Devanagari matras visible vertically */
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+.jd-ds .jd-bottom-nav a:focus-visible {
+  outline: 2px solid var(--jd-gold);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
 /* F46 skeleton shimmer */
 @keyframes jd-skel {
   0% {
@@ -205,33 +226,38 @@ html[data-font-scale="xl"] .jd-ds {
 .jd-breaking-strip {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 8px 14px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
   background: var(--jd-red);
   color: #fff;
   width: 100%;
   box-sizing: border-box;
-  overflow: hidden;
+  /* Horizontal marquee only — never clip Devanagari matras vertically */
+  overflow-x: hidden;
+  overflow-y: visible;
+  min-height: 2.75rem;
 }
 
 .jd-breaking-strip__badge {
+  font-family: var(--jd-ff-ui);
   font-weight: 800;
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: var(--jd-type-breaking-label, 0.75rem);
+  letter-spacing: 0.04em;
   background: #fff;
   color: var(--jd-red);
-  padding: 3px 8px;
+  padding: 0.35em 0.65em;
   border-radius: 2px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
-  min-width: 5.5rem;
+  min-width: 5.75rem;
+  min-height: 1.75rem;
   justify-content: center;
-  line-height: 1.2;
-  margin-top: 1px;
+  line-height: var(--jd-lh-label, 1.4);
+  overflow: visible;
 }
 
 .jd-breaking-strip__pulse {
@@ -257,6 +283,8 @@ html[data-font-scale="xl"] .jd-ds {
 
 .jd-breaking-strip__label {
   color: var(--jd-red);
+  padding-block: 0.1em;
+  line-height: var(--jd-lh-label, 1.4);
 }
 
 .jd-breaking-strip__item {
@@ -272,28 +300,34 @@ html[data-font-scale="xl"] .jd-ds {
 }
 
 .jd-breaking-strip__headline {
-  font-size: 13px;
+  font-family: var(--jd-ff-serif);
+  font-size: var(--jd-type-breaking-headline, 0.875rem);
   font-weight: 600;
   color: #fff;
-  line-height: 1.35;
+  line-height: var(--jd-lh-ui, 1.45);
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
   display: block;
   word-break: break-word;
+  padding-block: 0.12em;
 }
 
 .jd-breaking-strip__track-wrap {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent);
+  overflow-x: hidden;
+  overflow-y: visible;
+  padding-block: 0.1em;
+  /* Soft edge fade — start opaque so the first glyph is never cropped */
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 14px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 14px), transparent 100%);
 }
 
 .jd-breaking-strip__track {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 4px 0 2px;
   display: flex;
   align-items: center;
   gap: 28px;
@@ -308,6 +342,7 @@ html[data-font-scale="xl"] .jd-ds {
 
 .jd-breaking-strip__track .jd-breaking-strip__headline {
   white-space: nowrap;
+  overflow: visible;
 }
 
 @keyframes jd-breaking-ticker {
@@ -335,17 +370,127 @@ html[data-font-scale="xl"] .jd-ds {
   color: var(--jd-muted);
 }
 
-.jd-home-ending {
+.jd-home-ending,
+.jd-page-ending {
   margin: 12px 14px 20px;
   padding: 14px 0 8px;
   border-top: 1px solid var(--jd-line);
 }
 
-.jd-home-ending__title {
+.jd-page-ending__block {
+  margin: 0 0 18px;
+}
+
+.jd-page-ending__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.jd-home-ending__title,
+.jd-page-ending__title {
   margin: 0 0 8px;
   font-size: 15px;
   font-weight: 700;
   color: var(--jd-navy);
+}
+
+.jd-page-ending__head .jd-page-ending__title {
+  margin-bottom: 0;
+}
+
+.jd-page-ending__more {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--jd-red);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jd-page-ending__more:focus-visible,
+.jd-page-ending__chips a:focus-visible,
+.jd-page-ending__stories a:focus-visible,
+.jd-page-ending__cta:focus-visible {
+  outline: 2px solid var(--jd-gold);
+  outline-offset: 2px;
+}
+
+.jd-page-ending__stories {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.jd-page-ending__stories li + li {
+  border-top: 1px solid var(--jd-line-2);
+}
+
+.jd-page-ending__stories a {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 9px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.jd-page-ending__rank {
+  flex: 0 0 18px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--jd-muted);
+  line-height: 1.45;
+}
+
+.jd-page-ending__headline {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 1.45;
+  color: var(--jd-ink);
+}
+
+.jd-page-ending__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.jd-page-ending__chips a {
+  display: inline-block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--jd-red);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--jd-red) 28%, transparent);
+}
+
+.jd-page-ending__support {
+  margin-top: 8px;
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--jd-line);
+}
+
+.jd-page-ending__support-copy {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--jd-ink-3);
+  max-width: 36em;
+}
+
+.jd-page-ending__cta {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--jd-navy);
+  text-decoration: none;
 }
 
 .jd-home-ending__links {

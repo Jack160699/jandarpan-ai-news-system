@@ -42,6 +42,7 @@ export type OpenAiTelemetryContext = {
   articleId?: string;
   eventId?: string;
   tenantId?: string;
+  articleType?: string;
 };
 
 export type ChatCompletionRequest = {

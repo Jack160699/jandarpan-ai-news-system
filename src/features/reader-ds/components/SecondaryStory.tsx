@@ -35,30 +35,27 @@ export function SecondaryStory({
           <Tag>{story.kicker ?? "ख़बर"}</Tag>
         </div>
         <h3
-          className="jd-serif jd-sec-title"
+          className="jd-serif jd-sec-title jd-type-card"
           style={{
             margin: 0,
-            fontSize: 15,
-            lineHeight: 1.34,
-            fontWeight: 600,
             color: "var(--jd-ink)",
           }}
+          title={story.headline}
         >
           {story.headline}
         </h3>
         {time ? (
           <div
-            className="jd-ui"
+            className="jd-ui jd-type-meta"
             style={{
               display: "flex",
               alignItems: "center",
               gap: 4,
-              fontSize: 10.5,
               color: "var(--jd-muted)",
-              marginTop: 5,
+              marginTop: 6,
             }}
           >
-            <JdIcon name="clock" size={12} stroke={1.7} color="var(--jd-muted)" />
+            <JdIcon name="clock" size={13} stroke={1.7} color="var(--jd-muted)" />
             {time}
           </div>
         ) : null}

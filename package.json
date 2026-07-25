@@ -42,7 +42,10 @@
     "ops:audit-editorial-images": "npx tsx scripts/audit-editorial-images.ts",
     "ops:repair-editorial-images": "npx tsx scripts/repair-editorial-images.ts",
     "ops:repair-editorial-images-apply": "npx tsx scripts/repair-editorial-images.ts --apply",
-    "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
+    "qstash:setup": "node scripts/setup-qstash-schedules.mjs",
+    "audit:editorial-depth": "npx tsx scripts/audit-editorial-depth.ts",
+    "ops:regen-editorial-depth": "npx tsx scripts/regenerate-editorial-depth.ts",
+    "ops:regen-editorial-depth-apply": "npx tsx scripts/regenerate-editorial-depth.ts --apply"
   },
   "dependencies": {
     "@stratxcel/platform": "file:./packages/stratxcel-platform",

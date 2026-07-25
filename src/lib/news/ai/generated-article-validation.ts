@@ -9,13 +9,15 @@ import {
   normalizeArticleLanguage,
   type NewsroomLanguage,
 } from "@/lib/i18n/languages";
+import { bodyEqualsExcerpt } from "@/lib/news/ai/editorial-depth-quality";
 import { normalizeTitle, titleSimilarity } from "@/lib/news/normalize";
 
 export const GENERATION_VALIDATION_LIMITS = {
   minHeadlineChars: 8,
   minSummaryChars: 20,
-  minBodyChars: 120,
-  minBodyWords: 40,
+  /** Structural floor — type-specific depth gates enforce higher targets */
+  minBodyChars: 180,
+  minBodyWords: 60,
   maxValidationRetries: 3,
   duplicateTitleSimilarity: 0.88,
   duplicateBodySimilarity: 0.92,
@@ -26,6 +28,7 @@ export type GenerationValidationCode =
   | "placeholder_title"
   | "empty_body"
   | "body_too_short"
+  | "body_equals_excerpt"
   | "body_headings_only"
   | "body_urls_only"
   | "model_apology"
@@ -44,7 +47,8 @@ export type GenerationValidationCode =
   | "unresolved_template_token"
   | "raw_json_or_instructions"
   | "empty_section"
-  | "unsafe_markup";
+  | "unsafe_markup"
+  | "null_undefined_artifact";
 
 export type GenerationValidationIssue = {
   code: GenerationValidationCode;
@@ -264,7 +268,7 @@ export function validateGeneratedArticle(
   } else {
     const words = wordCount(body);
     if (
-      words < GENERATION_VALIDATION_LIMITS.minBodyWords &&
+      words < GENERATION_VALIDATION_LIMITS.minBodyWords ||
       body.length < GENERATION_VALIDATION_LIMITS.minBodyChars
     ) {
       issues.push(
@@ -273,6 +277,20 @@ export function validateGeneratedArticle(
           `Body too short (${words} words / ${body.length} chars)`,
           true
         )
+      );
+    }
+    if (summary && bodyEqualsExcerpt(body, summary)) {
+      issues.push(
+        issue(
+          "body_equals_excerpt",
+          "Article body is identical or near-identical to summary",
+          true
+        )
+      );
+    }
+    if (/\b(undefined|null)\b/.test(body) || /\b(undefined|null)\b/.test(summary)) {
+      issues.push(
+        issue("null_undefined_artifact", "null/undefined artifact in copy", true)
       );
     }
     if (isHeadingsOrMetaOnly(body)) {
@@ -434,6 +452,7 @@ export function validateGeneratedArticle(
     [
       "empty_body",
       "body_too_short",
+      "body_equals_excerpt",
       "body_headings_only",
       "body_urls_only",
       "model_apology",
@@ -442,6 +461,7 @@ export function validateGeneratedArticle(
       "unsafe_markup",
       "raw_json_or_instructions",
       "unresolved_template_token",
+      "null_undefined_artifact",
     ].includes(c)
   );
   const missingSource = codes.some(

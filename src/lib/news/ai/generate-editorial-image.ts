@@ -10,13 +10,23 @@ import { createAdminServerClient } from "@/lib/supabase";
 import { getPublicSupabaseEnv } from "@/lib/supabase/env";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
 import { logEditorialImageAnalytics } from "@/lib/news/ai/editorial-image-analytics";
+import { assertUploadPayload } from "@/lib/news/ai/editorial-image-asset-validation";
+import {
+  buildEditorialImageBrief,
+  type EditorialImageBrief,
+} from "@/lib/news/ai/editorial-image-brief";
 import {
   buildEditorialImageContext,
   type EditorialImageContext,
 } from "@/lib/news/ai/editorial-image-context";
+import {
+  decideEditorialImageStrategy,
+  type EditorialImageDecision,
+} from "@/lib/news/ai/editorial-image-decision";
 import { logGenerationAttempt } from "@/lib/news/ai/editorial-image-history";
 import { incrementImageMetrics } from "@/lib/news/ai/editorial-image-metrics";
 import {
+  assessStorySensitivity,
   moderateEditorialImageContext,
   moderateGeneratedPrompt,
 } from "@/lib/news/ai/editorial-image-moderation";
@@ -40,6 +50,7 @@ import {
   appendRetryLog,
   claimEditorialImageBatch,
   enqueueEditorialImage,
+  enqueueEditorialImageDetailed,
   findDuplicateImageByPromptHash,
   findDuplicateImageByVisualHash,
   getQueueRowForArticle,
@@ -56,7 +67,9 @@ import {
   scoreImageBuffer,
 } from "@/lib/news/ai/editorial-image-quality";
 import { getRetryConfig } from "@/lib/news/ai/editorial-image-retry";
-import { isTerminalEditorialImageSource } from "@/lib/news/ai/editorial-image-terminal";
+import {
+  isAcceptableCompletionWhenAiExpected,
+} from "@/lib/news/ai/editorial-image-terminal";
 import { resolveContextualFallback } from "@/lib/news/images/editorial-visual-fallbacks";
 import { isDisplayableImage } from "@/lib/news/images/validate";
 import { logNewsroom } from "@/lib/newsroom/logger";
@@ -74,19 +87,20 @@ export type EditorialImageSource =
   | "branded_placeholder"
   | "duplicate_reuse"
   | "duplicate_visual_reuse"
-  | "manual_replace";
+  | "manual_replace"
+  | "text_only";
 
 export type EditorialImageMetadata = {
   source: EditorialImageSource;
-  hero_url: string;
-  og_url: string;
+  hero_url: string | null;
+  og_url: string | null;
   prompt_hash?: string | null;
   visual_hash?: string | null;
   prompt?: string | null;
   moderation_flags?: string[];
   quality_score?: number;
   quality_flags?: string[];
-  status?: "queued" | "completed" | "failed" | "repaired";
+  status?: "queued" | "completed" | "failed" | "repaired" | "pending_attachment";
   compressed?: boolean;
   storage_path?: string | null;
   width?: number;
@@ -102,13 +116,24 @@ export type EditorialImageMetadata = {
   provider?: string;
   model?: string;
   approval_status?: string;
+  decision?: string;
+  decision_reason?: string;
+  brief?: Partial<EditorialImageBrief>;
+  relevance?: {
+    theme?: string;
+    district?: string | null;
+    keywords?: string[];
+  };
+  ai_attempted?: boolean;
+  fallback_reason?: string;
 };
 
 export type ResolveEditorialImageResult = {
-  hero_image_url: string;
-  og_image_url: string;
+  hero_image_url: string | null;
+  og_image_url: string | null;
   source: EditorialImageSource;
   metadata: EditorialImageMetadata;
+  decision?: EditorialImageDecision;
 };
 
 export type ProcessEditorialImageQueueResult = {
@@ -227,6 +252,19 @@ async function uploadEditorialVariants(input: {
       event: "storage_upload_fail",
       error: heroUp.error.message,
       metadata: { path: heroPath },
+    });
+    return null;
+  }
+
+  const payloadCheck = assertUploadPayload({
+    buffer: input.hero,
+    contentType: "image/webp",
+  });
+  if (!payloadCheck.ok) {
+    logEditorialImageAnalytics({
+      event: "storage_upload_fail",
+      error: payloadCheck.reason ?? "asset_validation_failed",
+      metadata: { path: heroPath, validation: payloadCheck },
     });
     return null;
   }
@@ -402,29 +440,39 @@ async function generateAiIllustration(input: {
 }
 
 function buildFallbackResult(input: {
-  url: string;
+  url: string | null;
   source: EditorialImageSource;
   moderationFlags: string[];
   fallbackTier: string;
   qualityScore?: number;
   context?: EditorialImageContext;
+  brief?: EditorialImageBrief;
+  decision?: EditorialImageDecision;
+  aiAttempted?: boolean;
+  fallbackReason?: string;
 }): ResolveEditorialImageResult {
-  const og = buildOpenGraphImageUrl(input.url);
+  const url = input.url;
+  const og = url ? buildOpenGraphImageUrl(url) : null;
   logEditorialImageAnalytics({
     event: "fallback_applied",
     source: input.source,
     fallbackTier: 5,
     qualityScore: input.qualityScore,
-    metadata: { tier: input.fallbackTier },
+    metadata: {
+      tier: input.fallbackTier,
+      decision: input.decision?.code,
+      reason: input.fallbackReason ?? input.decision?.reason,
+    },
   });
 
   return {
-    hero_image_url: input.url,
+    hero_image_url: url,
     og_image_url: og,
     source: input.source,
+    decision: input.decision,
     metadata: {
       source: input.source,
-      hero_url: input.url,
+      hero_url: url,
       og_url: og,
       moderation_flags: input.moderationFlags,
       quality_score: input.qualityScore,
@@ -434,8 +482,48 @@ function buildFallbackResult(input: {
       theme: input.context?.theme,
       district: input.context?.location.district,
       processed_at: new Date().toISOString(),
+      decision: input.decision?.code,
+      decision_reason: input.decision?.reason,
+      brief: input.brief
+        ? {
+            headline: input.brief.headline,
+            category: input.brief.category,
+            district: input.brief.district,
+            eventType: input.brief.eventType,
+            generationAppropriate: input.brief.generationAppropriate,
+            sensitive: input.brief.sensitive,
+          }
+        : undefined,
+      relevance: input.context
+        ? {
+            theme: input.context.theme,
+            district: input.context.location.district,
+            keywords: input.context.entities.keywords.slice(0, 6),
+          }
+        : undefined,
+      ai_attempted: input.aiAttempted,
+      fallback_reason: input.fallbackReason,
     },
   };
+}
+
+function buildTextOnlyResult(input: {
+  moderationFlags: string[];
+  context?: EditorialImageContext;
+  brief?: EditorialImageBrief;
+  decision?: EditorialImageDecision;
+  reason?: string;
+}): ResolveEditorialImageResult {
+  return buildFallbackResult({
+    url: null,
+    source: "text_only",
+    moderationFlags: input.moderationFlags,
+    fallbackTier: "text_only",
+    context: input.context,
+    brief: input.brief,
+    decision: input.decision,
+    fallbackReason: input.reason ?? "text_only_card",
+  });
 }
 
 async function trySourceImageWithQuality(
@@ -489,6 +577,8 @@ export async function resolveEditorialHeroImage(input: {
   event?: NewsEventRow | null;
   customPrompt?: string | null;
   promptHashCache?: Map<string, { hero_image_url: string; og_image_url: string | null }>;
+  /** When false, decision engine will not choose B */
+  costTierAllowsImage?: boolean;
 }): Promise<ResolveEditorialImageResult> {
   const started = Date.now();
   const retryConfig = getRetryConfig();
@@ -531,10 +621,61 @@ export async function resolveEditorialHeroImage(input: {
     },
   });
 
+  const sensitivity = assessStorySensitivity({
+    headline: input.headline,
+    eventSummary: input.eventSummary ?? imageContext.summary,
+    bodyExcerpt: imageContext.bodyExcerpt,
+    category: input.category,
+    theme: imageContext.theme,
+    people: imageContext.entities.people,
+  });
+
   const moderation = moderateEditorialImageContext({
     headline: input.headline,
     eventSummary: input.eventSummary ?? imageContext.summary,
     category: input.category,
+    bodyExcerpt: imageContext.bodyExcerpt,
+    theme: imageContext.theme,
+    people: imageContext.entities.people,
+  });
+
+  const brief = buildEditorialImageBrief(imageContext, sensitivity);
+
+  const costTierAllowsImage =
+    input.costTierAllowsImage ??
+    Boolean(
+      (input.article?.editorial_metadata as { cost_plan?: { generateImage?: boolean } } | null)
+        ?.cost_plan?.generateImage ?? true
+    );
+
+  const isShortAlert =
+    (imageContext.bodyExcerpt?.length ?? 0) < 120 &&
+    (imageContext.summary?.length ?? 0) < 80;
+
+  const persistedDecision = (
+    input.article?.editorial_metadata as {
+      image?: { decision?: "A" | "B" | "C" | "D"; decision_reason?: string };
+    } | null
+  )?.image?.decision;
+
+  // Honor prior A/C/D decisions so source-only jobs never trigger paid AI.
+  const forceSkipAiForPersisted =
+    persistedDecision === "A" ||
+    persistedDecision === "C" ||
+    persistedDecision === "D";
+
+  const decision = decideEditorialImageStrategy({
+    brief,
+    costTierAllowsImage: forceSkipAiForPersisted ? false : costTierAllowsImage,
+    hasSourceImage: Boolean(
+      input.signals?.length ? pickSourceSignalImage(input.signals) : null
+    ),
+    providerAvailable:
+      isEditorialImageGenerationEnabled() &&
+      !input.skipAi &&
+      !forceSkipAiForPersisted,
+    isShortAlert,
+    skipAi: input.skipAi || forceSkipAiForPersisted,
   });
 
   const contextual = resolveContextualFallback({
@@ -545,18 +686,100 @@ export async function resolveEditorialHeroImage(input: {
     ? pickSourceSignalImage(input.signals)
     : null;
 
-  if (!isEditorialImageGenerationEnabled() || input.skipAi || !moderation.allowed) {
-    const sourceResult = sourceImageUrl
-      ? await trySourceImageWithQuality(sourceImageUrl, moderation.flags, imageContext)
-      : null;
-    if (sourceResult) {
+  // Decision A / C / D — do not force AI
+  if (decision.code !== "B") {
+    if (decision.code === "A" && sourceImageUrl) {
+      const sourceResult = await trySourceImageWithQuality(
+        sourceImageUrl,
+        moderation.flags,
+        imageContext
+      );
+      if (sourceResult) {
+        sourceResult.decision = decision;
+        sourceResult.metadata.decision = decision.code;
+        sourceResult.metadata.decision_reason = decision.reason;
+        sourceResult.metadata.brief = {
+          headline: brief.headline,
+          category: brief.category,
+          district: brief.district,
+          eventType: brief.eventType,
+          generationAppropriate: brief.generationAppropriate,
+          sensitive: brief.sensitive,
+        };
+        await incrementImageMetrics({
+          completed: true,
+          fallbackUsed: true,
+          latencyMs: Date.now() - started,
+          qualityScore: sourceResult.metadata.quality_score,
+        });
+        return sourceResult;
+      }
+    }
+
+    if (decision.code === "D") {
       await incrementImageMetrics({
         completed: true,
         fallbackUsed: true,
         latencyMs: Date.now() - started,
-        qualityScore: sourceResult.metadata.quality_score,
       });
-      return sourceResult;
+      return buildTextOnlyResult({
+        moderationFlags: moderation.flags,
+        context: imageContext,
+        brief,
+        decision,
+        reason: decision.reason,
+      });
+    }
+
+    // C — category / region curated (or A without usable source)
+    const result = buildFallbackResult({
+      url: contextual.url,
+      source:
+        contextual.tier === "region_curated" ? "region_curated" : "category_curated",
+      moderationFlags: moderation.flags,
+      fallbackTier: contextual.fallbackKey,
+      context: imageContext,
+      brief,
+      decision,
+      fallbackReason: decision.reason,
+    });
+    await incrementImageMetrics({
+      completed: true,
+      fallbackUsed: true,
+      latencyMs: Date.now() - started,
+    });
+    return result;
+  }
+
+  // Decision B — attempt AI illustration
+  if (!isEditorialImageGenerationEnabled() || input.skipAi || !moderation.allowed) {
+    if (sourceImageUrl) {
+      const sourceResult = await trySourceImageWithQuality(
+        sourceImageUrl,
+        moderation.flags,
+        imageContext
+      );
+      if (sourceResult) {
+        sourceResult.decision = decision;
+        sourceResult.metadata.ai_attempted = false;
+        sourceResult.metadata.fallback_reason = "provider_or_moderation_blocked";
+        await incrementImageMetrics({
+          completed: true,
+          fallbackUsed: true,
+          latencyMs: Date.now() - started,
+          qualityScore: sourceResult.metadata.quality_score,
+        });
+        return sourceResult;
+      }
+    }
+    if (brief.preferredFallback === "text_only") {
+      return buildTextOnlyResult({
+        moderationFlags: moderation.flags,
+        context: imageContext,
+        brief,
+        decision,
+        reason: "moderation_blocked_text_only",
+      });
     }
     const result = buildFallbackResult({
       url: contextual.url,
@@ -565,6 +788,10 @@ export async function resolveEditorialHeroImage(input: {
       moderationFlags: moderation.flags,
       fallbackTier: contextual.fallbackKey,
       context: imageContext,
+      brief,
+      decision,
+      aiAttempted: false,
+      fallbackReason: "provider_or_moderation_blocked",
     });
     await incrementImageMetrics({ completed: true, fallbackUsed: true, latencyMs: Date.now() - started });
     return result;
@@ -573,6 +800,7 @@ export async function resolveEditorialHeroImage(input: {
   const basePrompt = buildIntelligentEditorialPrompt({
     context: imageContext,
     moderation,
+    brief,
   });
   const promptHash = hashImagePrompt(basePrompt);
 
@@ -731,6 +959,7 @@ export async function resolveEditorialHeroImage(input: {
         hero_image_url: uploaded.heroUrl,
         og_image_url: uploaded.ogUrl,
         source: "ai_generated",
+        decision,
         metadata: {
           source: "ai_generated",
           hero_url: uploaded.heroUrl,
@@ -755,6 +984,22 @@ export async function resolveEditorialHeroImage(input: {
           provider: gen.provider,
           model: gen.model,
           processed_at: new Date().toISOString(),
+          decision: decision.code,
+          decision_reason: decision.reason,
+          brief: {
+            headline: brief.headline,
+            category: brief.category,
+            district: brief.district,
+            eventType: brief.eventType,
+            generationAppropriate: brief.generationAppropriate,
+            sensitive: brief.sensitive,
+          },
+          relevance: {
+            theme: imageContext.theme,
+            district: imageContext.location.district,
+            keywords: imageContext.entities.keywords.slice(0, 6),
+          },
+          ai_attempted: true,
         },
       };
     }
@@ -767,6 +1012,9 @@ export async function resolveEditorialHeroImage(input: {
       imageContext
     );
     if (sourceResult) {
+      sourceResult.decision = decision;
+      sourceResult.metadata.ai_attempted = true;
+      sourceResult.metadata.fallback_reason = "ai_exhausted_use_source";
       await incrementImageMetrics({
         completed: true,
         fallbackUsed: true,
@@ -776,6 +1024,21 @@ export async function resolveEditorialHeroImage(input: {
     }
   }
 
+  if (brief.preferredFallback === "text_only") {
+    await incrementImageMetrics({
+      completed: true,
+      fallbackUsed: true,
+      latencyMs: Date.now() - started,
+    });
+    return buildTextOnlyResult({
+      moderationFlags: moderation.flags,
+      context: imageContext,
+      brief,
+      decision,
+      reason: "ai_exhausted_text_only",
+    });
+  }
+
   const result = buildFallbackResult({
     url: contextual.url,
     source:
@@ -783,6 +1046,10 @@ export async function resolveEditorialHeroImage(input: {
     moderationFlags: moderation.flags,
     fallbackTier: contextual.fallbackKey,
     context: imageContext,
+    brief,
+    decision,
+    aiAttempted: true,
+    fallbackReason: "ai_exhausted_category_fallback",
   });
   await incrementImageMetrics({
     completed: true,
@@ -980,9 +1247,17 @@ async function processQueueItem(
       promptHashCache,
     });
 
+    const persistedDecision = (
+      article.editorial_metadata as { image?: { decision?: string } } | null
+    )?.image?.decision;
+    const aiWasExpected =
+      persistedDecision === "B" ||
+      (persistedDecision == null && isEditorialImageGenerationEnabled());
+
     const aiFailed =
+      aiWasExpected &&
       isEditorialImageGenerationEnabled() &&
-      !isTerminalEditorialImageSource(resolved.source);
+      !isAcceptableCompletionWhenAiExpected(resolved.source);
 
     if (aiFailed && row.attempts + 1 < row.max_attempts) {
       const history = appendRetryLog(row.generation_history, {
@@ -1012,15 +1287,50 @@ async function processQueueItem(
       return { ok: false, error: "ai_fallback_retry_scheduled", usedFallback: true, retried: true };
     }
 
+    // Terminal: AI success OR intentional fallback after exhausted retries / non-AI decision
+    const heroUrl = resolved.hero_image_url;
+    const isTextOnly = resolved.source === "text_only" || !heroUrl;
+
     await markEditorialImageCompletedWithMeta({
       queueId: row.id,
       generatedArticleId: article.id,
-      heroImageUrl: resolved.hero_image_url,
+      heroImageUrl: heroUrl ?? "",
       ogImageUrl: resolved.og_image_url,
       imageSource: resolved.source,
       promptHash: resolved.metadata.prompt_hash ?? null,
-      imageMeta: resolved.metadata,
+      imageMeta: {
+        ...resolved.metadata,
+        status: isTextOnly ? "completed" : resolved.metadata.status ?? "completed",
+        pending_attachment: false,
+      },
     });
+
+    // Clear hero when text-only so display layer can choose text card
+    if (isTextOnly) {
+      const supabase = createAdminServerClient();
+      const { data: art } = await supabase
+        .from("generated_articles")
+        .select("editorial_metadata")
+        .eq("id", article.id)
+        .single();
+      const meta = (art?.editorial_metadata ?? {}) as Record<string, unknown>;
+      await supabase
+        .from("generated_articles")
+        .update({
+          hero_image_url: null,
+          editorial_metadata: {
+            ...meta,
+            image: {
+              ...resolved.metadata,
+              hero_url: null,
+              og_url: null,
+              source: "text_only",
+              status: "completed",
+            },
+          },
+        })
+        .eq("id", article.id);
+    }
 
     logImageGenerationPhase("image_generation_completed", {
       queueId: row.id,
@@ -1029,6 +1339,7 @@ async function processQueueItem(
       qualityScore: resolved.metadata.quality_score ?? null,
       theme: resolved.metadata.theme,
       district: resolved.metadata.district,
+      decision: resolved.decision?.code ?? resolved.metadata.decision,
     });
 
     return { ok: true };
@@ -1199,16 +1510,36 @@ export async function processEditorialImageQueue(
 }
 
 export async function queueEditorialImageForArticle(
-  generatedArticleId: string
-): Promise<void> {
-  const queued = await enqueueEditorialImage(generatedArticleId);
-  if (queued) {
+  generatedArticleId: string,
+  options?: { force?: boolean; priority?: number; customPrompt?: string }
+): Promise<{ enqueued: boolean; reason: string }> {
+  const result = await enqueueEditorialImageDetailed(generatedArticleId, {
+    force: options?.force,
+    priority: options?.priority,
+    customPrompt: options?.customPrompt,
+  });
+  if (result.enqueued) {
     logEditorialImageAnalytics({
       event: "resolve_start",
       articleId: generatedArticleId,
-      metadata: { enqueued: true, aiEnabled: isEditorialImageGenerationEnabled() },
+      metadata: {
+        enqueued: true,
+        reason: result.reason,
+        aiEnabled: isEditorialImageGenerationEnabled(),
+      },
+    });
+  } else {
+    logEditorialImageAnalytics({
+      event: "resolve_start",
+      articleId: generatedArticleId,
+      metadata: {
+        enqueued: false,
+        reason: result.reason,
+        aiEnabled: isEditorialImageGenerationEnabled(),
+      },
     });
   }
+  return { enqueued: result.enqueued, reason: result.reason };
 }
 
 export function initialHeroPlaceholder(

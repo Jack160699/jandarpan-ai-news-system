@@ -32,6 +32,14 @@ import { optimizeSeoSlug } from "@/lib/seo/slug-optimize";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import { buildOptimizedFactPack } from "@/lib/news/ai/optimized-fact-pack";
 import {
+  classifyArticleType,
+  type ArticleType,
+  type ArticleTypeClassification,
+} from "@/lib/news/ai/article-type";
+import {
+  shouldRetryDepthFailure,
+} from "@/lib/news/ai/editorial-depth-quality";
+import {
   classifyEditorialTier,
   editorialMaxTokens,
 } from "@/lib/observability/openai-cost/adaptive-tokens";
@@ -41,6 +49,12 @@ import {
   initialHeroPlaceholder,
   queueEditorialImageForArticle,
 } from "@/lib/news/ai/generate-editorial-image";
+import { buildEditorialImageBrief } from "@/lib/news/ai/editorial-image-brief";
+import { buildEditorialImageContext } from "@/lib/news/ai/editorial-image-context";
+import { decideEditorialImageStrategy } from "@/lib/news/ai/editorial-image-decision";
+import { assessStorySensitivity } from "@/lib/news/ai/editorial-image-moderation";
+import { isImageProviderAvailable } from "@/lib/news/ai/editorial-image-provider";
+import { isDisplayableImage } from "@/lib/news/images/validate";
 import {
   logEditorialDecision,
   runEditorialQualityChecks,
@@ -133,6 +147,9 @@ type PendingCandidate = {
   repaired: boolean;
   usedFallback: boolean;
   intelligenceV2: EditorialIntelligenceV2 | null;
+  articleType: ArticleType;
+  articleTypeClassification: ArticleTypeClassification;
+  depthRetries: number;
   humanQualityMeta?: {
     score: number;
     decision: string;
@@ -200,17 +217,45 @@ function resolveLanguage(
   return "en";
 }
 
-function buildFactPack(event: NewsEventRow, signals: NewsSignalRow[]): {
+function buildFactPack(
+  event: NewsEventRow,
+  signals: NewsSignalRow[],
+  articleType?: ArticleType | null
+): {
   factPackText: string;
   sourceTexts: string[];
   attributions: SourceAttribution[];
 } {
-  const optimized = buildOptimizedFactPack(event, signals);
+  const optimized = buildOptimizedFactPack(event, signals, { articleType });
   return {
     factPackText: optimized.factPackText,
     sourceTexts: optimized.sourceTexts,
     attributions: optimized.attributions,
   };
+}
+
+function classifyEventArticleType(
+  event: NewsEventRow,
+  signals: NewsSignalRow[],
+  factPackCharsHint?: number
+): ArticleTypeClassification {
+  const deskTemplate = resolveDeskTemplateFromCategory(event.category, {
+    region: event.region,
+    urgencyScore: event.urgency_score,
+  });
+  const rawChars = signals.reduce(
+    (n, s) => n + (s.raw_content?.length ?? s.title.length),
+    0
+  );
+  return classifyArticleType({
+    urgencyScore: event.urgency_score,
+    signalCount: signals.length,
+    factPackChars: factPackCharsHint ?? rawChars,
+    category: event.category,
+    canonicalTitle: event.canonical_title,
+    eventSummary: event.event_summary,
+    deskTemplate,
+  });
 }
 
 function computeReadingTime(body: string, language: SupportedEditorialLanguage): string {
@@ -237,9 +282,18 @@ function parseLlmDraft(
   if (!headline || !summary) return null;
 
   const article_body = assembleArticleBody(sections, summary);
-  if (!article_body && summary.length < 20) return null;
+  if (!article_body || article_body.trim().length < 40) return null;
 
-  const body = article_body || summary;
+  // Never publish summary-as-body — incomplete generations must retry/fail
+  const body = article_body.trim();
+  if (
+    body.length <= summary.length + 20 &&
+    body.replace(/\s+/g, " ").toLowerCase().startsWith(
+      summary.replace(/\s+/g, " ").toLowerCase().slice(0, 60)
+    )
+  ) {
+    return null;
+  }
 
   const seo_title = (raw.seo_title?.trim() || headline).slice(0, 70);
   const seo_description = (raw.seo_description?.trim() || summary).slice(0, 160);
@@ -264,7 +318,9 @@ async function callEditorialLlm(
   factPackText: string,
   language: SupportedEditorialLanguage,
   event: NewsEventRow,
-  signalCount: number
+  signalCount: number,
+  articleType: ArticleType,
+  evidenceSufficient: boolean
 ): Promise<LlmEditorialResponse | null> {
   const deskTemplate = resolveDeskTemplateFromCategory(event.category, {
     region: event.region,
@@ -276,6 +332,8 @@ async function callEditorialLlm(
     language,
     deskTemplate,
     categoryHint,
+    articleType,
+    evidenceSufficient,
   });
 
   const model =
@@ -288,8 +346,9 @@ async function callEditorialLlm(
     signalCount,
     factPackChars: factPackText.length,
     category: event.category,
+    articleType,
   });
-  const maxTokens = editorialMaxTokens(tier);
+  const maxTokens = editorialMaxTokens(tier, articleType);
 
   const result = await requestChatCompletion({
     operation: "editorial_generate",
@@ -300,7 +359,7 @@ async function callEditorialLlm(
     maxTokens,
     jsonMode: true,
     timeoutMs: EDITORIAL_TIMEOUT_MS,
-    context: { worker: "editorial_generate", eventId: event.id },
+    context: { worker: "editorial_generate", eventId: event.id, articleType },
   });
 
   if (!result.ok) return null;
@@ -394,6 +453,8 @@ function evaluateDraft(input: {
   existingBodyFingerprints?: string[];
   existingEventIds?: string[];
   forcePublish?: boolean;
+  articleType?: ArticleType | null;
+  evidenceSufficient?: boolean;
 }): EditorialQualityReport {
   return runEditorialQualityChecks({
     headline: input.draft.headline,
@@ -412,6 +473,8 @@ function evaluateDraft(input: {
     existingEventIds: input.existingEventIds,
     forcePublish: input.forcePublish,
     event: input.event,
+    articleType: input.articleType,
+    evidenceSufficient: input.evidenceSufficient,
   });
 }
 
@@ -632,6 +695,9 @@ async function persistGeneratedArticle(input: {
   usedFallback: boolean;
   batchRescue?: boolean;
   intelligenceV2?: EditorialIntelligenceV2 | null;
+  articleType?: ArticleType;
+  articleTypeClassification?: ArticleTypeClassification;
+  depthRetries?: number;
   humanQualityMeta?: {
     score: number;
     decision: string;
@@ -720,6 +786,110 @@ async function persistGeneratedArticle(input: {
     };
   }
 
+  const hasSourceImage = input.signals.some(
+    (s) => s.image_url && isDisplayableImage(s.image_url)
+  );
+
+  const provisionalArticle = {
+    id: "provisional",
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    article_body: input.draft.article_body,
+    slug,
+    tags: input.draft.tags.length
+      ? input.draft.tags
+      : input.event.category
+        ? [input.event.category]
+        : [],
+  } as import("@/lib/types/newsroom").GeneratedArticleRow;
+
+  const imageContext = buildEditorialImageContext({
+    article: provisionalArticle,
+    event: input.event,
+    signals: input.signals,
+  });
+  const sensitivity = assessStorySensitivity({
+    headline: input.draft.headline,
+    eventSummary: input.event.event_summary ?? input.draft.summary,
+    bodyExcerpt: imageContext.bodyExcerpt,
+    category: category,
+    theme: imageContext.theme,
+    people: imageContext.entities.people,
+  });
+  const imageBrief = buildEditorialImageBrief(imageContext, sensitivity);
+  const imageDecision = decideEditorialImageStrategy({
+    brief: imageBrief,
+    costTierAllowsImage: tierPlan.generateImage,
+    hasSourceImage,
+    providerAvailable: isImageProviderAvailable(),
+    isShortAlert:
+      (input.draft.article_body?.length ?? 0) < 120 &&
+      (input.draft.summary?.length ?? 0) < 80,
+  });
+
+  const imageMeta =
+    imageDecision.code === "B"
+      ? {
+          status: "queued" as const,
+          hero_url: hero_image_url,
+          source: "category_fallback",
+          decision: imageDecision.code,
+          decision_reason: imageDecision.reason,
+          brief: {
+            eventType: imageBrief.eventType,
+            district: imageBrief.district,
+            sensitive: imageBrief.sensitive,
+            generationAppropriate: imageBrief.generationAppropriate,
+          },
+          pending_attachment: true,
+        }
+      : imageDecision.code === "D"
+        ? {
+            status: "completed" as const,
+            hero_url: null as string | null,
+            source: "text_only",
+            decision: imageDecision.code,
+            decision_reason: imageDecision.reason,
+            brief: {
+              eventType: imageBrief.eventType,
+              district: imageBrief.district,
+              sensitive: imageBrief.sensitive,
+              generationAppropriate: imageBrief.generationAppropriate,
+            },
+          }
+        : imageDecision.code === "A"
+          ? {
+              status: "queued" as const,
+              hero_url: hero_image_url,
+              source: "source_pending",
+              decision: imageDecision.code,
+              decision_reason: imageDecision.reason,
+              brief: {
+                eventType: imageBrief.eventType,
+                district: imageBrief.district,
+                sensitive: imageBrief.sensitive,
+                generationAppropriate: imageBrief.generationAppropriate,
+              },
+              pending_attachment: true,
+            }
+          : {
+              status: "completed" as const,
+              hero_url: hero_image_url,
+              source: "category_curated",
+              decision: imageDecision.code,
+              decision_reason: imageDecision.reason,
+              brief: {
+                eventType: imageBrief.eventType,
+                district: imageBrief.district,
+                sensitive: imageBrief.sensitive,
+                generationAppropriate: imageBrief.generationAppropriate,
+              },
+            };
+
+  // Text-only: no stock placeholder hero
+  const resolvedHeroUrl =
+    imageDecision.code === "D" ? null : hero_image_url;
+
   const persistValidation = validateGeneratedArticle({
     headline: input.draft.headline,
     summary: input.draft.summary,
@@ -765,7 +935,7 @@ async function persistGeneratedArticle(input: {
     headline: input.draft.headline,
     summary: input.draft.summary,
     article_body: input.draft.article_body,
-    hero_image_url,
+    hero_image_url: resolvedHeroUrl,
     seo_title: input.draft.seo_title,
     seo_description: input.draft.seo_description,
     reading_time: input.draft.reading_time,
@@ -824,6 +994,12 @@ async function persistGeneratedArticle(input: {
         region: input.event.region,
         urgencyScore: input.event.urgency_score,
       }),
+      article_type: input.articleType ?? input.quality.article_type ?? null,
+      article_type_reasons: input.articleTypeClassification?.reasons ?? [],
+      evidence_sufficient:
+        input.articleTypeClassification?.evidenceSufficient ?? null,
+      depth_retries: input.depthRetries ?? 0,
+      depth_metrics: input.quality.depth_quality?.metrics ?? null,
       ...(input.intelligenceV2
         ? { intelligence_v2: input.intelligenceV2 }
         : {}),
@@ -836,11 +1012,7 @@ async function persistGeneratedArticle(input: {
             evidence_ledger_summary: input.humanQualityMeta.evidenceSummary,
           }
         : {}),
-      image: {
-        status: "queued",
-        hero_url: hero_image_url,
-        source: "category_fallback",
-      },
+      image: imageMeta,
     },
   };
 
@@ -903,7 +1075,9 @@ async function persistGeneratedArticle(input: {
     quality_breakdown: input.quality.quality_breakdown,
   });
 
-  if (tierPlan.generateImage) {
+  // Enqueue only when decision requires worker (AI and/or source attachment).
+  // Never blocks publication — images may attach later.
+  if (imageDecision.enqueueJob) {
     await queueEditorialImageForArticle(inserted.id);
   }
 
@@ -944,25 +1118,53 @@ async function prepareCandidate(
   }
 
   const language = resolveLanguage(event, signals);
-  const { factPackText, sourceTexts, attributions } = buildFactPack(
+  let articleTypeClassification = classifyEventArticleType(event, signals);
+  let { factPackText, sourceTexts, attributions } = buildFactPack(
     event,
-    signals
+    signals,
+    articleTypeClassification.type
   );
+  // Reclassify with actual fact-pack size (excerpt-aware)
+  articleTypeClassification = classifyEventArticleType(
+    event,
+    signals,
+    factPackText.length
+  );
+  // Rebuild pack if type changed (excerpt budget differs)
+  ({ factPackText, sourceTexts, attributions } = buildFactPack(
+    event,
+    signals,
+    articleTypeClassification.type
+  ));
 
   let draft: EditorialDraft | null = null;
   let usedFallback = false;
   let intelligenceV2: EditorialIntelligenceV2 | null = null;
   const generatedAt = new Date().toISOString();
+  let depthRetries = 0;
 
-  try {
-    const llmRaw = await callEditorialLlm(factPackText, language, event, signals.length);
-    if (llmRaw) {
-      draft = parseLlmDraft(llmRaw, language);
+  async function generateOnce(): Promise<EditorialDraft | null> {
+    const llmRaw = await callEditorialLlm(
+      factPackText,
+      language,
+      event,
+      signals.length,
+      articleTypeClassification.type,
+      articleTypeClassification.evidenceSufficient
+    );
+    if (!llmRaw) return null;
+    const parsed = parseLlmDraft(llmRaw, language);
+    if (parsed) {
       intelligenceV2 = parseEditorialIntelligenceV2(llmRaw, {
-        tags: draft?.tags ?? (llmRaw.tags ?? []).map((t) => String(t)),
+        tags: parsed.tags ?? (llmRaw.tags ?? []).map((t) => String(t)),
         generatedAt,
       });
     }
+    return parsed;
+  }
+
+  try {
+    draft = await generateOnce();
   } catch (err) {
     logEditorial("llm_error", {
       eventId: event.id,
@@ -992,7 +1194,47 @@ async function prepareCandidate(
     existingHeadlines,
     existingBodyFingerprints: storyIndex?.bodyFingerprints,
     existingEventIds: storyIndex?.eventIds,
+    articleType: articleTypeClassification.type,
+    evidenceSufficient: articleTypeClassification.evidenceSufficient,
   });
+
+  // Bounded depth retry — regenerate when body too short / equals excerpt (never infinite)
+  while (
+    quality.depth_quality &&
+    !quality.depth_quality.ok &&
+    shouldRetryDepthFailure(quality.depth_quality, depthRetries) &&
+    !usedFallback
+  ) {
+    depthRetries += 1;
+    logEditorial("depth_retry", {
+      eventId: event.id,
+      attempt: depthRetries,
+      codes: quality.depth_quality.codes,
+      articleType: articleTypeClassification.type,
+    });
+    try {
+      const retried = await generateOnce();
+      if (retried) {
+        draft = applyEditorialEnhancements(retried, event);
+        quality = evaluateDraft({
+          draft,
+          event,
+          signals,
+          factPackText,
+          sourceTexts,
+          existingHeadlines,
+          existingBodyFingerprints: storyIndex?.bodyFingerprints,
+          existingEventIds: storyIndex?.eventIds,
+          articleType: articleTypeClassification.type,
+          evidenceSufficient: articleTypeClassification.evidenceSufficient,
+        });
+      } else {
+        break;
+      }
+    } catch {
+      break;
+    }
+  }
 
   const repairDecision = shouldRunEditorialRepair(quality);
 
@@ -1013,6 +1255,8 @@ async function prepareCandidate(
       existingHeadlines,
       existingBodyFingerprints: storyIndex?.bodyFingerprints,
       existingEventIds: storyIndex?.eventIds,
+      articleType: articleTypeClassification.type,
+      evidenceSufficient: articleTypeClassification.evidenceSufficient,
     });
     logEditorial("borderline_repaired", {
       eventId: event.id,
@@ -1062,6 +1306,9 @@ async function prepareCandidate(
       repaired,
       usedFallback,
       intelligenceV2,
+      articleType: articleTypeClassification.type,
+      articleTypeClassification,
+      depthRetries,
       humanQualityMeta: {
         score: hqGate.humanScore.score,
         decision: hqGate.gate.decision,
@@ -1091,13 +1338,21 @@ export async function previewEditorialDraftFromEvent(
   }
 
   const language = resolveLanguage(event, signals);
-  const { factPackText } = buildFactPack(event, signals);
+  const classification = classifyEventArticleType(event, signals);
+  const { factPackText } = buildFactPack(event, signals, classification.type);
 
   let draft: EditorialDraft | null = null;
   let usedFallback = false;
 
   try {
-    const llmRaw = await callEditorialLlm(factPackText, language, event, signals.length);
+    const llmRaw = await callEditorialLlm(
+      factPackText,
+      language,
+      event,
+      signals.length,
+      classification.type,
+      classification.evidenceSufficient
+    );
     draft = llmRaw ? parseLlmDraft(llmRaw, language) : null;
   } catch {
     draft = null;
@@ -1165,14 +1420,21 @@ export async function generateEditorialFromEvent(
   let quality = candidate.quality;
 
   if (options?.forcePublish && !quality.hard_reject) {
+    const pack = buildFactPack(
+      candidate.event,
+      candidate.signals,
+      candidate.articleType
+    );
     quality = evaluateDraft({
       draft: candidate.draft,
       event: candidate.event,
       signals: candidate.signals,
-      factPackText: buildFactPack(candidate.event, candidate.signals).factPackText,
-      sourceTexts: buildFactPack(candidate.event, candidate.signals).sourceTexts,
+      factPackText: pack.factPackText,
+      sourceTexts: pack.sourceTexts,
       existingHeadlines,
       forcePublish: true,
+      articleType: candidate.articleType,
+      evidenceSufficient: candidate.articleTypeClassification.evidenceSufficient,
     });
   }
 
@@ -1239,6 +1501,9 @@ export async function generateEditorialFromEvent(
     repaired: candidate.repaired,
     usedFallback: candidate.usedFallback,
     intelligenceV2: candidate.intelligenceV2,
+    articleType: candidate.articleType,
+    articleTypeClassification: candidate.articleTypeClassification,
+    depthRetries: candidate.depthRetries,
     humanQualityMeta: candidate.humanQualityMeta,
   });
   if (persisted.ok && persisted.article) {
@@ -1465,6 +1730,9 @@ export async function generateEditorialsFromEvents(options?: {
         repaired: candidate.repaired,
         usedFallback: candidate.usedFallback,
         intelligenceV2: candidate.intelligenceV2,
+        articleType: candidate.articleType,
+        articleTypeClassification: candidate.articleTypeClassification,
+        depthRetries: candidate.depthRetries,
         humanQualityMeta: candidate.humanQualityMeta,
       });
 
@@ -1610,7 +1878,8 @@ export async function generateEditorialsFromEvents(options?: {
     for (const candidate of rescuable) {
       const { factPackText, sourceTexts } = buildFactPack(
         candidate.event,
-        candidate.signals
+        candidate.signals,
+        candidate.articleType
       );
       const quality = evaluateDraft({
         draft: candidate.draft,
@@ -1620,6 +1889,8 @@ export async function generateEditorialsFromEvents(options?: {
         sourceTexts,
         existingHeadlines,
         forcePublish: true,
+        articleType: candidate.articleType,
+        evidenceSufficient: candidate.articleTypeClassification.evidenceSufficient,
       });
 
       const saved = await persistGeneratedArticle({
@@ -1632,6 +1903,9 @@ export async function generateEditorialsFromEvents(options?: {
         usedFallback: candidate.usedFallback,
         batchRescue: true,
         intelligenceV2: candidate.intelligenceV2,
+        articleType: candidate.articleType,
+        articleTypeClassification: candidate.articleTypeClassification,
+        depthRetries: candidate.depthRetries,
         humanQualityMeta: candidate.humanQualityMeta,
       });
 

@@ -3,7 +3,7 @@ import { ArticleImage } from "./ArticleImage";
 import { AiSummary, ActionRow, Tag } from "./primitives";
 import { hindiRelativeTime, storyHref, type ReaderStory } from "../utils";
 
-/** Single strong lead — 190px image, serif 22/1.28, AI summary, action row. */
+/** Single strong lead — image, Hindi-safe lead type, AI summary, action row. */
 export function LeadStory({ story, priority = true }: { story: ReaderStory; priority?: boolean }) {
   const time = story.timeLabel ?? hindiRelativeTime(story.publishedAt);
   return (
@@ -20,23 +20,21 @@ export function LeadStory({ story, priority = true }: { story: ReaderStory; prio
           tone="city"
           category={story.kicker ?? "general"}
         />
-        <div style={{ display: "flex", gap: 7, alignItems: "center", margin: "9px 0 4px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 7, alignItems: "center", margin: "10px 0 6px", flexWrap: "wrap" }}>
           <Tag>{story.kicker ?? "प्रमुख"}</Tag>
           {time ? (
-            <span className="jd-ui" style={{ fontSize: 10, color: "var(--jd-muted)" }}>
+            <span className="jd-ui jd-type-meta" style={{ color: "var(--jd-muted)" }}>
               · {time}
             </span>
           ) : null}
         </div>
         <h2
-          className="jd-serif jd-lead-title"
+          className="jd-serif jd-lead-title jd-type-lead"
           style={{
-            margin: "0 0 4px",
-            fontSize: 22,
-            lineHeight: 1.28,
-            fontWeight: 700,
+            margin: "0 0 6px",
             color: "var(--jd-ink)",
           }}
+          title={story.headline}
         >
           {story.headline}
         </h2>
