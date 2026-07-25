@@ -25,6 +25,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "src/types/database.generated.ts",
+    // Local/audit artifacts and CommonJS tooling — not shipped app code
+    ".claude/**",
+    "docs/audits/**",
+    "docs/jandarpan-reader-redesign/source-designs/**",
+    "playwright-report/**",
+    "test-results/**",
+    "**/*.cjs",
   ]),
 ]);
 
