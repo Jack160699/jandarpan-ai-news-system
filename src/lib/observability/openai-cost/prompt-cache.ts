@@ -28,6 +28,16 @@ type CacheRow = {
   model: string;
 };
 
+export function decodeCachedPromptResult(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const content = (value as { content?: unknown }).content;
+    if (typeof content === "string" && content.trim()) return content;
+    return JSON.stringify(value);
+  }
+  return null;
+}
+
 export function computePromptCacheKey(input: {
   system?: string;
   user: string;
@@ -81,10 +91,8 @@ export async function lookupPromptCache(input: {
     if (!data) return { hit: false };
 
     const row = data as CacheRow;
-    const result =
-      typeof row.result_json === "string"
-        ? row.result_json
-        : JSON.stringify(row.result_json);
+    const result = decodeCachedPromptResult(row.result_json);
+    if (!result) return { hit: false };
 
     const savedCost = Number(row.estimated_cost_usd);
 

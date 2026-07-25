@@ -54,6 +54,8 @@ export type ChatCompletionRequest = {
   maxTokens?: number;
   jsonMode?: boolean;
   timeoutMs?: number;
+  /** Bypass lookup and storage when retrying output rejected by validation. */
+  cachePolicy?: "default" | "bypass";
   context?: OpenAiTelemetryContext;
 };
 
