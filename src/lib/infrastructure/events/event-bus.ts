@@ -6,7 +6,6 @@ import { createAdminClient } from "@/lib/supabase";
 import { asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
 import { enqueueJob } from "@/lib/infrastructure/jobs/queue";
 import type { JobType } from "@/lib/infrastructure/jobs/types";
-import { editorialJobQueuePriority } from "@/lib/infrastructure/workers/editorial-priority";
 
 export type EventTopic =
   | "ingest.completed"
@@ -38,6 +37,12 @@ const TOPIC_JOB_MAP: Partial<Record<EventTopic, JobType[]>> = {
   "dam.asset.uploaded": ["dam_analyze"],
   "analytics.refresh": ["analytics_aggregate"],
 };
+
+/**
+ * ingest.completed is a wake-up, not a NewsEventRow. It contains counts/log ids
+ * only, so event scoring would produce a non-finite database priority.
+ */
+export const EDITORIAL_WAKEUP_PRIORITY = 80;
 
 export async function publishEvent(input: PublishEventInput): Promise<string | null> {
   const supabase = createAdminClient();
@@ -108,9 +113,7 @@ export async function deliverPendingEvents(
             jobType === "intelligence_snapshot"
               ? 5
               : jobType === "editorial_generate"
-                ? editorialJobQueuePriority(
-                    payload as unknown as import("@/lib/types/newsroom").NewsEventRow
-                  )
+                ? EDITORIAL_WAKEUP_PRIORITY
                 : 0,
           timeoutMs: jobType === "editorial_generate" ? 90_000 : undefined,
         });

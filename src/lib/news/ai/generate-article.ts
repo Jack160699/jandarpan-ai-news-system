@@ -75,6 +75,7 @@ import {
   validationPassRate,
 } from "@/lib/news/ai/generation-quality-metrics";
 import { buildPublicPublishPatch } from "@/lib/newsroom/publish-state";
+import { isAutonomousPublishingEnabled } from "@/lib/autonomous/rollout-state";
 import {
   applyEditorialEnhancements,
   buildFallbackDraftFromFactPack,
@@ -765,7 +766,11 @@ async function persistGeneratedArticle(input: {
     aiConfidence >= 0.9 &&
     trustedSources >= 3;
 
-  const breakingPatch = breakingOverride ? buildPublicPublishPatch(new Date()) : null;
+  // Shadow may generate, score and image drafts, but it must never publish.
+  const breakingPatch =
+    breakingOverride && isAutonomousPublishingEnabled()
+      ? buildPublicPublishPatch(new Date())
+      : null;
 
   const tierPlan = resolveEditorialTierPlan({
     event: input.event,
@@ -1055,7 +1060,7 @@ async function persistGeneratedArticle(input: {
     );
   }
 
-  logEditorialDecision({
+  await logEditorialDecision({
     confidence: input.quality.ai_confidence,
     readability: input.quality.quality_breakdown.readability,
     seoQuality: input.quality.quality_breakdown.seo_quality,
@@ -1451,7 +1456,7 @@ export async function generateEditorialFromEvent(
   });
 
   if (!quality.publish_allowed) {
-    logEditorialDecision({
+    await logEditorialDecision({
       confidence: quality.ai_confidence,
       readability: quality.quality_breakdown.readability,
       seoQuality: quality.quality_breakdown.seo_quality,
@@ -1638,6 +1643,7 @@ export async function generateEditorialsFromEvents(options?: {
     selected: pending.length,
   };
 
+  let generated = 0;
   let published = 0;
   let rejected = 0;
   let repaired = 0;
@@ -1739,7 +1745,7 @@ export async function generateEditorialsFromEvents(options?: {
       results.push({
         eventId: event.id,
         ok: saved.ok,
-        published: saved.ok,
+        published: Boolean(saved.article?.published_at),
         repaired: candidate.repaired,
         reason: saved.reason,
         ...qualityResultFields(candidate.quality),
@@ -1769,7 +1775,8 @@ export async function generateEditorialsFromEvents(options?: {
           confidence: candidate.quality.ai_confidence,
           mode: "batch",
         });
-        published++;
+        generated++;
+        if (saved.article.published_at) published++;
         existingHeadlines.push(candidate.draft.headline);
         existingBodyFingerprints.push(
           fingerprintBody(candidate.draft.article_body)
@@ -1854,7 +1861,7 @@ export async function generateEditorialsFromEvents(options?: {
         ...qualityResultFields(candidate.quality),
       });
 
-      logEditorialDecision({
+      await logEditorialDecision({
         ...qualityResultFields(candidate.quality),
         accepted: false,
         storyId: null,
@@ -1869,7 +1876,7 @@ export async function generateEditorialsFromEvents(options?: {
     }
   }
 
-  if (published === 0 && failedCandidates.length > 0) {
+  if (generated === 0 && failedCandidates.length > 0) {
     const rescuable = failedCandidates
       .filter((c) => !c.quality.hard_reject)
       .sort((a, b) => b.quality.ai_confidence - a.quality.ai_confidence)
@@ -1917,13 +1924,14 @@ export async function generateEditorialsFromEvents(options?: {
           confidence: quality.ai_confidence,
           mode: "batch_rescue",
         });
-        published++;
+        generated++;
+        if (saved.article.published_at) published++;
         rejected = Math.max(0, rejected - 1);
         const idx = results.findIndex((r) => r.eventId === candidate.event.id);
         const entry = {
           eventId: candidate.event.id,
           ok: true,
-          published: true,
+          published: Boolean(saved.article.published_at),
           repaired: candidate.repaired,
           reason: "batch_rescue_top_scorer",
           ...qualityResultFields(quality),
@@ -1954,7 +1962,7 @@ export async function generateEditorialsFromEvents(options?: {
     }
 
     logEditorial("batch_rescue", {
-      rescued: published,
+      rescued: generated,
       candidates: rescuable.length,
     });
   }
@@ -2011,6 +2019,7 @@ export async function generateEditorialsFromEvents(options?: {
   }
 
   logEditorial("batch_complete", {
+    generated,
     published,
     rejected,
     repaired,
@@ -2024,7 +2033,7 @@ export async function generateEditorialsFromEvents(options?: {
   });
 
   return {
-    generated: published,
+    generated,
     rejected,
     published,
     repaired,

@@ -76,9 +76,13 @@ export async function requestImageGeneration(input: {
       prompt: input.prompt.slice(0, 4000),
       n: 1,
       size: input.size ?? (model.includes("dall-e-3") ? "1792x1024" : "1024x1024"),
-      response_format: "url",
       ...input.extraBody,
     };
+    // DALL-E supports explicit URL output. Current GPT Image models return
+    // b64_json by default and reject the legacy response_format parameter.
+    if (model.includes("dall-e")) {
+      body.response_format = "url";
+    }
 
     const res = await fetch(OPENAI_IMAGES_URL, {
       method: "POST",
@@ -93,21 +97,32 @@ export async function requestImageGeneration(input: {
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       const classified = classifyAiHttpFailure(res.status, detail);
-      markProviderUnhealthy("openai", {
-        reason: classified.authFailure
-          ? "openai_unauthorized"
-          : classified.message,
-        httpStatus: res.status,
-        authFailure: classified.authFailure,
-        rateLimited: classified.rateLimited,
-      });
+      if (
+        classified.authFailure ||
+        classified.rateLimited ||
+        (res.status >= 500 && classified.retryable)
+      ) {
+        markProviderUnhealthy("openai", {
+          reason: classified.authFailure
+            ? "openai_unauthorized"
+            : classified.message,
+          httpStatus: res.status,
+          authFailure: classified.authFailure,
+          rateLimited: classified.rateLimited,
+        });
+      }
       return { error: classified };
     }
 
     const json = (await res.json()) as {
-      data?: Array<{ url?: string }>;
+      data?: Array<{ url?: string; b64_json?: string }>;
     };
-    const url = json.data?.[0]?.url;
+    const item = json.data?.[0];
+    const url =
+      item?.url ??
+      (item?.b64_json
+        ? `data:image/png;base64,${item.b64_json}`
+        : undefined);
     if (!url) {
       return {
         error: {

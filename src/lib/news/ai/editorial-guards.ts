@@ -20,6 +20,9 @@ import {
 import type { ArticleType } from "@/lib/news/ai/article-type";
 import { normalizeTitle, titleSimilarity } from "@/lib/news/normalize";
 import type { NewsEventRow } from "@/lib/types/newsroom";
+import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
+import { getPipelineTenantId } from "@/lib/tenant/pipeline";
+import { asJsonObject } from "@/types/json";
 
 const CLICKBAIT_RE =
   /\b(shocking|unbelievable|you won'?t believe|exposed|slams|destroys|बड़ा धमाका|चौंकाने|सनसनी|धमाकेदार)\b/i;
@@ -264,13 +267,38 @@ function detectHardRejects(input: {
   return reasons;
 }
 
-export function logEditorialDecision(decision: EditorialDecisionLog): void {
+export async function logEditorialDecision(
+  decision: EditorialDecisionLog
+): Promise<void> {
   const payload = {
     type: "EDITORIAL_DECISION",
     ...decision,
     ts: new Date().toISOString(),
   };
   console.log("[EDITORIAL_DECISION]", JSON.stringify(payload));
+
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    const supabase = createAdminServerClient();
+    const { error } = await supabase.from("editorial_audit_log").insert({
+      tenant_id: getPipelineTenantId(),
+      user_id: null,
+      user_email: null,
+      action: "generation_candidate_decision",
+      resource_type: "news_event",
+      resource_id: decision.eventId ?? null,
+      payload: asJsonObject(payload),
+    });
+    if (error) {
+      console.warn("[EDITORIAL_DECISION_PERSIST_FAILED]", error.message);
+    }
+  } catch (error) {
+    console.warn(
+      "[EDITORIAL_DECISION_PERSIST_FAILED]",
+      error instanceof Error ? error.message : "unknown_error"
+    );
+  }
 }
 
 function intelligenceToQualityBreakdown(
