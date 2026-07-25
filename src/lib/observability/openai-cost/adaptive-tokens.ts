@@ -1,8 +1,9 @@
 /**
- * Dynamic max_tokens — allocate only what each article type needs
+ * Dynamic max_tokens — allocate what each article type needs for complete reports
  */
 
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import type { ArticleType } from "@/lib/news/ai/article-type";
 
 export type EditorialContentTier = "breaking" | "regular" | "deep_analysis";
 
@@ -11,30 +12,66 @@ export function classifyEditorialTier(input: {
   signalCount?: number;
   factPackChars?: number;
   category?: string | null;
+  articleType?: ArticleType | null;
 }): EditorialContentTier {
   const urgency = input.urgencyScore ?? 50;
   const signals = input.signalCount ?? 1;
   const chars = input.factPackChars ?? 0;
   const cat = (input.category ?? "").toLowerCase();
+  const articleType = input.articleType;
 
-  if (urgency >= 75 || cat === "breaking") return "breaking";
-  if (signals >= 6 || chars > 3500 || cat === "analysis" || cat === "investigation") {
+  if (
+    articleType === "breaking_alert" ||
+    urgency >= 75 ||
+    cat === "breaking"
+  ) {
+    return "breaking";
+  }
+  if (
+    articleType === "explainer" ||
+    articleType === "analysis" ||
+    signals >= 6 ||
+    chars > 3500 ||
+    cat === "analysis" ||
+    cat === "investigation"
+  ) {
     return "deep_analysis";
   }
   return "regular";
 }
 
+/**
+ * Raised so body + intelligence_v2 JSON can coexist without truncating reports.
+ * Override with OPENAI_EDITORIAL_MAX_TOKENS when needed.
+ */
 const EDITORIAL_MAX_TOKENS: Record<EditorialContentTier, number> = {
-  breaking: 1000,
-  regular: 1200,
-  deep_analysis: 1800,
+  breaking: 1600,
+  regular: 2800,
+  deep_analysis: 3600,
 };
 
-export function editorialMaxTokens(tier: EditorialContentTier): number {
+const EDITORIAL_MAX_TOKENS_BY_ARTICLE_TYPE: Partial<Record<ArticleType, number>> = {
+  breaking_alert: 1600,
+  short_update: 2200,
+  standard_report: 3000,
+  developing_story: 2600,
+  service_information: 2000,
+  live_continuing: 2600,
+  explainer: 3600,
+  analysis: 3600,
+};
+
+export function editorialMaxTokens(
+  tier: EditorialContentTier,
+  articleType?: ArticleType | null
+): number {
   const override = process.env.OPENAI_EDITORIAL_MAX_TOKENS?.trim();
   if (override) {
     const n = Number(override);
     if (Number.isFinite(n) && n > 0) return n;
+  }
+  if (articleType && EDITORIAL_MAX_TOKENS_BY_ARTICLE_TYPE[articleType]) {
+    return EDITORIAL_MAX_TOKENS_BY_ARTICLE_TYPE[articleType]!;
   }
   return EDITORIAL_MAX_TOKENS[tier];
 }

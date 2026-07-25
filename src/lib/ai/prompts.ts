@@ -1,19 +1,21 @@
 import type { AiDeskTemplate, AiStoryLanguage } from "./types";
+import type { ArticleType } from "@/lib/news/ai/article-type";
+import { ARTICLE_DEPTH_RULES } from "@/lib/news/ai/article-type";
 
 const TEMPLATE_HINTS: Record<AiDeskTemplate, string> = {
   breaking_news:
-    "Breaking news format: urgent lead, what happened, who is affected, what is next. Keep sentences short.",
+    "Breaking news format: urgent lead, what happened, who is affected, what is next. Keep sentences short — but still a complete alert, not a one-line dek.",
   district_update:
-    "District desk update for Chhattisgarh: local names, places, administration response, citizen impact.",
+    "District desk report for Chhattisgarh: local names, places, administration response, citizen impact, and verified background when available.",
   political_report:
     "Political report: neutral tone, attribute claims, party/office-holder context, no sensationalism.",
   crime_report:
-    "Crime report: facts only, police attribution, avoid graphic detail, victim privacy.",
+    "Crime report: facts only, police attribution, avoid graphic detail, victim privacy. Distinguish allegation from confirmation.",
   sports_brief:
-    "Sports brief: score/result upfront, key performers, tournament context.",
+    "Sports update: score/result upfront, key performers, tournament context — complete enough for readers, not a bare result line.",
   business_update:
     "Business update: market/company impact, numbers if present, policy angle for readers.",
-  general: "Standard regional newsroom article structure.",
+  general: "Standard regional newspaper report structure in natural prose.",
 };
 
 /** Supplemental desk guidance when category does not map 1:1 to AiDeskTemplate */
@@ -113,23 +115,56 @@ export function buildEditorialPipelineSystemPrompt(input: {
   language: "hi" | "en";
   deskTemplate: AiDeskTemplate;
   categoryHint?: string | null;
+  articleType?: ArticleType | null;
+  evidenceSufficient?: boolean;
 }): string {
   const lang = input.language === "en" ? "en" : "hi";
+  const articleType = input.articleType ?? "standard_report";
+  const depthRule = ARTICLE_DEPTH_RULES[articleType];
+  const thin = input.evidenceSufficient === false;
+
+  const depthBlock = [
+    `Article type: ${articleType} (${lang === "hi" ? depthRule.labelHi : depthRule.labelEn}).`,
+    depthRule.promptDepthHint,
+    thin
+      ? "Evidence is LIMITED: write a verified short update or developing note. Mark uncertainty. Do NOT expand through speculation or filler."
+      : `When facts support it, write a complete report near ~${depthRule.targetWords} words (acceptable band ${depthRule.minWords}–${depthRule.maxWords}). Word count is a quality guard — never invent facts to hit it.`,
+  ].join("\n");
+
+  const structureBlock =
+    lang === "hi"
+      ? [
+          "Internal structure (write as natural Hindi newspaper paragraphs — do NOT print these as visible headings):",
+          "1) headline 2) summary/dek 3) what happened 4) where & when 5) key verified details",
+          "6) who said what (only if in fact pack) 7) local/district relevance 8) background/context when supported",
+          "9) public impact 10) what happens next 11) source transparency via attribution phrasing.",
+          "sections.lead = opening what/where/when; sections.details = verified details + attribution + impact;",
+          "sections.context = background / what next / district relevance when supported — omit key if unsupported.",
+        ].join("\n")
+      : [
+          "Internal structure (natural newspaper paragraphs — do NOT print these as visible headings):",
+          "headline, dek, what happened, where/when, key details, attribution, local relevance,",
+          "background, public impact, what next — only when supported by the fact pack.",
+          "sections.lead / details / context map to this structure without labeled section titles.",
+        ].join("\n");
 
   return [
     "You are a senior editor at Jan Darpan, a Chhattisgarh regional digital newsroom.",
     languageInstruction(lang),
     TEMPLATE_HINTS[input.deskTemplate],
     input.categoryHint ?? "",
+    depthBlock,
+    structureBlock,
     ATTRIBUTION_RULES[lang],
     "Output MUST be valid JSON only:",
     "{",
     '  "headline": string,',
     '  "summary": string (2-3 sentence dek — shown separately; do NOT repeat in body),',
+    '  "article_type": string (echo the assigned article type),',
     '  "sections": {',
     '    "lead": string (opening paragraph — must differ from summary),',
-    '    "details": string (main report in natural newsroom prose),',
-    '    "context": string (OPTIONAL — only if fact pack has verifiable background; omit key if no facts)',
+    '    "details": string (main report in natural newsroom prose; multiple paragraphs OK with \\n\\n),',
+    '    "context": string (OPTIONAL — background, impact, what next when verifiable; omit key if no facts)',
     "  },",
     '  "seo_title": string (<=60 chars),',
     '  "seo_description": string (<=155 chars),',
@@ -140,13 +175,20 @@ export function buildEditorialPipelineSystemPrompt(input: {
     '  "timeline": [{"label": string, "detail": string}] (OPTIONAL — only for clearly chronological stories; omit key if not applicable),',
     '  "reader_keywords": string[] (OPTIONAL — 3-8 discovery keywords; may differ from tags; omit if redundant)',
     "}",
-    "Rules:",
-    "- Synthesize ONLY facts in the fact pack. Do NOT invent names, numbers, quotes, or outcomes.",
-    "- Do NOT add Background, Regional Impact, or Conclusion unless explicitly supported by facts.",
+    "Factual safety:",
+    "- Synthesize ONLY facts in the fact pack. Do NOT invent names, numbers, quotes, outcomes, or on-ground reporting.",
+    "- Never invent quotations. Never infer guilt. Distinguish allegation from confirmation. Preserve uncertainty.",
+    "- Attribute claims to sources present in the fact pack. Avoid copying source text excessively.",
+    "- No SEO keyword stuffing. No repetitive filler. No template tokens like {{...}} or undefined/null.",
+    "- Label AI assistance only via newsroom policy metadata — do not write fake bylines claiming field reporting.",
+    "Body rules:",
+    "- Body MUST be substantially longer and different from summary/dek.",
     "- Never use visible template section headings inside section text (no ## सारांश, ## Background, etc.).",
     "- Write like a professional newsroom article — flowing paragraphs, not an AI report template.",
-    "- If source material is thin, write a cautious short wire; omit empty optional sections entirely.",
-    "- Optional intelligence fields (takeaways, why_this_matters, entities, timeline, reader_keywords): include only when supported by the fact pack; omit the key entirely when not applicable — never send empty arrays.",
+    thin
+      ? "- Source material is thin: prefer a cautious verified update; omit empty optional sections entirely."
+      : "- Prefer a complete evidence-based report over a wire summary when facts support it.",
+    "- Optional intelligence fields: include only when supported; omit the key entirely when not applicable — never send empty arrays.",
     "No fabricated quotes, no clickbait.",
   ]
     .filter(Boolean)
