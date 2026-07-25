@@ -25,6 +25,8 @@ import {
   getStoryStaticSlugs,
 } from "@/lib/story/get-story-data";
 import { getEventViewModel } from "@/lib/events/event-view-model";
+import { fetchEventClusterArticles } from "@/lib/events/fetch-event-cluster-articles";
+import { buildContinuingCoverage } from "@/lib/events/continuing-coverage";
 import { parseStoryMarkdown } from "@/lib/news/story-markdown";
 import { storyBodyParagraphs } from "@/lib/news/story-utils";
 import { buildStoryIntelligence } from "@/lib/story/story-intelligence";
@@ -103,14 +105,16 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
       permanentRedirect(`/story/${generatedRow.slug}`);
     }
 
-    const [localized, relatedResult, eventViewModel, tenant] = await Promise.all([
-      resolveStoryArticleFields(generatedRow, readerLang),
-      getStoryRelatedArticles(generatedRow.slug ?? slug, readerLang),
-      generatedRow.event_id
-        ? getEventViewModel(generatedRow.event_id)
-        : Promise.resolve(null),
-      getTenantConfig(),
-    ]);
+    const [localized, relatedResult, eventViewModel, clusterArticles, tenant] =
+      await Promise.all([
+        resolveStoryArticleFields(generatedRow, readerLang),
+        getStoryRelatedArticles(generatedRow.slug ?? slug, readerLang),
+        generatedRow.event_id
+          ? getEventViewModel(generatedRow.event_id)
+          : Promise.resolve(null),
+        fetchEventClusterArticles(generatedRow.event_id),
+        getTenantConfig(),
+      ]);
     if (!localized?.headline?.trim()) notFound();
 
     const liveArticle = applyLocalizedFieldsToNewsArticle(
@@ -150,6 +154,15 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     const shareSummary = aiSummary ?? plainParagraphs.slice(0, 2).join(" ");
     const contentSections = bodySections(parsed.sections);
 
+    const continuingCoverage = buildContinuingCoverage({
+      eventId: generatedRow.event_id,
+      eventTitle: eventViewModel?.canonical_title ?? null,
+      eventViewModel,
+      articles: clusterArticles,
+      currentSlug: slugResolved,
+      currentStoryId: generatedRow.id,
+    });
+
     if (isReaderDesignSystemEnabled()) {
       const model = buildReaderArticleModel({
         article: liveArticle,
@@ -161,6 +174,7 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
         sponsored: sponsoredStory,
         tags: generatedRow.tags ?? [],
         forceVariant: isArticleVariant(dsVariant) ? dsVariant : null,
+        continuingCoverage,
       });
       return <ReaderArticlePage model={model} />;
     }

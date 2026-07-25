@@ -45,6 +45,13 @@ export {
   type EventCoverageStatistics,
 } from "@/lib/events/event-view-model";
 export {
+  buildContinuingCoverage,
+  continuingCoverageSlugs,
+  type ContinuingCoverageVm,
+  type ContinuingCoverageItem,
+} from "@/lib/events/continuing-coverage";
+export { fetchEventClusterArticles } from "@/lib/events/fetch-event-cluster-articles";
+export {
   hasMeaningfulEventCoverage,
   resolveStoryTimelineEvents,
   coverageTimelineToStoryEvents,
