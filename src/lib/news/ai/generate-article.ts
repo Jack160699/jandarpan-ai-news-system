@@ -37,6 +37,7 @@ import {
   type ArticleTypeClassification,
 } from "@/lib/news/ai/article-type";
 import {
+  maxEditorialDepthRetries,
   shouldRetryDepthFailure,
 } from "@/lib/news/ai/editorial-depth-quality";
 import {
@@ -375,6 +376,7 @@ async function callEditorialLlm(
     maxTokens,
     jsonMode: true,
     timeoutMs: EDITORIAL_TIMEOUT_MS,
+    cachePolicy: depthCorrection ? "bypass" : "default",
     context: { worker: "editorial_generate", eventId: event.id, articleType },
   });
 
@@ -1277,6 +1279,21 @@ async function prepareCandidate(
 
   try {
     draft = await generateOnce();
+    while (!draft && depthRetries < maxEditorialDepthRetries()) {
+      depthRetries += 1;
+      logEditorial("invalid_draft_retry", {
+        eventId: event.id,
+        attempt: depthRetries,
+        articleType: articleTypeClassification.type,
+        reason: "model_response_did_not_form_valid_article_body",
+      });
+      draft = await generateOnce({
+        attempt: depthRetries,
+        previousWords: 0,
+        minWords: articleTypeClassification.rule.minWords,
+        targetWords: articleTypeClassification.rule.targetWords,
+      });
+    }
   } catch (err) {
     logEditorial("llm_error", {
       eventId: event.id,

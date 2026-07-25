@@ -23,6 +23,7 @@ import {
   lookupPromptCache,
   storePromptCache,
 } from "@/lib/observability/openai-cost/prompt-cache";
+import { allowsPromptCache } from "@/lib/ai/providers/chat-cache-policy";
 import type {
   AiProviderId,
   ChatCompletionRequest,
@@ -178,26 +179,28 @@ async function postChat(
       })
     );
 
-    void storePromptCache({
-      system: request.system,
-      user: request.user,
-      operation: request.operation,
-      worker: request.context?.worker ?? request.operation,
-      articleId: request.context?.articleId,
-      eventId: request.context?.eventId,
-      model: request.model ?? config.model,
-      result: content,
-      inputTokens: usage.inputTokens,
-      outputTokens: usage.outputTokens,
-      estimatedCostUsd: buildUsageRecord({
+    if (allowsPromptCache(request.cachePolicy)) {
+      void storePromptCache({
+        system: request.system,
+        user: request.user,
         operation: request.operation,
-        endpoint: "chat.completions",
+        worker: request.context?.worker ?? request.operation,
+        articleId: request.context?.articleId,
+        eventId: request.context?.eventId,
         model: request.model ?? config.model,
+        result: content,
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
-        success: true,
-      }).estimatedCostUsd,
-    });
+        estimatedCostUsd: buildUsageRecord({
+          operation: request.operation,
+          endpoint: "chat.completions",
+          model: request.model ?? config.model,
+          inputTokens: usage.inputTokens,
+          outputTokens: usage.outputTokens,
+          success: true,
+        }).estimatedCostUsd,
+      });
+    }
 
     return { content, latencyMs };
   } catch (err) {
@@ -239,16 +242,18 @@ async function requestFromProvider(
   let retryCount = 0;
 
   const worker = request.context?.worker ?? request.operation;
-  const cached = await lookupPromptCache({
-    system: request.system,
-    user: request.user,
-    operation: request.operation,
-    worker,
-    articleId: request.context?.articleId,
-    eventId: request.context?.eventId,
-  });
-  if (cached.hit && cached.result) {
-    return { ok: true, content: cached.result, provider: config.id, latencyMs: 0 };
+  if (allowsPromptCache(request.cachePolicy)) {
+    const cached = await lookupPromptCache({
+      system: request.system,
+      user: request.user,
+      operation: request.operation,
+      worker,
+      articleId: request.context?.articleId,
+      eventId: request.context?.eventId,
+    });
+    if (cached.hit && cached.result) {
+      return { ok: true, content: cached.result, provider: config.id, latencyMs: 0 };
+    }
   }
 
   try {
