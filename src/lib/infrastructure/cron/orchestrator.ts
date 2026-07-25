@@ -37,14 +37,14 @@ export type OrchestrateResult = {
   degraded: boolean;
 };
 
-/** Lightweight workers first; editorial_images last (heavy ~10-15s each) */
+/** Core newsroom work precedes lower-priority intelligence maintenance. */
 export const INTELLIGENCE_PIPELINE: WorkerId[] = [
   "ai_enrich",
   "job_processor",
+  "editorial_images",
   "intelligence_embed",
   "intelligence_snapshot",
   "analytics_aggregate",
-  "editorial_images",
 ];
 
 const DEFAULT_PIPELINE: WorkerId[] = INTELLIGENCE_PIPELINE;
