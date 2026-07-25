@@ -43,6 +43,12 @@ const TOPIC_JOB_MAP: Partial<Record<EventTopic, JobType[]>> = {
  * only, so event scoring would produce a non-finite database priority.
  */
 export const EDITORIAL_WAKEUP_PRIORITY = 80;
+/**
+ * The dedicated editorial lane has a 100s execution budget inside a 120s
+ * function. Keep its durable job timeout beyond that lane budget so the queue
+ * does not cancel legitimate generation/repair work first.
+ */
+export const EDITORIAL_GENERATE_JOB_TIMEOUT_MS = 105_000;
 
 export async function publishEvent(input: PublishEventInput): Promise<string | null> {
   const supabase = createAdminClient();
@@ -115,7 +121,10 @@ export async function deliverPendingEvents(
               : jobType === "editorial_generate"
                 ? EDITORIAL_WAKEUP_PRIORITY
                 : 0,
-          timeoutMs: jobType === "editorial_generate" ? 90_000 : undefined,
+          timeoutMs:
+            jobType === "editorial_generate"
+              ? EDITORIAL_GENERATE_JOB_TIMEOUT_MS
+              : undefined,
         });
         if (!jobId) {
           enqueueFailures.push(jobType);
