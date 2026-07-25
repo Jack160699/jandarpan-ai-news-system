@@ -47,14 +47,20 @@ import { shouldRunEditorialRepair } from "@/lib/observability/openai-cost/repair
 import { logOpenAiUsage, buildUsageRecord } from "@/lib/observability/openai-cost/record";
 import {
   initialHeroPlaceholder,
+  isEditoriallyEligibleSourceImageUrl,
   queueEditorialImageForArticle,
 } from "@/lib/news/ai/generate-editorial-image";
+import {
+  assessEditorialFreshness,
+  dedupeEditorialSignals,
+  findUnsafeSourceReason,
+  type EditorialFreshnessDecision,
+} from "@/lib/news/ai/editorial-candidate-safety";
 import { buildEditorialImageBrief } from "@/lib/news/ai/editorial-image-brief";
 import { buildEditorialImageContext } from "@/lib/news/ai/editorial-image-context";
 import { decideEditorialImageStrategy } from "@/lib/news/ai/editorial-image-decision";
 import { assessStorySensitivity } from "@/lib/news/ai/editorial-image-moderation";
 import { isImageProviderAvailable } from "@/lib/news/ai/editorial-image-provider";
-import { isDisplayableImage } from "@/lib/news/images/validate";
 import {
   logEditorialDecision,
   runEditorialQualityChecks,
@@ -151,6 +157,7 @@ type PendingCandidate = {
   articleType: ArticleType;
   articleTypeClassification: ArticleTypeClassification;
   depthRetries: number;
+  freshness: EditorialFreshnessDecision;
   humanQualityMeta?: {
     score: number;
     decision: string;
@@ -489,6 +496,7 @@ function applyHumanQualityAndEvidenceGate(input: {
   signals: NewsSignalRow[];
   sourceTexts: string[];
   quality: EditorialQualityReport;
+  freshness: EditorialFreshnessDecision;
 }): {
   quality: EditorialQualityReport;
   humanScore: ReturnType<typeof scoreHumanQuality>;
@@ -537,8 +545,13 @@ function applyHumanQualityAndEvidenceGate(input: {
       : 0.25,
     readability: Math.min(1, input.quality.quality_breakdown.readability ?? 0.6),
     sourceDiversity: Math.min(1, input.signals.length / 3),
-    freshness: 0.7,
-    imagePresence: 0.4,
+    freshness: input.freshness.decision === "fresh" ? 1 : 0.45,
+    imagePresence:
+      input.signals.some((signal) =>
+        isEditoriallyEligibleSourceImageUrl(signal.image_url)
+      ) || isImageProviderAvailable()
+        ? 0.85
+        : 0.35,
     headlineClarity: Math.min(
       1,
       input.quality.quality_breakdown.headline_quality ?? 0.6
@@ -625,6 +638,29 @@ function applyHumanQualityAndEvidenceGate(input: {
     holdReason = "held_for_quality";
   }
 
+  const authoritativeDecision =
+    quality.hard_reject || holdReason
+      ? gate.decision === "repair" && !quality.hard_reject
+        ? "repair"
+        : "reject"
+      : gate.decision === "publish" && quality.publish_allowed
+        ? "publish"
+        : gate.decision === "repair"
+          ? "repair"
+          : "reject";
+  quality = {
+    ...quality,
+    passed: authoritativeDecision === "publish",
+    publish_allowed: authoritativeDecision === "publish",
+    publishDecision: authoritativeDecision,
+    should_repair: authoritativeDecision === "repair",
+    borderline: authoritativeDecision === "repair",
+    intelligence: {
+      ...quality.intelligence,
+      publishDecision: authoritativeDecision,
+    },
+  };
+
   const sourceUrls = input.signals
     .map((s) => s.article_url)
     .filter(Boolean);
@@ -707,6 +743,7 @@ async function persistGeneratedArticle(input: {
     evidenceSummary: Record<string, number>;
     unsupportedNumbers: ReturnType<typeof scanUnsupportedNumbers>;
   };
+  freshness?: EditorialFreshnessDecision;
 }): Promise<EditorialGenerationResult> {
   const supabase = createAdminServerClient();
   const slug = optimizeSeoSlug(input.draft.headline, input.event.id);
@@ -791,8 +828,8 @@ async function persistGeneratedArticle(input: {
     };
   }
 
-  const hasSourceImage = input.signals.some(
-    (s) => s.image_url && isDisplayableImage(s.image_url)
+  const hasSourceImage = input.signals.some((s) =>
+    isEditoriallyEligibleSourceImageUrl(s.image_url)
   );
 
   const provisionalArticle = {
@@ -1003,6 +1040,7 @@ async function persistGeneratedArticle(input: {
       article_type_reasons: input.articleTypeClassification?.reasons ?? [],
       evidence_sufficient:
         input.articleTypeClassification?.evidenceSufficient ?? null,
+      freshness: input.freshness ?? null,
       depth_retries: input.depthRetries ?? 0,
       depth_metrics: input.quality.depth_quality?.metrics ?? null,
       ...(input.intelligenceV2
@@ -1109,8 +1147,8 @@ async function prepareCandidate(
   skipped: boolean;
   reason?: string;
 }> {
-  const signals = await loadSignalsForEvent(event);
-  if (!signals.length) {
+  const loadedSignals = await loadSignalsForEvent(event);
+  if (!loadedSignals.length) {
     const classification = classifyNoSignalsForEvent({
       event,
       foundSignalCount: 0,
@@ -1119,6 +1157,61 @@ async function prepareCandidate(
       candidate: null,
       skipped: true,
       reason: classification.reason,
+    };
+  }
+
+  const unsafeSourceReason = findUnsafeSourceReason(loadedSignals);
+  if (unsafeSourceReason) {
+    return {
+      candidate: null,
+      skipped: false,
+      reason: unsafeSourceReason,
+    };
+  }
+
+  const signals = dedupeEditorialSignals(loadedSignals);
+  if (!signals.length) {
+    return {
+      candidate: null,
+      skipped: false,
+      reason: "no_unique_safe_sources",
+    };
+  }
+
+  const freshness = assessEditorialFreshness(event, signals);
+  if (freshness.decision === "stale") {
+    return {
+      candidate: null,
+      skipped: false,
+      reason: `stale_candidate:${freshness.reason}`,
+    };
+  }
+
+  const evidenceGeo = mergeGeoMetadata(
+    ...signals.map((signal) =>
+      tagGeoFromContent({
+        title: signal.title,
+        body: signal.raw_content,
+        region: signal.region,
+        category: signal.category,
+      })
+    )
+  );
+  if (!evidenceGeo.is_chhattisgarh) {
+    return {
+      candidate: null,
+      skipped: false,
+      reason:
+        evidenceGeo.classification_kind === "non_cg"
+          ? "non_cg_story_text"
+          : "unproven_cg_geography",
+    };
+  }
+  if (evidenceGeo.confidence < 0.65) {
+    return {
+      candidate: null,
+      skipped: false,
+      reason: "low_confidence_geography",
     };
   }
 
@@ -1298,6 +1391,7 @@ async function prepareCandidate(
     signals,
     sourceTexts,
     quality,
+    freshness,
   });
   quality = hqGate.quality;
 
@@ -1314,9 +1408,10 @@ async function prepareCandidate(
       articleType: articleTypeClassification.type,
       articleTypeClassification,
       depthRetries,
+      freshness,
       humanQualityMeta: {
         score: hqGate.humanScore.score,
-        decision: hqGate.gate.decision,
+        decision: quality.publishDecision,
         highRisk: hqGate.gate.highRisk,
         holdReason: hqGate.holdReason,
         evidenceSummary: hqGate.evidenceSummary,
@@ -1510,6 +1605,7 @@ export async function generateEditorialFromEvent(
     articleTypeClassification: candidate.articleTypeClassification,
     depthRetries: candidate.depthRetries,
     humanQualityMeta: candidate.humanQualityMeta,
+    freshness: candidate.freshness,
   });
   if (persisted.ok && persisted.article) {
     logArticleGenerationPhase("article_generation_completed", {
@@ -1740,6 +1836,7 @@ export async function generateEditorialsFromEvents(options?: {
         articleTypeClassification: candidate.articleTypeClassification,
         depthRetries: candidate.depthRetries,
         humanQualityMeta: candidate.humanQualityMeta,
+        freshness: candidate.freshness,
       });
 
       results.push({
@@ -1914,6 +2011,7 @@ export async function generateEditorialsFromEvents(options?: {
         articleTypeClassification: candidate.articleTypeClassification,
         depthRetries: candidate.depthRetries,
         humanQualityMeta: candidate.humanQualityMeta,
+        freshness: candidate.freshness,
       });
 
       if (saved.ok && saved.article) {

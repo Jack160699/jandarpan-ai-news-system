@@ -129,24 +129,20 @@ export function tagGeoFromContent(input: {
     };
   }
 
-  // unknown — light heuristic fallback for region/category hints
-  const blob = normalizeBlob([input.title, input.body, input.region, input.category]);
-  const regionCg =
-    input.region?.toLowerCase() === "chhattisgarh" ||
-    input.region?.toLowerCase() === "cg";
+  // Unknown stays unknown: feed region/category are weak hints, not proof.
+  const blob = normalizeBlob([input.title, input.body]);
   const textCg = CG_STATE_RE.test(blob);
-  const categoryLocal = input.category?.toLowerCase() === "local";
 
-  if (regionCg || textCg || categoryLocal) {
+  if (textCg) {
     return {
       state: CG_STATE_SLUG,
       districts: [],
       primary_district: null,
-      confidence: Math.min(0.6, classification.confidence + 0.15),
+      confidence: Math.min(0.65, classification.confidence + 0.15),
       is_chhattisgarh: true,
       tagged_at,
       classification_kind: "statewide",
-      classification_method: "unknown_cg_context",
+      classification_method: "explicit_cg_text_fallback",
     };
   }
 
@@ -197,6 +193,24 @@ export function mergeGeoMetadata(
     best.primary_district && districts.includes(best.primary_district)
       ? best.primary_district
       : null;
+
+  const strongNonCg = valid
+    .filter(
+      (t) =>
+        t.classification_kind === "non_cg" &&
+        !t.is_chhattisgarh &&
+        t.confidence >= 0.8
+    )
+    .sort((a, b) => b.confidence - a.confidence)[0];
+  const hasDistrictEvidence = districts.length > 0;
+  if (strongNonCg && !hasDistrictEvidence) {
+    return {
+      ...strongNonCg,
+      districts: [],
+      primary_district: null,
+      tagged_at: new Date().toISOString(),
+    };
+  }
 
   const isCg = valid.some((t) => t.is_chhattisgarh) || best.state === CG_STATE_SLUG;
   const anyStatewide = valid.some(

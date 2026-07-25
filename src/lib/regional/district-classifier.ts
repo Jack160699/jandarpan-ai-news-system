@@ -65,7 +65,7 @@ const STATEWIDE_INSTITUTION_TERMS = [
 ] as const;
 
 const INDIA_NATIONAL_RE =
-  /\b(delhi|mumbai|kolkata|parliament|lok\s*sabha|rajya\s*sabha|modi|centre|center\s+government|national\s+capital|maharashtra|uttar\s+pradesh|madhya\s+pradesh|bihar|rajasthan|gujarat|karnataka|tamil\s+nadu|west\s+bengal)\b/i;
+  /\b(delhi|mumbai|kolkata|parliament|lok\s*sabha|rajya\s*sabha|modi|union\s+(cabinet|government)|central\s+government|centre|center\s+government|national\s+capital|maharashtra|uttar\s+pradesh|madhya\s+pradesh|bihar|rajasthan|gujarat|karnataka|tamil\s+nadu|west\s+bengal)\b|दिल्ली|संसद|लोक\s*सभा|राज्य\s*सभा|केंद्रीय\s+(मंत्रिमंडल|सरकार)|प्रधानमंत्री|जंतर\s*मंतर/i;
 
 const PRIMARY_MIN_CONFIDENCE = 0.65;
 /** One official-name/alias hit → 0.45 + 0.20 base = 0.65 (geo primary threshold). */
@@ -156,16 +156,17 @@ function scoreDistrictHits(blob: string): DistrictHit[] {
 export function classifyDistrictContent(
   input: ClassifyDistrictInput
 ): DistrictClassification {
-  const blob = normalizeBlob([input.title, input.body, input.region, input.category]);
-  const hits = scoreDistrictHits(blob);
+  const storyBlob = normalizeBlob([input.title, input.body]);
+  const hits = scoreDistrictHits(storyBlob);
   const strongHits = hits.filter((h) => h.strongHits > 0);
-  const textCg = hasAnyTerm(blob, CG_STATE_TERMS);
+  const textCg = hasAnyTerm(storyBlob, CG_STATE_TERMS);
   const regionCg =
     input.region?.toLowerCase() === "chhattisgarh" ||
     input.region?.toLowerCase() === "cg";
-  const statewideInstitution = hasAnyTerm(blob, STATEWIDE_INSTITUTION_TERMS);
+  const statewideInstitution = hasAnyTerm(storyBlob, STATEWIDE_INSTITUTION_TERMS);
   const categoryLocal = input.category?.toLowerCase() === "local";
-  const isCgContext = textCg || regionCg || categoryLocal || strongHits.length > 0;
+  const isCgContext = textCg || strongHits.length > 0;
+  const hasNationalEvidence = INDIA_NATIONAL_RE.test(storyBlob);
 
   const alternatives = strongHits.slice(0, 5).map((h) => ({
     slug: h.slug,
@@ -205,15 +206,26 @@ export function classifyDistrictContent(
     };
   }
 
+  if (hasNationalEvidence && !textCg) {
+    return {
+      kind: "non_cg",
+      confidence: 0.9,
+      matchedTerms: ["national_or_other_state"],
+      method: "story_text_national_non_cg",
+      ambiguity: false,
+      alternatives: [],
+    };
+  }
+
   // Statewide: CG/state keywords or institutions without a specific district
-  if (statewideInstitution || ((textCg || regionCg) && strongHits.length === 0)) {
+  if (textCg && (statewideInstitution || strongHits.length === 0)) {
     // Explicitly never force Raipur for secretariat/cabinet/vidhan sabha alone
     return {
       kind: "statewide",
-      confidence: statewideInstitution ? 0.78 : textCg || regionCg ? 0.72 : 0.6,
+      confidence: statewideInstitution ? 0.86 : 0.8,
       matchedTerms: [
         ...(statewideInstitution ? ["statewide_institution"] : []),
-        ...(textCg || regionCg ? ["chhattisgarh"] : []),
+        ...(textCg ? ["chhattisgarh"] : []),
       ],
       method: statewideInstitution
         ? "statewide_institution_no_district"
@@ -241,10 +253,10 @@ export function classifyDistrictContent(
     }
   }
 
-  if (INDIA_NATIONAL_RE.test(blob) && !isCgContext) {
+  if (hasNationalEvidence && !isCgContext) {
     return {
       kind: "non_cg",
-      confidence: 0.55,
+      confidence: 0.9,
       matchedTerms: ["national_or_other_state"],
       method: "national_non_cg",
       ambiguity: false,
@@ -254,10 +266,10 @@ export function classifyDistrictContent(
 
   return {
     kind: "unknown",
-    confidence: 0.35,
-    matchedTerms: [],
-    method: "no_match",
-    ambiguity: false,
+    confidence: regionCg || categoryLocal ? 0.4 : 0.35,
+    matchedTerms: regionCg || categoryLocal ? ["weak_feed_hint"] : [],
+    method: regionCg || categoryLocal ? "weak_feed_hint_only" : "no_match",
+    ambiguity: regionCg || categoryLocal,
     alternatives: [],
   };
 }

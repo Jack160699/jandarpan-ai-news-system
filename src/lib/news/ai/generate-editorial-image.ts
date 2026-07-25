@@ -182,13 +182,26 @@ function getStorageBucket(): string {
   return process.env.NEWSROOM_STORAGE_BUCKET?.trim() || "editorial-images";
 }
 
+export function isEditoriallyEligibleSourceImageUrl(url: string | null): boolean {
+  if (!url || !isDisplayableImage(url)) return false;
+  const lower = url.toLowerCase();
+  return ![
+    "images.unsplash.com",
+    "plus.unsplash.com",
+    "source.unsplash.com",
+    "pexels.com",
+    "pixabay.com",
+  ].some((host) => lower.includes(host));
+}
+
 function pickSourceSignalImage(signals: NewsSignalRow[]): string | null {
   const ranked = [...signals].sort(
     (a, b) => scoreSourceConfidence(b) - scoreSourceConfidence(a)
   );
   for (const s of ranked) {
-    if (s.image_url && isDisplayableImage(s.image_url)) {
-      return optimizeCdnImageUrl(s.image_url, 1200);
+    const sourceUrl = s.image_url;
+    if (isEditoriallyEligibleSourceImageUrl(sourceUrl) && sourceUrl) {
+      return optimizeCdnImageUrl(sourceUrl, 1200);
     }
   }
   return null;
@@ -660,7 +673,6 @@ export async function resolveEditorialHeroImage(input: {
 
   // Honor prior A/C/D decisions so source-only jobs never trigger paid AI.
   const forceSkipAiForPersisted =
-    persistedDecision === "A" ||
     persistedDecision === "C" ||
     persistedDecision === "D";
 

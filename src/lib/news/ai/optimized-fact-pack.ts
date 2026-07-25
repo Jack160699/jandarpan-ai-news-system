@@ -32,7 +32,7 @@ function normalizeHeadline(text: string): string {
     .trim();
 }
 
-function dedupeSignalsByTitle(signals: NewsSignalRow[]): NewsSignalRow[] {
+export function dedupeSignalsByTitle(signals: NewsSignalRow[]): NewsSignalRow[] {
   const seen = new Set<string>();
   const out: NewsSignalRow[] = [];
   for (const s of signals) {
