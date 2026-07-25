@@ -335,17 +335,127 @@ html[data-font-scale="xl"] .jd-ds {
   color: var(--jd-muted);
 }
 
-.jd-home-ending {
+.jd-home-ending,
+.jd-page-ending {
   margin: 12px 14px 20px;
   padding: 14px 0 8px;
   border-top: 1px solid var(--jd-line);
 }
 
-.jd-home-ending__title {
+.jd-page-ending__block {
+  margin: 0 0 18px;
+}
+
+.jd-page-ending__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.jd-home-ending__title,
+.jd-page-ending__title {
   margin: 0 0 8px;
   font-size: 15px;
   font-weight: 700;
   color: var(--jd-navy);
+}
+
+.jd-page-ending__head .jd-page-ending__title {
+  margin-bottom: 0;
+}
+
+.jd-page-ending__more {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--jd-red);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.jd-page-ending__more:focus-visible,
+.jd-page-ending__chips a:focus-visible,
+.jd-page-ending__stories a:focus-visible,
+.jd-page-ending__cta:focus-visible {
+  outline: 2px solid var(--jd-gold);
+  outline-offset: 2px;
+}
+
+.jd-page-ending__stories {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.jd-page-ending__stories li + li {
+  border-top: 1px solid var(--jd-line-2);
+}
+
+.jd-page-ending__stories a {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 9px 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.jd-page-ending__rank {
+  flex: 0 0 18px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--jd-muted);
+  line-height: 1.45;
+}
+
+.jd-page-ending__headline {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 650;
+  line-height: 1.45;
+  color: var(--jd-ink);
+}
+
+.jd-page-ending__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.jd-page-ending__chips a {
+  display: inline-block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--jd-red);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--jd-red) 28%, transparent);
+}
+
+.jd-page-ending__support {
+  margin-top: 8px;
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--jd-line);
+}
+
+.jd-page-ending__support-copy {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--jd-ink-3);
+  max-width: 36em;
+}
+
+.jd-page-ending__cta {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--jd-navy);
+  text-decoration: none;
 }
 
 .jd-home-ending__links {

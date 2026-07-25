@@ -5,6 +5,7 @@ import { buildHomeSections, countDuplicateSlugs } from "./build-home-sections";
 import {
   filterFooterColumns,
   filterFooterLinks,
+  buildPublicationFooterColumns,
   READER_DS_FOOTER_ROUTE_ALLOWLIST,
 } from "./footer-links";
 import { jdDsT } from "../i18n/strings";
@@ -144,19 +145,28 @@ describe("footer link allowlist", () => {
     const links = filterFooterLinks([
       { href: "/latest", label: "ताज़ा" },
       { href: "/careers", label: "करियर" },
+      { href: "/advertise", label: "Advertise" },
+      { href: "/category/india", label: "भारत" },
       { href: "/editorial-policy", label: "संपादकीय" },
       { href: "/sitemap.xml", label: "साइटमैप" },
+      { href: "/feed.xml", label: "RSS" },
       { href: "https://twitter.com/x", label: "Twitter", enabled: false },
       { href: "/ads-policy", label: "विज्ञापन" },
+      { href: "/news/national", label: "भारत" },
+      { href: "/district/raipur", label: "रायपुर" },
       { href: "", label: "empty" },
     ]);
     expect(links.map((l) => l.href)).toEqual([
       "/latest",
       "/editorial-policy",
       "/sitemap.xml",
+      "/feed.xml",
       "/ads-policy",
+      "/news/national",
+      "/district/raipur",
     ]);
     expect(READER_DS_FOOTER_ROUTE_ALLOWLIST.has("/careers")).toBe(false);
+    expect(READER_DS_FOOTER_ROUTE_ALLOWLIST.has("/category/india")).toBe(false);
   });
 
   it("drops empty columns after filtering", () => {
@@ -166,6 +176,111 @@ describe("footer link allowlist", () => {
     ]);
     expect(cols).toHaveLength(1);
     expect(cols[0]?.title).toBe("B");
+  });
+
+  it("builds publication footer with categories, districts, policy, copyright destinations", () => {
+    const cols = buildPublicationFooterColumns({
+      newsNav: "खबर नेविगेशन",
+      districts: "प्रमुख जिले",
+      allDistricts: "सभी जिले देखें",
+      publication: "प्रकाशन",
+      utilities: "सुविधाएँ",
+      topHeadlines: "मुख्य खबरें",
+      chhattisgarh: "छत्तीसगढ़",
+      india: "भारत",
+      politics: "राजनीति",
+      business: "व्यापार",
+      education: "शिक्षा",
+      health: "स्वास्थ्य",
+      sports: "खेल",
+      entertainment: "मनोरंजन",
+      technology: "टेक्नोलॉजी",
+      about: "हमारे बारे में",
+      contact: "संपर्क",
+      editorial: "संपादकीय नीति",
+      corrections: "सुधार नीति",
+      privacy: "गोपनीयता नीति",
+      terms: "नियम एवं शर्तें",
+      ads: "विज्ञापन",
+      sitemap: "साइटमैप",
+      rss: "RSS",
+      listen: "सुनें",
+      saved: "सहेजी गई खबरें",
+      notifications: "सूचना प्राथमिकताएँ",
+      support: "समर्थन",
+      rates: "दरें",
+    });
+
+    const hrefs = cols.flatMap((c) => c.links.map((l) => l.href));
+    expect(hrefs).toContain("/");
+    expect(hrefs).toContain("/news/national");
+    expect(hrefs).toContain("/category/health");
+    expect(hrefs).toContain("/category/entertainment");
+    expect(hrefs).toContain("/category/technology");
+    expect(hrefs).toContain("/district/raipur");
+    expect(hrefs).toContain("/district?select=1");
+    expect(hrefs).toContain("/editorial-policy");
+    expect(hrefs).toContain("/corrections");
+    expect(hrefs).toContain("/privacy");
+    expect(hrefs).toContain("/terms");
+    expect(hrefs).toContain("/ads-policy");
+    expect(hrefs).toContain("/sitemap.xml");
+    expect(hrefs).toContain("/feed.xml");
+    expect(hrefs).toContain("/saved");
+    expect(hrefs).toContain("/membership");
+    expect(hrefs).not.toContain("/careers");
+    expect(hrefs).not.toContain("/category/india");
+    expect(hrefs).not.toContain("/advertise");
+
+    const districtCol = cols.find((c) => c.id === "districts");
+    expect(districtCol?.links.length).toBeGreaterThanOrEqual(5);
+  });
+
+  it("hides social column unless explicitly enabled https links are provided", () => {
+    const labels = {
+      newsNav: "n",
+      districts: "d",
+      allDistricts: "all",
+      publication: "p",
+      utilities: "u",
+      topHeadlines: "t",
+      chhattisgarh: "cg",
+      india: "in",
+      politics: "po",
+      business: "bu",
+      education: "ed",
+      health: "he",
+      sports: "sp",
+      entertainment: "en",
+      technology: "te",
+      about: "ab",
+      contact: "co",
+      editorial: "edp",
+      corrections: "cr",
+      privacy: "pr",
+      terms: "tm",
+      ads: "ad",
+      sitemap: "sm",
+      rss: "rs",
+      listen: "li",
+      saved: "sv",
+      notifications: "nt",
+      support: "su",
+      rates: "rt",
+    };
+    const without = buildPublicationFooterColumns(labels);
+    expect(without.find((c) => c.id === "social")).toBeUndefined();
+
+    const withSocial = buildPublicationFooterColumns(labels, {
+      socialLinks: [
+        {
+          href: "https://example.com/jandarpan",
+          label: "X",
+          enabled: true,
+        },
+      ],
+    });
+    expect(withSocial.find((c) => c.id === "social")?.links).toHaveLength(1);
   });
 });
 
