@@ -1,8 +1,8 @@
-{
+﻿{
   "name": "jan-darpan-chhattisgarh",
   "version": "1.0.0",
   "private": true,
-  "description": "Jan Darpan Chhattisgarh — premium regional digital news for Chhattisgarh",
+  "description": "Jan Darpan Chhattisgarh â€” premium regional digital news for Chhattisgarh",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -45,8 +45,6 @@
     "ops:audit-editorial-images": "npx tsx scripts/audit-editorial-images.ts",
     "ops:repair-editorial-images": "npx tsx scripts/repair-editorial-images.ts",
     "ops:repair-editorial-images-apply": "npx tsx scripts/repair-editorial-images.ts --apply",
-    "ops:backfill-editorial-ai-images": "npx tsx scripts/backfill-editorial-ai-images.ts",
-    "ops:backfill-editorial-ai-images-apply": "npx tsx scripts/backfill-editorial-ai-images.ts --apply",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {
