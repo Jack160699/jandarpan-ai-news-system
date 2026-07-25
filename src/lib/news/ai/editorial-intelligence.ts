@@ -195,16 +195,20 @@ export function scoreReadability(input: {
       ? sents.reduce((a, s) => a + wordCount(s), 0) / sents.length
       : wc;
 
-  let score = 0.4;
-  if (wc >= 80) score += 0.2;
-  if (wc >= 180) score += 0.1;
-  if (input.summary.length >= 50) score += 0.15;
-  if (avgLen >= 8 && avgLen <= 24) score += 0.15;
-  else if (avgLen > 32) score -= 0.12;
+  let score = 0.35;
+  if (wc >= 80) score += 0.15;
+  if (wc >= 180) score += 0.12;
+  if (wc >= 400) score += 0.1;
+  if (wc >= 600) score += 0.08;
+  if (input.summary.length >= 50) score += 0.1;
+  if (avgLen >= 8 && avgLen <= 28) score += 0.12;
+  else if (avgLen > 36) score -= 0.1;
 
   const sectionCount = (body.match(/^##\s/mg) ?? []).length;
-  if (sectionCount >= 2) score += 0.12;
-  if (sectionCount >= 3) score += 0.08;
+  const paraCount = body.split(/\n{2,}/).filter((p) => p.trim().length > 40).length;
+  if (sectionCount >= 2) score += 0.08;
+  if (paraCount >= 4) score += 0.1;
+  if (paraCount >= 6) score += 0.05;
 
   return clamp01(score);
 }

@@ -14,7 +14,17 @@ describe("adaptive-tokens", () => {
   });
 
   it("limits editorial tokens for breaking", () => {
-    expect(editorialMaxTokens("breaking")).toBe(1000);
+    expect(editorialMaxTokens("breaking")).toBe(1600);
+  });
+
+  it("raises regular/deep tokens for complete reports", () => {
+    expect(editorialMaxTokens("regular")).toBeGreaterThanOrEqual(2800);
+    expect(editorialMaxTokens("deep_analysis")).toBeGreaterThanOrEqual(3600);
+  });
+
+  it("uses article-type token overrides", () => {
+    expect(editorialMaxTokens("regular", "standard_report")).toBe(3000);
+    expect(editorialMaxTokens("breaking", "breaking_alert")).toBe(1600);
   });
 
   it("slices translation body adaptively", () => {
@@ -29,7 +39,7 @@ describe("adaptive-tokens", () => {
 });
 
 describe("optimized-fact-pack", () => {
-  it("uses top 5 signals only", () => {
+  it("uses top signals with expanded excerpts", () => {
     const event = {
       id: "e1",
       canonical_title: "Test Event",
@@ -45,13 +55,16 @@ describe("optimized-fact-pack", () => {
       provider: "rss",
       article_url: `https://example.com/${i}`,
       published_at: new Date().toISOString(),
-      raw_content: "content ".repeat(20),
+      raw_content: "content ".repeat(200),
     })) as NewsSignalRow[];
 
-    const pack = buildOptimizedFactPack(event, signals);
-    expect(pack.signalCountUsed).toBe(5);
+    const pack = buildOptimizedFactPack(event, signals, {
+      articleType: "standard_report",
+    });
+    expect(pack.signalCountUsed).toBe(6);
     expect(pack.signalCountTotal).toBe(8);
-    expect(pack.factPackText).toContain("Top sources used: 5 of 8");
-    expect(pack.factPackText.length).toBeLessThan(8000);
+    expect(pack.excerptMax).toBeGreaterThanOrEqual(1400);
+    expect(pack.factPackText).toContain("Top sources used: 6 of 8");
+    expect(pack.factPackText.length).toBeGreaterThan(2000);
   });
 });

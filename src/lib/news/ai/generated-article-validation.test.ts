@@ -18,15 +18,15 @@ const hiBody = `
 रायपुर। छत्तीसगढ़ प्रशासन ने आज एक महत्वपूर्ण घोषणा की जिसमें स्थानीय विकास परियोजनाओं को प्राथमिकता दी गई। अधिकारियों ने कहा कि योजना का क्रियान्वयन जिला स्तर पर होगा और नागरिकों को नियमित अपडेट मिलेंगे।
 
 ## विस्तार
-विभाग के अनुसार बजट आवंटन के बाद काम शुरू होगा। स्थानीय प्रतिनिधि भी मौजूद रहे। परियोजना में शिक्षा, स्वास्थ्य और सड़क सुधार शामिल हैं। निगरानी समिति समय-समय पर प्रगति की समीक्षा करेगी।
+विभाग के अनुसार बजट आवंटन के बाद काम शुरू होगा। स्थानीय प्रतिनिधि भी मौजूद रहे। परियोजना में शिक्षा, स्वास्थ्य और सड़क सुधार शामिल हैं। निगरानी समिति समय-समय पर प्रगति की समीक्षा करेगी। जिला प्रशासन ने कहा कि प्रगति की जानकारी सार्वजनिक रूप से साझा की जाएगी और शिकायत निवारण हेतु हेल्पलाइन भी उपलब्ध रहेगी।
 `.trim();
 
 const enBody = `
 ## Lead
-Raipur authorities announced a regional development package covering roads, clinics, and schools across multiple districts.
+Raipur authorities announced a regional development package covering roads, clinics, and schools across multiple districts in Chhattisgarh.
 
 ## Details
-Officials said implementation will begin after budget clearance, with monthly public updates. Local representatives attended the briefing and sought timelines for each district.
+Officials said implementation will begin after budget clearance, with monthly public updates for citizens. Local representatives attended the briefing and sought timelines for each district. The administration confirmed that grievance redressal channels will remain open throughout the rollout period and that progress reports will be published regularly for transparency.
 `.trim();
 
 function validBase(
@@ -91,6 +91,12 @@ describe("validateGeneratedArticle", () => {
     const r = validBase({ articleBody: "छोटा पाठ।" });
     expect(r.ok).toBe(false);
     expect(r.codes).toContain("body_too_short");
+  });
+
+  it("fails body equal to summary", () => {
+    const same = hiBody.replace(/^##[^\n]*\n+/gm, "").trim();
+    const r = validBase({ summary: same, articleBody: same });
+    expect(r.codes).toContain("body_equals_excerpt");
   });
 
   it("fails model apology", () => {
