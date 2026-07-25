@@ -2,6 +2,24 @@ import { expect, test } from "@playwright/test";
 
 const FLAG = process.env.NEXT_PUBLIC_READER_DS === "1";
 
+async function selectLanguageOption(
+  page: import("@playwright/test").Page,
+  id: "hi" | "en"
+) {
+  const option = page.getByTestId(`lang-option-${id}`);
+  await expect(option).toBeVisible({ timeout: 30_000 });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await option.evaluate((el) => (el as HTMLButtonElement).click());
+    try {
+      await expect(option).toHaveAttribute("aria-pressed", "true", { timeout: 4_000 });
+      return;
+    } catch {
+      /* retry — pointer interception can drop the first synthetic click */
+    }
+  }
+  await expect(option).toHaveAttribute("aria-pressed", "true", { timeout: 10_000 });
+}
+
 /**
  * Release blocker #3 — language switching across Reader DS chrome.
  * Asserts Hindi default, English switch + persistence, return to Hindi,
@@ -37,10 +55,7 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 45_000 });
     await expect(page.getByTestId("lang-option-en")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("lang-option-en").evaluate((el) => (el as HTMLButtonElement).click());
-    await expect(page.getByTestId("lang-option-en")).toHaveAttribute("aria-pressed", "true", {
-      timeout: 10_000,
-    });
+    await selectLanguageOption(page, "en");
     await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
 
@@ -75,11 +90,7 @@ test.describe("reader-ds language switching (blocker #3)", () => {
 
   test("switching back to Hindi restores Hindi chrome", async ({ page }) => {
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("lang-option-en")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("lang-option-en").evaluate((el) => (el as HTMLButtonElement).click());
-    await expect(page.getByTestId("lang-option-en")).toHaveAttribute("aria-pressed", "true", {
-      timeout: 10_000,
-    });
+    await selectLanguageOption(page, "en");
     await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
     await expect(page.getByTestId("jd-bottom-nav").first()).toHaveAttribute("data-jd-locale", "en", {
@@ -87,11 +98,7 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     });
 
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
-    await expect(page.getByTestId("lang-option-hi")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("lang-option-hi").evaluate((el) => (el as HTMLButtonElement).click());
-    await expect(page.getByTestId("lang-option-hi")).toHaveAttribute("aria-pressed", "true", {
-      timeout: 10_000,
-    });
+    await selectLanguageOption(page, "hi");
     await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
 

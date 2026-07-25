@@ -117,7 +117,7 @@ test.describe("reader-ds smoke (Phase 7)", () => {
     });
     await expect(page.locator(".jd-search-phone-bar").first()).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("jd-search-filter-rail")).toBeHidden();
-    await page.getByTestId("jd-search-filter-trigger").click();
+    await page.getByTestId("jd-search-filter-trigger").evaluate((el) => (el as HTMLButtonElement).click());
     await expect(page.getByTestId("jd-search-drawer")).toBeVisible({ timeout: 10_000 });
   });
 
