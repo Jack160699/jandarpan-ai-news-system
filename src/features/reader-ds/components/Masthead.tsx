@@ -44,7 +44,7 @@ export function Masthead({
         flexShrink: 0,
         background: "var(--jd-navy)",
         color: "var(--jd-paper)",
-        padding: "7px 14px 8px",
+        padding: "9px 14px 10px",
       }}
     >
       <div
@@ -57,7 +57,7 @@ export function Masthead({
           maxWidth: 900,
           margin: "0 auto",
           width: "100%",
-          minHeight: 32,
+          minHeight: 36,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
@@ -104,15 +104,15 @@ export function Masthead({
           )}
           {pageTitle ? (
             <span
-              className="jd-serif"
+              className="jd-serif jd-type-section"
               style={{
-                fontSize: 17,
-                fontWeight: 700,
                 color: "var(--jd-paper)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
+                paddingBlock: "0.12em",
               }}
+              title={pageTitle}
             >
               {pageTitle}
             </span>
@@ -129,31 +129,32 @@ export function Masthead({
               }}
             >
               <span
-                className={locale === "en" ? "jd-ui" : "jd-brand"}
+                className={locale === "en" ? "jd-ui jd-type-masthead" : "jd-brand jd-type-masthead"}
                 style={{
-                  fontSize: locale === "en" ? 17 : 20,
-                  lineHeight: 1.1,
                   display: "block",
-                  fontWeight: 700,
-                  overflow: "hidden",
+                  color: "var(--jd-paper)",
+                  /* Ellipsis without vertical crop — keep matras visible */
+                  overflowX: "hidden",
+                  overflowY: "visible",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
                 }}
+                title={t("brand.name")}
               >
                 {t("brand.name")}
               </span>
               {premiumBadge ? (
                 <span
-                  className="jd-ui"
+                  className="jd-ui jd-type-caption"
                   style={{
-                    fontSize: 8.5,
                     fontWeight: 800,
                     letterSpacing: ".06em",
                     color: "var(--jd-navy)",
                     background: "var(--jd-gold)",
-                    padding: "2px 6px",
+                    padding: "3px 7px",
                     borderRadius: 2,
                     flexShrink: 0,
+                    lineHeight: 1.35,
                   }}
                 >
                   {t("masthead.premium")}

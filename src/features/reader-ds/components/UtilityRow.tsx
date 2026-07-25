@@ -168,13 +168,13 @@ export function UtilityRow({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "6px 14px",
-        fontSize: locale === "en" ? 10.5 : 11.5,
+        padding: "8px 14px",
         gap: 8,
       }}
     >
       <Link
         href={districtHref}
+        className="jd-type-meta"
         style={{
           display: "flex",
           alignItems: "center",
@@ -185,20 +185,25 @@ export function UtilityRow({
           maxWidth: "42%",
           minWidth: 0,
         }}
+        title={districtLabel}
       >
         <JdIcon name="pin" size={13} stroke={2} color="var(--jd-gold)" />
         <span
           style={{
-            overflow: "hidden",
+            overflowX: "hidden",
+            overflowY: "visible",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
+            paddingBlock: "0.08em",
           }}
         >
           {districtLabel}
         </span>
         <JdIcon name="chevD" size={12} stroke={2} color="#8ea0c4" />
       </Link>
-      <span style={{ color: "#8ea0c4", whiteSpace: "nowrap", flexShrink: 0 }}>{date}</span>
+      <span className="jd-type-meta" style={{ color: "#8ea0c4", whiteSpace: "nowrap", flexShrink: 0 }}>
+        {date}
+      </span>
       {weatherNode}
     </div>
   );

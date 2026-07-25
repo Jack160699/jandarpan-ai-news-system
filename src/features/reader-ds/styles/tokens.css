@@ -57,10 +57,11 @@
   --jd-d-text: #e7edf6;
   --jd-d-muted: #93a4c2;
 
-  /* Typography — next/font vars from readerDsFontClassName + root --font-hindi */
-  --jd-ff-brand: var(--jd-font-brand), "Tiro Devanagari Hindi", Georgia, serif;
-  --jd-ff-serif: var(--font-hindi), "Noto Serif Devanagari", Georgia, serif;
-  --jd-ff-ui: var(--jd-font-ui), "Mukta", system-ui, -apple-system, sans-serif;
+  /* Typography stacks — overridden/extended in typography.css for Hindi safety */
+  --jd-ff-brand: var(--jd-font-brand), "Tiro Devanagari Hindi", "Noto Serif Devanagari", Georgia,
+    serif;
+  --jd-ff-serif: var(--font-hindi), "Noto Serif Devanagari", "Tiro Devanagari Hindi", Georgia, serif;
+  --jd-ff-ui: var(--jd-font-ui), Mukta, "Noto Sans Devanagari", system-ui, -apple-system, sans-serif;
 
   /* Spacing scale: 2 4 8 12 14 18 24 32 */
   --jd-s1: 2px;
@@ -205,33 +206,38 @@ html[data-font-scale="xl"] .jd-ds {
 .jd-breaking-strip {
   flex-shrink: 0;
   display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  padding: 8px 14px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
   background: var(--jd-red);
   color: #fff;
   width: 100%;
   box-sizing: border-box;
-  overflow: hidden;
+  /* Horizontal marquee only — never clip Devanagari matras vertically */
+  overflow-x: hidden;
+  overflow-y: visible;
+  min-height: 2.75rem;
 }
 
 .jd-breaking-strip__badge {
+  font-family: var(--jd-ff-ui);
   font-weight: 800;
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: var(--jd-type-breaking-label, 0.75rem);
+  letter-spacing: 0.04em;
   background: #fff;
   color: var(--jd-red);
-  padding: 3px 8px;
+  padding: 0.35em 0.65em;
   border-radius: 2px;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
-  min-width: 5.5rem;
+  min-width: 5.75rem;
+  min-height: 1.75rem;
   justify-content: center;
-  line-height: 1.2;
-  margin-top: 1px;
+  line-height: var(--jd-lh-label, 1.4);
+  overflow: visible;
 }
 
 .jd-breaking-strip__pulse {
@@ -257,6 +263,8 @@ html[data-font-scale="xl"] .jd-ds {
 
 .jd-breaking-strip__label {
   color: var(--jd-red);
+  padding-block: 0.1em;
+  line-height: var(--jd-lh-label, 1.4);
 }
 
 .jd-breaking-strip__item {
@@ -272,28 +280,34 @@ html[data-font-scale="xl"] .jd-ds {
 }
 
 .jd-breaking-strip__headline {
-  font-size: 13px;
+  font-family: var(--jd-ff-serif);
+  font-size: var(--jd-type-breaking-headline, 0.875rem);
   font-weight: 600;
   color: #fff;
-  line-height: 1.35;
+  line-height: var(--jd-lh-ui, 1.45);
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
   display: block;
   word-break: break-word;
+  padding-block: 0.12em;
 }
 
 .jd-breaking-strip__track-wrap {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  mask-image: linear-gradient(90deg, transparent, #000 8px, #000 calc(100% - 8px), transparent);
+  overflow-x: hidden;
+  overflow-y: visible;
+  padding-block: 0.1em;
+  /* Soft edge fade — start opaque so the first glyph is never cropped */
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 14px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 14px), transparent 100%);
 }
 
 .jd-breaking-strip__track {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 4px 0 2px;
   display: flex;
   align-items: center;
   gap: 28px;
@@ -308,6 +322,7 @@ html[data-font-scale="xl"] .jd-ds {
 
 .jd-breaking-strip__track .jd-breaking-strip__headline {
   white-space: nowrap;
+  overflow: visible;
 }
 
 @keyframes jd-breaking-ticker {

@@ -36,7 +36,7 @@ export function BottomNav({
         borderTop: dark ? "1px solid rgba(150,175,215,0.16)" : "1px solid var(--jd-line)",
         display: "flex",
         justifyContent: "space-around",
-        padding: "7px 0 max(9px, env(safe-area-inset-bottom))",
+        padding: "8px 0 max(10px, env(safe-area-inset-bottom))",
       }}
     >
       {items.map((it) => {
@@ -47,14 +47,15 @@ export function BottomNav({
             key={it.key}
             href={it.href}
             aria-current={on ? "page" : undefined}
+            title={it.label}
             style={{
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: 3,
+              gap: 4,
               minWidth: 56,
-              maxWidth: 72,
-              minHeight: 44,
+              maxWidth: 76,
+              minHeight: 48,
               justifyContent: "center",
               color,
               padding: "0 2px",
@@ -62,14 +63,13 @@ export function BottomNav({
           >
             <JdIcon name={it.icon} size={21} stroke={on ? 2.1 : 1.8} color={color} />
             <span
-              className="jd-ui"
+              className="jd-ui jd-type-nav"
               style={{
-                fontSize: locale === "en" ? 9 : 9.5,
                 fontWeight: on ? 800 : 600,
-                lineHeight: 1.1,
                 textAlign: "center",
                 whiteSpace: "nowrap",
-                overflow: "hidden",
+                overflowX: "hidden",
+                overflowY: "visible",
                 textOverflow: "ellipsis",
                 maxWidth: "100%",
               }}

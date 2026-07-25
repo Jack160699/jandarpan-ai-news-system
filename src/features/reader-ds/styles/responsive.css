@@ -144,8 +144,9 @@
     font-family: var(--jd-ff-brand);
     font-weight: 700;
     font-size: 14px;
-    line-height: 1;
+    line-height: 1.2;
     flex-shrink: 0;
+    overflow: visible;
   }
 
   .jd-desk-mark--lg {
@@ -246,9 +247,10 @@
 
   .jd-desk-brand__word {
     display: block;
-    font-size: 26px;
-    line-height: 1;
+    font-size: var(--jd-type-masthead, 1.625rem);
+    line-height: var(--jd-lh-display, 1.35);
     color: var(--jd-navy);
+    padding-block: 0.08em;
   }
 
   .jd-desk-brand__tag {
@@ -463,8 +465,8 @@
 
   .jd-desk-footer__brand p {
     margin: 10px 0 0;
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: var(--jd-type-footer-link, 13px);
+    line-height: var(--jd-lh-body, 1.62);
     color: #8ea0c4;
     max-width: 280px;
   }
@@ -479,10 +481,11 @@
 
   .jd-desk-footer__col h3 {
     margin: 0 0 10px;
-    font-size: 12px;
+    font-size: var(--jd-type-footer-h, 12px);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--jd-gold-soft);
+    line-height: var(--jd-lh-ui, 1.45);
   }
 
   .jd-desk-footer__col ul {
@@ -494,8 +497,8 @@
   .jd-desk-footer__col a {
     color: #c7d0e2;
     text-decoration: none;
-    font-size: 13px;
-    line-height: 1.9;
+    font-size: var(--jd-type-footer-link, 13px);
+    line-height: 1.75;
   }
 
   .jd-desk-footer__bar {
@@ -636,7 +639,7 @@
 
   .jd-ds .jd-home-lead .jd-lead-title {
     font-size: 32px !important;
-    line-height: 1.25 !important;
+    line-height: var(--jd-lh-headline, 1.38) !important;
   }
 
   .jd-ds .jd-home-rail {
@@ -887,7 +890,9 @@
 
   .jd-desk-sticky__word {
     font-size: 18px;
+    line-height: var(--jd-lh-display, 1.35);
     color: #fff;
+    padding-block: 0.08em;
   }
 
   .jd-desk-sticky__nav {
@@ -973,19 +978,20 @@
   }
 
   .jd-desk-footer__brand p {
-    font-size: 12px;
-    line-height: 1.4;
+    font-size: var(--jd-type-caption, 12px);
+    line-height: var(--jd-lh-body, 1.62);
     margin: 6px 0 0;
   }
 
   .jd-desk-footer__col h3 {
-    font-size: 11px;
+    font-size: var(--jd-type-footer-h, 11px);
     margin: 0 0 6px;
+    line-height: var(--jd-lh-ui, 1.45);
   }
 
   .jd-desk-footer__col a {
-    font-size: 12px;
-    line-height: 1.55;
+    font-size: var(--jd-type-footer-link, 12px);
+    line-height: 1.65;
   }
 
   .jd-desk-footer__bar {
@@ -1022,11 +1028,12 @@
   }
 
   .jd-breaking-strip {
-    align-items: flex-start;
+    align-items: center;
   }
 
   .jd-masthead__inner {
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 }
 

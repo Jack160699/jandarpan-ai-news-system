@@ -23,14 +23,14 @@ export const sourceSerif = Source_Serif_4({
   preload: true,
 });
 
-/** Hindi / Chhattisgarhi (Devanagari) */
+/** Hindi / Chhattisgarhi (Devanagari) — preload to avoid matra clipping during swap */
 export const notoDevanagari = Noto_Serif_Devanagari({
   variable: "--font-hindi",
   subsets: ["devanagari", "latin"],
   weight: ["400", "500", "600"],
   display: "swap",
   adjustFontFallback: true,
-  preload: false,
+  preload: true,
 });
 
 /** Meta labels, timestamps */
