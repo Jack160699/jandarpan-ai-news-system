@@ -312,7 +312,7 @@ function sortChronologically(
 
   const missingEventTime = decorated.filter((entry) => !entry.usedEventTime).length;
   if (missingEventTime > 0) {
-    logNewsroom("continuing_coverage_missing_event_time", {
+    logNewsroom("events", "continuing_coverage_missing_event_time", {
       eventId: articles[0]?.event_id ?? null,
       missingCount: missingEventTime,
       total: decorated.length,
@@ -393,7 +393,7 @@ export function buildContinuingCoverage(
     "";
 
   if (!eventId) {
-    logNewsroom("continuing_coverage_missing_event_id", {
+    logNewsroom("events", "continuing_coverage_missing_event_id", {
       slug: input.currentSlug,
       reason: "build_without_event_id",
     });
@@ -406,7 +406,7 @@ export function buildContinuingCoverage(
   );
 
   if (sameEvent.length === 0) {
-    logNewsroom("continuing_coverage_missing_cluster", {
+    logNewsroom("events", "continuing_coverage_missing_cluster", {
       eventId,
       slug: input.currentSlug,
       reason: "no_matching_articles",

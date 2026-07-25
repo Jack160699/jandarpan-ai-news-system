@@ -67,12 +67,12 @@ export async function fetchEventClusterArticles(
 ): Promise<EventClusterArticle[]> {
   const id = eventId?.trim();
   if (!id) {
-    logNewsroom("continuing_coverage_missing_event_id", { reason: "no_event_id" });
+    logNewsroom("events", "continuing_coverage_missing_event_id", { reason: "no_event_id" });
     return [];
   }
 
   if (!isSupabaseConfigured()) {
-    logNewsroom("continuing_coverage_missing_cluster", {
+    logNewsroom("events", "continuing_coverage_missing_cluster", {
       eventId: id,
       reason: "supabase_unconfigured",
     });
@@ -90,7 +90,7 @@ export async function fetchEventClusterArticles(
     .limit(EVENT_CLUSTER_ARTICLE_LIMIT);
 
   if (error) {
-    logNewsroom("continuing_coverage_missing_cluster", {
+    logNewsroom("events", "continuing_coverage_missing_cluster", {
       eventId: id,
       reason: "query_error",
       message: error.message,
@@ -103,7 +103,7 @@ export async function fetchEventClusterArticles(
     .filter((row): row is EventClusterArticle => row !== null);
 
   if (rows.length === 0) {
-    logNewsroom("continuing_coverage_missing_cluster", {
+    logNewsroom("events", "continuing_coverage_missing_cluster", {
       eventId: id,
       reason: "empty_cluster",
     });

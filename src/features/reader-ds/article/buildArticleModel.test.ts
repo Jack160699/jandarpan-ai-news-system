@@ -70,19 +70,19 @@ describe("buildReaderArticleModel continuing coverage", () => {
 
     const model = buildReaderArticleModel({
       article: newsArticle({
-        id: "a1",
+        id: 1,
         title: "घटनाक्रम एक",
         slug: "timeline-a",
       }),
       paragraphs: ["पैरा एक।"],
       related: [
         newsArticle({
-          id: "a2",
+          id: 2,
           title: "घटनाक्रम दो",
           slug: "timeline-b",
         }),
         newsArticle({
-          id: "a3",
+          id: 3,
           title: "पृष्ठभूमि खबर",
           slug: "background-story",
         }),
@@ -110,14 +110,14 @@ describe("buildReaderArticleModel continuing coverage", () => {
 
     const model = buildReaderArticleModel({
       article: newsArticle({
-        id: "a1",
+        id: 1,
         title: "अकेली खबर",
         slug: "only-one",
       }),
       paragraphs: ["पैरा।"],
       related: [
         newsArticle({
-          id: "a9",
+          id: 9,
           title: "संबंधित",
           slug: "related-one",
         }),

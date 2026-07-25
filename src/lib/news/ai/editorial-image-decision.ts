@@ -14,6 +14,8 @@ export type EditorialImageDecisionCode = "A" | "B" | "C" | "D";
 export type EditorialImageDecision = {
   code: EditorialImageDecisionCode;
   reason: string;
+  /** When true, enqueue async image worker after publish. */
+  enqueueJob: boolean;
 };
 
 export function decideEditorialImageStrategy(input: {
@@ -42,6 +44,7 @@ export function decideEditorialImageStrategy(input: {
       reason: brief.sensitive
         ? "sensitive_story_text_only"
         : "generation_not_appropriate",
+      enqueueJob: false,
     };
   }
 
@@ -49,6 +52,7 @@ export function decideEditorialImageStrategy(input: {
     return {
       code: "A",
       reason: "source_image_available",
+      enqueueJob: true,
     };
   }
 
@@ -61,6 +65,7 @@ export function decideEditorialImageStrategy(input: {
     return {
       code: "B",
       reason: "ai_illustration_eligible",
+      enqueueJob: true,
     };
   }
 
@@ -68,6 +73,7 @@ export function decideEditorialImageStrategy(input: {
     return {
       code: "C",
       reason: "short_alert_curated_fallback",
+      enqueueJob: false,
     };
   }
 
@@ -79,11 +85,13 @@ export function decideEditorialImageStrategy(input: {
         : skipAi
           ? "ai_skipped"
           : "provider_unavailable",
+      enqueueJob: false,
     };
   }
 
   return {
     code: "C",
     reason: "default_curated_fallback",
+    enqueueJob: false,
   };
 }
