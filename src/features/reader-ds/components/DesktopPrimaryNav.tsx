@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
-import { JdIcon } from "./icons";
+import { JdIcon, jdIconStroke } from "./icons";
 import { getPrimaryNavItems, type PrimaryNavKey } from "./navItems";
 
 /**
@@ -73,7 +73,12 @@ export function DesktopPrimaryNav({
                 textDecoration: "none",
               }}
             >
-              <JdIcon name={it.icon} size={18} stroke={on ? 2.1 : 1.8} color={color} />
+              <JdIcon
+                name={it.icon}
+                size={18}
+                stroke={jdIconStroke(18, on ? "active" : "regular")}
+                color={color}
+              />
               {it.label}
             </Link>
           );

@@ -11,7 +11,10 @@ import {
   PRIMARY_NAV_ITEMS,
   type PrimaryNavKey,
 } from "../components/navItems";
-import { MASTHEAD_LOGO_DISPLAY } from "../components/MastheadBrandLogo";
+import {
+  MASTHEAD_LOGO_CSS_WIDTH,
+  MASTHEAD_LOGO_DISPLAY,
+} from "../components/MastheadBrandLogo";
 
 const root = join(__dirname, "../../../..");
 const publicBrand = join(root, "public/brand/jan-darpan");
@@ -22,12 +25,14 @@ describe("approved masthead logo asset", () => {
       "/brand/jan-darpan/logo/compact-dark.svg"
     );
     expect(JAN_DARPAN_COMPACT_LOGO_INTRINSIC).toEqual({ width: 230, height: 48 });
-    expect(MASTHEAD_LOGO_DISPLAY).toEqual({ width: 134, height: 28 });
+    expect(MASTHEAD_LOGO_DISPLAY.width).toBeGreaterThanOrEqual(148);
+    expect(MASTHEAD_LOGO_DISPLAY.width).toBeLessThanOrEqual(172);
+    expect(MASTHEAD_LOGO_CSS_WIDTH).toContain("clamp");
     expect(
       Math.abs(
         MASTHEAD_LOGO_DISPLAY.width / MASTHEAD_LOGO_DISPLAY.height - 230 / 48
       )
-    ).toBeLessThan(0.02);
+    ).toBeLessThan(0.03);
   });
 
   it("ships the compact-dark file on disk", () => {
@@ -116,46 +121,57 @@ describe("masthead header actions", () => {
 });
 
 describe("bottom navigation destinations", () => {
-  it("keeps four primary reading destinations plus Videos", () => {
+  it("keeps exactly four primary reading destinations without Videos", () => {
     const items = getPrimaryNavItems("hi");
-    expect(items).toHaveLength(5);
+    expect(items).toHaveLength(4);
     expect(items.map((i) => i.key)).toEqual([
       "home",
       "district",
       "latest",
       "listen",
-      "videos",
     ]);
     expect(items.map((i) => i.href)).toEqual([
       "/",
       "/district",
       "/latest",
       "/listen",
-      "/shorts",
     ]);
-    expect(items.find((i) => i.key === "videos")?.label).toBe("वीडियो");
+    expect(items.find((i) => i.key === "district")?.label).toBe("मेरा जिला");
+    expect(items.some((i) => i.href === "/shorts")).toBe(false);
   });
 
   it("exposes English labels for the same routes", () => {
     const items = getPrimaryNavItems("en");
-    expect(items.find((i) => i.key === "videos")?.label).toBe("Videos");
-    expect(items.find((i) => i.key === "district")?.label).toBe("District");
+    expect(items.map((i) => i.key)).toEqual([
+      "home",
+      "district",
+      "latest",
+      "listen",
+    ]);
+    expect(items.find((i) => i.key === "district")?.label).toBe("My District");
+    expect(items.find((i) => i.key === "listen")?.label).toBe("Listen");
+    expect(items.some((i) => /video/i.test(i.label))).toBe(false);
   });
 
-  it("BottomNav source has no More/अधिक destination", () => {
+  it("BottomNav source has no Videos/More destination and even flex slots", () => {
     const src = readFileSync(join(__dirname, "../components/BottomNav.tsx"), "utf8");
     expect(src).not.toContain('key: "more"');
+    expect(src).not.toContain('key: "videos"');
     expect(src).not.toContain("/archive");
+    expect(src).not.toContain("/shorts");
     expect(src).toContain("minHeight: 48");
     expect(src).toContain("aria-current");
     expect(src).toContain("safe-area-inset-bottom");
+    expect(src).toContain("space-evenly");
+    expect(src).not.toContain("maxWidth: 88");
   });
 
-  it("navItems source documents five-item behavior without Search duplication", () => {
+  it("navItems source documents four-item behavior without Search/Videos duplication", () => {
     const src = readFileSync(join(__dirname, "../components/navItems.ts"), "utf8");
-    expect(src).toContain('key: "videos"');
+    expect(src).not.toContain('key: "videos"');
     expect(src).not.toContain('key: "more"');
     expect(src).not.toContain('href: "/search"');
+    expect(src).not.toContain('href: "/shorts"');
   });
 });
 

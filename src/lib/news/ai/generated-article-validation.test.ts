@@ -15,18 +15,24 @@ import {
 
 const hiBody = `
 ## मुख्य समाचार
-रायपुर। छत्तीसगढ़ प्रशासन ने आज एक महत्वपूर्ण घोषणा की जिसमें स्थानीय विकास परियोजनाओं को प्राथमिकता दी गई। अधिकारियों ने कहा कि योजना का क्रियान्वयन जिला स्तर पर होगा और नागरिकों को नियमित अपडेट मिलेंगे।
+रायपुर। छत्तीसगढ़ प्रशासन ने आज एक महत्वपूर्ण घोषणा की जिसमें स्थानीय विकास परियोजनाओं को प्राथमिकता दी गई। अधिकारियों ने कहा कि योजना का क्रियान्वयन जिला स्तर पर होगा और नागरिकों को नियमित अपडेट मिलेंगे। विभाग ने स्पष्ट किया कि बजट मंजूरी के बाद ही निर्माण एजेंसियाँ मैदान में उतरेंगी।
 
 ## विस्तार
-विभाग के अनुसार बजट आवंटन के बाद काम शुरू होगा। स्थानीय प्रतिनिधि भी मौजूद रहे। परियोजना में शिक्षा, स्वास्थ्य और सड़क सुधार शामिल हैं। निगरानी समिति समय-समय पर प्रगति की समीक्षा करेगी। जिला प्रशासन ने कहा कि प्रगति की जानकारी सार्वजनिक रूप से साझा की जाएगी और शिकायत निवारण हेतु हेल्पलाइन भी उपलब्ध रहेगी।
+विभाग के अनुसार बजट आवंटन के बाद काम शुरू होगा। स्थानीय प्रतिनिधि भी मौजूद रहे। परियोजना में शिक्षा, स्वास्थ्य और सड़क सुधार शामिल हैं। निगरानी समिति समय-समय पर प्रगति की समीक्षा करेगी। जिला प्रशासन ने कहा कि प्रगति की जानकारी सार्वजनिक रूप से साझा की जाएगी और शिकायत निवारण हेतु हेल्पलाइन भी उपलब्ध रहेगी। अधिकारियों के मुताबिक पहले चरण में प्राथमिक स्वास्थ्य केंद्रों का उन्नयन और ग्रामीण सड़कों की मरम्मत पर ध्यान केंद्रित रहेगा।
+
+## आगे क्या
+अगले सप्ताह जिलाधिकारियों के साथ समीक्षा बैठक प्रस्तावित है। नागरिकों से अनुरोध है कि वे आधिकारिक सूचनाओं पर ही भरोसा करें और अफवाहों से बचें। योजना की समय-सीमा और आवंटन विवरण प्रशासन की वेबसाइट पर प्रकाशित किए जाएँगे।
 `.trim();
 
 const enBody = `
 ## Lead
-Raipur authorities announced a regional development package covering roads, clinics, and schools across multiple districts in Chhattisgarh.
+Raipur authorities announced a regional development package covering roads, clinics, and schools across multiple districts in Chhattisgarh. Officials said the programme prioritises district-level delivery with monthly public updates for citizens.
 
 ## Details
-Officials said implementation will begin after budget clearance, with monthly public updates for citizens. Local representatives attended the briefing and sought timelines for each district. The administration confirmed that grievance redressal channels will remain open throughout the rollout period and that progress reports will be published regularly for transparency.
+Officials said implementation will begin after budget clearance, with monthly public updates for citizens. Local representatives attended the briefing and sought timelines for each district. The administration confirmed that grievance redressal channels will remain open throughout the rollout period and that progress reports will be published regularly for transparency. The first phase focuses on primary health centres and rural road repairs, with contractors mobilised only after formal fund release.
+
+## Next
+A review meeting with district collectors is scheduled for next week. Residents were asked to rely on official notices and avoid unverified claims circulating on messaging apps.
 `.trim();
 
 function validBase(

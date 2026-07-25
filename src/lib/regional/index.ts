@@ -52,8 +52,11 @@ export {
 export {
   buildHyperlocalFeedBundle,
   filterRowsForDistrict,
+  partitionDistrictHubRows,
   prioritizePrimaryDistrict,
   routeArticlesByDistrict,
+  rowMatchesDistrict,
+  type DistrictHubPartition,
   type HyperlocalFeedBlock,
   type HyperlocalFeedBundle,
 } from "@/lib/regional/hyperlocal-feed";

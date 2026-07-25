@@ -33,6 +33,15 @@ export function scoreRelatedness(
 
   let score = 0;
 
+  // Same event / continuing coverage — strongest signal (timeline dedupes later)
+  if (
+    source.event_id &&
+    candidate.event_id &&
+    source.event_id === candidate.event_id
+  ) {
+    score += 120;
+  }
+
   if (source.category === candidate.category) score += 40;
   if (source.region === candidate.region) score += 30;
   if (resolveArticleProvider(source) === resolveArticleProvider(candidate)) score += 10;
@@ -65,7 +74,11 @@ export function pickRelatedStories(
   knowledgeBoost?: (source: NewsArticleRow, candidate: NewsArticleRow) => number
 ): NewsArticleRow[] {
   const seenTitles = new Set<string>();
+  const seenIds = new Set<string>();
+  const seenUrls = new Set<string>();
   const sourceNorm = normalizeTitle(source.title ?? "");
+  const sourceUrl = (source.article_url ?? "").trim().toLowerCase();
+  const sourceId = String(source.id);
 
   return pool
     .map((c) => ({
@@ -77,7 +90,14 @@ export function pickRelatedStories(
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .filter(({ article }) => {
-      if (article.id === source.id) return false;
+      const id = String(article.id);
+      if (id === sourceId) return false;
+      if (seenIds.has(id)) return false;
+      seenIds.add(id);
+
+      const url = (article.article_url ?? "").trim().toLowerCase();
+      if (url && (url === sourceUrl || seenUrls.has(url))) return false;
+      if (url) seenUrls.add(url);
 
       const th = titleHash(article.title);
       if (seenTitles.has(th)) return false;
@@ -85,16 +105,6 @@ export function pickRelatedStories(
       const norm = normalizeTitle(article.title ?? "");
       if (norm && sourceNorm && norm === sourceNorm) return false;
       if (titleSimilarity(source.title ?? "", article.title ?? "") >= 0.78) {
-        return false;
-      }
-
-      const sourceEvent = source.event_id;
-      const candidateEvent = article.event_id;
-      if (
-        sourceEvent &&
-        candidateEvent &&
-        sourceEvent === candidateEvent
-      ) {
         return false;
       }
 

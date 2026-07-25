@@ -3,11 +3,18 @@ import {
   JAN_DARPAN_COMPACT_LOGO_INTRINSIC,
 } from "@/lib/brand/assets";
 
-/** Display size for phone masthead — preserves 230×48 aspect, avoids CLS. */
+/**
+ * Masthead lockup optical size — preserves 230×48 aspect.
+ * Intrinsic attrs reserve layout (CLS); CSS clamp adapts 320–430px phones.
+ */
 export const MASTHEAD_LOGO_DISPLAY = {
-  width: 134,
-  height: 28,
+  /** Layout reservation / max optical width at ≥390px (230×48 aspect) */
+  width: 153,
+  height: 32,
 } as const;
+
+/** Responsive CSS width — never exceeds reserved box. */
+export const MASTHEAD_LOGO_CSS_WIDTH = "clamp(142px, 40vw, 153px)";
 
 type MastheadBrandLogoProps = {
   alt: string;
@@ -31,12 +38,15 @@ export function MastheadBrandLogo({ alt, className }: MastheadBrandLogoProps) {
       data-jd-brand-asset="compact-dark"
       decoding="async"
       style={{
-        width: MASTHEAD_LOGO_DISPLAY.width,
-        height: MASTHEAD_LOGO_DISPLAY.height,
+        width: MASTHEAD_LOGO_CSS_WIDTH,
+        height: "auto",
+        maxWidth: MASTHEAD_LOGO_DISPLAY.width,
+        maxHeight: MASTHEAD_LOGO_DISPLAY.height,
+        aspectRatio: `${JAN_DARPAN_COMPACT_LOGO_INTRINSIC.width} / ${JAN_DARPAN_COMPACT_LOGO_INTRINSIC.height}`,
         display: "block",
         objectFit: "contain",
         objectPosition: "left center",
-        flexShrink: 0,
+        flexShrink: 1,
       }}
       // Intrinsic hint for browsers (aspect from approved viewBox)
       {...{

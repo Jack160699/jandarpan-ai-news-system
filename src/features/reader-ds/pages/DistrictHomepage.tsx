@@ -9,7 +9,7 @@ import { Masthead } from "../components/Masthead";
 import { ReaderShell } from "../components/ReaderShell";
 import { SectionHeader } from "../components/primitives";
 import { SecondaryStory } from "../components/SecondaryStory";
-import { JdIcon, type JdIconName } from "../components/icons";
+import { JdIcon, jdIconStroke, type JdIconName } from "../components/icons";
 import { useJdDsT } from "../i18n";
 import { toReaderStory } from "../utils";
 
@@ -23,6 +23,8 @@ type Props = {
   districtName: string;
   districtNameHi: string;
   articles: HomeArticle[];
+  /** Statewide/nearby stories — shown only when local inventory is thin. */
+  fallbackArticles?: HomeArticle[];
   utilityTiles?: UtilityTile[];
   sponsorLabel?: string | null;
 };
@@ -46,6 +48,7 @@ export function DistrictHomepage({
   districtName,
   districtNameHi,
   articles,
+  fallbackArticles = [],
   utilityTiles,
   sponsorLabel,
 }: Props) {
@@ -56,6 +59,8 @@ export function DistrictHomepage({
     ? toReaderStory(articles[0], `${displayName}`)
     : null;
   const rest = articles.slice(1, 8).map((a) => toReaderStory(a));
+  const fallbackStories = fallbackArticles.slice(0, 6).map((a) => toReaderStory(a));
+  const showHonestGap = articles.length > 0 && articles.length < 4;
   const countLabel =
     articles.length > 0 ? t("district.newsCount", { n: articles.length }) : undefined;
 
@@ -138,7 +143,12 @@ export function DistrictHomepage({
                     minHeight: 44,
                   }}
                 >
-                  <JdIcon name={u.icon} size={20} stroke={1.8} color="var(--jd-navy)" />
+                  <JdIcon
+                    name={u.icon}
+                    size={20}
+                    stroke={jdIconStroke(20)}
+                    color="var(--jd-navy)"
+                  />
                   <div style={{ minWidth: 0 }}>
                     <div
                       className="jd-ui"
@@ -168,17 +178,46 @@ export function DistrictHomepage({
               moreHref={`/latest?district=${encodeURIComponent(districtNameHi || districtName)}`}
               moreLabel={t("common.seeAll")}
             />
-            <div className="jd-hub-list" style={{ padding: "0 14px" }}>
-              {rest.length === 0 ? (
+            <div className="jd-hub-list" style={{ padding: "0 14px" }} data-testid="jd-district-primary">
+              {rest.length === 0 && !lead ? (
                 <p className="jd-ui" style={{ color: "var(--jd-muted)", fontSize: 13, padding: "8px 0" }}>
                   {t("district.emptyMore")}
+                </p>
+              ) : rest.length === 0 ? (
+                <p className="jd-ui" style={{ color: "var(--jd-muted)", fontSize: 13, padding: "8px 0" }}>
+                  {t("district.moreSoon")}
                 </p>
               ) : (
                 rest.map((s, i) => (
                   <SecondaryStory key={s.slug} story={s} last={i === rest.length - 1} toneIndex={i} />
                 ))
               )}
+              {showHonestGap ? (
+                <p
+                  className="jd-ui"
+                  data-testid="jd-district-more-soon"
+                  style={{ color: "var(--jd-muted)", fontSize: 13, padding: "10px 0 4px" }}
+                >
+                  {t("district.moreSoon")}
+                </p>
+              ) : null}
             </div>
+
+            {fallbackStories.length > 0 ? (
+              <div data-testid="jd-district-fallback">
+                <SectionHeader title={t("district.stateFallback")} color="var(--jd-ink-2)" />
+                <div className="jd-hub-list" style={{ padding: "0 14px" }}>
+                  {fallbackStories.map((s, i) => (
+                    <SecondaryStory
+                      key={`fb-${s.slug}`}
+                      story={s}
+                      last={i === fallbackStories.length - 1}
+                      toneIndex={i + 3}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
         <Ad label="विज्ञापन · ज़िला" />
