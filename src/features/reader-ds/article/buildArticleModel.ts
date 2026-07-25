@@ -2,6 +2,10 @@ import type { SponsoredStoryMeta } from "@/lib/monetization/types";
 import type { NewsArticleRow } from "@/lib/types/news-article";
 import type { EditorialMetadata, GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { StoryIntelligenceVm } from "@/lib/story/story-intelligence";
+import {
+  continuingCoverageSlugs,
+  type ContinuingCoverageVm,
+} from "@/lib/events/continuing-coverage";
 import { SITE_URL } from "@/lib/seo/constants";
 import { resolveArticleVariant } from "./resolveVariant";
 import type { ArticleVariant, ReaderArticleModel } from "./types";
@@ -34,6 +38,7 @@ export function buildReaderArticleModel(input: {
   forceLiveBlog?: boolean;
   /** QA / Preview override — presentation only; content stays real. */
   forceVariant?: ArticleVariant | null;
+  continuingCoverage?: ContinuingCoverageVm | null;
 }): ReaderArticleModel {
   const {
     article,
@@ -47,6 +52,7 @@ export function buildReaderArticleModel(input: {
     forcePremium,
     forceLiveBlog,
     forceVariant,
+    continuingCoverage = null,
   } = input;
 
   const slug = article.slug?.trim() || String(article.id);
@@ -105,6 +111,8 @@ export function buildReaderArticleModel(input: {
       ? "जनदर्पण डेस्क"
       : rawAuthor;
 
+  const timelineSlugs = continuingCoverageSlugs(continuingCoverage);
+
   return {
     variant,
     slug,
@@ -130,13 +138,22 @@ export function buildReaderArticleModel(input: {
     isLive: Boolean(intelligence?.flags?.liveHref),
     liveHref: intelligence?.flags?.liveHref ?? null,
     sponsored,
-    related: related.slice(0, 6).map((r) => ({
-      slug: r.slug?.trim() || String(r.id),
-      headline: r.ai_headline?.trim() || r.title,
-      kicker: categoryLabelHi(r.category),
-      imageUrl: r.image_url,
-      publishedAt: r.published_at,
-    })),
+    // Hierarchy: timeline owns same-event stories; related stays background-only.
+    related: related
+      .filter((r) => {
+        const relatedSlug = r.slug?.trim() || String(r.id);
+        return !timelineSlugs.has(relatedSlug);
+      })
+      .slice(0, 6)
+      .map((r) => ({
+        slug: r.slug?.trim() || String(r.id),
+        headline: r.ai_headline?.trim() || r.title,
+        kicker: categoryLabelHi(r.category),
+        imageUrl: r.image_url,
+        publishedAt: r.published_at,
+      })),
+    continuingCoverage:
+      continuingCoverage?.showTimeline === true ? continuingCoverage : null,
     stats: [],
     article,
     intelligence,

@@ -32,6 +32,7 @@ import { VideoPlayer } from "./components/VideoPlayer";
 import { ArticleInlineAd } from "../monetization";
 import { ReservedAd } from "../components/ReservedAd";
 import { OfflineDownloadControl } from "../offline/OfflineDownloadControl";
+import { ContinuingCoverageTimeline } from "./components/ContinuingCoverageTimeline";
 import type { ReaderArticleModel } from "./types";
 
 function storyAsLiveEntries(model: ReaderArticleModel): LiveBlogEntry[] {
@@ -503,6 +504,14 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
                 article: model.article,
               }}
             />
+
+            {/* Hierarchy: article → event timeline → related recommendations */}
+            {model.continuingCoverage?.showTimeline ? (
+              <ContinuingCoverageTimeline
+                coverage={model.continuingCoverage}
+                locale={locale}
+              />
+            ) : null}
 
             {variant === "sponsored" ? (
               sponsored?.ctaUrl ? (

@@ -2,6 +2,7 @@ import type { SponsoredStoryMeta } from "@/lib/monetization/types";
 import type { NewsArticleRow } from "@/lib/types/news-article";
 import type { EditorialMetadata, GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { StoryIntelligenceVm } from "@/lib/story/story-intelligence";
+import type { ContinuingCoverageVm } from "@/lib/events/continuing-coverage";
 
 /** Design screens B11–B20 (opinion/editorial split from B17). */
 export type ArticleVariant =
@@ -64,6 +65,8 @@ export type ReaderArticleModel = {
     imageUrl?: string | null;
     publishedAt?: string | null;
   }>;
+  /** Multi-story event chronology — null/hidden when cluster has fewer than 2 stories. */
+  continuingCoverage: ContinuingCoverageVm | null;
   /** Optional stats for explainer data box — only from real takeaways/meta, never invented. */
   stats: Array<{ value: string; label: string }>;
   article: NewsArticleRow;
