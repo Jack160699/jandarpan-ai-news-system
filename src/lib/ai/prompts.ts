@@ -117,6 +117,12 @@ export function buildEditorialPipelineSystemPrompt(input: {
   categoryHint?: string | null;
   articleType?: ArticleType | null;
   evidenceSufficient?: boolean;
+  depthCorrection?: {
+    attempt: number;
+    previousWords: number;
+    minWords: number;
+    targetWords: number;
+  } | null;
 }): string {
   const lang = input.language === "en" ? "en" : "hi";
   const articleType = input.articleType ?? "standard_report";
@@ -130,6 +136,13 @@ export function buildEditorialPipelineSystemPrompt(input: {
       ? "Evidence is LIMITED: write a verified short update or developing note. Mark uncertainty. Do NOT expand through speculation or filler."
       : `When facts support it, write a complete report near ~${depthRule.targetWords} words (acceptable band ${depthRule.minWords}–${depthRule.maxWords}). Word count is a quality guard — never invent facts to hit it.`,
   ].join("\n");
+  const correctionBlock = input.depthCorrection
+    ? [
+        `DEPTH CORRECTION ATTEMPT ${input.depthCorrection.attempt}: the previous body had only ${input.depthCorrection.previousWords} words and failed the hard minimum of ${input.depthCorrection.minWords}.`,
+        `Rewrite the complete article from the fact pack. The body sections alone must contain at least ${input.depthCorrection.minWords} words and should approach ${input.depthCorrection.targetWords} when evidence supports it.`,
+        "Do not reuse the short draft, repeat the summary, add filler, or invent facts. Expand only through attributed source details, chronology, local relevance, public impact, and supported next steps.",
+      ].join("\n")
+    : "";
 
   const structureBlock =
     lang === "hi"
@@ -154,6 +167,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
     TEMPLATE_HINTS[input.deskTemplate],
     input.categoryHint ?? "",
     depthBlock,
+    correctionBlock,
     structureBlock,
     ATTRIBUTION_RULES[lang],
     "Output MUST be valid JSON only:",

@@ -329,7 +329,13 @@ async function callEditorialLlm(
   event: NewsEventRow,
   signalCount: number,
   articleType: ArticleType,
-  evidenceSufficient: boolean
+  evidenceSufficient: boolean,
+  depthCorrection?: {
+    attempt: number;
+    previousWords: number;
+    minWords: number;
+    targetWords: number;
+  }
 ): Promise<LlmEditorialResponse | null> {
   const deskTemplate = resolveDeskTemplateFromCategory(event.category, {
     region: event.region,
@@ -343,6 +349,7 @@ async function callEditorialLlm(
     categoryHint,
     articleType,
     evidenceSufficient,
+    depthCorrection,
   });
 
   const model =
@@ -1242,14 +1249,20 @@ async function prepareCandidate(
   const generatedAt = new Date().toISOString();
   let depthRetries = 0;
 
-  async function generateOnce(): Promise<EditorialDraft | null> {
+  async function generateOnce(depthCorrection?: {
+    attempt: number;
+    previousWords: number;
+    minWords: number;
+    targetWords: number;
+  }): Promise<EditorialDraft | null> {
     const llmRaw = await callEditorialLlm(
       factPackText,
       language,
       event,
       signals.length,
       articleTypeClassification.type,
-      articleTypeClassification.evidenceSufficient
+      articleTypeClassification.evidenceSufficient,
+      depthCorrection
     );
     if (!llmRaw) return null;
     const parsed = parseLlmDraft(llmRaw, language);
@@ -1312,7 +1325,12 @@ async function prepareCandidate(
       articleType: articleTypeClassification.type,
     });
     try {
-      const retried = await generateOnce();
+      const retried = await generateOnce({
+        attempt: depthRetries,
+        previousWords: quality.depth_quality.metrics.words,
+        minWords: quality.depth_quality.metrics.minWordsForType,
+        targetWords: articleTypeClassification.rule.targetWords,
+      });
       if (retried) {
         draft = applyEditorialEnhancements(retried, event);
         quality = evaluateDraft({
