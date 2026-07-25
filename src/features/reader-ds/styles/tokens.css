@@ -197,7 +197,9 @@ html[data-font-scale="xl"] .jd-ds {
   flex-shrink: 0;
 }
 .jd-ds .jd-masthead__inner {
-  overflow: hidden;
+  /* Clip horizontal overflow from actions; keep Devanagari matras visible vertically */
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 .jd-ds .jd-bottom-nav a:focus-visible {
   outline: 2px solid var(--jd-gold);

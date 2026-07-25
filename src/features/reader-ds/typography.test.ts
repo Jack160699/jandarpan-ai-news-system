@@ -70,7 +70,11 @@ describe("reader-ds Hindi typography tokens", () => {
     expect(css).toMatch(/\.jd-breaking-strip__badge[\s\S]*?overflow:\s*visible/);
     expect(css).toMatch(/\.jd-breaking-strip__headline[\s\S]*?overflow:\s*visible/);
     expect(css).toMatch(/\.jd-masthead__inner[\s\S]*?overflow-y:\s*visible/);
-    expect(css).not.toMatch(/\.jd-breaking-strip__badge[\s\S]*?line-height:\s*1(?:\.0+|\.1|\.2)?[;\s]/);
+    const badgeBlock = css.match(
+      /\.jd-breaking-strip__badge\s*\{[^}]*\}/
+    )?.[0];
+    expect(badgeBlock).toBeTruthy();
+    expect(badgeBlock).not.toMatch(/line-height:\s*1(?:\.0+|\.1|\.2)?\s*;/);
   });
 
   it("keeps reduced-motion breaking ticker static without removing glyph safety", async () => {
@@ -93,18 +97,20 @@ describe("reader-ds Hindi typography tokens", () => {
 });
 
 describe("reader-ds Hindi typography component contracts", () => {
-  it("masthead wordmark avoids line-height 1.1 overflow crop", async () => {
+  it("masthead keeps brand lockup without clipped 1.1 line-height wordmark", async () => {
     const src = await readFile(path.join(__dirname, "components/Masthead.tsx"), "utf8");
-    expect(src).toContain("jd-type-masthead");
-    expect(src).not.toMatch(/lineHeight:\s*1\.1/);
-    expect(src).toMatch(/overflowY:\s*"visible"/);
+    // Header-nav uses approved logo lockup; typography classes remain on chrome labels.
+    expect(src).toContain("MastheadBrandLogo");
+    expect(src).toContain("jd-type-caption");
+    expect(src).toContain("jd-type-section");
+    expect(src).not.toMatch(/lineHeight:\s*1\.1(?!\d)/);
   });
 
   it("bottom nav labels meet minimum readable size token", async () => {
     const src = await readFile(path.join(__dirname, "components/BottomNav.tsx"), "utf8");
     expect(src).toContain("jd-type-nav");
     expect(src).not.toMatch(/fontSize:\s*9(?:\.5)?/);
-    expect(src).not.toMatch(/lineHeight:\s*1\.1/);
+    expect(src).not.toMatch(/lineHeight:\s*1\.1(?!\d)/);
   });
 
   it("lead and card headlines use type roles, not undersized fixed px", async () => {

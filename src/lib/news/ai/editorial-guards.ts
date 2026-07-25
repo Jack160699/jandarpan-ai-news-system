@@ -392,7 +392,7 @@ export function runEditorialQualityChecks(input: {
     intelligence.duplicateCluster !== null &&
     intelligence.duplicateCluster.similarity >= 0.88;
 
-  let hard_reject_reasons = applyStructuralHardReject(
+  const hard_reject_reasons = applyStructuralHardReject(
     detectHardRejects({
       headline: input.headline,
       summary: input.summary,
