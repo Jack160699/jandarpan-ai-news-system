@@ -29,7 +29,11 @@ import {
   DEFAULT_DISTRICT_SLUG,
   rankDistrictStories,
 } from "@/lib/district-intelligence";
+import { isAliveHomeEnabled } from "@/lib/engagement/config";
+import { toFormattedStory } from "@/lib/engagement/story-format";
 import { isAdPreviewMode, shouldMountStickyAd } from "../ads/ad-display";
+import { AliveHomeBriefingSlot, AliveHomeSecondarySlot } from "../engagement/AliveHomeModules";
+import { FormatStoryCard } from "../engagement/FormatStoryCard";
 import { pickBreakingItems } from "./breaking";
 import { buildHomeSections, toStory } from "./build-home-sections";
 import { PageEndingModules } from "./PageEndingModules";
@@ -65,6 +69,7 @@ type ReaderHomepageProps = {
 /**
  * A1 homepage + SoT desktop/tablet editorial composition.
  * Journalism first; mandi/utilities sit in a lower utility block.
+ * Phase 1 Alive Home modules insert after breaking when enabled.
  */
 export function ReaderHomepage({
   feed,
@@ -78,6 +83,7 @@ export function ReaderHomepage({
   const homeDistrict =
     prefsCtx?.prefs.homeDistrict ?? DEFAULT_DISTRICT_SLUG;
   const showAds = adsEnabled && !isPremium;
+  const aliveHome = isAliveHomeEnabled();
 
   const leadArticle = pickLead(feed, homeDistrict);
   const lead = leadArticle ? toStory(leadArticle) : null;
@@ -95,7 +101,6 @@ export function ReaderHomepage({
     return toStory(a);
   });
 
-  // Sections claim stories next so phone (no desk rail) still gets full coverage.
   const breakingItems = pickBreakingItems(feed);
   const sections = buildHomeSections(feed, used, t);
   for (const section of sections) {
@@ -120,7 +125,6 @@ export function ReaderHomepage({
 
   const seeAll = t("common.seeAll");
   const adPreview = isAdPreviewMode();
-  /** Sticky only with creative or preview — never empty 320×50 chrome in production. */
   const showStickyAd =
     showAds &&
     shouldMountStickyAd({
@@ -146,6 +150,22 @@ export function ReaderHomepage({
     { href: "/category/technology", label: locale === "en" ? "Technology" : "टेक्नोलॉजी" },
   ];
 
+  const articleBySlug = new Map<string, HomeArticle>();
+  for (const pool of [
+    feed.trending,
+    feed.liveWire,
+    feed.regionalHighlights,
+    feed.editorsPicks?.supporting,
+    feed.breakingTicker,
+  ]) {
+    for (const a of pool ?? []) {
+      if (a?.slug) articleBySlug.set(a.slug, a);
+    }
+  }
+  if (feed.editorsPicks?.lead?.slug) {
+    articleBySlug.set(feed.editorsPicks.lead.slug, feed.editorsPicks.lead);
+  }
+
   return (
     <ReaderShell activeNav="home" bottomPad={showStickyAd ? 128 : 72}>
       <Masthead premiumBadge={isPremium} />
@@ -162,6 +182,15 @@ export function ReaderHomepage({
           background: "var(--jd-paper)",
         }}
       >
+        {aliveHome ? (
+          <AliveHomeBriefingSlot
+            feed={feed}
+            excludeSlugs={
+              new Set(leadArticle?.slug ? [leadArticle.slug] : [])
+            }
+          />
+        ) : null}
+
         <div className="jd-home-hero">
           <div className="jd-home-lead">
             {lead ? <LeadStory story={lead} /> : null}
@@ -190,7 +219,6 @@ export function ReaderHomepage({
             ) : null}
           </div>
 
-          {/* Editorial right rail — news first; mandi lives in lower utility */}
           <aside className="jd-home-desk-rail" aria-label={t("home.latest")} data-jd-rail="editorial">
             <div className="jd-home-side-module">
               <div
@@ -246,6 +274,20 @@ export function ReaderHomepage({
           </aside>
         </div>
 
+        {aliveHome ? (
+          <AliveHomeSecondarySlot
+            feed={feed}
+            excludeSlugs={
+              new Set(
+                [
+                  leadArticle?.slug,
+                  ...secondary.map((s) => s.slug),
+                ].filter((s): s is string => Boolean(s))
+              )
+            }
+          />
+        ) : null}
+
         {showAds ? (
           <div className="jd-home-billboard">
             <ReservedAd format="billboard" locale={locale} placementId="home.billboard" />
@@ -285,14 +327,27 @@ export function ReaderHomepage({
                 moreLabel={seeAll}
               />
               <div className="jd-home-section-cards">
-                {section.stories.map((s, idx) => (
-                  <SecondaryStory
-                    key={s.slug}
-                    story={s}
-                    last={idx === section.stories.length - 1}
-                    toneIndex={idx}
-                  />
-                ))}
+                {section.stories.map((s, idx) => {
+                  const source = articleBySlug.get(s.slug);
+                  if (aliveHome && source) {
+                    return (
+                      <FormatStoryCard
+                        key={s.slug}
+                        story={toFormattedStory(source, locale)}
+                        last={idx === section.stories.length - 1}
+                        toneIndex={idx}
+                      />
+                    );
+                  }
+                  return (
+                    <SecondaryStory
+                      key={s.slug}
+                      story={s}
+                      last={idx === section.stories.length - 1}
+                      toneIndex={idx}
+                    />
+                  );
+                })}
               </div>
               {i === 0 && showAds ? (
                 <>
@@ -314,7 +369,6 @@ export function ReaderHomepage({
           ))}
         </div>
 
-        {/* Lower utility — mandi / rates / tiles (not in primary viewport rail) */}
         <section
           className="jd-home-utility"
           data-testid="jd-home-utility"

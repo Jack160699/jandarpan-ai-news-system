@@ -33,6 +33,8 @@ import { ArticleInlineAd } from "../monetization";
 import { ReservedAd } from "../components/ReservedAd";
 import { OfflineDownloadControl } from "../offline/OfflineDownloadControl";
 import { ContinuingCoverageTimeline } from "./components/ContinuingCoverageTimeline";
+import { FollowStoryButton } from "../engagement/FollowStoryButton";
+import { WhatChangedPanel } from "../engagement/WhatChangedPanel";
 import type { ReaderArticleModel } from "./types";
 
 function storyAsLiveEntries(model: ReaderArticleModel): LiveBlogEntry[] {
@@ -505,7 +507,27 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
               }}
             />
 
-            {/* Hierarchy: article → event timeline → related recommendations */}
+            {/* Hierarchy: what-changed → follow → event timeline → related */}
+            <div style={{ marginTop: 12, marginBottom: 8 }}>
+              <FollowStoryButton
+                articleId={String(article.id)}
+                eventId={
+                  model.continuingCoverage?.eventId ??
+                  article.event_id ??
+                  null
+                }
+                label={headline}
+              />
+            </div>
+
+            <WhatChangedPanel
+              articleId={String(article.id)}
+              eventId={
+                model.continuingCoverage?.eventId ?? article.event_id ?? null
+              }
+              coverage={model.continuingCoverage}
+            />
+
             {model.continuingCoverage?.showTimeline ? (
               <ContinuingCoverageTimeline
                 coverage={model.continuingCoverage}
