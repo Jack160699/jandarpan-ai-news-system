@@ -3,7 +3,7 @@
  */
 
 import { formatDistrictLabel, scoreRegionalTopicFromArticle } from "@/lib/regional/topic-scoring";
-import { geoFromRecord } from "@/lib/regional/geo-tagging";
+import { geoFromRecord, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import {
   normalizeArticleLanguage,
   type NewsroomLanguage,
@@ -182,13 +182,83 @@ export function filterRowsForDistrict(
     return rows.filter((r) => geoFromRecord(r).is_chhattisgarh);
   }
 
-  return rows.filter((r) => {
-    const geo = geoFromRecord(r);
-    return (
-      geo.primary_district === districtSlug ||
-      geo.districts.includes(districtSlug)
-    );
+  return rows.filter((r) => rowMatchesDistrict(r, districtSlug));
+}
+
+/**
+ * Exact + content-reclassified match for a district hub.
+ * Prefer stored geo; when statewide/empty, re-tag from headline/summary so
+ * local stories are not dropped behind generic Chhattisgarh metadata.
+ */
+export function rowMatchesDistrict(
+  row: GeneratedArticleRow,
+  districtSlug: string
+): boolean {
+  const geo = geoFromRecord(row);
+  if (
+    geo.primary_district === districtSlug ||
+    geo.districts.includes(districtSlug)
+  ) {
+    return true;
+  }
+
+  // Stored statewide / weak geo — recover district from live copy.
+  const needsRetag =
+    !geo.primary_district ||
+    geo.classification_kind === "statewide" ||
+    geo.districts.length === 0;
+
+  if (!needsRetag) return false;
+
+  const classified = tagGeoFromContent({
+    title: row.headline ?? "",
+    body: row.summary ?? null,
+    region: null,
+    category: row.tags?.[0] ?? null,
   });
+
+  return (
+    classified.primary_district === districtSlug ||
+    classified.districts.includes(districtSlug)
+  );
+}
+
+export type DistrictHubPartition = {
+  /** Exact / strongly associated district stories */
+  primary: GeneratedArticleRow[];
+  /** Nearby / statewide CG only when primary inventory is thin */
+  fallback: GeneratedArticleRow[];
+};
+
+/**
+ * Partition pool for My District:
+ * 1) exact district (+ content retag)
+ * 2) remaining Chhattisgarh as honest fallback (never mixed into primary)
+ */
+export function partitionDistrictHubRows(
+  rows: GeneratedArticleRow[],
+  districtSlug: string,
+  options?: { minPrimary?: number; maxFallback?: number }
+): DistrictHubPartition {
+  const minPrimary = options?.minPrimary ?? 4;
+  const maxFallback = options?.maxFallback ?? 12;
+
+  const primary = prioritizePrimaryDistrict(
+    filterRowsForDistrict(rows, districtSlug),
+    districtSlug
+  );
+
+  if (primary.length >= minPrimary) {
+    return { primary, fallback: [] };
+  }
+
+  const primaryIds = new Set(primary.map((r) => r.id));
+  const fallback = rows
+    .filter((r) => !primaryIds.has(r.id))
+    .filter((r) => geoFromRecord(r).is_chhattisgarh)
+    .slice(0, maxFallback);
+
+  return { primary, fallback };
 }
 
 /**

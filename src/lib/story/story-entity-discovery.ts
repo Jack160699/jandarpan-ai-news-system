@@ -137,6 +137,14 @@ export function scoreKnowledgeOverlap(
     score += DISTRICT_MATCH_WEIGHT;
   }
 
+  if (
+    source.eventId &&
+    candidate.eventId &&
+    source.eventId === candidate.eventId
+  ) {
+    score += 140;
+  }
+
   return score;
 }
 

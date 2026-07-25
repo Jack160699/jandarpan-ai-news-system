@@ -149,9 +149,10 @@ export type ArticleTypeClassification = {
 /** Heuristic: enough source text to support a standard report */
 export const EVIDENCE_THRESHOLDS = {
   thinChars: 500,
-  shortUpdateChars: 900,
-  standardChars: 1600,
-  explainerChars: 2800,
+  shortUpdateChars: 700,
+  /** Multi-source / rich single packs should reach standard_report */
+  standardChars: 1100,
+  explainerChars: 2600,
   analysisSignals: 5,
 } as const;
 
@@ -237,9 +238,12 @@ export function classifyArticleType(
   } else if (evidenceChars < EVIDENCE_THRESHOLDS.shortUpdateChars) {
     type = "short_update";
     reasons.push("limited_source_chars");
-  } else if (evidenceChars < EVIDENCE_THRESHOLDS.standardChars) {
+  } else if (
+    evidenceChars < EVIDENCE_THRESHOLDS.standardChars &&
+    signals < 2
+  ) {
     type = "short_update";
-    reasons.push("moderate_source_chars");
+    reasons.push("moderate_source_chars_single_signal");
   } else {
     type = "standard_report";
     reasons.push("sufficient_for_standard_report");

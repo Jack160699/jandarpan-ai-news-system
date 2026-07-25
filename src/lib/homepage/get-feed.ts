@@ -145,11 +145,14 @@ function getCachedHomepageFeedBuild(
 }
 
 export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed | null> {
-  const tenant = await getTenantConfig();
+  // Parallelize independent cookie/tenant reads — avoid request waterfall.
+  const [tenant, readerPrefs] = await Promise.all([
+    getTenantConfig(),
+    getReaderPersonalizationPrefs(),
+  ]);
   const displayLanguage = await getServerReaderLanguage(
     tenant.newsroom.defaultLanguage
   );
-  const readerPrefs = await getReaderPersonalizationPrefs();
   const prefSignature = personalizationCacheSignature(readerPrefs);
   const cacheKey = `${buildHomepageFeedRedisKey(tenant.slug, displayLanguage)}:${prefSignature}`;
 

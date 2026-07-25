@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
-import { JdIcon } from "./icons";
+import { JdIcon, jdIconStroke } from "./icons";
 import { getPrimaryNavItems, type PrimaryNavKey } from "./navItems";
 
 export type BottomNavKey = PrimaryNavKey;
 
 /**
- * Phone bottom navigation — primary reading destinations only.
- * Profile/More lives in the masthead; Search is header-only.
+ * Phone bottom navigation — four primary reading destinations.
+ * Profile/More lives in the masthead; Search is header-only; Videos is not a tab.
  * Hidden at tablet+ via CSS (DeskChrome replaces phone chrome).
  */
 export function BottomNav({
@@ -39,9 +39,10 @@ export function BottomNav({
         background: dark ? "#0a1220" : "#fff",
         borderTop: dark ? "1px solid rgba(150,175,215,0.16)" : "1px solid var(--jd-line)",
         display: "flex",
-        justifyContent: "space-around",
+        justifyContent: "space-evenly",
         alignItems: "stretch",
-        padding: "6px 4px max(8px, env(safe-area-inset-bottom))",
+        width: "100%",
+        padding: "6px 2px max(8px, env(safe-area-inset-bottom))",
       }}
     >
       {items.map((it) => {
@@ -65,15 +66,19 @@ export function BottomNav({
               gap: 3,
               flex: "1 1 0",
               minWidth: 0,
-              maxWidth: 88,
               minHeight: 48,
               justifyContent: "center",
               color,
-              padding: "2px 4px",
+              padding: "4px 2px",
               textDecoration: "none",
             }}
           >
-            <JdIcon name={it.icon} size={22} stroke={on ? 2.2 : 1.85} color={color} />
+            <JdIcon
+              name={it.icon}
+              size={22}
+              stroke={jdIconStroke(22, on ? "active" : "regular")}
+              color={color}
+            />
             <span
               className="jd-ui jd-type-nav"
               style={{

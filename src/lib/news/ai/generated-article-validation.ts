@@ -16,8 +16,8 @@ export const GENERATION_VALIDATION_LIMITS = {
   minHeadlineChars: 8,
   minSummaryChars: 20,
   /** Structural floor — type-specific depth gates enforce higher targets */
-  minBodyChars: 180,
-  minBodyWords: 60,
+  minBodyChars: 280,
+  minBodyWords: 100,
   maxValidationRetries: 3,
   duplicateTitleSimilarity: 0.88,
   duplicateBodySimilarity: 0.92,

@@ -15,10 +15,9 @@ import { fetchMonetizationPayload } from "@/lib/monetization/fetch-payload";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import {
   buildRegionalRankingPersonalization,
-  filterRowsForDistrict,
   getAllDistrictSlugs,
   getDistrict,
-  prioritizePrimaryDistrict,
+  partitionDistrictHubRows,
 } from "@/lib/regional";
 import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
 import {
@@ -77,39 +76,46 @@ export default async function DistrictPage({ params }: PageProps) {
   if (!district) notFound();
 
   const readerDs = isReaderDesignSystemEnabled();
-  const displayLanguage = await getServerReaderLanguage();
-  // Overlap pool fetch with tenant config when DS needs monetization next.
-  const [pool, tenant] = await Promise.all([
+  const [displayLanguage, pool, tenant] = await Promise.all([
+    getServerReaderLanguage(),
     fetchGeneratedArticlePool(120, { select: "homepage" }),
     readerDs ? getTenantConfig() : Promise.resolve(null),
   ]);
   const langPool = filterPoolByLanguage(pool, displayLanguage);
-  const filtered = prioritizePrimaryDistrict(
-    filterRowsForDistrict(langPool, slug),
-    slug
-  );
+  const { primary: districtRows, fallback: fallbackRows } =
+    partitionDistrictHubRows(langPool, slug, { minPrimary: 4, maxFallback: 12 });
   const personalization = buildRegionalRankingPersonalization({
     homeDistrict: slug,
     regionBoostMultiplier: 1.3,
   });
-  const ranked = rankArticlesForHomepage(filtered, { personalization });
+  const rankedPrimary = rankArticlesForHomepage(districtRows, { personalization });
+  const rankedFallback =
+    fallbackRows.length > 0
+      ? rankArticlesForHomepage(fallbackRows, { personalization })
+      : [];
 
-  const articles = ranked
-    .map((r) =>
-      toHomeArticle(
-        r.row,
-        {
-          priorityScore: r.ranking.priorityScore,
-          reasons: r.ranking.reasons,
-          isTrending: r.ranking.isTrending,
-          isBreaking: r.ranking.isBreaking,
-          duplicateClusterId: r.ranking.duplicateClusterId,
-          section: r.section,
-        },
-        displayLanguage
+  const toArticles = (
+    ranked: typeof rankedPrimary
+  ): NonNullable<ReturnType<typeof toHomeArticle>>[] =>
+    ranked
+      .map((r) =>
+        toHomeArticle(
+          r.row,
+          {
+            priorityScore: r.ranking.priorityScore,
+            reasons: r.ranking.reasons,
+            isTrending: r.ranking.isTrending,
+            isBreaking: r.ranking.isBreaking,
+            duplicateClusterId: r.ranking.duplicateClusterId,
+            section: r.section,
+          },
+          displayLanguage
+        )
       )
-    )
-    .filter((a): a is NonNullable<typeof a> => a !== null);
+      .filter((a): a is NonNullable<typeof a> => a !== null);
+
+  const articles = toArticles(rankedPrimary);
+  const fallbackArticles = toArticles(rankedFallback);
 
   const path = `/district/${slug}`;
   const jsonLd = [
@@ -145,6 +151,7 @@ export default async function DistrictPage({ params }: PageProps) {
           districtName={district.name}
           districtNameHi={district.nameHi}
           articles={articles}
+          fallbackArticles={fallbackArticles}
           sponsorLabel={sponsorLabel}
         />
       </>

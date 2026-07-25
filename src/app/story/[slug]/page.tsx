@@ -112,10 +112,17 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
         generatedRow.event_id
           ? getEventViewModel(generatedRow.event_id)
           : Promise.resolve(null),
-        fetchEventClusterArticles(generatedRow.event_id),
+        generatedRow.event_id
+          ? fetchEventClusterArticles(generatedRow.event_id)
+          : Promise.resolve([]),
         getTenantConfig(),
       ]);
     if (!localized?.headline?.trim()) notFound();
+
+    const sponsoredPromise =
+      tenant.monetization?.sponsoredStoriesEnabled !== false
+        ? fetchSponsoredStory(tenant.id, generatedRow.slug)
+        : Promise.resolve(null);
 
     const liveArticle = applyLocalizedFieldsToNewsArticle(
       generatedToNewsArticle(generatedRow),
@@ -141,10 +148,8 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
         localized.usedTranslation && !localized.usedSourceFallback,
     });
 
-    const sponsoredStory =
-      tenant.monetization?.sponsoredStoriesEnabled !== false
-        ? await fetchSponsoredStory(tenant.id, generatedRow.slug)
-        : null;
+    // Overlap sponsored fetch with sync intelligence / coverage build.
+    const [sponsoredStory] = await Promise.all([sponsoredPromise]);
 
     const articleV3 = isArticleV3Enabled();
     const slugResolved = resolveStorySlug(liveArticle);

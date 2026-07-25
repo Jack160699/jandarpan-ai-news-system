@@ -53,6 +53,19 @@ type JdIconProps = {
   color?: string;
 } & Omit<SVGProps<SVGSVGElement>, "name" | "color" | "stroke">;
 
+/** Optical stroke scale — one system across masthead / nav / actions. */
+export function jdIconStroke(
+  size: number,
+  weight: "regular" | "active" = "regular"
+): number {
+  if (size <= 14) return weight === "active" ? 1.85 : 1.65;
+  if (size <= 18) return weight === "active" ? 1.95 : 1.7;
+  return weight === "active" ? 2.05 : 1.8;
+}
+
+/** Solid fills for closed glyphs so they match open line icons optically. */
+const FILLED_ICONS = new Set<JdIconName>(["play", "prev", "next", "pause"]);
+
 const PATHS: Record<JdIconName, React.ReactNode> = {
   home: <path d="M3 10.5 12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5" />,
   pin: (
@@ -96,12 +109,12 @@ const PATHS: Record<JdIconName, React.ReactNode> = {
       <path d="m8.2 10.8 7.6-3.6M8.2 13.2l7.6 3.6" />
     </>
   ),
-  play: <path d="M7 4.5v15l13-7.5-13-7.5Z" />,
+  play: <path d="M7 4.5v15l13-7.5-13-7.5Z" fill="currentColor" stroke="none" />,
   more: (
     <>
-      <circle cx="5" cy="12" r="1.6" />
-      <circle cx="12" cy="12" r="1.6" />
-      <circle cx="19" cy="12" r="1.6" />
+      <circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
     </>
   ),
   clock: (
@@ -183,12 +196,12 @@ const PATHS: Record<JdIconName, React.ReactNode> = {
   ),
   pause: (
     <>
-      <rect x="7" y="5" width="3.5" height="14" rx="1" />
-      <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
+      <rect x="7" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none" />
+      <rect x="13.5" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none" />
     </>
   ),
-  prev: <path d="M19 5v14L7 12l12-7Z" />,
-  next: <path d="M5 5v14l12-7L5 5Z" />,
+  prev: <path d="M19 5v14L7 12l12-7Z" fill="currentColor" stroke="none" />,
+  next: <path d="M5 5v14l12-7L5 5Z" fill="currentColor" stroke="none" />,
   list: (
     <>
       <path d="M8 7h12M8 12h12M8 17h12" />
@@ -219,23 +232,26 @@ const PATHS: Record<JdIconName, React.ReactNode> = {
 export function JdIcon({
   name,
   size = 22,
-  stroke = 1.8,
+  stroke,
   color = "currentColor",
   ...rest
 }: JdIconProps) {
+  const resolvedStroke = stroke ?? jdIconStroke(size, "regular");
+  const filled = FILLED_ICONS.has(name);
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      stroke={color}
-      strokeWidth={stroke}
+      stroke={filled ? "none" : color}
+      strokeWidth={filled ? 0 : resolvedStroke}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
       {...rest}
+      style={{ color, display: "block", flexShrink: 0, ...(rest.style ?? {}) }}
     >
       {PATHS[name]}
     </svg>

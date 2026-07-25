@@ -42,7 +42,11 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     const nav = page.getByTestId("jd-bottom-nav").first();
     await expect(nav).toBeVisible({ timeout: 45_000 });
     await expect(nav.getByText("होम", { exact: true })).toBeVisible();
-    await expect(nav.getByText("वीडियो", { exact: true })).toBeVisible();
+    await expect(nav.getByText("मेरा जिला", { exact: true })).toBeVisible();
+    await expect(nav.getByText("ताज़ा", { exact: true })).toBeVisible();
+    await expect(nav.getByText("सुनें", { exact: true })).toBeVisible();
+    await expect(nav.getByText("वीडियो", { exact: true })).toHaveCount(0);
+    await expect(nav).toHaveAttribute("data-jd-nav-count", "4");
     await expect(nav.getByText("Home", { exact: true })).toHaveCount(0);
     await expect(nav).toHaveAttribute("data-jd-locale", "hi");
     // Profile/More lives in the masthead after header-nav refinement.
@@ -63,14 +67,19 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     const archiveNav = page.getByTestId("jd-bottom-nav").first();
     await expect(archiveNav).toBeVisible({ timeout: 45_000 });
     await expect(archiveNav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
-    await expect(archiveNav.getByText("Videos", { exact: true })).toBeVisible();
+    await expect(archiveNav.getByText("Listen", { exact: true })).toBeVisible();
+    await expect(archiveNav.getByText("Videos", { exact: true })).toHaveCount(0);
+    await expect(archiveNav).toHaveAttribute("data-jd-nav-count", "4");
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const nav = page.getByTestId("jd-bottom-nav").first();
     await expect(nav).toBeVisible({ timeout: 45_000 });
     await expect(nav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
     await expect(nav.getByText("Home", { exact: true })).toBeVisible();
-    await expect(nav.getByText("Videos", { exact: true })).toBeVisible();
+    await expect(nav.getByText("My District", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Latest", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Listen", { exact: true })).toBeVisible();
+    await expect(nav.getByText("Videos", { exact: true })).toHaveCount(0);
     await expect(nav.getByText("होम", { exact: true })).toHaveCount(0);
     await expect(nav.getByText("वीडियो", { exact: true })).toHaveCount(0);
 
