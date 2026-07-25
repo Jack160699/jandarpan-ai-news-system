@@ -179,7 +179,6 @@ export function UtilityRow({
         alignItems: "center",
         columnGap: 8,
         padding: "6px 14px",
-        fontSize: locale === "en" ? 10.5 : 11.5,
         boxSizing: "border-box",
         overflow: "hidden",
       }}

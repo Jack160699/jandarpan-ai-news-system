@@ -42,21 +42,22 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
 
     // Profile hub always mounts bottom nav (does not depend on homepage feed).
-    await expect(page.locator(".jd-bottom-nav")).toBeVisible({ timeout: 45_000 });
-    await expect(page.locator(".jd-bottom-nav")).toHaveAttribute("data-jd-locale", "en");
-    await expect(page.locator(".jd-bottom-nav").getByText("Videos", { exact: true })).toBeVisible();
+    const archiveNav = page.locator(".jd-bottom-nav");
+    await expect(archiveNav).toBeVisible({ timeout: 45_000 });
+    await expect(archiveNav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
+    await expect(archiveNav.getByText("Videos", { exact: true })).toBeVisible();
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const nav = page.locator(".jd-bottom-nav");
     await expect(nav).toBeVisible({ timeout: 45_000 });
-    await expect(nav).toHaveAttribute("data-jd-locale", "en");
+    await expect(nav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
     await expect(nav.getByText("Home", { exact: true })).toBeVisible();
     await expect(nav.getByText("Videos", { exact: true })).toBeVisible();
     await expect(nav.getByText("होम", { exact: true })).toHaveCount(0);
     await expect(nav.getByText("वीडियो", { exact: true })).toHaveCount(0);
 
     await page.reload({ waitUntil: "domcontentloaded" });
-    await expect(nav).toHaveAttribute("data-jd-locale", "en");
+    await expect(nav).toHaveAttribute("data-jd-locale", "en", { timeout: 30_000 });
     await expect(nav.getByText("Home", { exact: true })).toBeVisible();
 
     await page.goto("/search", { waitUntil: "domcontentloaded" });
@@ -74,16 +75,21 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     await expect(page.getByTestId("lang-option-en")).toBeVisible({ timeout: 30_000 });
     await page.getByTestId("lang-option-en").click();
     await page.getByTestId("lang-continue").click();
+    await page.waitForURL(/\/archive/, { timeout: 15_000 });
+    await expect(page.locator(".jd-bottom-nav")).toHaveAttribute("data-jd-locale", "en", {
+      timeout: 30_000,
+    });
 
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("lang-option-hi")).toBeVisible({ timeout: 30_000 });
     await page.getByTestId("lang-option-hi").click();
     await page.getByTestId("lang-continue").click();
+    await page.waitForURL(/\/archive/, { timeout: 15_000 });
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const nav = page.locator(".jd-bottom-nav");
     await expect(nav).toBeVisible({ timeout: 45_000 });
-    await expect(nav).toHaveAttribute("data-jd-locale", "hi");
+    await expect(nav).toHaveAttribute("data-jd-locale", "hi", { timeout: 30_000 });
     await expect(nav.getByText("होम", { exact: true })).toBeVisible();
     await expect(nav.getByText("Home", { exact: true })).toHaveCount(0);
   });

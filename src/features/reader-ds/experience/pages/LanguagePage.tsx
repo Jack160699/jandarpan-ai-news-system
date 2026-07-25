@@ -111,7 +111,10 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
           onClick={() => {
             confirmLanguage(selected);
             savePreferences({ language: selected, languageChosen: true });
-            router.push(continueHref);
+            // Defer navigation so LanguageProvider state + storage flush before route chrome mounts.
+            queueMicrotask(() => {
+              router.push(continueHref);
+            });
           }}
           style={{
             marginTop: 8,
