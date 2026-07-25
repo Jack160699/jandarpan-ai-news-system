@@ -49,6 +49,12 @@ import {
   initialHeroPlaceholder,
   queueEditorialImageForArticle,
 } from "@/lib/news/ai/generate-editorial-image";
+import { buildEditorialImageBrief } from "@/lib/news/ai/editorial-image-brief";
+import { buildEditorialImageContext } from "@/lib/news/ai/editorial-image-context";
+import { decideEditorialImageStrategy } from "@/lib/news/ai/editorial-image-decision";
+import { assessStorySensitivity } from "@/lib/news/ai/editorial-image-moderation";
+import { isImageProviderAvailable } from "@/lib/news/ai/editorial-image-provider";
+import { isDisplayableImage } from "@/lib/news/images/validate";
 import {
   logEditorialDecision,
   runEditorialQualityChecks,
@@ -780,6 +786,110 @@ async function persistGeneratedArticle(input: {
     };
   }
 
+  const hasSourceImage = input.signals.some(
+    (s) => s.image_url && isDisplayableImage(s.image_url)
+  );
+
+  const provisionalArticle = {
+    id: "provisional",
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    article_body: input.draft.article_body,
+    slug,
+    tags: input.draft.tags.length
+      ? input.draft.tags
+      : input.event.category
+        ? [input.event.category]
+        : [],
+  } as import("@/lib/types/newsroom").GeneratedArticleRow;
+
+  const imageContext = buildEditorialImageContext({
+    article: provisionalArticle,
+    event: input.event,
+    signals: input.signals,
+  });
+  const sensitivity = assessStorySensitivity({
+    headline: input.draft.headline,
+    eventSummary: input.event.event_summary ?? input.draft.summary,
+    bodyExcerpt: imageContext.bodyExcerpt,
+    category: category,
+    theme: imageContext.theme,
+    people: imageContext.entities.people,
+  });
+  const imageBrief = buildEditorialImageBrief(imageContext, sensitivity);
+  const imageDecision = decideEditorialImageStrategy({
+    brief: imageBrief,
+    costTierAllowsImage: tierPlan.generateImage,
+    hasSourceImage,
+    providerAvailable: isImageProviderAvailable(),
+    isShortAlert:
+      (input.draft.article_body?.length ?? 0) < 120 &&
+      (input.draft.summary?.length ?? 0) < 80,
+  });
+
+  const imageMeta =
+    imageDecision.code === "B"
+      ? {
+          status: "queued" as const,
+          hero_url: hero_image_url,
+          source: "category_fallback",
+          decision: imageDecision.code,
+          decision_reason: imageDecision.reason,
+          brief: {
+            eventType: imageBrief.eventType,
+            district: imageBrief.district,
+            sensitive: imageBrief.sensitive,
+            generationAppropriate: imageBrief.generationAppropriate,
+          },
+          pending_attachment: true,
+        }
+      : imageDecision.code === "D"
+        ? {
+            status: "completed" as const,
+            hero_url: null as string | null,
+            source: "text_only",
+            decision: imageDecision.code,
+            decision_reason: imageDecision.reason,
+            brief: {
+              eventType: imageBrief.eventType,
+              district: imageBrief.district,
+              sensitive: imageBrief.sensitive,
+              generationAppropriate: imageBrief.generationAppropriate,
+            },
+          }
+        : imageDecision.code === "A"
+          ? {
+              status: "queued" as const,
+              hero_url: hero_image_url,
+              source: "source_pending",
+              decision: imageDecision.code,
+              decision_reason: imageDecision.reason,
+              brief: {
+                eventType: imageBrief.eventType,
+                district: imageBrief.district,
+                sensitive: imageBrief.sensitive,
+                generationAppropriate: imageBrief.generationAppropriate,
+              },
+              pending_attachment: true,
+            }
+          : {
+              status: "completed" as const,
+              hero_url: hero_image_url,
+              source: "category_curated",
+              decision: imageDecision.code,
+              decision_reason: imageDecision.reason,
+              brief: {
+                eventType: imageBrief.eventType,
+                district: imageBrief.district,
+                sensitive: imageBrief.sensitive,
+                generationAppropriate: imageBrief.generationAppropriate,
+              },
+            };
+
+  // Text-only: no stock placeholder hero
+  const resolvedHeroUrl =
+    imageDecision.code === "D" ? null : hero_image_url;
+
   const persistValidation = validateGeneratedArticle({
     headline: input.draft.headline,
     summary: input.draft.summary,
@@ -825,7 +935,7 @@ async function persistGeneratedArticle(input: {
     headline: input.draft.headline,
     summary: input.draft.summary,
     article_body: input.draft.article_body,
-    hero_image_url,
+    hero_image_url: resolvedHeroUrl,
     seo_title: input.draft.seo_title,
     seo_description: input.draft.seo_description,
     reading_time: input.draft.reading_time,
@@ -902,11 +1012,7 @@ async function persistGeneratedArticle(input: {
             evidence_ledger_summary: input.humanQualityMeta.evidenceSummary,
           }
         : {}),
-      image: {
-        status: "queued",
-        hero_url: hero_image_url,
-        source: "category_fallback",
-      },
+      image: imageMeta,
     },
   };
 
@@ -969,7 +1075,9 @@ async function persistGeneratedArticle(input: {
     quality_breakdown: input.quality.quality_breakdown,
   });
 
-  if (tierPlan.generateImage) {
+  // Enqueue only when decision requires worker (AI and/or source attachment).
+  // Never blocks publication — images may attach later.
+  if (imageDecision.enqueueJob) {
     await queueEditorialImageForArticle(inserted.id);
   }
 

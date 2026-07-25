@@ -45,6 +45,8 @@
     "ops:audit-editorial-images": "npx tsx scripts/audit-editorial-images.ts",
     "ops:repair-editorial-images": "npx tsx scripts/repair-editorial-images.ts",
     "ops:repair-editorial-images-apply": "npx tsx scripts/repair-editorial-images.ts --apply",
+    "ops:backfill-editorial-ai-images": "npx tsx scripts/backfill-editorial-ai-images.ts",
+    "ops:backfill-editorial-ai-images-apply": "npx tsx scripts/backfill-editorial-ai-images.ts --apply",
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs"
   },
   "dependencies": {

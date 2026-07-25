@@ -5,11 +5,11 @@
 export const BRAND_VISUAL = {
   name: "Jan Darpan Desk",
   palette:
-    "warm saffron accents (#E8952D), deep forest green (#1B5E4B), paper beige background, muted trustworthy blues — never neon",
+    "restrained navy (#0B1F3A) and deep red (#8B1E1E) accents with selective gold (#C4A35A) highlights only where culturally appropriate; warm paper undertones — never neon, never purple glow",
   typographySpace:
-    "reserve calm negative space at top and bottom for Hindi/English headline overlays",
+    "reserve calm negative space at top and bottom for Hindi/English headline overlays — never render text, letters, or logos inside the illustration",
   style:
-    "premium Indian digital newspaper illustration — symbolic editorial art, soft gradients, credible not sensational",
+    "premium Indian news editorial illustration for Jan Darpan — realistic atmosphere without deceptive photorealism; Chhattisgarh-aware architecture and geography when local; accurate cultural context; soft gradients; credible not sensational; unique composition per story; mobile-safe focal point for 16:9 and card crops; no malformed hands, faces, or signage artifacts",
 } as const;
 
 export type CategoryFallbackKey =

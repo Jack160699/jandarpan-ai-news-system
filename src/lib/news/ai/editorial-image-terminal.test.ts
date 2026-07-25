@@ -6,16 +6,17 @@ import {
 } from "@/lib/news/ai/editorial-image-terminal";
 
 describe("isTerminalEditorialImageSource", () => {
-  it("accepts AI and curated terminal sources", () => {
+  it("accepts AI, source, curated, and text-only terminal sources", () => {
     expect(isTerminalEditorialImageSource("ai_generated")).toBe(true);
     expect(isTerminalEditorialImageSource("duplicate_reuse")).toBe(true);
     expect(isTerminalEditorialImageSource("region_curated")).toBe(true);
     expect(isTerminalEditorialImageSource("category_curated")).toBe(true);
     expect(isTerminalEditorialImageSource("repaired")).toBe(true);
+    expect(isTerminalEditorialImageSource("source_extracted")).toBe(true);
+    expect(isTerminalEditorialImageSource("text_only")).toBe(true);
   });
 
-  it("rejects publish-time and wire sources", () => {
-    expect(isTerminalEditorialImageSource("source_extracted")).toBe(false);
+  it("rejects publish-time placeholders", () => {
     expect(isTerminalEditorialImageSource("category_fallback")).toBe(false);
     expect(isTerminalEditorialImageSource(undefined)).toBe(false);
   });
