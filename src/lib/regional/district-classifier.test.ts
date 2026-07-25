@@ -3,11 +3,31 @@ import { classifyDistrictContent } from "@/lib/regional/district-classifier";
 import { tagGeoFromContent } from "@/lib/regional/geo-tagging";
 
 describe("district-classifier", () => {
+  it("does not turn a Delhi national story into CG from feed hints", () => {
+    const result = classifyDistrictContent({
+      title: "राहुल गांधी ने दिल्ली के जंतर मंतर पर छात्रों को संबोधित किया",
+      body: "संसद में राष्ट्रीय परीक्षा नीति पर चर्चा की मांग की गई।",
+      region: "chhattisgarh",
+      category: "local",
+    });
+    expect(result.kind).toBe("non_cg");
+    expect(result.confidence).toBeGreaterThanOrEqual(0.8);
+  });
+
+  it("keeps feed-only CG hints unproven", () => {
+    const result = classifyDistrictContent({
+      title: "नागरिक सेवा पर नया अपडेट",
+      body: "विभाग ने प्रक्रिया की जानकारी दी।",
+      region: "chhattisgarh",
+      category: "local",
+    });
+    expect(result.kind).toBe("unknown");
+  });
+
   it("treats secretariat / cabinet / vidhan sabha as statewide — not Raipur", () => {
     const cases = [
       "Chhattisgarh cabinet clears new education policy at secretariat",
       "Vidhan Sabha session begins in Chhattisgarh",
-      "Chief Minister announces statewide flood relief",
       "छत्तीसगढ़ मंत्रालय में बैठक",
     ];
 
@@ -21,6 +41,15 @@ describe("district-classifier", () => {
       expect(geo.state).toBe("chhattisgarh");
       expect(geo.primary_district).toBeNull();
     }
+  });
+
+  it("does not treat a generic chief-minister reference as CG proof", () => {
+    const result = classifyDistrictContent({
+      title: "Chief Minister announces statewide flood relief",
+      region: "chhattisgarh",
+      category: "local",
+    });
+    expect(result.kind).toBe("unknown");
   });
 
   it("assigns Raipur only when Raipur is explicitly mentioned", () => {

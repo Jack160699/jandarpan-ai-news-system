@@ -30,7 +30,7 @@ export type ArticleDepthRule = {
 export const ARTICLE_DEPTH_RULES: Record<ArticleType, ArticleDepthRule> = {
   breaking_alert: {
     type: "breaking_alert",
-    minWords: 220,
+    minWords: 250,
     targetWords: 320,
     maxWords: 450,
     minParagraphs: 3,
@@ -42,7 +42,7 @@ export const ARTICLE_DEPTH_RULES: Record<ArticleType, ArticleDepthRule> = {
   },
   short_update: {
     type: "short_update",
-    minWords: 220,
+    minWords: 250,
     targetWords: 320,
     maxWords: 450,
     minParagraphs: 3,

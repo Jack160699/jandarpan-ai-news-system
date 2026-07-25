@@ -6,7 +6,7 @@
 import type { NewsEventRow } from "@/lib/types/newsroom";
 
 /** Primary auto-generation lookback window. */
-export const AUTO_GENERATION_MAX_AGE_HOURS = 7 * 24;
+export const AUTO_GENERATION_MAX_AGE_HOURS = 36;
 
 /** Events older than this with dangling signal IDs are obsolete, not retryable. */
 export const OBSOLETE_DANGLING_SIGNAL_AGE_HOURS = 72;

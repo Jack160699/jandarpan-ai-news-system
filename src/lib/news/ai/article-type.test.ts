@@ -70,7 +70,7 @@ describe("article-type classification", () => {
     const body = hindiParagraphs(2, 50);
     const floor = meetsDepthFloor(body, "breaking_alert");
     expect(floor.minWords).toBeGreaterThanOrEqual(220);
-    expect(depthRejectThreshold("breaking_alert")).toBe(220);
+    expect(depthRejectThreshold("breaking_alert")).toBe(250);
   });
 
   it("targets standard report depth when evidence is rich", () => {
