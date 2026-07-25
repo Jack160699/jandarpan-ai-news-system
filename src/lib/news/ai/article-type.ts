@@ -30,15 +30,15 @@ export type ArticleDepthRule = {
 export const ARTICLE_DEPTH_RULES: Record<ArticleType, ArticleDepthRule> = {
   breaking_alert: {
     type: "breaking_alert",
-    minWords: 80,
-    targetWords: 160,
-    maxWords: 280,
-    minParagraphs: 2,
+    minWords: 220,
+    targetWords: 320,
+    maxWords: 450,
+    minParagraphs: 3,
     insufficientFallback: "breaking_alert",
     labelHi: "ब्रेकिंग अलर्ट",
     labelEn: "Breaking alert",
     promptDepthHint:
-      "Breaking alert: concise, factual, clearly labeled. Prefer verified facts over length. Target ~80–220 Hindi words. Do not pad.",
+      "Short verified wire: approximately 250–450 Hindi words. Cover what happened, where/when, attributed verified details, immediate public relevance, and what happens next when supported. Prefer verified facts over length and do not pad.",
   },
   short_update: {
     type: "short_update",
@@ -196,7 +196,9 @@ export function classifyArticleType(
   let type: ArticleType = "standard_report";
 
   if (urgency >= 80 || cat === "breaking" || desk === "breaking_news") {
-    type = thin ? "breaking_alert" : "breaking_alert";
+    // Rich evidence should not be forced into a sub-200-word alert merely
+    // because the event is urgent. Reserve the alert format for thin packs.
+    type = thin ? "breaking_alert" : "developing_story";
     reasons.push("high_urgency_or_breaking");
   } else if (
     /explainer|समझें|क्या है|why it matters|backgrounder/i.test(blob) ||
@@ -298,9 +300,9 @@ export function meetsDepthFloor(
   const paragraphs = paragraphCount(body);
   let minWords = rule.minWords;
 
-  // Breaking stays concise; still require a real alert, not a dek
+  // Even a thin breaking wire must be a useful article, not a long dek.
   if (type === "breaking_alert" && options?.allowThinBreaking !== false) {
-    minWords = Math.min(minWords, 80);
+    minWords = Math.min(minWords, 220);
   }
 
   const ok = words >= minWords && paragraphs >= Math.min(2, rule.minParagraphs);
