@@ -37,8 +37,11 @@ test.describe("reader-ds language switching (blocker #3)", () => {
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".jd-ds").first()).toBeVisible({ timeout: 45_000 });
     await expect(page.getByTestId("lang-option-en")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("lang-option-en").click();
-    await page.getByTestId("lang-continue").click();
+    await page.getByTestId("lang-option-en").evaluate((el) => (el as HTMLButtonElement).click());
+    await expect(page.getByTestId("lang-option-en")).toHaveAttribute("aria-pressed", "true", {
+      timeout: 10_000,
+    });
+    await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
 
     // Profile hub always mounts bottom nav (does not depend on homepage feed).
@@ -73,8 +76,11 @@ test.describe("reader-ds language switching (blocker #3)", () => {
   test("switching back to Hindi restores Hindi chrome", async ({ page }) => {
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("lang-option-en")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("lang-option-en").click();
-    await page.getByTestId("lang-continue").click();
+    await page.getByTestId("lang-option-en").evaluate((el) => (el as HTMLButtonElement).click());
+    await expect(page.getByTestId("lang-option-en")).toHaveAttribute("aria-pressed", "true", {
+      timeout: 10_000,
+    });
+    await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
     await expect(page.locator(".jd-bottom-nav")).toHaveAttribute("data-jd-locale", "en", {
       timeout: 30_000,
@@ -82,8 +88,11 @@ test.describe("reader-ds language switching (blocker #3)", () => {
 
     await page.goto("/archive/language", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("lang-option-hi")).toBeVisible({ timeout: 30_000 });
-    await page.getByTestId("lang-option-hi").click();
-    await page.getByTestId("lang-continue").click();
+    await page.getByTestId("lang-option-hi").evaluate((el) => (el as HTMLButtonElement).click());
+    await expect(page.getByTestId("lang-option-hi")).toHaveAttribute("aria-pressed", "true", {
+      timeout: 10_000,
+    });
+    await page.getByTestId("lang-continue").evaluate((el) => (el as HTMLButtonElement).click());
     await page.waitForURL(/\/archive/, { timeout: 15_000 });
 
     await page.goto("/", { waitUntil: "domcontentloaded" });

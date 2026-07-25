@@ -52,7 +52,12 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
               key={l.id}
               type="button"
               data-testid={`lang-option-${l.id}`}
+              aria-pressed={on}
               onClick={() => setOverride(l.id as ReaderLanguage)}
+              onPointerUp={(e) => {
+                if (e.button !== 0) return;
+                setOverride(l.id as ReaderLanguage);
+              }}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -65,6 +70,8 @@ export function LanguagePage({ continueHref = "/archive" }: { continueHref?: str
                 width: "100%",
                 cursor: "pointer",
                 minHeight: 44,
+                position: "relative",
+                zIndex: 1,
               }}
             >
               <div style={{ textAlign: "left" }}>
