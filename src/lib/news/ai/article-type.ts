@@ -30,19 +30,19 @@ export type ArticleDepthRule = {
 export const ARTICLE_DEPTH_RULES: Record<ArticleType, ArticleDepthRule> = {
   breaking_alert: {
     type: "breaking_alert",
-    minWords: 250,
-    targetWords: 320,
-    maxWords: 450,
-    minParagraphs: 3,
+    minWords: 80,
+    targetWords: 160,
+    maxWords: 280,
+    minParagraphs: 2,
     insufficientFallback: "breaking_alert",
     labelHi: "ब्रेकिंग अलर्ट",
     labelEn: "Breaking alert",
     promptDepthHint:
-      "Short verified wire: approximately 250–450 Hindi words. Cover what happened, where/when, attributed verified details, immediate public relevance, and what happens next when supported. Prefer verified facts over length and do not pad.",
+      "Breaking alert: concise, factual, clearly labeled. Prefer verified facts over length. Target ~80–220 Hindi words. Do not pad.",
   },
   short_update: {
     type: "short_update",
-    minWords: 250,
+    minWords: 220,
     targetWords: 320,
     maxWords: 450,
     minParagraphs: 3,
@@ -149,10 +149,9 @@ export type ArticleTypeClassification = {
 /** Heuristic: enough source text to support a standard report */
 export const EVIDENCE_THRESHOLDS = {
   thinChars: 500,
-  shortUpdateChars: 700,
-  /** Multi-source / rich single packs should reach standard_report */
-  standardChars: 1100,
-  explainerChars: 2600,
+  shortUpdateChars: 900,
+  standardChars: 1600,
+  explainerChars: 2800,
   analysisSignals: 5,
 } as const;
 
@@ -196,9 +195,7 @@ export function classifyArticleType(
   let type: ArticleType = "standard_report";
 
   if (urgency >= 80 || cat === "breaking" || desk === "breaking_news") {
-    // Rich evidence should not be forced into a sub-200-word alert merely
-    // because the event is urgent. Reserve the alert format for thin packs.
-    type = thin ? "breaking_alert" : "developing_story";
+    type = thin ? "breaking_alert" : "breaking_alert";
     reasons.push("high_urgency_or_breaking");
   } else if (
     /explainer|समझें|क्या है|why it matters|backgrounder/i.test(blob) ||
@@ -240,12 +237,9 @@ export function classifyArticleType(
   } else if (evidenceChars < EVIDENCE_THRESHOLDS.shortUpdateChars) {
     type = "short_update";
     reasons.push("limited_source_chars");
-  } else if (
-    evidenceChars < EVIDENCE_THRESHOLDS.standardChars &&
-    signals < 2
-  ) {
+  } else if (evidenceChars < EVIDENCE_THRESHOLDS.standardChars) {
     type = "short_update";
-    reasons.push("moderate_source_chars_single_signal");
+    reasons.push("moderate_source_chars");
   } else {
     type = "standard_report";
     reasons.push("sufficient_for_standard_report");
@@ -300,9 +294,9 @@ export function meetsDepthFloor(
   const paragraphs = paragraphCount(body);
   let minWords = rule.minWords;
 
-  // Even a thin breaking wire must be a useful article, not a long dek.
+  // Breaking stays concise; still require a real alert, not a dek
   if (type === "breaking_alert" && options?.allowThinBreaking !== false) {
-    minWords = Math.min(minWords, 220);
+    minWords = Math.min(minWords, 80);
   }
 
   const ok = words >= minWords && paragraphs >= Math.min(2, rule.minParagraphs);

@@ -45,15 +45,21 @@ function hindiParagraphs(n: number, wordsPer = 40): string {
 }
 
 describe("article-type classification", () => {
-  it("uses developing-story depth for urgent events with rich evidence", () => {
+  it("uses breaking-alert depth for urgent events regardless of evidence richness", () => {
+    // 2026-07-25/26 production incident: routing rich-evidence urgent events to the
+    // stricter developing_story tier (280 minWords) — instead of breaking_alert (80) —
+    // combined with raised minWords, starved generation to zero for 11+ hours. Real
+    // single-source Hindi wire content for urgent local news rarely clears 280 words
+    // without padding/fabrication; breaking_alert is the correct tier regardless of
+    // evidence richness.
     const c = classifyArticleType({
       urgencyScore: 90,
       signalCount: 2,
       factPackChars: 2000,
       category: "breaking",
     });
-    expect(c.type).toBe("developing_story");
-    expect(ARTICLE_DEPTH_RULES.breaking_alert.maxWords).toBeLessThanOrEqual(450);
+    expect(c.type).toBe("breaking_alert");
+    expect(ARTICLE_DEPTH_RULES.breaking_alert.maxWords).toBeLessThanOrEqual(280);
   });
 
   it("reserves breaking alerts for urgent events with thin evidence", () => {
@@ -69,8 +75,8 @@ describe("article-type classification", () => {
   it("keeps breaking alert depth floor concise", () => {
     const body = hindiParagraphs(2, 50);
     const floor = meetsDepthFloor(body, "breaking_alert");
-    expect(floor.minWords).toBeGreaterThanOrEqual(220);
-    expect(depthRejectThreshold("breaking_alert")).toBe(250);
+    expect(floor.minWords).toBeGreaterThanOrEqual(80);
+    expect(depthRejectThreshold("breaking_alert")).toBe(80);
   });
 
   it("targets standard report depth when evidence is rich", () => {

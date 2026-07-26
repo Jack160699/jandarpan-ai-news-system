@@ -434,7 +434,11 @@ export function runEditorialQualityChecks(input: {
     structural
   );
 
-  // Depth / factual-safety gates — hard reject for missing body, equals excerpt, quotes, artifacts
+  // Depth / factual-safety gates — hard reject for missing body, equals excerpt, quotes, artifacts.
+  // body_too_short_for_type is deliberately NOT here: validateEditorialDepth() marks it
+  // retryable, and it's already handled below as a should_repair trigger — hard-rejecting
+  // it here made that repair path unreachable (hard_reject short-circuits should_repair),
+  // turning every under-length draft into an instant dead-end instead of a repair candidate.
   const depthHardCodes = new Set([
     "missing_body",
     "body_equals_excerpt",
@@ -447,7 +451,7 @@ export function runEditorialQualityChecks(input: {
     "insufficient_evidence_for_longform",
   ]);
   for (const d of depth_quality.issues) {
-    if (depthHardCodes.has(d.code) || d.code === "body_too_short_for_type") {
+    if (depthHardCodes.has(d.code)) {
       if (!hard_reject_reasons.includes(d.code)) {
         hard_reject_reasons.push(d.code);
       }
