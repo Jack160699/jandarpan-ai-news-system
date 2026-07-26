@@ -20,6 +20,7 @@ import {
   getEditorialGenerateQueueMetrics,
 } from "@/lib/infrastructure/workers/editorial-generate-observability";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { pipelineLog } from "@/lib/observability/production-log";
@@ -69,7 +70,23 @@ async function handleEditorialGenerate(request: Request) {
     CRON_JOB_ID,
     GENERATION_LANE_TARGETS.lockWindowSec,
     async () => {
-      const deadline = createExecutionDeadline(GENERATION_LANE_TARGETS.budgetMs);
+      // createExecutionDeadline() applies INFRA_CONFIG.ingestStopRatio and
+      // workerDeadlineReserveMs on top of whatever budget is passed in (it
+      // expects a raw ceiling, not an already-safe working budget). Passing
+      // GENERATION_LANE_TARGETS.budgetMs (100s) straight through silently
+      // shrank the lane's real working window to ~79s
+      // (100_000 * 0.82 - 3_000), well under EDITORIAL_GENERATE_JOB_TIMEOUT_MS
+      // (105s), so the per-attempt race in processJobBatch() always fired
+      // job_timeout at ~77-79s regardless of the job's own timeout_ms.
+      // Inflate the input so the post-shrink result matches the intended
+      // 100s lane budget, restoring the "100s inside a 120s function"
+      // design documented in EDITORIAL_GENERATE_JOB_TIMEOUT_MS's comment.
+      const deadline = createExecutionDeadline(
+        Math.ceil(
+          (GENERATION_LANE_TARGETS.budgetMs + INFRA_CONFIG.workerDeadlineReserveMs) /
+            INFRA_CONFIG.ingestStopRatio
+        )
+      );
       const result = await runQueueWorker("editorial_generate", {
         deadline,
         requestUrl: request.url,
