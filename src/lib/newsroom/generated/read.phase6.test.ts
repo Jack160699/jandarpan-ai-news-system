@@ -18,6 +18,7 @@ vi.mock("@/lib/supabase", () => ({
         chain.gte = self;
         chain.lt = self;
         chain.order = self;
+        chain.abortSignal = self;
         chain.limit = (n: number) => {
           chain.__limit = n;
           return Promise.resolve({

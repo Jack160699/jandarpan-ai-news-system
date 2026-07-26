@@ -158,13 +158,14 @@ export async function fetchGeneratedArticlePool(
   const startedAt = Date.now();
 
   const result = await safeQuery<Record<string, unknown>[]>(
-    async () => {
+    async (signal) => {
       let q = supabase
         .from("generated_articles")
         .select(columns)
         .not("published_at", "is", null)
         .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
-        .order("published_at", { ascending: false, nullsFirst: false });
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .abortSignal(signal);
 
       if (options?.cursorPublishedAt) {
         q = q.lt("published_at", options.cursorPublishedAt);
@@ -261,7 +262,7 @@ export async function fetchGoogleNewsArticlePool(
   const cutoffIso = getGoogleNewsCutoffIso(now);
 
   const result = await safeQuery<GoogleNewsArticleRow[]>(
-    async () => {
+    async (signal) => {
       const res = await supabase
         .from("generated_articles")
         .select(GOOGLE_NEWS_SELECT)
@@ -269,6 +270,7 @@ export async function fetchGoogleNewsArticlePool(
         .gte("published_at", cutoffIso)
         .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
         .order("published_at", { ascending: false, nullsFirst: false })
+        .abortSignal(signal)
         .limit(bounded);
       return {
         data: (res.data ?? null) as GoogleNewsArticleRow[] | null,

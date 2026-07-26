@@ -77,12 +77,13 @@ export async function queryTenantMembershipList(
   const supabase = createAdminServerClient();
 
   const result = await safeQuery<TenantMembershipDbRow[]>(
-    async () => {
+    async (signal) => {
       const r = await supabase
         .from("tenant_memberships")
         .select(TENANT_MEMBERSHIP_LIST_SELECT)
         .eq("tenant_id", tenantId)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .abortSignal(signal);
       return {
         data: (r.data ?? []) as unknown as TenantMembershipDbRow[],
         error: r.error,
