@@ -53,11 +53,25 @@ function getIstHourMinute(now = new Date()): { hour: number; minute: number } {
   return { hour, minute };
 }
 
+/**
+ * Vercel's cron trigger is not always exact — ops_cron_runs shows
+ * edition-publish firing 60-90s late (e.g. IST minute 01 instead of 00)
+ * on multiple occasions. Requiring an exact `minute === 0` match caused
+ * those late invocations to reject their entire slot with no retry, since
+ * each slot only fires once per the vercel.json schedule. Tolerating a
+ * few minutes of lateness lets a late invocation still serve its intended
+ * slot; because each slot fires at most once, widening this window cannot
+ * cause a slot to be served twice.
+ */
+const SLOT_MINUTE_TOLERANCE = 5;
+
 export function resolveEditionPublishSlot(
   now = new Date()
 ): { ok: true; slot: EditionPublishSlot } | { ok: false; reason: string } {
   const { hour, minute } = getIstHourMinute(now);
-  if (minute !== 0) return { ok: false, reason: "outside_slot_minute" };
+  if (minute > SLOT_MINUTE_TOLERANCE) {
+    return { ok: false, reason: "outside_slot_minute" };
+  }
 
   const slot = (Object.keys(SLOT_HOURS) as EditionPublishSlot[]).find(
     (s) => SLOT_HOURS[s] === hour

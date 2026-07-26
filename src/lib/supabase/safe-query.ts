@@ -33,6 +33,37 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * On timeout, the caller's request must actually be cancelled via the
+ * AbortSignal passed to `run` — not just abandoned. `Promise.race` alone
+ * lets a "timed out" query keep executing in the background, holding a
+ * pooled connection until it naturally finishes; under load that piles up
+ * and starves later queries of connections, causing more timeouts (seen in
+ * production: generated_pool_homepage/sitemap intermittently timing out on
+ * /search and /story/[slug] even though the underlying query itself runs
+ * in single-digit milliseconds when measured directly).
+ */
+async function withTimeout<T>(
+  run: (signal: AbortSignal) => Promise<T>,
+  timeoutMs: number
+): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(new Error(`query_timeout_${timeoutMs}ms`)),
+    timeoutMs
+  );
+  try {
+    return await run(controller.signal);
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error(`query_timeout_${timeoutMs}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function classifyError(
   message: string,
   postgrest: PostgrestError | null
@@ -49,31 +80,16 @@ function classifyError(
   return "unknown";
 }
 
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number
-): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error(`query_timeout_${timeoutMs}ms`)),
-          timeoutMs
-        );
-      }),
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
-
 /**
  * Execute a Supabase query with retry, timeout, and optional schema fallback.
+ * `run` receives an AbortSignal that fires when `timeoutMs` elapses — pass
+ * it to the query builder via `.abortSignal(signal)` so a timeout actually
+ * cancels the in-flight request instead of merely abandoning it.
  */
 export async function safeQuery<T>(
-  run: () => Promise<{ data: T | null; error: PostgrestError | null }>,
+  run: (
+    signal: AbortSignal
+  ) => Promise<{ data: T | null; error: PostgrestError | null }>,
   options: SafeQueryOptions = {}
 ): Promise<SafeQueryResult<T>> {
   const label = options.label ?? "query";
@@ -87,7 +103,7 @@ export async function safeQuery<T>(
   while (attempts <= retries) {
     attempts += 1;
     try {
-      const result = await withTimeout(run(), timeoutMs);
+      const result = await withTimeout(run, timeoutMs);
       if (!result.error) {
         const durationMs = Date.now() - startedAt;
         log.debug("query_ok", { label, attempts, durationMs });
