@@ -1904,7 +1904,14 @@ export async function generateEditorialsFromEvents(options?: {
 
     if (candidate.repaired) repaired++;
 
-    if (candidate.quality.publish_allowed) {
+    // Persist publish_allowed candidates as normal, and also persist
+    // non-hard-rejected candidates (repair/hold — e.g. below the autonomous
+    // human-quality threshold) as pending drafts for human review, matching
+    // the pre-PR-#48 behavior. Only structural/factual/safety hard rejects
+    // (missing body, unsupported quotes, insufficient evidence, etc.) should
+    // produce zero row — a soft quality signal is a review queue, not a
+    // silent drop.
+    if (candidate.quality.publish_allowed || !candidate.quality.hard_reject) {
       const saved = await persistGeneratedArticle({
         event: candidate.event,
         draft: candidate.draft,
@@ -1962,8 +1969,9 @@ export async function generateEditorialsFromEvents(options?: {
         );
         usedEventIds.add(event.id);
         if (
-          !lastPublishedStory ||
-          candidate.quality.ai_confidence > lastPublishedStory.confidence
+          saved.article.published_at &&
+          (!lastPublishedStory ||
+            candidate.quality.ai_confidence > lastPublishedStory.confidence)
         ) {
           lastPublishedStory = {
             id: saved.article.id,
