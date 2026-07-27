@@ -792,9 +792,15 @@ async function persistGeneratedArticle(input: {
     geo,
   });
 
-  // Auto-publish flag now means "auto-schedule for the next edition publish window".
+  // Auto-publish flag means "auto-schedule ELIGIBLE content for the next edition
+  // publish window" — it must never bypass the quality/safety decision. A
+  // candidate is only schedulable when the authoritative quality gate
+  // (computed above into input.quality.publish_allowed) actually cleared it;
+  // reject/repair/held-for-safety candidates always persist as drafts,
+  // regardless of this flag, so a human can review them.
   // Publication is performed by the edition scheduler only (not by continuous crons).
-  const autoPublish = process.env.NEWSROOM_AUTO_PUBLISH === "true";
+  const autoPublish =
+    process.env.NEWSROOM_AUTO_PUBLISH === "true" && input.quality.publish_allowed;
 
   const urgency = Number(input.event.urgency_score ?? 0);
   const aiConfidence = Number(input.quality.ai_confidence ?? 0);
