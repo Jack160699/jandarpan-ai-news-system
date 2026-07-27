@@ -14,6 +14,7 @@ import {
   activateStage1,
   describeRolloutState,
 } from "@/lib/autonomous/rollout-state";
+import { isNewsroomAutoPublishEnabled } from "@/lib/newsroom/publish-state";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,7 +42,11 @@ export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ ok: false }, { status: 404 });
   }
-  return NextResponse.json({ ok: true, ...describeRolloutState() });
+  return NextResponse.json({
+    ok: true,
+    ...describeRolloutState(),
+    newsroomAutoPublish: isNewsroomAutoPublishEnabled(),
+  });
 }
 
 export async function POST(request: Request) {
