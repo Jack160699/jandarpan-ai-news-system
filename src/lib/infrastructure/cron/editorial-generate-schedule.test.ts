@@ -45,6 +45,12 @@ describe("editorial-generate schedule contract", () => {
       ),
       "utf8"
     );
-    expect(src).toContain('excludeJobTypes: ["editorial_generate"]');
+    // event_cluster now gets its own dedicated claim (jobTypes: ["event_cluster"]),
+    // which naturally excludes editorial_generate; the remaining mixed-type
+    // batch explicitly excludes both.
+    expect(src).toContain('jobTypes: ["event_cluster"]');
+    expect(src).toContain(
+      'excludeJobTypes: ["editorial_generate", "event_cluster"]'
+    );
   });
 });
