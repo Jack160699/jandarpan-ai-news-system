@@ -267,9 +267,17 @@ export async function fetchUnprocessedSignals(
     Date.now() - lookbackHours * 60 * 60 * 1000
   ).toISOString();
 
+  // Only events touched within the same lookback window as the signals
+  // below can possibly reference one of them — an event untouched since
+  // before `cutoff` cannot contain a signal published after it. Fetching
+  // signal_ids from every news_events row ever created (2,292+ and
+  // growing) on every single clustering job was the dominant cost of each
+  // ~54s run, since it re-scans the entire historical table regardless of
+  // how small the actual signal batch being processed is.
   const { data: events } = await supabase
     .from("news_events")
-    .select("signal_ids");
+    .select("signal_ids")
+    .gte("updated_at", cutoff);
 
   const clusteredIds = new Set<string>();
   for (const e of events ?? []) {
