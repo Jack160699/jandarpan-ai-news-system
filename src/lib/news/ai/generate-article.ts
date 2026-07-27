@@ -19,6 +19,7 @@ import {
 } from "@/lib/autonomous/evidence-ledger";
 import {
   decideQualityGate,
+  districtRelevanceInput,
   isHighRiskStory,
   scoreHumanQuality,
   PUBLISH_THRESHOLD,
@@ -549,11 +550,7 @@ function applyHumanQualityAndEvidenceGate(input: {
 
   const humanScore = scoreHumanQuality({
     factualGrounding: factualBase,
-    districtRelevance: geo.is_chhattisgarh
-      ? geo.primary_district
-        ? 0.9
-        : 0.55
-      : 0.25,
+    districtRelevance: districtRelevanceInput(geo, input.event.region),
     readability: Math.min(1, input.quality.quality_breakdown.readability ?? 0.6),
     sourceDiversity: Math.min(1, input.signals.length / 3),
     freshness: input.freshness.decision === "fresh" ? 1 : 0.45,

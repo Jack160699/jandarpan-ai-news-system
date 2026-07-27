@@ -6,6 +6,7 @@ import {
   REVIEW_THRESHOLD,
   HIGH_RISK_THRESHOLD,
   decideQualityGate,
+  districtRelevanceInput,
   isHighRiskStory,
   meetsPublishThreshold,
   scoreHumanQuality,
@@ -81,5 +82,68 @@ describe("human-quality-score thresholds", () => {
     expect(result.score).toBe(70);
     expect(result.publishable).toBe(false);
     expect(decideQualityGate(result.score).decision).toBe("repair");
+  });
+});
+
+describe("districtRelevanceInput", () => {
+  it("scores a district-level Chhattisgarh story highest", () => {
+    expect(
+      districtRelevanceInput(
+        { is_chhattisgarh: true, primary_district: "raipur" },
+        "chhattisgarh"
+      )
+    ).toBe(0.9);
+  });
+
+  it("scores a statewide Chhattisgarh story second-highest", () => {
+    expect(
+      districtRelevanceInput(
+        { is_chhattisgarh: true, primary_district: null },
+        "chhattisgarh"
+      )
+    ).toBe(0.55);
+  });
+
+  it("credits a genuine national story instead of flatly penalizing it", () => {
+    expect(
+      districtRelevanceInput({ is_chhattisgarh: false, primary_district: null }, "india")
+    ).toBe(0.6);
+  });
+
+  it("credits a genuine international story instead of flatly penalizing it", () => {
+    expect(
+      districtRelevanceInput({ is_chhattisgarh: false, primary_district: null }, "global")
+    ).toBe(0.5);
+  });
+
+  it("falls back to the original flat penalty for an unrecognized region", () => {
+    expect(
+      districtRelevanceInput({ is_chhattisgarh: false, primary_district: null }, null)
+    ).toBe(0.25);
+    expect(
+      districtRelevanceInput(
+        { is_chhattisgarh: false, primary_district: null },
+        "something_else"
+      )
+    ).toBe(0.25);
+  });
+
+  it("a well-rounded national/international story can now realistically cross PUBLISH_THRESHOLD", () => {
+    // Same strong-but-not-perfect inputs a genuinely good national/
+    // international story could plausibly hit; before this fix
+    // districtRelevance was flatly 0.25 for these regions.
+    const national = scoreHumanQuality({
+      factualGrounding: 0.9,
+      districtRelevance: districtRelevanceInput(
+        { is_chhattisgarh: false, primary_district: null },
+        "india"
+      ),
+      readability: 0.85,
+      sourceDiversity: 0.8,
+      freshness: 1,
+      imagePresence: 0.85,
+      headlineClarity: 0.85,
+    });
+    expect(national.score).toBeGreaterThanOrEqual(PUBLISH_THRESHOLD);
   });
 });

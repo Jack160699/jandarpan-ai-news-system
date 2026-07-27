@@ -102,6 +102,28 @@ export function isHighRiskStory(text: string): boolean {
   return HIGH_RISK_PATTERNS.some((re) => re.test(sample));
 }
 
+/**
+ * districtRelevance input (0-1) for scoreHumanQuality — 20% of the total
+ * score. A genuine national/international story correctly has zero
+ * Chhattisgarh district relevance; that must not be scored the same as a
+ * poorly-sourced or off-topic story. Credit a story for being appropriately
+ * scoped to its own region (event.region, assigned at clustering) instead
+ * of only ever rewarding Chhattisgarh specificity — otherwise every
+ * non-Chhattisgarh story's realistic ceiling sits well below
+ * PUBLISH_THRESHOLD regardless of how good its other six dimensions are.
+ */
+export function districtRelevanceInput(
+  geo: { is_chhattisgarh: boolean; primary_district: string | null },
+  eventRegion: string | null | undefined
+): number {
+  if (geo.is_chhattisgarh) {
+    return geo.primary_district ? 0.9 : 0.55;
+  }
+  if (eventRegion === "india") return 0.6;
+  if (eventRegion === "global") return 0.5;
+  return 0.25;
+}
+
 export function scoreHumanQuality(input: HumanQualityInput): HumanQualityResult {
   const components = {
     factualGrounding: clamp01(input.factualGrounding),
