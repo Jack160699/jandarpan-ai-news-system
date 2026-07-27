@@ -135,11 +135,17 @@ export function resolveEditorialTierPlan(input: {
     return {
       tier: 3,
       generateArticle: true,
-      generateImage: false,
+      // Every published article gets its own AI hero image (DALL-E 3
+      // standard ≈ $0.04/image; at the stage_1 daily ceiling of 60
+      // articles that's ≈ $2.40/day worst case) rather than falling back
+      // to a generic, repeated stock photo. Tier 3 is this newsroom's most
+      // common tier — most candidates are single-source Hindi wire content
+      // — so gating images out of it left almost nothing illustrated.
+      generateImage: true,
       generateTranslation: false,
       generateEmbedding: false,
       generateShorts: false,
-      reason: "tier3_article_only",
+      reason: "tier3_article_with_image",
       signals: { urgency, aiConfidence, verifiedSources, localRelevance, readerValueHint },
     };
   }

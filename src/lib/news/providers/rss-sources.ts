@@ -240,6 +240,38 @@ export const RSS_SOURCES: RSSSource[] = [
     priority: 74,
     tier: "publisher",
   },
+
+  // ── International (previously absent — no "global" region source existed) ──
+  {
+    id: "bbc-world",
+    name: "BBC News — World",
+    category: "world",
+    language: "en",
+    region: "global",
+    url: "https://feeds.bbci.co.uk/news/world/rss.xml",
+    priority: 80,
+    tier: "publisher",
+  },
+  {
+    id: "gnews-world",
+    name: "Google News — World",
+    category: "world",
+    language: "en",
+    region: "global",
+    url: googleNewsRss("world news", "en"),
+    priority: 78,
+    tier: "aggregator",
+  },
+  {
+    id: "gnews-world-india-relevant",
+    name: "Google News — International news for India",
+    category: "world",
+    language: "en",
+    region: "global",
+    url: googleNewsRss("international news India", "en"),
+    priority: 76,
+    tier: "aggregator",
+  },
 ];
 
 export const RSS_FEED_TIMEOUT_MS = 8_000;
