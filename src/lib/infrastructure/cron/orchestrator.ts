@@ -37,11 +37,39 @@ export type OrchestrateResult = {
   degraded: boolean;
 };
 
-/** Core newsroom work precedes lower-priority intelligence maintenance. */
+/**
+ * Core newsroom work precedes lower-priority intelligence maintenance.
+ *
+ * job_processor drains worker_jobs(event_cluster, analytics_aggregate,
+ * intelligence_snapshot, embed_signals, intelligence_cluster, ...) — most
+ * importantly event_cluster, which is the ONLY path that turns fetched
+ * signals into news_events for editorial-generate to work from. It used to
+ * run third, after ai_enrich and editorial_images. Production evidence
+ * (worker_jobs): ai_enrich's own per-item AI provider calls were timing out
+ * ("Request timed out", 2026-07-27 14:45-14:46 UTC) and, even when they
+ * don't, ai_enrich legitimately runs up to 5 internal batches against its
+ * own queue — routinely consuming most of orchestrate's ~90-100s budget
+ * inside a fixed ~120s function, leaving job_processor perpetually
+ * deadline-starved. Real effect: 33-48 event_cluster/analytics_aggregate/
+ * intelligence_snapshot/embed_signals/intelligence_cluster jobs sat pending
+ * with zero progress and attempts:0 for 1.5+ hours across multiple full
+ * orchestrate runs — clustering had completely stalled, so no new articles
+ * had fresh events to generate from regardless of any editorial-generate
+ * fix. job_processor now runs first so the event_cluster -> editorial
+ * pipeline gets first claim on the time budget every cycle. editorial_images
+ * stays right after it (own empty-queue skip already makes it cheap when
+ * there is nothing to illustrate, and every published article now getting
+ * an AI image — see ai-cost-tiers.ts tier 3 — makes its priority more
+ * important, not less). ai_enrich (enrichment of already-ingested content,
+ * non-blocking for freshness, and the actual source of the observed
+ * "Request timed out" errors and heavy 5-loop budget consumption) moves
+ * after both, ahead of the remaining lower-priority intelligence
+ * maintenance workers it was already ordered before.
+ */
 export const INTELLIGENCE_PIPELINE: WorkerId[] = [
-  "ai_enrich",
-  "editorial_images",
   "job_processor",
+  "editorial_images",
+  "ai_enrich",
   "intelligence_embed",
   "intelligence_snapshot",
   "analytics_aggregate",
