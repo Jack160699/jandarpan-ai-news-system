@@ -25,13 +25,42 @@ async function runJobProcessor(ctx: WorkerContext): Promise<WorkerResult> {
   const health = await buildQueueHealthSnapshot().catch(() => null);
 
   const eventDelivery = await deliverPendingEvents(15);
-  const batch = await processJobBatch(JOB_HANDLERS, {
+
+  // event_cluster is the only path that turns fetched signals into
+  // news_events for editorial-generate — every other job type this worker
+  // drains (analytics_aggregate, intelligence_snapshot, embed_signals,
+  // intelligence_cluster, ...) is secondary. A single mixed-type batch
+  // claims strictly by oldest scheduled_at across ALL types, so
+  // event_cluster jobs were routinely starved by an unrelated backlog of
+  // older jobs of other types (observed: a 216-job combined backlog,
+  // ~30-min-cycle batches of 8 mostly landing on other types, while
+  // event_cluster's own ~35-job backlog sat untouched for hours). Give it
+  // its own dedicated claim first, then spend whatever budget/limit
+  // remains on everything else.
+  const clusterBatch = await processJobBatch(JOB_HANDLERS, {
+    limit: INFRA_CONFIG.workerJobBatch,
+    jobTypes: ["event_cluster"],
+    workerId: "job_processor",
+    deadline: ctx.deadline,
+    oldestFirst: health?.oldestFirst ?? false,
+  });
+
+  const restBatch = await processJobBatch(JOB_HANDLERS, {
     limit: INFRA_CONFIG.workerJobBatch,
     workerId: "job_processor",
     deadline: ctx.deadline,
     oldestFirst: health?.oldestFirst ?? false,
-    excludeJobTypes: ["editorial_generate"],
+    excludeJobTypes: ["editorial_generate", "event_cluster"],
   });
+
+  const batch = {
+    processed: clusterBatch.processed + restBatch.processed,
+    completed: clusterBatch.completed + restBatch.completed,
+    failed: clusterBatch.failed + restBatch.failed,
+    dead: clusterBatch.dead + restBatch.dead,
+    partial: Boolean(clusterBatch.partial || restBatch.partial),
+    released: (clusterBatch.released ?? 0) + (restBatch.released ?? 0),
+  };
   const pending = await countPendingJobs();
 
   const build = batch.partial ? partialWorkerResult : completeWorkerResult;
@@ -39,9 +68,11 @@ async function runJobProcessor(ctx: WorkerContext): Promise<WorkerResult> {
     recordsProcessed: batch.completed + eventDelivery.delivered,
     recordsSkipped: batch.failed,
     remainingQueue: pending,
-    partial: batch.partial ?? false,
+    partial: batch.partial,
     extra: {
       ...batch,
+      clusterBatch,
+      restBatch,
       eventsDelivered: eventDelivery.delivered,
       eventsFailed: eventDelivery.failed,
       pending,
