@@ -17,6 +17,15 @@ const PAGE_TIMEOUT_MS = 8_000;
 const USER_AGENT =
   "Mozilla/5.0 (compatible; Jan-Darpan-Chhattisgarh-RSS/2.1; +https://newspaper-motion.vercel.app)";
 
+// Generic aggregator/interstitial titles that a redirect-URL page scrape can
+// return instead of the real headline (e.g. Google News RSS <link> values are
+// redirect wrappers, not the publisher URL — fetching them can land on a
+// Google-branded interstitial whose og:title is just the feed's own name).
+const GENERIC_SCRAPED_TITLES = new Set([
+  "google समाचार",
+  "google news",
+]);
+
 export function extractArticleMetadataFromHtml(html: string): {
   title?: string;
   description?: string;
@@ -41,8 +50,12 @@ export function extractArticleMetadataFromHtml(html: string): {
   const images = extractImagesFromHtml(html);
   const best = pickBestImageCandidate(images);
 
+  const decodedTitle = ogTitle ? decodeHtmlEntities(ogTitle) : undefined;
+  const titleIsGeneric =
+    decodedTitle && GENERIC_SCRAPED_TITLES.has(decodedTitle.trim().toLowerCase());
+
   return {
-    title: ogTitle ? decodeHtmlEntities(ogTitle) : undefined,
+    title: titleIsGeneric ? undefined : decodedTitle,
     description: decodeHtmlEntities(ogDesc ?? metaDesc ?? "").slice(0, 600) || undefined,
     imageUrl: best?.url,
     publishedAt: published ? parsePublishedAt(published) ?? undefined : undefined,
@@ -142,7 +155,15 @@ export async function enrichRssArticleFromPage(
   return {
     article: {
       ...article,
-      title: meta.title && meta.title.length > 10 ? meta.title : article.title,
+      // Prefer the RSS item's own title (parsed directly from <title>) over a
+      // page scrape — article_url can be a redirect wrapper (Google News), so
+      // only fall back to the scraped title when the original looks missing.
+      title:
+        (!article.title || article.title.length < 10) &&
+        meta.title &&
+        meta.title.length > 10
+          ? meta.title
+          : article.title,
       description,
       image_url,
       published_at,
