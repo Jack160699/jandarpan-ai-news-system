@@ -1214,22 +1214,31 @@ async function prepareCandidate(
       })
     )
   );
-  if (!evidenceGeo.is_chhattisgarh) {
-    return {
-      candidate: null,
-      skipped: false,
-      reason:
-        evidenceGeo.classification_kind === "non_cg"
-          ? "non_cg_story_text"
-          : "unproven_cg_geography",
-    };
-  }
-  if (evidenceGeo.confidence < 0.65) {
-    return {
-      candidate: null,
-      skipped: false,
-      reason: "low_confidence_geography",
-    };
+  // tagGeoFromContent only recognizes Chhattisgarh state/district content —
+  // it correctly returns is_chhattisgarh:false for genuine national/
+  // international stories, which is NOT a rejection reason for events that
+  // were never meant to be about Chhattisgarh in the first place. Only
+  // events sourced from CG-region feeds need to actually prove CG relevance
+  // here; india/global-sourced events are accepted on the event's own
+  // region classification (already assigned at clustering time).
+  if (event.region === "chhattisgarh") {
+    if (!evidenceGeo.is_chhattisgarh) {
+      return {
+        candidate: null,
+        skipped: false,
+        reason:
+          evidenceGeo.classification_kind === "non_cg"
+            ? "non_cg_story_text"
+            : "unproven_cg_geography",
+      };
+    }
+    if (evidenceGeo.confidence < 0.65) {
+      return {
+        candidate: null,
+        skipped: false,
+        reason: "low_confidence_geography",
+      };
+    }
   }
 
   const language = resolveLanguage(event, signals);
