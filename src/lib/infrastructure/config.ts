@@ -45,6 +45,15 @@ export const INFRA_CONFIG = {
   /** Minimum remaining budget (ms) before starting a worker */
   workerDeadlineReserveMs:
     Number(process.env.WORKER_DEADLINE_RESERVE_MS) || 3_000,
+  /**
+   * job_processor runs first each orchestrate cycle and, given enough
+   * backlog, will otherwise consume the entire shared budget (its internal
+   * loop only stops when the deadline is hit or its queues are empty) —
+   * leaving ai_enrich and the rest of the pipeline zero time on every single
+   * cycle. Reserve this much of the orchestrate budget for what runs after it.
+   */
+  jobProcessorReserveForRestMs:
+    Number(process.env.JOB_PROCESSOR_RESERVE_FOR_REST_MS) || 30_000,
   /** Skip editorial_images when remaining budget is below this threshold */
   editorialImagesDeadlineThresholdMs:
     Number(process.env.EDITORIAL_IMAGES_DEADLINE_THRESHOLD_MS) || 15_000,
