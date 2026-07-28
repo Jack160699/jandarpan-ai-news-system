@@ -15,7 +15,7 @@ import {
   mergeWorkerMetadata,
 } from "@/lib/infrastructure/workers/deadline-aware";
 import type { WorkerId, WorkerResult } from "@/lib/infrastructure/workers/types";
-import { createExecutionDeadline } from "@/lib/serverless/deadline";
+import { createExecutionDeadline, type ExecutionDeadline } from "@/lib/serverless/deadline";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
 import { countPendingEditorialImages } from "@/lib/news/ai/generate-editorial-image";
 import { estimateBudgetSurplus } from "@/lib/infrastructure/queue/tuning";
@@ -143,6 +143,47 @@ function buildSkippedResult(
   };
 }
 
+/**
+ * A view onto `parent` with its own, earlier stop point — used to reserve a
+ * slice of the shared orchestrate budget for whatever runs after `worker`.
+ * Timing out on the bounded view does NOT mark `parent` as timed out, so
+ * later workers still see accurate real remaining budget against the true
+ * orchestrate deadline.
+ */
+export function withReservedTail(
+  parent: ExecutionDeadline,
+  reserveMs: number
+): ExecutionDeadline {
+  const cappedStopAtMs = Math.max(0, parent.stopAtMs - reserveMs);
+  const local = { timedOutSafely: false };
+
+  return {
+    startedAt: parent.startedAt,
+    maxDurationMs: parent.maxDurationMs,
+    stopAtMs: cappedStopAtMs,
+    get timedOutSafely() {
+      return local.timedOutSafely || parent.timedOutSafely;
+    },
+    elapsedMs: () => parent.elapsedMs(),
+    remainingMs: () => Math.max(0, cappedStopAtMs - parent.elapsedMs()),
+    hasBudgetFor: (minMs: number) => {
+      if (local.timedOutSafely || parent.timedOutSafely) return false;
+      return cappedStopAtMs - parent.elapsedMs() >= minMs;
+    },
+    shouldStop: () => {
+      if (local.timedOutSafely || parent.timedOutSafely) return true;
+      if (parent.elapsedMs() >= cappedStopAtMs) {
+        local.timedOutSafely = true;
+        return true;
+      }
+      return false;
+    },
+    markTimedOut: () => {
+      local.timedOutSafely = true;
+    },
+  };
+}
+
 export async function runCronOrchestration(
   options: OrchestrateOptions
 ): Promise<OrchestrateResult> {
@@ -197,8 +238,13 @@ export async function runCronOrchestration(
       continue;
     }
 
+    const workerDeadline =
+      id === "job_processor"
+        ? withReservedTail(deadline, INFRA_CONFIG.jobProcessorReserveForRestMs)
+        : deadline;
+
     const result = await runQueueWorker(id, {
-      deadline,
+      deadline: workerDeadline,
       requestUrl: options.requestUrl,
       editorialGenerateTrigger:
         id === "editorial_generate" && options.explicitWorkers
