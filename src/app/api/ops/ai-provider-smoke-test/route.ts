@@ -213,6 +213,37 @@ export async function POST(request: Request) {
     );
   }
 
+  if (requested.has("groq_review_gpt_oss_direct")) {
+    // Isolates openai/gpt-oss-120b specifically (model override bypasses the
+    // in-provider fallback chain) at a realistic token budget — gpt-oss is a
+    // reasoning model whose "reasoning" preamble consumes completion tokens
+    // before the visible JSON content, so a too-tight maxTokens can truncate
+    // valid JSON mid-object. independent-review.ts (the real caller) sets no
+    // maxTokens override and inherits the 1400 default; groq_review below
+    // deliberately caps at 100 to stay cheap, which is NOT representative
+    // for this specific model.
+    const r = await requestChatCompletion({
+      operation: "editorial_review",
+      model: "openai/gpt-oss-120b",
+      system: "You are a terse test assistant. Reply with strict JSON only.",
+      user: 'Reply with exactly this JSON: {"passed": true, "issues": [], "sensitivity_flags": [], "confidence": 0.9}',
+      jsonMode: true,
+      maxTokens: 400,
+      context: { worker: "ai_provider_smoke_test" },
+    });
+    results.push(
+      r.ok
+        ? { case: "groq_review_gpt_oss_direct", ok: true, provider: r.provider, snippet: r.content.slice(0, 160) }
+        : {
+            case: "groq_review_gpt_oss_direct",
+            ok: false,
+            provider: r.provider,
+            errorCode: r.error.code,
+            errorMessage: r.error.message,
+          }
+    );
+  }
+
   if (requested.has("groq_review")) {
     const r = await requestChatCompletion({
       operation: "editorial_review",
