@@ -7,6 +7,7 @@ import { Masthead, ReaderShell } from "@/features/reader-ds/components";
 import { ReaderHomepage } from "@/features/reader-ds/homepage/ReaderHomepage";
 import { EmptyState } from "@/features/reader-ds/system";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchMonetizationPayload } from "@/lib/monetization/fetch-payload";
 import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
 import { getTenantConfig } from "@/lib/tenant/resolve";
@@ -51,10 +52,11 @@ async function HomeFeed() {
 /** Approved navy/red/gold reader design (flag-gated, preview only). */
 async function ReaderDesignFeed() {
   // Parallel independent fetches — do not serialize feed behind tenant/rates.
-  const [feed, tenant, verifiedRatesNavEnabled] = await Promise.all([
+  const [feed, tenant, verifiedRatesNavEnabled, readerLanguage] = await Promise.all([
     getCachedGeneratedHomepageFeed(),
     getTenantConfig(),
     isVerifiedRatesPublicNavEnabled(),
+    getServerReaderLanguage(),
   ]);
   const monetization = await fetchMonetizationPayload(tenant);
   const adsEnabled = monetization.settings.enabled && monetization.settings.adsEnabled;
@@ -76,7 +78,20 @@ async function ReaderDesignFeed() {
       ) : (
         <ReaderShell activeNav="home">
           <Masthead />
-          <EmptyState />
+          <EmptyState
+            title={
+              readerLanguage === "hi"
+                ? "अभी कोई ताज़ा खबर उपलब्ध नहीं है"
+                : "No fresh stories are available right now"
+            }
+            body={
+              readerLanguage === "hi"
+                ? "हम पुरानी खबर को ताज़ा बताकर नहीं दिखाते। नई सत्यापित खबर प्रकाशित होते ही यहाँ दिखाई देगी।"
+                : "We do not present old reports as current news. New verified stories will appear here as soon as they are published."
+            }
+            primaryLabel={readerLanguage === "hi" ? "जिले देखें" : "Browse districts"}
+            primaryHref="/district"
+          />
         </ReaderShell>
       )}
     </>
