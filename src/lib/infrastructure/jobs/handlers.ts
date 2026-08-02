@@ -16,6 +16,7 @@ import { createAdminServerClient } from "@/lib/supabase";
 import { asJson } from "@/types/json";
 import { clusterRecentSignals } from "@/lib/newsroom";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
+import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import { normalizeArticleLanguage } from "@/lib/i18n/languages";
@@ -477,8 +478,8 @@ const editorialGenerate: JobHandler = async (job) => {
     return { ok: true, result: { skipped: true, reason: "generation_disabled" } };
   }
 
-  if (!process.env.OPENAI_API_KEY?.trim()) {
-    return { ok: true, result: { skipped: true, reason: "no_openai" } };
+  if (!isAnyChatProviderConfigured()) {
+    return { ok: true, result: { skipped: true, reason: "no_ai_provider_configured" } };
   }
 
   const limit = Number(job.payload.limit ?? INFRA_CONFIG.editorialBatchLimit);
