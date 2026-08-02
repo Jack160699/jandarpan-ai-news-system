@@ -2,6 +2,7 @@
  * Resilient chat completions — OpenAI primary, OpenRouter secondary, retries on transient errors only.
  */
 
+import { after } from "next/server";
 import {
   classifyAiHttpFailure,
   classifyAiNetworkError,
@@ -20,10 +21,10 @@ import { isGeminiConfigured, requestGeminiChat } from "@/lib/ai/providers/gemini
 import { resolveChatChain } from "@/lib/ai/providers/router";
 import {
   buildUsageRecord,
-  logOpenAiUsage,
+  recordOpenAiUsage,
   parseChatCompletionUsage,
 } from "@/lib/observability/openai-cost";
-import { buildAiUsageRecord, logAiProviderUsage } from "@/lib/observability/ai-usage/record";
+import { buildAiUsageRecord, recordAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import {
   lookupPromptCache,
   storePromptCache,
@@ -224,27 +225,13 @@ async function postChat(
     const usage = parseChatCompletionUsage(json);
     if (config.id === "openai") {
       // Legacy table stays OpenAI-only for backward-compatible dashboard continuity.
-      logOpenAiUsage(
-        buildUsageRecord({
-          operation: request.operation,
-          endpoint: "chat.completions",
-          model: request.model ?? config.model,
-          inputTokens: usage.inputTokens,
-          outputTokens: usage.outputTokens,
-          cachedTokens: usage.cachedTokens,
-          latencyMs,
-          success: true,
-          system: request.system,
-          user: request.user,
-          completion: content,
-          context: request.context,
-          metadata: { provider: config.id },
-        })
-      );
-    }
-    logAiProviderUsage(
-      buildAiUsageRecord({
-        provider: config.id,
+      // after() (not a bare fire-and-forget call) so Vercel keeps this
+      // invocation alive until the write lands — confirmed live that a
+      // bare `void recordX(...)` can lose the race when the response is
+      // the last thing the handler does (no subsequent work to keep the
+      // function alive), silently dropping the usage/audit-trail row even
+      // though the actual provider call succeeded.
+      const openAiRecord = buildUsageRecord({
         operation: request.operation,
         endpoint: "chat.completions",
         model: request.model ?? config.model,
@@ -257,8 +244,26 @@ async function postChat(
         user: request.user,
         completion: content,
         context: request.context,
-      })
-    );
+        metadata: { provider: config.id },
+      });
+      after(() => recordOpenAiUsage(openAiRecord));
+    }
+    const usageRecord = buildAiUsageRecord({
+      provider: config.id,
+      operation: request.operation,
+      endpoint: "chat.completions",
+      model: request.model ?? config.model,
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      cachedTokens: usage.cachedTokens,
+      latencyMs,
+      success: true,
+      system: request.system,
+      user: request.user,
+      completion: content,
+      context: request.context,
+    });
+    after(() => recordAiProviderUsage(usageRecord));
 
     if (allowsPromptCache(request.cachePolicy)) {
       void storePromptCache({
@@ -418,26 +423,7 @@ async function requestFromProviderInner(
         ? (err as ClassifiedAiError).code
         : "unknown";
     if (config.id === "openai") {
-      logOpenAiUsage(
-        buildUsageRecord({
-          operation: request.operation,
-          endpoint: "chat.completions",
-          model: request.model ?? config.model,
-          inputTokens: 0,
-          outputTokens: 0,
-          latencyMs: Date.now() - started,
-          retryCount,
-          success: false,
-          system: request.system,
-          user: request.user,
-          context: request.context,
-          metadata: { provider: config.id, error: errorCode },
-        })
-      );
-    }
-    logAiProviderUsage(
-      buildAiUsageRecord({
-        provider: config.id,
+      const openAiRecord = buildUsageRecord({
         operation: request.operation,
         endpoint: "chat.completions",
         model: request.model ?? config.model,
@@ -449,9 +435,26 @@ async function requestFromProviderInner(
         system: request.system,
         user: request.user,
         context: request.context,
-        fallbackReason: errorCode,
-      })
-    );
+        metadata: { provider: config.id, error: errorCode },
+      });
+      after(() => recordOpenAiUsage(openAiRecord));
+    }
+    const usageRecord = buildAiUsageRecord({
+      provider: config.id,
+      operation: request.operation,
+      endpoint: "chat.completions",
+      model: request.model ?? config.model,
+      inputTokens: 0,
+      outputTokens: 0,
+      latencyMs: Date.now() - started,
+      retryCount,
+      success: false,
+      system: request.system,
+      user: request.user,
+      context: request.context,
+      fallbackReason: errorCode,
+    });
+    after(() => recordAiProviderUsage(usageRecord));
     const error =
       err && typeof err === "object" && "code" in err
         ? (err as ClassifiedAiError)
