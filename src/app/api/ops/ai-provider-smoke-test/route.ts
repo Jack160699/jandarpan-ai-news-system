@@ -1,5 +1,10 @@
 /**
- * POST /api/debug/ai-provider-smoke-test — minimal real-provider verification.
+ * POST /api/ops/ai-provider-smoke-test — minimal real-provider verification.
+ *
+ * Deliberately NOT under /api/debug/* — that whole path prefix is blocked
+ * at the edge on every deployed environment (confirmed: even pre-existing
+ * /api/debug/* routes 404 there on Preview, not just this one), independent
+ * of each route's own in-code production guard.
  *
  * Gated on VERCEL_ENV !== "production" specifically (not the repo's usual
  * isDevNewsroomDebugAllowed()/isProductionDeployment() guard, which checks
