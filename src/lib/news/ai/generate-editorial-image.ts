@@ -391,6 +391,8 @@ async function generateAiIllustration(input: {
 
   if ("error" in result) {
     await incrementImageMetrics({ providerError: true });
+    // Chain-wide failure carries no per-provider info — providerConfig.id is
+    // the chain's first candidate, used here as a best-effort attribution.
     await logGenerationAttempt({
       queueId: input.queueId,
       generatedArticleId: input.articleId ?? "unknown",
@@ -426,13 +428,13 @@ async function generateAiIllustration(input: {
   const buffer = await downloadImageBuffer(result.url);
   if (!buffer) {
     await incrementImageMetrics({ providerError: true });
-    const downloadError = "openai_image_download_failed";
+    const downloadError = "ai_image_download_failed";
     await logGenerationAttempt({
       queueId: input.queueId,
       generatedArticleId: input.articleId ?? "unknown",
       attemptNumber: input.attemptNumber,
-      provider: providerConfig.id,
-      model: providerConfig.model,
+      provider: result.provider,
+      model: result.model,
       prompt: input.prompt,
       status: "failed",
       latencyMs: Date.now() - started,
@@ -440,8 +442,8 @@ async function generateAiIllustration(input: {
     });
     return {
       buffer: null,
-      provider: providerConfig.id,
-      model: providerConfig.model,
+      provider: result.provider,
+      model: result.model,
       latencyMs: Date.now() - started,
       error: downloadError,
       httpStatus: 200,
@@ -449,7 +451,10 @@ async function generateAiIllustration(input: {
   }
 
   logImage("download_ok", { downloadMs: Date.now() - downloadStarted, bytes: buffer.length });
-  return { buffer, provider: providerConfig.id, model: providerConfig.model, latencyMs };
+  // Provenance reflects whichever provider in the chain actually served the
+  // image (may differ from providerConfig.id if an earlier candidate failed
+  // over — see requestImageGeneration()'s chain fallback in providers/images.ts).
+  return { buffer, provider: result.provider, model: result.model, latencyMs };
 }
 
 function buildFallbackResult(input: {

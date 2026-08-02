@@ -27,6 +27,11 @@ import { mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging"
 import { logNewsroom } from "@/lib/newsroom/logger";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import { recordDirectEmbedding } from "@/lib/observability/openai-cost";
+import {
+  isCloudflareEmbeddingsConfigured,
+  requestCloudflareEmbeddings,
+} from "@/lib/ai/providers/cloudflare-embeddings";
+import { isOpenAiProviderEnabled } from "@/lib/ai/providers/router";
 import { asJson, asJsonObject } from "@/types/json";
 import type { NewsEventInsert } from "@/lib/types/newsroom";
 import type { NewsSignalRow } from "@/lib/types/newsroom";
@@ -190,8 +195,29 @@ function buildClusteringMetadata(
 async function fetchEmbeddings(
   texts: string[]
 ): Promise<(number[] | null)[]> {
+  if (process.env.NEWSROOM_USE_EMBEDDINGS !== "true") {
+    return texts.map(() => null);
+  }
+
+  // Outer switch (NEWSROOM_USE_EMBEDDINGS) decides whether to attempt
+  // embeddings at all; provider selection below is a second, inner decision
+  // — Cloudflare first (free tier), OpenAI only as an explicitly-enabled
+  // fallback. Embeddings here are a best-effort clustering boost, so any
+  // failure just falls back to keyword/entity-only similarity.
+  if (isCloudflareEmbeddingsConfigured()) {
+    const result = await requestCloudflareEmbeddings({
+      operation: "cluster_embeddings",
+      texts,
+      context: { worker: "event_cluster" },
+    });
+    if ("vectors" in result && result.vectors.length === texts.length) {
+      return result.vectors;
+    }
+    return texts.map(() => null);
+  }
+
   const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (process.env.NEWSROOM_USE_EMBEDDINGS !== "true" || !apiKey) {
+  if (!isOpenAiProviderEnabled() || !apiKey) {
     return texts.map(() => null);
   }
 

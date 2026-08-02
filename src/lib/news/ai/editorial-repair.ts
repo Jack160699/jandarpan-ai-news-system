@@ -13,10 +13,9 @@ import {
 } from "@/lib/news/ai/editorial-body";
 import { scoreHeadlineQuality } from "@/lib/news/ai/editorial-intelligence";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
-import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
+import { isAnyChatProviderConfigured, requestChatCompletion } from "@/lib/ai/providers";
 import { repairMaxTokens } from "@/lib/observability/openai-cost/adaptive-tokens";
 
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const REPAIR_TIMEOUT_MS = 18_000;
 
 const CLICKBAIT_TRIM_RE =
@@ -196,8 +195,7 @@ export async function regenerateIntroSection(input: {
   factPackText: string;
   language: SupportedEditorialLanguage;
 }): Promise<EditorialDraft> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return normalizeEditorialFormatting(input.draft);
+  if (!isAnyChatProviderConfigured()) return normalizeEditorialFormatting(input.draft);
 
   const lang =
     input.language === "hi"
@@ -205,69 +203,28 @@ export async function regenerateIntroSection(input: {
       : "Write in English.";
 
   try {
-    const model =
-      process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
-      process.env.OPENAI_MODEL?.trim() ||
-      "gpt-4o-mini";
+    // Explicit override only — an unset value lets each provider in the
+    // free-first chain (see resolveChatChain("editorial_repair")) resolve
+    // its own default model instead of forcing an OpenAI model name onto it.
+    const modelOverride = process.env.NEWSROOM_EDITORIAL_MODEL?.trim();
     const systemContent = `${lang} Improve ONLY headline and lead paragraph. Use fact pack only. Lead must differ from summary. Return JSON: {"headline":"","summary":"","lead":""}`;
     const userContent = `Current headline: ${input.draft.headline}\nCurrent summary: ${input.draft.summary}\n\n${input.factPackText}`;
-    const started = Date.now();
 
-    const res = await fetch(OPENAI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.3,
-        max_tokens: repairMaxTokens(),
-        messages: [
-          {
-            role: "system",
-            content: systemContent,
-          },
-          {
-            role: "user",
-            content: userContent,
-          },
-        ],
-        response_format: { type: "json_object" },
-      }),
-      signal: AbortSignal.timeout(REPAIR_TIMEOUT_MS),
-    });
-
-    const latencyMs = Date.now() - started;
-
-    if (!res.ok) {
-      recordDirectChatCompletion({
-        operation: "editorial_repair",
-        model,
-        system: systemContent,
-        user: userContent,
-        latencyMs,
-        success: false,
-        context: { worker: "editorial_generate" },
-      });
-      return normalizeEditorialFormatting(input.draft);
-    }
-
-    const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = json.choices?.[0]?.message?.content;
-    recordDirectChatCompletion({
+    const result = await requestChatCompletion({
       operation: "editorial_repair",
-      model,
       system: systemContent,
       user: userContent,
-      json,
-      content: content ?? undefined,
-      latencyMs,
-      success: Boolean(content),
+      model: modelOverride,
+      temperature: 0.3,
+      maxTokens: repairMaxTokens(),
+      jsonMode: true,
+      timeoutMs: REPAIR_TIMEOUT_MS,
       context: { worker: "editorial_generate" },
     });
+
+    if (!result.ok) return normalizeEditorialFormatting(input.draft);
+
+    const content = result.content;
     if (!content) return normalizeEditorialFormatting(input.draft);
 
     const parsed = JSON.parse(content) as {

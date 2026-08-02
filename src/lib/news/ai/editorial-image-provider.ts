@@ -2,7 +2,13 @@
  * Image provider selection for editorial pipeline
  */
 
-export type ImageProviderId = "openai";
+import {
+  isCloudflareConfigured,
+  resolveCloudflareImageModel,
+} from "@/lib/ai/providers/cloudflare-images";
+import { isOpenAiProviderEnabled } from "@/lib/ai/providers/router";
+
+export type ImageProviderId = "openai" | "cloudflare";
 
 export type ImageProviderConfig = {
   id: ImageProviderId;
@@ -26,7 +32,7 @@ export type ProviderRecommendation = {
   expectedBenefits: string[];
 };
 
-export function selectImageProvider(): ImageProviderConfig {
+function selectOpenAiImageProvider(): ImageProviderConfig {
   const model =
     process.env.NEWSROOM_IMAGE_MODEL?.trim() ||
     process.env.OPENAI_IMAGE_MODEL?.trim() ||
@@ -47,6 +53,29 @@ export function selectImageProvider(): ImageProviderConfig {
     estimatedLatencyMs: 18_000,
     ...extra,
   };
+}
+
+/**
+ * Cloudflare Workers AI first (free tier), OpenAI DALL-E only when
+ * AI_PROVIDER_OPENAI_ENABLED=true and configured. Callers gate on
+ * isImageProviderAvailable() before invoking this, so the OpenAI fallback
+ * below is only ever reached when at least one provider is usable —
+ * generateAiIllustration()'s existing non-AI fallback tiers (source/curated/
+ * text-only) take over gracefully if requestImageGeneration() still fails.
+ */
+export function selectImageProvider(): ImageProviderConfig {
+  if (isCloudflareConfigured()) {
+    return {
+      id: "cloudflare",
+      model: resolveCloudflareImageModel(),
+      size: "1024x1024",
+      timeoutMs: Number(process.env.EDITORIAL_IMAGE_TIMEOUT_MS ?? 45_000),
+      estimatedCostUsd: 0,
+      estimatedLatencyMs: 12_000,
+    };
+  }
+
+  return selectOpenAiImageProvider();
 }
 
 /**
@@ -74,8 +103,9 @@ export function getProviderRecommendation(): ProviderRecommendation {
 }
 
 export function isImageProviderAvailable(): boolean {
-  return (
-    process.env.NEWSROOM_EDITORIAL_IMAGES === "true" &&
-    Boolean(process.env.OPENAI_API_KEY?.trim())
-  );
+  const anyProviderConfigured =
+    isCloudflareConfigured() ||
+    (isOpenAiProviderEnabled() && Boolean(process.env.OPENAI_API_KEY?.trim()));
+
+  return process.env.NEWSROOM_EDITORIAL_IMAGES === "true" && anyProviderConfigured;
 }

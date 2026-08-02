@@ -181,7 +181,14 @@ export function recordProviderFallback(
 }
 
 export function getAiProviderHealthSnapshots(): AiProviderHealthSnapshot[] {
-  const providers: AiProviderId[] = ["openai", "openrouter", "local"];
+  const providers: AiProviderId[] = [
+    "gemini",
+    "groq",
+    "cloudflare",
+    "openai",
+    "openrouter",
+    "local",
+  ];
   return providers.map((provider) => {
     const s = getState(provider);
     const now = Date.now();

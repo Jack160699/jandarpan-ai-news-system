@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
 import { acknowledgeIncident } from "@/lib/admin-v3/incident-feed";
+import { acknowledgeNewsroomAuditNotification } from "@/lib/newsroom-audit/notifications-feed";
 import { logAdminAccessDenied } from "@/lib/security/admin-access-log";
 
 export const runtime = "nodejs";
@@ -41,6 +42,14 @@ export async function POST(request: Request) {
       });
       return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
     }
+    // Newsroom audit notifications are persisted rows, not in-memory ops
+    // incidents — acknowledgeIncident() wouldn't know about this id.
+    if (body.id.startsWith("audit-")) {
+      const notificationId = body.id.slice("audit-".length);
+      const ok = await acknowledgeNewsroomAuditNotification(notificationId, guard.session.userId);
+      return NextResponse.json({ ok, action: "acknowledge", id: body.id });
+    }
+
     // No destructive retry/purge here — acknowledge only.
     const ok = acknowledgeIncident(body.id);
     return NextResponse.json({ ok, action: "acknowledge", id: body.id });

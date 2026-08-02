@@ -7,7 +7,14 @@ import {
   getCategoryEditorialHint,
   resolveDeskTemplateFromCategory,
 } from "@/lib/ai/prompts";
-import { requestChatCompletion } from "@/lib/ai/providers";
+import { isAnyChatProviderConfigured, requestChatCompletion } from "@/lib/ai/providers";
+import type { AiProviderId } from "@/lib/ai/providers/types";
+import { runIndependentReview } from "@/lib/news/ai/independent-review";
+import {
+  buildFactPack as buildStructuredFactPack,
+  persistFactPack,
+  type FactPack,
+} from "@/lib/news/ai/fact-pack";
 import { createAdminServerClient } from "@/lib/supabase";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
@@ -73,7 +80,9 @@ import {
   fingerprintBody,
   shouldQuarantineGenerationFailure,
   shouldRetryGenerationFailure,
+  validateClaimsAgainstFactPack,
   validateGeneratedArticle,
+  type GenerationValidationIssue,
 } from "@/lib/news/ai/generated-article-validation";
 import {
   createGenerationQualityMetrics,
@@ -104,6 +113,7 @@ import type {
   BatchEditorialResult,
   EditorialDraft,
   EditorialGenerationResult,
+  IndependentReviewResult,
   SupportedEditorialLanguage,
 } from "@/lib/news/ai/editorial-types";
 import { logNewsroom } from "@/lib/newsroom/logger";
@@ -170,6 +180,9 @@ type PendingCandidate = {
     evidenceSummary: Record<string, number>;
     unsupportedNumbers: ReturnType<typeof scanUnsupportedNumbers>;
   };
+  independentReview?: IndependentReviewResult;
+  /** Hard-blocking issues from validateClaimsAgainstFactPack, if any (see prepareCandidate). */
+  factPackValidationIssues?: GenerationValidationIssue[];
 };
 
 function logEditorial(message: string, context?: Record<string, unknown>): void {
@@ -209,7 +222,7 @@ function qualityResultFields(quality: EditorialQualityReport) {
 function isEditorialEnabled(): boolean {
   return (
     process.env.NEWSROOM_GENERATE_ARTICLES === "true" &&
-    Boolean(process.env.OPENAI_API_KEY?.trim())
+    isAnyChatProviderConfigured()
   );
 }
 
@@ -338,8 +351,9 @@ async function callEditorialLlm(
     previousWords: number;
     minWords: number;
     targetWords: number;
-  }
-): Promise<LlmEditorialResponse | null> {
+  },
+  structuredFactPack?: FactPack | null
+): Promise<{ response: LlmEditorialResponse; provider: AiProviderId } | null> {
   const deskTemplate = resolveDeskTemplateFromCategory(event.category, {
     region: event.region,
     urgencyScore: event.urgency_score,
@@ -369,10 +383,18 @@ async function callEditorialLlm(
   });
   const maxTokens = editorialMaxTokens(tier, articleType);
 
+  // Structured fact pack is appended as a JSON block on top of the existing
+  // human-readable factPackText — factPackText itself stays unchanged since
+  // it also doubles as the ground-truth text for source-overlap/originality
+  // scoring in evaluateDraft() below, which must not see the extra JSON.
+  const user = structuredFactPack
+    ? `${factPackText}\n\n--- Structured fact pack (verified ground truth — JSON; do not exceed these facts) ---\n${JSON.stringify(structuredFactPack)}`
+    : factPackText;
+
   const result = await requestChatCompletion({
     operation: "editorial_generate",
     system,
-    user: factPackText,
+    user,
     model,
     temperature: 0.35,
     maxTokens,
@@ -385,7 +407,10 @@ async function callEditorialLlm(
   if (!result.ok) return null;
 
   try {
-    return JSON.parse(result.content) as LlmEditorialResponse;
+    return {
+      response: JSON.parse(result.content) as LlmEditorialResponse,
+      provider: result.provider,
+    };
   } catch {
     return null;
   }
@@ -752,6 +777,7 @@ async function persistGeneratedArticle(input: {
     unsupportedNumbers: ReturnType<typeof scanUnsupportedNumbers>;
   };
   freshness?: EditorialFreshnessDecision;
+  independentReview?: IndependentReviewResult;
 }): Promise<EditorialGenerationResult> {
   const supabase = createAdminServerClient();
   const slug = optimizeSeoSlug(input.draft.headline, input.event.id);
@@ -1069,6 +1095,27 @@ async function persistGeneratedArticle(input: {
             evidence_ledger_summary: input.humanQualityMeta.evidenceSummary,
           }
         : {}),
+      ...(input.independentReview
+        ? {
+            independent_review: {
+              passed: input.independentReview.passed,
+              issues:
+                (input.independentReview.verdict as { issues?: string[] } | undefined)
+                  ?.issues ?? [],
+              sensitivity_flags:
+                (
+                  input.independentReview.verdict as
+                    | { sensitivity_flags?: string[] }
+                    | undefined
+                )?.sensitivity_flags ?? [],
+              confidence:
+                (input.independentReview.verdict as { confidence?: number } | undefined)
+                  ?.confidence ?? null,
+              provider: input.independentReview.provider,
+              error: input.independentReview.error,
+            },
+          }
+        : {}),
       image: imageMeta,
     },
   };
@@ -1146,6 +1193,7 @@ async function persistGeneratedArticle(input: {
     skipped: false,
     repaired: input.repaired,
     usedFallback: input.usedFallback,
+    independentReview: input.independentReview,
   };
 }
 
@@ -1258,11 +1306,22 @@ async function prepareCandidate(
     articleTypeClassification.type
   ));
 
+  // Structured fact pack — consolidated entities/dates/numbers/quotes used
+  // both as writer context (injected into the LLM call below) and as ground
+  // truth for the claim-against-fact-pack safety net further down. Persisted
+  // best-effort; a persistence failure must never block article generation.
+  const structuredFactPack = buildStructuredFactPack({ event, signals });
+  await persistFactPack(event.id, structuredFactPack);
+
   let draft: EditorialDraft | null = null;
   let usedFallback = false;
   let intelligenceV2: EditorialIntelligenceV2 | null = null;
   const generatedAt = new Date().toISOString();
   let depthRetries = 0;
+  // Provider that produced the current draft — threaded into the independent
+  // review so it can be recorded; "local" marks the deterministic fallback
+  // draft (buildFallbackDraftFromFactPack), which never called an LLM.
+  let writerProvider: AiProviderId | null = null;
 
   async function generateOnce(depthCorrection?: {
     attempt: number;
@@ -1270,22 +1329,24 @@ async function prepareCandidate(
     minWords: number;
     targetWords: number;
   }): Promise<EditorialDraft | null> {
-    const llmRaw = await callEditorialLlm(
+    const llmResult = await callEditorialLlm(
       factPackText,
       language,
       event,
       signals.length,
       articleTypeClassification.type,
       articleTypeClassification.evidenceSufficient,
-      depthCorrection
+      depthCorrection,
+      structuredFactPack
     );
-    if (!llmRaw) return null;
-    const parsed = parseLlmDraft(llmRaw, language);
+    if (!llmResult) return null;
+    const parsed = parseLlmDraft(llmResult.response, language);
     if (parsed) {
-      intelligenceV2 = parseEditorialIntelligenceV2(llmRaw, {
-        tags: parsed.tags ?? (llmRaw.tags ?? []).map((t) => String(t)),
+      intelligenceV2 = parseEditorialIntelligenceV2(llmResult.response, {
+        tags: parsed.tags ?? (llmResult.response.tags ?? []).map((t) => String(t)),
         generatedAt,
       });
+      writerProvider = llmResult.provider;
     }
     return parsed;
   }
@@ -1484,6 +1545,74 @@ async function prepareCandidate(
     });
   }
 
+  // Claim-against-fact-pack hard gate — cheap (regex, no LLM call), so it
+  // runs before spending an independent-review call on a draft that would
+  // be rejected anyway. Folded into `quality` the same way
+  // applyHumanQualityAndEvidenceGate folds in held_for_* reasons, so both
+  // the single-event and batch callers reject/hold it through their
+  // existing, unmodified rejection paths.
+  let factPackValidationIssues: GenerationValidationIssue[] | undefined;
+  if (quality.publish_allowed) {
+    const claimIssues = validateClaimsAgainstFactPack({
+      headline: draft.headline,
+      summary: draft.summary,
+      articleBody: draft.article_body,
+      factPack: structuredFactPack,
+    });
+    if (claimIssues.length) {
+      factPackValidationIssues = claimIssues;
+      quality = {
+        ...quality,
+        passed: false,
+        publish_allowed: false,
+        publishDecision: "reject",
+        rejectionReasons: [
+          ...quality.rejectionReasons,
+          ...claimIssues.map((i) => `fact_pack_validation:${i.code}`),
+          "held_for_fact_pack_validation",
+        ],
+      };
+      logEditorial("fact_pack_validation_failed", {
+        eventId: event.id,
+        codes: claimIssues.map((i) => i.code),
+      });
+    }
+  }
+
+  // Independent-reviewer hard gate — only worth spending a call on a draft
+  // that has already cleared every other quality/safety check. A failure
+  // here is folded into `quality` the same way applyHumanQualityAndEvidenceGate
+  // folds in held_for_* reasons, so both the single-event and batch callers
+  // reject/hold it through their existing, unmodified rejection paths.
+  let independentReview: IndependentReviewResult | undefined;
+  if (quality.publish_allowed) {
+    independentReview = await runIndependentReview({
+      draft,
+      writerProvider: writerProvider ?? "local",
+      factPack: structuredFactPack,
+      context: { worker: "editorial_generate", eventId: event.id },
+    });
+    if (!independentReview.passed) {
+      quality = {
+        ...quality,
+        passed: false,
+        publish_allowed: false,
+        publishDecision: "reject",
+        rejectionReasons: [
+          ...quality.rejectionReasons,
+          `independent_review_failed${independentReview.error ? `:${independentReview.error}` : ""}`,
+          "held_for_independent_review",
+        ],
+      };
+      logEditorial("independent_review_failed", {
+        eventId: event.id,
+        provider: independentReview.provider,
+        error: independentReview.error,
+        issues: (independentReview.verdict as { issues?: unknown }).issues,
+      });
+    }
+  }
+
   return {
     candidate: {
       event,
@@ -1498,6 +1627,8 @@ async function prepareCandidate(
       articleTypeClassification,
       depthRetries,
       freshness,
+      independentReview,
+      factPackValidationIssues,
       humanQualityMeta: {
         score: hqGate.humanScore.score,
         decision: quality.publishDecision,
@@ -1534,7 +1665,7 @@ export async function previewEditorialDraftFromEvent(
   let usedFallback = false;
 
   try {
-    const llmRaw = await callEditorialLlm(
+    const llmResult = await callEditorialLlm(
       factPackText,
       language,
       event,
@@ -1542,7 +1673,7 @@ export async function previewEditorialDraftFromEvent(
       classification.type,
       classification.evidenceSufficient
     );
-    draft = llmRaw ? parseLlmDraft(llmRaw, language) : null;
+    draft = llmResult ? parseLlmDraft(llmResult.response, language) : null;
   } catch {
     draft = null;
   }
@@ -1627,6 +1758,43 @@ export async function generateEditorialFromEvent(
     });
   }
 
+  // Independent review is a hard safety gate — forcePublish (human override
+  // of the quality-score thresholds above) must not be able to bypass it.
+  if (candidate.independentReview && !candidate.independentReview.passed) {
+    quality = {
+      ...quality,
+      passed: false,
+      publish_allowed: false,
+      publishDecision: "reject",
+      rejectionReasons: quality.rejectionReasons.includes("held_for_independent_review")
+        ? quality.rejectionReasons
+        : [
+            ...quality.rejectionReasons,
+            `independent_review_failed${candidate.independentReview.error ? `:${candidate.independentReview.error}` : ""}`,
+            "held_for_independent_review",
+          ],
+    };
+  }
+
+  // Same bypass-proofing for the claim-against-fact-pack hard gate —
+  // forcePublish must not be able to resurrect a draft with fabricated
+  // names/dates/numbers/quotes or insufficient sensitive-story sourcing.
+  if (candidate.factPackValidationIssues?.length) {
+    quality = {
+      ...quality,
+      passed: false,
+      publish_allowed: false,
+      publishDecision: "reject",
+      rejectionReasons: quality.rejectionReasons.includes("held_for_fact_pack_validation")
+        ? quality.rejectionReasons
+        : [
+            ...quality.rejectionReasons,
+            ...candidate.factPackValidationIssues.map((i) => `fact_pack_validation:${i.code}`),
+            "held_for_fact_pack_validation",
+          ],
+    };
+  }
+
   logEditorial("quality_report", {
     eventId: event.id,
     passed: quality.publish_allowed,
@@ -1675,6 +1843,7 @@ export async function generateEditorialFromEvent(
       skipped: false,
       repaired: candidate.repaired,
       usedFallback: candidate.usedFallback,
+      independentReview: candidate.independentReview,
       reason: quality.hard_reject
         ? quality.hard_reject_reasons.join(",")
         : "quality_checks_failed",
@@ -1695,6 +1864,7 @@ export async function generateEditorialFromEvent(
     depthRetries: candidate.depthRetries,
     humanQualityMeta: candidate.humanQualityMeta,
     freshness: candidate.freshness,
+    independentReview: candidate.independentReview,
   });
   if (persisted.ok && persisted.article) {
     logArticleGenerationPhase("article_generation_completed", {
@@ -1938,6 +2108,7 @@ export async function generateEditorialsFromEvents(options?: {
         depthRetries: candidate.depthRetries,
         humanQualityMeta: candidate.humanQualityMeta,
         freshness: candidate.freshness,
+        independentReview: candidate.independentReview,
       });
 
       results.push({
@@ -2077,6 +2248,11 @@ export async function generateEditorialsFromEvents(options?: {
 
   if (generated === 0 && failedCandidates.length > 0) {
     const rescuable = failedCandidates
+      // A failed independent review or fact-pack claim check is a hard
+      // block — batch rescue must not bypass either just because the
+      // underlying quality score looks fine.
+      .filter((c) => !c.independentReview || c.independentReview.passed)
+      .filter((c) => !c.factPackValidationIssues?.length)
       .filter((c) => isSafeBatchRescueCandidate(c.quality))
       .sort((a, b) => b.quality.ai_confidence - a.quality.ai_confidence)
       .slice(0, BATCH_RESCUE_COUNT);
@@ -2115,6 +2291,7 @@ export async function generateEditorialsFromEvents(options?: {
         depthRetries: candidate.depthRetries,
         humanQualityMeta: candidate.humanQualityMeta,
         freshness: candidate.freshness,
+        independentReview: candidate.independentReview,
       });
 
       if (saved.ok && saved.article) {

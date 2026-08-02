@@ -1,4 +1,10 @@
-export type AiProviderId = "openai" | "openrouter" | "local";
+export type AiProviderId =
+  | "openai"
+  | "openrouter"
+  | "gemini"
+  | "groq"
+  | "cloudflare"
+  | "local";
 export type OpenAiProviderStatus =
   | "healthy"
   | "degraded"

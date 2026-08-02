@@ -1,5 +1,9 @@
 /**
- * OpenAI image generation with auth-failure cooldown (no retries on 401/403).
+ * Image generation — free-first provider chain (see router.ts's IMAGE_CHAIN):
+ * Cloudflare Workers AI is tried first, OpenAI DALL-E only when
+ * AI_PROVIDER_OPENAI_ENABLED=true. The OpenAI request/response handling below
+ * (auth-failure cooldown, no retries on 401/403) is unchanged from the
+ * OpenAI-only implementation this replaces.
  */
 
 import {
@@ -9,10 +13,17 @@ import {
 import {
   isProviderHealthy,
   markProviderUnhealthy,
+  recordProviderFallback,
   recordProviderRequestCompleted,
   recordProviderRequestStarted,
 } from "@/lib/ai/providers/health";
-import type { ClassifiedAiError } from "@/lib/ai/providers/types";
+import { resolveImageChain } from "@/lib/ai/providers/router";
+import {
+  isCloudflareConfigured,
+  requestCloudflareImageGeneration,
+  resolveCloudflareImageModel,
+} from "@/lib/ai/providers/cloudflare-images";
+import type { AiProviderId, ClassifiedAiError } from "@/lib/ai/providers/types";
 import {
   buildUsageRecord,
   logOpenAiUsage,
@@ -21,7 +32,11 @@ import type { OpenAiCallContext } from "@/lib/observability/openai-cost";
 
 const OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations";
 
-export async function requestImageGeneration(input: {
+export type ImageGenerationResult =
+  | { url: string; provider: AiProviderId; model: string }
+  | { error: ClassifiedAiError };
+
+export type ImageGenerationInput = {
   operation: string;
   prompt: string;
   model?: string;
@@ -29,7 +44,11 @@ export async function requestImageGeneration(input: {
   timeoutMs?: number;
   extraBody?: Record<string, unknown>;
   context?: OpenAiCallContext;
-}): Promise<{ url: string } | { error: ClassifiedAiError }> {
+};
+
+async function requestOpenAiImageGeneration(
+  input: ImageGenerationInput
+): Promise<ImageGenerationResult> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
     return {
@@ -159,7 +178,7 @@ export async function requestImageGeneration(input: {
       })
     );
 
-    return { url };
+    return { url, provider: "openai", model };
   } catch (err) {
     const classified = classifyAiNetworkError(err);
     logOpenAiUsage(
@@ -180,4 +199,79 @@ export async function requestImageGeneration(input: {
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function requestCloudflareImage(
+  input: ImageGenerationInput
+): Promise<ImageGenerationResult> {
+  const result = await requestCloudflareImageGeneration({
+    operation: input.operation,
+    prompt: input.prompt,
+    timeoutMs: input.timeoutMs,
+    context: input.context,
+  });
+  if ("error" in result) return result;
+  return { url: result.url, provider: "cloudflare", model: resolveCloudflareImageModel() };
+}
+
+/**
+ * Free-first image generation. Provider order comes from router.ts's
+ * IMAGE_CHAIN (Cloudflare Workers AI first; OpenAI only appears when
+ * AI_PROVIDER_OPENAI_ENABLED=true). Returns first success or the last
+ * failure across the chain, including which provider/model actually served
+ * the image so callers can keep provenance accurate.
+ */
+export async function requestImageGeneration(
+  input: ImageGenerationInput
+): Promise<ImageGenerationResult> {
+  const chain = resolveImageChain();
+
+  const attempts: Array<{ id: AiProviderId; invoke: () => Promise<ImageGenerationResult> }> = [];
+  for (const providerId of chain) {
+    if (providerId === "cloudflare") {
+      if (isCloudflareConfigured()) attempts.push({ id: "cloudflare", invoke: () => requestCloudflareImage(input) });
+    } else if (providerId === "openai") {
+      if (process.env.OPENAI_API_KEY?.trim()) attempts.push({ id: "openai", invoke: () => requestOpenAiImageGeneration(input) });
+    }
+  }
+
+  if (!attempts.length) {
+    return {
+      error: {
+        code: "ai_unavailable",
+        message: "No image provider configured",
+        retryable: false,
+        authFailure: false,
+        invalidRequest: false,
+        rateLimited: false,
+      },
+    };
+  }
+
+  let lastFailure: ImageGenerationResult | null = null;
+
+  for (let i = 0; i < attempts.length; i++) {
+    const attempt = attempts[i]!;
+    const result = await attempt.invoke();
+    if (!("error" in result)) return result;
+
+    lastFailure = result;
+    const next = attempts[i + 1];
+    if (next) {
+      recordProviderFallback(attempt.id, next.id, result.error.code);
+    }
+  }
+
+  return (
+    lastFailure ?? {
+      error: {
+        code: "ai_unavailable",
+        message: "No image provider configured",
+        retryable: false,
+        authFailure: false,
+        invalidRequest: false,
+        rateLimited: false,
+      },
+    }
+  );
 }
