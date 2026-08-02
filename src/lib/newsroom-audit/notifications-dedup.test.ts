@@ -101,6 +101,12 @@ function createGenerateSupabaseMock() {
     }
 
     api.single = () => run();
+    api.maybeSingle = async () => {
+      const res = await run();
+      const rows = (res.data ?? []) as Row[] | Row | null;
+      if (Array.isArray(rows)) return { data: rows[0] ?? null, error: res.error };
+      return { data: rows, error: res.error };
+    };
     api.then = (resolve: (v: unknown) => void, reject?: (e: unknown) => void) =>
       run().then(resolve, reject);
     return api;

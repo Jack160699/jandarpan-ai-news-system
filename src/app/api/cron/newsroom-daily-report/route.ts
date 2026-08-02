@@ -30,6 +30,7 @@ import {
 import {
   generateDailyReport,
   isValidReportDateParam,
+  notifyReportGenerationFailure,
   yesterdayIstDay,
 } from "@/lib/newsroom-audit/generate";
 
@@ -58,6 +59,7 @@ async function handleNewsroomDailyReport(request: Request) {
   const result = await generateDailyReport(reportDate);
 
   if (!result.ok) {
+    await notifyReportGenerationFailure(reportDate, result.error);
     await finalizeCronRun({
       job: "newsroom-daily-report",
       startedAt,

@@ -190,8 +190,22 @@ export type GenerateDailyReportResult =
       aiStatus: AiAnalysisResult["ai_status"];
       notificationsCreated: number;
       actionsRecommended: number;
+      /** true when an existing final report was returned as-is (force !== true) instead of re-running the pipeline. */
+      skipped?: boolean;
     }
   | { ok: false; reportDate: string; error: string };
+
+export type GenerateDailyReportOptions = {
+  /**
+   * When false (default), a report_date that already has status:"final"
+   * short-circuits without re-running collect/analyze — avoids burning
+   * scarce free-tier AI quota when the cron, the catch-up trigger, and a
+   * manual click all land on the same already-complete day. The manual
+   * "Regenerate" admin action passes force:true so operators can always
+   * force a fresh run on demand.
+   */
+  force?: boolean;
+};
 
 /**
  * Build the Daily Newsroom Audit Report for one IST calendar day:
@@ -199,7 +213,10 @@ export type GenerateDailyReportResult =
  * persisted rows (daily_newsroom_reports/_metrics/_findings/_actions) ->
  * deduped operator notifications -> optional gated automation.
  */
-export async function generateDailyReport(reportDate: string): Promise<GenerateDailyReportResult> {
+export async function generateDailyReport(
+  reportDate: string,
+  options?: GenerateDailyReportOptions
+): Promise<GenerateDailyReportResult> {
   if (!isSupabaseConfigured()) {
     return { ok: false, reportDate, error: "supabase_not_configured" };
   }
@@ -207,6 +224,28 @@ export async function generateDailyReport(reportDate: string): Promise<GenerateD
   const supabase = createAdminServerClient();
 
   try {
+    if (!options?.force) {
+      const { data: existing } = await supabase
+        .from("daily_newsroom_reports" as never)
+        .select("id,status,ai_status")
+        .eq("report_date", reportDate)
+        .maybeSingle();
+      const existingRow = existing as { id: string; status: string; ai_status: AiAnalysisResult["ai_status"] } | null;
+      if (existingRow?.status === "final") {
+        return {
+          ok: true,
+          reportId: existingRow.id,
+          reportDate,
+          metrics: 0,
+          deterministicFindings: 0,
+          aiStatus: existingRow.ai_status,
+          notificationsCreated: 0,
+          actionsRecommended: 0,
+          skipped: true,
+        };
+      }
+    }
+
     const deterministic = await collectDailyMetrics(reportDate);
 
     const { data: upserted, error: upsertErr } = await supabase
@@ -416,5 +455,103 @@ export async function generateDailyReport(reportDate: string): Promise<GenerateD
   } catch (err) {
     const message = err instanceof Error ? err.message : "newsroom_daily_report_failed";
     return { ok: false, reportDate, error: message };
+  }
+}
+
+export type ReportGenerationClaim = "claimed" | "already_final" | "already_in_progress" | "error";
+
+/** A draft/pending claim older than this is presumed abandoned (crashed function, killed invocation) and may be reclaimed. */
+const STALE_CLAIM_MS = 5 * 60 * 1000;
+
+/**
+ * Best-effort, mostly-atomic "only one caller starts generation" gate for
+ * the dashboard catch-up trigger (see /api/admin/reports/daily's GET
+ * handler). The plain (non-upsert) INSERT is the atomic part: report_date is
+ * unique, so when two requests race, the database itself arbitrates which
+ * INSERT succeeds — the loser falls through to the existing-row branch below
+ * and does not trigger a second generation run. Reclaiming a stale draft
+ * (crash recovery) has a small non-atomic race window, which is acceptable
+ * here: generateDailyReport's own persistence is idempotent, so the worst
+ * case of a lost race is one redundant AI analysis call, not corrupted data.
+ */
+export async function claimReportGenerationIfMissing(reportDate: string): Promise<ReportGenerationClaim> {
+  if (!isSupabaseConfigured()) return "error";
+  const supabase = createAdminServerClient();
+
+  // Cheap pre-check: the steady-state case (today's report already final)
+  // happens on nearly every dashboard load, so avoid an insert-that-always-
+  // conflicts round trip for it. Doesn't need to be atomic — the actual
+  // claim below still is.
+  const { data: precheck } = await supabase
+    .from("daily_newsroom_reports" as never)
+    .select("status,generated_at")
+    .eq("report_date", reportDate)
+    .maybeSingle();
+  if (precheck && (precheck as { status: string }).status === "final") return "already_final";
+
+  const { error: insertError } = await supabase.from("daily_newsroom_reports" as never).insert({
+    report_date: reportDate,
+    status: "draft",
+    ai_status: "pending",
+    generated_at: new Date().toISOString(),
+    deterministic_metrics: {},
+  } as never);
+  if (!insertError) return "claimed";
+
+  const { data: existing, error: selectError } = await supabase
+    .from("daily_newsroom_reports" as never)
+    .select("status,generated_at")
+    .eq("report_date", reportDate)
+    .maybeSingle();
+  if (selectError || !existing) return "error";
+
+  const row = existing as { status: string; generated_at: string };
+  if (row.status === "final") return "already_final";
+
+  const ageMs = Date.now() - new Date(row.generated_at).getTime();
+  if (ageMs < STALE_CLAIM_MS) return "already_in_progress";
+
+  const { error: reclaimError } = await supabase
+    .from("daily_newsroom_reports" as never)
+    .update({ generated_at: new Date().toISOString() } as never)
+    .eq("report_date", reportDate)
+    .eq("status", "draft");
+  return reclaimError ? "error" : "claimed";
+}
+
+/**
+ * Records a critical, deduped admin notification when scheduled/automatic
+ * report generation fails (cron or dashboard catch-up). Reuses the same
+ * incident_key + "one open row per key" pattern as the in-pipeline finding
+ * notifications, so a repeatedly-failing day doesn't spam duplicate rows —
+ * the existing open notification just stays open until someone resolves it.
+ * Best-effort: never throws, so a failure here can't mask the original
+ * generation failure it's trying to report.
+ */
+export async function notifyReportGenerationFailure(reportDate: string, reason: string): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const supabase = createAdminServerClient();
+    const incidentKey = `${reportDate}:report_generation:failed`;
+    const { data: existing } = await supabase
+      .from("daily_newsroom_notifications" as never)
+      .select("id")
+      .eq("incident_key", incidentKey)
+      .is("resolved_at", null)
+      .limit(1);
+    if (existing && existing.length) return;
+
+    await supabase.from("daily_newsroom_notifications" as never).insert({
+      incident_key: incidentKey,
+      title: `Daily newsroom report generation failed for ${reportDate}`,
+      message: reason,
+      severity: "critical",
+      category: "report_generation",
+    } as never);
+  } catch (err) {
+    pipelineWarn("[newsroom_audit_failure_notification_error]", {
+      reportDate,
+      reason: err instanceof Error ? err.message : String(err),
+    });
   }
 }

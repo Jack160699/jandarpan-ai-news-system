@@ -5,12 +5,31 @@
  * for the history list, and a server-computed today/yesterday/7-day-average
  * comparison (deltas are computed here, server-side, not client-side — see
  * computeComparison below).
+ *
+ * Catch-up: when viewing the default ("latest") view — no explicit ?date=
+ * — and the most-recently-completed IST day (yesterdayIstDay()) has no
+ * final report yet, this claims a generation slot
+ * (claimReportGenerationIfMissing) and, if it wins the claim, schedules
+ * generateDailyReport() via next/server's after() so it runs once the
+ * response has been sent — the normal 02:00 IST cron can still be late,
+ * fail, or never fire (e.g. before this PR's first Production deploy) and
+ * an admin opening the dashboard still gets a report without clicking
+ * anything. `catchUp` in the response tells the client whether to show an
+ * in-progress state and keep polling.
  */
 
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { requireDashboardSession } from "@/lib/saas-auth/guard";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
+import { pipelineWarn } from "@/lib/observability/production-log";
+import {
+  claimReportGenerationIfMissing,
+  generateDailyReport,
+  notifyReportGenerationFailure,
+  yesterdayIstDay,
+  type ReportGenerationClaim,
+} from "@/lib/newsroom-audit/generate";
 import {
   fetchReportBundle,
   fetchRecentReports,
@@ -18,6 +37,25 @@ import {
   isValidDateParam,
   type HistoryRow,
 } from "./_shared";
+
+async function runCatchUpGeneration(reportDate: string): Promise<void> {
+  try {
+    const result = await generateDailyReport(reportDate);
+    if (!result.ok) {
+      await notifyReportGenerationFailure(reportDate, result.error);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "newsroom_daily_report_catchup_failed";
+    pipelineWarn("[newsroom_audit_catchup_error]", { reportDate, reason: message });
+    await notifyReportGenerationFailure(reportDate, message);
+  }
+}
+
+function catchUpStatusFromClaim(claim: ReportGenerationClaim): "triggered" | "in_progress" | "none" {
+  if (claim === "claimed") return "triggered";
+  if (claim === "already_in_progress") return "in_progress";
+  return "none"; // already_final | error — nothing for the client to wait on
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,9 +107,21 @@ export async function GET(request: Request) {
     const history = await fetchRecentReports(supabase, 8);
     const reportDate = isValidDateParam(dateParam) ? dateParam : await resolveLatestReportDate(supabase);
 
+    // Catch-up only applies to the default ("latest") view — navigating to
+    // an explicit historical ?date= should never trigger generation.
+    let catchUp: { status: "triggered" | "in_progress" | "none"; reportDate: string } | null = null;
+    if (!dateParam) {
+      const expectedReportDate = yesterdayIstDay();
+      const claim = await claimReportGenerationIfMissing(expectedReportDate);
+      if (claim === "claimed") {
+        after(() => runCatchUpGeneration(expectedReportDate));
+      }
+      catchUp = { status: catchUpStatusFromClaim(claim), reportDate: expectedReportDate };
+    }
+
     if (!reportDate) {
       return NextResponse.json(
-        { ok: true, report: null, metrics: [], findings: [], actions: [], history, comparison: null },
+        { ok: true, report: null, metrics: [], findings: [], actions: [], history, comparison: null, catchUp },
         { headers: noStoreHeaders() }
       );
     }
@@ -79,7 +129,7 @@ export async function GET(request: Request) {
     const bundle = await fetchReportBundle(supabase, reportDate);
     if (!bundle) {
       return NextResponse.json(
-        { ok: false, error: "report_not_found", reportDate, history },
+        { ok: false, error: "report_not_found", reportDate, history, catchUp },
         { status: 404, headers: noStoreHeaders() }
       );
     }
@@ -87,6 +137,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         ok: true,
+        catchUp,
         report: {
           id: bundle.report.id,
           reportDate: bundle.report.report_date,

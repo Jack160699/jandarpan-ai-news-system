@@ -171,6 +171,8 @@ type Comparison = {
   sevenDayAvgArticlesPublished: number | null;
 } | null;
 
+type CatchUpStatus = { status: "triggered" | "in_progress" | "none"; reportDate: string } | null;
+
 type ReportApiResponse =
   | {
       ok: true;
@@ -180,8 +182,9 @@ type ReportApiResponse =
       actions: unknown[];
       history: HistoryRow[];
       comparison: Comparison;
+      catchUp?: CatchUpStatus;
     }
-  | { ok: false; error: string; reportDate?: string; history?: HistoryRow[] };
+  | { ok: false; error: string; reportDate?: string; history?: HistoryRow[]; catchUp?: CatchUpStatus };
 
 /* ---------------------------------------------------------------------- */
 /* Constants                                                               */
@@ -752,8 +755,8 @@ export function NewsroomDailyReportPanel() {
   const [generating, setGenerating] = useState(false);
   const [generateMessage, setGenerateMessage] = useState<string | null>(null);
 
-  const load = useCallback(async (date: string | null) => {
-    setLoading(true);
+  const load = useCallback(async (date: string | null, opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     setError(null);
     try {
       const url = date ? `/api/admin/reports/daily?date=${date}` : "/api/admin/reports/daily";
@@ -762,15 +765,29 @@ export function NewsroomDailyReportPanel() {
       setData(json);
       if (!json.ok) setError(json.error);
     } catch {
-      setError("network_error");
+      if (!opts?.silent) setError("network_error");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void load(dateParam);
   }, [dateParam, load]);
+
+  // While the dashboard catch-up trigger (see /api/admin/reports/daily's GET
+  // handler) has a generation in flight for the expected report date,
+  // silently re-poll every 5s so the page flips to the finished report on
+  // its own — no manual refresh, no "Generate report" click needed.
+  const catchUp = data?.catchUp ?? null;
+  const catchUpActive = catchUp?.status === "triggered" || catchUp?.status === "in_progress";
+  useEffect(() => {
+    if (!catchUpActive) return;
+    const interval = setInterval(() => {
+      void load(dateParam, { silent: true });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [catchUpActive, dateParam, load]);
 
   const goToDate = useCallback(
     (date: string) => {
@@ -853,6 +870,15 @@ export function NewsroomDailyReportPanel() {
 
   return (
     <div className="space-y-6">
+      {catchUpActive ? (
+        <div className="flex items-center gap-2 rounded-md border border-amber-800/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-200">
+          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-amber-400" aria-hidden="true" />
+          Report generation in progress for {catchUp?.reportDate}
+          {catchUp?.status === "in_progress" ? " (already running)" : ""} — this page updates automatically, no
+          action needed.
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-zinc-100">
@@ -868,16 +894,21 @@ export function NewsroomDailyReportPanel() {
             <p className="mt-1 text-xs text-zinc-500">
               {supabaseNotConfigured
                 ? "Supabase is not configured."
-                : notFoundForDate
-                  ? "No report exists for this date yet."
-                  : "No reports have been generated yet."}
+                : catchUpActive
+                  ? "Waiting for the in-progress generation above."
+                  : notFoundForDate
+                    ? "No report exists for this date yet."
+                    : "No reports have been generated yet."}
             </p>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => void generateReport()} disabled={generating}>
-            {generating ? "Generating…" : "Generate report"}
-          </Button>
+          <div className="flex flex-col items-end gap-1">
+            <Button variant="outline" size="sm" onClick={() => void generateReport()} disabled={generating}>
+              {generating ? "Regenerating…" : "Regenerate now"}
+            </Button>
+            <span className="text-[10px] text-zinc-500">Manual override — generates automatically ~02:00 IST</span>
+          </div>
           <a
             href={exportHref("csv")}
             className="inline-flex items-center gap-1 rounded-md border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-200 hover:bg-zinc-800"
@@ -895,14 +926,24 @@ export function NewsroomDailyReportPanel() {
 
       {generateMessage ? <p className="text-xs text-zinc-400">{generateMessage}</p> : null}
 
-      {!report ? (
+      {!report && catchUpActive ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Generating today’s report…</CardTitle>
+            <CardDescription>
+              Deterministic metrics, AI analysis, findings, and notifications are being built for{" "}
+              {catchUp?.reportDate}. This section will populate automatically once it finishes.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : !report ? (
         <Card>
           <CardHeader>
             <CardTitle>{notFoundForDate ? "No report for this date" : "No report available"}</CardTitle>
             <CardDescription>
               {supabaseNotConfigured
                 ? "Configure Supabase to generate and view daily newsroom audit reports."
-                : "Use “Generate report” above to build one for this date."}
+                : "Use “Regenerate now” above to build one for this date."}
             </CardDescription>
           </CardHeader>
         </Card>

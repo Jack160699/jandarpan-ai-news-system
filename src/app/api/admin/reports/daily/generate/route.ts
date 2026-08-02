@@ -3,9 +3,12 @@
  * Body: { date?: "YYYY-MM-DD" } (optional; defaults to yesterday's IST day,
  * same default as the cron job — see generateDailyReport's doc comment).
  *
- * Manual trigger for the Daily Newsroom Audit Report. Runs the exact same
- * generateDailyReport() pipeline the newsroom-daily-report cron uses (see
- * src/lib/newsroom-audit/generate.ts) — no duplicated report-building logic.
+ * Emergency/manual fallback for the Daily Newsroom Audit Report — normal
+ * generation is the 02:00 IST cron plus the dashboard catch-up trigger (see
+ * GET /api/admin/reports/daily), neither of which needs a human. Runs the
+ * exact same generateDailyReport() pipeline (see
+ * src/lib/newsroom-audit/generate.ts) with force:true so it always produces
+ * a fresh run — no duplicated report-building logic.
  *
  * Permission: monitoring:read, matching this page's own view permission.
  * No existing "run this now" admin route in this repo (schema health
@@ -41,7 +44,11 @@ export async function POST(request: Request) {
   }
 
   const reportDate = isValidReportDateParam(body.date) ? body.date : yesterdayIstDay();
-  const result = await generateDailyReport(reportDate);
+  // Manual trigger is the emergency/on-demand fallback (normal generation is
+  // the 02:00 IST cron + the dashboard catch-up trigger) — always force a
+  // fresh run so operators can regenerate a report they believe is wrong,
+  // rather than silently no-op'ing against an existing final report.
+  const result = await generateDailyReport(reportDate, { force: true });
 
   return NextResponse.json(result, {
     status: result.ok ? 200 : 500,

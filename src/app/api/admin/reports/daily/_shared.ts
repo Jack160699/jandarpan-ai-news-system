@@ -75,10 +75,18 @@ export type ReportBundle = {
   actions: ActionRow[];
 };
 
+/**
+ * Latest report_date with status:"final" only — a draft/pending row (e.g.
+ * the placeholder claimReportGenerationIfMissing inserts while a catch-up
+ * generation is in flight) must never be resolved as "the" report to
+ * display; its deterministic_metrics is empty/incomplete and would break
+ * every chart that assumes the full DeterministicReport shape.
+ */
 export async function resolveLatestReportDate(supabase: SupabaseAdminClient): Promise<string | null> {
   const { data, error } = await supabase
     .from("daily_newsroom_reports" as never)
     .select("report_date")
+    .eq("status", "final")
     .order("report_date", { ascending: false })
     .limit(1);
   if (error) throw new Error(error.message);
