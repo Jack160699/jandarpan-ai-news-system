@@ -406,6 +406,15 @@ export async function generateDailyReport(
           urgency: action.urgency,
           automationEligible: action.automation_eligible,
           findingId: null,
+          // Same "AI text is not a stable identity" fix as notifications
+          // (buildIncidentKey) — action.action is regenerated free text and
+          // paraphrases across runs; evidence_refs are the AI's required,
+          // grounded dot-path citations, stable across reruns describing the
+          // same recommendation. Without this, recordActionExecution's
+          // idempotency_key defaulted to `${reportId}:${action.action}` and
+          // reran text produced a new row every time (6 rows for what should
+          // have been 2 distinct recommendations across two forced reruns).
+          idempotencyKey: `${reportId}:${[...action.evidence_refs].sort().join("|")}`,
         });
       }
     }
