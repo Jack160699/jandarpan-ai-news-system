@@ -65,6 +65,28 @@ export async function POST(request: Request) {
   );
 
   const results: CaseResult[] = [];
+  let groqModelList: string[] | { error: string } | undefined;
+
+  if (requested.has("groq_models")) {
+    const key = process.env.GROQ_API_KEY?.trim();
+    if (!key) {
+      groqModelList = { error: "GROQ_API_KEY not set" };
+    } else {
+      try {
+        const res = await fetch("https://api.groq.com/openai/v1/models", {
+          headers: { Authorization: `Bearer ${key}` },
+        });
+        if (!res.ok) {
+          groqModelList = { error: `HTTP ${res.status}: ${(await res.text()).slice(0, 300)}` };
+        } else {
+          const json = (await res.json()) as { data?: Array<{ id: string }> };
+          groqModelList = (json.data ?? []).map((m) => m.id);
+        }
+      } catch (err) {
+        groqModelList = { error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  }
 
   if (requested.has("gemini_normal")) {
     const r = await requestGeminiChat({
@@ -172,6 +194,7 @@ export async function POST(request: Request) {
       ok: results.every((r) => r.ok),
       results,
       expectedEmbeddingDimensions: CLOUDFLARE_EMBEDDING_DIMENSIONS,
+      ...(groqModelList !== undefined ? { groqModelList } : {}),
     },
     { status: 200, headers: noStoreHeaders() }
   );
