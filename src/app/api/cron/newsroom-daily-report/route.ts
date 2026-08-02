@@ -55,8 +55,12 @@ async function handleNewsroomDailyReport(request: Request) {
   const url = new URL(request.url);
   const dateParam = url.searchParams.get("date");
   const reportDate = isValidReportDateParam(dateParam) ? dateParam : yesterdayIstDay();
+  // ?force=true is an ops-authenticated equivalent of the admin "Regenerate
+  // now" button — same capability, for operators who have a cron secret but
+  // not a dashboard session. The actual scheduled run never sends this.
+  const force = url.searchParams.get("force") === "true";
 
-  const result = await generateDailyReport(reportDate);
+  const result = await generateDailyReport(reportDate, { force });
 
   if (!result.ok) {
     await notifyReportGenerationFailure(reportDate, result.error);
