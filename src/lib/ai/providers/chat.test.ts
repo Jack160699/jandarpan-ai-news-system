@@ -1,4 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// next/server's after() requires an active Next.js request-scope
+// (AsyncLocalStorage-tracked), which doesn't exist when calling
+// requestChatCompletion directly in a unit test. Runs the callback
+// immediately instead — fine for assertions, which only care that the
+// usage-record write was attempted with the right payload.
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: (fn: () => unknown) => fn() };
+});
+
 import { requestChatCompletion } from "./chat";
 
 // health.ts's provider-health registry is a module-level Map with no

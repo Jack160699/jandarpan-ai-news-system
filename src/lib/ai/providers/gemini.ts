@@ -16,6 +16,7 @@
  * the same reason.
  */
 
+import { after } from "next/server";
 import {
   isProviderHealthy,
   markProviderUnhealthy,
@@ -24,7 +25,7 @@ import {
 } from "@/lib/ai/providers/health";
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
 import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib/ai/providers/quota";
-import { buildAiUsageRecord, logAiProviderUsage } from "@/lib/observability/ai-usage/record";
+import { buildAiUsageRecord, recordAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import type { ChatCompletionRequest, ChatCompletionResult, ClassifiedAiError } from "@/lib/ai/providers/types";
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -200,23 +201,30 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
 
     void reconcileQuotaUsage(quota.reservation, { inputTokens, outputTokens });
 
-    logAiProviderUsage(
-      buildAiUsageRecord({
-        provider: "gemini",
-        operation: request.operation,
-        endpoint: "generateContent",
-        model,
-        inputTokens,
-        outputTokens,
-        latencyMs,
-        retryCount,
-        success: true,
-        system: request.system,
-        user: request.user,
-        completion: content,
-        context: request.context,
-        metadata: request.premium ? { premium: true, premiumReason: request.premiumReason ?? null } : undefined,
-      })
+    // after() (not a bare fire-and-forget call) so Vercel keeps this
+    // invocation alive until the write lands — confirmed live that a bare
+    // `void recordAiProviderUsage(...)` can lose the race when the response
+    // is the last thing the handler does, silently dropping the usage/audit
+    // row even though the Gemini call itself succeeded.
+    after(() =>
+      recordAiProviderUsage(
+        buildAiUsageRecord({
+          provider: "gemini",
+          operation: request.operation,
+          endpoint: "generateContent",
+          model,
+          inputTokens,
+          outputTokens,
+          latencyMs,
+          retryCount,
+          success: true,
+          system: request.system,
+          user: request.user,
+          completion: content,
+          context: request.context,
+          metadata: request.premium ? { premium: true, premiumReason: request.premiumReason ?? null } : undefined,
+        })
+      )
     );
 
     return { ok: true, content, provider: "gemini", model, latencyMs };
@@ -224,7 +232,8 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     const error = err && typeof err === "object" && "code" in err ? (err as ClassifiedAiError) : { code: "ai_network_error", message: "Gemini request failed", retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
     // No real tokens were consumed — give the reserved estimate back.
     void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
-    logAiProviderUsage(
+    after(() =>
+      recordAiProviderUsage(
       buildAiUsageRecord({
         provider: "gemini",
         operation: request.operation,
@@ -241,6 +250,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
         fallbackReason: error.code,
         metadata: request.premium ? { premium: true, premiumReason: request.premiumReason ?? null } : undefined,
       })
+      )
     );
     return { ok: false, provider: "gemini", latencyMs: Date.now() - started, error };
   } finally {

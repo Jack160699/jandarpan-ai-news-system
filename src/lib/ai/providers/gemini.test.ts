@@ -5,8 +5,18 @@ vi.mock("@/lib/observability/ai-usage/record", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/observability/ai-usage/record")>();
   return {
     ...actual,
-    logAiProviderUsage: (...args: unknown[]) => mockLogAiProviderUsage(...args),
+    recordAiProviderUsage: (...args: unknown[]) => mockLogAiProviderUsage(...args),
   };
+});
+
+// next/server's after() requires an active Next.js request-scope
+// (AsyncLocalStorage-tracked), which doesn't exist when calling
+// requestGeminiChat directly in a unit test. Runs the callback immediately
+// instead — fine for assertions, which only care the usage-record write
+// was attempted with the right payload.
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: (fn: () => unknown) => fn() };
 });
 
 import { isGeminiConfigured, requestGeminiChat, resolveGeminiModel } from "./gemini";
