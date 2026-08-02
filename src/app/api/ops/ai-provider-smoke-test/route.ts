@@ -228,6 +228,11 @@ export async function POST(request: Request) {
       user: 'Reply with exactly this JSON: {"passed": true, "issues": [], "sensitivity_flags": [], "confidence": 0.9}',
       jsonMode: true,
       maxTokens: 400,
+      // A smoke test exists to prove *live* provider behavior — serving a
+      // cached result (Preview and Production share this Supabase project,
+      // so identical prompt text across environments/models can collide on
+      // the same cache key) would silently verify nothing.
+      cachePolicy: "bypass",
       context: { worker: "ai_provider_smoke_test" },
     });
     results.push(
@@ -250,6 +255,7 @@ export async function POST(request: Request) {
       user: 'Reply with exactly this JSON: {"passed": true, "issues": [], "sensitivity_flags": [], "confidence": 0.9}',
       jsonMode: true,
       maxTokens: 100,
+      cachePolicy: "bypass",
       context: { worker: "ai_provider_smoke_test" },
     });
     results.push(
