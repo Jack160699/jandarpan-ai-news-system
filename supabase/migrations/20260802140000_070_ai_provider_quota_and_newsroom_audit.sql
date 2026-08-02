@@ -239,6 +239,7 @@ returns table (
 )
 language sql
 stable
+set search_path = public, pg_temp
 as $$
   select
     e.entity_type,
