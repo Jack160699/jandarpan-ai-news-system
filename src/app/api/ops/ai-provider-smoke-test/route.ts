@@ -96,6 +96,55 @@ export async function POST(request: Request) {
     }
   }
 
+  let groqDiagMatrix: unknown;
+  if (requested.has("groq_diag_matrix")) {
+    const key = process.env.GROQ_API_KEY?.trim();
+    if (!key) {
+      groqDiagMatrix = { error: "GROQ_API_KEY not set" };
+    } else {
+      const models = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b"];
+      const variants: Array<{ label: string; extra: Record<string, unknown> }> = [
+        { label: "max_tokens, no json mode", extra: { max_tokens: 100 } },
+        { label: "max_completion_tokens, no json mode", extra: { max_completion_tokens: 100 } },
+        { label: "max_tokens, json mode", extra: { max_tokens: 100, response_format: { type: "json_object" } } },
+        {
+          label: "max_completion_tokens, json mode",
+          extra: { max_completion_tokens: 100, response_format: { type: "json_object" } },
+        },
+      ];
+      const results: Array<{ model: string; variant: string; status: number | null; body: string }> = [];
+      for (const model of models) {
+        for (const variant of variants) {
+          try {
+            const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model,
+                temperature: 0.35,
+                messages: [
+                  { role: "system", content: "You are a terse test assistant. Reply with strict JSON only." },
+                  { role: "user", content: 'Reply with exactly this JSON: {"passed": true}' },
+                ],
+                ...variant.extra,
+              }),
+            });
+            const bodyText = await res.text();
+            results.push({ model, variant: variant.label, status: res.status, body: bodyText.slice(0, 400) });
+          } catch (err) {
+            results.push({
+              model,
+              variant: variant.label,
+              status: null,
+              body: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+      }
+      groqDiagMatrix = results;
+    }
+  }
+
   if (requested.has("groq_models")) {
     const key = process.env.GROQ_API_KEY?.trim();
     if (!key) {
@@ -225,6 +274,7 @@ export async function POST(request: Request) {
       expectedEmbeddingDimensions: CLOUDFLARE_EMBEDDING_DIMENSIONS,
       ...(groqModelList !== undefined ? { groqModelList } : {}),
       ...(groqRawDiagnostic !== undefined ? { groqRawDiagnostic } : {}),
+      ...(groqDiagMatrix !== undefined ? { groqDiagMatrix } : {}),
     },
     { status: 200, headers: noStoreHeaders() }
   );
