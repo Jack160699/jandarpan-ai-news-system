@@ -21,6 +21,7 @@ import {
   requestChatCompletion,
 
 } from "@/lib/ai/providers";
+import { isAiQuotaExhaustionMessage } from "@/lib/ai/providers/errors";
 
 import { createAdminClient } from "@/lib/supabase";
 
@@ -444,14 +445,17 @@ export async function processAiQueueBatch(
           pendingIds.delete(article.id);
         } catch (err) {
           const msg = err instanceof Error ? err.message : "AI enrich failed";
+          const quotaExhausted = isAiQuotaExhaustionMessage(msg);
           errors.push(`${article.id}: ${msg}`);
-          await markAiQueueOutcome(article.id, false, msg, { retryable: true });
+          await markAiQueueOutcome(article.id, false, msg, {
+            retryable: !quotaExhausted,
+          });
           await recordQueueFailure({
             worker: "ai_enrich",
             articleId: article.id,
             error: msg,
             retryCount: 0,
-            terminal: false,
+            terminal: quotaExhausted,
           });
           pendingIds.delete(article.id);
         }

@@ -43,6 +43,7 @@ describe("Phase 6 sitemap performance", () => {
     );
     expect(story).toBeTruthy();
     expect(story?.lastModified).toEqual(new Date("2026-07-18T08:00:00.000Z"));
+    expect(entries.some((entry) => entry.url.endsWith("/search"))).toBe(false);
   });
 
   it("serves warm cache without re-querying on second call", async () => {

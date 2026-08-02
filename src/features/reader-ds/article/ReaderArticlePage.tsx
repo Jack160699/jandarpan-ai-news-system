@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Fragment } from "react";
+import { ReaderAnalyticsTracker } from "@/components/analytics/ReaderAnalyticsTracker";
 import { LiveStoryJsonLd } from "@/components/seo/LiveStoryJsonLd";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { ArticleImage } from "../components/ArticleImage";
@@ -197,6 +198,7 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
       : [];
     return (
       <>
+        <ReaderAnalyticsTracker slug={slug} category={article.category} />
         <LiveStoryJsonLd article={article} imageMeta={editorialMeta?.image} />
         <PhotoGallery images={images} kicker={kicker} backHref="/" />
       </>
@@ -207,6 +209,7 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
     const entries = storyAsLiveEntries(model);
     return (
       <>
+        <ReaderAnalyticsTracker slug={slug} category={article.category} />
         <LiveStoryJsonLd article={article} imageMeta={editorialMeta?.image} />
         <ReaderShell activeNav="latest">
           <Masthead back backHref="/live" pageTitle={t("article.liveBlog")} />
@@ -272,6 +275,7 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
 
   return (
     <>
+      <ReaderAnalyticsTracker slug={slug} category={article.category} />
       <LiveStoryJsonLd article={article} imageMeta={editorialMeta?.image} />
       <ReaderShell
         activeNav={

@@ -6,8 +6,8 @@
 export const GENERATED_POOL_HARD_CAPS = {
   full: 120,
   homepage: 160,
-  sitemap: 400,
-  slug: 400,
+  sitemap: 5000,
+  slug: 5000,
   summary: 1,
   googleNews: 200,
 } as const;

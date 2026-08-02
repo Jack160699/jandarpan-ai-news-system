@@ -496,7 +496,12 @@ export function composeHomepageSlots(
     scoreHeroCandidate(a, rowsById.get(a.id), index, options?.homeDistrict);
 
   const nonRoundup = ranked.filter((a) => !isRoundupArticle(a));
-  const heroPool = nonRoundup.length ? nonRoundup : ranked;
+  const freshNonRoundup = nonRoundup.filter(
+    (article) => hoursSince(article.publishedAt) <= 6
+  );
+  const heroPool = freshNonRoundup.length
+    ? freshNonRoundup
+    : ranked.filter((article) => hoursSince(article.publishedAt) <= 6);
 
   const hero =
     options?.pinnedLead ??
@@ -531,13 +536,12 @@ export function composeHomepageSlots(
 
   const breakingPool = ranked.filter(
     (a) =>
-      a.ranking.isBreaking ||
-      a.urgency === "high" ||
-      a.isLive
+      hoursSince(a.publishedAt) <= 2 &&
+      (a.ranking.isBreaking || a.urgency === "high" || a.isLive)
   );
 
   const breakingTicker = pickDeskBalancedArticles({
-    pool: breakingPool.length ? breakingPool : ranked,
+    pool: breakingPool,
     limit: 8,
     reserved,
     index,

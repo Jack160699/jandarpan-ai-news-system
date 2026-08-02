@@ -60,12 +60,6 @@ async function buildMainSitemapUncached(): Promise<MetadataRoute.Sitemap> {
       priority: 1,
     },
     {
-      url: `${SITE_URL}/search`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.75,
-    },
-    {
       url: `${SITE_URL}/listen`,
       lastModified: now,
       changeFrequency: "daily",
