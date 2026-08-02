@@ -6,6 +6,8 @@
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { JOB_HANDLERS } from "@/lib/infrastructure/jobs/handlers";
 import { processJobBatch } from "@/lib/infrastructure/jobs/queue";
+import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
+import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
 import {
   completeWorkerResult,
   partialWorkerResult,
@@ -117,12 +119,12 @@ export async function runEditorialGenerateLane(
     );
   }
 
-  if (!process.env.OPENAI_API_KEY?.trim()) {
+  if (!isAnyChatProviderConfigured()) {
     return skippedWorkerResult(
       "editorial_generate",
       started,
       ctx.deadline,
-      "no_openai_key"
+      "no_ai_provider_configured"
     );
   }
 
@@ -153,21 +155,36 @@ export async function runEditorialGenerateLane(
   const incidents = evaluateGenerationLaneIncidents(metrics);
 
   if (metrics.pending === 0 && metrics.claimed === 0) {
+    // Nothing queued to drain. Nothing in the automated pipeline enqueues
+    // new editorial_generate worker_jobs from news_events on an ongoing
+    // basis (only the manual ops/editorial-backlog-recovery tool does) —
+    // confirmed live in Production: worker_jobs(editorial_generate) sat
+    // empty while 161 real, un-drafted "active" events existed and this
+    // lane kept reporting queue_empty every 15 minutes indefinitely.
+    // Fall back to generating directly from eligible events (the same
+    // proven, free-first-aware generateEditorialsFromEvents() the queue
+    // handler itself calls once a job is claimed) so the lane makes real
+    // progress instead of idling on an empty queue it has no way to fill.
+    const direct = await generateEditorialsFromEvents({
+      limit: GENERATION_LANE_TARGETS.batchLimit,
+    });
+    const madeProgress = direct.generated > 0 || direct.published > 0;
+
     const outcome = classifyLaneOutcome({
       batch: {
-        processed: 0,
-        completed: 0,
-        failed: 0,
+        processed: direct.generated + direct.skipped + (direct.updates ?? 0),
+        completed: direct.published,
+        failed: direct.rejected,
         dead: 0,
       },
       incidents,
-      skipped: true,
-      reason: "queue_empty",
+      skipped: !madeProgress,
+      reason: madeProgress ? undefined : "no_eligible_candidates",
     });
 
     return completeWorkerResult("editorial_generate", started, ctx.deadline, {
-      recordsProcessed: 0,
-      recordsSkipped: 0,
+      recordsProcessed: direct.published,
+      recordsSkipped: direct.rejected + direct.skipped,
       remainingQueue: 0,
       partial: false,
       extra: {
@@ -175,8 +192,16 @@ export async function runEditorialGenerateLane(
         queueDepth: 0,
         oldestPendingAgeMs: metrics.oldestPendingAgeMs,
         incidents,
-        generatedArticleIds: [],
+        generatedArticleIds: direct.topStory?.storyId ? [direct.topStory.storyId] : [],
         continuationRequired: false,
+        directGeneration: true,
+        generated: direct.generated,
+        published: direct.published,
+        rejected: direct.rejected,
+        skipped: direct.skipped,
+        errors: direct.errors.slice(0, 5),
+        skipReasonCounts: direct.skipReasonCounts ?? {},
+        candidatePool: direct.candidatePool ?? null,
       },
     });
   }

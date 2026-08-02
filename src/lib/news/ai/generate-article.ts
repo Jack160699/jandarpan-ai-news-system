@@ -1947,7 +1947,7 @@ export async function generateEditorialsFromEvents(options?: {
       skipped: 1,
       avgConfidence: 0,
       topStory: null,
-      errors: ["OPENAI_API_KEY not set"],
+      errors: ["no_ai_provider_configured"],
       results: [],
     };
   }
