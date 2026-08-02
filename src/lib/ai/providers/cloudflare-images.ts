@@ -14,12 +14,28 @@ import {
   recordProviderRequestStarted,
 } from "@/lib/ai/providers/health";
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
-import { acquireConcurrencySlot, checkAndConsumeQuota } from "@/lib/ai/providers/quota";
+import {
+  acquireConcurrencySlot,
+  estimateCloudflareNeurons,
+  reconcileCloudflareNeurons,
+  reserveCloudflareNeurons,
+} from "@/lib/ai/providers/quota";
 import { buildAiUsageRecord, logAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import type { AiUsageContext } from "@/lib/observability/ai-usage/record";
 import type { ClassifiedAiError } from "@/lib/ai/providers/types";
 
 const CLOUDFLARE_ACCOUNTS_URL = "https://api.cloudflare.com/client/v4/accounts";
+
+/**
+ * Default image dimensions/steps — configurable per call, but these are the
+ * values used for capacity forecasting (see quota.ts's
+ * getCloudflareNeuronForecast) and the ones a plain requestCloudflareImageGeneration()
+ * call with no explicit width/height/steps will use. At 1024x1024/4 steps
+ * this reserves 57.6 neurons ((2*2 tiles * 4.8) + (4 steps * 9.6)).
+ */
+const DEFAULT_IMAGE_WIDTH = 1024;
+const DEFAULT_IMAGE_HEIGHT = 1024;
+const DEFAULT_IMAGE_STEPS = 4;
 
 export function isCloudflareConfigured(): boolean {
   return (
@@ -69,12 +85,18 @@ async function postCloudflareImage(input: {
   operation: string;
   prompt: string;
   timeoutMs: number;
+  width: number;
+  height: number;
+  steps: number;
 }): Promise<{ url: string; latencyMs: number }> {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID!.trim();
   const apiToken = process.env.CLOUDFLARE_API_TOKEN!.trim();
   const model = resolveCloudflareImageModel();
   const started = Date.now();
   recordProviderRequestStarted("cloudflare", input.operation);
+  console.log(
+    `[cloudflare-image] requesting ${model} width=${input.width} height=${input.height} steps=${input.steps}`
+  );
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), input.timeoutMs);
@@ -87,7 +109,12 @@ async function postCloudflareImage(input: {
         Authorization: `Bearer ${apiToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt: input.prompt.slice(0, 4000) }),
+      body: JSON.stringify({
+        prompt: input.prompt.slice(0, 4000),
+        width: input.width,
+        height: input.height,
+        steps: input.steps,
+      }),
     });
 
     const latencyMs = Date.now() - started;
@@ -146,6 +173,11 @@ export async function requestCloudflareImageGeneration(input: {
   operation: string;
   prompt: string;
   timeoutMs?: number;
+  /** Defaults to 1024x1024/4 steps — see DEFAULT_IMAGE_* above. Always pass these explicitly when the caller knows the real target size, since neuron accounting is size/step-dependent. */
+  width?: number;
+  height?: number;
+  steps?: number;
+  priority?: "breaking" | "normal" | "backfill";
   context?: AiUsageContext;
 }): Promise<{ url: string } | { error: ClassifiedAiError }> {
   if (!isCloudflareConfigured()) {
@@ -173,12 +205,17 @@ export async function requestCloudflareImageGeneration(input: {
     };
   }
 
-  const quota = await checkAndConsumeQuota({ provider: "cloudflare", operation: input.operation });
-  if (!quota.allowed) {
+  const width = input.width ?? DEFAULT_IMAGE_WIDTH;
+  const height = input.height ?? DEFAULT_IMAGE_HEIGHT;
+  const steps = input.steps ?? DEFAULT_IMAGE_STEPS;
+  const estimatedNeurons = estimateCloudflareNeurons({ kind: "image", width, height, steps });
+
+  const neurons = await reserveCloudflareNeurons(estimatedNeurons, input.priority);
+  if (!neurons.allowed) {
     return {
       error: {
         code: "ai_quota_exhausted",
-        message: quota.reason ?? "cloudflare quota exhausted",
+        message: neurons.reason ?? "cloudflare daily neuron budget exhausted",
         retryable: false,
         authFailure: false,
         invalidRequest: false,
@@ -189,6 +226,7 @@ export async function requestCloudflareImageGeneration(input: {
 
   const slot = acquireConcurrencySlot("cloudflare");
   if (!slot.acquired) {
+    void reconcileCloudflareNeurons(estimatedNeurons, 0);
     return {
       error: {
         code: "ai_provider_busy",
@@ -212,9 +250,13 @@ export async function requestCloudflareImageGeneration(input: {
       isRetryable: (e) => e.retryable,
       fn: async (attempt) => {
         retryCount = attempt;
-        return postCloudflareImage({ operation: input.operation, prompt: input.prompt, timeoutMs });
+        return postCloudflareImage({ operation: input.operation, prompt: input.prompt, timeoutMs, width, height, steps });
       },
     });
+
+    // Cloudflare's response doesn't currently report real neuron cost, so
+    // the reservation estimate stands as the final accounting figure.
+    void reconcileCloudflareNeurons(estimatedNeurons, estimatedNeurons);
 
     logAiProviderUsage(
       buildAiUsageRecord({
@@ -229,11 +271,13 @@ export async function requestCloudflareImageGeneration(input: {
         success: true,
         user: input.prompt,
         context: input.context,
+        metadata: { width, height, steps, estimatedNeurons },
       })
     );
 
     return { url };
   } catch (err) {
+    void reconcileCloudflareNeurons(estimatedNeurons, 0);
     const error =
       err && typeof err === "object" && "code" in err
         ? (err as ClassifiedAiError)
@@ -252,6 +296,7 @@ export async function requestCloudflareImageGeneration(input: {
         user: input.prompt,
         context: input.context,
         fallbackReason: error.code,
+        metadata: { width, height, steps, estimatedNeurons },
       })
     );
     return { error };

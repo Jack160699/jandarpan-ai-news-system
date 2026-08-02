@@ -72,6 +72,60 @@ export function isRedisConfigured(): boolean {
   return INFRA_CONFIG.redisEnabled;
 }
 
+/**
+ * Atomically execute a Lua script via Upstash's REST `/eval` endpoint. Used
+ * for quota reservations that must check-and-increment multiple counters as
+ * a single indivisible operation (see quota.ts) — a plain GET-then-SET would
+ * race under concurrent requests.
+ */
+export async function redisEval<T = unknown>(
+  script: string,
+  keys: string[],
+  args: Array<string | number>
+): Promise<T | null> {
+  const cfg = restConfig();
+  if (!cfg) return null;
+
+  try {
+    const res = await fetch(`${cfg.url}/eval`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cfg.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([script, keys, args.map(String)]),
+      signal: AbortSignal.timeout(2_500),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { result?: T };
+    return json.result ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Atomic increment (can be negative) — used to reconcile estimated vs. actual usage after the fact. */
+export async function redisIncrBy(key: string, amount: number): Promise<number | null> {
+  const cfg = restConfig();
+  if (!cfg) return null;
+
+  try {
+    const res = await fetch(
+      `${cfg.url}/incrby/${encodeURIComponent(key)}/${amount}`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${cfg.token}` },
+        signal: AbortSignal.timeout(2_500),
+      }
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { result?: number };
+    return json.result ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Lightweight connectivity probe for health/readiness checks. */
 export async function redisPing(): Promise<{
   configured: boolean;

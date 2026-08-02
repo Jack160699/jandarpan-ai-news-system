@@ -14,7 +14,14 @@ import {
   recordProviderRequestStarted,
 } from "@/lib/ai/providers/health";
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
-import { acquireConcurrencySlot, checkAndConsumeQuota } from "@/lib/ai/providers/quota";
+import {
+  acquireConcurrencySlot,
+  estimateCloudflareNeurons,
+  reconcileCloudflareNeurons,
+  reconcileQuotaUsage,
+  reserveCloudflareNeurons,
+  reserveQuota,
+} from "@/lib/ai/providers/quota";
 import { buildAiUsageRecord, logAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import type { AiUsageContext } from "@/lib/observability/ai-usage/record";
 import { estimateTokensFromText } from "@/lib/observability/openai-cost/token-estimate";
@@ -138,6 +145,21 @@ async function postCloudflareEmbeddings(
       throw empty;
     }
 
+    // Fail closed rather than silently persist a vector of the wrong
+    // dimension into the fixed-width intelligence_embeddings_cf column.
+    const wrongDimension = vectors.find((v) => v.length !== CLOUDFLARE_EMBEDDING_DIMENSIONS);
+    if (wrongDimension) {
+      const mismatch: ClassifiedAiError = {
+        code: "ai_invalid_request",
+        message: `Cloudflare embedding returned ${wrongDimension.length} dimensions, expected ${CLOUDFLARE_EMBEDDING_DIMENSIONS}`,
+        retryable: false,
+        authFailure: false,
+        invalidRequest: true,
+        rateLimited: false,
+      };
+      throw mismatch;
+    }
+
     recordProviderRequestCompleted("cloudflare", "embeddings", latencyMs);
     return {
       vectors,
@@ -197,7 +219,7 @@ export async function requestCloudflareEmbeddings(input: {
   // this codebase (see estimateTokensFromText) rather than raw char count,
   // so it lines up with the token-per-minute/day quota scopes in quota.ts.
   const estimatedTokens = estimateTokensFromText(input.texts.join(" "));
-  const quota = await checkAndConsumeQuota({
+  const quota = await reserveQuota({
     provider: "cloudflare",
     operation: input.operation,
     estimatedTokens,
@@ -215,8 +237,29 @@ export async function requestCloudflareEmbeddings(input: {
     };
   }
 
+  // Cloudflare's free tier is one shared daily neuron pool across every
+  // model (images included) — the rpm/tpm/rpd/tpd reservation above bounds
+  // request rate, but the neuron budget is the real binding constraint.
+  const estimatedNeurons = estimateCloudflareNeurons({ kind: "embedding", inputTokens: estimatedTokens });
+  const neurons = await reserveCloudflareNeurons(estimatedNeurons);
+  if (!neurons.allowed) {
+    void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
+    return {
+      error: {
+        code: "ai_quota_exhausted",
+        message: neurons.reason ?? "cloudflare daily neuron budget exhausted",
+        retryable: false,
+        authFailure: false,
+        invalidRequest: false,
+        rateLimited: true,
+      },
+    };
+  }
+
   const slot = acquireConcurrencySlot("cloudflare");
   if (!slot.acquired) {
+    void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
+    void reconcileCloudflareNeurons(estimatedNeurons, 0);
     return {
       error: {
         code: "ai_provider_busy",
@@ -242,6 +285,15 @@ export async function requestCloudflareEmbeddings(input: {
       },
     });
 
+    void reconcileQuotaUsage(quota.reservation, { inputTokens, outputTokens: 0 });
+    // Reconcile against the *actual* token count (may differ slightly from
+    // the pre-request estimate), keeping neuron accounting consistent with
+    // the real cost formula rather than the estimate used to reserve.
+    void reconcileCloudflareNeurons(
+      estimatedNeurons,
+      estimateCloudflareNeurons({ kind: "embedding", inputTokens })
+    );
+
     logAiProviderUsage(
       buildAiUsageRecord({
         provider: "cloudflare",
@@ -254,12 +306,14 @@ export async function requestCloudflareEmbeddings(input: {
         retryCount,
         success: true,
         context: input.context,
-        metadata: { batchSize: input.texts.length, dimensions: CLOUDFLARE_EMBEDDING_DIMENSIONS },
+        metadata: { batchSize: input.texts.length, dimensions: CLOUDFLARE_EMBEDDING_DIMENSIONS, estimatedNeurons },
       })
     );
 
     return { vectors, model };
   } catch (err) {
+    void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
+    void reconcileCloudflareNeurons(estimatedNeurons, 0);
     const error =
       err && typeof err === "object" && "code" in err
         ? (err as ClassifiedAiError)

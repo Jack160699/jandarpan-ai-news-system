@@ -125,4 +125,76 @@ describe("requestChatCompletion", () => {
     const url = fetchMock.mock.calls[0][0] as string;
     expect(url).toContain("api.openai.com");
   });
+
+  it("defaults the reviewer to openai/gpt-oss-120b and the lightweight model to llama-3.1-8b-instant", async () => {
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    let sentModels: string[] = [];
+    const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { model: string };
+      sentModels.push(body.model);
+      return Promise.resolve(
+        new Response(openAiCompatSuccessBody, { status: 200, headers: { "content-type": "application/json" } })
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await requestChatCompletion(baseRequest({ operation: "editorial_review" }));
+    expect(sentModels).toEqual(["openai/gpt-oss-120b"]);
+
+    sentModels = [];
+    await requestChatCompletion(baseRequest({ operation: "classification_lightweight" }));
+    expect(sentModels).toEqual(["llama-3.1-8b-instant"]);
+  });
+
+  it("falls back from openai/gpt-oss-120b to qwen/qwen3.6-27b within Groq when the primary reviewer model is blocked, and reports the transition (not silently)", async () => {
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { model: string };
+      if (body.model === "openai/gpt-oss-120b") {
+        return Promise.resolve(
+          new Response(JSON.stringify({ error: { message: "model access denied for this account" } }), {
+            status: 403,
+            headers: { "content-type": "application/json" },
+          })
+        );
+      }
+      return Promise.resolve(
+        new Response(openAiCompatSuccessBody, { status: 200, headers: { "content-type": "application/json" } })
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestChatCompletion(baseRequest({ operation: "editorial_review" }));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.provider).toBe("groq");
+
+    const sentModels = fetchMock.mock.calls.map((call) => (JSON.parse(String(call[1].body)) as { model: string }).model);
+    expect(sentModels).toEqual(["openai/gpt-oss-120b", "qwen/qwen3.6-27b"]);
+
+    // The fallback must be visibly reported, not a silent downgrade.
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[ai-model-fallback]"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("openai/gpt-oss-120b"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("qwen/qwen3.6-27b"));
+    warnSpy.mockRestore();
+  });
+
+  it("respects GROQ_REVIEW_MODEL / GROQ_REVIEW_FALLBACK_MODEL overrides", async () => {
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    vi.stubEnv("GROQ_REVIEW_MODEL", "custom-primary");
+    vi.stubEnv("GROQ_REVIEW_FALLBACK_MODEL", "custom-fallback");
+    const sentModels: string[] = [];
+    const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { model: string };
+      sentModels.push(body.model);
+      return Promise.resolve(
+        new Response(openAiCompatSuccessBody, { status: 200, headers: { "content-type": "application/json" } })
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await requestChatCompletion(baseRequest({ operation: "editorial_review" }));
+    expect(sentModels).toEqual(["custom-primary"]);
+  });
 });

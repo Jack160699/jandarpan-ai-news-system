@@ -13,7 +13,7 @@ import {
   recordProviderRequestStarted,
 } from "@/lib/ai/providers/health";
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
-import { acquireConcurrencySlot, checkAndConsumeQuota } from "@/lib/ai/providers/quota";
+import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib/ai/providers/quota";
 import { buildAiUsageRecord, logAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import type { ChatCompletionRequest, ChatCompletionResult, ClassifiedAiError } from "@/lib/ai/providers/types";
 
@@ -23,15 +23,22 @@ export function isGeminiConfigured(): boolean {
   return Boolean(process.env.GEMINI_API_KEY?.trim());
 }
 
+/**
+ * Current stable defaults as of Aug 2026 (Gemini 3.6 Flash / 3.5 Flash-Lite
+ * GA — see the manual setup notes for sourcing). Always prefer the explicit
+ * env var over these fallbacks so a future model rename doesn't require a
+ * code change: set GEMINI_EDITORIAL_MODEL / GEMINI_TRANSLATION_MODEL /
+ * GEMINI_LIGHTWEIGHT_MODEL rather than relying on this function's defaults.
+ */
 function resolveGeminiModel(operation: string, override?: string): string {
   if (override?.trim()) return override.trim();
   if (operation === "translation") {
-    return process.env.GEMINI_TRANSLATION_MODEL?.trim() || process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-2.0-flash";
+    return process.env.GEMINI_TRANSLATION_MODEL?.trim() || process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-3.5-flash-lite";
   }
   if (operation === "classification_lightweight" || operation === "schema_repair") {
-    return process.env.GEMINI_LIGHTWEIGHT_MODEL?.trim() || "gemini-2.0-flash-lite";
+    return process.env.GEMINI_LIGHTWEIGHT_MODEL?.trim() || "gemini-3.5-flash-lite";
   }
-  return process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-2.0-flash";
+  return process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-3.6-flash";
 }
 
 function classifyGeminiFailure(status: number, body: string): ClassifiedAiError {
@@ -138,7 +145,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_provider_cooldown", message: "gemini temporarily unhealthy", retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
   }
 
-  const quota = await checkAndConsumeQuota({ provider: "gemini", operation: request.operation, estimatedTokens: request.maxTokens });
+  const quota = await reserveQuota({ provider: "gemini", operation: request.operation, estimatedTokens: request.maxTokens });
   if (!quota.allowed) {
     return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_quota_exhausted", message: quota.reason ?? "gemini quota exhausted", retryable: false, authFailure: false, invalidRequest: false, rateLimited: true } };
   }
@@ -161,6 +168,8 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
       },
     });
 
+    void reconcileQuotaUsage(quota.reservation, { inputTokens, outputTokens });
+
     logAiProviderUsage(
       buildAiUsageRecord({
         provider: "gemini",
@@ -182,6 +191,8 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     return { ok: true, content, provider: "gemini", latencyMs };
   } catch (err) {
     const error = err && typeof err === "object" && "code" in err ? (err as ClassifiedAiError) : { code: "ai_network_error", message: "Gemini request failed", retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
+    // No real tokens were consumed — give the reserved estimate back.
+    void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
     logAiProviderUsage(
       buildAiUsageRecord({
         provider: "gemini",

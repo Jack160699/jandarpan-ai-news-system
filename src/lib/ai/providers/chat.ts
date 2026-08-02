@@ -14,7 +14,8 @@ import {
   recordProviderFallback,
 } from "@/lib/ai/providers/health";
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
-import { acquireConcurrencySlot, checkAndConsumeQuota } from "@/lib/ai/providers/quota";
+import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib/ai/providers/quota";
+import type { QuotaReservation } from "@/lib/ai/providers/quota";
 import { isGeminiConfigured, requestGeminiChat } from "@/lib/ai/providers/gemini";
 import { resolveChatChain } from "@/lib/ai/providers/router";
 import {
@@ -63,29 +64,40 @@ function resolveOpenRouterModel(override?: string): string {
   );
 }
 
-function resolveGroqModel(operation: string, override?: string): string {
-  if (override?.trim()) return override.trim();
+/**
+ * Groq model chain for one operation — most operations use a single model,
+ * but the independent reviewer gets an explicit in-provider fallback: if
+ * the primary reviewer model (openai/gpt-oss-120b) is unavailable or the
+ * account lacks access to it, Groq retries with qwen/qwen3.6-27b rather
+ * than silently degrading straight to a different provider's weaker model.
+ * That transition is always logged (see the `next.id === attempt.id`
+ * branch in requestChatCompletion) — never silent.
+ */
+function resolveGroqModelChain(operation: string, override?: string): string[] {
+  if (override?.trim()) return [override.trim()];
   if (operation === "editorial_review") {
-    return process.env.GROQ_REVIEW_MODEL?.trim() || "llama-3.3-70b-versatile";
+    const primary = process.env.GROQ_REVIEW_MODEL?.trim() || "openai/gpt-oss-120b";
+    const fallback = process.env.GROQ_REVIEW_FALLBACK_MODEL?.trim() || "qwen/qwen3.6-27b";
+    return primary === fallback ? [primary] : [primary, fallback];
   }
-  return process.env.GROQ_LIGHTWEIGHT_MODEL?.trim() || "llama-3.1-8b-instant";
+  return [process.env.GROQ_LIGHTWEIGHT_MODEL?.trim() || "llama-3.1-8b-instant"];
 }
 
-/** REST configs for the OpenAI-compatible providers (openai, openrouter, groq) — excludes gemini, which has its own request shape (see gemini.ts). */
-function getRestProviderConfigs(operation: string, modelOverride?: string): Partial<Record<AiProviderId, ProviderConfig>> {
-  const configs: Partial<Record<AiProviderId, ProviderConfig>> = {};
+/** REST configs for the OpenAI-compatible providers (openai, openrouter, groq) — excludes gemini, which has its own request shape (see gemini.ts). Each provider maps to an ordered array of configs since Groq can have more than one (primary reviewer model + in-provider fallback model). */
+function getRestProviderConfigs(operation: string, modelOverride?: string): Partial<Record<AiProviderId, ProviderConfig[]>> {
+  const configs: Partial<Record<AiProviderId, ProviderConfig[]>> = {};
   const openaiKey = process.env.OPENAI_API_KEY?.trim();
   if (openaiKey) {
-    configs.openai = {
+    configs.openai = [{
       id: "openai",
       url: OPENAI_CHAT_URL,
       apiKey: openaiKey,
       model: resolveOpenAiModel(modelOverride),
-    };
+    }];
   }
   const openrouterKey = process.env.OPENROUTER_API_KEY?.trim();
   if (openrouterKey) {
-    configs.openrouter = {
+    configs.openrouter = [{
       id: "openrouter",
       url: OPENROUTER_CHAT_URL,
       apiKey: openrouterKey,
@@ -95,26 +107,38 @@ function getRestProviderConfigs(operation: string, modelOverride?: string): Part
           process.env.OPENROUTER_REFERER?.trim() || "https://newspaper-motion.local",
         "X-Title": process.env.OPENROUTER_APP_NAME?.trim() || "Newspaper Motion",
       },
-    };
+    }];
   }
   const groqKey = process.env.GROQ_API_KEY?.trim();
   if (groqKey) {
-    configs.groq = {
-      id: "groq",
+    configs.groq = resolveGroqModelChain(operation, modelOverride).map((model) => ({
+      id: "groq" as const,
       url: GROQ_CHAT_URL,
       apiKey: groqKey,
-      model: resolveGroqModel(operation, modelOverride),
-    };
+      model,
+    }));
   }
   return configs;
+}
+
+/**
+ * Groq hosts multiple distinct models on one account/key; a health-registry
+ * key of just "groq" would let one model's cooldown (e.g. a 403 because the
+ * account lacks access to a specific model) block every other Groq model
+ * too, defeating the in-provider model fallback in resolveGroqModelChain().
+ * Other providers in this file have exactly one model per chain slot, so
+ * they keep the plain provider-id key.
+ */
+function healthKeyFor(config: ProviderConfig): string {
+  return config.id === "groq" ? `groq:${config.model}` : config.id;
 }
 
 async function postChat(
   config: ProviderConfig,
   request: ChatCompletionRequest
-): Promise<{ content: string; latencyMs: number }> {
+): Promise<{ content: string; latencyMs: number; inputTokens: number; outputTokens: number }> {
   const started = Date.now();
-  recordProviderRequestStarted(config.id, request.operation);
+  recordProviderRequestStarted(healthKeyFor(config), request.operation);
 
   const controller = new AbortController();
   const timeoutMs = request.timeoutMs ?? 45_000;
@@ -152,7 +176,7 @@ async function postChat(
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       const classified = classifyAiHttpFailure(res.status, detail);
-      markProviderUnhealthy(config.id, {
+      markProviderUnhealthy(healthKeyFor(config), {
         reason: classified.authFailure
           ? `${config.id}_unauthorized`
           : classified.message,
@@ -180,7 +204,7 @@ async function postChat(
       throw empty;
     }
 
-    recordProviderRequestCompleted(config.id, request.operation, latencyMs);
+    recordProviderRequestCompleted(healthKeyFor(config), request.operation, latencyMs);
 
     const usage = parseChatCompletionUsage(json);
     if (config.id === "openai") {
@@ -244,7 +268,7 @@ async function postChat(
       });
     }
 
-    return { content, latencyMs };
+    return { content, latencyMs, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens };
   } catch (err) {
     if (
       err &&
@@ -264,7 +288,7 @@ async function requestFromProvider(
   config: ProviderConfig,
   request: ChatCompletionRequest
 ): Promise<ChatCompletionResult> {
-  if (!isProviderHealthy(config.id)) {
+  if (!isProviderHealthy(healthKeyFor(config))) {
     return {
       ok: false,
       provider: config.id,
@@ -299,10 +323,13 @@ async function requestFromProvider(
   }
 
   // OpenAI has no quota controller (billing is disabled by default — see
-  // AI_PROVIDER_OPENAI_ENABLED); the free providers are quota-gated.
+  // AI_PROVIDER_OPENAI_ENABLED); the free providers are quota-gated, keyed
+  // by provider+model so e.g. Groq's gpt-oss-120b and llama-3.1-8b-instant
+  // buckets can never authorize each other's traffic.
   if (config.id !== "openai") {
-    const quota = await checkAndConsumeQuota({
+    const quota = await reserveQuota({
       provider: config.id,
+      model: config.model,
       operation: request.operation,
       estimatedTokens: request.maxTokens,
     });
@@ -323,6 +350,7 @@ async function requestFromProvider(
     }
     const slot = acquireConcurrencySlot(config.id);
     if (!slot.acquired) {
+      void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
       return {
         ok: false,
         provider: config.id,
@@ -338,24 +366,25 @@ async function requestFromProvider(
       };
     }
     try {
-      return await requestFromProviderInner(config, request, started, retryCount);
+      return await requestFromProviderInner(config, request, started, retryCount, quota.reservation);
     } finally {
       slot.release();
     }
   }
 
-  return requestFromProviderInner(config, request, started, retryCount);
+  return requestFromProviderInner(config, request, started, retryCount, null);
 }
 
 async function requestFromProviderInner(
   config: ProviderConfig,
   request: ChatCompletionRequest,
   started: number,
-  retryCountInit: number
+  retryCountInit: number,
+  reservation: QuotaReservation | null
 ): Promise<ChatCompletionResult> {
   let retryCount = retryCountInit;
   try {
-    const { content, latencyMs } = await withTransientAiRetry({
+    const { content, latencyMs, inputTokens, outputTokens } = await withTransientAiRetry({
       operation: request.operation,
       provider: config.id,
       isRetryable: (e) => e.retryable,
@@ -364,8 +393,10 @@ async function requestFromProviderInner(
         return postChat(config, request);
       },
     });
+    if (reservation) void reconcileQuotaUsage(reservation, { inputTokens, outputTokens });
     return { ok: true, content, provider: config.id, latencyMs };
   } catch (err) {
+    if (reservation) void reconcileQuotaUsage(reservation, { inputTokens: 0, outputTokens: 0 });
     const errorCode =
       err && typeof err === "object" && "code" in err
         ? (err as ClassifiedAiError).code
@@ -430,14 +461,17 @@ export async function requestChatCompletion(
   const chain = resolveChatChain(request.operation);
   const restConfigs = getRestProviderConfigs(request.operation, request.model);
 
-  const attempts: Array<{ id: AiProviderId; invoke: () => Promise<ChatCompletionResult> }> = [];
+  const attempts: Array<{ id: AiProviderId; model: string | null; invoke: () => Promise<ChatCompletionResult> }> = [];
   for (const providerId of chain) {
     if (providerId === "gemini") {
-      if (isGeminiConfigured()) attempts.push({ id: "gemini", invoke: () => requestGeminiChat(request) });
+      if (isGeminiConfigured()) attempts.push({ id: "gemini", model: null, invoke: () => requestGeminiChat(request) });
       continue;
     }
-    const config = restConfigs[providerId];
-    if (config) attempts.push({ id: providerId, invoke: () => requestFromProvider(config, request) });
+    const configs = restConfigs[providerId];
+    if (!configs) continue;
+    for (const config of configs) {
+      attempts.push({ id: providerId, model: config.model, invoke: () => requestFromProvider(config, request) });
+    }
   }
 
   if (!attempts.length) {
@@ -467,6 +501,13 @@ export async function requestChatCompletion(
     const next = attempts[i + 1];
     if (next) {
       recordProviderFallback(attempt.id, next.id, result.error.code);
+      if (attempt.id === next.id && attempt.model && next.model && attempt.model !== next.model) {
+        // In-provider model fallback (e.g. reviewer model blocked for the
+        // account) — always reported, never a silent downgrade.
+        console.warn(
+          `[ai-model-fallback] ${attempt.id}: model "${attempt.model}" unavailable (${result.error.code}: ${result.error.message}) — falling back to "${next.model}"`
+        );
+      }
     }
   }
 

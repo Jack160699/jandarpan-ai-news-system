@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  CLOUDFLARE_EMBEDDING_DIMENSIONS,
   isCloudflareEmbeddingsConfigured,
   requestCloudflareEmbeddings,
 } from "./cloudflare-embeddings";
@@ -14,13 +15,20 @@ function stubCloudflareEnv() {
   vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-token");
 }
 
+/** Realistic-dimension vector for tests — real bge-m3 output, not a 3-value toy. */
+function fakeVector(seed: number): number[] {
+  return Array.from({ length: CLOUDFLARE_EMBEDDING_DIMENSIONS }, (_, i) => (seed + i) / 10000);
+}
+
 describe("requestCloudflareEmbeddings", () => {
   it("returns vectors/model from a successful nested {result:{data:[[...],[...]]}} response", async () => {
     stubCloudflareEnv();
+    const v1 = fakeVector(1);
+    const v2 = fakeVector(2);
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          result: { data: [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]] },
+          result: { data: [v1, v2] },
           success: true,
         }),
         { status: 200, headers: { "content-type": "application/json" } }
@@ -34,17 +42,18 @@ describe("requestCloudflareEmbeddings", () => {
     });
 
     expect(result).toEqual({
-      vectors: [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]],
+      vectors: [v1, v2],
       model: "@cf/baai/bge-m3",
     });
   });
 
   it("normalizes a flat single-vector response into a 1-vector array", async () => {
     stubCloudflareEnv();
+    const v1 = fakeVector(1);
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          result: { data: [0.1, 0.2, 0.3] },
+          result: { data: v1 },
           success: true,
         }),
         { status: 200, headers: { "content-type": "application/json" } }
@@ -58,8 +67,34 @@ describe("requestCloudflareEmbeddings", () => {
     });
 
     expect(result).toEqual({
-      vectors: [[0.1, 0.2, 0.3]],
+      vectors: [v1],
       model: "@cf/baai/bge-m3",
+    });
+  });
+
+  it("fails closed when a returned vector's dimension doesn't match CLOUDFLARE_EMBEDDING_DIMENSIONS", async () => {
+    stubCloudflareEnv();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          result: { data: [[0.1, 0.2, 0.3]] }, // wrong dimension — must not be silently persisted
+          success: true,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestCloudflareEmbeddings({
+      operation: "test",
+      texts: ["some text"],
+    });
+
+    expect(result).toEqual({
+      error: expect.objectContaining({
+        code: "ai_invalid_request",
+        retryable: false,
+      }),
     });
   });
 
