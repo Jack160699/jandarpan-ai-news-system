@@ -20,7 +20,7 @@ import type {
   TranslationJobResult,
 } from "@/lib/i18n/multilingual/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
-import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
+import { isAnyChatProviderConfigured, requestChatCompletion } from "@/lib/ai/providers";
 import {
   computeSourceContentVersion,
   resolveTranslationUrgencyScore,
@@ -36,8 +36,6 @@ import {
   storePromptCache,
 } from "@/lib/observability/openai-cost/prompt-cache";
 import { buildUsageRecord } from "@/lib/observability/openai-cost/record";
-
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 export const DEFAULT_TRANSLATION_TARGETS: NewsroomLanguage[] = [
   "en",
@@ -84,8 +82,7 @@ export async function translateArticleBundle(input: {
   urgencyScore?: number | null;
   sourceContentVersion?: string;
 }): Promise<ArticleLocaleBundle | null> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return null;
+  if (!isAnyChatProviderConfigured()) return null;
   if (input.sourceLanguage === input.targetLanguage) {
     const mins = estimateMinutes(input.article_body);
     const sameLang: ArticleLocaleBundle = {
@@ -188,64 +185,31 @@ Return JSON only:
     }
   }
 
-  const body = {
-    model:
-      process.env.NEWSROOM_TRANSLATION_MODEL?.trim() ||
-      process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
-      "gpt-4o-mini",
-    temperature: 0.25,
-    max_tokens: maxTokens,
-    response_format: { type: "json_object" as const },
-    messages: [
-      { role: "system", content: system },
-      {
-        role: "user",
-        content: userContent,
-      },
-    ],
-  };
+  // Explicit override only — do not force an OpenAI-shaped default (e.g.
+  // "gpt-4o-mini") onto gemini/groq/openrouter; each provider resolves its
+  // own operation-appropriate default model when no override is given.
+  const modelOverride =
+    process.env.NEWSROOM_TRANSLATION_MODEL?.trim() ||
+    process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
+    undefined;
 
   try {
-    const started = Date.now();
-    const res = await fetch(OPENAI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(90_000),
-    });
-
-    const latencyMs = Date.now() - started;
-
-    if (!res.ok) {
-      recordDirectChatCompletion({
-        operation: "translation",
-        model: body.model,
-        system,
-        user: userContent,
-        latencyMs,
-        success: false,
-        context: { worker: "translation", articleId: input.articleId },
-      });
-      return null;
-    }
-    const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const text = json.choices?.[0]?.message?.content?.trim();
-    recordDirectChatCompletion({
+    const result = await requestChatCompletion({
       operation: "translation",
-      model: body.model,
       system,
-      user: body.messages[1]!.content as string,
-      json,
-      content: text,
-      latencyMs,
-      success: Boolean(text),
+      user: userContent,
+      model: modelOverride,
+      temperature: 0.25,
+      maxTokens,
+      jsonMode: true,
+      timeoutMs: 90_000,
+      cachePolicy: "bypass",
       context: { worker: "translation", articleId: input.articleId },
     });
+
+    if (!result.ok) return null;
+
+    const text = result.content.trim();
     if (!text) return null;
 
     const parsed = JSON.parse(text) as LlmTranslationResponse;
@@ -253,20 +217,22 @@ Return JSON only:
     const summary = parsed.summary?.trim();
     if (!headline || !summary) return null;
 
+    const modelLabel = modelOverride ?? result.provider;
+
     void storePromptCache({
       system,
       user: userContent,
       operation: "translation",
       worker: "translation",
       articleId: input.articleId,
-      model: body.model,
+      model: modelLabel,
       result: text,
       inputTokens: 0,
       outputTokens: 0,
       estimatedCostUsd: buildUsageRecord({
         operation: "translation",
         endpoint: "chat.completions",
-        model: body.model,
+        model: modelLabel,
         inputTokens: 0,
         outputTokens: 0,
         success: true,
@@ -288,7 +254,7 @@ Return JSON only:
       tags: tags?.length ? tags : input.tags,
       reading_time: readingTimeLabel(mins, input.targetLanguage),
       translated_at: new Date().toISOString(),
-      model: body.model,
+      model: modelLabel,
       tone_profile: getRegionalToneProfile(input.targetLanguage).id,
     };
     return input.sourceContentVersion

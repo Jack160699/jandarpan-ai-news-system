@@ -4,6 +4,7 @@
 
 import type { EditorialQualityReport } from "@/lib/news/ai/editorial-guards";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+import type { AiProviderId } from "@/lib/ai/providers/types";
 
 export type SupportedEditorialLanguage = "hi" | "en";
 
@@ -18,6 +19,36 @@ export type EditorialDraft = {
   language: SupportedEditorialLanguage;
 };
 
+/**
+ * Independent-reviewer verdict shape — parsed JSON from the model. Kept
+ * loose (Record<string, unknown>) at the call boundary so the fact-pack
+ * workstream (src/lib/news/ai/fact-pack.ts) can consume it without a hard
+ * type dependency on this module's exact schema.
+ */
+export type IndependentReviewVerdict = {
+  passed: boolean;
+  issues: string[];
+  sensitivity_flags: string[];
+  confidence: number;
+};
+
+export type IndependentReviewResult = {
+  passed: boolean;
+  verdict: Record<string, unknown>;
+  provider: AiProviderId | null;
+  error?: string;
+};
+
+/** Persisted into editorial_metadata.independent_review (see generate-article.ts). */
+export type IndependentReviewMetadata = {
+  passed: boolean;
+  issues: string[];
+  sensitivity_flags: string[];
+  confidence: number | null;
+  provider: AiProviderId | null;
+  error?: string;
+};
+
 export type EditorialGenerationResult = {
   ok: boolean;
   article: GeneratedArticleRow | null;
@@ -27,6 +58,7 @@ export type EditorialGenerationResult = {
   repaired?: boolean;
   usedFallback?: boolean;
   reason?: string;
+  independentReview?: IndependentReviewResult;
 };
 
 export type BatchEditorialResult = {

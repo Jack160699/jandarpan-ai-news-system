@@ -14,7 +14,7 @@ const AUTH_COOLDOWN_MS = 15 * 60 * 1000;
 const DEFAULT_COOLDOWN_MS = 5 * 60 * 1000;
 
 type ProviderState = {
-  provider: AiProviderId;
+  provider: HealthKey;
   healthy: boolean;
   disabledUntil: number | null;
   lastSuccessAt: number | null;
@@ -28,10 +28,20 @@ type ProviderState = {
   lastHttpStatus: number | null;
 };
 
-const registry = new Map<AiProviderId, ProviderState>();
+/**
+ * Registry key: an AiProviderId for most providers, or a "provider:model"
+ * compound string for providers with multiple distinct models sharing one
+ * account (currently only Groq — see chat.ts's healthKeyFor()). This keeps
+ * one model's cooldown (e.g. a 403 because the account lacks access to
+ * openai/gpt-oss-120b) from poisoning every other model on the same
+ * provider, which would otherwise defeat in-provider model fallback.
+ */
+type HealthKey = AiProviderId | (string & {});
+
+const registry = new Map<HealthKey, ProviderState>();
 let lastUnauthorizedWarningAt: number | null = null;
 
-function emptyState(provider: AiProviderId): ProviderState {
+function emptyState(provider: HealthKey): ProviderState {
   return {
     provider,
     healthy: true,
@@ -48,7 +58,7 @@ function emptyState(provider: AiProviderId): ProviderState {
   };
 }
 
-function getState(provider: AiProviderId): ProviderState {
+function getState(provider: HealthKey): ProviderState {
   let state = registry.get(provider);
   if (!state) {
     state = emptyState(provider);
@@ -70,7 +80,7 @@ export function logProviderTelemetry(
   );
 }
 
-export function isProviderHealthy(provider: AiProviderId): boolean {
+export function isProviderHealthy(provider: HealthKey): boolean {
   const state = getState(provider);
   if (!state.disabledUntil) return true;
   if (Date.now() >= state.disabledUntil) {
@@ -84,7 +94,7 @@ export function isProviderHealthy(provider: AiProviderId): boolean {
 }
 
 export function markProviderUnhealthy(
-  provider: AiProviderId,
+  provider: HealthKey,
   input: {
     reason: string;
     httpStatus?: number;
@@ -130,7 +140,7 @@ export function markProviderUnhealthy(
 }
 
 export function recordProviderSuccess(
-  provider: AiProviderId,
+  provider: HealthKey,
   latencyMs: number
 ): void {
   const state = getState(provider);
@@ -146,7 +156,7 @@ export function recordProviderSuccess(
 }
 
 export function recordProviderRequestStarted(
-  provider: AiProviderId,
+  provider: HealthKey,
   operation: string
 ): void {
   const state = getState(provider);
@@ -156,7 +166,7 @@ export function recordProviderRequestStarted(
 }
 
 export function recordProviderRequestCompleted(
-  provider: AiProviderId,
+  provider: HealthKey,
   operation: string,
   latencyMs: number
 ): void {
@@ -181,7 +191,14 @@ export function recordProviderFallback(
 }
 
 export function getAiProviderHealthSnapshots(): AiProviderHealthSnapshot[] {
-  const providers: AiProviderId[] = ["openai", "openrouter", "local"];
+  const providers: AiProviderId[] = [
+    "gemini",
+    "groq",
+    "cloudflare",
+    "openai",
+    "openrouter",
+    "local",
+  ];
   return providers.map((provider) => {
     const s = getState(provider);
     const now = Date.now();

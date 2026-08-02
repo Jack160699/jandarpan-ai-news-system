@@ -11,6 +11,8 @@ import {
 } from "@/lib/i18n/languages";
 import { bodyEqualsExcerpt } from "@/lib/news/ai/editorial-depth-quality";
 import { normalizeTitle, titleSimilarity } from "@/lib/news/normalize";
+import { extractSignificantNumbers } from "@/lib/autonomous/claim-number-scan";
+import { extractDateMentions, extractQuotedSpans, type FactPack } from "@/lib/news/ai/fact-pack";
 
 export const GENERATION_VALIDATION_LIMITS = {
   minHeadlineChars: 8,
@@ -48,7 +50,12 @@ export type GenerationValidationCode =
   | "raw_json_or_instructions"
   | "empty_section"
   | "unsafe_markup"
-  | "null_undefined_artifact";
+  | "null_undefined_artifact"
+  | "unsupported_name"
+  | "unsupported_date"
+  | "unsupported_number"
+  | "unsupported_quote"
+  | "insufficient_sensitive_sourcing";
 
 export type GenerationValidationIssue = {
   code: GenerationValidationCode;
@@ -516,4 +523,184 @@ export function shouldQuarantineGenerationFailure(
   if (validation.ok) return false;
   if (attempts >= GENERATION_VALIDATION_LIMITS.maxValidationRetries) return true;
   return validation.quarantineRecommended && !validation.retryable;
+}
+
+const COMMON_CAPITALIZED_WORDS = new Set([
+  "the", "this", "that", "these", "those", "he", "she", "it", "they", "we", "you",
+  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+  "january", "february", "march", "april", "may", "june", "july", "august",
+  "september", "october", "november", "december",
+]);
+
+const ORG_HINT_RE =
+  /\b(ministry|government|court|police|election|commission|party|cabinet|department|corporation|committee|assembly|council|board|authority|company|university|college|hospital|bank)\b/i;
+
+const NAME_CANDIDATE_RE = /\b[A-Z][a-z]{2,}(?:\s+[A-Z][a-z]{2,}){1,3}\b/g;
+
+const RELATIVE_DATE_RE =
+  /^(today|yesterday|tomorrow|tonight|this\s+(week|month|year)|last\s+(week|month|year)|next\s+(week|month|year)|आज|कल|परसों|इस\s*सप्ताह|इस\s*महीने|पिछले\s*सप्ताह|पिछले\s*महीने)$/i;
+
+function extractNameCandidates(text: string): string[] {
+  const matches = text.match(NAME_CANDIDATE_RE) ?? [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const m of matches) {
+    const trimmed = m.trim();
+    const key = trimmed.toLowerCase();
+    if (seen.has(key) || ORG_HINT_RE.test(trimmed)) continue;
+    const words = trimmed.split(/\s+/);
+    if (words.every((w) => COMMON_CAPITALIZED_WORDS.has(w.toLowerCase()))) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+function wordOverlap(a: string, b: string): boolean {
+  const wordsA = a.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+  const wordsB = new Set(b.toLowerCase().split(/\s+/).filter((w) => w.length >= 3));
+  return wordsA.some((w) => wordsB.has(w));
+}
+
+function nameSupportedByFactPack(name: string, people: string[]): boolean {
+  if (!people.length) return false;
+  const lower = name.toLowerCase();
+  return people.some((p) => {
+    const pLower = p.toLowerCase();
+    return (
+      wordOverlap(name, p) ||
+      lower.includes(pLower) ||
+      pLower.includes(lower) ||
+      titleSimilarity(name, p) >= 0.5
+    );
+  });
+}
+
+function normalizeDateToken(d: string): string {
+  return d.toLowerCase().replace(/[.,]/g, "").replace(/\s+/g, " ").trim();
+}
+
+function dateSupportedByFactPack(date: string, factDates: string[]): boolean {
+  const norm = normalizeDateToken(date);
+  return factDates.some((f) => {
+    const fn = normalizeDateToken(f);
+    return fn === norm || fn.includes(norm) || norm.includes(fn);
+  });
+}
+
+function normalizeNumberForCompare(n: string): string {
+  return n.replace(/[₹,\s]|rs\.?|inr/gi, "").toLowerCase();
+}
+
+function numberSupportedByFactPack(num: string, factNumbers: string[]): boolean {
+  const norm = normalizeNumberForCompare(num);
+  if (!norm) return true;
+  return factNumbers.some((f) => {
+    const fn = normalizeNumberForCompare(f);
+    return fn === norm || (fn.length >= 2 && (fn.includes(norm) || norm.includes(fn)));
+  });
+}
+
+function quoteSupportedByFactPack(quote: string, factQuotes: FactPack["quotes"]): boolean {
+  const normQuote = quote.toLowerCase().replace(/\s+/g, " ").trim();
+  return factQuotes.some((q) => {
+    const normFact = q.text.toLowerCase().replace(/\s+/g, " ").trim();
+    if (!normFact) return false;
+    if (normFact === normQuote || normFact.includes(normQuote) || normQuote.includes(normFact)) {
+      return true;
+    }
+    return titleSimilarity(normQuote, normFact) >= 0.6;
+  });
+}
+
+/**
+ * Claim-against-fact-pack checks — a safety net against fabrication, not a
+ * grammar-precision tool. This pipeline has no real NLP entity linker, so
+ * every matcher below (name/date/number/quote) is deliberately permissive:
+ * substring, word-overlap, and bigram-similarity matches all count as
+ * "supported". A stricter matcher would reject legitimate paraphrasing
+ * (e.g. "the minister" after the model already named them once, or
+ * "12,000 crore" reformatted as "Rs 12,000 crore") far more often than it
+ * would ever catch a genuine fabrication. We accept a higher false-negative
+ * rate (some fabrications slip through this regex net) to keep the
+ * false-positive rate (blocking real, well-sourced articles) low — judgment-
+ * based hallucination screening additionally runs via the independent AI
+ * reviewer (independent-review.ts), which this function does not replace.
+ *
+ * The one exception is "insufficient_sensitive_sourcing", which is a hard,
+ * non-retryable block (see duplicate_title/unsafe_markup for the same
+ * pattern) — sensitive-category stories must clear a sourcing floor
+ * regardless of how well the rest of the draft reads.
+ */
+export function validateClaimsAgainstFactPack(input: {
+  headline: string;
+  summary: string;
+  articleBody: string;
+  factPack: FactPack;
+}): GenerationValidationIssue[] {
+  const issues: GenerationValidationIssue[] = [];
+  const { factPack } = input;
+  const combined = `${input.headline}\n${input.summary}\n${input.articleBody}`;
+
+  for (const name of extractNameCandidates(combined)) {
+    if (!nameSupportedByFactPack(name, factPack.people)) {
+      issues.push(
+        issue(
+          "unsupported_name",
+          `Name-shaped mention has no match in fact pack: "${name}"`,
+          true
+        )
+      );
+    }
+  }
+
+  for (const date of extractDateMentions(combined)) {
+    if (RELATIVE_DATE_RE.test(date.trim())) continue;
+    if (!dateSupportedByFactPack(date, factPack.dates)) {
+      issues.push(
+        issue("unsupported_date", `Date not traceable to fact pack: "${date}"`, true)
+      );
+    }
+  }
+
+  // Numbers — noise-filtered: only 3+ digit figures or currency/percent-marked
+  // ones are checked; ages, counts, and list positions are not claims worth
+  // gating on and would otherwise dominate false positives.
+  const draftNumbers = extractSignificantNumbers(combined).filter(
+    (n) => n.includes("%") || n.replace(/[^\d]/g, "").length >= 3
+  );
+  for (const num of draftNumbers) {
+    if (!numberSupportedByFactPack(num, factPack.numbers)) {
+      issues.push(
+        issue("unsupported_number", `Number not traceable to fact pack: "${num}"`, true)
+      );
+    }
+  }
+
+  for (const quote of extractQuotedSpans(input.articleBody)) {
+    if (!quoteSupportedByFactPack(quote, factPack.quotes)) {
+      issues.push(
+        issue(
+          "unsupported_quote",
+          `Quoted text has no matching source quote in fact pack: "${quote.slice(0, 60)}"`,
+          true
+        )
+      );
+    }
+  }
+
+  if (factPack.sensitiveCategory) {
+    const sufficient = factPack.sources.length >= 2 || factPack.primarySourceIndicator === true;
+    if (!sufficient) {
+      issues.push(
+        issue(
+          "insufficient_sensitive_sourcing",
+          `Sensitive category "${factPack.sensitiveCategory}" requires 2+ sources or a primary source; fact pack has ${factPack.sources.length} source(s), primarySourceIndicator=${factPack.primarySourceIndicator}`,
+          false
+        )
+      );
+    }
+  }
+
+  return issues;
 }

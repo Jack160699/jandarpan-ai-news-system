@@ -8,6 +8,7 @@ import { requireDashboardSession } from "@/lib/saas-auth/guard";
 import { roleHasPermission } from "@/lib/saas-auth/rbac";
 import { fetchCollaborationHub } from "@/lib/collaboration/store";
 import { buildIncidentFeed, type AdminIncident } from "@/lib/admin-v3/incident-feed";
+import { fetchNewsroomAuditNotifications } from "@/lib/newsroom-audit/notifications-feed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -122,6 +123,13 @@ export async function GET(request: Request) {
       for (const incident of feed.incidents) {
         items.push(incidentToNotification(incident));
       }
+    } catch {
+      /* optional */
+    }
+
+    try {
+      const auditNotifications = await fetchNewsroomAuditNotifications();
+      items.push(...auditNotifications);
     } catch {
       /* optional */
     }

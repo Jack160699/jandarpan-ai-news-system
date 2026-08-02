@@ -1,4 +1,10 @@
-export type AiProviderId = "openai" | "openrouter" | "local";
+export type AiProviderId =
+  | "openai"
+  | "openrouter"
+  | "gemini"
+  | "groq"
+  | "cloudflare"
+  | "local";
 export type OpenAiProviderStatus =
   | "healthy"
   | "degraded"
@@ -56,11 +62,17 @@ export type ChatCompletionRequest = {
   timeoutMs?: number;
   /** Bypass lookup and storage when retrying output rejected by validation. */
   cachePolicy?: "default" | "bypass";
+  /** Breaking-priority requests may dip into each provider/model's reserved daily budget fraction — see quota.ts. */
+  priority?: "breaking" | "normal" | "backfill";
+  /** Escalate to a provider's premium/higher-tier model where one is configured (see GEMINI_PREMIUM_EDITORIAL_MODEL). Reserved for sensitive categories, high-value explainers, breaking news, and quality-retry escalation — never the default. */
+  premium?: boolean;
+  /** Required when premium is true — persisted into AI usage telemetry and the article audit trail, never a silent escalation. */
+  premiumReason?: string;
   context?: OpenAiTelemetryContext;
 };
 
 export type ChatCompletionResult =
-  | { ok: true; content: string; provider: AiProviderId; latencyMs: number }
+  | { ok: true; content: string; provider: AiProviderId; model: string; latencyMs: number }
   | {
       ok: false;
       error: ClassifiedAiError;

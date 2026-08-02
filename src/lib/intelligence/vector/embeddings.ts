@@ -1,5 +1,6 @@
 /**
- * OpenAI embedding client — text-embedding-3-small (1536 dims)
+ * Embedding client — Cloudflare Workers AI (free tier) first, OpenAI
+ * text-embedding-3-small (1536 dims) as an explicitly-enabled fallback.
  */
 
 import {
@@ -8,6 +9,12 @@ import {
   parseEmbeddingUsage,
 } from "@/lib/observability/openai-cost";
 import type { OpenAiCallContext } from "@/lib/observability/openai-cost";
+import {
+  CLOUDFLARE_EMBEDDING_DIMENSIONS,
+  isCloudflareEmbeddingsConfigured,
+  requestCloudflareEmbeddings,
+} from "@/lib/ai/providers/cloudflare-embeddings";
+import { isOpenAiProviderEnabled } from "@/lib/ai/providers/router";
 
 const MODEL = process.env.OPENAI_EMBEDDING_MODEL?.trim() || "text-embedding-3-small";
 const DIM = 1536;
@@ -22,6 +29,13 @@ export function embeddingDimensions(): number {
 
 export type EmbedTextsResult = {
   embeddings: (number[] | null)[];
+  /** Model id that produced `embeddings` — absent when the safe empty
+   * fallback was returned (no provider configured/enabled). */
+  model?: string;
+  /** Vector width of `embeddings` — callers must check this before writing
+   * to a fixed-dimension pgvector column. */
+  dimensions?: number;
+  provider?: "openai" | "cloudflare";
   error?: string;
   retryable?: boolean;
 };
@@ -30,16 +44,55 @@ export async function embedTexts(
   texts: string[]
 ): Promise<(number[] | null)[]> {
   const result = await embedTextsSafe(texts);
+  // TODO(migration-070): once intelligence_embeddings_cf exists, vector-store.ts
+  // must branch on embedding.model/dimensions to pick the write target. Until
+  // then this legacy wrapper (the only path vector-store.ts uses) only
+  // forwards OpenAI-dimensioned (1536) vectors through — intelligence_embeddings
+  // .embedding is a fixed vector(1536) column, and Cloudflare's
+  // CLOUDFLARE_EMBEDDING_DIMENSIONS-dim vectors must not be written into it.
+  if (result.dimensions && result.dimensions !== DIM) {
+    return texts.map(() => null);
+  }
   return result.embeddings;
 }
 
-/** Defensive OpenAI client — never throws; surfaces retry hints for workers */
+/** Defensive embedding client — never throws; surfaces retry hints for workers.
+ * Tries Cloudflare (free tier) first when configured, falling back to OpenAI
+ * only when explicitly enabled via AI_PROVIDER_OPENAI_ENABLED. */
 export async function embedTextsSafe(
   texts: string[],
   context?: OpenAiCallContext & { operation?: string }
 ): Promise<EmbedTextsResult> {
+  if (texts.length === 0) {
+    return { embeddings: [] };
+  }
+
+  if (isCloudflareEmbeddingsConfigured()) {
+    const cfResult = await requestCloudflareEmbeddings({
+      operation: context?.operation ?? "embeddings",
+      texts,
+      context: {
+        worker: context?.worker,
+        cron: context?.cron,
+        articleId: context?.articleId,
+        eventId: context?.eventId,
+        tenantId: context?.tenantId,
+      },
+    });
+    if ("vectors" in cfResult && cfResult.vectors.length === texts.length) {
+      return {
+        embeddings: cfResult.vectors,
+        model: cfResult.model,
+        dimensions: CLOUDFLARE_EMBEDDING_DIMENSIONS,
+        provider: "cloudflare",
+      };
+    }
+    // Cloudflare configured but the request failed/mismatched — best-effort,
+    // fall through to the OpenAI path below rather than giving up.
+  }
+
   const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey || texts.length === 0) {
+  if (!isOpenAiProviderEnabled() || !apiKey) {
     return { embeddings: texts.map(() => null) };
   }
 
@@ -99,7 +152,7 @@ export async function embedTextsSafe(
       const idx = row.index ?? 0;
       if (row.embedding?.length === DIM) out[idx] = row.embedding;
     }
-    return { embeddings: out };
+    return { embeddings: out, model: MODEL, dimensions: DIM, provider: "openai" };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "openai_embed_failed";
     return {
