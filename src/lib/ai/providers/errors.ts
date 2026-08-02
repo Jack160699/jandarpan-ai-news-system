@@ -2,6 +2,12 @@ import type { ClassifiedAiError } from "@/lib/ai/providers/types";
 
 const INVALID_REQUEST_RE =
   /invalid_request_error|invalid_api_key|incorrect api key/i;
+const EXHAUSTED_QUOTA_RE =
+  /insufficient_quota|quota (?:has been )?exceeded|no credits? remaining|credit balance|billing/i;
+
+export function isAiQuotaExhaustionMessage(message: string): boolean {
+  return EXHAUSTED_QUOTA_RE.test(message);
+}
 
 export function parseOpenAiErrorBody(body: string): {
   message: string;
@@ -57,14 +63,18 @@ export function classifyAiHttpFailure(
   }
 
   if (status === 429) {
+    const exhaustedQuota =
+      parsed.code === "insufficient_quota" ||
+      parsed.type === "insufficient_quota" ||
+      isAiQuotaExhaustionMessage(parsed.message);
     return {
-      code: "ai_rate_limit",
+      code: exhaustedQuota ? "ai_quota_exhausted" : "ai_rate_limit",
       message: parsed.message || "Rate limited",
       httpStatus: status,
-      retryable: true,
+      retryable: !exhaustedQuota,
       authFailure: false,
       invalidRequest: false,
-      rateLimited: true,
+      rateLimited: !exhaustedQuota,
     };
   }
 

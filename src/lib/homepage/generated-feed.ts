@@ -257,15 +257,33 @@ export function buildGeneratedHomepageFeed(
   const displayLanguage = options?.displayLanguage ?? "hi";
   if (!rows.length) return null;
 
-  const rankedOutputs = rankArticlesForHomepage(rows, {
+  // A news homepage must never disguise an archive as a live feed. Keep the
+  // latest surface within 24h and require a genuinely fresh (<6h) lead.
+  const freshRows = rows.filter(
+    (row) => hoursSince(row.published_at ?? row.created_at) <= 24
+  );
+  if (
+    !freshRows.length ||
+    !freshRows.some(
+      (row) => hoursSince(row.published_at ?? row.created_at) <= 6
+    )
+  ) {
+    homeDebug("buildGeneratedHomepageFeed: no fresh lead", {
+      displayLanguage,
+      poolSize: rows.length,
+    });
+    return null;
+  }
+
+  const rankedOutputs = rankArticlesForHomepage(freshRows, {
     personalization: options?.personalization,
   });
-  const hyperlocalBundle = buildHyperlocalFeedBundle(rows, {
+  const hyperlocalBundle = buildHyperlocalFeedBundle(freshRows, {
     maxDistricts: 6,
     displayLanguage,
     homeDistrict: options?.personalization?.homeDistrict ?? null,
   });
-  const localAlerts = buildLocalBreakingAlerts(rows, {
+  const localAlerts = buildLocalBreakingAlerts(freshRows, {
     cgOnly: true,
     limit: 8,
     homeDistrict: options?.personalization?.homeDistrict ?? null,
@@ -295,7 +313,11 @@ export function buildGeneratedHomepageFeed(
     return null;
   }
 
-  const pinnedRow = rows.find((r) => r.homepage_pin);
+  const pinnedRow = freshRows.find(
+    (r) =>
+      r.homepage_pin &&
+      hoursSince(r.published_at ?? r.created_at) <= 6
+  );
   const pinnedArticle = pinnedRow
     ? ranked.find((a) => a.id === pinnedRow.id)
     : undefined;

@@ -32,7 +32,7 @@ export function HomepageView({ feed }: HomepageViewProps) {
     ...supporting.slice(0, 3),
   ].filter((a, i, arr) => arr.findIndex((x) => x.id === a.id) === i);
 
-  const heroLead = feed.breakingTicker[0] ?? lead;
+  const heroLead = lead;
   const tickerItems = useMemo(() => buildTickerHeadlines(feed), [feed]);
 
   return (

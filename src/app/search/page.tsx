@@ -21,7 +21,6 @@ import { getPlatformTopic } from "@/lib/newsroom-platform/config/topics";
 import { BRAND } from "@/lib/brand";
 import {
   NOINDEX_FOLLOW_ROBOTS,
-  PRODUCTION_ROBOTS,
   SEARCH_PAGE_CANONICAL,
 } from "@/lib/seo";
 import type { SearchDistrict, SearchTimeScope } from "@/lib/search/types";
@@ -68,7 +67,7 @@ export async function generateMetadata({
       title: BASE_SEARCH_TITLE,
       description: BASE_SEARCH_DESCRIPTION,
       alternates: { canonical },
-      robots: PRODUCTION_ROBOTS,
+      robots: NOINDEX_FOLLOW_ROBOTS,
       openGraph: {
         title: BASE_SEARCH_TITLE,
         description: BASE_SEARCH_DESCRIPTION,

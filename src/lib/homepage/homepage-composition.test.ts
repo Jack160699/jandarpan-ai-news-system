@@ -203,4 +203,25 @@ describe("homepage composition", () => {
     expect(slots.editorialDesks.length).toBeGreaterThan(0);
     expect(slots.deskQuality.duplicateCount).toBe(0);
   });
+
+  it("never labels stories older than two hours as breaking", () => {
+    const staleBreaking = mockArticle("stale", "Old breaking headline", {
+      publishedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    });
+    const freshLead = mockArticle("fresh", "Current lead", {
+      ranking: {
+        priorityScore: 80,
+        reasons: [],
+        isTrending: true,
+        isBreaking: false,
+        duplicateClusterId: null,
+      },
+    });
+    const articles = [staleBreaking, freshLead];
+    const outputs = articles.map((a) => toRankedOutput(mockRow(a.id, a.headline)));
+
+    const slots = composeHomepageSlots(articles, outputs);
+
+    expect(slots.breakingTicker).toHaveLength(0);
+  });
 });
