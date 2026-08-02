@@ -219,7 +219,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
       })
     );
 
-    return { ok: true, content, provider: "gemini", latencyMs };
+    return { ok: true, content, provider: "gemini", model, latencyMs };
   } catch (err) {
     const error = err && typeof err === "object" && "code" in err ? (err as ClassifiedAiError) : { code: "ai_network_error", message: "Gemini request failed", retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
     // No real tokens were consumed — give the reserved estimate back.

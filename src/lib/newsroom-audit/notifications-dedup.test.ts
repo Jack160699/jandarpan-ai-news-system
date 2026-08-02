@@ -91,7 +91,20 @@ function createGenerateSupabaseMock() {
       if (table === "daily_newsroom_notifications") {
         if (mode === "insert") {
           const row = payload as Row;
-          notifications.push({ id: `notif-${notificationIdSeq++}`, ...row, resolved_at: null });
+          notifications.push({
+            id: `notif-${notificationIdSeq++}`,
+            ...row,
+            resolved_at: null,
+            acknowledged_at: null,
+            created_at: `created-at-seq-${notificationIdSeq}`,
+          });
+          return { data: null, error: null };
+        }
+        if (mode === "update") {
+          const patch = payload as Row;
+          for (const n of notifications) {
+            if (filters.every((f) => f(n))) Object.assign(n, patch);
+          }
           return { data: null, error: null };
         }
         const results = notifications.filter((r) => filters.every((f) => f(r)));
@@ -236,7 +249,7 @@ describe("generateDailyReport notification dedup", () => {
     }
     expect(notifications).toHaveLength(1);
     const firstIncidentKey = notifications[0]!.incident_key;
-    expect(firstIncidentKey).toBe("2026-08-01:content_production:No articles published today");
+    expect(firstIncidentKey).toBe("2026-08-01:deterministic:content_production:content_production.articlesPublished:critical");
 
     const second = await generateDailyReport("2026-08-01");
     expect(second.ok).toBe(true);
@@ -250,5 +263,109 @@ describe("generateDailyReport notification dedup", () => {
     // incident_key construction is stable/deterministic across runs.
     expect(notifications).toHaveLength(1);
     expect(notifications[0]!.incident_key).toBe(firstIncidentKey);
+  });
+
+  it("three differently worded AI findings about the same metric create exactly one notification", async () => {
+    notifications = [];
+    notificationIdSeq = 1;
+    collectDailyMetricsMock.mockReset();
+    analyzeDailyReportMock.mockReset();
+    runAutomatedActionsMock.mockClear();
+    collectDailyMetricsMock.mockResolvedValue(buildReport());
+
+    // Same underlying incident (pipeline_infrastructure.jobsFailed), three
+    // completely different AI phrasings across three "runs" — this is
+    // exactly the failure mode reported live: workers-health/jobsFailed
+    // findings paraphrased differently each regeneration produced 16
+    // notification rows for what should have been a handful of incidents.
+    const wordings = [
+      "पाइपलाइन बुनियादी ढांचे में 12 नौकरियां (jobsFailed) विफल हो गईं।",
+      "12 jobs failed in the pipeline infrastructure today — investigate the queue.",
+      "Pipeline infra: 12 job failures recorded (jobsFailed metric).",
+    ];
+
+    // buildReport()'s articlesPublished:0 also triggers its own deterministic
+    // finding/notification (covered by the test above) — give this report a
+    // nonzero count so this test isolates purely to the AI-finding dedup
+    // behavior under test.
+    const reportWithoutDeterministicFindings: DeterministicReport = {
+      ...buildReport(),
+      content_production: { ...buildReport().content_production, articlesPublished: metricOk(5) },
+    };
+    collectDailyMetricsMock.mockResolvedValue(reportWithoutDeterministicFindings);
+
+    for (const text of wordings) {
+      analyzeDailyReportMock.mockResolvedValueOnce({
+        ai_status: "completed",
+        status: "warning",
+        executive_summary: "Test summary.",
+        achievements: [],
+        warnings: [],
+        problems: [{ text, metric_ref: "pipeline_infrastructure.jobsFailed" }],
+        actions: [],
+        provider: "gemini",
+        model: "gemini-3.5-flash-lite",
+      });
+      const result = await generateDailyReport("2026-08-02");
+      expect(result.ok).toBe(true);
+    }
+
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]!.incident_key).toBe(
+      "2026-08-02:ai:ai_summary:pipeline_infrastructure.jobsFailed:critical"
+    );
+
+    // The single row's wording reflects the LAST run (updated in place, not
+    // left stale), while its identity/ack state would have survived any
+    // real acknowledgement across all three runs.
+    expect(notifications[0]!.title).toBe(wordings[2]);
+    expect(notifications[0]!.id).toBe("notif-1"); // still the first-ever-inserted row, only updated
+  });
+
+  it("preserves acknowledged_at across a reworded rerun of the same incident (update-in-place, not delete+reinsert)", async () => {
+    notifications = [];
+    notificationIdSeq = 1;
+    collectDailyMetricsMock.mockReset();
+    analyzeDailyReportMock.mockReset();
+    runAutomatedActionsMock.mockClear();
+    const reportWithoutDeterministicFindings: DeterministicReport = {
+      ...buildReport(),
+      content_production: { ...buildReport().content_production, articlesPublished: metricOk(5) },
+    };
+    collectDailyMetricsMock.mockResolvedValue(reportWithoutDeterministicFindings);
+    analyzeDailyReportMock.mockResolvedValue({
+      ai_status: "completed",
+      status: "warning",
+      executive_summary: "Test summary.",
+      achievements: [],
+      warnings: [{ text: "Initial wording of the same issue.", metric_ref: "images.failed" }],
+      problems: [],
+      actions: [],
+      provider: "gemini",
+      model: "gemini-3.5-flash-lite",
+    });
+
+    await generateDailyReport("2026-08-03");
+    expect(notifications).toHaveLength(1);
+    notifications[0]!.acknowledged_at = "2026-08-03T10:00:00.000Z";
+    notifications[0]!.acknowledged_by = "editor@jandarpan.news";
+
+    analyzeDailyReportMock.mockResolvedValue({
+      ai_status: "completed",
+      status: "warning",
+      executive_summary: "Test summary.",
+      achievements: [],
+      warnings: [{ text: "Reworded description of the same issue.", metric_ref: "images.failed" }],
+      problems: [],
+      actions: [],
+      provider: "gemini",
+      model: "gemini-3.5-flash-lite",
+    });
+    await generateDailyReport("2026-08-03");
+
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]!.title).toBe("Reworded description of the same issue.");
+    expect(notifications[0]!.acknowledged_at).toBe("2026-08-03T10:00:00.000Z");
+    expect(notifications[0]!.acknowledged_by).toBe("editor@jandarpan.news");
   });
 });

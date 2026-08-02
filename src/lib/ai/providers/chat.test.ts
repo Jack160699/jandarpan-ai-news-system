@@ -92,6 +92,41 @@ describe("requestChatCompletion", () => {
     expect(url).toContain("api.groq.com");
   });
 
+  it("sends max_completion_tokens (not max_tokens) to Groq, especially under jsonMode — confirmed live that Groq's json_object mode 400s (json_validate_failed) with the legacy max_tokens param but succeeds with max_completion_tokens", async () => {
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    const fetchMock = mockFetchByUrl({
+      "api.groq.com": () =>
+        new Response(openAiCompatSuccessBody, { status: 200, headers: { "content-type": "application/json" } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestChatCompletion(
+      baseRequest({ operation: "editorial_review", jsonMode: true, maxTokens: 500 })
+    );
+
+    expect(result.ok).toBe(true);
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string) as Record<string, unknown>;
+    expect(body.max_completion_tokens).toBe(500);
+    expect(body.max_tokens).toBeUndefined();
+    expect(body.response_format).toEqual({ type: "json_object" });
+  });
+
+  it("still sends max_tokens (not max_completion_tokens) to OpenAI — the Groq-specific fix must not change other providers", async () => {
+    vi.stubEnv("AI_PROVIDER_OPENAI_ENABLED", "true");
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    const fetchMock = mockFetchByUrl({
+      "api.openai.com": () =>
+        new Response(openAiCompatSuccessBody, { status: 200, headers: { "content-type": "application/json" } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await requestChatCompletion(baseRequest({ maxTokens: 500 }));
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string) as Record<string, unknown>;
+    expect(body.max_tokens).toBe(500);
+    expect(body.max_completion_tokens).toBeUndefined();
+  });
+
   it("never silently uses OpenAI: OPENAI_API_KEY set but AI_PROVIDER_OPENAI_ENABLED not 'true' and no other provider configured -> ai_unavailable", async () => {
     vi.stubEnv("OPENAI_API_KEY", "test-key");
     const fetchMock = vi.fn();

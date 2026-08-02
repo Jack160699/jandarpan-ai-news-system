@@ -54,12 +54,33 @@ function isOk<T>(m: MetricResult<T>): m is { status: "ok"; value: T } {
   return m.status === "ok";
 }
 
+/**
+ * Deterministic notification identity: report_date + finding source + category
+ * + metric_ref (a stable dot-path — never AI-generated title/message text) +
+ * severity (the "threshold state"). Two runs describing the same underlying
+ * condition — even with completely different AI wording — produce the same
+ * key; a severity change (warning -> critical) intentionally produces a
+ * different key rather than silently merging, so a worsening incident isn't
+ * hidden by an existing acknowledged/dismissed lower-severity notification.
+ */
+export function buildIncidentKey(input: {
+  reportDate: string;
+  source: "deterministic" | "ai";
+  category: string;
+  metricRef: string;
+  severity: string;
+}): string {
+  return `${input.reportDate}:${input.source}:${input.category}:${input.metricRef}:${input.severity}`.slice(0, 500);
+}
+
 type DeterministicFinding = {
   severity: "informational" | "success" | "warning" | "critical";
   category: string;
   title: string;
   observed_fact: string;
   evidence: Record<string, unknown>;
+  /** Stable dot-path identity for this rule — see buildIncidentKey. Never includes the dynamic count/value, only the field the rule watches. */
+  metricRef: string;
 };
 
 function buildDeterministicFindings(report: DeterministicReport): DeterministicFinding[] {
@@ -74,6 +95,7 @@ function buildDeterministicFindings(report: DeterministicReport): DeterministicF
       title: "No articles published today",
       observed_fact: "content_production.articlesPublished.value = 0",
       evidence: { field: "content_production.articlesPublished" },
+      metricRef: "content_production.articlesPublished",
     });
   }
 
@@ -84,6 +106,7 @@ function buildDeterministicFindings(report: DeterministicReport): DeterministicF
       title: `${quality.emptyArticleBody.value} article(s) created with an empty body`,
       observed_fact: `quality.emptyArticleBody.value = ${quality.emptyArticleBody.value}`,
       evidence: { field: "quality.emptyArticleBody" },
+      metricRef: "quality.emptyArticleBody",
     });
   }
 
@@ -94,6 +117,7 @@ function buildDeterministicFindings(report: DeterministicReport): DeterministicF
       title: `${quality.missingHeroImage.value} article(s) missing a hero image`,
       observed_fact: `quality.missingHeroImage.value = ${quality.missingHeroImage.value}`,
       evidence: { field: "quality.missingHeroImage" },
+      metricRef: "quality.missingHeroImage",
     });
   }
 
@@ -106,6 +130,7 @@ function buildDeterministicFindings(report: DeterministicReport): DeterministicF
         title: `AI provider success rate is ${Math.round(rate * 100)}%`,
         observed_fact: `ai_provider_usage.successRate.value = ${rate}`,
         evidence: { field: "ai_provider_usage.successRate" },
+        metricRef: "ai_provider_usage.successRate",
       });
     } else if (rate < 0.85) {
       findings.push({
@@ -114,6 +139,7 @@ function buildDeterministicFindings(report: DeterministicReport): DeterministicF
         title: `AI provider success rate is ${Math.round(rate * 100)}%`,
         observed_fact: `ai_provider_usage.successRate.value = ${rate}`,
         evidence: { field: "ai_provider_usage.successRate" },
+        metricRef: "ai_provider_usage.successRate",
       });
     }
   }
@@ -125,6 +151,7 @@ function buildDeterministicFindings(report: DeterministicReport): DeterministicF
       title: `${images.failed.value} editorial image job(s) failed today`,
       observed_fact: `images.failed.value = ${images.failed.value}`,
       evidence: { field: "images.failed" },
+      metricRef: "images.failed",
     });
   }
 
@@ -135,6 +162,7 @@ function buildDeterministicFindings(report: DeterministicReport): DeterministicF
       title: `${pipeline_infrastructure.deadLetters.value} job(s) landed in the dead-letter queue`,
       observed_fact: `pipeline_infrastructure.deadLetters.value = ${pipeline_infrastructure.deadLetters.value}`,
       evidence: { field: "pipeline_infrastructure.deadLetters" },
+      metricRef: "pipeline_infrastructure.deadLetters",
     });
   }
 
@@ -149,6 +177,7 @@ function buildDeterministicFindings(report: DeterministicReport): DeterministicF
       title: `${n} critical ops error event(s) recorded today`,
       observed_fact: `pipeline_infrastructure.errorEventsBySeverity.value.critical = ${n}`,
       evidence: { field: "pipeline_infrastructure.errorEventsBySeverity" },
+      metricRef: "pipeline_infrastructure.errorEventsBySeverity.critical",
     });
   }
 
@@ -325,23 +354,23 @@ export async function generateDailyReport(
         title: string;
         ai_interpretation: string;
       }> = [
-        ...aiResult.achievements.map((title) => ({
+        ...aiResult.achievements.map((f) => ({
           severity: "success" as const,
           category: "ai_summary",
-          title,
-          ai_interpretation: title,
+          title: f.text,
+          ai_interpretation: f.text,
         })),
-        ...aiResult.warnings.map((title) => ({
+        ...aiResult.warnings.map((f) => ({
           severity: "warning" as const,
           category: "ai_summary",
-          title,
-          ai_interpretation: title,
+          title: f.text,
+          ai_interpretation: f.text,
         })),
-        ...aiResult.problems.map((title) => ({
+        ...aiResult.problems.map((f) => ({
           severity: "critical" as const,
           category: "ai_summary",
-          title,
-          ai_interpretation: title,
+          title: f.text,
+          ai_interpretation: f.text,
         })),
       ];
 
@@ -393,46 +422,95 @@ export async function generateDailyReport(
       } as never)
       .eq("id", reportId);
 
-    // Notifications: dedupe against any currently-open (unresolved) notification with the same incident key.
-    const allFindingsForNotify: DeterministicFinding[] = [
-      ...deterministicFindings,
+    // Notifications: identified by a deterministic incident key (report_date
+    // + source + category + metric_ref + severity — see buildIncidentKey),
+    // never by AI-generated title/message text. AI wording is
+    // regenerated fresh on every run and can paraphrase the same underlying
+    // condition differently each time, which made the old
+    // `${reportDate}:${category}:${title}` key create a new "duplicate"
+    // notification per rerun for what was really the same incident.
+    type NotifiableFinding = {
+      source: "deterministic" | "ai";
+      severity: "warning" | "critical";
+      category: string;
+      title: string;
+      message: string;
+      metricRef: string;
+      evidence: Record<string, unknown>;
+    };
+    const notifiableFindings: NotifiableFinding[] = [
+      ...deterministicFindings
+        .filter((f): f is DeterministicFinding & { severity: "warning" | "critical" } =>
+          f.severity === "warning" || f.severity === "critical"
+        )
+        .map((f) => ({
+          source: "deterministic" as const,
+          severity: f.severity,
+          category: f.category,
+          title: f.title,
+          message: f.observed_fact,
+          metricRef: f.metricRef,
+          evidence: f.evidence,
+        })),
       ...(aiResult.ai_status === "completed"
         ? [
-            ...aiResult.warnings.map((title) => ({
+            ...aiResult.warnings.map((f) => ({
+              source: "ai" as const,
               severity: "warning" as const,
               category: "ai_summary",
-              title,
-              observed_fact: title,
-              evidence: {},
+              title: f.text,
+              message: f.text,
+              metricRef: f.metric_ref,
+              evidence: { metric_ref: f.metric_ref },
             })),
-            ...aiResult.problems.map((title) => ({
+            ...aiResult.problems.map((f) => ({
+              source: "ai" as const,
               severity: "critical" as const,
               category: "ai_summary",
-              title,
-              observed_fact: title,
-              evidence: {},
+              title: f.text,
+              message: f.text,
+              metricRef: f.metric_ref,
+              evidence: { metric_ref: f.metric_ref },
             })),
           ]
         : []),
     ];
 
     let notificationsCreated = 0;
-    for (const finding of allFindingsForNotify) {
-      if (finding.severity !== "warning" && finding.severity !== "critical") continue;
-      const incidentKey = `${reportDate}:${finding.category}:${finding.title}`.slice(0, 500);
+    for (const finding of notifiableFindings) {
+      const incidentKey = buildIncidentKey({
+        reportDate,
+        source: finding.source,
+        category: finding.category,
+        metricRef: finding.metricRef,
+        severity: finding.severity,
+      });
       const { data: existing } = await supabase
         .from("daily_newsroom_notifications" as never)
-        .select("id")
+        .select("id,title,message")
         .eq("incident_key", incidentKey)
         .is("resolved_at", null)
         .limit(1);
-      if (existing && existing.length) continue;
+      const existingRow = (existing as Array<{ id: string; title: string; message: string }> | null)?.[0];
+
+      if (existingRow) {
+        // Same incident, possibly reworded (AI paraphrase, or a deterministic
+        // count that changed) — update the existing row in place rather than
+        // insert a duplicate, so acknowledged_at/created_at are preserved.
+        if (existingRow.title !== finding.title || existingRow.message !== finding.message) {
+          await supabase
+            .from("daily_newsroom_notifications" as never)
+            .update({ title: finding.title, message: finding.message, evidence: finding.evidence as never } as never)
+            .eq("id", existingRow.id);
+        }
+        continue;
+      }
 
       const { error } = await supabase.from("daily_newsroom_notifications" as never).insert({
         report_id: reportId,
         incident_key: incidentKey,
         title: finding.title,
-        message: finding.observed_fact,
+        message: finding.message,
         severity: finding.severity,
         category: finding.category,
         evidence: finding.evidence as never,

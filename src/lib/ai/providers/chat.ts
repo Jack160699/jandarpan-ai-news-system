@@ -153,9 +153,17 @@ async function postChat(
     const body: Record<string, unknown> = {
       model: request.model ?? config.model,
       temperature: request.temperature ?? 0.35,
-      max_tokens: request.maxTokens ?? 1400,
       messages,
     };
+    // Groq's chat/completions endpoint silently misbehaves under strict JSON
+    // mode when given the legacy `max_tokens` param: confirmed live against
+    // openai/gpt-oss-120b — identical request/prompt, only the token-limit
+    // param name changed, and `max_tokens` + response_format:json_object
+    // returns 400 json_validate_failed while `max_completion_tokens` +
+    // response_format:json_object returns 200 with valid JSON. Groq is the
+    // only provider in this chain that has shown this; openai/openrouter
+    // keep the legacy name they were verified against.
+    body[config.id === "groq" ? "max_completion_tokens" : "max_tokens"] = request.maxTokens ?? 1400;
     if (request.jsonMode) {
       body.response_format = { type: "json_object" };
     }
@@ -318,7 +326,7 @@ async function requestFromProvider(
       eventId: request.context?.eventId,
     });
     if (cached.hit && cached.result) {
-      return { ok: true, content: cached.result, provider: config.id, latencyMs: 0 };
+      return { ok: true, content: cached.result, provider: config.id, model: request.model ?? config.model, latencyMs: 0 };
     }
   }
 
@@ -395,7 +403,7 @@ async function requestFromProviderInner(
       },
     });
     if (reservation) void reconcileQuotaUsage(reservation, { inputTokens, outputTokens });
-    return { ok: true, content, provider: config.id, latencyMs };
+    return { ok: true, content, provider: config.id, model: request.model ?? config.model, latencyMs };
   } catch (err) {
     if (reservation) void reconcileQuotaUsage(reservation, { inputTokens: 0, outputTokens: 0 });
     const errorCode =

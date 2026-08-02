@@ -26,12 +26,27 @@ export type AiAnalysisAction = {
   evidence_refs: string[];
 };
 
+/**
+ * An achievement/problem/warning item. `text` is the AI's free-form
+ * (re-generated-every-run, non-deterministic-wording) summary — display
+ * only, never used to identify the underlying incident. `metric_ref` is a
+ * dot-path into the DeterministicReport input (same convention as actions'
+ * evidence_refs) that the AI must cite as the grounding for this item; it's
+ * the stable, deterministic half of a notification's incident_key (see
+ * generate.ts's buildIncidentKey). An item with no metric_ref is dropped —
+ * same "must cite real evidence" hard rule already enforced for actions.
+ */
+export type AiAnalysisFinding = {
+  text: string;
+  metric_ref: string;
+};
+
 export type AiAnalysisSuccess = {
   status: "healthy" | "warning" | "critical";
   executive_summary: string;
-  achievements: string[];
-  problems: string[];
-  warnings: string[];
+  achievements: AiAnalysisFinding[];
+  problems: AiAnalysisFinding[];
+  warnings: AiAnalysisFinding[];
   actions: AiAnalysisAction[];
   provider: AiProviderId | null;
   model: string | null;
@@ -60,9 +75,9 @@ the JSON) matching exactly this schema:
 {
   "status": "healthy" | "warning" | "critical",
   "executive_summary": string (2-4 sentences, plain language, Hindi-first newsroom audience),
-  "achievements": string[] (notable positives, cite numbers from the input),
-  "problems": string[] (critical issues found in the data),
-  "warnings": string[] (lower-severity concerns worth watching),
+  "achievements": [{"text": string, "metric_ref": string}] (notable positives, cite numbers from the input),
+  "problems": [{"text": string, "metric_ref": string}] (critical issues found in the data),
+  "warnings": [{"text": string, "metric_ref": string}] (lower-severity concerns worth watching),
   "actions": [
     {
       "action": string,
@@ -76,8 +91,20 @@ the JSON) matching exactly this schema:
   ]
 }
 
+metric_ref (on every achievement/problem/warning item) is a single dot-path
+into the input JSON that grounds that specific item — e.g.
+"pipeline_infrastructure.jobsFailed.value", or, when the item is about one
+specific entry inside an array field like cronRuns, extend the path with
+that entry's identifying name, e.g.
+"pipeline_infrastructure.cronRuns.value[job=workers-health]". This path is
+used as a stable identity for deduplicating this finding across repeated
+report runs, so it MUST point at the same field every time the same
+underlying condition is being described — it is not free text and must not
+paraphrase.
+
 Hard rules:
 - Every action MUST include at least one evidence_refs entry pointing at a real field path in the input.
+- Every achievement/problem/warning item MUST include a metric_ref pointing at a real field path in the input — an item with no real metric_ref will be discarded.
 - Never invent numbers, percentages, or facts that are not present in the input JSON.
 - If a section is entirely unavailable, do not speculate about its contents — note the gap instead.
 - Keep the executive_summary factual and specific, not generic boilerplate.`;
@@ -92,6 +119,28 @@ function stripMarkdownFences(raw: string): string {
 function coerceStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((v): v is string => typeof v === "string");
+}
+
+/**
+ * Achievements/problems/warnings — each item must be a real
+ * {text, metric_ref} object with a non-empty metric_ref. Same "must cite
+ * real evidence" hard rule already enforced for actions' evidence_refs
+ * (see coerceActions below); an item that's just a bare string (old-style,
+ * or a model that ignored the schema) has no way to be dedup-identified
+ * deterministically, so it's dropped rather than persisted with a
+ * fabricated or missing ref.
+ */
+function coerceFindingList(value: unknown): AiAnalysisFinding[] {
+  if (!Array.isArray(value)) return [];
+  const out: AiAnalysisFinding[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const raw = item as Record<string, unknown>;
+    if (typeof raw.text !== "string" || !raw.text.trim()) continue;
+    if (typeof raw.metric_ref !== "string" || !raw.metric_ref.trim()) continue;
+    out.push({ text: raw.text, metric_ref: raw.metric_ref.trim() });
+  }
+  return out;
 }
 
 function coerceActions(value: unknown): AiAnalysisAction[] {
@@ -138,9 +187,9 @@ function parseAnalysis(content: string): AiAnalysisSuccess | null {
   return {
     status,
     executive_summary: raw.executive_summary,
-    achievements: coerceStringArray(raw.achievements),
-    problems: coerceStringArray(raw.problems),
-    warnings: coerceStringArray(raw.warnings),
+    achievements: coerceFindingList(raw.achievements),
+    problems: coerceFindingList(raw.problems),
+    warnings: coerceFindingList(raw.warnings),
     actions: coerceActions(raw.actions),
     provider: null,
     model: null,
@@ -181,7 +230,7 @@ export async function analyzeDailyReport(
       return { ai_status: "failed", reason: "ai_response_not_valid_json_schema" };
     }
 
-    return { ...parsed, provider: result.provider, model: null };
+    return { ...parsed, provider: result.provider, model: result.model };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     pipelineWarn("[newsroom_audit_analysis_error]", { reason });

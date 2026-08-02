@@ -102,7 +102,7 @@ export async function POST(request: Request) {
     if (!key) {
       groqDiagMatrix = { error: "GROQ_API_KEY not set" };
     } else {
-      const models = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b"];
+      const models = ["openai/gpt-oss-120b", "qwen/qwen3.6-27b", "llama-3.3-70b-versatile"];
       const variants: Array<{ label: string; extra: Record<string, unknown> }> = [
         { label: "max_tokens, no json mode", extra: { max_tokens: 100 } },
         { label: "max_completion_tokens, no json mode", extra: { max_completion_tokens: 100 } },

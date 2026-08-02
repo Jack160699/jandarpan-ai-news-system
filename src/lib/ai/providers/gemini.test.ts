@@ -72,6 +72,7 @@ describe("requestGeminiChat", () => {
       ok: true,
       content: "Hello there.",
       provider: "gemini",
+      model: "gemini-3.5-flash-lite",
       latencyMs: expect.any(Number),
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);

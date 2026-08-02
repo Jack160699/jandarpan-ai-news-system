@@ -72,7 +72,7 @@ export type ChatCompletionRequest = {
 };
 
 export type ChatCompletionResult =
-  | { ok: true; content: string; provider: AiProviderId; latencyMs: number }
+  | { ok: true; content: string; provider: AiProviderId; model: string; latencyMs: number }
   | {
       ok: false;
       error: ClassifiedAiError;
