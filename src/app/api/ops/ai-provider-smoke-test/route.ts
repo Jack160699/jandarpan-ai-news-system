@@ -66,6 +66,35 @@ export async function POST(request: Request) {
 
   const results: CaseResult[] = [];
   let groqModelList: string[] | { error: string } | undefined;
+  let groqRawDiagnostic: unknown;
+
+  if (requested.has("groq_raw_diagnostic")) {
+    const key = process.env.GROQ_API_KEY?.trim();
+    if (!key) {
+      groqRawDiagnostic = { error: "GROQ_API_KEY not set" };
+    } else {
+      try {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "openai/gpt-oss-120b",
+            messages: [
+              { role: "system", content: "You are a terse test assistant. Reply with strict JSON only." },
+              { role: "user", content: 'Reply with exactly this JSON: {"passed": true}' },
+            ],
+            temperature: 0.35,
+            max_tokens: 100,
+            response_format: { type: "json_object" },
+          }),
+        });
+        const bodyText = await res.text();
+        groqRawDiagnostic = { status: res.status, body: bodyText.slice(0, 800) };
+      } catch (err) {
+        groqRawDiagnostic = { error: err instanceof Error ? err.message : String(err) };
+      }
+    }
+  }
 
   if (requested.has("groq_models")) {
     const key = process.env.GROQ_API_KEY?.trim();
@@ -195,6 +224,7 @@ export async function POST(request: Request) {
       results,
       expectedEmbeddingDimensions: CLOUDFLARE_EMBEDDING_DIMENSIONS,
       ...(groqModelList !== undefined ? { groqModelList } : {}),
+      ...(groqRawDiagnostic !== undefined ? { groqRawDiagnostic } : {}),
     },
     { status: 200, headers: noStoreHeaders() }
   );
