@@ -183,6 +183,8 @@ type PendingCandidate = {
   independentReview?: IndependentReviewResult;
   /** Hard-blocking issues from validateClaimsAgainstFactPack, if any (see prepareCandidate). */
   factPackValidationIssues?: GenerationValidationIssue[];
+  /** Audit trail for whether/why the premium Gemini model (gemini-3.6-flash) was used for this draft — see callEditorialLlm. */
+  premiumEditorial?: { used: boolean; reason: string | null };
 };
 
 function logEditorial(message: string, context?: Record<string, unknown>): void {
@@ -339,6 +341,9 @@ function parseLlmDraft(
   };
 }
 
+/** event.urgency_score is 0..1; this is the upfront (pre-generation) signal used to decide breaking-priority quota reservation — quality_breakdown.breaking_score only exists after a draft is generated, too late to inform model routing for the first attempt. */
+const BREAKING_URGENCY_THRESHOLD = 0.85;
+
 async function callEditorialLlm(
   factPackText: string,
   language: SupportedEditorialLanguage,
@@ -353,7 +358,7 @@ async function callEditorialLlm(
     targetWords: number;
   },
   structuredFactPack?: FactPack | null
-): Promise<{ response: LlmEditorialResponse; provider: AiProviderId } | null> {
+): Promise<{ response: LlmEditorialResponse; provider: AiProviderId; premium: boolean; premiumReason: string | null } | null> {
   const deskTemplate = resolveDeskTemplateFromCategory(event.category, {
     region: event.region,
     urgencyScore: event.urgency_score,
@@ -369,10 +374,33 @@ async function callEditorialLlm(
     depthCorrection,
   });
 
-  const model =
+  // Explicit override only — do not force an OpenAI-shaped default (e.g.
+  // "gpt-4o-mini") onto gemini/groq/openrouter; each provider resolves its
+  // own operation-appropriate default (and, for Gemini, premium-vs-lite)
+  // model when no override is given. See translate.ts / editorial-repair.ts
+  // for the same pattern.
+  const modelOverride =
     process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
     process.env.OPENAI_MODEL?.trim() ||
-    "gpt-4o-mini";
+    undefined;
+
+  const isBreaking = (event.urgency_score ?? 0) >= BREAKING_URGENCY_THRESHOLD;
+
+  // Premium (gemini-3.6-flash) escalation — reserved for sensitive
+  // categories, quality-retry escalation, and breaking news, per the
+  // free-first routing brief. Never the default; every escalation carries
+  // an explicit, persisted reason (see requestGeminiChat's premiumReason
+  // handling and the editorial_metadata.premium_editorial audit trail
+  // below in prepareCandidate()).
+  let premiumReason: string | null = null;
+  if (structuredFactPack?.sensitiveCategory) {
+    premiumReason = `sensitive_category:${structuredFactPack.sensitiveCategory}`;
+  } else if (depthCorrection) {
+    premiumReason = "quality_retry_escalation";
+  } else if (isBreaking) {
+    premiumReason = "breaking_news";
+  }
+  const premium = premiumReason !== null;
 
   const tier = classifyEditorialTier({
     urgencyScore: event.urgency_score,
@@ -395,12 +423,15 @@ async function callEditorialLlm(
     operation: "editorial_generate",
     system,
     user,
-    model,
+    model: modelOverride,
     temperature: 0.35,
     maxTokens,
     jsonMode: true,
     timeoutMs: EDITORIAL_TIMEOUT_MS,
     cachePolicy: depthCorrection ? "bypass" : "default",
+    priority: isBreaking ? "breaking" : "normal",
+    premium,
+    premiumReason: premiumReason ?? undefined,
     context: { worker: "editorial_generate", eventId: event.id, articleType },
   });
 
@@ -410,6 +441,8 @@ async function callEditorialLlm(
     return {
       response: JSON.parse(result.content) as LlmEditorialResponse,
       provider: result.provider,
+      premium,
+      premiumReason,
     };
   } catch {
     return null;
@@ -778,6 +811,7 @@ async function persistGeneratedArticle(input: {
   };
   freshness?: EditorialFreshnessDecision;
   independentReview?: IndependentReviewResult;
+  premiumEditorial?: { used: boolean; reason: string | null };
 }): Promise<EditorialGenerationResult> {
   const supabase = createAdminServerClient();
   const slug = optimizeSeoSlug(input.draft.headline, input.event.id);
@@ -1054,10 +1088,15 @@ async function persistGeneratedArticle(input: {
         generateShorts: tierPlan.generateShorts,
         signals: tierPlan.signals,
       },
-      model:
-        process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
-        process.env.OPENAI_MODEL?.trim() ||
-        "gpt-4o-mini",
+      // Best-effort label only — the actual model/provider that served this
+      // request can vary across the free-first chain (see router.ts); the
+      // authoritative record is ai_provider_usage_events. premium_editorial
+      // below is the authoritative audit field for whether/why the premium
+      // Gemini tier was requested.
+      model: input.premiumEditorial?.used
+        ? process.env.GEMINI_PREMIUM_EDITORIAL_MODEL?.trim() || "gemini-3.6-flash"
+        : process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-3.5-flash-lite",
+      premium_editorial: input.premiumEditorial ?? null,
       event_id: input.event.id,
       source_count: input.signals.length,
       duplicate_cluster_id: input.quality.duplicate_cluster_id,
@@ -1322,6 +1361,10 @@ async function prepareCandidate(
   // review so it can be recorded; "local" marks the deterministic fallback
   // draft (buildFallbackDraftFromFactPack), which never called an LLM.
   let writerProvider: AiProviderId | null = null;
+  // Persisted into editorial_metadata.premium_editorial below — the audit
+  // trail for why (if at all) the premium Gemini model was used.
+  let premiumEditorialUsed = false;
+  let premiumEditorialReason: string | null = null;
 
   async function generateOnce(depthCorrection?: {
     attempt: number;
@@ -1346,6 +1389,8 @@ async function prepareCandidate(
         tags: parsed.tags ?? (llmResult.response.tags ?? []).map((t) => String(t)),
         generatedAt,
       });
+      premiumEditorialUsed = llmResult.premium;
+      premiumEditorialReason = llmResult.premiumReason;
       writerProvider = llmResult.provider;
     }
     return parsed;
@@ -1629,6 +1674,7 @@ async function prepareCandidate(
       freshness,
       independentReview,
       factPackValidationIssues,
+      premiumEditorial: { used: premiumEditorialUsed, reason: premiumEditorialReason },
       humanQualityMeta: {
         score: hqGate.humanScore.score,
         decision: quality.publishDecision,
@@ -1865,6 +1911,7 @@ export async function generateEditorialFromEvent(
     humanQualityMeta: candidate.humanQualityMeta,
     freshness: candidate.freshness,
     independentReview: candidate.independentReview,
+    premiumEditorial: candidate.premiumEditorial,
   });
   if (persisted.ok && persisted.article) {
     logArticleGenerationPhase("article_generation_completed", {
@@ -2109,6 +2156,7 @@ export async function generateEditorialsFromEvents(options?: {
         humanQualityMeta: candidate.humanQualityMeta,
         freshness: candidate.freshness,
         independentReview: candidate.independentReview,
+        premiumEditorial: candidate.premiumEditorial,
       });
 
       results.push({
@@ -2292,6 +2340,7 @@ export async function generateEditorialsFromEvents(options?: {
         humanQualityMeta: candidate.humanQualityMeta,
         freshness: candidate.freshness,
         independentReview: candidate.independentReview,
+        premiumEditorial: candidate.premiumEditorial,
       });
 
       if (saved.ok && saved.article) {

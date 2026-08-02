@@ -331,6 +331,7 @@ async function requestFromProvider(
       provider: config.id,
       model: config.model,
       operation: request.operation,
+      priority: request.priority,
       estimatedTokens: request.maxTokens,
     });
     if (!quota.allowed) {

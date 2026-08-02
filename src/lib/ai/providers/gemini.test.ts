@@ -1,5 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { isGeminiConfigured, requestGeminiChat } from "./gemini";
+
+const mockLogAiProviderUsage = vi.fn();
+vi.mock("@/lib/observability/ai-usage/record", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/observability/ai-usage/record")>();
+  return {
+    ...actual,
+    logAiProviderUsage: (...args: unknown[]) => mockLogAiProviderUsage(...args),
+  };
+});
+
+import { isGeminiConfigured, requestGeminiChat, resolveGeminiModel } from "./gemini";
 
 // health.ts's provider-health registry (src/lib/ai/providers/health.ts) is a
 // module-level Map with no exported reset. Several tests below deliberately
@@ -24,6 +34,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  mockLogAiProviderUsage.mockReset();
 });
 
 function baseRequest(overrides: Partial<Parameters<typeof requestGeminiChat>[0]> = {}) {
@@ -163,5 +174,122 @@ describe("requestGeminiChat", () => {
       expect(result.error.code).toBe("ai_unavailable");
     }
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("resolveGeminiModel — routing", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("routes normal editorial_generate to gemini-3.5-flash-lite by default", () => {
+    expect(resolveGeminiModel("editorial_generate")).toBe("gemini-3.5-flash-lite");
+  });
+
+  it("routes translation and lightweight operations to gemini-3.5-flash-lite", () => {
+    expect(resolveGeminiModel("translation")).toBe("gemini-3.5-flash-lite");
+    expect(resolveGeminiModel("classification_lightweight")).toBe("gemini-3.5-flash-lite");
+    expect(resolveGeminiModel("schema_repair")).toBe("gemini-3.5-flash-lite");
+  });
+
+  it("routes to gemini-3.6-flash only when premium:true is explicitly requested, regardless of operation", () => {
+    expect(resolveGeminiModel("editorial_generate", undefined, true)).toBe("gemini-3.6-flash");
+    // Premium never applies to translation/lightweight operations in practice
+    // (callers never set it there), but the function itself just honors the
+    // flag — the *decision* not to premium-escalate those lives in the
+    // caller (generate-article.ts), not in this resolver.
+  });
+
+  it("respects GEMINI_PREMIUM_EDITORIAL_MODEL override for premium requests", () => {
+    vi.stubEnv("GEMINI_PREMIUM_EDITORIAL_MODEL", "gemini-3.6-flash-custom");
+    expect(resolveGeminiModel("editorial_generate", undefined, true)).toBe("gemini-3.6-flash-custom");
+  });
+
+  it("an explicit model override always wins, premium or not", () => {
+    expect(resolveGeminiModel("editorial_generate", "gemini-explicit", true)).toBe("gemini-explicit");
+  });
+});
+
+describe("requestGeminiChat — premium escalation telemetry", () => {
+  it("calls the premium model URL and records premiumReason in usage telemetry metadata when premium:true", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: "Sensitive story text." }] } }],
+          usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 6 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestGeminiChat(
+      baseRequest({
+        operation: "editorial_generate",
+        premium: true,
+        premiumReason: "sensitive_category:crime",
+      })
+    );
+
+    expect(result.ok).toBe(true);
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("gemini-3.6-flash");
+    expect(url).not.toContain("gemini-3.5-flash-lite");
+
+    expect(mockLogAiProviderUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "gemini",
+        model: "gemini-3.6-flash",
+        metadata: expect.objectContaining({ premium: true, premiumReason: "sensitive_category:crime" }),
+      })
+    );
+  });
+
+  it("uses gemini-3.5-flash-lite (not premium) for a normal, non-escalated request", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: "Routine local report." }] } }],
+          usageMetadata: { promptTokenCount: 8, candidatesTokenCount: 4 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await requestGeminiChat(baseRequest({ operation: "editorial_generate" }));
+
+    expect(result.ok).toBe(true);
+    const url = fetchMock.mock.calls[0][0] as string;
+    expect(url).toContain("gemini-3.5-flash-lite");
+  });
+});
+
+describe("requestGeminiChat — model-specific health isolation", () => {
+  it("a cooldown on gemini-3.6-flash does not block gemini-3.5-flash-lite", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("gemini-3.6-flash")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ error: { message: "blocked", status: "PERMISSION_DENIED" } }), {
+            status: 403,
+            headers: { "content-type": "application/json" },
+          })
+        );
+      }
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ candidates: [{ content: { parts: [{ text: "ok" }] } }], usageMetadata: {} }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        )
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const premiumResult = await requestGeminiChat(baseRequest({ operation: "editorial_generate", premium: true, premiumReason: "test" }));
+    expect(premiumResult.ok).toBe(false);
+
+    const liteResult = await requestGeminiChat(baseRequest({ operation: "editorial_generate" }));
+    expect(liteResult.ok).toBe(true);
   });
 });

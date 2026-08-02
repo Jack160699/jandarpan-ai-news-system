@@ -4,6 +4,16 @@
  * providers handled in chat.ts, so it gets its own request/response mapping,
  * but plugs into the same health registry, retry policy, quota controller,
  * and ChatCompletionResult contract so callers can't tell the difference.
+ *
+ * Two models are in normal rotation: gemini-3.5-flash-lite is the default
+ * for everything (its RPD budget is large enough for volume), and
+ * gemini-3.6-flash is a premium escalation reserved for sensitive
+ * categories, high-value explainers, breaking news, and quality-retry
+ * escalation (its free-tier RPD is only 20/day — see quota.ts's
+ * MODEL_LIMITS.gemini). Each model has its own quota bucket AND its own
+ * health/cooldown key ("gemini:<model>") so a rate-limit on one never
+ * blocks the other — the same fix applied to Groq's per-model chain, for
+ * the same reason.
  */
 
 import {
@@ -24,21 +34,32 @@ export function isGeminiConfigured(): boolean {
 }
 
 /**
- * Current stable defaults as of Aug 2026 (Gemini 3.6 Flash / 3.5 Flash-Lite
- * GA — see the manual setup notes for sourcing). Always prefer the explicit
- * env var over these fallbacks so a future model rename doesn't require a
- * code change: set GEMINI_EDITORIAL_MODEL / GEMINI_TRANSLATION_MODEL /
- * GEMINI_LIGHTWEIGHT_MODEL rather than relying on this function's defaults.
+ * Current stable defaults as of Aug 2026. gemini-3.5-flash-lite is the
+ * default for every operation (translation, lightweight, and normal
+ * editorial generation alike) — gemini-3.6-flash is ONLY selected when the
+ * caller explicitly sets `premium: true` (see generate-article.ts's
+ * sensitive-category and quality-retry escalation). Always prefer the
+ * explicit env var over these fallbacks: GEMINI_EDITORIAL_MODEL /
+ * GEMINI_TRANSLATION_MODEL / GEMINI_LIGHTWEIGHT_MODEL /
+ * GEMINI_PREMIUM_EDITORIAL_MODEL.
  */
-function resolveGeminiModel(operation: string, override?: string): string {
+export function resolveGeminiModel(operation: string, override?: string, premium?: boolean): string {
   if (override?.trim()) return override.trim();
+  if (premium) {
+    return process.env.GEMINI_PREMIUM_EDITORIAL_MODEL?.trim() || "gemini-3.6-flash";
+  }
   if (operation === "translation") {
     return process.env.GEMINI_TRANSLATION_MODEL?.trim() || process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-3.5-flash-lite";
   }
   if (operation === "classification_lightweight" || operation === "schema_repair") {
     return process.env.GEMINI_LIGHTWEIGHT_MODEL?.trim() || "gemini-3.5-flash-lite";
   }
-  return process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-3.6-flash";
+  return process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-3.5-flash-lite";
+}
+
+/** "gemini:<model>" — see the module doc comment for why health/cooldown is model-scoped, not provider-scoped. */
+function healthKeyFor(model: string): string {
+  return `gemini:${model}`;
 }
 
 function classifyGeminiFailure(status: number, body: string): ClassifiedAiError {
@@ -67,11 +88,10 @@ function classifyGeminiFailure(status: number, body: string): ClassifiedAiError 
   return { code: "ai_http_error", message, httpStatus: status, retryable: false, authFailure: false, invalidRequest: false, rateLimited: false };
 }
 
-async function postGemini(request: ChatCompletionRequest): Promise<{ content: string; latencyMs: number; inputTokens: number; outputTokens: number }> {
+async function postGemini(request: ChatCompletionRequest, model: string): Promise<{ content: string; latencyMs: number; inputTokens: number; outputTokens: number }> {
   const apiKey = process.env.GEMINI_API_KEY!.trim();
-  const model = resolveGeminiModel(request.operation, request.model);
   const started = Date.now();
-  recordProviderRequestStarted("gemini", request.operation);
+  recordProviderRequestStarted(healthKeyFor(model), request.operation);
 
   const controller = new AbortController();
   const timeoutMs = request.timeoutMs ?? 45_000;
@@ -100,7 +120,7 @@ async function postGemini(request: ChatCompletionRequest): Promise<{ content: st
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       const classified = classifyGeminiFailure(res.status, detail);
-      markProviderUnhealthy("gemini", {
+      markProviderUnhealthy(healthKeyFor(model), {
         reason: classified.authFailure ? "gemini_unauthorized" : classified.message,
         httpStatus: res.status,
         authFailure: classified.authFailure,
@@ -119,7 +139,7 @@ async function postGemini(request: ChatCompletionRequest): Promise<{ content: st
       throw empty;
     }
 
-    recordProviderRequestCompleted("gemini", request.operation, latencyMs);
+    recordProviderRequestCompleted(healthKeyFor(model), request.operation, latencyMs);
     return {
       content,
       latencyMs,
@@ -141,17 +161,27 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
   if (!isGeminiConfigured()) {
     return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_unavailable", message: "GEMINI_API_KEY not set", retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
   }
-  if (!isProviderHealthy("gemini")) {
-    return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_provider_cooldown", message: "gemini temporarily unhealthy", retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
+
+  const model = resolveGeminiModel(request.operation, request.model, request.premium);
+
+  if (request.premium && !request.premiumReason) {
+    // Fail loudly in dev rather than silently escalate cost/quota with no
+    // audit trail — every premium call must be explainable.
+    console.warn(`[gemini] premium escalation to ${model} requested with no premiumReason (operation=${request.operation})`);
   }
 
-  const quota = await reserveQuota({ provider: "gemini", operation: request.operation, estimatedTokens: request.maxTokens });
+  if (!isProviderHealthy(healthKeyFor(model))) {
+    return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_provider_cooldown", message: `gemini/${model} temporarily unhealthy`, retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
+  }
+
+  const quota = await reserveQuota({ provider: "gemini", model, operation: request.operation, priority: request.priority, estimatedTokens: request.maxTokens });
   if (!quota.allowed) {
-    return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_quota_exhausted", message: quota.reason ?? "gemini quota exhausted", retryable: false, authFailure: false, invalidRequest: false, rateLimited: true } };
+    return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_quota_exhausted", message: quota.reason ?? `gemini/${model} quota exhausted`, retryable: false, authFailure: false, invalidRequest: false, rateLimited: true } };
   }
 
   const slot = acquireConcurrencySlot("gemini");
   if (!slot.acquired) {
+    void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
     return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_provider_busy", message: "gemini concurrency limit reached", retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
   }
 
@@ -164,7 +194,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
       isRetryable: (e) => e.retryable,
       fn: async (attempt) => {
         retryCount = attempt;
-        return postGemini(request);
+        return postGemini(request, model);
       },
     });
 
@@ -175,7 +205,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
         provider: "gemini",
         operation: request.operation,
         endpoint: "generateContent",
-        model: resolveGeminiModel(request.operation, request.model),
+        model,
         inputTokens,
         outputTokens,
         latencyMs,
@@ -185,6 +215,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
         user: request.user,
         completion: content,
         context: request.context,
+        metadata: request.premium ? { premium: true, premiumReason: request.premiumReason ?? null } : undefined,
       })
     );
 
@@ -198,7 +229,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
         provider: "gemini",
         operation: request.operation,
         endpoint: "generateContent",
-        model: resolveGeminiModel(request.operation, request.model),
+        model,
         inputTokens: 0,
         outputTokens: 0,
         latencyMs: Date.now() - started,
@@ -208,6 +239,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
         user: request.user,
         context: request.context,
         fallbackReason: error.code,
+        metadata: request.premium ? { premium: true, premiumReason: request.premiumReason ?? null } : undefined,
       })
     );
     return { ok: false, provider: "gemini", latencyMs: Date.now() - started, error };

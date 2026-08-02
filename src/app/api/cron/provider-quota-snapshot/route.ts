@@ -11,7 +11,7 @@ import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
-import { peekQuota, type QuotaScope } from "@/lib/ai/providers/quota";
+import { getTrackedQuotaBuckets, peekQuota, type QuotaScope } from "@/lib/ai/providers/quota";
 import type { AiProviderId } from "@/lib/ai/providers/types";
 import {
   finalizeCronRun,
@@ -22,7 +22,6 @@ import { pipelineWarn } from "@/lib/observability/production-log";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const PROVIDERS: AiProviderId[] = ["gemini", "groq", "cloudflare", "openrouter"];
 const SCOPES: QuotaScope[] = ["rpm", "tpm", "rpd", "tpd"];
 
 export async function GET(request: Request) {
@@ -40,22 +39,33 @@ async function handleProviderQuotaSnapshot(request: Request) {
     return cronAuthFailureResponse(auth);
   }
 
+  const buckets = getTrackedQuotaBuckets();
+
   const rows: Array<{
     provider: AiProviderId;
+    model: string | null;
     scope: QuotaScope;
     window_start: string;
     quota_limit: number;
     quota_used: number;
     quota_remaining: number;
   }> = [];
+  // Scopes that are genuinely unavailable (e.g. Gemini TPD) are never
+  // inserted as a fabricated row — see peekQuota's `unavailable` flag.
+  const unavailableScopes: Array<{ provider: string; model: string | null; scope: string }> = [];
   const errors: Array<{ provider: string; scope: string; reason: string }> = [];
 
-  for (const provider of PROVIDERS) {
+  for (const { provider, model } of buckets) {
     for (const scope of SCOPES) {
       try {
-        const snapshot = await peekQuota(provider, scope);
+        const snapshot = await peekQuota(provider, scope, model);
+        if (snapshot.unavailable || snapshot.limit === null || snapshot.used === null || snapshot.remaining === null) {
+          unavailableScopes.push({ provider, model, scope });
+          continue;
+        }
         rows.push({
           provider,
+          model,
           scope,
           window_start: new Date(snapshot.windowStart).toISOString(),
           quota_limit: snapshot.limit,
@@ -64,8 +74,8 @@ async function handleProviderQuotaSnapshot(request: Request) {
         });
       } catch (err) {
         const reason = err instanceof Error ? err.message : String(err);
-        errors.push({ provider, scope, reason });
-        pipelineWarn("[provider_quota_snapshot_peek_error]", { provider, scope, reason });
+        errors.push({ provider: model ? `${provider}:${model}` : provider, scope, reason });
+        pipelineWarn("[provider_quota_snapshot_peek_error]", { provider, model, scope, reason });
       }
     }
   }
@@ -101,7 +111,8 @@ async function handleProviderQuotaSnapshot(request: Request) {
     {
       ok,
       inserted,
-      attempted: PROVIDERS.length * SCOPES.length,
+      attempted: buckets.length * SCOPES.length,
+      unavailable: unavailableScopes,
       errors,
       duration_ms: Date.now() - startedAt,
     },

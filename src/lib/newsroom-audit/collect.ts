@@ -12,6 +12,7 @@
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { getIstDayBounds } from "@/lib/autonomous/ist-day";
 import { pipelineWarn } from "@/lib/observability/production-log";
+import { getTrackedQuotaBuckets, peekQuota, type QuotaScope } from "@/lib/ai/providers/quota";
 
 export type MetricResult<T> =
   | { status: "ok"; value: T }
@@ -124,6 +125,28 @@ export type AudienceSeoSection = {
   note: string;
 };
 
+/**
+ * Per-model-and-scope quota status, read live via quota.ts's peekQuota() at
+ * report-generation time (not from the hourly snapshot table, so it's as
+ * current as possible). `unavailable: true` means the scope has no
+ * configured/known limit at all (e.g. Gemini's TPD, which its free-tier
+ * dashboard doesn't expose) — limit/used/remaining are then explicitly
+ * `null`, never a fabricated 0 or a made-up "remaining" number.
+ */
+export type QuotaBucketStatus = {
+  provider: string;
+  model: string | null;
+  scope: QuotaScope;
+  limit: number | null;
+  used: number | null;
+  remaining: number | null;
+  unavailable: boolean;
+};
+
+export type ProviderQuotaSection = {
+  buckets: MetricResult<QuotaBucketStatus[]>;
+};
+
 export type DeterministicReport = {
   reportDate: string;
   windowStartIso: string;
@@ -134,6 +157,7 @@ export type DeterministicReport = {
   freshness: FreshnessSection;
   quality: QualitySection;
   ai_provider_usage: AiProviderUsageSection;
+  provider_quota: ProviderQuotaSection;
   embeddings_clustering: EmbeddingsClusteringSection;
   images: ImagesSection;
   pipeline_infrastructure: PipelineInfrastructureSection;
@@ -652,6 +676,39 @@ async function collectPipelineInfrastructure(
   return { jobsCompleted, jobsFailed, deadLetters, cronRuns, errorEventsBySeverity };
 }
 
+const QUOTA_SCOPES: QuotaScope[] = ["rpm", "tpm", "rpd", "tpd"];
+
+/**
+ * Live per-model quota status — not a Supabase query, so it doesn't need the
+ * safe()/unavailableSupabase() Supabase-specific wrapper, but still fails
+ * closed into `unavailable` rather than throwing if quota.ts itself errors.
+ */
+async function collectProviderQuota(): Promise<ProviderQuotaSection> {
+  try {
+    const buckets = getTrackedQuotaBuckets();
+    const statuses: QuotaBucketStatus[] = [];
+    for (const { provider, model } of buckets) {
+      for (const scope of QUOTA_SCOPES) {
+        const snapshot = await peekQuota(provider, scope, model);
+        statuses.push({
+          provider,
+          model,
+          scope,
+          limit: snapshot.limit,
+          used: snapshot.used,
+          remaining: snapshot.remaining,
+          unavailable: snapshot.unavailable,
+        });
+      }
+    }
+    return { buckets: ok(statuses) };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    pipelineWarn("[newsroom_audit_metric_error]", { label: "provider_quota.buckets", reason });
+    return { buckets: unavailable(reason) };
+  }
+}
+
 function collectAudienceSeo(): AudienceSeoSection {
   const reason =
     "No Google Search Console / Analytics integration is wired into the newsroom audit yet — do not fabricate.";
@@ -675,11 +732,15 @@ export async function collectDailyMetrics(reportDate: string): Promise<Determini
   const { startIso, endIso } = bounds;
 
   if (!isSupabaseConfigured()) {
+    // Quota status isn't a Supabase query — still collectable even when the
+    // database itself is unreachable.
+    const provider_quota = await collectProviderQuota();
     return {
       reportDate: bounds.day,
       windowStartIso: startIso,
       windowEndIso: endIso,
       collectedAt: new Date().toISOString(),
+      provider_quota,
       content_production: {
         articlesCreated: unavailableSupabase(),
         articlesPublished: unavailableSupabase(),
@@ -741,6 +802,7 @@ export async function collectDailyMetrics(reportDate: string): Promise<Determini
     freshness,
     quality,
     ai_provider_usage,
+    provider_quota,
     embeddings_clustering,
     images,
     pipeline_infrastructure,
@@ -750,6 +812,7 @@ export async function collectDailyMetrics(reportDate: string): Promise<Determini
     collectFreshness(supabase, startIso, endIso),
     collectQuality(supabase, startIso, endIso),
     collectAiProviderUsage(supabase, startIso, endIso),
+    collectProviderQuota(),
     collectEmbeddingsClustering(supabase, startIso, endIso),
     collectImages(supabase, startIso, endIso),
     collectPipelineInfrastructure(supabase, startIso, endIso),
@@ -765,6 +828,7 @@ export async function collectDailyMetrics(reportDate: string): Promise<Determini
     freshness,
     quality,
     ai_provider_usage,
+    provider_quota,
     embeddings_clustering,
     images,
     pipeline_infrastructure,

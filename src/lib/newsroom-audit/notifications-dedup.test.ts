@@ -181,6 +181,9 @@ function buildReport(): DeterministicReport {
       fallbackEvents: metricOk(0),
       totalEstimatedCostUsd: metricOk(0),
     },
+    provider_quota: {
+      buckets: metricOk([]),
+    },
     embeddings_clustering: {
       embeddingsCreatedOpenAi: metricOk(0),
       embeddingsCreatedCloudflare: metricOk(0),

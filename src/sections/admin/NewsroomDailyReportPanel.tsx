@@ -66,6 +66,19 @@ type DeterministicMetrics = {
     fallbackEvents: MetricResult<number>;
     totalEstimatedCostUsd: MetricResult<number>;
   };
+  provider_quota: {
+    buckets: MetricResult<
+      Array<{
+        provider: string;
+        model: string | null;
+        scope: "rpm" | "tpm" | "rpd" | "tpd";
+        limit: number | null;
+        used: number | null;
+        remaining: number | null;
+        unavailable: boolean;
+      }>
+    >;
+  };
   embeddings_clustering: {
     embeddingsCreatedOpenAi: MetricResult<number>;
     embeddingsCreatedCloudflare: MetricResult<number>;
@@ -445,6 +458,60 @@ function AiUsageChart({ metrics }: { metrics: DeterministicMetrics["ai_provider_
                 <Bar dataKey="failed" name="Failed" stackId="req" fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProviderQuotaCard({ quota }: { quota: DeterministicMetrics["provider_quota"] }) {
+  const buckets = quota.buckets;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Provider quota status</CardTitle>
+        <CardDescription>Model-specific rpm/tpm/rpd/tpd, read live at report time.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {buckets.status === "unavailable" ? (
+          <p className="text-sm text-zinc-500">Not available — {buckets.reason}</p>
+        ) : buckets.value.length === 0 ? (
+          <p className="text-sm text-zinc-500">No tracked quota buckets.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-zinc-500">
+                  <th className="py-1 pr-3 font-medium">Provider</th>
+                  <th className="py-1 pr-3 font-medium">Model</th>
+                  <th className="py-1 pr-3 font-medium">Scope</th>
+                  <th className="py-1 pr-3 font-medium">Used</th>
+                  <th className="py-1 pr-3 font-medium">Limit</th>
+                  <th className="py-1 pr-3 font-medium">Remaining</th>
+                </tr>
+              </thead>
+              <tbody>
+                {buckets.value.map((b, i) => (
+                  <tr key={`${b.provider}-${b.model ?? "default"}-${b.scope}-${i}`} className="border-t border-zinc-800">
+                    <td className="py-1 pr-3">{b.provider}</td>
+                    <td className="py-1 pr-3 text-zinc-400">{b.model ?? "—"}</td>
+                    <td className="py-1 pr-3 uppercase text-zinc-400">{b.scope}</td>
+                    {b.unavailable ? (
+                      <td colSpan={3} className="py-1 pr-3 italic text-zinc-500">
+                        unavailable — not exposed by provider
+                      </td>
+                    ) : (
+                      <>
+                        <td className="py-1 pr-3">{b.used}</td>
+                        <td className="py-1 pr-3">{b.limit}</td>
+                        <td className="py-1 pr-3">{b.remaining}</td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>
@@ -868,6 +935,7 @@ export function NewsroomDailyReportPanel() {
               color={CHART_COLORS[4]}
             />
             <AiUsageChart metrics={report.deterministicMetrics.ai_provider_usage} />
+            <ProviderQuotaCard quota={report.deterministicMetrics.provider_quota} />
           </div>
 
           <AudienceSeoCard audienceSeo={report.deterministicMetrics.audience_seo} />

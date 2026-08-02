@@ -16,10 +16,12 @@ vi.mock("@/lib/infrastructure/cache/redis", () => ({
 
 import {
   __resetCloudflareNeuronsForTests,
+  __resetQuotaCountersForTests,
   acquireConcurrencySlot,
   checkAndConsumeQuota,
   estimateCloudflareNeurons,
   getCloudflareNeuronForecast,
+  getGeminiEditorialCapacityForecast,
   getProviderLimits,
   peekQuota,
   reconcileCloudflareNeurons,
@@ -34,6 +36,7 @@ afterEach(() => {
   mockIsRedisConfigured.mockReturnValue(false);
   mockRedisEval.mockReset();
   __resetCloudflareNeuronsForTests();
+  __resetQuotaCountersForTests();
 });
 
 // NOTE on test isolation: reserveQuota's in-memory fallback (used here since
@@ -373,5 +376,118 @@ describe("Cloudflare neuron accounting", () => {
     expect(forecast.remaining).toBe(600);
     expect(forecast.estimatedImagesRemaining).toBeGreaterThan(0);
     expect(forecast.estimatedEmbeddingCallsRemaining).toBeGreaterThan(0);
+  });
+});
+
+describe("Gemini model-specific quotas (real Free-tier dashboard limits)", () => {
+  it("uses the sourced dashboard limits for gemini-3.6-flash and gemini-3.5-flash-lite, with tpd unavailable for both", () => {
+    const premium = getProviderLimits("gemini", "gemini-3.6-flash");
+    expect(premium).toMatchObject({ rpm: 4, tpm: 240_000, rpd: 20 });
+    expect(premium.tpd).toBeNull();
+
+    const lite = getProviderLimits("gemini", "gemini-3.5-flash-lite");
+    expect(lite).toMatchObject({ rpm: 14, tpm: 240_000, rpd: 500 });
+    expect(lite.tpd).toBeNull();
+  });
+
+  it("gives gemini-3.6-flash and gemini-3.5-flash-lite fully independent quota buckets", async () => {
+    vi.stubEnv("AI_QUOTA_GEMINI_GEMINI_3_6_FLASH_RPD_LIMIT", "2");
+    vi.stubEnv("AI_QUOTA_GEMINI_GEMINI_3_5_FLASH_LITE_RPD_LIMIT", "100");
+    vi.stubEnv("AI_QUOTA_BREAKING_RESERVE_FRACTION", "0");
+
+    for (let i = 0; i < 2; i++) {
+      const r = await reserveQuota({ provider: "gemini", model: "gemini-3.6-flash", operation: "editorial_generate" });
+      expect(r.allowed).toBe(true);
+    }
+    // Exhausting the premium model...
+    const exhausted = await reserveQuota({ provider: "gemini", model: "gemini-3.6-flash", operation: "editorial_generate" });
+    expect(exhausted.allowed).toBe(false);
+
+    // ...does not block the lite model, which has its own, much larger budget.
+    const lite = await reserveQuota({ provider: "gemini", model: "gemini-3.5-flash-lite", operation: "editorial_generate" });
+    expect(lite.allowed).toBe(true);
+  });
+
+  it("exhausting gemini-3.5-flash-lite does not affect gemini-3.6-flash's independent budget", async () => {
+    vi.stubEnv("AI_QUOTA_GEMINI_GEMINI_3_5_FLASH_LITE_RPD_LIMIT", "2");
+    vi.stubEnv("AI_QUOTA_GEMINI_GEMINI_3_6_FLASH_RPD_LIMIT", "100");
+    vi.stubEnv("AI_QUOTA_BREAKING_RESERVE_FRACTION", "0");
+
+    for (let i = 0; i < 2; i++) {
+      const r = await reserveQuota({ provider: "gemini", model: "gemini-3.5-flash-lite", operation: "editorial_generate" });
+      expect(r.allowed).toBe(true);
+    }
+    const exhausted = await reserveQuota({ provider: "gemini", model: "gemini-3.5-flash-lite", operation: "editorial_generate" });
+    expect(exhausted.allowed).toBe(false);
+
+    const premium = await reserveQuota({ provider: "gemini", model: "gemini-3.6-flash", operation: "editorial_generate" });
+    expect(premium.allowed).toBe(true);
+  });
+
+  it("reports Gemini TPD as unavailable — never zero, never a fabricated remaining value — and does not block reservations on it", async () => {
+    const snapshot = await peekQuota("gemini", "tpd", "gemini-3.6-flash");
+    expect(snapshot.unavailable).toBe(true);
+    expect(snapshot.limit).toBeNull();
+    expect(snapshot.used).toBeNull();
+    expect(snapshot.remaining).toBeNull();
+
+    // A token estimate within TPM (240,000) but that would exceed any
+    // plausible real TPD limit if one existed — since TPD is unavailable it
+    // must not be enforced, so this succeeds on rpm/tpm/rpd alone.
+    vi.stubEnv("AI_QUOTA_GEMINI_GEMINI_3_6_FLASH_RPD_LIMIT", "20");
+    const result = await reserveQuota({
+      provider: "gemini",
+      model: "gemini-3.6-flash",
+      operation: "editorial_generate",
+      estimatedTokens: 200_000,
+    });
+    expect(result.allowed).toBe(true);
+    if (result.allowed) {
+      // Confirms the reservation truly never touched the tpd scope.
+      expect(result.reservation.tpdTracked).toBe(false);
+    }
+  });
+
+  it("reserves ~4 of gemini-3.6-flash's 20 daily requests for breaking news, per the 18% reserve fraction", async () => {
+    vi.stubEnv("AI_QUOTA_GEMINI_GEMINI_3_6_FLASH_RPD_LIMIT", "20");
+    // RPM stays high here so only RPD gates this loop — RPM=4 is the real
+    // per-model default and is exercised by its own test elsewhere.
+    vi.stubEnv("AI_QUOTA_GEMINI_GEMINI_3_6_FLASH_RPM_LIMIT", "1000");
+    vi.stubEnv("AI_QUOTA_BREAKING_RESERVE_FRACTION", "0.18");
+
+    // Normal-priority effective limit = floor(20 * (1 - 0.18)) = 16.
+    for (let i = 0; i < 16; i++) {
+      const r = await reserveQuota({ provider: "gemini", model: "gemini-3.6-flash", operation: "editorial_generate", priority: "normal" });
+      expect(r.allowed).toBe(true);
+    }
+    const seventeenthNormal = await reserveQuota({ provider: "gemini", model: "gemini-3.6-flash", operation: "editorial_generate", priority: "normal" });
+    expect(seventeenthNormal.allowed).toBe(false);
+
+    // Breaking-priority can still use the reserved ~4 remaining slots.
+    let breakingSucceeded = 0;
+    for (let i = 0; i < 4; i++) {
+      const r = await reserveQuota({ provider: "gemini", model: "gemini-3.6-flash", operation: "editorial_generate", priority: "breaking" });
+      if (r.allowed) breakingSucceeded += 1;
+    }
+    expect(breakingSucceeded).toBe(4);
+  });
+
+  it("computes the 100-article capacity forecast from gemini-3.5-flash-lite's model-specific remaining RPD", async () => {
+    vi.stubEnv("AI_QUOTA_GEMINI_GEMINI_3_5_FLASH_LITE_RPD_LIMIT", "500");
+    vi.stubEnv("AI_QUOTA_GEMINI_GEMINI_3_6_FLASH_RPD_LIMIT", "20");
+    vi.stubEnv("AI_QUOTA_BREAKING_RESERVE_FRACTION", "0");
+
+    for (let i = 0; i < 10; i++) {
+      await reserveQuota({ provider: "gemini", model: "gemini-3.5-flash-lite", operation: "editorial_generate" });
+    }
+
+    const forecast = await getGeminiEditorialCapacityForecast();
+    expect(forecast.liteModel).toBe("gemini-3.5-flash-lite");
+    expect(forecast.liteRpdLimit).toBe(500);
+    expect(forecast.liteRpdRemaining).toBe(490);
+    expect(forecast.estimatedArticlesRemaining).toBe(490);
+    // Premium model's own remaining is reported separately, not conflated with the lite-model article count.
+    expect(forecast.premiumModel).toBe("gemini-3.6-flash");
+    expect(forecast.premiumRpdLimit).toBe(20);
   });
 });
