@@ -68,16 +68,23 @@ function resolveOpenRouterModel(override?: string): string {
  * Groq model chain for one operation — most operations use a single model,
  * but the independent reviewer gets an explicit in-provider fallback: if
  * the primary reviewer model (openai/gpt-oss-120b) is unavailable or the
- * account lacks access to it, Groq retries with qwen/qwen3.6-27b rather
+ * account lacks access to it, Groq retries with a fallback model rather
  * than silently degrading straight to a different provider's weaker model.
  * That transition is always logged (see the `next.id === attempt.id`
  * branch in requestChatCompletion) — never silent.
+ *
+ * Fallback default was qwen/qwen3.6-27b — confirmed live (groq_diag_matrix
+ * smoke-test case) that it 400s (json_validate_failed) under
+ * response_format:json_object regardless of max_tokens/max_completion_tokens
+ * naming, i.e. it cannot serve this operation (editorial_review always runs
+ * with jsonMode:true). Replaced with llama-3.3-70b-versatile, verified live
+ * to return valid JSON under the exact same request shape.
  */
 function resolveGroqModelChain(operation: string, override?: string): string[] {
   if (override?.trim()) return [override.trim()];
   if (operation === "editorial_review") {
     const primary = process.env.GROQ_REVIEW_MODEL?.trim() || "openai/gpt-oss-120b";
-    const fallback = process.env.GROQ_REVIEW_FALLBACK_MODEL?.trim() || "qwen/qwen3.6-27b";
+    const fallback = process.env.GROQ_REVIEW_FALLBACK_MODEL?.trim() || "llama-3.3-70b-versatile";
     return primary === fallback ? [primary] : [primary, fallback];
   }
   return [process.env.GROQ_LIGHTWEIGHT_MODEL?.trim() || "llama-3.1-8b-instant"];

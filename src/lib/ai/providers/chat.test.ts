@@ -181,7 +181,7 @@ describe("requestChatCompletion", () => {
     expect(sentModels).toEqual(["llama-3.1-8b-instant"]);
   });
 
-  it("falls back from openai/gpt-oss-120b to qwen/qwen3.6-27b within Groq when the primary reviewer model is blocked, and reports the transition (not silently)", async () => {
+  it("falls back from openai/gpt-oss-120b to llama-3.3-70b-versatile within Groq when the primary reviewer model is blocked, and reports the transition (not silently)", async () => {
     vi.stubEnv("GROQ_API_KEY", "test-key");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const fetchMock = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
@@ -206,12 +206,12 @@ describe("requestChatCompletion", () => {
     if (result.ok) expect(result.provider).toBe("groq");
 
     const sentModels = fetchMock.mock.calls.map((call) => (JSON.parse(String(call[1].body)) as { model: string }).model);
-    expect(sentModels).toEqual(["openai/gpt-oss-120b", "qwen/qwen3.6-27b"]);
+    expect(sentModels).toEqual(["openai/gpt-oss-120b", "llama-3.3-70b-versatile"]);
 
     // The fallback must be visibly reported, not a silent downgrade.
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[ai-model-fallback]"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("openai/gpt-oss-120b"));
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("qwen/qwen3.6-27b"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("llama-3.3-70b-versatile"));
     warnSpy.mockRestore();
   });
 
