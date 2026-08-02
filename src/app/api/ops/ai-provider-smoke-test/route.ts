@@ -6,12 +6,11 @@
  * /api/debug/* routes 404 there on Preview, not just this one), independent
  * of each route's own in-code production guard.
  *
- * Gated on VERCEL_ENV !== "production" specifically (not the repo's usual
- * isDevNewsroomDebugAllowed()/isProductionDeployment() guard, which checks
- * NODE_ENV === "production" first — true for every Vercel build, Preview
- * included, since `next build` always sets NODE_ENV=production regardless
- * of which Vercel environment it's deploying to. VERCEL_ENV is the actual
- * Preview-vs-Production signal). Never runs in Production.
+ * Open on Preview/dev (VERCEL_ENV !== "production"). In Production, closed
+ * by default and only reachable with a valid "ops"-capability cron secret
+ * (same verifyCronRequest gate the cron routes use) — controlled,
+ * authenticated one-off verification after a real deploy, not a public
+ * debug endpoint. Never reachable in Production without that secret.
  *
  * Makes exactly one real call per provider/model combination under test —
  * free-tier quotas here are scarce (gemini-3.6-flash is 20 requests/day
@@ -20,6 +19,8 @@
 
 import { NextResponse } from "next/server";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { requestChatCompletion } from "@/lib/ai/providers/chat";
 import { requestGeminiChat } from "@/lib/ai/providers/gemini";
 import { CLOUDFLARE_EMBEDDING_DIMENSIONS, requestCloudflareEmbeddings } from "@/lib/ai/providers/cloudflare-embeddings";
@@ -48,10 +49,8 @@ type CaseResult = {
 
 export async function POST(request: Request) {
   if (!isPreviewOrDev()) {
-    return NextResponse.json(
-      { ok: false, error: "Forbidden — smoke test is disabled in production" },
-      { status: 403, headers: noStoreHeaders() }
-    );
+    const auth = await verifyCronRequest(request, { capability: "ops" });
+    if (!auth.authorized) return cronAuthFailureResponse(auth);
   }
 
   let body: { cases?: string[] } = {};
