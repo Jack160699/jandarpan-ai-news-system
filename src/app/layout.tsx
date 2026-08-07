@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { AppChrome } from "@/components/navigation/AppChrome";
 import { ThemeScript } from "@/components/reader/ThemeScript";
 import { TenantRoot } from "@/components/tenant/TenantRoot";
@@ -72,6 +73,7 @@ export default async function RootLayout({
             </LanguageProvider>
           </ReaderPreferencesProvider>
         </TenantRoot>
+        <Analytics />
       </body>
     </html>
   );
