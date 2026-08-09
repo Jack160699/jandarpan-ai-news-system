@@ -139,6 +139,7 @@ describe("runEditorialGenerateLane — empty-queue direct-generation fallback", 
     });
 
     expect(mockGenerateEditorialsFromEvents).toHaveBeenCalledTimes(1);
+    expect(mockGenerateEditorialsFromEvents).toHaveBeenCalledWith({ limit: 1 });
     expect(result.ok).toBe(true);
     expect(result.metadata?.recordsProcessed).toBe(2);
     expect(result.metadata?.directGeneration).toBe(true);
