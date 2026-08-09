@@ -9,11 +9,12 @@ import {
 import type { ExecutionDeadline } from "@/lib/serverless/deadline";
 
 describe("queue tuning", () => {
-  it("scales AI batch with backlog", () => {
+  it("serializes local enrichment in free-capacity mode", () => {
     const low = resolveAiWorkerTuning(100);
     const high = resolveAiWorkerTuning(12_000);
-    expect(high.batchSize).toBeGreaterThan(low.batchSize);
-    expect(high.microBatchSize).toBeGreaterThanOrEqual(low.microBatchSize);
+    expect(low.microBatchSize).toBe(1);
+    expect(high.microBatchSize).toBe(1);
+    expect(high.batchSize).toBeLessThanOrEqual(20);
   });
 
   it("caps batch by deadline budget", () => {

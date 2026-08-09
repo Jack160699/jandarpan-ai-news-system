@@ -9,18 +9,20 @@ afterEach(() => {
 });
 
 describe("Phase 8 AI_LOCAL_ENRICH_ENABLED", () => {
-  it("is disabled by default in production", () => {
+  it("is enabled by default in production free-capacity mode", () => {
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("NODE_ENV", "production");
-    // Unset → not "true"/"false"; production must stay disabled.
+    // Unset local override; free-capacity mode provides the safe default.
     vi.stubEnv("AI_LOCAL_ENRICH_ENABLED", "");
-    expect(isLocalEnrichEnabled()).toBe(false);
-    expect(isLocalEnrichMisconfiguredForProduction()).toBe(true);
+    vi.stubEnv("AI_FREE_CAPACITY_MODE", "true");
+    expect(isLocalEnrichEnabled()).toBe(true);
+    expect(isLocalEnrichMisconfiguredForProduction()).toBe(false);
   });
 
   it("respects explicit false in production", () => {
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("AI_LOCAL_ENRICH_ENABLED", "false");
+    vi.stubEnv("AI_FREE_CAPACITY_MODE", "false");
     expect(isLocalEnrichEnabled()).toBe(false);
     expect(isLocalEnrichMisconfiguredForProduction()).toBe(false);
   });

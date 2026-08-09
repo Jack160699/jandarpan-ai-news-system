@@ -22,6 +22,7 @@ export {
 } from "@/lib/ai/providers/health";
 
 export { enrichArticleLocally } from "@/lib/ai/providers/local-enrich";
+export { isFreeCapacityMode } from "@/lib/ai/providers/local-enrich-flag";
 
 export {
   isAnyChatProviderConfigured,
