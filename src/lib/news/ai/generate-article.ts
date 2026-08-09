@@ -7,7 +7,11 @@ import {
   getCategoryEditorialHint,
   resolveDeskTemplateFromCategory,
 } from "@/lib/ai/prompts";
-import { isAnyChatProviderConfigured, requestChatCompletion } from "@/lib/ai/providers";
+import {
+  isAnyChatProviderConfigured,
+  isFreeCapacityMode,
+  requestChatCompletion,
+} from "@/lib/ai/providers";
 import type { AiProviderId } from "@/lib/ai/providers/types";
 import { runIndependentReview } from "@/lib/news/ai/independent-review";
 import {
@@ -400,6 +404,10 @@ async function callEditorialLlm(
   } else if (isBreaking) {
     premiumReason = "breaking_news";
   }
+  // Free-capacity mode must prefer the separately metered Flash-Lite pool.
+  // Premium escalation was routing every urgent story into an exhausted
+  // Gemini model even while Flash-Lite remained available for generation.
+  if (isFreeCapacityMode()) premiumReason = null;
   const premium = premiumReason !== null;
 
   const tier = classifyEditorialTier({
