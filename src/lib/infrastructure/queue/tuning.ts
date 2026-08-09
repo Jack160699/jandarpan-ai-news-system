@@ -3,6 +3,7 @@
  */
 
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
+import { isFreeCapacityMode } from "@/lib/ai/providers/local-enrich-flag";
 import type { ExecutionDeadline } from "@/lib/serverless/deadline";
 import type { QueueDrainMetric } from "@/lib/observability/types";
 
@@ -92,6 +93,15 @@ export function resolveAiWorkerTuning(
   pending: number,
   deadline?: ExecutionDeadline
 ): WorkerTuning {
+  if (isFreeCapacityMode()) {
+    const batchSize = Math.min(pending, INFRA_CONFIG.aiQueueBatchMax);
+    return {
+      batchSize,
+      microBatchSize: Math.min(1, batchSize),
+      concurrency: Math.min(1, batchSize),
+      reason: `free_capacity_local_enrich,pending=${pending},batch=${batchSize},micro=1`,
+    };
+  }
   const batchSize = computeAdaptiveBatchSize({
     pending,
     deadline,

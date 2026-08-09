@@ -11,6 +11,7 @@
 import {
 
   enrichArticleLocally,
+  isFreeCapacityMode,
 
   isAnyChatProviderConfigured,
 
@@ -89,6 +90,19 @@ type EnrichOutput = {
 
 
 async function enrichArticle(article: NewsArticleRow): Promise<EnrichOutput | null> {
+
+  // Free providers are the publication bottleneck. Raw wire/RSS enrichment
+  // is deterministic in free-capacity mode, reserving Gemini/Groq/OpenRouter
+  // tokens for original editorial generation and independent review.
+  if (isFreeCapacityMode()) {
+    const local = enrichArticleLocally(article);
+    return {
+      ai_summary: local.ai_summary,
+      ai_headline: local.ai_headline,
+      category: local.category,
+      via: "local",
+    };
+  }
 
   const system = `You are a bilingual (Hindi + English) news editor for a Chhattisgarh newspaper.
 

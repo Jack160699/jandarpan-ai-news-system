@@ -3,6 +3,9 @@
  */
 
 import { EDITORIAL_LIMITS } from "@/lib/newsroom/editorial-capacity";
+import { isFreeCapacityMode } from "@/lib/ai/providers/local-enrich-flag";
+
+const FREE_CAPACITY_MODE = isFreeCapacityMode();
 
 export const INFRA_CONFIG = {
   /** Serverless budget before soft stop (ms) */
@@ -18,19 +21,32 @@ export const INFRA_CONFIG = {
 
   rssBatchSize: Number(process.env.RSS_BATCH_SIZE) || 4,
 
-  aiQueueBatch: Number(process.env.AI_QUEUE_BATCH) || 40,
-  aiQueueBatchMax: Number(process.env.AI_QUEUE_BATCH_MAX) || 120,
-  aiQueueMicroBatch: Number(process.env.AI_QUEUE_MICRO_BATCH) || 10,
-  aiQueueMicroBatchMax: Number(process.env.AI_QUEUE_MICRO_BATCH_MAX) || 25,
+  aiQueueBatch: FREE_CAPACITY_MODE
+    ? Math.min(20, Number(process.env.AI_QUEUE_BATCH) || 20)
+    : Number(process.env.AI_QUEUE_BATCH) || 40,
+  aiQueueBatchMax: FREE_CAPACITY_MODE
+    ? Math.min(20, Number(process.env.AI_QUEUE_BATCH_MAX) || 20)
+    : Number(process.env.AI_QUEUE_BATCH_MAX) || 120,
+  aiQueueMicroBatch: FREE_CAPACITY_MODE
+    ? 1
+    : Number(process.env.AI_QUEUE_MICRO_BATCH) || 10,
+  aiQueueMicroBatchMax: FREE_CAPACITY_MODE
+    ? 1
+    : Number(process.env.AI_QUEUE_MICRO_BATCH_MAX) || 25,
   /** Reclaim processing rows only after this long since processing_started_at */
   aiQueueStaleProcessingMs:
     Number(process.env.AI_QUEUE_STALE_PROCESSING_MS) || 10 * 60_000,
   editorialBatchLimit:
-    Number(process.env.EDITORIAL_BATCH_LIMIT) ||
-    EDITORIAL_LIMITS.defaultEditorialBatchLimit,
+    FREE_CAPACITY_MODE
+      ? 1
+      : Number(process.env.EDITORIAL_BATCH_LIMIT) ||
+        EDITORIAL_LIMITS.defaultEditorialBatchLimit,
   editorialConcurrency: Math.min(
-    4,
-    Math.max(1, Number(process.env.EDITORIAL_CONCURRENCY) || 2)
+    FREE_CAPACITY_MODE ? 1 : 4,
+    Math.max(
+      1,
+      Number(process.env.EDITORIAL_CONCURRENCY) || (FREE_CAPACITY_MODE ? 1 : 2)
+    )
   ),
   imageQueueBatch: Number(process.env.IMAGE_QUEUE_BATCH) || 12,
   imageQueueBatchMax: Number(process.env.IMAGE_QUEUE_BATCH_MAX) || 16,
