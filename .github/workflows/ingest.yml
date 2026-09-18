@@ -1,0 +1,17 @@
+name: Ingest News
+on: workflow_dispatch
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ secrets.PRODUCTION_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then exit 1; fi
+          case "$APP_URL" in
+            https://jandarpan.news|http://jandarpan.news|https://jandarpan.news/|http://jandarpan.news/)
+              echo "APP_URL=https://www.jandarpan.news" >> "$GITHUB_ENV" ;;
+          esac
+      - run: bash .github/scripts/invoke-cron-endpoint.sh "fetch_news" "/api/fetch-news" "POST" "{}"
