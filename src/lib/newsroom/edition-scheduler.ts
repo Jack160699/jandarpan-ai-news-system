@@ -73,7 +73,7 @@ export function resolveEditionPublishSlot(
     // return { ok: false, reason: "outside_slot_minute" };
   }
 
-  const slot = (Object.keys(SLOT_HOURS) as EditionPublishSlot[]).find(
+  let slot = (Object.keys(SLOT_HOURS) as EditionPublishSlot[]).find(
     (s) => SLOT_HOURS[s] === hour
   );
   if (!slot) slot = "06:00"; // return { ok: false, reason: "outside_slot_hour" };
