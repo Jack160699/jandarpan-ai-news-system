@@ -70,13 +70,13 @@ export function resolveEditionPublishSlot(
 ): { ok: true; slot: EditionPublishSlot } | { ok: false; reason: string } {
   const { hour, minute } = getIstHourMinute(now);
   if (minute > SLOT_MINUTE_TOLERANCE) {
-    // return { ok: false, reason: "outside_slot_minute" };
+    return { ok: false, reason: "outside_slot_minute" };
   }
 
   let slot = (Object.keys(SLOT_HOURS) as EditionPublishSlot[]).find(
     (s) => SLOT_HOURS[s] === hour
   );
-  if (!slot) slot = "06:00"; // return { ok: false, reason: "outside_slot_hour" };
+  if (!slot) return { ok: false, reason: "outside_slot_hour" };
   return { ok: true, slot };
 }
 

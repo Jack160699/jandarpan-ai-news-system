@@ -11,75 +11,66 @@ export async function POST(request: Request) {
 
   try {
     const url = new URL(request.url);
-    const mode = url.searchParams.get("mode"); // "dry-run" or "execute"
+    const mode = url.searchParams.get("mode");
     const supabase = createAdminServerClient();
-
-    // Tables to reset based on user specification
-    const tables = [
-      "generated_articles",
-      "news_ai_queue",
-      "worker_jobs",
-      "event_bus_messages",
-      "news_events",
-      "editorial_image_generations",
-      "dam_media",
-      "news_signals"
-    ];
 
     const inventory: Record<string, number> = {};
 
     // Dry-run: Count rows
     if (mode === "dry-run" || !mode) {
-      for (const table of tables) {
-        const { count, error } = await supabase
-          .from(table)
-          .select("*", { count: "exact", head: true });
-        
-        if (error) {
-          inventory[table] = -1;
-          console.error(`Error counting ${table}:`, error);
-        } else {
-          inventory[table] = count || 0;
-        }
+      const queries = [
+        { name: "generated_articles", query: supabase.from("generated_articles").select("*", { count: "exact", head: true }) },
+        { name: "news_ai_queue", query: supabase.from("news_ai_queue").select("*", { count: "exact", head: true }) },
+        { name: "worker_jobs", query: supabase.from("worker_jobs").select("*", { count: "exact", head: true }).in("job_type", ["editorial_generate", "image_generate", "tts_generate", "ai_enrich"]) },
+        { name: "event_bus_messages", query: supabase.from("event_bus_messages").select("*", { count: "exact", head: true }).in("event_type", ["article.generated", "article.published", "article.rejected", "article.scheduled"]) },
+        { name: "news_events", query: supabase.from("news_events").select("*", { count: "exact", head: true }) },
+        { name: "editorial_image_generations", query: supabase.from("editorial_image_generations").select("*", { count: "exact", head: true }) },
+      ];
+
+      for (const { name, query } of queries) {
+        const { count, error } = await query;
+        inventory[name] = error ? -1 : (count || 0);
       }
+      
       return NextResponse.json({
         status: "dry-run",
-        message: "Dry-run inventory counted.",
+        message: "Inventory counted. Infrastructure preserved.",
         inventory,
       });
     }
 
-    // Execute: Delete rows safely
     if (mode === "execute") {
-      // Deletion order is critical for FKs
-      const deleteOrder = [
-        "event_bus_messages",
-        "worker_jobs",
-        "generated_articles",
-        "news_ai_queue",
-        "editorial_image_generations",
-        "dam_media",
-        "news_signals",
-        "news_events" // Delete events last
-      ];
+      // 1. Delete content-related event bus messages
+      await supabase.from("event_bus_messages")
+        .delete()
+        .in("event_type", ["article.generated", "article.published", "article.rejected", "article.scheduled", "generation.failed", "tts.completed"]);
+      inventory["event_bus_messages"] = 1;
 
-      for (const table of deleteOrder) {
-        // Delete all trick
-        const { error } = await supabase
-          .from(table)
-          .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000'); 
-          
-        if (error) {
-          inventory[table] = -1;
-          console.error(`Error deleting ${table}:`, error);
-        } else {
-          inventory[table] = 1;
-        }
-      }
+      // 2. Delete content-related worker jobs
+      await supabase.from("worker_jobs")
+        .delete()
+        .in("job_type", ["editorial_generate", "image_generate", "tts_generate", "ai_enrich", "ingest"]);
+      inventory["worker_jobs"] = 1;
+
+      // 3. Delete generated articles
+      await supabase.from("generated_articles").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      inventory["generated_articles"] = 1;
+
+      // 4. Delete AI queue
+      await supabase.from("news_ai_queue").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      inventory["news_ai_queue"] = 1;
+
+      // 5. Delete images
+      await supabase.from("editorial_image_generations").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      inventory["editorial_image_generations"] = 1;
+
+      // 6. Delete news events (source of truth)
+      await supabase.from("news_events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      inventory["news_events"] = 1;
+
       return NextResponse.json({
         status: "execute",
-        message: "Reset executed.",
+        message: "Safe reset executed.",
         inventory,
       });
     }

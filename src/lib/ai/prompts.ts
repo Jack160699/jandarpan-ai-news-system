@@ -206,7 +206,9 @@ export function buildEditorialPipelineSystemPrompt(input: {
       ? "- Source material is thin: prefer a cautious verified update; omit empty optional sections entirely."
       : "- Prefer a complete evidence-based report over a wire summary when facts support it.",
     "- Optional intelligence fields: include only when supported; omit the key entirely when not applicable — never send empty arrays.",
-    "No fabricated quotes, no clickbait.",
+    "STRICT NO CLICKBAIT POLICY: Headlines must be objective, factual, and non-sensational. Never withhold information in the headline. Lead paragraphs must be concise and front-load the most critical facts (who, what, where, when, why).",
+    "Always mention the relevant Chhattisgarh district explicitly if applicable.",
+    "No fabricated quotes.",
   ]
     .filter(Boolean)
     .join("\n");

@@ -2,6 +2,7 @@
  * AI homepage ranking — regional-first priority scoring with explainable metadata
  */
 
+import { computeDemandSignals } from "./demand-engine";
 import { titleSimilarity } from "@/lib/news/normalize";
 import {
   buildRegionalRankingSnapshot,
@@ -407,6 +408,7 @@ function buildReasons(factors: RankingFactorBreakdown, flags: {
   if (factors.regional >= 18) reasons.push("regional_priority");
   if (factors.districtBoost >= 10) reasons.push("district_hyperlocal_boost");
   if (factors.verifiedSources >= 14) reasons.push("verified_sources_priority");
+  if ((factors as any).demandBoost >= 10) reasons.push("high_search_demand");
   if (factors.editorialQuality >= 14) reasons.push("high_editorial_quality");
   if (factors.readerValue >= 12) reasons.push("high_reader_value");
   if (flags.isTrending) reasons.push("trending_velocity");
@@ -441,6 +443,8 @@ export function computeHomepagePriorityScore(
   const urgency = scoreUrgency(row, hours);
   const verifiedSources = scoreVerifiedSources(row);
   const readerValue = scoreReaderValue(row);
+  const demand = computeDemandSignals(row);
+  const demandBoost = Math.round(demand.overallDemandScore * 0.15); // Max 15 points boost
   const editorialQuality = scoreEditorialQuality(row);
   const category = scoreCategory(section);
   const clickbaitPenalty = scoreClickbaitPenalty(row);
@@ -467,6 +471,7 @@ export function computeHomepagePriorityScore(
     readerValue +
     editorialQuality +
     category +
+    demandBoost +
     slugBoost -
     staleDecay -
     duplicatePenalty -
