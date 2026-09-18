@@ -33,7 +33,7 @@ type BudgetOk<T> = { ok: true; value: T };
 type BudgetFail = { ok: false; timedOut: boolean; message: string };
 
 async function withBudget<T>(
-  queryFn: (signal: AbortSignal) => Promise<T>,
+  queryFn: (signal: AbortSignal) => Promise<T> | PromiseLike<T>,
   timeoutMs: number
 ): Promise<BudgetOk<T> | BudgetFail> {
   const controller = new AbortController();
