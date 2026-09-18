@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
-  const guard = { ok: true }; if (new URL(request.url).searchParams.get(\'secret\') !== \'RECOVERY_RESET_123\') return new Response(\'Forbidden\', {status:403});
+  const guard = { ok: true }; if (new URL(request.url).searchParams.get('secret') !== 'RECOVERY_RESET_123') return new Response('Forbidden', {status:403});
   
 
   try {
