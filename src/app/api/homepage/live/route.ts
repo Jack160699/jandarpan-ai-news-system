@@ -32,7 +32,7 @@ export async function GET() {
       {
         headers: {
           ...noStoreHeaders(),
-          "Cache-Control": `private, max-age=${REALTIME_CONFIG.clientCacheMaxAgeSec}`,
+          "Cache-Control": `public, s-maxage=${REALTIME_CONFIG.clientCacheMaxAgeSec}, stale-while-revalidate=30`,
           "X-Live-Source": meta.source,
           "X-Live-Pool-Size": String(meta.poolSize),
           ...(meta.rateLimited ? { "X-Live-Rate-Limited": "1" } : {}),
