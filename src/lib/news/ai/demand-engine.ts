@@ -1,4 +1,4 @@
-import { GeneratedArticleRow } from "@/lib/news/ai/article-type";
+import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 export type DemandSignals = {
   searchDemand: number;
