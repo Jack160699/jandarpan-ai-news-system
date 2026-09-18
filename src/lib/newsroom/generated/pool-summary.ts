@@ -33,15 +33,19 @@ type BudgetOk<T> = { ok: true; value: T };
 type BudgetFail = { ok: false; timedOut: boolean; message: string };
 
 async function withBudget<T>(
-  promise: Promise<T>,
+  queryFn: (signal: AbortSignal) => Promise<T>,
   timeoutMs: number
 ): Promise<BudgetOk<T> | BudgetFail> {
+  const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const raced = await Promise.race([
-      promise.then((v) => ({ kind: "value" as const, v })),
+      queryFn(controller.signal).then((v) => ({ kind: "value" as const, v })),
       new Promise<{ kind: "timeout" }>((resolve) => {
-        timer = setTimeout(() => resolve({ kind: "timeout" }), timeoutMs);
+        timer = setTimeout(() => {
+          controller.abort(new Error(`query_timeout_${timeoutMs}ms`));
+          resolve({ kind: "timeout" });
+        }, timeoutMs);
       }),
     ]);
     if (raced.kind === "timeout") {
@@ -79,7 +83,7 @@ async function loadGeneratedPoolSummary(): Promise<GeneratedPoolSummary> {
   const supabase = createAnonServerClient();
 
   const latestRes = await withBudget(
-    Promise.resolve(
+    (signal) =>
       supabase
         .from("generated_articles")
         .select("published_at")
@@ -87,8 +91,8 @@ async function loadGeneratedPoolSummary(): Promise<GeneratedPoolSummary> {
         .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
         .order("published_at", { ascending: false, nullsFirst: false })
         .limit(1)
-        .maybeSingle()
-    ),
+        .abortSignal(signal)
+        .maybeSingle(),
     QUERY_TIMEOUT_MS
   );
 
@@ -125,23 +129,23 @@ async function loadGeneratedPoolSummary(): Promise<GeneratedPoolSummary> {
   const hasPublished = Boolean(latestPublishedAt);
 
   const publishedCountRes = await withBudget(
-    Promise.resolve(
+    (signal) =>
       supabase
         .from("generated_articles")
         .select("id", { count: "exact", head: true })
         .not("published_at", "is", null)
         .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
-    ),
+        .abortSignal(signal),
     QUERY_TIMEOUT_MS
   );
 
   const pendingCountRes = await withBudget(
-    Promise.resolve(
+    (signal) =>
       supabase
         .from("generated_articles")
         .select("id", { count: "exact", head: true })
         .eq("editorial_status", "pending")
-    ),
+        .abortSignal(signal),
     QUERY_TIMEOUT_MS
   );
 
