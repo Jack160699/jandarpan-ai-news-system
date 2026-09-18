@@ -165,45 +165,115 @@ export async function runEditorialGenerateLane(
     // proven, free-first-aware generateEditorialsFromEvents() the queue
     // handler itself calls once a job is claimed) so the lane makes real
     // progress instead of idling on an empty queue it has no way to fill.
-    const direct = await generateEditorialsFromEvents({
-      limit: GENERATION_LANE_TARGETS.batchLimit,
-    });
-    const madeProgress = direct.generated > 0 || direct.published > 0;
+    try {
+      const direct = await generateEditorialsFromEvents({
+        limit: GENERATION_LANE_TARGETS.batchLimit,
+      });
+      const madeProgress = direct.generated > 0 || direct.published > 0;
 
-    const outcome = classifyLaneOutcome({
-      batch: {
-        processed: direct.generated + direct.skipped + (direct.updates ?? 0),
-        completed: direct.published,
-        failed: direct.rejected,
-        dead: 0,
-      },
-      incidents,
-      skipped: !madeProgress,
-      reason: madeProgress ? undefined : "no_eligible_candidates",
-    });
-
-    return completeWorkerResult("editorial_generate", started, ctx.deadline, {
-      recordsProcessed: direct.published,
-      recordsSkipped: direct.rejected + direct.skipped,
-      remainingQueue: 0,
-      partial: false,
-      extra: {
-        status: outcome,
-        queueDepth: 0,
-        oldestPendingAgeMs: metrics.oldestPendingAgeMs,
+      const outcome = classifyLaneOutcome({
+        batch: {
+          processed: direct.generated + direct.skipped + (direct.updates ?? 0),
+          completed: direct.published,
+          failed: direct.rejected,
+          dead: 0,
+        },
         incidents,
-        generatedArticleIds: direct.topStory?.storyId ? [direct.topStory.storyId] : [],
-        continuationRequired: false,
-        directGeneration: true,
-        generated: direct.generated,
-        published: direct.published,
-        rejected: direct.rejected,
-        skipped: direct.skipped,
-        errors: direct.errors.slice(0, 5),
-        skipReasonCounts: direct.skipReasonCounts ?? {},
-        candidatePool: direct.candidatePool ?? null,
-      },
-    });
+        skipped: !madeProgress,
+        reason: madeProgress ? undefined : "no_eligible_candidates",
+      });
+
+      return completeWorkerResult("editorial_generate", started, ctx.deadline, {
+        recordsProcessed: direct.published,
+        recordsSkipped: direct.rejected + direct.skipped,
+        remainingQueue: 0,
+        partial: false,
+        extra: {
+          status: outcome,
+          queueDepth: 0,
+          oldestPendingAgeMs: metrics.oldestPendingAgeMs,
+          incidents,
+          generatedArticleIds: direct.topStory?.storyId ? [direct.topStory.storyId] : [],
+          continuationRequired: false,
+          directGeneration: true,
+          generated: direct.generated,
+          published: direct.published,
+          rejected: direct.rejected,
+          skipped: direct.skipped,
+          errors: direct.errors.slice(0, 5),
+          skipReasonCounts: direct.skipReasonCounts ?? {},
+          candidatePool: direct.candidatePool ?? null,
+        },
+      });
+    } catch (err) {
+      // Defense-in-depth: generateEditorialsFromEvents' own per-candidate
+      // loop now catches unexpected exceptions internally (see
+      // generate-article.ts), but if something still escapes — e.g. a
+      // throw between candidates, not during one — this must not report a
+      // hard, detail-free "failed" that hides real articles already
+      // persisted earlier in the same call. Count what actually landed in
+      // generated_articles since this invocation started so the incident
+      // is at least reported accurately even in the worst case.
+      const message = err instanceof Error ? err.message : "direct_generation_threw";
+      let recoveredCount = 0;
+      let recoveredIds: string[] = [];
+      try {
+        const supabase = createAdminClient();
+        const { data } = await supabase
+          .from("generated_articles")
+          .select("id")
+          .gte("created_at", startedIso)
+          .limit(GENERATION_LANE_TARGETS.batchLimit);
+        recoveredIds = (data ?? []).map((r) => r.id as string);
+        recoveredCount = recoveredIds.length;
+      } catch {
+        // best-effort only — never let the recovery probe itself throw
+      }
+
+      if (recoveredCount === 0) {
+        // Nothing was persisted before the exception — a genuine failure,
+        // not a partial success wearing a degraded label. Fail closed, same
+        // shape as the queue-draining path's hard-failure branch below.
+        return {
+          worker: "editorial_generate",
+          ok: false,
+          durationMs: Date.now() - started,
+          error: "direct_generation_exception",
+          metadata: {
+            status: "failed",
+            degraded: false,
+            queueDepth: 0,
+            oldestPendingAgeMs: metrics.oldestPendingAgeMs,
+            incidents,
+            generatedArticleIds: [],
+            continuationRequired: false,
+            directGeneration: true,
+            directGenerationException: message,
+            recoveredArticleCount: 0,
+          },
+        };
+      }
+
+      // Real articles were persisted before the exception — degraded, not
+      // failed, so the genuine progress isn't hidden behind a hard failure.
+      return partialWorkerResult("editorial_generate", started, ctx.deadline, {
+        recordsProcessed: recoveredCount,
+        recordsSkipped: 0,
+        remainingQueue: 0,
+        partial: true,
+        extra: {
+          status: "degraded",
+          queueDepth: 0,
+          oldestPendingAgeMs: metrics.oldestPendingAgeMs,
+          incidents,
+          generatedArticleIds: recoveredIds,
+          continuationRequired: false,
+          directGeneration: true,
+          directGenerationException: message,
+          recoveredArticleCount: recoveredCount,
+        },
+      });
+    }
   }
 
   const batch = await processJobBatch(JOB_HANDLERS, {

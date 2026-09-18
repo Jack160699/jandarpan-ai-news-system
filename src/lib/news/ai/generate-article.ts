@@ -2104,6 +2104,7 @@ export async function generateEditorialsFromEvents(options?: {
   for (let i = 0; i < pending.length; i++) {
     const event = pending[i];
     const prepared = preparedList[i];
+    try {
     logArticleGenerationPhase("article_generation_started", {
       eventId: event.id,
       region: event.region,
@@ -2290,6 +2291,30 @@ export async function generateEditorialsFromEvents(options?: {
         trendScore: candidate.quality.quality_breakdown.trend_score,
         duplicateClusterId: candidate.quality.duplicate_cluster_id,
         quality_breakdown: candidate.quality.quality_breakdown,
+      });
+    }
+    } catch (err) {
+      // A single candidate's unexpected exception (persist/image/translate/
+      // network blip, anything not already classified above) must not abort
+      // the whole batch and silently discard candidates already persisted
+      // earlier in this loop. Confirmed live in Production: 2 real drafts
+      // were saved, then an uncaught throw on the 3rd candidate propagated
+      // all the way out of generateEditorialsFromEvents, marking the entire
+      // cron run "failed" with no detail — hiding two genuine successes
+      // behind a generic error.
+      const message = err instanceof Error ? err.message : "unexpected_candidate_error";
+      logArticleGenerationPhase("article_generation_failed", {
+        eventId: event.id,
+        reason: `unexpected_error:${message}`,
+        skipped: false,
+        mode: "batch",
+      });
+      rejected++;
+      errors.push(`${event.id}: unexpected_error:${message}`);
+      results.push({
+        eventId: event.id,
+        ok: false,
+        reason: `unexpected_error:${message}`,
       });
     }
   }

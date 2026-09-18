@@ -18,6 +18,19 @@ vi.mock("@/lib/ai/providers/chat", () => ({
   isAnyChatProviderConfigured: () => mockIsAnyChatProviderConfigured(),
 }));
 
+const mockRecoveredArticles = vi.fn();
+vi.mock("@/lib/supabase", () => ({
+  createAdminClient: () => ({
+    from: () => ({
+      select: () => ({
+        gte: () => ({
+          limit: async () => mockRecoveredArticles(),
+        }),
+      }),
+    }),
+  }),
+}));
+
 import { classifyLaneOutcome, runEditorialGenerateLane } from "@/lib/infrastructure/workers/editorial-generate-lane";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
 
@@ -168,5 +181,72 @@ describe("runEditorialGenerateLane — empty-queue direct-generation fallback", 
     }
 
     expect(mockGenerateEditorialsFromEvents).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Regression coverage for a real Production incident: a cron run created 2
+   * real drafts (persisted successfully), then an uncaught exception on a
+   * later candidate propagated out of generateEditorialsFromEvents, marking
+   * the whole run ok:false/error:"editorial_generate_failed" with no detail
+   * — hiding the 2 genuine successes. generate-article.ts's per-candidate
+   * loop now catches this internally, but this test covers the lane's
+   * defense-in-depth path for the case where an exception still escapes
+   * (e.g. between candidates, not during one): it must recover the actual
+   * count of articles persisted since the run started and report
+   * "degraded", never a bare failure that discards known-real progress.
+   */
+  it("reports degraded (not a bare failure) and recovers the real article count when generateEditorialsFromEvents throws after partial persistence", async () => {
+    mockGetQueueMetrics.mockResolvedValue({
+      pending: 0,
+      claimed: 0,
+      dead: 0,
+      oldestPendingAgeMs: null,
+      lastSuccessAt: null,
+      lastSuccessAgeMs: null,
+      recentFailures: 0,
+    });
+    mockGenerateEditorialsFromEvents.mockRejectedValue(
+      new Error("unexpected_candidate_error: something threw between candidates")
+    );
+    mockRecoveredArticles.mockResolvedValue({
+      data: [{ id: "article-1" }, { id: "article-2" }],
+      error: null,
+    });
+
+    const result = await runEditorialGenerateLane({
+      deadline: createExecutionDeadline(60_000),
+      requestUrl: "https://example.test/api/cron/editorial-generate",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.metadata?.status).toBe("degraded");
+    expect(result.metadata?.recordsProcessed).toBe(2);
+    expect(result.metadata?.recoveredArticleCount).toBe(2);
+    expect(result.metadata?.generatedArticleIds).toEqual(["article-1", "article-2"]);
+    expect(String(result.metadata?.directGenerationException)).toContain("something threw between candidates");
+  });
+
+  it("reports a genuine failure (not degraded) when generateEditorialsFromEvents throws and nothing was actually persisted", async () => {
+    mockGetQueueMetrics.mockResolvedValue({
+      pending: 0,
+      claimed: 0,
+      dead: 0,
+      oldestPendingAgeMs: null,
+      lastSuccessAt: null,
+      lastSuccessAgeMs: null,
+      recentFailures: 0,
+    });
+    mockGenerateEditorialsFromEvents.mockRejectedValue(new Error("total_failure_before_any_persist"));
+    mockRecoveredArticles.mockResolvedValue({ data: [], error: null });
+
+    const result = await runEditorialGenerateLane({
+      deadline: createExecutionDeadline(60_000),
+      requestUrl: "https://example.test/api/cron/editorial-generate",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("direct_generation_exception");
+    expect(result.metadata?.recoveredArticleCount).toBe(0);
+    expect(result.metadata?.status).toBe("failed");
   });
 });
