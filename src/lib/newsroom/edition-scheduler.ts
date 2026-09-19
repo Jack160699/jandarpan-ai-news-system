@@ -65,7 +65,7 @@ function getIstHourMinute(now = new Date()): { hour: number; minute: number } {
  * slot; because each slot fires at most once, widening this window cannot
  * cause a slot to be served twice.
  */
-const SLOT_MINUTE_TOLERANCE = 5;
+const SLOT_MINUTE_TOLERANCE = 59;
 
 export function resolveEditionPublishSlot(
   now = new Date()
