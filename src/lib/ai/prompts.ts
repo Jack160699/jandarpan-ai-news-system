@@ -1,10 +1,10 @@
-﻿import type { AiDeskTemplate, AiStoryLanguage } from "./types";
+import type { AiDeskTemplate, AiStoryLanguage } from "./types";
 import type { ArticleType } from "@/lib/news/ai/article-type";
 import { ARTICLE_DEPTH_RULES } from "@/lib/news/ai/article-type";
 
 const TEMPLATE_HINTS: Record<AiDeskTemplate, string> = {
   breaking_news:
-    "Breaking news format: urgent lead, what happened, who is affected, what is next. Keep sentences short â€” but still a complete alert, not a one-line dek.",
+    "Breaking news format: urgent lead, what happened, who is affected, what is next. Keep sentences short — but still a complete alert, not a one-line dek.",
   district_update:
     "District desk report for Chhattisgarh: local names, places, administration response, citizen impact, and verified background when available.",
   political_report:
@@ -12,7 +12,7 @@ const TEMPLATE_HINTS: Record<AiDeskTemplate, string> = {
   crime_report:
     "Crime report: facts only, police attribution, avoid graphic detail, victim privacy. Distinguish allegation from confirmation.",
   sports_brief:
-    "Sports update: score/result upfront, key performers, tournament context â€” complete enough for readers, not a bare result line.",
+    "Sports update: score/result upfront, key performers, tournament context — complete enough for readers, not a bare result line.",
   business_update:
     "Business update: market/company impact, numbers if present, policy angle for readers.",
   general: "Standard regional newspaper report structure in natural prose.",
@@ -21,7 +21,7 @@ const TEMPLATE_HINTS: Record<AiDeskTemplate, string> = {
 /** Supplemental desk guidance when category does not map 1:1 to AiDeskTemplate */
 const CATEGORY_EDITORIAL_HINTS: Record<string, string> = {
   weather:
-    "Weather desk: IMD or official alert attribution, district-wise impact, safety guidance â€” only from sources.",
+    "Weather desk: IMD or official alert attribution, district-wise impact, safety guidance — only from sources.",
   education:
     "Education desk: school, board, or exam facts; attribute to education department or named officials when present.",
   health:
@@ -33,7 +33,7 @@ const CATEGORY_EDITORIAL_HINTS: Record<string, string> = {
 const ATTRIBUTION_RULES: Record<"hi" | "en", string> = {
   hi: [
     "Attribution (only when the fact pack supports it):",
-    'Use natural Hindi phrasing such as "à¤ªà¥à¤²à¤¿à¤¸ à¤•à¥‡ à¤…à¤¨à¥à¤¸à¤¾à¤°", "à¤ªà¥à¤°à¤¶à¤¾à¤¸à¤¨ à¤•à¥‡ à¤…à¤¨à¥à¤¸à¤¾à¤°", "à¤ªà¥à¤°à¤¤à¥à¤¯à¤•à¥à¤·à¤¦à¤°à¥à¤¶à¤¿à¤¯à¥‹à¤‚ à¤•à¥‡ à¤…à¤¨à¥à¤¸à¤¾à¤°", "à¤…à¤§à¤¿à¤•à¤¾à¤°à¤¿à¤¯à¥‹à¤‚ à¤•à¥‡ à¤…à¤¨à¥à¤¸à¤¾à¤°".',
+    'Use natural Hindi phrasing such as "पुलिस के अनुसार", "प्रशासन के अनुसार", "प्रत्यक्षदर्शियों के अनुसार", "अधिकारियों के अनुसार".',
     "Never invent quotes, speakers, or attributions.",
   ].join(" "),
   en: [
@@ -113,7 +113,7 @@ export function buildStorySystemPrompt(input: {
   ].join("\n");
 }
 
-/** Pipeline editorial prompt â€” reuses desk templates + language rules from the manual desk */
+/** Pipeline editorial prompt — reuses desk templates + language rules from the manual desk */
 export function buildEditorialPipelineSystemPrompt(input: {
   language: "hi" | "en";
   deskTemplate: AiDeskTemplate;
@@ -132,7 +132,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
     depthRule.promptDepthHint,
     thin
       ? "Evidence is LIMITED: write a verified short update or developing note. Mark uncertainty. Do NOT expand through speculation or filler."
-      : `When facts support it, write a complete report near ~${depthRule.targetWords} words (acceptable band ${depthRule.minWords}â€“${depthRule.maxWords}). Word count is a quality guard â€” never invent facts to hit it.`,
+      : `When facts support it, write a complete report near ~${depthRule.targetWords} words (acceptable band ${depthRule.minWords}–${depthRule.maxWords}). Word count is a quality guard — never invent facts to hit it.`,
   ].join("\n");
   const correctionBlock = input.repairContext
     ? [
@@ -145,17 +145,17 @@ export function buildEditorialPipelineSystemPrompt(input: {
   const structureBlock =
     lang === "hi"
       ? [
-          "Internal structure (write as natural Hindi newspaper paragraphs â€” do NOT print these as visible headings):",
+          "Internal structure (write as natural Hindi newspaper paragraphs — do NOT print these as visible headings):",
           "1) headline 2) summary/dek 3) what happened 4) where & when 5) key verified details",
           "6) who said what (only if in fact pack) 7) local/district relevance 8) background/context when supported",
           "9) public impact 10) what happens next 11) source transparency via attribution phrasing.",
           "sections.lead = opening what/where/when; sections.details = verified details + attribution + impact;",
-          "sections.context = background / what next / district relevance when supported â€” omit key if unsupported.",
+          "sections.context = background / what next / district relevance when supported — omit key if unsupported.",
         ].join("\n")
       : [
-          "Internal structure (natural newspaper paragraphs â€” do NOT print these as visible headings):",
+          "Internal structure (natural newspaper paragraphs — do NOT print these as visible headings):",
           "headline, dek, what happened, where/when, key details, attribution, local relevance,",
-          "background, public impact, what next â€” only when supported by the fact pack.",
+          "background, public impact, what next — only when supported by the fact pack.",
           "sections.lead / details / context map to this structure without labeled section titles.",
         ].join("\n");
 
@@ -171,36 +171,37 @@ export function buildEditorialPipelineSystemPrompt(input: {
     "Output MUST be valid JSON only:",
     "{",
     '  "headline": string,',
-    '  "summary": string (2-3 sentence dek â€” shown separately; do NOT repeat in body),',
+    '  "summary": string (2-3 sentence dek — shown separately; do NOT repeat in body),',
     '  "article_type": string (echo the assigned article type),',
     '  "sections": {',
-    '    "lead": string (opening paragraph â€” must differ from summary),',
+    '    "lead": string (opening paragraph — must NEVER start with the same words as the summary. Write a completely new opening sentence.),',
     '    "details": string (main report in natural newsroom prose; multiple paragraphs OK with \\n\\n),',
-    '    "context": string (OPTIONAL â€” background, impact, what next when verifiable; omit key if no facts)',
+    '    "context": string (OPTIONAL — background, impact, what next when verifiable; omit key if no facts)',
     "  },",
     '  "seo_title": string (<=60 chars),',
     '  "seo_description": string (<=155 chars),',
     '  "tags": string[] (4-8 lowercase tags),',
-    '  "takeaways": string[] (OPTIONAL â€” 3-5 concise reader bullets from facts only; omit key if thin),',
-    '  "why_this_matters": string (OPTIONAL â€” one short paragraph on local significance; omit key if unclear),',
-    '  "entities": [{"name": string, "type": "person"|"organization"|"location"|"program"|"other"}] (OPTIONAL â€” key names from fact pack; omit key if none),',
-    '  "timeline": [{"label": string, "detail": string}] (OPTIONAL â€” only for clearly chronological stories; omit key if not applicable),',
-    '  "reader_keywords": string[] (OPTIONAL â€” 3-8 discovery keywords; may differ from tags; omit if redundant)',
+    '  "takeaways": string[] (OPTIONAL — 3-5 concise reader bullets from facts only; omit key if thin),',
+    '  "why_this_matters": string (OPTIONAL — one short paragraph on local significance; omit key if unclear),',
+    '  "entities": [{"name": string, "type": "person"|"organization"|"location"|"program"|"other"}] (OPTIONAL — key names from fact pack; omit key if none),',
+    '  "timeline": [{"label": string, "detail": string}] (OPTIONAL — only for clearly chronological stories; omit key if not applicable),',
+    '  "reader_keywords": string[] (OPTIONAL — 3-8 discovery keywords; may differ from tags; omit if redundant)',
     "}",
     "Factual safety:",
     "- Synthesize ONLY facts in the fact pack. Do NOT invent names, numbers, quotes, outcomes, or on-ground reporting.",
     "- Never invent quotations. Never infer guilt. Distinguish allegation from confirmation. Preserve uncertainty.",
     "- Attribute claims to sources present in the fact pack. Avoid copying source text excessively.",
     "- No SEO keyword stuffing. No repetitive filler. No template tokens like {{...}} or undefined/null.",
-    "- Label AI assistance only via newsroom policy metadata â€” do not write fake bylines claiming field reporting.",
+    "- Label AI assistance only via newsroom policy metadata — do not write fake bylines claiming field reporting.",
     "Body rules:",
-    "- Body MUST be substantially longer and different from summary/dek.",
-    "- Never use visible template section headings inside section text (no ## à¤¸à¤¾à¤°à¤¾à¤‚à¤¶, ## Background, etc.).",
-    "- Write like a professional newsroom article â€” flowing paragraphs, not an AI report template.",
+    "- Do not repeat paragraphs or sentences. Each paragraph must provide new information.
+    - Body MUST be substantially longer and different from summary/dek. DO NOT START the lead paragraph with the same words as the summary. The lead and summary MUST be completely different sentences..",
+    "- Never use visible template section headings inside section text (no ## सारांश, ## Background, etc.).",
+    "- Write like a professional newsroom article — flowing paragraphs, not an AI report template.",
     thin
       ? "- Source material is thin: prefer a cautious verified update; omit empty optional sections entirely."
       : "- Prefer a complete evidence-based report over a wire summary when facts support it.",
-    "- Optional intelligence fields: include only when supported; omit the key entirely when not applicable â€” never send empty arrays.",
+    "- Optional intelligence fields: include only when supported; omit the key entirely when not applicable — never send empty arrays.",
     "STRICT NO CLICKBAIT POLICY: Headlines must be objective, factual, and non-sensational. Never withhold information in the headline. Lead paragraphs must be concise and front-load the most critical facts (who, what, where, when, why).",
     "Always mention the relevant Chhattisgarh district explicitly if applicable.",
     "No fabricated quotes.",
