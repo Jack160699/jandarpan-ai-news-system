@@ -2,7 +2,7 @@
  * Startup infrastructure validation — warnings only, no secrets logged.
  */
 
-import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
+import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";`nimport { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { isProductionDeployment } from "@/lib/infrastructure/production";
 import { hasGscCredentialsConfigured } from "@/lib/gsc-intelligence/config";
 import { logOpsEvent } from "@/lib/observability/ops-event";
@@ -33,7 +33,7 @@ export function runStartupInfraChecks(): void {
   const checks: StartupCheck[] = [
     {
       key: "openai",
-      ok: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      ok: isAnyChatProviderConfigured(),
       message: "OPENAI_API_KEY not set — AI pipeline will be degraded",
     },
     {
@@ -90,4 +90,6 @@ export function runStartupInfraChecks(): void {
     });
   }
 }
+
+
 
