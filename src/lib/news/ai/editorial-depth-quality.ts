@@ -103,7 +103,7 @@ export function findDuplicatedParagraphs(body: string): string[] {
   const seen = new Map<string, number>();
   const dupes: string[] = [];
   for (const p of paras) {
-    const key = normalizePara(p).slice(0, 160);
+    const key = normalizePara(p).slice(0, 300);
     if (!key) continue;
     const count = (seen.get(key) ?? 0) + 1;
     seen.set(key, count);

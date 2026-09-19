@@ -26,9 +26,9 @@ export function isDuplicateOfSummary(text: string, summary: string): boolean {
   const b = normalizeComparableText(summary);
   if (!a || !b) return false;
   if (a === b) return true;
-  if (a.length >= 40 && b.length >= 40) {
-    if (a.startsWith(b.slice(0, Math.min(80, b.length)))) return true;
-    if (b.startsWith(a.slice(0, Math.min(80, a.length)))) return true;
+  if (a.length >= 80 && b.length >= 80) {
+    if (a.length >= 150 && b.length >= 150 && a.startsWith(b.slice(0, 150))) return true;
+    if (a.length >= 150 && b.length >= 150 && b.startsWith(a.slice(0, 150))) return true;
   }
   return false;
 }
