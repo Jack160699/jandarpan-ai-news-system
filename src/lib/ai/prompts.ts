@@ -174,7 +174,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
     '  "article_type": string (echo the assigned article type),',
     '  "sections": {',
     '    "lead": string (Write a detailed 3-4 sentence opening paragraph focusing on specific event details, people involved, time, and location. MUST NOT use the same phrasing as the summary.),',
-    '    "details": string (main report in natural newsroom prose; multiple paragraphs OK with \n\n),',
+    '    "details": string (main report in natural newsroom prose containing new information. MUST NOT repeat paragraphs from the lead. multiple paragraphs OK with \n\n),',
     '    "context": string (OPTIONAL — background, impact, what next when verifiable; omit key if no facts)',
     "  },",
     '  "summary": string (A concise 1-2 sentence executive summary highlighting ONLY the main outcome. Keep it brief and distinct from the lead paragraph.),',
