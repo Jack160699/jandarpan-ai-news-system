@@ -1,18 +1,34 @@
-﻿import os
+﻿import sys
 
-def replace_in_file(filepath, old, new):
-    if not os.path.exists(filepath): return
-    with open(filepath, 'r', encoding='utf-8') as f:
-        content = f.read()
-    if old in content:
-        content = content.replace(old, new)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
+with open('src/lib/ai/prompts.ts', 'r', encoding='utf-8') as f:
+    content = f.read()
 
-replace_in_file('src/lib/ai/prompts.depth-correction.test.ts', 'depthCorrection:', 'repairContext:')
-replace_in_file('src/lib/news/ai/generate-article.ts', 'depthCorrection,', 'repairContext,')
-replace_in_file('src/lib/news/ai/generate-article.ts', 'depthCorrection:', 'repairContext:')
-replace_in_file('src/lib/news/ai/generate-article.ts', 'depthCorrection=', 'repairContext=')
+target = '''    "Output MUST be valid JSON only:",
+    "{",
+    '  "headline": string,',
+    '  "summary": string (Write a 2-3 sentence high-level overview. Do NOT use the exact same sentences as the body sections.),',
+    '  "article_type": string (echo the assigned article type),',
+    '  "sections": {',
+    '    "lead": string (Write the opening paragraph of the article. It MUST use entirely different phrasing from the summary. Do NOT copy the summary.),',
+    '    "details": string (main report in natural newsroom prose; multiple paragraphs OK with \\n\\n),',
+    '    "context": string (OPTIONAL — background, impact, what next when verifiable; omit key if no facts)',
+    "  },",'''
 
-# Also for validation_issues -> failureCodes or something
-# Let's inspect what's at line 1476 of generate-article.ts
+replacement = '''    "Output MUST be valid JSON only:",
+    "{",
+    '  "headline": string,',
+    '  "article_type": string (echo the assigned article type),',
+    '  "sections": {',
+    '    "lead": string (Write the opening paragraph of the article. Jump straight into the news without high-level overview. MUST NOT use the same phrasing as the summary.),',
+    '    "details": string (main report in natural newsroom prose; multiple paragraphs OK with \\n\\n),',
+    '    "context": string (OPTIONAL — background, impact, what next when verifiable; omit key if no facts)',
+    "  },",
+    '  "summary": string (Write a 2-3 sentence high-level overview AFTER writing the sections. MUST use entirely different phrasing from the body sections),','''
+
+if target in content:
+    content = content.replace(target, replacement)
+    with open('src/lib/ai/prompts.ts', 'w', encoding='utf-8') as f:
+        f.write(content)
+    print("Replaced successfully")
+else:
+    print("Target not found")
