@@ -18,7 +18,7 @@ export type EditionPublishSlot =
     | "14:00"
   | "15:00"
   | "18:00"
-  | "21:00";
+  | "16:00" | "17:00" | "19:00" | "20:00" | "21:00" | "22:00" | "23:00";
 
 const IST_TZ = "Asia/Kolkata";
 const SLOT_HOURS: Record<EditionPublishSlot, number> = {
@@ -26,8 +26,8 @@ const SLOT_HOURS: Record<EditionPublishSlot, number> = {
   "09:00": 9,
   "12:00": 12,
     "14:00": 14,
-  "15:00": 15,
-  "18:00": 18,
+  "15:00": 15, "16:00": 16, "17:00": 17,
+  "18:00": 18, "19:00": 19, "20:00": 20,
   "21:00": 21,
 };
 
@@ -37,9 +37,9 @@ function baseEditionPublishLimit(slot: EditionPublishSlot): number {
     return Math.max(1, Math.floor(EDITORIAL_CAPACITY.editions.morning / 2));
   }
   if (slot === "12:00" || slot === "14:00") return EDITORIAL_CAPACITY.editions.noon;
-  if (slot === "15:00") return EDITORIAL_CAPACITY.editions.afternoon;
-  if (slot === "18:00") return EDITORIAL_CAPACITY.editions.evening;
-  return EDITORIAL_CAPACITY.editions.night;
+  if (slot === "15:00" || slot === "16:00" || slot === "17:00") return EDITORIAL_CAPACITY.editions.afternoon;
+  if (slot === "18:00" || slot === "19:00" || slot === "20:00") return EDITORIAL_CAPACITY.editions.evening;
+  if (slot === "21:00" || slot === "22:00" || slot === "23:00") return EDITORIAL_CAPACITY.editions.night; return EDITORIAL_CAPACITY.editions.afternoon;
 }
 
 function getIstHourMinute(now = new Date()): { hour: number; minute: number } {
