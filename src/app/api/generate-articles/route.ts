@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     return cronAuthFailureResponse(auth);
   }
 
-  if (!process.env.OPENAI_API_KEY?.trim()) {
+  if (!isAnyChatProviderConfigured()) {
     await finalizeCronRun({
       job: "generate-articles",
       startedAt,
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       errorCode: "openai_not_configured",
     });
     return NextResponse.json(
-      { ok: false, message: "OPENAI_API_KEY not set" },
+      { ok: false, message: "No AI provider configured" },
       { status: 503 }
     );
   }
@@ -117,3 +118,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

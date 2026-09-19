@@ -1,4 +1,5 @@
 /**
+import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
  * POST /api/process-ai — drain AI enrichment queue (max 10 per invocation)
  */
 
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!process.env.OPENAI_API_KEY?.trim()) {
+  if (!isAnyChatProviderConfigured()) {
     await finalizeCronRun({
       job: "process-ai",
       startedAt,
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
       processed: 0,
       skipped: 0,
       pending: 0,
-      message: "OPENAI_API_KEY not set",
+      message: "No AI provider configured",
     });
   }
 
@@ -109,3 +110,4 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   return POST(request);
 }
+
