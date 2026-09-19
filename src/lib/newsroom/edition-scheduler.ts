@@ -28,7 +28,7 @@ const SLOT_HOURS: Record<EditionPublishSlot, number> = {
     "14:00": 14,
   "15:00": 15, "16:00": 16, "17:00": 17,
   "18:00": 18, "19:00": 19, "20:00": 20,
-  "21:00": 21,
+  "21:00": 21, "22:00": 22, "23:00": 23,
 };
 
 /** Base (shadow / 40-day) slot limits before stage scaling. */
