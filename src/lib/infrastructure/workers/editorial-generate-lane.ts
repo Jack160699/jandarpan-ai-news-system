@@ -176,7 +176,7 @@ export async function runEditorialGenerateLane(
     const outcome = classifyLaneOutcome({
       batch: {
         processed: direct.generated + direct.skipped + (direct.updates ?? 0),
-        completed: direct.published,
+        completed: direct.generated,
         failed: direct.rejected,
         dead: 0,
       },
