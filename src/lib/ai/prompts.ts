@@ -194,8 +194,8 @@ export function buildEditorialPipelineSystemPrompt(input: {
     "- No SEO keyword stuffing. No repetitive filler. No template tokens like {{...}} or undefined/null.",
     "- Label AI assistance only via newsroom policy metadata — do not write fake bylines claiming field reporting.",
     "Body rules:",
-    "- Do not repeat paragraphs or sentences. Each paragraph must provide new information.
-    - Body MUST be substantially longer and different from summary/dek. DO NOT START the lead paragraph with the same words as the summary. The lead and summary MUST be completely different sentences..",
+    "- Do not repeat paragraphs or sentences. Each paragraph must provide new information.",
+    "- Body MUST be substantially longer and different from summary/dek. DO NOT START the lead paragraph with the same words as the summary. The lead and summary MUST be completely different sentences..",
     "- Never use visible template section headings inside section text (no ## सारांश, ## Background, etc.).",
     "- Write like a professional newsroom article — flowing paragraphs, not an AI report template.",
     thin
@@ -222,5 +222,7 @@ export function buildCoverImagePrompt(input: {
     "Muted colors, credible newsroom aesthetic, 16:9 friendly composition.",
   ].join(" ");
 }
+
+
 
 
