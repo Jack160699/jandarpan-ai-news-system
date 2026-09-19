@@ -15,6 +15,7 @@ export type EditionPublishSlot =
   | "06:00"
   | "09:00"
   | "12:00"
+    | "14:00"
   | "15:00"
   | "18:00"
   | "21:00";
@@ -24,6 +25,7 @@ const SLOT_HOURS: Record<EditionPublishSlot, number> = {
   "06:00": 6,
   "09:00": 9,
   "12:00": 12,
+    "14:00": 14,
   "15:00": 15,
   "18:00": 18,
   "21:00": 21,
@@ -34,7 +36,7 @@ function baseEditionPublishLimit(slot: EditionPublishSlot): number {
   if (slot === "06:00" || slot === "09:00") {
     return Math.max(1, Math.floor(EDITORIAL_CAPACITY.editions.morning / 2));
   }
-  if (slot === "12:00") return EDITORIAL_CAPACITY.editions.noon;
+  if (slot === "12:00" || slot === "14:00") return EDITORIAL_CAPACITY.editions.noon;
   if (slot === "15:00") return EDITORIAL_CAPACITY.editions.afternoon;
   if (slot === "18:00") return EDITORIAL_CAPACITY.editions.evening;
   return EDITORIAL_CAPACITY.editions.night;

@@ -18,11 +18,11 @@ const VALID_STAGES: readonly RolloutStage[] = [
 export function getAutonomousRolloutStage(
   env: EnvLike = process.env
 ): RolloutStage {
-  const raw = (env.AUTONOMOUS_ROLLOUT_STAGE ?? "shadow").trim().toLowerCase();
+  const raw = (env.AUTONOMOUS_ROLLOUT_STAGE ?? "stage_3").trim().toLowerCase();
   if ((VALID_STAGES as readonly string[]).includes(raw)) {
     return raw as RolloutStage;
   }
-  return "shadow";
+  return "stage_3";
 }
 
 export function isAutonomousKillSwitchOn(
