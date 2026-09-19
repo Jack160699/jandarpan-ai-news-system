@@ -28,7 +28,7 @@ const GENERATED_SELECT =
 
 /** Homepage ranking uses headline/summary/metadata — omits heavy article_body payloads. */
 export const GENERATED_SELECT_HOMEPAGE =
-  "id,event_id,slug,headline,summary,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,created_at";
+  "id,event_id,slug,headline,summary,hero_image_url,seo_title,seo_description,reading_time,language,tags,published_at,editorial_status,workflow_status,homepage_pin,pinned_at,editorial_metadata,geo_metadata,created_at";
 
 /** Main sitemap — slug + stable lastmod only. */
 export const GENERATED_SELECT_SITEMAP =

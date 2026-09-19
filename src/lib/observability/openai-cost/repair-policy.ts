@@ -35,6 +35,9 @@ export function shouldRunEditorialRepair(
   if (quality.rejectionReasons.includes("low_seo_quality")) {
     reasons.push("seo_missing");
   }
+  if (quality.rejectionReasons.includes("held_for_quality")) {
+    reasons.push("held_for_quality");
+  }
 
   const shouldRepair = reasons.length > 0;
 

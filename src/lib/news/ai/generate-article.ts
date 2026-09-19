@@ -2148,7 +2148,7 @@ export async function generateEditorialsFromEvents(options?: {
     // (missing body, unsupported quotes, insufficient evidence, etc.) should
     // produce zero row — a soft quality signal is a review queue, not a
     // silent drop.
-    if (candidate.quality.publish_allowed || !candidate.quality.hard_reject) {
+    if (candidate.quality.publish_allowed) {
       const saved = await persistGeneratedArticle({
         event: candidate.event,
         draft: candidate.draft,
