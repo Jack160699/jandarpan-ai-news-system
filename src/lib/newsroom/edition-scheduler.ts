@@ -65,7 +65,20 @@ function getIstHourMinute(now = new Date()): { hour: number; minute: number } {
  */
 const SLOT_MINUTE_TOLERANCE = 5;
 
-export function resolveEditionPublishSlot(now = new Date()): { ok: true; slot: EditionPublishSlot } | { ok: false; reason: string } { return { ok: true, slot: "12:00" }; }
+export function resolveEditionPublishSlot(
+  now = new Date()
+): { ok: true; slot: EditionPublishSlot } | { ok: false; reason: string } {
+  const { hour, minute } = getIstHourMinute(now);
+  if (minute > SLOT_MINUTE_TOLERANCE) {
+    return { ok: false, reason: "outside_slot_minute" };
+  }
+
+  let slot = (Object.keys(SLOT_HOURS) as EditionPublishSlot[]).find(
+    (s) => SLOT_HOURS[s] === hour
+  );
+  if (!slot) return { ok: false, reason: "outside_slot_hour" };
+  return { ok: true, slot };
+}
 
 /**
  * Scale slot limits so daily slot sum tracks getEffectiveDailyLimit().

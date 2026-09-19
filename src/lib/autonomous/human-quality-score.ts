@@ -27,16 +27,16 @@ export const HUMAN_QUALITY_WEIGHTS = {
 } as const;
 
 /** Minimum score to allow autonomous publish (stage_1+) */
-export const PUBLISH_THRESHOLD = 0;
+export const PUBLISH_THRESHOLD = 82;
 
 /** Repair band lower bound — scores in [70, 81] → repair */
-export const REPAIR_THRESHOLD = 0;
+export const REPAIR_THRESHOLD = 70;
 
 /** Soft review / hold ceiling — scores < 70 → hold */
-export const REVIEW_THRESHOLD = 0;
+export const REVIEW_THRESHOLD = 70;
 
 /** High-risk category stories require ≥90 to publish */
-export const HIGH_RISK_THRESHOLD = 0;
+export const HIGH_RISK_THRESHOLD = 90;
 
 export type QualityGateDecision = "publish" | "repair" | "hold";
 
