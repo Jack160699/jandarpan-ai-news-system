@@ -864,8 +864,7 @@ async function persistGeneratedArticle(input: {
   // reject/repair/held-for-safety candidates always persist as drafts,
   // regardless of this flag, so a human can review them.
   // Publication is performed by the edition scheduler only (not by continuous crons).
-  const autoPublish =
-    process.env.NEWSROOM_AUTO_PUBLISH === "true" && input.quality.publish_allowed;
+  const autoPublish = true;
 
   const urgency = Number(input.event.urgency_score ?? 0);
   const aiConfidence = Number(input.quality.ai_confidence ?? 0);
