@@ -1,4 +1,4 @@
-export function parseRobustLlmResponse(content: string): LlmEditorialResponse | null {
+﻿export function parseRobustLlmResponse(content: string): LlmEditorialResponse | null {
   let cleaned = content.trim();
   if (cleaned.startsWith("```")) {
     const firstNewline = cleaned.indexOf("\n");
@@ -32,7 +32,7 @@ export function parseRobustLlmResponse(content: string): LlmEditorialResponse | 
   }
 }
 /**
- * AI editorial generation — production-tolerant publishing from news_events
+ * AI editorial generation â€” production-tolerant publishing from news_events
  */
 
 import {
@@ -220,7 +220,7 @@ type PendingCandidate = {
   independentReview?: IndependentReviewResult;
   /** Hard-blocking issues from validateClaimsAgainstFactPack, if any (see prepareCandidate). */
   factPackValidationIssues?: GenerationValidationIssue[];
-  /** Audit trail for whether/why the premium Gemini model (gemini-3.6-flash) was used for this draft — see callEditorialLlm. */
+  /** Audit trail for whether/why the premium Gemini model (gemini-3.6-flash) was used for this draft â€” see callEditorialLlm. */
   premiumEditorial?: { used: boolean; reason: string | null };
 };
 
@@ -325,7 +325,7 @@ function classifyEventArticleType(
 function computeReadingTime(body: string, language: SupportedEditorialLanguage): string {
   const words = body.split(/\s+/).filter(Boolean).length;
   const minutes = Math.max(1, Math.round(words / 200));
-  return language === "hi" ? `${minutes} मिनट` : `${minutes} min read`;
+  return language === "hi" ? `${minutes} à¤®à¤¿à¤¨à¤Ÿ` : `${minutes} min read`;
 }
 
 function assembleArticleBody(
@@ -348,7 +348,7 @@ function parseLlmDraft(
   const article_body = assembleArticleBody(sections, summary);
   if (!article_body || article_body.trim().length < 40) return null;
 
-  // Never publish summary-as-body — incomplete generations must retry/fail
+  // Never publish summary-as-body â€” incomplete generations must retry/fail
   const body = article_body.trim();
   if (
     body.length <= summary.length + 20 &&
@@ -378,7 +378,7 @@ function parseLlmDraft(
   };
 }
 
-/** event.urgency_score is 0..1; this is the upfront (pre-generation) signal used to decide breaking-priority quota reservation — quality_breakdown.breaking_score only exists after a draft is generated, too late to inform model routing for the first attempt. */
+/** event.urgency_score is 0..1; this is the upfront (pre-generation) signal used to decide breaking-priority quota reservation â€” quality_breakdown.breaking_score only exists after a draft is generated, too late to inform model routing for the first attempt. */
 const BREAKING_URGENCY_THRESHOLD = 0.85;
 
 async function callEditorialLlm(
@@ -406,7 +406,7 @@ async function callEditorialLlm(
     repairContext,
   });
 
-  // Explicit override only — do not force an OpenAI-shaped default (e.g.
+  // Explicit override only â€” do not force an OpenAI-shaped default (e.g.
   // "gpt-4o-mini") onto gemini/groq/openrouter; each provider resolves its
   // own operation-appropriate default (and, for Gemini, premium-vs-lite)
   // model when no override is given. See translate.ts / editorial-repair.ts
@@ -418,7 +418,7 @@ async function callEditorialLlm(
 
   const isBreaking = (event.urgency_score ?? 0) >= BREAKING_URGENCY_THRESHOLD;
 
-  // Premium (gemini-3.6-flash) escalation — reserved for sensitive
+  // Premium (gemini-3.6-flash) escalation â€” reserved for sensitive
   // categories, quality-retry escalation, and breaking news, per the
   // free-first routing brief. Never the default; every escalation carries
   // an explicit, persisted reason (see requestGeminiChat's premiumReason
@@ -427,7 +427,7 @@ async function callEditorialLlm(
   let premiumReason: string | null = null;
   if (structuredFactPack?.sensitiveCategory) {
     premiumReason = `sensitive_category:${structuredFactPack.sensitiveCategory}`;
-  } else if (depthCorrection) {
+  } else if (repairContext) {
     premiumReason = "quality_retry_escalation";
   } else if (isBreaking) {
     premiumReason = "breaking_news";
@@ -448,11 +448,11 @@ async function callEditorialLlm(
   const maxTokens = editorialMaxTokens(tier, articleType);
 
   // Structured fact pack is appended as a JSON block on top of the existing
-  // human-readable factPackText — factPackText itself stays unchanged since
+  // human-readable factPackText â€” factPackText itself stays unchanged since
   // it also doubles as the ground-truth text for source-overlap/originality
   // scoring in evaluateDraft() below, which must not see the extra JSON.
   const user = structuredFactPack
-    ? `${factPackText}\n\n--- Structured fact pack (verified ground truth — JSON; do not exceed these facts) ---\n${JSON.stringify(structuredFactPack)}`
+    ? `${factPackText}\n\n--- Structured fact pack (verified ground truth â€” JSON; do not exceed these facts) ---\n${JSON.stringify(structuredFactPack)}`
     : factPackText;
 
   const result = await requestChatCompletion({
@@ -464,7 +464,7 @@ async function callEditorialLlm(
     maxTokens,
     jsonMode: true,
     timeoutMs: EDITORIAL_TIMEOUT_MS,
-    cachePolicy: depthCorrection ? "bypass" : "default",
+    cachePolicy: repairContext ? "bypass" : "default",
     priority: isBreaking ? "breaking" : "normal",
     premium,
     premiumReason: premiumReason ?? undefined,
@@ -529,7 +529,7 @@ async function loadExistingStoryIndex(): Promise<{
   headlines: string[];
   bodyFingerprints: string[];
   eventIds: string[];
-  /** Published event_id → article id */
+  /** Published event_id â†’ article id */
   eventToArticleId: Map<string, string>;
 }> {
   const supabase = createAdminServerClient();
@@ -820,7 +820,7 @@ async function persistEvidenceLedgerOptional(
       { onConflict: "article_id" }
     );
   } catch {
-    // optional — never fail generation on ledger write
+    // optional â€” never fail generation on ledger write
   }
 }
 
@@ -886,7 +886,7 @@ async function persistGeneratedArticle(input: {
   });
 
   // Auto-publish flag means "auto-schedule ELIGIBLE content for the next edition
-  // publish window" — it must never bypass the quality/safety decision. A
+  // publish window" â€” it must never bypass the quality/safety decision. A
   // candidate is only schedulable when the authoritative quality gate
   // (computed above into input.quality.publish_allowed) actually cleared it;
   // reject/repair/held-for-safety candidates always persist as drafts,
@@ -1124,7 +1124,7 @@ async function persistGeneratedArticle(input: {
         generateShorts: tierPlan.generateShorts,
         signals: tierPlan.signals,
       },
-      // Best-effort label only — the actual model/provider that served this
+      // Best-effort label only â€” the actual model/provider that served this
       // request can vary across the free-first chain (see router.ts); the
       // authoritative record is ai_provider_usage_events. premium_editorial
       // below is the authoritative audit field for whether/why the premium
@@ -1255,7 +1255,7 @@ async function persistGeneratedArticle(input: {
   });
 
   // Enqueue only when decision requires worker (AI and/or source attachment).
-  // Never blocks publication — images may attach later.
+  // Never blocks publication â€” images may attach later.
   if (imageDecision.enqueueJob) {
     await queueEditorialImageForArticle(inserted.id);
   }
@@ -1334,7 +1334,7 @@ async function prepareCandidate(
       })
     )
   );
-  // tagGeoFromContent only recognizes Chhattisgarh state/district content —
+  // tagGeoFromContent only recognizes Chhattisgarh state/district content â€”
   // it correctly returns is_chhattisgarh:false for genuine national/
   // international stories, which is NOT a rejection reason for events that
   // were never meant to be about Chhattisgarh in the first place. Only
@@ -1381,7 +1381,7 @@ async function prepareCandidate(
     articleTypeClassification.type
   ));
 
-  // Structured fact pack — consolidated entities/dates/numbers/quotes used
+  // Structured fact pack â€” consolidated entities/dates/numbers/quotes used
   // both as writer context (injected into the LLM call below) and as ground
   // truth for the claim-against-fact-pack safety net further down. Persisted
   // best-effort; a persistence failure must never block article generation.
@@ -1393,11 +1393,11 @@ async function prepareCandidate(
   let intelligenceV2: EditorialIntelligenceV2 | null = null;
   const generatedAt = new Date().toISOString();
   let depthRetries = 0;
-  // Provider that produced the current draft — threaded into the independent
+  // Provider that produced the current draft â€” threaded into the independent
   // review so it can be recorded; "local" marks the deterministic fallback
   // draft (buildFallbackDraftFromFactPack), which never called an LLM.
   let writerProvider: AiProviderId | null = null;
-  // Persisted into editorial_metadata.premium_editorial below — the audit
+  // Persisted into editorial_metadata.premium_editorial below â€” the audit
   // trail for why (if at all) the premium Gemini model was used.
   let premiumEditorialUsed = false;
   let premiumEditorialReason: string | null = null;
@@ -1472,17 +1472,17 @@ async function prepareCandidate(
     evidenceSufficient: articleTypeClassification.evidenceSufficient,
   });
 
-  // Bounded depth retry — regenerate when body too short / equals excerpt (never infinite)
-  while ((!quality.depth_quality?.ok || quality.validation_issues.length > 0) && depthRetries < 2 && !usedFallback) {
+  // Bounded depth retry â€” regenerate when body too short / equals excerpt (never infinite)
+  while ((!quality.depth_quality?.ok || !quality.passed) && depthRetries < 2 && !usedFallback) {
     depthRetries += 1;
     logEditorial("depth_retry", {
       eventId: event.id,
       attempt: depthRetries,
-      codes: quality.depth_quality.codes,
+      codes: quality.depth_quality?.codes ?? [],
       articleType: articleTypeClassification.type,
     });
     try {
-      const retried = await generateOnce({ attempt: depthRetries, failureCodes: quality.depth_quality?.codes ?? quality.validation_issues.map(i => i.code), previousWords: quality.depth_quality?.metrics?.words ?? 0, minWords: quality.depth_quality?.metrics?.minWordsForType ?? articleTypeClassification.rule.minWords, targetWords: articleTypeClassification.rule.targetWords });
+      const retried = await generateOnce({ attempt: depthRetries, failureCodes: quality.depth_quality?.codes ?? quality.rejectionReasons, previousWords: quality.depth_quality?.metrics?.words ?? 0, minWords: quality.depth_quality?.metrics?.minWordsForType ?? articleTypeClassification.rule.minWords, targetWords: articleTypeClassification.rule.targetWords });
       if (retried) {
         draft = applyEditorialEnhancements(retried, event);
         quality = evaluateDraft({
@@ -1606,7 +1606,7 @@ async function prepareCandidate(
     });
   }
 
-  // Claim-against-fact-pack hard gate — cheap (regex, no LLM call), so it
+  // Claim-against-fact-pack hard gate â€” cheap (regex, no LLM call), so it
   // runs before spending an independent-review call on a draft that would
   // be rejected anyway. Folded into `quality` the same way
   // applyHumanQualityAndEvidenceGate folds in held_for_* reasons, so both
@@ -1640,7 +1640,7 @@ async function prepareCandidate(
     }
   }
 
-  // Independent-reviewer hard gate — only worth spending a call on a draft
+  // Independent-reviewer hard gate â€” only worth spending a call on a draft
   // that has already cleared every other quality/safety check. A failure
   // here is folded into `quality` the same way applyHumanQualityAndEvidenceGate
   // folds in held_for_* reasons, so both the single-event and batch callers
@@ -1705,7 +1705,7 @@ async function prepareCandidate(
 }
 
 /**
- * Dry-run editorial draft for verification — does not persist or run repair.
+ * Dry-run editorial draft for verification â€” does not persist or run repair.
  */
 export async function previewEditorialDraftFromEvent(
   event: NewsEventRow
@@ -1820,7 +1820,7 @@ export async function generateEditorialFromEvent(
     });
   }
 
-  // Independent review is a hard safety gate — forcePublish (human override
+  // Independent review is a hard safety gate â€” forcePublish (human override
   // of the quality-score thresholds above) must not be able to bypass it.
   if (candidate.independentReview && !candidate.independentReview.passed) {
     quality = {
@@ -1838,7 +1838,7 @@ export async function generateEditorialFromEvent(
     };
   }
 
-  // Same bypass-proofing for the claim-against-fact-pack hard gate —
+  // Same bypass-proofing for the claim-against-fact-pack hard gate â€”
   // forcePublish must not be able to resurrect a draft with fabricated
   // names/dates/numbers/quotes or insufficient sensitive-story sourcing.
   if (candidate.factPackValidationIssues?.length) {
@@ -2150,11 +2150,11 @@ export async function generateEditorialsFromEvents(options?: {
     if (candidate.repaired) repaired++;
 
     // Persist publish_allowed candidates as normal, and also persist
-    // non-hard-rejected candidates (repair/hold — e.g. below the autonomous
+    // non-hard-rejected candidates (repair/hold â€” e.g. below the autonomous
     // human-quality threshold) as pending drafts for human review, matching
     // the pre-PR-#48 behavior. Only structural/factual/safety hard rejects
     // (missing body, unsupported quotes, insufficient evidence, etc.) should
-    // produce zero row — a soft quality signal is a review queue, not a
+    // produce zero row â€” a soft quality signal is a review queue, not a
     // silent drop.
     if (candidate.quality.publish_allowed) {
       const saved = await persistGeneratedArticle({
@@ -2238,7 +2238,7 @@ export async function generateEditorialsFromEvents(options?: {
         if (saved.reason) errors.push(`${event.id}: ${saved.reason}`);
       }
     } else {
-      // One invalid article must not stop the batch — classify + continue.
+      // One invalid article must not stop the batch â€” classify + continue.
       const structural = validateGeneratedArticle({
         headline: candidate.draft.headline,
         summary: candidate.draft.summary,
@@ -2313,7 +2313,7 @@ export async function generateEditorialsFromEvents(options?: {
   if (generated === 0 && failedCandidates.length > 0) {
     const rescuable = failedCandidates
       // A failed independent review or fact-pack claim check is a hard
-      // block — batch rescue must not bypass either just because the
+      // block â€” batch rescue must not bypass either just because the
       // underlying quality score looks fine.
       .filter((c) => !c.independentReview || c.independentReview.passed)
       .filter((c) => !c.factPackValidationIssues?.length)
@@ -2501,6 +2501,7 @@ export async function generateEditorialsFromEvents(options?: {
     results,
   };
 }
+
 
 
 

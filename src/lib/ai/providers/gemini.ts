@@ -257,3 +257,4 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     slot.release();
   }
 }
+

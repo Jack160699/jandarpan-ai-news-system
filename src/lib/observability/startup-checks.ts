@@ -2,7 +2,8 @@
  * Startup infrastructure validation — warnings only, no secrets logged.
  */
 
-import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";`nimport { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
+import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
+import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { isProductionDeployment } from "@/lib/infrastructure/production";
 import { hasGscCredentialsConfigured } from "@/lib/gsc-intelligence/config";
 import { logOpsEvent } from "@/lib/observability/ops-event";

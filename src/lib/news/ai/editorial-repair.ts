@@ -207,12 +207,11 @@ export async function regenerateFullArticle(input: {
   try {
     const modelOverride = process.env.NEWSROOM_EDITORIAL_MODEL?.trim();
     const systemContent = `\nYou are repairing an article that failed quality validation.\nPREVIOUS ATTEMPT FAILED WITH:\n\n\nREQUIRED CORRECTION:\n- retain only facts supported by the fact pack\n- do not repeat the summary as the body\n- do not repeat paragraphs\n- do not invent facts\n- rebuild the complete body when required\n- preserve attribution\n- preserve uncertainty\n- satisfy the article-type depth requirement when evidence permits\n\nReturn EXACTLY this JSON schema:\n{\n  "headline": string,\n  "summary": string,\n  "sections": {\n    "lead": string,\n    "details": string,\n    "context": string\n  };\n}`;
-}
     const userContent = `Current headline: ${input.draft.headline}
 Current summary: ${input.draft.summary}
 Current body: ${input.draft.article_body}
 
-Fact Pack:\n${input.factPackText}`;;
+Fact Pack:\n${input.factPackText}`;
 
     const result = await requestChatCompletion({
       operation: "editorial_repair",
@@ -251,7 +250,6 @@ Fact Pack:\n${input.factPackText}`;;
   } catch {
     return normalizeEditorialFormatting(input.draft);
   }
-}
 }
 
 export async function repairBorderlineDraft(input: { draft: EditorialDraft; event: NewsEventRow; factPackText: string; language: SupportedEditorialLanguage; failureCodes?: string[]; }): Promise<EditorialDraft> {

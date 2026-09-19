@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 
 import { buildEditorialPipelineSystemPrompt } from "./prompts";
 
@@ -13,7 +13,7 @@ describe("editorial depth correction prompt", () => {
     const initial = buildEditorialPipelineSystemPrompt(base);
     const retry = buildEditorialPipelineSystemPrompt({
       ...base,
-      depthCorrection: {
+      repairContext: { failureCodes: [],
         attempt: 1,
         previousWords: 141,
         minWords: 250,
@@ -28,3 +28,4 @@ describe("editorial depth correction prompt", () => {
     expect(retry).toContain("Do not reuse the short draft");
   });
 });
+

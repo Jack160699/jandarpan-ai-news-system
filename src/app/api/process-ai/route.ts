@@ -1,9 +1,9 @@
 /**
-import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
- * POST /api/process-ai — drain AI enrichment queue (max 10 per invocation)
+ * POST /api/process-ai ?" drain AI enrichment queue (max 10 per invocation)
  */
 
 import { NextResponse } from "next/server";
+import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
@@ -110,4 +110,6 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   return POST(request);
 }
+
+
 
