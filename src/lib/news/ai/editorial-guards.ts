@@ -441,13 +441,11 @@ export function runEditorialQualityChecks(input: {
   // turning every under-length draft into an instant dead-end instead of a repair candidate.
   const depthHardCodes = new Set([
     "missing_body",
-    "body_equals_excerpt",
     "unsupported_quote",
     "placeholder_text",
     "unresolved_template_token",
     "null_undefined_artifact",
     "markdown_artifact",
-    "duplicated_paragraphs",
     "insufficient_evidence_for_longform",
   ]);
   for (const d of depth_quality.issues) {
@@ -505,7 +503,7 @@ export function runEditorialQualityChecks(input: {
       rejectionReasons.includes("weak_headline") ||
       rejectionReasons.includes("low_seo_quality") ||
       rejectionReasons.includes("body_too_short_for_type") ||
-      rejectionReasons.includes("insufficient_paragraphs") ||
+      rejectionReasons.includes("insufficient_paragraphs") || rejectionReasons.includes("body_equals_excerpt") || rejectionReasons.includes("duplicated_paragraphs") ||
       (ai_confidence < thresholds.minConfidence &&
         ai_confidence >= thresholds.minConfidence - BORDERLINE_WINDOW));
 

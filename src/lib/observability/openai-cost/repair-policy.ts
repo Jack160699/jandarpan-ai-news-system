@@ -38,6 +38,15 @@ export function shouldRunEditorialRepair(
   if (quality.rejectionReasons.includes("held_for_quality")) {
     reasons.push("held_for_quality");
   }
+  if (quality.rejectionReasons.includes("body_equals_excerpt")) {
+    reasons.push("body_equals_excerpt");
+  }
+  if (quality.rejectionReasons.includes("duplicated_paragraphs")) {
+    reasons.push("duplicated_paragraphs");
+  }
+  if (quality.rejectionReasons.includes("held_for_quality")) {
+    reasons.push("held_for_quality");
+  }
 
   const shouldRepair = reasons.length > 0;
 
