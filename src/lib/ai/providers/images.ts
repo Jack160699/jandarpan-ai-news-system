@@ -54,7 +54,7 @@ async function requestOpenAiImageGeneration(
     return {
       error: {
         code: "ai_unavailable",
-        message: "OPENAI_API_KEY not set",
+        message: "No AI provider configured",
         retryable: false,
         authFailure: false,
         invalidRequest: false,
@@ -275,3 +275,4 @@ export async function requestImageGeneration(
     }
   );
 }
+

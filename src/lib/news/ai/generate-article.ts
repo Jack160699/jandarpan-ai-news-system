@@ -1,3 +1,36 @@
+export function parseRobustLlmResponse(content: string): LlmEditorialResponse | null {
+  let cleaned = content.trim();
+  if (cleaned.startsWith("```")) {
+    const firstNewline = cleaned.indexOf("\n");
+    if (firstNewline !== -1) cleaned = cleaned.substring(firstNewline + 1);
+    if (cleaned.endsWith("```")) {
+      cleaned = cleaned.substring(0, cleaned.length - 3).trim();
+    }
+  }
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (parsed && typeof parsed === "object") {
+      if (typeof parsed.excerpt === "string" && !parsed.summary) {
+        parsed.summary = parsed.excerpt;
+      }
+      if (typeof parsed.body === "string" && !parsed.sections) {
+        const parts = parsed.body.split("\n\n");
+        parsed.sections = {
+          lead: parts[0] || "",
+          details: parts.slice(1).join("\n\n") || parts[0] || "",
+        };
+      }
+    }
+    return parsed as LlmEditorialResponse;
+  } catch {
+    return null;
+  }
+}
 /**
  * AI editorial generation — production-tolerant publishing from news_events
  */
@@ -355,12 +388,7 @@ async function callEditorialLlm(
   signalCount: number,
   articleType: ArticleType,
   evidenceSufficient: boolean,
-  depthCorrection?: {
-    attempt: number;
-    previousWords: number;
-    minWords: number;
-    targetWords: number;
-  },
+  repairContext?: { attempt: number; failureCodes: string[]; previousWords?: number; minWords?: number; targetWords?: number; },
   structuredFactPack?: FactPack | null
 ): Promise<{ response: LlmEditorialResponse; provider: AiProviderId; premium: boolean; premiumReason: string | null } | null> {
   const deskTemplate = resolveDeskTemplateFromCategory(event.category, {
@@ -375,7 +403,7 @@ async function callEditorialLlm(
     categoryHint,
     articleType,
     evidenceSufficient,
-    depthCorrection,
+    repairContext,
   });
 
   // Explicit override only — do not force an OpenAI-shaped default (e.g.
@@ -1374,12 +1402,7 @@ async function prepareCandidate(
   let premiumEditorialUsed = false;
   let premiumEditorialReason: string | null = null;
 
-  async function generateOnce(depthCorrection?: {
-    attempt: number;
-    previousWords: number;
-    minWords: number;
-    targetWords: number;
-  }): Promise<EditorialDraft | null> {
+  async function generateOnce(repairContext?: { attempt: number; failureCodes: string[]; previousWords?: number; minWords?: number; targetWords?: number; }): Promise<EditorialDraft | null> {
     const llmResult = await callEditorialLlm(
       factPackText,
       language,
@@ -1387,7 +1410,7 @@ async function prepareCandidate(
       signals.length,
       articleTypeClassification.type,
       articleTypeClassification.evidenceSufficient,
-      depthCorrection,
+      repairContext,
       structuredFactPack
     );
     if (!llmResult) return null;
@@ -1414,12 +1437,7 @@ async function prepareCandidate(
         articleType: articleTypeClassification.type,
         reason: "model_response_did_not_form_valid_article_body",
       });
-      draft = await generateOnce({
-        attempt: depthRetries,
-        previousWords: 0,
-        minWords: articleTypeClassification.rule.minWords,
-        targetWords: articleTypeClassification.rule.targetWords,
-      });
+      draft = await generateOnce({ attempt: depthRetries, failureCodes: ["model_response_did_not_form_valid_article_body"], previousWords: 0, minWords: articleTypeClassification.rule.minWords, targetWords: articleTypeClassification.rule.targetWords });
     }
   } catch (err) {
     logEditorial("llm_error", {
@@ -1455,12 +1473,7 @@ async function prepareCandidate(
   });
 
   // Bounded depth retry — regenerate when body too short / equals excerpt (never infinite)
-  while (
-    quality.depth_quality &&
-    !quality.depth_quality.ok &&
-    shouldRetryDepthFailure(quality.depth_quality, depthRetries) &&
-    !usedFallback
-  ) {
+  while ((!quality.depth_quality?.ok || quality.validation_issues.length > 0) && depthRetries < 2 && !usedFallback) {
     depthRetries += 1;
     logEditorial("depth_retry", {
       eventId: event.id,
@@ -1469,12 +1482,7 @@ async function prepareCandidate(
       articleType: articleTypeClassification.type,
     });
     try {
-      const retried = await generateOnce({
-        attempt: depthRetries,
-        previousWords: quality.depth_quality.metrics.words,
-        minWords: quality.depth_quality.metrics.minWordsForType,
-        targetWords: articleTypeClassification.rule.targetWords,
-      });
+      const retried = await generateOnce({ attempt: depthRetries, failureCodes: quality.depth_quality?.codes ?? quality.validation_issues.map(i => i.code), previousWords: quality.depth_quality?.metrics?.words ?? 0, minWords: quality.depth_quality?.metrics?.minWordsForType ?? articleTypeClassification.rule.minWords, targetWords: articleTypeClassification.rule.targetWords });
       if (retried) {
         draft = applyEditorialEnhancements(retried, event);
         quality = evaluateDraft({
@@ -1762,7 +1770,7 @@ export async function generateEditorialFromEvent(
       draft: null,
       quality: null,
       skipped: true,
-      reason: "OPENAI_API_KEY not set",
+      reason: "No AI provider configured",
     };
   }
 
@@ -2493,3 +2501,12 @@ export async function generateEditorialsFromEvents(options?: {
     results,
   };
 }
+
+
+
+
+
+
+
+
+

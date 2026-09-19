@@ -184,7 +184,7 @@ export async function regenerateGeneratedArticle(
 ): Promise<EditorialActionResult> {
   if (!isSupabaseConfigured()) return { ok: false, message: "No database" };
   if (!process.env.OPENAI_API_KEY?.trim()) {
-    return { ok: false, message: "OPENAI_API_KEY not set" };
+    return { ok: false, message: "No AI provider configured" };
   }
 
   const article = await loadArticle(articleId, tenantId);
@@ -273,3 +273,4 @@ export async function queueArticleImageRegeneration(
   if (!queued) return { ok: false, message: "Failed to queue image" };
   return { ok: true, message: "Image queued for regeneration" };
 }
+

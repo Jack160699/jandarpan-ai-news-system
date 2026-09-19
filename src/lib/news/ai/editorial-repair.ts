@@ -190,10 +190,11 @@ export function buildFallbackDraftFromFactPack(input: {
   return applyEditorialEnhancements(draft, event);
 }
 
-export async function regenerateIntroSection(input: {
+export async function regenerateFullArticle(input: {
   draft: EditorialDraft;
   factPackText: string;
   language: SupportedEditorialLanguage;
+  failureCodes: string[];
 }): Promise<EditorialDraft> {
   if (!isAnyChatProviderConfigured()) return normalizeEditorialFormatting(input.draft);
 
@@ -202,13 +203,16 @@ export async function regenerateIntroSection(input: {
       ? "Write in Hindi (Devanagari)."
       : "Write in English.";
 
+  const codes = input.failureCodes.map(c => "* " + c).join("\n");
   try {
-    // Explicit override only — an unset value lets each provider in the
-    // free-first chain (see resolveChatChain("editorial_repair")) resolve
-    // its own default model instead of forcing an OpenAI model name onto it.
     const modelOverride = process.env.NEWSROOM_EDITORIAL_MODEL?.trim();
-    const systemContent = `${lang} Improve ONLY headline and lead paragraph. Use fact pack only. Lead must differ from summary. Return JSON: {"headline":"","summary":"","lead":""}`;
-    const userContent = `Current headline: ${input.draft.headline}\nCurrent summary: ${input.draft.summary}\n\n${input.factPackText}`;
+    const systemContent = `\nYou are repairing an article that failed quality validation.\nPREVIOUS ATTEMPT FAILED WITH:\n\n\nREQUIRED CORRECTION:\n- retain only facts supported by the fact pack\n- do not repeat the summary as the body\n- do not repeat paragraphs\n- do not invent facts\n- rebuild the complete body when required\n- preserve attribution\n- preserve uncertainty\n- satisfy the article-type depth requirement when evidence permits\n\nReturn EXACTLY this JSON schema:\n{\n  "headline": string,\n  "summary": string,\n  "sections": {\n    "lead": string,\n    "details": string,\n    "context": string\n  };\n}`;
+}
+    const userContent = `Current headline: ${input.draft.headline}
+Current summary: ${input.draft.summary}
+Current body: ${input.draft.article_body}
+
+Fact Pack:\n${input.factPackText}`;;
 
     const result = await requestChatCompletion({
       operation: "editorial_repair",
@@ -230,39 +234,38 @@ export async function regenerateIntroSection(input: {
     const parsed = JSON.parse(content) as {
       headline?: string;
       summary?: string;
-      lead?: string;
-      intro?: string;
+      sections?: { lead?: string; details?: string; context?: string; };
     };
 
-    const leadText = (parsed.lead ?? parsed.intro)?.trim();
-    let body = input.draft.article_body;
-    if (leadText && !isDuplicateOfSummary(leadText, parsed.summary ?? input.draft.summary)) {
-      const rest = body.replace(/^[\s\S]*?(?=\n{2,}|$)/, "").trim();
-      body = rest ? `${leadText}\n\n${rest}` : leadText;
+    let body = "";
+    if (parsed.sections) {
+      body = [parsed.sections.lead, parsed.sections.details, parsed.sections.context].filter(Boolean).join("\n\n");
     }
 
     return normalizeEditorialFormatting({
       ...input.draft,
       headline: parsed.headline?.trim() || input.draft.headline,
       summary: parsed.summary?.trim() || input.draft.summary,
-      article_body: body,
+      article_body: body || input.draft.article_body,
     });
   } catch {
     return normalizeEditorialFormatting(input.draft);
   }
 }
+}
 
-export async function repairBorderlineDraft(input: {
-  draft: EditorialDraft;
-  event: NewsEventRow;
-  factPackText: string;
-  language: SupportedEditorialLanguage;
-}): Promise<EditorialDraft> {
+export async function repairBorderlineDraft(input: { draft: EditorialDraft; event: NewsEventRow; factPackText: string; language: SupportedEditorialLanguage; failureCodes?: string[]; }): Promise<EditorialDraft> {
   let draft = applyEditorialEnhancements(input.draft, input.event);
-  draft = await regenerateIntroSection({
+  draft = await regenerateFullArticle({
     draft,
     factPackText: input.factPackText,
-    language: input.language,
-  });
+    language: input.language, failureCodes: input.failureCodes ?? [], });
   return applyEditorialEnhancements(draft, input.event);
 }
+
+
+
+
+
+
+

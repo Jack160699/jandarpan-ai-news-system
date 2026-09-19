@@ -120,12 +120,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
   categoryHint?: string | null;
   articleType?: ArticleType | null;
   evidenceSufficient?: boolean;
-  depthCorrection?: {
-    attempt: number;
-    previousWords: number;
-    minWords: number;
-    targetWords: number;
-  } | null;
+  repairContext?: { attempt: number; failureCodes: string[]; previousWords?: number; minWords?: number; targetWords?: number; } | null;
 }): string {
   const lang = input.language === "en" ? "en" : "hi";
   const articleType = input.articleType ?? "standard_report";
@@ -226,3 +221,4 @@ export function buildCoverImagePrompt(input: {
     "Muted colors, credible newsroom aesthetic, 16:9 friendly composition.",
   ].join(" ");
 }
+

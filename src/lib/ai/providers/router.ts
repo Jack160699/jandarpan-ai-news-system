@@ -28,6 +28,10 @@ export function isOpenAiProviderEnabled(): boolean {
   return process.env.AI_PROVIDER_OPENAI_ENABLED === "true";
 }
 
+export function isGeminiOnlyMode(): boolean {
+  return process.env.NEWSROOM_GEMINI_ONLY === "true";
+}
+
 function withOpenAiGate(chain: AiProviderId[]): AiProviderId[] {
   return isOpenAiProviderEnabled()
     ? chain
@@ -36,12 +40,14 @@ function withOpenAiGate(chain: AiProviderId[]): AiProviderId[] {
 
 /** Provider order for a chat-completion-shaped operation (writer, reviewer, translation, repair, lightweight). */
 export function resolveChatChain(operation: string): AiProviderId[] {
+  if (isGeminiOnlyMode()) return ["gemini"];
   const chain = CHAT_OPERATION_CHAINS[operation] ?? WRITER_CHAIN;
   return withOpenAiGate(chain);
 }
 
 /** Provider that should have generated the draft, used to pick a *different* reviewer provider at call time. */
 export function resolveReviewerChain(writerProvider?: AiProviderId): AiProviderId[] {
+  if (isGeminiOnlyMode()) return ["gemini"];
   const chain = withOpenAiGate(REVIEWER_CHAIN);
   if (!writerProvider) return chain;
   const reordered = chain.filter((p) => p !== writerProvider);
@@ -55,3 +61,4 @@ export function resolveEmbeddingChain(): AiProviderId[] {
 export function resolveImageChain(): AiProviderId[] {
   return withOpenAiGate(IMAGE_CHAIN);
 }
+
