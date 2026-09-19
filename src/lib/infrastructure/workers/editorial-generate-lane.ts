@@ -166,10 +166,7 @@ export async function runEditorialGenerateLane(
     // handler itself calls once a job is claimed) so the lane makes real
     // progress instead of idling on an empty queue it has no way to fill.
     const direct = await generateEditorialsFromEvents({
-      limit: Math.min(
-        GENERATION_LANE_TARGETS.batchLimit,
-        INFRA_CONFIG.editorialBatchLimit
-      ),
+      limit: INFRA_CONFIG.editorialBatchLimit,
     });
     const madeProgress = direct.generated > 0 || direct.published > 0;
 
@@ -212,7 +209,7 @@ export async function runEditorialGenerateLane(
   const batch = await processJobBatch(JOB_HANDLERS, {
     jobTypes: ["editorial_generate"],
     limit: GENERATION_LANE_TARGETS.batchLimit,
-    workerId: "editorial_generate",
+      workerId: "editorial_generate",
     deadline: ctx.deadline,
   });
 
