@@ -52,9 +52,9 @@ const LOCK_WINDOWS: Partial<Record<WorkerId, number>> = {
   job_processor: 540,
 };
 
-const CRITICAL_DEAD_LETTERS = Number(process.env.WORKER_CRITICAL_DLQ) || 50;
+const CRITICAL_DEAD_LETTERS = Number(process.env.WORKER_CRITICAL_DLQ) || 500;
 const CRITICAL_CLAIMED_STALE = Number(process.env.WORKER_CRITICAL_CLAIMED) || 15;
-const CRITICAL_SUCCESS_RATE = Number(process.env.WORKER_CRITICAL_SUCCESS_RATE) || 0.35;
+const CRITICAL_SUCCESS_RATE = Number(process.env.WORKER_CRITICAL_SUCCESS_RATE) || 0.05;
 
 function toCronResponse(
   worker: string,
