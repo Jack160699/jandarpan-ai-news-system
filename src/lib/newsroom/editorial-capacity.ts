@@ -1,11 +1,11 @@
 export const EDITORIAL_CAPACITY = {
-  dailyLimit: 40,
+  dailyLimit: 12,
   editions: {
-    morning: 8,
-    noon: 6,
-    afternoon: 6,
-    evening: 10,
-    night: 10,
+    morning: 6,
+    noon: 0,
+    afternoon: 0,
+    evening: 6,
+    night: 0,
   },
   breakingUnlimited: true,
 } as const;

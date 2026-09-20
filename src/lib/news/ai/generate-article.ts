@@ -567,7 +567,7 @@ function evaluateDraft(input: {
   existingHeadlines: string[];
   existingBodyFingerprints?: string[];
   existingEventIds?: string[];
-  forcePublish?: boolean;
+
   articleType?: ArticleType | null;
   evidenceSufficient?: boolean;
 }): EditorialQualityReport {
@@ -586,7 +586,7 @@ function evaluateDraft(input: {
     existingHeadlines: input.existingHeadlines,
     existingBodyFingerprints: input.existingBodyFingerprints,
     existingEventIds: input.existingEventIds,
-    forcePublish: input.forcePublish,
+
     event: input.event,
     articleType: input.articleType,
     evidenceSufficient: input.evidenceSufficient,
@@ -1131,8 +1131,8 @@ async function persistGeneratedArticle(input: {
       // below is the authoritative audit field for whether/why the premium
       // Gemini tier was requested.
       model: input.premiumEditorial?.used
-        ? process.env.GEMINI_PREMIUM_EDITORIAL_MODEL?.trim() || "gemini-3.6-flash"
-        : process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-3.5-flash-lite",
+        ? process.env.CODECRAFT_REPAIR_MODEL?.trim() || "codecraft-repair-v1"
+        : process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "codecraft-editorial-v1",
       premium_editorial: input.premiumEditorial ?? null,
       event_id: input.event.id,
       source_count: input.signals.length,
@@ -1822,7 +1822,7 @@ export async function previewEditorialDraftFromEvent(
  */
 export async function generateEditorialFromEvent(
   event: NewsEventRow,
-  options?: { existingHeadlines?: string[] }
+  options?: { existingHeadlines?: string[]; }
 ): Promise<EditorialGenerationResult> {
   logArticleGenerationPhase("article_generation_started", {
     eventId: event.id,

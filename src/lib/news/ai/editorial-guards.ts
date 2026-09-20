@@ -333,7 +333,7 @@ export function runEditorialQualityChecks(input: {
   existingHeadlines?: string[];
   existingBodyFingerprints?: string[];
   existingEventIds?: string[];
-  forcePublish?: boolean;
+
   event?: NewsEventRow | null;
   articleType?: ArticleType | null;
   evidenceSufficient?: boolean;
@@ -521,12 +521,6 @@ export function runEditorialQualityChecks(input: {
       duplicate_phrasing.length === 0 &&
       clickbait_flags.length === 0 &&
       intelligence.readability >= 0.45;
-  }
-
-  // forcePublish may bypass soft quality gates only — never structural hard rejects
-  if (input.forcePublish && !hard_reject) {
-    publish_allowed = true;
-    rejectionReasons.length = 0;
   }
 
   let publishDecision: PublishDecision = "reject";
