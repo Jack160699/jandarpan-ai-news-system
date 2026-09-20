@@ -1,9 +1,5 @@
 ﻿/**
  * GET/POST /api/admin/ops/trigger-editorial
- * 
- * Supports:
- * - ?action=test-codecraft : runs a direct raw fetch to CodeCraft API and returns full response details
- * - default: runs generateEditorialsFromEvents({ limit: 1 })
  */
 
 import { NextResponse } from "next/server";
@@ -52,10 +48,27 @@ function authorized(request: Request): boolean {
   });
 }
 
-async function testCodeCraftDirectly() {
+async function listCodeCraftModels() {
   const apiKey = process.env.CODECRAFT_API_KEY?.trim();
   const baseUrl = process.env.CODECRAFT_BASE_URL?.trim() || "https://codecraftapi.com/v1";
-  const model = process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "codecraft-editorial-v1";
+
+  if (!apiKey) return { ok: false, error: "no_api_key" };
+
+  try {
+    const res = await fetch(`${baseUrl}/models`, {
+      headers: { "Authorization": `Bearer ${apiKey}` }
+    });
+    const text = await res.text();
+    return { status: res.status, text };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function testCodeCraftDirectly(modelName?: string) {
+  const apiKey = process.env.CODECRAFT_API_KEY?.trim();
+  const baseUrl = process.env.CODECRAFT_BASE_URL?.trim() || "https://codecraftapi.com/v1";
+  const model = modelName || process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "codecraft-editorial-v1";
 
   if (!apiKey) {
     return { ok: false, error: "CODECRAFT_API_KEY is not set in environment" };
@@ -117,9 +130,15 @@ async function handleTrigger(request: Request) {
 
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
+  const modelParam = url.searchParams.get("model") || undefined;
+
+  if (action === "list-models") {
+    const models = await listCodeCraftModels();
+    return NextResponse.json({ ok: true, models }, { headers: noStoreHeaders() });
+  }
 
   if (action === "test-codecraft") {
-    const diagnostic = await testCodeCraftDirectly();
+    const diagnostic = await testCodeCraftDirectly(modelParam);
     return NextResponse.json({ ok: true, diagnostic }, { headers: noStoreHeaders() });
   }
 
