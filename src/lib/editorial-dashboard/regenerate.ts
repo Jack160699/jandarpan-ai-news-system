@@ -213,7 +213,8 @@ export async function regenerateGeneratedArticle(
       language,
     } satisfies EditorialDraft);
 
-  draft = await repairBorderlineDraft({ draft, event, factPackText: factPack, language });
+  const repairResult = await repairBorderlineDraft({ draft, event, factPackText: factPack, language });
+  draft = repairResult.draft;
   draft = applyEditorialEnhancements(draft, event);
 
   const sourceTexts = signals.map((s) => `${s.title} ${s.raw_content ?? ""}`);

@@ -222,6 +222,12 @@ type PendingCandidate = {
   factPackValidationIssues?: GenerationValidationIssue[];
   /** Audit trail for whether/why the premium Gemini model (gemini-3.6-flash) was used for this draft â€” see callEditorialLlm. */
   premiumEditorial?: { used: boolean; reason: string | null };
+  generationProvider?: AiProviderId;
+  generationModel?: string;
+  repairProvider?: AiProviderId | null;
+  repairModel?: string | null;
+  finalProvider?: AiProviderId;
+  finalModel?: string;
 };
 
 function logEditorial(message: string, context?: Record<string, unknown>): void {
@@ -1267,6 +1273,182 @@ async function persistGeneratedArticle(input: {
   };
 }
 
+
+/**
+ * Executes the complete validation pipeline in strict order:
+ * 1. Structural validation
+ * 2. Fact-pack validation
+ * 3. Unsupported-number validation
+ * 4. Human-quality gate
+ * 5. Independent review
+ * 
+ * Invariant: Earlier safety blocks (e.g. unsupported numbers) can NEVER
+ * be overwritten or bypassed by later gates.
+ */
+async function runFullValidationSequence(input: {
+  draft: EditorialDraft;
+  event: NewsEventRow;
+  signals: NewsSignalRow[];
+  factPackText: string;
+  sourceTexts: string[];
+  structuredFactPack?: FactPack | null;
+  existingHeadlines: string[];
+  storyIndex?: {
+    bodyFingerprints?: string[];
+    eventIds?: string[];
+  };
+  articleType: ArticleType;
+  evidenceSufficient: boolean;
+  freshness: EditorialFreshnessDecision;
+  writerProvider: AiProviderId;
+}): Promise<{
+  quality: EditorialQualityReport;
+  hqGate: ReturnType<typeof applyHumanQualityAndEvidenceGate>;
+  claimIssues: GenerationValidationIssue[];
+  unsupportedNumbers: ReturnType<typeof scanUnsupportedNumbers>;
+  independentReview?: IndependentReviewResult;
+  canPublish: boolean;
+  failureCodes: string[];
+}> {
+  // Step 1: Structural validation
+  let quality = evaluateDraft({
+    draft: input.draft,
+    event: input.event,
+    signals: input.signals,
+    factPackText: input.factPackText,
+    sourceTexts: input.sourceTexts,
+    existingHeadlines: input.existingHeadlines,
+    existingBodyFingerprints: input.storyIndex?.bodyFingerprints,
+    existingEventIds: input.storyIndex?.eventIds,
+    articleType: input.articleType,
+    evidenceSufficient: input.evidenceSufficient,
+  });
+
+  // Step 2: Fact-pack validation
+  let claimIssues: GenerationValidationIssue[] = [];
+  if (input.structuredFactPack) {
+    claimIssues = validateClaimsAgainstFactPack({
+      headline: input.draft.headline,
+      summary: input.draft.summary,
+      articleBody: input.draft.article_body,
+      factPack: input.structuredFactPack,
+    });
+    if (claimIssues.length > 0) {
+      quality = {
+        ...quality,
+        passed: false,
+        publish_allowed: false,
+        publishDecision: "reject",
+        rejectionReasons: [
+          ...quality.rejectionReasons,
+          ...claimIssues.map((i) => `fact_pack_validation:${i.code}`),
+          "held_for_fact_pack_validation",
+        ],
+      };
+    }
+  }
+
+  // Step 3: Unsupported-number validation
+  const draftText = [
+    input.draft.headline,
+    input.draft.summary,
+    input.draft.article_body,
+  ].join("\n");
+  const unsupportedNumbers = scanUnsupportedNumbers({
+    draftText,
+    sourceTexts: input.sourceTexts,
+  });
+  if (unsupportedNumbers.length > 0) {
+    quality = {
+      ...quality,
+      passed: false,
+      publish_allowed: false,
+      publishDecision: "reject",
+      rejectionReasons: [
+        ...quality.rejectionReasons,
+        `unsupported_numbers:${unsupportedNumbers.length}`,
+        "held_for_evidence",
+      ],
+    };
+  }
+
+  // Step 4: Human-quality gate
+  const hqGate = applyHumanQualityAndEvidenceGate({
+    draft: input.draft,
+    event: input.event,
+    signals: input.signals,
+    sourceTexts: input.sourceTexts,
+    quality,
+    freshness: input.freshness,
+  });
+  quality = hqGate.quality;
+
+  // STRICT SAFETY INVARIANT: A later stage must NEVER overwrite a stronger earlier safety block
+  if (unsupportedNumbers.length > 0) {
+    quality.passed = false;
+    quality.publish_allowed = false;
+    if (quality.publishDecision === "publish") {
+      quality.publishDecision = "reject";
+    }
+  }
+  if (claimIssues.length > 0) {
+    quality.passed = false;
+    quality.publish_allowed = false;
+    if (quality.publishDecision === "publish") {
+      quality.publishDecision = "reject";
+    }
+  }
+
+  // Step 5: Independent review
+  let independentReview: IndependentReviewResult | undefined;
+  if (quality.publish_allowed) {
+    independentReview = await runIndependentReview({
+      draft: input.draft,
+      writerProvider: input.writerProvider,
+      factPack: input.structuredFactPack,
+      context: { worker: "editorial_generate", eventId: input.event.id },
+    });
+    if (!independentReview.passed) {
+      quality = {
+        ...quality,
+        passed: false,
+        publish_allowed: false,
+        publishDecision: "reject",
+        rejectionReasons: [
+          ...quality.rejectionReasons,
+          `independent_review_failed${independentReview.error ? `:${independentReview.error}` : ""}`,
+          "held_for_independent_review",
+        ],
+      };
+    }
+  }
+
+  const failureCodes = [
+    ...quality.rejectionReasons,
+    ...claimIssues.map((c) => `fact_pack:${c.code}`),
+    ...unsupportedNumbers.map((u) => `unsupported_number:${u.claimText}`),
+    ...(independentReview?.verdict ? (independentReview.verdict as { issues?: string[] }).issues ?? [] : []),
+  ];
+
+  const canPublish =
+    quality.publish_allowed &&
+    quality.publishDecision === "publish" &&
+    !quality.hard_reject &&
+    unsupportedNumbers.length === 0 &&
+    claimIssues.length === 0 &&
+    Boolean(independentReview?.passed);
+
+  return {
+    quality,
+    hqGate,
+    claimIssues,
+    unsupportedNumbers,
+    independentReview,
+    canPublish,
+    failureCodes,
+  };
+}
+
 async function prepareCandidate(
   event: NewsEventRow,
   existingHeadlines: string[],
@@ -1463,219 +1645,94 @@ async function prepareCandidate(
     intelligenceV2 = buildFallbackIntelligenceV2({ event, signals, draft });
   }
 
+  let generationProvider: AiProviderId = writerProvider ?? "codecraft";
+  let generationModel: string = "deepseek-v4-pro-max";
+  let repairProvider: AiProviderId | null = null;
+  let repairModel: string | null = null;
+  let finalProvider: AiProviderId = generationProvider;
+  let finalModel: string = generationModel;
   let repaired = false;
-  let quality = evaluateDraft({
+
+  // Step 1: Initial full validation sequence
+  let val = await runFullValidationSequence({
     draft,
     event,
     signals,
     factPackText,
     sourceTexts,
+    structuredFactPack,
     existingHeadlines,
-    existingBodyFingerprints: storyIndex?.bodyFingerprints,
-    existingEventIds: storyIndex?.eventIds,
+    storyIndex,
     articleType: articleTypeClassification.type,
     evidenceSufficient: articleTypeClassification.evidenceSufficient,
+    freshness,
+    writerProvider: generationProvider,
   });
 
-  // Bounded depth retry â€” regenerate when body too short / equals excerpt (never infinite)
-  while ((!quality.depth_quality?.ok || !quality.passed) && depthRetries < 1 && !usedFallback) {
-    depthRetries += 1;
-    logEditorial("depth_retry", {
+  // Step 2: Optional one-time repair if not published and repair is viable
+  const canAttemptRepair =
+    !val.canPublish &&
+    !val.quality.hard_reject &&
+    !usedFallback;
+
+  if (canAttemptRepair) {
+    logEditorial("attempting_editorial_repair", {
       eventId: event.id,
-      attempt: depthRetries,
-      codes: quality.depth_quality?.codes ?? [],
-      articleType: articleTypeClassification.type,
+      failureCodes: val.failureCodes,
     });
-    try {
-      const retried = await generateOnce({ attempt: depthRetries, failureCodes: quality.depth_quality?.codes ?? quality.rejectionReasons, previousWords: quality.depth_quality?.metrics?.words ?? 0, minWords: quality.depth_quality?.metrics?.minWordsForType ?? articleTypeClassification.rule.minWords, targetWords: articleTypeClassification.rule.targetWords });
-      if (retried) {
-        draft = applyEditorialEnhancements(retried, event);
-        quality = evaluateDraft({
-          draft,
-          event,
-          signals,
-          factPackText,
-          sourceTexts,
-          existingHeadlines,
-          existingBodyFingerprints: storyIndex?.bodyFingerprints,
-          existingEventIds: storyIndex?.eventIds,
-          articleType: articleTypeClassification.type,
-          evidenceSufficient: articleTypeClassification.evidenceSufficient,
+    const repairResult = await repairBorderlineDraft({
+      draft,
+      event,
+      factPackText,
+      language,
+      failureCodes: val.failureCodes,
+    });
+
+    if (repairResult.repaired) {
+      repairProvider = repairResult.provider ?? "codecraft";
+      repairModel = repairResult.model ?? "deepseek-v4-pro-max";
+      const repairedDraft = repairResult.draft;
+
+      // Re-run ALL relevant gates from scratch on the repaired draft!
+      const reval = await runFullValidationSequence({
+        draft: repairedDraft,
+        event,
+        signals,
+        factPackText,
+        sourceTexts,
+        structuredFactPack,
+        existingHeadlines,
+        storyIndex,
+        articleType: articleTypeClassification.type,
+        evidenceSufficient: articleTypeClassification.evidenceSufficient,
+        freshness,
+        writerProvider: repairProvider,
+      });
+
+      // No previous approval may be reused. Repaired draft must satisfy all gates independently.
+      if (reval.canPublish) {
+        draft = repairedDraft;
+        val = reval;
+        repaired = true;
+        finalProvider = repairProvider;
+        finalModel = repairModel;
+        logEditorial("editorial_repair_succeeded", {
+          eventId: event.id,
+          provider: repairProvider,
+          model: repairModel,
         });
       } else {
-        break;
+        // Repair did not satisfy all gates; remain rejected/held
+        draft = repairedDraft;
+        val = reval;
+        repaired = true;
+        finalProvider = repairProvider;
+        finalModel = repairModel;
+        logEditorial("editorial_repair_failed_gates", {
+          eventId: event.id,
+          reasons: reval.quality.rejectionReasons,
+        });
       }
-    } catch {
-      break;
-    }
-  }
-
-  const repairDecision = shouldRunEditorialRepair(quality);
-
-  if (repairDecision.shouldRepair) {
-    draft = await repairBorderlineDraft({
-      draft,
-      event,
-      factPackText,
-      language,
-    });
-    repaired = true;
-    quality = evaluateDraft({
-      draft,
-      event,
-      signals,
-      factPackText,
-      sourceTexts,
-      existingHeadlines,
-      existingBodyFingerprints: storyIndex?.bodyFingerprints,
-      existingEventIds: storyIndex?.eventIds,
-      articleType: articleTypeClassification.type,
-      evidenceSufficient: articleTypeClassification.evidenceSufficient,
-    });
-    logEditorial("borderline_repaired", {
-      eventId: event.id,
-      confidence: quality.ai_confidence,
-      passed: quality.publish_allowed,
-      reasons: repairDecision.reasons,
-    });
-  } else if (quality.should_repair && !quality.hard_reject) {
-    logOpenAiUsage(
-      buildUsageRecord({
-        operation: "editorial_repair",
-        endpoint: "chat.completions",
-        model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-        inputTokens: 0,
-        outputTokens: 0,
-        success: true,
-        context: { worker: "editorial_generate", eventId: event.id },
-        metadata: {
-          repairSkipped: true,
-          repairSavedUsd: 0.002,
-          skippedReasons: repairDecision.reasons,
-        },
-      })
-    );
-    logEditorial("repair_skipped", {
-      eventId: event.id,
-      reasons: repairDecision.reasons,
-    });
-  }
-
-  let hqGate = applyHumanQualityAndEvidenceGate({
-    draft,
-    event,
-    signals,
-    sourceTexts,
-    quality,
-    freshness,
-  });
-  quality = hqGate.quality;
-
-  if (
-    quality.publishDecision === "repair" &&
-    !quality.hard_reject &&
-    !usedFallback
-  ) {
-    draft = await repairBorderlineDraft({
-      draft,
-      event,
-      factPackText,
-      language,
-    });
-    repaired = true;
-    quality = evaluateDraft({
-      draft,
-      event,
-      signals,
-      factPackText,
-      sourceTexts,
-      existingHeadlines,
-      existingBodyFingerprints: storyIndex?.bodyFingerprints,
-      existingEventIds: storyIndex?.eventIds,
-      articleType: articleTypeClassification.type,
-      evidenceSufficient: articleTypeClassification.evidenceSufficient,
-    });
-    hqGate = applyHumanQualityAndEvidenceGate({
-      draft,
-      event,
-      signals,
-      sourceTexts,
-      quality,
-      freshness,
-    });
-    quality = hqGate.quality;
-    logEditorial("human_quality_repaired", {
-      eventId: event.id,
-      score: hqGate.humanScore.score,
-      decision: quality.publishDecision,
-    });
-  }
-
-  // Claim-against-fact-pack hard gate â€” cheap (regex, no LLM call), so it
-  // runs before spending an independent-review call on a draft that would
-  // be rejected anyway. Folded into `quality` the same way
-  // applyHumanQualityAndEvidenceGate folds in held_for_* reasons, so both
-  // the single-event and batch callers reject/hold it through their
-  // existing, unmodified rejection paths.
-  let factPackValidationIssues: GenerationValidationIssue[] | undefined;
-  if (quality.publish_allowed) {
-    const claimIssues = validateClaimsAgainstFactPack({
-      headline: draft.headline,
-      summary: draft.summary,
-      articleBody: draft.article_body,
-      factPack: structuredFactPack,
-    });
-    if (claimIssues.length) {
-      factPackValidationIssues = claimIssues;
-      quality = {
-        ...quality,
-        passed: false,
-        publish_allowed: false,
-        publishDecision: "reject",
-        rejectionReasons: [
-          ...quality.rejectionReasons,
-          ...claimIssues.map((i) => `fact_pack_validation:${i.code}`),
-          "held_for_fact_pack_validation",
-        ],
-      };
-      logEditorial("fact_pack_validation_failed", {
-        eventId: event.id,
-        codes: claimIssues.map((i) => i.code),
-      });
-    }
-  }
-
-  // Independent-reviewer hard gate â€” only worth spending a call on a draft
-  // that has already cleared every other quality/safety check. A failure
-  // here is folded into `quality` the same way applyHumanQualityAndEvidenceGate
-  // folds in held_for_* reasons, so both the single-event and batch callers
-  // reject/hold it through their existing, unmodified rejection paths.
-  let independentReview: IndependentReviewResult | undefined;
-  if (quality.publish_allowed) {
-    independentReview = await runIndependentReview({
-      draft,
-      writerProvider: writerProvider ?? "local",
-      factPack: structuredFactPack,
-      context: { worker: "editorial_generate", eventId: event.id },
-    });
-    if (!independentReview.passed) {
-      quality = {
-        ...quality,
-        passed: false,
-        publish_allowed: false,
-        publishDecision: "reject",
-        rejectionReasons: [
-          ...quality.rejectionReasons,
-          `independent_review_failed${independentReview.error ? `:${independentReview.error}` : ""}`,
-          "held_for_independent_review",
-        ],
-      };
-      logEditorial("independent_review_failed", {
-        eventId: event.id,
-        provider: independentReview.provider,
-        error: independentReview.error,
-        issues: (independentReview.verdict as { issues?: unknown }).issues,
-      });
     }
   }
 
@@ -1683,7 +1740,7 @@ async function prepareCandidate(
     candidate: {
       event,
       draft,
-      quality,
+      quality: val.quality,
       signals,
       attributions,
       repaired,
@@ -1693,16 +1750,22 @@ async function prepareCandidate(
       articleTypeClassification,
       depthRetries,
       freshness,
-      independentReview,
-      factPackValidationIssues,
+      independentReview: val.independentReview,
+      factPackValidationIssues: val.claimIssues,
+      generationProvider,
+      generationModel,
+      repairProvider,
+      repairModel,
+      finalProvider,
+      finalModel,
       premiumEditorial: { used: premiumEditorialUsed, reason: premiumEditorialReason },
       humanQualityMeta: {
-        score: hqGate.humanScore.score,
-        decision: quality.publishDecision,
-        highRisk: hqGate.gate.highRisk,
-        holdReason: hqGate.holdReason,
-        evidenceSummary: hqGate.evidenceSummary,
-        unsupportedNumbers: hqGate.unsupportedNumbers,
+        score: val.hqGate.humanScore.score,
+        decision: val.quality.publishDecision,
+        highRisk: val.hqGate.gate.highRisk,
+        holdReason: val.hqGate.holdReason,
+        evidenceSummary: val.hqGate.evidenceSummary,
+        unsupportedNumbers: val.unsupportedNumbers,
       },
     },
     skipped: false,
@@ -1759,7 +1822,7 @@ export async function previewEditorialDraftFromEvent(
  */
 export async function generateEditorialFromEvent(
   event: NewsEventRow,
-  options?: { existingHeadlines?: string[]; forcePublish?: boolean }
+  options?: { existingHeadlines?: string[] }
 ): Promise<EditorialGenerationResult> {
   logArticleGenerationPhase("article_generation_started", {
     eventId: event.id,
@@ -1803,63 +1866,7 @@ export async function generateEditorialFromEvent(
   }
 
   const { candidate } = prepared;
-  let quality = candidate.quality;
-
-  if (options?.forcePublish && !quality.hard_reject) {
-    const pack = buildFactPack(
-      candidate.event,
-      candidate.signals,
-      candidate.articleType
-    );
-    quality = evaluateDraft({
-      draft: candidate.draft,
-      event: candidate.event,
-      signals: candidate.signals,
-      factPackText: pack.factPackText,
-      sourceTexts: pack.sourceTexts,
-      existingHeadlines,
-      forcePublish: true,
-      articleType: candidate.articleType,
-      evidenceSufficient: candidate.articleTypeClassification.evidenceSufficient,
-    });
-  }
-
-  // Independent review is a hard safety gate â€” forcePublish (human override
-  // of the quality-score thresholds above) must not be able to bypass it.
-  if (candidate.independentReview && !candidate.independentReview.passed) {
-    quality = {
-      ...quality,
-      passed: false,
-      publish_allowed: false,
-      publishDecision: "reject",
-      rejectionReasons: quality.rejectionReasons.includes("held_for_independent_review")
-        ? quality.rejectionReasons
-        : [
-            ...quality.rejectionReasons,
-            `independent_review_failed${candidate.independentReview.error ? `:${candidate.independentReview.error}` : ""}`,
-            "held_for_independent_review",
-          ],
-    };
-  }
-
-  // Same bypass-proofing for the claim-against-fact-pack hard gate â€”
-  // forcePublish must not be able to resurrect a draft with fabricated
-  // names/dates/numbers/quotes or insufficient sensitive-story sourcing.
-  if (candidate.factPackValidationIssues?.length) {
-    quality = {
-      ...quality,
-      passed: false,
-      publish_allowed: false,
-      publishDecision: "reject",
-      rejectionReasons: quality.rejectionReasons.includes("held_for_fact_pack_validation")
-        ? quality.rejectionReasons
-        : [
-            ...quality.rejectionReasons,
-            ...candidate.factPackValidationIssues.map((i) => `fact_pack_validation:${i.code}`),
-            "held_for_fact_pack_validation",
-          ],
-    };
-  }
+  const quality = candidate.quality;
 
   logEditorial("quality_report", {
     eventId: event.id,

@@ -3,6 +3,7 @@
  */
 
 import type { NewsEventRow, NewsSignalRow } from "@/lib/types/newsroom";
+import type { AiProviderId } from "@/lib/ai/providers/types";
 import type {
   EditorialDraft,
   SupportedEditorialLanguage,
@@ -190,13 +191,20 @@ export function buildFallbackDraftFromFactPack(input: {
   return applyEditorialEnhancements(draft, event);
 }
 
+export type RepairDraftResult = {
+  draft: EditorialDraft;
+  repaired: boolean;
+  provider?: AiProviderId;
+  model?: string;
+};
+
 export async function regenerateFullArticle(input: {
   draft: EditorialDraft;
   factPackText: string;
   language: SupportedEditorialLanguage;
   failureCodes: string[];
-}): Promise<EditorialDraft> {
-  if (!isAnyChatProviderConfigured()) return normalizeEditorialFormatting(input.draft);
+}): Promise<RepairDraftResult> {
+  if (!isAnyChatProviderConfigured()) return { draft: normalizeEditorialFormatting(input.draft), repaired: false };
 
   const lang =
     input.language === "hi"
@@ -225,10 +233,10 @@ Fact Pack:\n${input.factPackText}`;
       context: { worker: "editorial_generate" },
     });
 
-    if (!result.ok) return normalizeEditorialFormatting(input.draft);
+    if (!result.ok) return { draft: normalizeEditorialFormatting(input.draft), repaired: false };
 
     const content = result.content;
-    if (!content) return normalizeEditorialFormatting(input.draft);
+    if (!content) return { draft: normalizeEditorialFormatting(input.draft), repaired: false };
 
     const parsed = JSON.parse(content) as {
       headline?: string;
@@ -241,24 +249,48 @@ Fact Pack:\n${input.factPackText}`;
       body = [parsed.sections.lead, parsed.sections.details, parsed.sections.context].filter(Boolean).join("\n\n");
     }
 
-    return normalizeEditorialFormatting({
-      ...input.draft,
-      headline: parsed.headline?.trim() || input.draft.headline,
-      summary: parsed.summary?.trim() || input.draft.summary,
-      article_body: body || input.draft.article_body,
-    });
+    return {
+      draft: normalizeEditorialFormatting({
+        ...input.draft,
+        headline: parsed.headline?.trim() || input.draft.headline,
+        summary: parsed.summary?.trim() || input.draft.summary,
+        article_body: body || input.draft.article_body,
+      }),
+      repaired: true,
+      provider: result.provider,
+      model: result.model,
+    };
   } catch {
-    return normalizeEditorialFormatting(input.draft);
+    return { draft: normalizeEditorialFormatting(input.draft), repaired: false };
   }
 }
 
-export async function repairBorderlineDraft(input: { draft: EditorialDraft; event: NewsEventRow; factPackText: string; language: SupportedEditorialLanguage; failureCodes?: string[]; }): Promise<EditorialDraft> {
+export async function repairBorderlineDraft(input: {
+  draft: EditorialDraft;
+  event: NewsEventRow;
+  factPackText: string;
+  language: SupportedEditorialLanguage;
+  failureCodes?: string[];
+}): Promise<RepairDraftResult> {
   let draft = applyEditorialEnhancements(input.draft, input.event);
-  draft = await regenerateFullArticle({
+  const result = await regenerateFullArticle({
     draft,
     factPackText: input.factPackText,
-    language: input.language, failureCodes: input.failureCodes ?? [], });
-  return applyEditorialEnhancements(draft, input.event);
+    language: input.language,
+    failureCodes: input.failureCodes ?? [],
+  });
+  if (result.repaired) {
+    return {
+      draft: applyEditorialEnhancements(result.draft, input.event),
+      repaired: true,
+      provider: result.provider,
+      model: result.model,
+    };
+  }
+  return {
+    draft: applyEditorialEnhancements(draft, input.event),
+    repaired: false,
+  };
 }
 
 

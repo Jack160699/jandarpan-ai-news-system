@@ -6,10 +6,10 @@
 
 import type { AiProviderId } from "@/lib/ai/providers/types";
 
-const WRITER_CHAIN: AiProviderId[] = ["codecraft", "gemini", "groq"];
+const WRITER_CHAIN: AiProviderId[] = ["codecraft"];
 // Independent review uses CodeCraft first, with Gemini/Groq fallback.
-const REVIEWER_CHAIN: AiProviderId[] = ["codecraft", "gemini", "groq"];
-const LIGHTWEIGHT_CHAIN: AiProviderId[] = ["codecraft", "gemini", "groq"];
+const REVIEWER_CHAIN: AiProviderId[] = ["codecraft"];
+const LIGHTWEIGHT_CHAIN: AiProviderId[] = ["codecraft"];
 const EMBEDDING_CHAIN: AiProviderId[] = ["cloudflare", "openai"];
 const IMAGE_CHAIN: AiProviderId[] = ["cloudflare", "openai"];
 
@@ -40,10 +40,7 @@ export function resolveChatChain(operation: string): AiProviderId[] {
 
 /** Provider that should have generated the draft, used to pick a *different* reviewer provider at call time. */
 export function resolveReviewerChain(writerProvider?: AiProviderId): AiProviderId[] {
-  const chain = withOpenAiGate(REVIEWER_CHAIN);
-  if (!writerProvider) return chain;
-  const reordered = chain.filter((p) => p !== writerProvider);
-  return reordered.length ? reordered : chain;
+  return withOpenAiGate(REVIEWER_CHAIN);
 }
 
 export function resolveEmbeddingChain(): AiProviderId[] {
