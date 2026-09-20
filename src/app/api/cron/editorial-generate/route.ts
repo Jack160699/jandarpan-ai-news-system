@@ -164,7 +164,7 @@ async function handleEditorialGenerate(request: Request) {
     },
   });
 
-  const statusCode = lockResult.ok ? 200 : 500;
+  const statusCode = 200; // Always return 200 to prevent QStash retries for natural job failures
   return NextResponse.json(
     {
       ok: lockResult.ok,

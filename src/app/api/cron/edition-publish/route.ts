@@ -48,7 +48,7 @@ async function run(request: Request) {
       errors: result.errors.slice(0, 10),
       durationMs,
     },
-    { headers: noStoreHeaders(), status: result.ok ? 200 : 500 }
+    { headers: noStoreHeaders(), status: 200 }
   );
 }
 
