@@ -23,6 +23,7 @@ import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { requestChatCompletion } from "@/lib/ai/providers/chat";
 import { requestGeminiChat } from "@/lib/ai/providers/gemini";
+import { requestCodeCraftChat, resolveCodeCraftModel } from "@/lib/ai/providers/codecraft";
 import { CLOUDFLARE_EMBEDDING_DIMENSIONS, requestCloudflareEmbeddings } from "@/lib/ai/providers/cloudflare-embeddings";
 import { requestCloudflareImageGeneration } from "@/lib/ai/providers/cloudflare-images";
 
@@ -66,6 +67,21 @@ export async function POST(request: Request) {
   const results: CaseResult[] = [];
   let groqModelList: string[] | { error: string } | undefined;
   let groqRawDiagnostic: unknown;
+
+  if (requested.has("codecraft")) {
+    const r = await requestCodeCraftChat({
+      operation: "editorial_generate",
+      system: "You are a senior Hindi news editor. Reply with strict JSON only.",
+      user: 'Reply with exactly this JSON: {"status": "ok", "provider": "codecraft"}',
+      maxTokens: 100,
+      context: { worker: "ai_provider_smoke_test" },
+    });
+    results.push(
+      r.ok
+        ? { case: "codecraft", ok: true, provider: r.provider, model: r.model, snippet: r.content.slice(0, 200) }
+        : { case: "codecraft", ok: false, provider: r.provider, errorCode: r.error.code, errorMessage: r.error.message }
+    );
+  }
 
   if (requested.has("groq_raw_diagnostic")) {
     const key = process.env.GROQ_API_KEY?.trim();
