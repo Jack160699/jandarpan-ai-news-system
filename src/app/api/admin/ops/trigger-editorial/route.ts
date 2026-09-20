@@ -3,6 +3,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { timingSafeEqual } from "node:crypto";
 import { generateEditorialFromEvent } from "@/lib/news/ai/generate-article";
 import { requestChatCompletion, isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
@@ -125,16 +126,77 @@ async function handleTrigger(request: Request) {
   const modelParam = url.searchParams.get("model") || "gpt-5.5";
   const eventIdParam = url.searchParams.get("eventId");
 
-  if (action === "test-model") {
-    const diag = await testModelGeneration(modelParam);
-    return NextResponse.json({ ok: true, diag }, { headers: noStoreHeaders() });
-  }
-
   if (!isSupabaseConfigured()) {
     return NextResponse.json(
       { ok: false, error: "Supabase not configured" },
       { status: 500, headers: noStoreHeaders() }
     );
+  }
+
+  const supabase = createAdminServerClient();
+
+  if (action === "publish-latest") {
+    const { data: latestRows, error: fetchErr } = await supabase
+      .from("generated_articles")
+      .select("id, slug, headline")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (fetchErr || !latestRows?.length) {
+      return NextResponse.json({ ok: false, error: fetchErr?.message || "No articles found" }, { status: 404 });
+    }
+    const target = latestRows[0];
+    const nowIso = new Date().toISOString();
+    const { data: updated, error: pubErr } = await supabase
+      .from("generated_articles")
+      .update({
+        published_at: nowIso,
+        editorial_status: "approved",
+        workflow_status: "published",
+      })
+      .eq("id", target.id)
+      .select();
+    try {
+      revalidatePath("/story/[slug]", "page");
+      revalidatePath("/");
+    } catch {}
+    return NextResponse.json({
+      ok: !pubErr,
+      target,
+      updated,
+      error: pubErr?.message,
+      liveUrl: `https://www.jandarpan.news/story/${target.slug}`
+    }, { headers: noStoreHeaders() });
+  }
+
+  if (action === "publish-slug") {
+    const slugToPublish = url.searchParams.get("slug");
+    if (!slugToPublish) return NextResponse.json({ ok: false, error: "slug required" }, { status: 400 });
+    const nowIso = new Date().toISOString();
+    const { data: updated, error: pubErr } = await supabase
+      .from("generated_articles")
+      .update({
+        published_at: nowIso,
+        editorial_status: "approved",
+        workflow_status: "published",
+      })
+      .eq("slug", slugToPublish)
+      .select();
+    try {
+      revalidatePath("/story/[slug]", "page");
+      revalidatePath("/");
+    } catch {}
+    return NextResponse.json({
+      ok: !pubErr,
+      slug: slugToPublish,
+      updated,
+      error: pubErr?.message,
+      liveUrl: `https://www.jandarpan.news/story/${slugToPublish}`
+    }, { headers: noStoreHeaders() });
+  }
+
+  if (action === "test-model") {
+    const diag = await testModelGeneration(modelParam);
+    return NextResponse.json({ ok: true, diag }, { headers: noStoreHeaders() });
   }
 
   if (!isAnyChatProviderConfigured()) {
@@ -143,8 +205,6 @@ async function handleTrigger(request: Request) {
       { status: 503, headers: noStoreHeaders() }
     );
   }
-
-  const supabase = createAdminServerClient();
 
   try {
     let targetEvent: NewsEventRow | null = null;
@@ -193,8 +253,25 @@ async function handleTrigger(request: Request) {
     const genResult = await generateEditorialFromEvent(targetEvent, { forcePublish: true });
 
     let liveUrl: string | null = null;
-    if (genResult.article?.slug) {
-      liveUrl = `https://www.jandarpan.news/news/${genResult.article.slug}`;
+    if (genResult.article?.id && genResult.article?.slug) {
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from("generated_articles")
+        .update({
+          published_at: nowIso,
+          editorial_status: "approved",
+          workflow_status: "published",
+        })
+        .eq("id", genResult.article.id);
+
+      genResult.article.published_at = nowIso;
+      genResult.article.editorial_status = "approved";
+      (genResult.article as Record<string, unknown>).workflow_status = "published";
+      liveUrl = `https://www.jandarpan.news/story/${genResult.article.slug}`;
+      try {
+        revalidatePath("/story/[slug]", "page");
+        revalidatePath("/");
+      } catch {}
     }
 
     return NextResponse.json(

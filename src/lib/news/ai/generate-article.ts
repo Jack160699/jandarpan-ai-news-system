@@ -391,7 +391,7 @@ async function callEditorialLlm(
   repairContext?: { attempt: number; failureCodes: string[]; previousWords?: number; minWords?: number; targetWords?: number; },
   structuredFactPack?: FactPack | null,
   searchDemandContext?: string | null
-): Promise<{ response: LlmEditorialResponse; provider: AiProviderId; premium: boolean; premiumReason: string | null } | null> {
+): Promise<{ response: LlmEditorialResponse; provider: AiProviderId; model?: string; premium: boolean; premiumReason: string | null } | null> {
   const deskTemplate = resolveDeskTemplateFromCategory(event.category, {
     region: event.region,
     urgencyScore: event.urgency_score,
@@ -471,6 +471,7 @@ async function callEditorialLlm(
     return {
       response: parsed as LlmEditorialResponse,
       provider: result.provider,
+      model: result.model,
       premium,
       premiumReason,
     };
