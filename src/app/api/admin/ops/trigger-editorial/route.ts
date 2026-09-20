@@ -49,6 +49,69 @@ function authorized(request: Request): boolean {
   });
 }
 
+async function testModelGeneration(model: string) {
+  const apiKey = process.env.CODECRAFT_API_KEY!.trim();
+  const baseUrl = process.env.CODECRAFT_BASE_URL?.trim() || "https://codecraftapi.com/v1";
+  const started = Date.now();
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+      "Accept": "text/event-stream, application/json"
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: "system",
+          content: "You are a senior journalist writing in Hindi for Jandarpan. Output ONLY valid JSON: {\"headline\":\"...\",\"summary\":\"...\",\"sections\":{\"lead\":\"...\",\"details\":\"...\",\"context\":\"...\"},\"tags\":[\"...\"]}"
+        },
+        {
+          role: "user",
+          content: "छत्तीसगढ़ में सरकारी स्कूलों के बुनियादी ढांचे को नया स्वरूप देने के लिए 5200 स्कूलों में शुरू हुए विकास कार्यों पर 250 शब्दों की विस्तृत समाचार रिपोर्ट लिखें।"
+        }
+      ],
+      temperature: 0.35,
+      max_tokens: 1500,
+      stream: true,
+      response_format: { type: "json_object" }
+    })
+  });
+
+  const latencyMs = Date.now() - started;
+  const raw = await res.text();
+  let content = "";
+  for (const line of raw.split("\n")) {
+    const t = line.trim();
+    if (!t.startsWith("data:")) continue;
+    const d = t.replace(/^data:\s*/, "");
+    if (d === "[DONE]") break;
+    try {
+      const p = JSON.parse(d);
+      const delta = p.choices?.[0]?.delta?.content || "";
+      content += delta;
+    } catch {}
+  }
+
+  let parsed: unknown = null;
+  let parseError: string | null = null;
+  try {
+    parsed = JSON.parse(content);
+  } catch (e) {
+    parseError = e instanceof Error ? e.message : String(e);
+  }
+
+  return {
+    model,
+    latencyMs,
+    contentLength: content.length,
+    parseError,
+    contentPreview: content.slice(0, 300),
+    parsedValid: parsed !== null
+  };
+}
+
 async function handleTrigger(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json(
@@ -59,54 +122,12 @@ async function handleTrigger(request: Request) {
 
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
+  const modelParam = url.searchParams.get("model") || "gpt-5.5";
   const eventIdParam = url.searchParams.get("eventId");
 
-  if (action === "test-chain") {
-    const started = Date.now();
-    const result = await requestChatCompletion({
-      operation: "editorial_generate",
-      system: "You are an editorial journalist. Return JSON with headline and body.",
-      user: "Write a short 100-word news report about Raipur development.",
-      jsonMode: true,
-      maxTokens: 500,
-      timeoutMs: 25000,
-    });
-    return NextResponse.json(
-      {
-        ok: result.ok,
-        provider: result.provider,
-        latencyMs: Date.now() - started,
-        error: !result.ok ? result.error : undefined,
-        contentSample: result.ok ? result.content.slice(0, 300) : undefined,
-      },
-      { headers: noStoreHeaders() }
-    );
-  }
-
-  if (action === "raw-codecraft-stream") {
-    const apiKey = process.env.CODECRAFT_API_KEY!.trim();
-    const baseUrl = process.env.CODECRAFT_BASE_URL?.trim() || "https://codecraftapi.com/v1";
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
-        "Accept": "text/event-stream, application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-5.5",
-        messages: [
-          { role: "system", content: "You are a Hindi journalist. Output valid JSON with keys: headline, summary, article_body." },
-          { role: "user", content: "Write a 200-word news report in Hindi about Chhattisgarh school infrastructure." }
-        ],
-        temperature: 0.35,
-        max_tokens: 1000,
-        stream: true,
-        response_format: { type: "json_object" }
-      })
-    });
-    const text = await res.text();
-    return NextResponse.json({ ok: res.ok, status: res.status, rawStream: text.slice(0, 2000) });
+  if (action === "test-model") {
+    const diag = await testModelGeneration(modelParam);
+    return NextResponse.json({ ok: true, diag }, { headers: noStoreHeaders() });
   }
 
   if (!isSupabaseConfigured()) {
