@@ -32,6 +32,22 @@ jobs:
 
           echo "Using APP_URL=${APP_URL}"
 
+      - name: Stage 0 - fetch news
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "fetch" \
+            "/api/fetch-news" \
+            "POST" \
+            "{}"
+            
+      - name: Stage 0.5 - orchestrate
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "orchestrate" \
+            "/api/cron/orchestrate" \
+            "POST" \
+            "{}"
+            
       - name: Stage A - AI enrichment
         run: |
           bash .github/scripts/invoke-cron-endpoint.sh \
