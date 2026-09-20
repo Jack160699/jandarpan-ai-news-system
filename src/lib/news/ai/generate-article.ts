@@ -467,8 +467,9 @@ async function callEditorialLlm(
   }
 
   try {
+    const parsed = parseRobustLlmResponse(result.content) ?? JSON.parse(result.content);
     return {
-      response: JSON.parse(result.content) as LlmEditorialResponse,
+      response: parsed as LlmEditorialResponse,
       provider: result.provider,
       premium,
       premiumReason,

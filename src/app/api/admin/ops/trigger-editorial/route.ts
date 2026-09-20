@@ -73,7 +73,7 @@ async function testModelGeneration(model: string) {
         }
       ],
       temperature: 0.35,
-      max_tokens: 1500,
+      max_tokens: 3600,
       stream: true,
       response_format: { type: "json_object" }
     })

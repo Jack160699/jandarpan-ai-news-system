@@ -89,7 +89,7 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
         { role: "user", content: request.user }
       ],
       temperature: request.temperature ?? 0.35,
-      max_tokens: request.maxTokens ?? 1600,
+      max_tokens: request.maxTokens ?? 3600,
       stream: true,
       ...(request.jsonMode ? { response_format: { type: "json_object" } } : {}),
     };

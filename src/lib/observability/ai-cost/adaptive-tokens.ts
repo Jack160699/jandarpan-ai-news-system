@@ -45,20 +45,20 @@ export function classifyEditorialTier(input: {
  * Override with OPENAI_EDITORIAL_MAX_TOKENS when needed.
  */
 const EDITORIAL_MAX_TOKENS: Record<EditorialContentTier, number> = {
-  breaking: 1600,
-  regular: 2800,
-  deep_analysis: 3600,
+  breaking: 3600,
+  regular: 4000,
+  deep_analysis: 4800,
 };
 
 const EDITORIAL_MAX_TOKENS_BY_ARTICLE_TYPE: Partial<Record<ArticleType, number>> = {
-  breaking_alert: 1600,
-  short_update: 2200,
-  standard_report: 3000,
-  developing_story: 2600,
-  service_information: 2000,
-  live_continuing: 2600,
-  explainer: 3600,
-  analysis: 3600,
+  breaking_alert: 3600,
+  short_update: 3600,
+  standard_report: 4000,
+  developing_story: 4000,
+  service_information: 3600,
+  live_continuing: 4000,
+  explainer: 4800,
+  analysis: 4800,
 };
 
 export function editorialMaxTokens(
