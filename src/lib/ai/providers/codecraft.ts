@@ -17,9 +17,9 @@ export function isCodeCraftConfigured(): boolean {
 export function resolveCodeCraftModel(operation: string, override?: string): string {
   if (override?.trim()) return override.trim();
   if (operation === "editorial_repair") {
-    return process.env.CODECRAFT_REPAIR_MODEL?.trim() || "gpt-5.5";
+    return process.env.CODECRAFT_REPAIR_MODEL?.trim() || "deepseek-v4-pro-max";
   }
-  return process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "gpt-5.5";
+  return process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "deepseek-v4-pro-max";
 }
 
 function healthKeyFor(model: string): string {
@@ -89,7 +89,7 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
         { role: "user", content: request.user }
       ],
       temperature: request.temperature ?? 0.35,
-      max_tokens: request.maxTokens ?? 1400,
+      max_tokens: request.maxTokens ?? 1600,
       stream: true,
       ...(request.jsonMode ? { response_format: { type: "json_object" } } : {}),
     };
