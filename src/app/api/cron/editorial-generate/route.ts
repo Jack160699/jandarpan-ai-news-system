@@ -26,7 +26,7 @@ import { isSupabaseConfigured } from "@/lib/supabase";
 import { pipelineLog } from "@/lib/observability/production-log";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const CRON_JOB_ID = "editorial-generate";
