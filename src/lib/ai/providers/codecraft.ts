@@ -110,12 +110,14 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       const classified = classifyCodeCraftFailure(res.status, detail);
-      markProviderUnhealthy(healthKeyFor(model), {
-        reason: classified.authFailure ? "codecraft_unauthorized" : classified.message,
-        httpStatus: res.status,
-        authFailure: classified.authFailure,
-        rateLimited: classified.rateLimited,
-      });
+      if (classified.authFailure || classified.rateLimited) {
+        markProviderUnhealthy(healthKeyFor(model), {
+          reason: classified.authFailure ? "codecraft_unauthorized" : classified.message,
+          httpStatus: res.status,
+          authFailure: classified.authFailure,
+          rateLimited: classified.rateLimited,
+        });
+      }
       throw classified;
     }
 
@@ -124,12 +126,14 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
 
     if (streamError) {
       const classified = classifyCodeCraftFailure(200, JSON.stringify({ error: { message: streamError } }));
-      markProviderUnhealthy(healthKeyFor(model), {
-        reason: classified.message,
-        httpStatus: 200,
-        authFailure: classified.authFailure,
-        rateLimited: classified.rateLimited,
-      });
+      if (classified.authFailure || classified.rateLimited) {
+        markProviderUnhealthy(healthKeyFor(model), {
+          reason: classified.message,
+          httpStatus: 200,
+          authFailure: classified.authFailure,
+          rateLimited: classified.rateLimited,
+        });
+      }
       throw classified;
     }
 
