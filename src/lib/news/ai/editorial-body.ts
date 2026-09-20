@@ -111,5 +111,9 @@ export function assembleEditorialBody(
     parts.push(context);
   }
 
+  if (parts.length === 0) {
+    const raw = [lead, details, context].filter(Boolean);
+    if (raw.length) return raw.join("\n\n");
+  }
   return parts.join("\n\n");
 }
