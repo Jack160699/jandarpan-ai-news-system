@@ -16,7 +16,7 @@ export function maxRetryAttempts(operation: string): number {
     const n = Number(env);
     if (Number.isFinite(n) && n >= 1) return Math.floor(n);
   }
-  return CRITICAL_OPERATIONS.has(operation) ? 3 : 2;
+  return CRITICAL_OPERATIONS.has(operation) ? 2 : 1;
 }
 
 export function isNeverRetryError(err: ClassifiedAiError): boolean {

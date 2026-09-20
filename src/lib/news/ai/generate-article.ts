@@ -182,7 +182,7 @@ export type {
   SupportedEditorialLanguage,
 } from "@/lib/news/ai/editorial-types";
 
-const EDITORIAL_TIMEOUT_MS = 28_000;
+const EDITORIAL_TIMEOUT_MS = 50_000;
 const BATCH_RESCUE_COUNT = 2;
 
 type LlmEditorialResponse = LlmEditorialIntelligenceFields & {
