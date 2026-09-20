@@ -1,8 +1,9 @@
 ﻿/**
  * GET/POST /api/admin/ops/trigger-editorial
  * 
- * Manual trigger for the editorial generation pipeline.
- * Calls generateEditorialsFromEvents with limit=1.
+ * Supports:
+ * - ?action=test-codecraft : runs a direct raw fetch to CodeCraft API and returns full response details
+ * - default: runs generateEditorialsFromEvents({ limit: 1 })
  */
 
 import { NextResponse } from "next/server";
@@ -51,12 +52,75 @@ function authorized(request: Request): boolean {
   });
 }
 
+async function testCodeCraftDirectly() {
+  const apiKey = process.env.CODECRAFT_API_KEY?.trim();
+  const baseUrl = process.env.CODECRAFT_BASE_URL?.trim() || "https://codecraftapi.com/v1";
+  const model = process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "codecraft-editorial-v1";
+
+  if (!apiKey) {
+    return { ok: false, error: "CODECRAFT_API_KEY is not set in environment" };
+  }
+
+  const endpoint = `${baseUrl}/chat/completions`;
+  const body = {
+    model,
+    messages: [
+      { role: "system", content: "You are a helpful assistant." },
+      { role: "user", content: "Ping. Respond with Pong." }
+    ],
+    temperature: 0.3,
+    max_tokens: 50
+  };
+
+  try {
+    const started = Date.now();
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+    const latencyMs = Date.now() - started;
+    const rawText = await res.text();
+    let json: unknown = null;
+    try {
+      json = JSON.parse(rawText);
+    } catch {}
+
+    return {
+      ok: res.ok,
+      httpStatus: res.status,
+      statusText: res.statusText,
+      latencyMs,
+      endpoint,
+      model,
+      rawText: rawText.slice(0, 1000),
+      json
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err)
+    };
+  }
+}
+
 async function handleTrigger(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json(
       { ok: false, error: "Unauthorized" },
       { status: 401, headers: noStoreHeaders() }
     );
+  }
+
+  const url = new URL(request.url);
+  const action = url.searchParams.get("action");
+
+  if (action === "test-codecraft") {
+    const diagnostic = await testCodeCraftDirectly();
+    return NextResponse.json({ ok: true, diagnostic }, { headers: noStoreHeaders() });
   }
 
   if (!isSupabaseConfigured()) {
