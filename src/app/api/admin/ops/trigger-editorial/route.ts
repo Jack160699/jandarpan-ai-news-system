@@ -1,15 +1,10 @@
 ﻿/**
  * GET/POST /api/admin/ops/trigger-editorial
- * 
- * Manual trigger for live CodeCraft editorial generation and publication.
- * Supports:
- * - ?action=test-chain : test raw chat completion chain
- * - ?action=generate (or default) : selects top eligible news event and generates + publishes article via CodeCraft
  */
 
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
-import { generateEditorialFromEvent, generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
+import { generateEditorialFromEvent } from "@/lib/news/ai/generate-article";
 import { requestChatCompletion, isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
 import { isCodeCraftConfigured } from "@/lib/ai/providers/codecraft";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
@@ -73,7 +68,7 @@ async function handleTrigger(request: Request) {
       system: "You are an editorial journalist. Return JSON with headline and body.",
       user: "Write a short 100-word news report about Raipur development.",
       jsonMode: true,
-      maxTokens: 300,
+      maxTokens: 500,
       timeoutMs: 25000,
     });
     return NextResponse.json(
@@ -86,6 +81,32 @@ async function handleTrigger(request: Request) {
       },
       { headers: noStoreHeaders() }
     );
+  }
+
+  if (action === "raw-codecraft-stream") {
+    const apiKey = process.env.CODECRAFT_API_KEY!.trim();
+    const baseUrl = process.env.CODECRAFT_BASE_URL?.trim() || "https://codecraftapi.com/v1";
+    const res = await fetch(`${baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+        "Accept": "text/event-stream, application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-5.5",
+        messages: [
+          { role: "system", content: "You are a Hindi journalist. Output valid JSON with keys: headline, summary, article_body." },
+          { role: "user", content: "Write a 200-word news report in Hindi about Chhattisgarh school infrastructure." }
+        ],
+        temperature: 0.35,
+        max_tokens: 1000,
+        stream: true,
+        response_format: { type: "json_object" }
+      })
+    });
+    const text = await res.text();
+    return NextResponse.json({ ok: res.ok, status: res.status, rawStream: text.slice(0, 2000) });
   }
 
   if (!isSupabaseConfigured()) {
@@ -118,7 +139,6 @@ async function handleTrigger(request: Request) {
       }
       targetEvent = data as NewsEventRow;
     } else {
-      // Find highest urgency event not already in generated_articles
       const { data: draftedRows } = await supabase
         .from("generated_articles")
         .select("event_id")
