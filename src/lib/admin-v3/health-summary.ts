@@ -11,7 +11,6 @@ import {
 } from "@/lib/observability";
 import {
   checkCronWorkers,
-  checkCronWorkers,
   checkAIProviders,
   checkQueues,
   checkRedisCache,
