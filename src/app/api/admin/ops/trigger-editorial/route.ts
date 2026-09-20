@@ -1,15 +1,20 @@
 ﻿/**
  * GET/POST /api/admin/ops/trigger-editorial
+ * 
+ * Manual trigger for live CodeCraft editorial generation and publication.
+ * Supports:
+ * - ?action=test-chain : test raw chat completion chain
+ * - ?action=generate (or default) : selects top eligible news event and generates + publishes article via CodeCraft
  */
 
 import { NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
-import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
-import { requestChatCompletion } from "@/lib/ai/providers/chat";
-import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
+import { generateEditorialFromEvent, generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
+import { requestChatCompletion, isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
 import { isCodeCraftConfigured } from "@/lib/ai/providers/codecraft";
-import { isSupabaseConfigured } from "@/lib/supabase";
+import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
+import type { NewsEventRow } from "@/lib/types/newsroom";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -59,6 +64,7 @@ async function handleTrigger(request: Request) {
 
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
+  const eventIdParam = url.searchParams.get("eventId");
 
   if (action === "test-chain") {
     const started = Date.now();
@@ -96,22 +102,70 @@ async function handleTrigger(request: Request) {
     );
   }
 
+  const supabase = createAdminServerClient();
+
   try {
-    const codecraftOk = isCodeCraftConfigured();
-    const result = await generateEditorialsFromEvents({ limit: 1 });
+    let targetEvent: NewsEventRow | null = null;
+
+    if (eventIdParam) {
+      const { data, error } = await supabase
+        .from("news_events")
+        .select("*")
+        .eq("id", eventIdParam)
+        .single();
+      if (error || !data) {
+        return NextResponse.json({ ok: false, error: `Event not found: ${error?.message}` }, { status: 404 });
+      }
+      targetEvent = data as NewsEventRow;
+    } else {
+      // Find highest urgency event not already in generated_articles
+      const { data: draftedRows } = await supabase
+        .from("generated_articles")
+        .select("event_id")
+        .not("event_id", "is", null);
+      const usedIds = new Set((draftedRows || []).map((r: { event_id: string }) => r.event_id));
+
+      const { data: events, error } = await supabase
+        .from("news_events")
+        .select("*")
+        .order("urgency_score", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error || !events?.length) {
+        return NextResponse.json({ ok: false, error: `Failed to fetch events: ${error?.message}` }, { status: 500 });
+      }
+
+      for (const ev of events as NewsEventRow[]) {
+        if (!usedIds.has(ev.id) && ev.signal_ids && ev.signal_ids.length > 0) {
+          targetEvent = ev;
+          break;
+        }
+      }
+    }
+
+    if (!targetEvent) {
+      return NextResponse.json({ ok: false, error: "No eligible unhandled event found" }, { status: 404 });
+    }
+
+    console.log(`[trigger-editorial] Generating article for event: ${targetEvent.id} - ${targetEvent.canonical_title}`);
+    const genResult = await generateEditorialFromEvent(targetEvent, { forcePublish: true });
+
+    let liveUrl: string | null = null;
+    if (genResult.article?.slug) {
+      liveUrl = `https://www.jandarpan.news/news/${genResult.article.slug}`;
+    }
+
     return NextResponse.json(
       {
-        ok: true,
-        codecraftConfigured: codecraftOk,
-        generated: result.generated,
-        rejected: result.rejected,
-        published: result.published,
-        repaired: result.repaired,
-        skipped: result.skipped,
-        avgConfidence: result.avgConfidence,
-        topStory: result.topStory,
-        errors: result.errors.slice(0, 10),
-        results: result.results,
+        ok: genResult.ok,
+        eventId: targetEvent.id,
+        canonicalTitle: targetEvent.canonical_title,
+        article: genResult.article,
+        quality: genResult.quality,
+        skipped: genResult.skipped,
+        reason: genResult.reason,
+        liveUrl,
       },
       { headers: noStoreHeaders() }
     );
