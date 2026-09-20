@@ -65,34 +65,46 @@ async function listCodeCraftModels() {
   }
 }
 
-async function testCodeCraftDirectly(modelName?: string) {
+async function testCodeCraftDirectly(options?: {
+  model?: string;
+  stream?: boolean;
+  userAgent?: boolean;
+  minimal?: boolean;
+}) {
   const apiKey = process.env.CODECRAFT_API_KEY?.trim();
   const baseUrl = process.env.CODECRAFT_BASE_URL?.trim() || "https://codecraftapi.com/v1";
-  const model = modelName || process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "codecraft-editorial-v1";
+  const model = options?.model || "gpt-5.5";
 
   if (!apiKey) {
     return { ok: false, error: "CODECRAFT_API_KEY is not set in environment" };
   }
 
   const endpoint = `${baseUrl}/chat/completions`;
-  const body = {
-    model,
-    messages: [
-      { role: "system", content: "You are a helpful assistant." },
-      { role: "user", content: "Ping. Respond with Pong." }
-    ],
-    temperature: 0.3,
-    max_tokens: 50
+  const body: Record<string, unknown> = options?.minimal
+    ? {
+        model,
+        messages: [{ role: "user", content: "Hello" }]
+      }
+    : {
+        model,
+        messages: [{ role: "user", content: "Say hello in one word." }],
+        temperature: 0.7,
+        max_tokens: 20,
+        ...(options?.stream ? { stream: true } : {})
+      };
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${apiKey}`,
+    "Accept": "application/json",
+    ...(options?.userAgent ? { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" } : {})
   };
 
   try {
     const started = Date.now();
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
+      headers,
       body: JSON.stringify(body)
     });
     const latencyMs = Date.now() - started;
@@ -109,7 +121,7 @@ async function testCodeCraftDirectly(modelName?: string) {
       latencyMs,
       endpoint,
       model,
-      rawText: rawText.slice(0, 1000),
+      rawText: rawText.slice(0, 500),
       json
     };
   } catch (err) {
@@ -131,6 +143,8 @@ async function handleTrigger(request: Request) {
   const url = new URL(request.url);
   const action = url.searchParams.get("action");
   const modelParam = url.searchParams.get("model") || undefined;
+  const streamParam = url.searchParams.get("stream") === "true";
+  const minimalParam = url.searchParams.get("minimal") === "true";
 
   if (action === "list-models") {
     const models = await listCodeCraftModels();
@@ -138,7 +152,12 @@ async function handleTrigger(request: Request) {
   }
 
   if (action === "test-codecraft") {
-    const diagnostic = await testCodeCraftDirectly(modelParam);
+    const diagnostic = await testCodeCraftDirectly({
+      model: modelParam,
+      stream: streamParam,
+      minimal: minimalParam,
+      userAgent: true
+    });
     return NextResponse.json({ ok: true, diagnostic }, { headers: noStoreHeaders() });
   }
 
