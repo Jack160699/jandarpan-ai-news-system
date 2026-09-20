@@ -14,7 +14,7 @@ import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import type { NewsEventRow } from "@/lib/types/newsroom";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 180;
 export const dynamic = "force-dynamic";
 
 function authorized(request: Request): boolean {

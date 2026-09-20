@@ -17,7 +17,7 @@ import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
 import { isAnyChatProviderConfigured, requestChatCompletion } from "@/lib/ai/providers";
 import { repairMaxTokens } from "@/lib/observability/ai-cost/adaptive-tokens";
 
-const REPAIR_TIMEOUT_MS = 40_000;
+const REPAIR_TIMEOUT_MS = 60_000;
 
 const CLICKBAIT_TRIM_RE =
   /\b(shocking|unbelievable|you won'?t believe|exposed|slams|destroys|बड़ा धमाका|चौंकाने|सनसनी)\b/gi;
