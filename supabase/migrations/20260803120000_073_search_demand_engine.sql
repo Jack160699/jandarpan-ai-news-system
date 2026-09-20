@@ -1,3 +1,13 @@
+CREATE OR REPLACE FUNCTION public.update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+
+
 -- Migration: 073_search_demand_engine
 -- Description: Adds tables for Search Demand Engine (Phase 5 of Autonomous Newsroom Migration)
 
@@ -55,9 +65,13 @@ CREATE INDEX IF NOT EXISTS idx_editorial_candidates_event_id ON public.editorial
 CREATE INDEX IF NOT EXISTS idx_editorial_candidates_score ON public.editorial_candidates(score DESC);
 
 -- Triggers for updated_at
+DROP TRIGGER IF EXISTS set_search_opportunities_updated_at ON public.search_opportunities;
 CREATE TRIGGER set_search_opportunities_updated_at BEFORE UPDATE ON public.search_opportunities FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+DROP TRIGGER IF EXISTS set_search_queries_updated_at ON public.search_queries;
 CREATE TRIGGER set_search_queries_updated_at BEFORE UPDATE ON public.search_queries FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+DROP TRIGGER IF EXISTS set_topic_clusters_updated_at ON public.topic_clusters;
 CREATE TRIGGER set_topic_clusters_updated_at BEFORE UPDATE ON public.topic_clusters FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+DROP TRIGGER IF EXISTS set_editorial_candidates_updated_at ON public.editorial_candidates;
 CREATE TRIGGER set_editorial_candidates_updated_at BEFORE UPDATE ON public.editorial_candidates FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 
 -- RLS
