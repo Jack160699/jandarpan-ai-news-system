@@ -231,7 +231,6 @@ export async function regenerateGeneratedArticle(
     category: event.category,
     language: draft.language,
     event,
-    forcePublish: true,
   });
 
   const meta = article.editorial_metadata ?? {};
