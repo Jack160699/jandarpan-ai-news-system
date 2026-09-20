@@ -4,9 +4,9 @@ import {
   computeEmbeddingCostUsd,
   computeImageCostUsd,
   estimateCostUsd,
-} from "@/lib/observability/openai-cost/pricing";
-import { estimateTokensFromText, hashPrompt } from "@/lib/observability/openai-cost/token-estimate";
-import { buildUsageRecord } from "@/lib/observability/openai-cost/record";
+} from "@/lib/observability/ai-cost/pricing";
+import { estimateTokensFromText, hashPrompt } from "@/lib/observability/ai-cost/token-estimate";
+import { buildUsageRecord } from "@/lib/observability/ai-cost/record";
 
 describe("openai-cost pricing", () => {
   it("computes gpt-4o-mini chat cost", () => {

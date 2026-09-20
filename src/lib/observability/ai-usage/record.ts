@@ -1,14 +1,14 @@
 /**
  * Multi-provider AI usage log — `ai_provider_usage_events` covers every provider
  * (gemini/groq/cloudflare/openrouter/openai) going forward. The legacy
- * `openai_usage_events` table (see src/lib/observability/openai-cost) is left
+ * `openai_usage_events` table (see src/lib/observability/ai-cost) is left
  * untouched for backward-compatible dashboard continuity and keeps recording
  * OpenAI calls independently when OpenAI is enabled.
  */
 
 import { createAdminServerClient } from "@/lib/supabase";
 import { asJsonObject } from "@/types/json";
-import { hashPrompt } from "@/lib/observability/openai-cost/token-estimate";
+import { hashPrompt } from "@/lib/observability/ai-cost/token-estimate";
 import type { AiProviderId } from "@/lib/ai/providers/types";
 
 export type AiUsageEndpoint =

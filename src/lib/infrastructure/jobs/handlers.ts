@@ -533,4 +533,9 @@ export const JOB_HANDLERS = new Map<JobType, JobHandler>([
   ["dam_analyze", damAnalyze],
   ["analytics_aggregate", analyticsAggregate],
   ["event_cluster", eventCluster],
+  ["search_demand_engine", async () => {
+     const { runSearchDemandEngine } = await import("@/lib/news/ai/search-demand-sync");
+     const result = await runSearchDemandEngine();
+     return { ok: true, result };
+  }],
 ]);

@@ -7,8 +7,8 @@ import {
   buildUsageRecord,
   logOpenAiUsage,
   parseEmbeddingUsage,
-} from "@/lib/observability/openai-cost";
-import type { OpenAiCallContext } from "@/lib/observability/openai-cost";
+} from "@/lib/observability/ai-cost";
+import type { OpenAiCallContext } from "@/lib/observability/ai-cost";
 import {
   CLOUDFLARE_EMBEDDING_DIMENSIONS,
   isCloudflareEmbeddingsConfigured,

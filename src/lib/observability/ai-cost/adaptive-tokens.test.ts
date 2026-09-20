@@ -4,7 +4,7 @@ import {
   classifyEditorialTier,
   editorialMaxTokens,
   translationMaxTokens,
-} from "@/lib/observability/openai-cost/adaptive-tokens";
+} from "@/lib/observability/ai-cost/adaptive-tokens";
 import { buildOptimizedFactPack } from "@/lib/news/ai/optimized-fact-pack";
 import type { NewsEventRow, NewsSignalRow } from "@/lib/types/newsroom";
 

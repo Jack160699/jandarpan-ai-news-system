@@ -7,8 +7,8 @@ import {
   logOpenAiUsage,
   parseChatCompletionUsage,
   parseEmbeddingUsage,
-} from "@/lib/observability/openai-cost";
-import type { OpenAiCallContext } from "@/lib/observability/openai-cost";
+} from "@/lib/observability/ai-cost";
+import type { OpenAiCallContext } from "@/lib/observability/ai-cost";
 
 export function recordDirectChatCompletion(input: {
   operation: string;

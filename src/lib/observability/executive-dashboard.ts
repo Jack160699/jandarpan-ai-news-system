@@ -7,8 +7,8 @@ import {
   getAiFinancialDashboard,
   getOpenAiUsageDashboard,
   type MoneyAmount,
-} from "@/lib/observability/openai-cost";
-import { getExchangeRate, formatDualCurrency } from "@/lib/observability/openai-cost/currency";
+} from "@/lib/observability/ai-cost";
+import { getExchangeRate, formatDualCurrency } from "@/lib/observability/ai-cost/currency";
 import { getQueueAnalyticsDashboard } from "@/lib/observability/queue-analytics";
 
 export type ExecutiveDashboard = {

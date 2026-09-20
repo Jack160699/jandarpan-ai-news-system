@@ -121,6 +121,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
   articleType?: ArticleType | null;
   evidenceSufficient?: boolean;
   repairContext?: { attempt: number; failureCodes: string[]; previousWords?: number; minWords?: number; targetWords?: number; } | null;
+  searchDemandContext?: string | null;
 }): string {
   const lang = input.language === "en" ? "en" : "hi";
   const articleType = input.articleType ?? "standard_report";
@@ -168,6 +169,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
     correctionBlock,
     structureBlock,
     ATTRIBUTION_RULES[lang],
+    input.searchDemandContext ? `SEARCH DEMAND CONTEXT: ${input.searchDemandContext} (Integrate naturally if relevant to facts)` : "",
     "Output MUST be valid JSON only:",
     "{",
     '  "headline": string,',

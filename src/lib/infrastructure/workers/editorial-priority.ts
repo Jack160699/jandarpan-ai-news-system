@@ -5,13 +5,14 @@
  */
 
 import { geoFromRecord } from "@/lib/regional/geo-tagging";
-import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
+import { scoreSearchOpportunity, type SearchOpportunity } from "@/lib/news/search-demand";
 import type { NewsEventRow } from "@/lib/types/newsroom";
 
 export type EditorialCandidateContext = {
   recentDistrictCounts?: Record<string, number>;
   recentCategoryCounts?: Record<string, number>;
   nowMs?: number;
+  searchOpportunities?: SearchOpportunity[];
 };
 
 const LIVE_BOOST = 1_000;
@@ -35,14 +36,18 @@ export function scoreEditorialCandidate(
 
   score += event.urgency_score * 25;
 
-  const regional = scoreRegionalTopic({
-    headline: event.canonical_title,
-    summary: event.event_summary,
-    region: event.region,
-    category: event.category,
-    geo: geoFromRecord(event),
-  });
-  score += Math.round(regional.score * 100);
+  // Use Search Demand Engine to score the topic, replacing legacy regional scoring
+  const searchDemand = scoreSearchOpportunity(
+    {
+      id: event.id,
+      category: event.category ?? "general",
+      region: event.region ?? "unknown",
+      urgencyScore: event.urgency_score ?? 0,
+    },
+    context?.searchOpportunities ?? []
+  );
+  
+  score += Math.round(searchDemand.score * 100);
 
   const ageMs = Math.max(0, nowMs - new Date(event.created_at).getTime());
   const ageHours = ageMs / 3_600_000;

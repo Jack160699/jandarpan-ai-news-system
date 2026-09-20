@@ -1,5 +1,5 @@
 import type { EditorAiAction } from "@/lib/editorial-editor/types";
-import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
+import { recordDirectChatCompletion } from "@/lib/observability/ai-cost";
 
 type AiInput = {
   action: EditorAiAction;

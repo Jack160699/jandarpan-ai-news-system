@@ -75,7 +75,7 @@ export async function listAdminArticles(
       .from("generated_articles")
       .select(GENERATED_SELECT, { count: "exact" })
       .order("created_at", { ascending: false })
-      .limit(500);
+      .range((page - 1) * pageSize, page * pageSize - 1);
 
     if (filters.workflowStatus && filters.workflowStatus !== "all") {
       q = q.eq("workflow_status", filters.workflowStatus);
@@ -152,7 +152,7 @@ export async function listAdminArticles(
       .from("platform_articles")
       .select(PLATFORM_SELECT, { count: "exact" })
       .order("published_at", { ascending: false })
-      .limit(300);
+      .range((page - 1) * pageSize, page * pageSize - 1);
 
     if (filters.district && filters.district !== "all") {
       pq = pq.eq("district_slug", filters.district);

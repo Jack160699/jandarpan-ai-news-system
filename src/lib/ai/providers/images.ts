@@ -27,8 +27,8 @@ import type { AiProviderId, ClassifiedAiError } from "@/lib/ai/providers/types";
 import {
   buildUsageRecord,
   logOpenAiUsage,
-} from "@/lib/observability/openai-cost";
-import type { OpenAiCallContext } from "@/lib/observability/openai-cost";
+} from "@/lib/observability/ai-cost";
+import type { OpenAiCallContext } from "@/lib/observability/ai-cost";
 
 const OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations";
 

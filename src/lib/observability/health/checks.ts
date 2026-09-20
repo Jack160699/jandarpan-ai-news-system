@@ -104,29 +104,45 @@ export async function checkSupabase(): Promise<HealthCheckResult> {
   });
 }
 
-export async function checkOpenAI(): Promise<HealthCheckResult> {
-  return timed("openai", "AI providers", async () => {
+export async function checkAIProviders(): Promise<HealthCheckResult> {
+  return timed("ai_providers", "AI Providers (CodeCraft / OpenAI)", async () => {
     const summary = getAiProviderHealthSummary();
     const openai = summary.providers.find((p) => p.provider === "openai");
-    const unhealthy = openai && !openai.healthy;
-    if (!summary.openaiConfigured && !summary.openrouterConfigured) {
+    const codecraft = summary.providers.find((p) => p.provider === "codecraft");
+    
+    const isCodeCraftHealthy = codecraft?.healthy;
+    const isOpenAiHealthy = openai?.healthy;
+    const isCodeCraftConfigured = summary.codecraftConfigured;
+
+    if (!isCodeCraftConfigured && !summary.openaiConfigured && !summary.openrouterConfigured) {
       return {
         ok: summary.localEnrichEnabled,
         degraded: true,
         message: summary.localEnrichEnabled
-          ? "No cloud AI keys — local enrich only"
+          ? "No cloud AI keys (CodeCraft/OpenAI/OpenRouter) — local enrich only"
           : "No AI providers configured",
         details: summary,
       };
     }
-    if (unhealthy) {
+    
+    if (isCodeCraftConfigured && !isCodeCraftHealthy) {
       return {
         ok: false,
         degraded: true,
-        message: openai?.lastError ?? "openai_unhealthy",
+        message: codecraft?.lastError ?? "codecraft_unhealthy",
         details: summary,
       };
     }
+
+    if (!isOpenAiHealthy && summary.openaiConfigured) {
+      return {
+        ok: true,
+        degraded: true,
+        message: openai?.lastError ?? "openai_unhealthy_but_fallback_exists",
+        details: summary,
+      };
+    }
+    
     return { ok: true, details: summary };
   });
 }
@@ -424,7 +440,7 @@ export async function checkHomepageReadable(): Promise<HealthCheckResult> {
 export async function runAllHealthChecks(): Promise<HealthCheckResult[]> {
   return Promise.all([
     checkSupabase(),
-    checkOpenAI(),
+    checkAIProviders(),
     checkCronWorkers(),
     checkRealtime(),
     checkStorage(),

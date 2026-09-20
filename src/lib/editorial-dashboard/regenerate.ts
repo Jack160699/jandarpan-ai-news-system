@@ -16,7 +16,7 @@ import type {
   NewsEventRow,
   NewsSignalRow,
 } from "@/lib/types/newsroom";
-import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
+import { recordDirectChatCompletion } from "@/lib/observability/ai-cost";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 const TIMEOUT_MS = 28_000;

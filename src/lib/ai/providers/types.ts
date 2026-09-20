@@ -1,4 +1,5 @@
 export type AiProviderId =
+  | "codecraft"
   | "openai"
   | "openrouter"
   | "gemini"

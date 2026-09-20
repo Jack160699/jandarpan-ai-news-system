@@ -4,13 +4,13 @@
 
 import { createAdminServerClient } from "@/lib/supabase";
 import { asJsonObject } from "@/types/json";
-import { estimateCostUsd } from "@/lib/observability/openai-cost/pricing";
+import { estimateCostUsd } from "@/lib/observability/ai-cost/pricing";
 import type {
   OpenAiCallContext,
   OpenAiEndpoint,
   OpenAiUsageRecord,
-} from "@/lib/observability/openai-cost/types";
-import { hashPrompt } from "@/lib/observability/openai-cost/token-estimate";
+} from "@/lib/observability/ai-cost/types";
+import { hashPrompt } from "@/lib/observability/ai-cost/token-estimate";
 
 export async function recordOpenAiUsage(
   record: OpenAiUsageRecord

@@ -11,7 +11,7 @@ import {
   resolveTranslationUrgencyScore,
   TRANSLATION_URGENCY_DEFAULT,
 } from "@/lib/i18n/multilingual/translation-contract";
-import { adaptiveTranslationBodySlice } from "@/lib/observability/openai-cost/adaptive-tokens";
+import { adaptiveTranslationBodySlice } from "@/lib/observability/ai-cost/adaptive-tokens";
 
 describe("resolveTranslationUrgencyScore", () => {
   it("prefers payload then event then default 50 (not a fake zero)", () => {

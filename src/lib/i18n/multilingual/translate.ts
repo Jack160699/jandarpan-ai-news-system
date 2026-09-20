@@ -30,12 +30,12 @@ import {
   adaptiveTranslationBodySlice,
   classifyTranslationBodyTierFromText,
   translationMaxTokens,
-} from "@/lib/observability/openai-cost/adaptive-tokens";
+} from "@/lib/observability/ai-cost/adaptive-tokens";
 import {
   lookupPromptCache,
   storePromptCache,
-} from "@/lib/observability/openai-cost/prompt-cache";
-import { buildUsageRecord } from "@/lib/observability/openai-cost/record";
+} from "@/lib/observability/ai-cost/prompt-cache";
+import { buildUsageRecord } from "@/lib/observability/ai-cost/record";
 
 export const DEFAULT_TRANSLATION_TARGETS: NewsroomLanguage[] = [
   "en",

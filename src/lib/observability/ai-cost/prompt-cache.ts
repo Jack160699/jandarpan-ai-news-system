@@ -4,8 +4,8 @@
 
 import { createAdminServerClient } from "@/lib/supabase";
 import { asJsonObject } from "@/types/json";
-import { hashPrompt } from "@/lib/observability/openai-cost/token-estimate";
-import { logOpenAiUsage, buildUsageRecord } from "@/lib/observability/openai-cost/record";
+import { hashPrompt } from "@/lib/observability/ai-cost/token-estimate";
+import { logOpenAiUsage, buildUsageRecord } from "@/lib/observability/ai-cost/record";
 
 export const PROMPT_CACHE_VERSION =
   process.env.OPENAI_PROMPT_CACHE_VERSION?.trim() || "1";

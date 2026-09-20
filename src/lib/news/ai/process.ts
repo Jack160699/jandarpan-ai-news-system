@@ -28,7 +28,7 @@ import { createAdminClient } from "@/lib/supabase";
 
 import {
   enrichMaxTokens,
-} from "@/lib/observability/openai-cost/adaptive-tokens";
+} from "@/lib/observability/ai-cost/adaptive-tokens";
 import {
   claimAiQueueBatch,
   releaseAiQueueItems,

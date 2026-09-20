@@ -3,7 +3,7 @@
  */
 
 import type { DamFaceGroup, DamMediaType } from "@/lib/dam/types";
-import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
+import { recordDirectChatCompletion } from "@/lib/observability/ai-cost";
 
 export type DamAiAnalysis = {
   tags: string[];

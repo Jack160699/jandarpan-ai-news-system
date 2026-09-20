@@ -4,8 +4,8 @@
 
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import type { HomeSectionId } from "@/lib/homepage/types";
-import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
-import { shortsMaxTokens } from "@/lib/observability/openai-cost/adaptive-tokens";
+import { recordDirectChatCompletion } from "@/lib/observability/ai-cost";
+import { shortsMaxTokens } from "@/lib/observability/ai-cost/adaptive-tokens";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 

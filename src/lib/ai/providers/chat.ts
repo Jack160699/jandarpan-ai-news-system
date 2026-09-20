@@ -18,17 +18,18 @@ import { withTransientAiRetry } from "@/lib/ai/providers/retry";
 import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib/ai/providers/quota";
 import type { QuotaReservation } from "@/lib/ai/providers/quota";
 import { isGeminiConfigured, requestGeminiChat } from "@/lib/ai/providers/gemini";
+import { isCodeCraftConfigured, requestCodeCraftChat } from "@/lib/ai/providers/codecraft";
 import { resolveChatChain } from "@/lib/ai/providers/router";
 import {
   buildUsageRecord,
   recordOpenAiUsage,
   parseChatCompletionUsage,
-} from "@/lib/observability/openai-cost";
+} from "@/lib/observability/ai-cost";
 import { buildAiUsageRecord, recordAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import {
   lookupPromptCache,
   storePromptCache,
-} from "@/lib/observability/openai-cost/prompt-cache";
+} from "@/lib/observability/ai-cost/prompt-cache";
 import { allowsPromptCache } from "@/lib/ai/providers/chat-cache-policy";
 import type {
   AiProviderId,
@@ -482,6 +483,10 @@ export async function requestChatCompletion(
 
   const attempts: Array<{ id: AiProviderId; model: string | null; invoke: () => Promise<ChatCompletionResult> }> = [];
   for (const providerId of chain) {
+    if (providerId === "codecraft") {
+      if (isCodeCraftConfigured()) attempts.push({ id: "codecraft", model: null, invoke: () => requestCodeCraftChat(request) });
+      continue;
+    }
     if (providerId === "gemini") {
       if (isGeminiConfigured()) attempts.push({ id: "gemini", model: null, invoke: () => requestGeminiChat(request) });
       continue;
@@ -549,6 +554,7 @@ export async function requestChatCompletion(
 
 export function isAnyChatProviderConfigured(): boolean {
   return (
+    isCodeCraftConfigured() ||
     isGeminiConfigured() ||
     Object.keys(getRestProviderConfigs("editorial_generate")).length > 0
   );

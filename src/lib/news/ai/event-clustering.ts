@@ -26,7 +26,7 @@ import {
 import { mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { logNewsroom } from "@/lib/newsroom/logger";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
-import { recordDirectEmbedding } from "@/lib/observability/openai-cost";
+import { recordDirectEmbedding } from "@/lib/observability/ai-cost";
 import {
   isCloudflareEmbeddingsConfigured,
   requestCloudflareEmbeddings,

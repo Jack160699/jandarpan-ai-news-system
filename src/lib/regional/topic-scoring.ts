@@ -14,16 +14,16 @@ import {
 } from "@/lib/regional/geo-tagging";
 
 const LOCAL_TOPIC_RE =
-  /\b(gram panchayat|panchayat|collector|dm\b|mla\b|mp\b|naxal|naxalite|police|court|hospital|flood|crop|farmer|kisan|mandi|nrega|scheme|छत्तीसगढ|रायपुर|बस्तर|जिला|पंचायत|किसान)\b/i;
+  /\b(gram panchayat|panchayat|collector|dm\b|mla\b|mp\b|police|court|hospital|flood|crop|farmer|kisan|mandi|nrega|scheme|district|local|city|state)\b/i;
 
-const CG_POLICY_RE =
-  /\b(cm\b|chief minister|cabinet|assembly|vidhan sabha|भूपेश|बघेल|मंत्री|विधानसभा)\b/i;
+const STATE_POLICY_RE =
+  /\b(cm\b|chief minister|cabinet|assembly|vidhan sabha|minister|government|policy)\b/i;
 
 export type RegionalTopicScore = {
   score: number;
   localRelevance: number;
   districtBoost: number;
-  cgStateBoost: number;
+  stateBoost: number;
   topicSignals: string[];
 };
 
@@ -55,7 +55,7 @@ export function scoreRegionalTopic(input: {
 
   if (geo.is_chhattisgarh) {
     localRelevance += 0.28;
-    topicSignals.push("cg_state");
+    topicSignals.push("state_level");
   }
   if (geo.primary_district) {
     localRelevance += 0.18;
@@ -65,9 +65,9 @@ export function scoreRegionalTopic(input: {
     localRelevance += 0.14;
     topicSignals.push("hyperlocal_topic");
   }
-  if (CG_POLICY_RE.test(blob)) {
+  if (STATE_POLICY_RE.test(blob)) {
     localRelevance += 0.1;
-    topicSignals.push("cg_policy");
+    topicSignals.push("state_policy");
   }
   if (input.category?.toLowerCase() === "local") {
     localRelevance += 0.12;
@@ -91,11 +91,11 @@ export function scoreRegionalTopic(input: {
     topicSignals.push("home_district_match");
   }
 
-  const cgStateBoost = geo.is_chhattisgarh ? 12 : 0;
+  const stateBoost = geo.is_chhattisgarh ? 12 : 0;
   const score = Math.min(
     100,
     Math.round(
-      (localRelevance * 40 + districtBoost + cgStateBoost + geo.confidence * 8) *
+      (localRelevance * 40 + districtBoost + stateBoost + geo.confidence * 8) *
         10
     ) / 10
   );
@@ -104,7 +104,7 @@ export function scoreRegionalTopic(input: {
     score,
     localRelevance,
     districtBoost,
-    cgStateBoost,
+    stateBoost,
     topicSignals,
   };
 }

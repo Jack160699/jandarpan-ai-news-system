@@ -8,7 +8,7 @@ import {
   type NewsroomLanguage,
 } from "@/lib/i18n/languages";
 import type { ShortVoiceMeta } from "@/lib/news/shorts/types";
-import { recordDirectTts } from "@/lib/observability/openai-cost";
+import { recordDirectTts } from "@/lib/observability/ai-cost";
 
 const OPENAI_SPEECH_URL = "https://api.openai.com/v1/audio/speech";
 

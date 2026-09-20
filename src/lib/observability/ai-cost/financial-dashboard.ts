@@ -7,8 +7,8 @@ import {
   getExchangeRate,
   toDualCurrency,
   type DualCurrency,
-} from "@/lib/observability/openai-cost/currency";
-import { getOpenAiUsageDashboard } from "@/lib/observability/openai-cost/dashboard";
+} from "@/lib/observability/ai-cost/currency";
+import { getOpenAiUsageDashboard } from "@/lib/observability/ai-cost/dashboard";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
 import { countPendingEditorialImages } from "@/lib/news/ai/generate-editorial-image";
 

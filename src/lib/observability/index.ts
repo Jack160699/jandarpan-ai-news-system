@@ -62,11 +62,11 @@ export {
   getOpenAiUsageDashboard,
   getAiFinancialDashboard,
   OPENAI_CALL_SITES,
-} from "@/lib/observability/openai-cost";
+} from "@/lib/observability/ai-cost";
 export type {
   OpenAiUsageDashboard,
   AiFinancialDashboard,
   MoneyAmount,
-} from "@/lib/observability/openai-cost";
+} from "@/lib/observability/ai-cost";
 export { getExecutiveDashboard } from "@/lib/observability/executive-dashboard";
 export type { ExecutiveDashboard } from "@/lib/observability/executive-dashboard";

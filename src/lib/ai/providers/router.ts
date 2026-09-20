@@ -6,12 +6,10 @@
 
 import type { AiProviderId } from "@/lib/ai/providers/types";
 
-const WRITER_CHAIN: AiProviderId[] = ["gemini", "groq", "openrouter", "openai"];
-// Independent review must not reuse the provider that generated the draft;
-// starting the chain at groq (vs. the writer chain's gemini) keeps writer
-// and reviewer on different providers in the common case.
-const REVIEWER_CHAIN: AiProviderId[] = ["groq", "gemini", "openrouter", "openai"];
-const LIGHTWEIGHT_CHAIN: AiProviderId[] = ["groq", "gemini", "openrouter", "openai"];
+const WRITER_CHAIN: AiProviderId[] = ["codecraft"];
+// Independent review uses CodeCraft.
+const REVIEWER_CHAIN: AiProviderId[] = ["codecraft"];
+const LIGHTWEIGHT_CHAIN: AiProviderId[] = ["codecraft"];
 const EMBEDDING_CHAIN: AiProviderId[] = ["cloudflare", "openai"];
 const IMAGE_CHAIN: AiProviderId[] = ["cloudflare", "openai"];
 
@@ -28,10 +26,6 @@ export function isOpenAiProviderEnabled(): boolean {
   return process.env.AI_PROVIDER_OPENAI_ENABLED === "true";
 }
 
-export function isGeminiOnlyMode(): boolean {
-  return process.env.NEWSROOM_GEMINI_ONLY === "true";
-}
-
 function withOpenAiGate(chain: AiProviderId[]): AiProviderId[] {
   return isOpenAiProviderEnabled()
     ? chain
@@ -40,14 +34,12 @@ function withOpenAiGate(chain: AiProviderId[]): AiProviderId[] {
 
 /** Provider order for a chat-completion-shaped operation (writer, reviewer, translation, repair, lightweight). */
 export function resolveChatChain(operation: string): AiProviderId[] {
-  if (isGeminiOnlyMode()) return ["gemini"];
   const chain = CHAT_OPERATION_CHAINS[operation] ?? WRITER_CHAIN;
   return withOpenAiGate(chain);
 }
 
 /** Provider that should have generated the draft, used to pick a *different* reviewer provider at call time. */
 export function resolveReviewerChain(writerProvider?: AiProviderId): AiProviderId[] {
-  if (isGeminiOnlyMode()) return ["gemini"];
   const chain = withOpenAiGate(REVIEWER_CHAIN);
   if (!writerProvider) return chain;
   const reordered = chain.filter((p) => p !== writerProvider);

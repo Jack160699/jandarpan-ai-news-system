@@ -11,7 +11,8 @@ import {
 } from "@/lib/observability";
 import {
   checkCronWorkers,
-  checkOpenAI,
+  checkCronWorkers,
+  checkAIProviders,
   checkQueues,
   checkRedisCache,
   checkSupabase,
@@ -73,7 +74,7 @@ export async function buildHealthSummary() {
     metricsR,
   ] = await Promise.all([
     timedSource("supabase", () => checkSupabase()),
-    timedSource("openai", () => checkOpenAI()),
+    timedSource("openai", () => checkAIProviders()),
     timedSource("cron_workers", () => checkCronWorkers()),
     timedSource("queues", () => checkQueues()),
     timedSource("redis", () => checkRedisCache()),

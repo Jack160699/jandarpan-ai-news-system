@@ -53,6 +53,7 @@ type ProviderLimits = {
  * real, account-sourced per-model limits actually used in routing.
  */
 const PROVIDER_DEFAULT_LIMITS: Record<AiProviderId, ProviderLimits> = {
+  codecraft: { rpm: 60, tpm: 1_000_000, rpd: 20_000, tpd: 50_000_000, maxConcurrent: 5 },
   gemini: { rpm: 10, tpm: 250_000, rpd: 250, tpd: null, maxConcurrent: 2 },
   groq: { rpm: 28, tpm: 5_000, rpd: 1_000, tpd: 150_000, maxConcurrent: 2 },
   cloudflare: { rpm: 40, tpm: 2_000_000, rpd: 9_000, tpd: 20_000_000, maxConcurrent: 1 },
@@ -164,7 +165,7 @@ function bucketKey(provider: AiProviderId, model: string | null, scope: QuotaSco
  * rather than only the coarser provider-level bucket).
  */
 export function getTrackedQuotaBuckets(): Array<{ provider: AiProviderId; model: string | null }> {
-  const providers: AiProviderId[] = ["gemini", "groq", "cloudflare", "openrouter"];
+  const providers: AiProviderId[] = ["codecraft", "gemini", "groq", "cloudflare", "openrouter"];
   const buckets: Array<{ provider: AiProviderId; model: string | null }> = providers.map((provider) => ({ provider, model: null }));
   for (const provider of providers) {
     for (const model of Object.keys(MODEL_LIMITS[provider] ?? {})) {

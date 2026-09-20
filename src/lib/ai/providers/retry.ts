@@ -2,7 +2,7 @@ import type { ClassifiedAiError } from "@/lib/ai/providers/types";
 import {
   maxRetryAttempts,
   shouldRetryAiError,
-} from "@/lib/observability/openai-cost/retry-policy";
+} from "@/lib/observability/ai-cost/retry-policy";
 
 const BASE_DELAY_MS = 800;
 

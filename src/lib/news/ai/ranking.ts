@@ -169,7 +169,7 @@ function scoreDistrictBoost(
   personalization?: RankingPersonalization
 ): number {
   const topic = scoreRegionalTopicFromArticle(row, personalization?.homeDistrict);
-  return Math.min(16, topic.districtBoost + topic.cgStateBoost * 0.35);
+  return Math.min(16, topic.districtBoost + topic.stateBoost * 0.35);
 }
 
 function scoreSourceTrust(row: GeneratedArticleRow): number {

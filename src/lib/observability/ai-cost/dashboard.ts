@@ -3,8 +3,8 @@
  */
 
 import { createAdminServerClient } from "@/lib/supabase";
-import type { OpenAiUsageDashboard } from "@/lib/observability/openai-cost/types";
-import { detectOptimizationOpportunities } from "@/lib/observability/openai-cost/optimization";
+import type { OpenAiUsageDashboard } from "@/lib/observability/ai-cost/types";
+import { detectOptimizationOpportunities } from "@/lib/observability/ai-cost/optimization";
 
 type UsageRow = {
   id: string;

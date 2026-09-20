@@ -1,4 +1,4 @@
-﻿export function parseRobustLlmResponse(content: string): LlmEditorialResponse | null {
+export function parseRobustLlmResponse(content: string): LlmEditorialResponse | null {
   let cleaned = content.trim();
   if (cleaned.startsWith("```")) {
     const firstNewline = cleaned.indexOf("\n");
@@ -88,9 +88,9 @@ import {
 import {
   classifyEditorialTier,
   editorialMaxTokens,
-} from "@/lib/observability/openai-cost/adaptive-tokens";
-import { shouldRunEditorialRepair } from "@/lib/observability/openai-cost/repair-policy";
-import { logOpenAiUsage, buildUsageRecord } from "@/lib/observability/openai-cost/record";
+} from "@/lib/observability/ai-cost/adaptive-tokens";
+import { shouldRunEditorialRepair } from "@/lib/observability/ai-cost/repair-policy";
+import { logOpenAiUsage, buildUsageRecord } from "@/lib/observability/ai-cost/record";
 import {
   initialHeroPlaceholder,
   isEditoriallyEligibleSourceImageUrl,
@@ -389,7 +389,8 @@ async function callEditorialLlm(
   articleType: ArticleType,
   evidenceSufficient: boolean,
   repairContext?: { attempt: number; failureCodes: string[]; previousWords?: number; minWords?: number; targetWords?: number; },
-  structuredFactPack?: FactPack | null
+  structuredFactPack?: FactPack | null,
+  searchDemandContext?: string | null
 ): Promise<{ response: LlmEditorialResponse; provider: AiProviderId; premium: boolean; premiumReason: string | null } | null> {
   const deskTemplate = resolveDeskTemplateFromCategory(event.category, {
     region: event.region,
@@ -404,26 +405,17 @@ async function callEditorialLlm(
     articleType,
     evidenceSufficient,
     repairContext,
+    searchDemandContext,
   });
 
-  // Explicit override only â€” do not force an OpenAI-shaped default (e.g.
-  // "gpt-4o-mini") onto gemini/groq/openrouter; each provider resolves its
-  // own operation-appropriate default (and, for Gemini, premium-vs-lite)
-  // model when no override is given. See translate.ts / editorial-repair.ts
-  // for the same pattern.
-  const modelOverride =
-    process.env.NEWSROOM_EDITORIAL_MODEL?.trim() ||
-    process.env.OPENAI_MODEL?.trim() ||
-    undefined;
+  // Use configured CodeCraft models for editorial generation and repair.
+  // Do not fall back to OPENAI_MODEL as it might be incorrectly routed.
+  const modelOverride = repairContext
+    ? process.env.CODECRAFT_REPAIR_MODEL?.trim() || process.env.NEWSROOM_EDITORIAL_MODEL?.trim()
+    : process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || process.env.NEWSROOM_EDITORIAL_MODEL?.trim();
 
   const isBreaking = (event.urgency_score ?? 0) >= BREAKING_URGENCY_THRESHOLD;
 
-  // Premium (gemini-3.6-flash) escalation â€” reserved for sensitive
-  // categories, quality-retry escalation, and breaking news, per the
-  // free-first routing brief. Never the default; every escalation carries
-  // an explicit, persisted reason (see requestGeminiChat's premiumReason
-  // handling and the editorial_metadata.premium_editorial audit trail
-  // below in prepareCandidate()).
   let premiumReason: string | null = null;
   if (structuredFactPack?.sensitiveCategory) {
     premiumReason = `sensitive_category:${structuredFactPack.sensitiveCategory}`;
@@ -432,10 +424,6 @@ async function callEditorialLlm(
   } else if (isBreaking) {
     premiumReason = "breaking_news";
   }
-  // Free-capacity mode must prefer the separately metered Flash-Lite pool.
-  // Premium escalation was routing every urgent story into an exhausted
-  // Gemini model even while Flash-Lite remained available for generation.
-  if (isFreeCapacityMode()) premiumReason = null;
   const premium = premiumReason !== null;
 
   const tier = classifyEditorialTier({
@@ -471,7 +459,12 @@ async function callEditorialLlm(
     context: { worker: "editorial_generate", eventId: event.id, articleType },
   });
 
-  if (!result.ok) return null;
+  if (!result.ok) {
+    if (result.error.code === "quota_exhausted") {
+      throw new Error("DEFERRED_QUOTA");
+    }
+    return null;
+  }
 
   try {
     return {
@@ -1444,12 +1437,22 @@ async function prepareCandidate(
       eventId: event.id,
       message: err instanceof Error ? err.message : "LLM failed",
     });
+    if (err instanceof Error && err.message === "DEFERRED_QUOTA") {
+      return {
+        candidate: null,
+        skipped: false,
+        reason: "DEFERRED_QUOTA",
+      };
+    }
   }
 
   if (!draft) {
-    draft = buildFallbackDraftFromFactPack({ event, signals, language });
-    usedFallback = true;
-    logEditorial("fallback_draft_used", { eventId: event.id });
+    logEditorial("generation_failed", { eventId: event.id, reason: "exhausted_retries" });
+    return {
+      candidate: null,
+      skipped: false,
+      reason: "llm_generation_failed",
+    };
   } else {
     draft = applyEditorialEnhancements(draft, event);
   }
@@ -1473,7 +1476,7 @@ async function prepareCandidate(
   });
 
   // Bounded depth retry â€” regenerate when body too short / equals excerpt (never infinite)
-  while ((!quality.depth_quality?.ok || !quality.passed) && depthRetries < 2 && !usedFallback) {
+  while ((!quality.depth_quality?.ok || !quality.passed) && depthRetries < 1 && !usedFallback) {
     depthRetries += 1;
     logEditorial("depth_retry", {
       eventId: event.id,
@@ -1741,8 +1744,7 @@ export async function previewEditorialDraftFromEvent(
   }
 
   if (!draft) {
-    draft = buildFallbackDraftFromFactPack({ event, signals, language });
-    usedFallback = true;
+    return { draft: null, usedFallback: false, reason: "llm_generation_failed" };
   } else {
     draft = applyEditorialEnhancements(draft, event);
   }
@@ -2310,105 +2312,8 @@ export async function generateEditorialsFromEvents(options?: {
     }
   }
 
-  if (generated === 0 && failedCandidates.length > 0) {
-    const rescuable = failedCandidates
-      // A failed independent review or fact-pack claim check is a hard
-      // block â€” batch rescue must not bypass either just because the
-      // underlying quality score looks fine.
-      .filter((c) => !c.independentReview || c.independentReview.passed)
-      .filter((c) => !c.factPackValidationIssues?.length)
-      .filter((c) => isSafeBatchRescueCandidate(c.quality))
-      .sort((a, b) => b.quality.ai_confidence - a.quality.ai_confidence)
-      .slice(0, BATCH_RESCUE_COUNT);
-
-    for (const candidate of rescuable) {
-      const { factPackText, sourceTexts } = buildFactPack(
-        candidate.event,
-        candidate.signals,
-        candidate.articleType
-      );
-      const quality = evaluateDraft({
-        draft: candidate.draft,
-        event: candidate.event,
-        signals: candidate.signals,
-        factPackText,
-        sourceTexts,
-        existingHeadlines,
-        articleType: candidate.articleType,
-        evidenceSufficient: candidate.articleTypeClassification.evidenceSufficient,
-      });
-
-      if (!isSafeBatchRescueCandidate(quality)) continue;
-
-      const saved = await persistGeneratedArticle({
-        event: candidate.event,
-        draft: candidate.draft,
-        quality,
-        signals: candidate.signals,
-        attributions: candidate.attributions,
-        repaired: candidate.repaired,
-        usedFallback: candidate.usedFallback,
-        batchRescue: true,
-        intelligenceV2: candidate.intelligenceV2,
-        articleType: candidate.articleType,
-        articleTypeClassification: candidate.articleTypeClassification,
-        depthRetries: candidate.depthRetries,
-        humanQualityMeta: candidate.humanQualityMeta,
-        freshness: candidate.freshness,
-        independentReview: candidate.independentReview,
-        premiumEditorial: candidate.premiumEditorial,
-      });
-
-      if (saved.ok && saved.article) {
-        logArticleGenerationPhase("article_generation_completed", {
-          eventId: candidate.event.id,
-          articleId: saved.article.id,
-          headline: saved.article.headline,
-          confidence: quality.ai_confidence,
-          mode: "batch_rescue",
-        });
-        generated++;
-        if (saved.article.published_at) published++;
-        rejected = Math.max(0, rejected - 1);
-        const idx = results.findIndex((r) => r.eventId === candidate.event.id);
-        const entry = {
-          eventId: candidate.event.id,
-          ok: true,
-          published: Boolean(saved.article.published_at),
-          repaired: candidate.repaired,
-          reason: "batch_rescue_top_scorer",
-          ...qualityResultFields(quality),
-          rejectionReasons: [] as string[],
-        };
-        if (idx >= 0) results[idx] = entry;
-        else results.push(entry);
-        existingHeadlines.push(candidate.draft.headline);
-        if (
-          !lastPublishedStory ||
-          quality.ai_confidence > lastPublishedStory.confidence
-        ) {
-          lastPublishedStory = {
-            id: saved.article.id,
-            title: saved.article.headline,
-            confidence: quality.ai_confidence,
-          };
-        }
-      }
-      if (!saved.ok) {
-        logArticleGenerationPhase("article_generation_failed", {
-          eventId: candidate.event.id,
-          reason: saved.reason ?? "batch_rescue_persist_failed",
-          skipped: saved.skipped,
-          mode: "batch_rescue",
-        });
-      }
-    }
-
-    logEditorial("batch_rescue", {
-      rescued: generated,
-      candidates: rescuable.length,
-    });
-  }
+  // Batch rescue has been removed to enforce the strict CodeCraft generation rules.
+  // If an article fails generation, it will not be aggressively rescued.
 
   const avgConfidence =
     confidenceScores.length > 0

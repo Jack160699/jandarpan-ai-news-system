@@ -228,6 +228,7 @@ export function getAiProviderHealthSnapshots(): AiProviderHealthSnapshot[] {
 export function getAiProviderHealthSummary(): {
   openaiConfigured: boolean;
   openrouterConfigured: boolean;
+  codecraftConfigured: boolean;
   localEnrichEnabled: boolean;
   OPENAI_PROVIDER_STATUS: OpenAiProviderStatus;
   providers: AiProviderHealthSnapshot[];
@@ -248,6 +249,7 @@ export function getAiProviderHealthSummary(): {
   return {
     openaiConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
     openrouterConfigured,
+    codecraftConfigured: Boolean(process.env.CODECRAFT_API_KEY?.trim()),
     localEnrichEnabled,
     OPENAI_PROVIDER_STATUS,
     providers: getAiProviderHealthSnapshots(),

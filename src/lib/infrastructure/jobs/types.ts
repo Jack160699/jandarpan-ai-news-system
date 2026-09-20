@@ -24,7 +24,8 @@ export type JobType =
   | "translate_article"
   | "dam_analyze"
   | "analytics_aggregate"
-  | "event_cluster";
+  | "event_cluster"
+  | "search_demand_engine";
 
 export type WorkerJobRow = {
   id: string;
@@ -82,4 +83,5 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   dam_analyze: "DAM vision AI analysis",
   analytics_aggregate: "Analytics rollup snapshot",
   event_cluster: "Signal→event clustering",
+  search_demand_engine: "Search Demand Engine Sync",
 };

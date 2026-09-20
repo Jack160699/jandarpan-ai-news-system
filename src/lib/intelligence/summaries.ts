@@ -2,7 +2,7 @@
  * Automated editorial summaries (extractive — no LLM required)
  */
 
-import { recordDirectChatCompletion } from "@/lib/observability/openai-cost";
+import { recordDirectChatCompletion } from "@/lib/observability/ai-cost";
 
 export function buildAutomatedSummary(input: {
   headline: string;

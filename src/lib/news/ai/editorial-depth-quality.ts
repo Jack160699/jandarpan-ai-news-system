@@ -67,7 +67,7 @@ const HINDI_NOISE_RE =
 const PADDING_PHRASES_RE =
   /(इससे क्षेत्रीय विकास को नई दिशा मिलेगी|यह एक महत्वपूर्ण कदम है जो|निष्कर्षतः कहा जा सकता है कि|overall this shows that|in conclusion,? it is clear)/i;
 
-const MAX_GENERATION_DEPTH_RETRIES = 2;
+const MAX_GENERATION_DEPTH_RETRIES = 1;
 
 export function maxEditorialDepthRetries(): number {
   const raw = process.env.EDITORIAL_DEPTH_MAX_RETRIES?.trim();

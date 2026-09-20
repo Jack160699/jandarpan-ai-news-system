@@ -24,7 +24,7 @@ import {
 } from "@/lib/ai/providers/quota";
 import { buildAiUsageRecord, logAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import type { AiUsageContext } from "@/lib/observability/ai-usage/record";
-import { estimateTokensFromText } from "@/lib/observability/openai-cost/token-estimate";
+import { estimateTokensFromText } from "@/lib/observability/ai-cost/token-estimate";
 import type { ClassifiedAiError } from "@/lib/ai/providers/types";
 
 const CLOUDFLARE_ACCOUNTS_URL = "https://api.cloudflare.com/client/v4/accounts";

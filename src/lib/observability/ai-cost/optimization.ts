@@ -2,7 +2,7 @@
  * Cost optimization opportunity detection from usage patterns
  */
 
-import type { OpenAiUsageDashboard } from "@/lib/observability/openai-cost/types";
+import type { OpenAiUsageDashboard } from "@/lib/observability/ai-cost/types";
 
 type UsageRow = {
   operation: string;

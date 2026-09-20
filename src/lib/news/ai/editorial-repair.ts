@@ -14,7 +14,7 @@ import {
 import { scoreHeadlineQuality } from "@/lib/news/ai/editorial-intelligence";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
 import { isAnyChatProviderConfigured, requestChatCompletion } from "@/lib/ai/providers";
-import { repairMaxTokens } from "@/lib/observability/openai-cost/adaptive-tokens";
+import { repairMaxTokens } from "@/lib/observability/ai-cost/adaptive-tokens";
 
 const REPAIR_TIMEOUT_MS = 18_000;
 

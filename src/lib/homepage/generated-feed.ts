@@ -257,39 +257,34 @@ export function buildGeneratedHomepageFeed(
   const displayLanguage = options?.displayLanguage ?? "hi";
   if (!rows.length) return null;
 
-  // A news homepage must never disguise an archive as a live feed. Keep the
-  // latest surface within 24h and require a genuinely fresh (<6h) lead.
-  const freshRows = rows.filter(
-    (row) => hoursSince(row.published_at ?? row.created_at) <= 24
-  );
-  if (
-    !freshRows.length ||
-    !freshRows.some(
-      (row) => hoursSince(row.published_at ?? row.created_at) <= 6
-    )
-  ) {
-    homeDebug("buildGeneratedHomepageFeed: no fresh lead", {
+  // We no longer strictly hide the homepage if articles are > 24h old.
+  // We still prefer fresh ones, but will display older articles if no fresh ones exist,
+  // preventing an empty homepage state.
+  const validRows = rows.slice(0, 120); // bounded pool
+
+  if (!validRows.length) {
+    homeDebug("buildGeneratedHomepageFeed: no articles available", {
       displayLanguage,
       poolSize: rows.length,
     });
     return null;
   }
 
-  const rankedOutputs = rankArticlesForHomepage(freshRows, {
+  const rankedOutputs = rankArticlesForHomepage(validRows, {
     personalization: options?.personalization,
   });
-  const hyperlocalBundle = buildHyperlocalFeedBundle(freshRows, {
+  const hyperlocalBundle = buildHyperlocalFeedBundle(validRows, {
     maxDistricts: 6,
     displayLanguage,
     homeDistrict: options?.personalization?.homeDistrict ?? null,
   });
-  const localAlerts = buildLocalBreakingAlerts(freshRows, {
+  const localAlerts = buildLocalBreakingAlerts(validRows, {
     cgOnly: true,
     limit: 8,
     homeDistrict: options?.personalization?.homeDistrict ?? null,
   });
   const ranked = rankedOutputs
-    .map((r) =>
+    .map((r: any) =>
       toHomeArticle(
         r.row,
         {
@@ -313,8 +308,8 @@ export function buildGeneratedHomepageFeed(
     return null;
   }
 
-  const pinnedRow = freshRows.find(
-    (r) =>
+  const pinnedRow = rows.find(
+    (r: any) =>
       r.homepage_pin &&
       hoursSince(r.published_at ?? r.created_at) <= 6
   );
@@ -375,8 +370,8 @@ export function buildGeneratedHomepageFeed(
     footerIntelligence: {
       fetchedAt: new Date().toISOString(),
       storyCount: ranked.length,
-      breakingCount: rankedOutputs.filter((r) => r.ranking.isBreaking).length,
-      trendingCount: rankedOutputs.filter((r) => r.ranking.isTrending).length,
+      breakingCount: rankedOutputs.filter((r: any) => r.ranking.isBreaking).length,
+      trendingCount: rankedOutputs.filter((r: any) => r.ranking.isTrending).length,
       avgConfidence,
       trendingSearches: getTrendingSearchesForLanguage(displayLanguage, 6),
     },
