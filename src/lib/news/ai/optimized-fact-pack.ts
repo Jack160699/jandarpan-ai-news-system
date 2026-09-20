@@ -121,7 +121,7 @@ export function buildOptimizedFactPack(
     .filter(Boolean)
     .join("\n\n");
 
-  const sourceTexts = top.map((s) => `${s.title} ${s.raw_content ?? ""}`.trim());
+  const sourceTexts = [factPackText, ...top.map((s) => `${s.title} ${s.raw_content ?? ""}`.trim())];
 
   return {
     factPackText,

@@ -191,6 +191,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
     "}",
     "Factual safety:",
     "- Synthesize ONLY facts in the fact pack. Do NOT invent names, numbers, quotes, outcomes, or on-ground reporting.",
+    "- NEVER invent dates (e.g. day of the month or calendar dates) or numeric statistics. Only mention numbers and dates explicitly stated in the fact pack. If a date is not in the fact pack, refer to it as 'हाल ही में' (recently).",
     "- Never invent quotations. Never infer guilt. Distinguish allegation from confirmation. Preserve uncertainty.",
     "- Attribute claims to sources present in the fact pack. Avoid copying source text excessively.",
     "- No SEO keyword stuffing. No repetitive filler. No template tokens like {{...}} or undefined/null.",
