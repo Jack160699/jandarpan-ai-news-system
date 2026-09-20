@@ -288,12 +288,16 @@ function resolveJobRaceTimeoutMs(
   deadline?: ExecutionDeadline
 ): number {
   const reserveMs = INFRA_CONFIG.workerDeadlineReserveMs;
+  let jobTimeout = job.timeout_ms;
+  if (job.job_type === "editorial_generate") {
+    jobTimeout = 285_000; // Override pending DB jobs which still have 105_000
+  }
   if (deadline) {
     const budget = deadline.remainingMs() - reserveMs;
     if (budget <= 0) return 1;
-    return Math.min(job.timeout_ms, budget);
+    return Math.min(jobTimeout, budget);
   }
-  return job.timeout_ms;
+  return jobTimeout;
 }
 
 export async function processJobBatch(
