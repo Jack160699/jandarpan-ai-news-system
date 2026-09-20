@@ -48,7 +48,7 @@ export const EDITORIAL_WAKEUP_PRIORITY = 80;
  * function. Keep its durable job timeout beyond that lane budget so the queue
  * does not cancel legitimate generation/repair work first.
  */
-export const EDITORIAL_GENERATE_JOB_TIMEOUT_MS = 105_000;
+export const EDITORIAL_GENERATE_JOB_TIMEOUT_MS = 285_000;
 
 export async function publishEvent(input: PublishEventInput): Promise<string | null> {
   const supabase = createAdminClient();

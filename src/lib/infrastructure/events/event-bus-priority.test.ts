@@ -15,6 +15,6 @@ describe("editorial event-bus wake-up priority", () => {
     expect(EDITORIAL_GENERATE_JOB_TIMEOUT_MS).toBeGreaterThan(
       GENERATION_LANE_TARGETS.budgetMs
     );
-    expect(EDITORIAL_GENERATE_JOB_TIMEOUT_MS).toBeLessThan(120_000);
+    expect(EDITORIAL_GENERATE_JOB_TIMEOUT_MS).toBeLessThan(300_000); // Max Vercel timeout
   });
 });
