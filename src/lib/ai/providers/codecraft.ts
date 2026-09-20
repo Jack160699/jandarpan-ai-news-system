@@ -1,4 +1,4 @@
-import { after } from "next/server";
+﻿import { after } from "next/server";
 import {
   isProviderHealthy,
   markProviderUnhealthy,
@@ -17,9 +17,9 @@ export function isCodeCraftConfigured(): boolean {
 export function resolveCodeCraftModel(operation: string, override?: string): string {
   if (override?.trim()) return override.trim();
   if (operation === "editorial_repair") {
-    return process.env.CODECRAFT_REPAIR_MODEL?.trim() || "codecraft-editorial-v1";
+    return process.env.CODECRAFT_REPAIR_MODEL?.trim() || "gpt-5.5";
   }
-  return process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "codecraft-editorial-v1";
+  return process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "gpt-5.5";
 }
 
 function healthKeyFor(model: string): string {
@@ -33,10 +33,13 @@ function classifyCodeCraftFailure(status: number, body: string): ClassifiedAiErr
     message = json.error?.message?.slice(0, 240) || message;
   } catch {}
 
+  if (message.toLowerCase().includes("billing verification") || message.toLowerCase().includes("payment method")) {
+    return { code: "ai_quota_exhausted", message, httpStatus: status, retryable: false, authFailure: true, invalidRequest: false, rateLimited: true };
+  }
   if (status === 401 || status === 403) {
     return { code: "ai_unauthorized", message, httpStatus: status, retryable: false, authFailure: true, invalidRequest: false, rateLimited: false };
   }
-  if (status === 400) {
+  if (status === 400 || status === 404) {
     return { code: "ai_invalid_request", message, httpStatus: status, retryable: false, authFailure: false, invalidRequest: true, rateLimited: false };
   }
   if (status === 429 || status === 402) {
@@ -46,6 +49,26 @@ function classifyCodeCraftFailure(status: number, body: string): ClassifiedAiErr
     return { code: "ai_upstream_error", message, httpStatus: status, retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
   }
   return { code: "ai_http_error", message, httpStatus: status, retryable: false, authFailure: false, invalidRequest: false, rateLimited: false };
+}
+
+function parseSseChunks(rawText: string): { content: string; error?: string } {
+  let content = "";
+  const lines = rawText.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) continue;
+    const dataStr = trimmed.replace(/^data:\s*/, "");
+    if (dataStr === "[DONE]") break;
+    try {
+      const parsed = JSON.parse(dataStr);
+      if (parsed.error?.message) {
+        return { content: "", error: parsed.error.message };
+      }
+      const delta = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content;
+      if (delta) content += delta;
+    } catch {}
+  }
+  return { content };
 }
 
 async function postCodeCraft(request: ChatCompletionRequest, model: string): Promise<{ content: string; latencyMs: number; inputTokens: number; outputTokens: number }> {
@@ -67,6 +90,7 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
       ],
       temperature: request.temperature ?? 0.35,
       max_tokens: request.maxTokens ?? 1400,
+      stream: true,
       ...(request.jsonMode ? { response_format: { type: "json_object" } } : {}),
     };
 
@@ -75,7 +99,8 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
       signal: controller.signal,
       headers: { 
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
+        "Authorization": `Bearer ${apiKey}`,
+        "Accept": "text/event-stream, application/json"
       },
       body: JSON.stringify(body),
     });
@@ -94,21 +119,30 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
       throw classified;
     }
 
-    const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-      usage?: { prompt_tokens?: number; completion_tokens?: number };
-    };
-    const content = json.choices?.[0]?.message?.content?.trim();
-    if (!content) {
+    const rawStreamText = await res.text();
+    const { content, error: streamError } = parseSseChunks(rawStreamText);
+
+    if (streamError) {
+      const classified = classifyCodeCraftFailure(200, JSON.stringify({ error: { message: streamError } }));
+      markProviderUnhealthy(healthKeyFor(model), {
+        reason: classified.message,
+        httpStatus: 200,
+        authFailure: classified.authFailure,
+        rateLimited: classified.rateLimited,
+      });
+      throw classified;
+    }
+
+    if (!content.trim()) {
       throw { code: "ai_empty_response", message: "Empty CodeCraft response", retryable: false, authFailure: false, invalidRequest: false, rateLimited: false };
     }
 
     recordProviderRequestCompleted(healthKeyFor(model), request.operation, latencyMs);
     return {
-      content,
+      content: content.trim(),
       latencyMs,
-      inputTokens: json.usage?.prompt_tokens ?? 0,
-      outputTokens: json.usage?.completion_tokens ?? 0,
+      inputTokens: Math.ceil(request.user.length / 4),
+      outputTokens: Math.ceil(content.length / 4),
     };
   } catch (err) {
     if (err && typeof err === "object" && "retryable" in err && "code" in err) throw err;
@@ -148,8 +182,8 @@ export async function requestCodeCraftChat(request: ChatCompletionRequest): Prom
     const { content, latencyMs, inputTokens, outputTokens } = await withTransientAiRetry({
       operation: request.operation,
       provider: "codecraft",
-      isRetryable: (e) => e.retryable,
-      fn: async (attempt) => {
+      isRetryable: (e: ClassifiedAiError) => Boolean(e?.retryable),
+      fn: async (attempt: number) => {
         retryCount = attempt;
         return postCodeCraft(request, model);
       },
