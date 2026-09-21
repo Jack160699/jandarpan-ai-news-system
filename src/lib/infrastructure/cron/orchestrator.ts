@@ -67,12 +67,8 @@ export type OrchestrateResult = {
  * maintenance workers it was already ordered before.
  */
 export const INTELLIGENCE_PIPELINE: WorkerId[] = [
-  "job_processor",
+  "editorial_generate",
   "editorial_images",
-  "ai_enrich",
-  "intelligence_embed",
-  "intelligence_snapshot",
-  "analytics_aggregate",
 ];
 
 const DEFAULT_PIPELINE: WorkerId[] = INTELLIGENCE_PIPELINE;

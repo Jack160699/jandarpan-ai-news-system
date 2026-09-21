@@ -12,7 +12,7 @@ export const GENERATION_LANE_TARGETS = {
   oldestPendingMaxMs: 30 * 60 * 1000,
   /** No successful run within this window while backlog exists */
   noSuccessMaxMs: 60 * 60 * 1000,
-  budgetMs: Number(process.env.EDITORIAL_GENERATE_BUDGET_MS) || 280_000,
+  budgetMs: 280_000,
   batchLimit: 6,
   lockWindowSec: 840,
 } as const;

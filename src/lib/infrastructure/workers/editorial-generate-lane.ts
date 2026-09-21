@@ -137,6 +137,14 @@ export async function runEditorialGenerateLane(
     );
   }
 
+  // Directly fetch, rank, and select the best candidates.
+  // We bypass the worker_jobs queue entirely.
+  const direct = await generateEditorialsFromEvents({
+    limit: 6, // Target exactly 6 per cycle
+  });
+
+  const madeProgress = direct.generated > 0 || direct.published > 0;
+
   let metrics: EditorialGenerateQueueMetrics;
   try {
     metrics = await getEditorialGenerateQueueMetrics();
@@ -151,118 +159,40 @@ export async function runEditorialGenerateLane(
       recentFailures: 0,
     };
   }
-
   const incidents = evaluateGenerationLaneIncidents(metrics);
 
-  if (metrics.pending === 0 && metrics.claimed === 0) {
-    // Nothing queued to drain. Nothing in the automated pipeline enqueues
-    // new editorial_generate worker_jobs from news_events on an ongoing
-    // basis (only the manual ops/editorial-backlog-recovery tool does) —
-    // confirmed live in Production: worker_jobs(editorial_generate) sat
-    // empty while 161 real, un-drafted "active" events existed and this
-    // lane kept reporting queue_empty every 15 minutes indefinitely.
-    // Fall back to generating directly from eligible events (the same
-    // proven, free-first-aware generateEditorialsFromEvents() the queue
-    // handler itself calls once a job is claimed) so the lane makes real
-    // progress instead of idling on an empty queue it has no way to fill.
-    const direct = await generateEditorialsFromEvents({
-      limit: INFRA_CONFIG.editorialBatchLimit,
-    });
-    const madeProgress = direct.generated > 0 || direct.published > 0;
-
-    const outcome = classifyLaneOutcome({
-      batch: {
-        processed: direct.generated + direct.skipped + (direct.updates ?? 0),
-        completed: direct.generated,
-        failed: direct.rejected,
-        dead: 0,
-      },
-      incidents,
-      skipped: !madeProgress,
-      reason: madeProgress ? undefined : "no_eligible_candidates",
-    });
-
-    return completeWorkerResult("editorial_generate", started, ctx.deadline, {
-      recordsProcessed: direct.published,
-      recordsSkipped: direct.rejected + direct.skipped,
-      remainingQueue: 0,
-      partial: false,
-      extra: {
-        status: outcome,
-        queueDepth: 0,
-        oldestPendingAgeMs: metrics.oldestPendingAgeMs,
-        incidents,
-        generatedArticleIds: direct.topStory?.storyId ? [direct.topStory.storyId] : [],
-        continuationRequired: false,
-        directGeneration: true,
-        generated: direct.generated,
-        published: direct.published,
-        rejected: direct.rejected,
-        skipped: direct.skipped,
-        errors: direct.errors.slice(0, 5),
-        skipReasonCounts: direct.skipReasonCounts ?? {},
-        candidatePool: direct.candidatePool ?? null,
-      },
-    });
-  }
-
-  const batch = await processJobBatch(JOB_HANDLERS, {
-    jobTypes: ["editorial_generate"],
-    limit: GENERATION_LANE_TARGETS.batchLimit,
-      workerId: "editorial_generate",
-    deadline: ctx.deadline,
+  const outcome = classifyLaneOutcome({
+    batch: {
+      processed: direct.generated + direct.skipped + (direct.updates ?? 0),
+      completed: direct.generated,
+      failed: direct.rejected,
+      dead: 0,
+    },
+    incidents,
+    skipped: !madeProgress,
+    reason: madeProgress ? undefined : "no_eligible_candidates",
   });
 
-  const remainingQueue = Math.max(
-    0,
-    metrics.pending + metrics.claimed - batch.completed
-  );
-  const generatedArticleIds = await collectGeneratedArticleIds(startedIso);
-  const outcome = classifyLaneOutcome({ batch, incidents });
-  const continuationRequired = Boolean(batch.partial) || remainingQueue > 0;
-
-  if (outcome === "failed") {
-    return {
-      worker: "editorial_generate",
-      ok: false,
-      durationMs: Date.now() - started,
-      error: "editorial_generate_batch_failed",
-      metadata: {
-        status: outcome,
-        degraded: false,
-        ...batch,
-        queueDepth: remainingQueue,
-        oldestPendingAgeMs: metrics.oldestPendingAgeMs,
-        incidents,
-        generatedArticleIds,
-        continuationRequired,
-        processed: batch.processed,
-        failed: batch.failed,
-      },
-    };
-  }
-
-  const build =
-    batch.partial || outcome === "degraded"
-      ? partialWorkerResult
-      : completeWorkerResult;
-
-  return build("editorial_generate", started, ctx.deadline, {
-    recordsProcessed: batch.completed,
-    recordsSkipped: batch.failed + batch.dead,
-    remainingQueue,
-    partial: batch.partial ?? false,
+  return completeWorkerResult("editorial_generate", started, ctx.deadline, {
+    recordsProcessed: direct.published,
+    recordsSkipped: direct.rejected + direct.skipped,
+    remainingQueue: 0,
+    partial: false,
     extra: {
-      ...batch,
       status: outcome,
-      degraded: outcome !== "success",
-      queueDepth: remainingQueue,
+      queueDepth: 0,
       oldestPendingAgeMs: metrics.oldestPendingAgeMs,
       incidents,
-      generatedArticleIds,
-      continuationRequired,
-      processed: batch.processed,
-      failed: batch.failed,
+      generatedArticleIds: direct.topStory?.storyId ? [direct.topStory.storyId] : [],
+      continuationRequired: false,
+      directGeneration: true,
+      generated: direct.generated,
+      published: direct.published,
+      rejected: direct.rejected,
+      skipped: direct.skipped,
+      errors: direct.errors.slice(0, 5),
+      skipReasonCounts: direct.skipReasonCounts ?? {},
+      candidatePool: direct.candidatePool ?? null,
     },
   });
 }
