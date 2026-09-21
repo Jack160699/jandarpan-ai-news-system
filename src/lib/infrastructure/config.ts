@@ -43,10 +43,7 @@ export const INFRA_CONFIG = {
         EDITORIAL_LIMITS.defaultEditorialBatchLimit,
   editorialConcurrency: Math.min(
     FREE_CAPACITY_MODE ? 1 : 4,
-    Math.max(
-      1,
-      Number(process.env.EDITORIAL_CONCURRENCY) || (FREE_CAPACITY_MODE ? 1 : 4)
-    )
+    FREE_CAPACITY_MODE ? 1 : 4 // Hardcoded to 4 to prevent 300s timeout on 6-limit batches
   ),
   imageQueueBatch: Number(process.env.IMAGE_QUEUE_BATCH) || 12,
   imageQueueBatchMax: Number(process.env.IMAGE_QUEUE_BATCH_MAX) || 16,
