@@ -1,11 +1,11 @@
 export const EDITORIAL_CAPACITY = {
-  dailyLimit: 12,
+  dailyLimit: 200,
   editions: {
-    morning: 6,
-    noon: 0,
-    afternoon: 0,
-    evening: 6,
-    night: 0,
+    morning: 20,
+    noon: 20,
+    afternoon: 20,
+    evening: 20,
+    night: 20,
   },
   breakingUnlimited: true,
 } as const;
@@ -15,10 +15,10 @@ export const EDITORIAL_CAPACITY = {
  * Does NOT change dailyLimit default behavior — use getEffectiveDailyLimit().
  */
 export const AUTONOMOUS_STAGE_TARGETS = {
-  shadow: 40,
-  stage_1: 60,
-  stage_2: 100,
-  stage_3: 160,
+  shadow: 50,
+  stage_1: 100,
+  stage_2: 180,
+  stage_3: 300,
 } as const;
 
 export type AutonomousStageTargetKey = keyof typeof AUTONOMOUS_STAGE_TARGETS;

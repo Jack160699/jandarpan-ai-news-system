@@ -31,9 +31,9 @@ export const JAN_DARPAN_BRAND_TYPOGRAPHY = {
 
 /** Master brand tagline (approved). */
 export const JAN_DARPAN_TAGLINE = {
-  hi: "हर जिले की अपनी आवाज़",
+  hi: "देश की आवाज़, निष्पक्ष पत्रकारिता",
   /** Approx. English rendering for alt text / non-Devanagari contexts. */
-  enApprox: "Every district, its own voice",
+  enApprox: "The Voice of India, Unbiased Journalism",
 } as const;
 
 /** Motion durations / easings from the approved motion system (ms). */

@@ -6,7 +6,7 @@ const TEMPLATE_HINTS: Record<AiDeskTemplate, string> = {
   breaking_news:
     "Breaking news format: urgent lead, what happened, who is affected, what is next. Keep sentences short — but still a complete alert, not a one-line dek.",
   district_update:
-    "District desk report for Chhattisgarh: local names, places, administration response, citizen impact, and verified background when available.",
+    "State & regional desk report: verified places, administration response, citizen impact, and factual background when available.",
   political_report:
     "Political report: neutral tone, attribute claims, party/office-holder context, no sensationalism.",
   crime_report:
@@ -15,13 +15,13 @@ const TEMPLATE_HINTS: Record<AiDeskTemplate, string> = {
     "Sports update: score/result upfront, key performers, tournament context — complete enough for readers, not a bare result line.",
   business_update:
     "Business update: market/company impact, numbers if present, policy angle for readers.",
-  general: "Standard regional newspaper report structure in natural prose.",
+  general: "Standard national newspaper report structure in natural prose.",
 };
 
 /** Supplemental desk guidance when category does not map 1:1 to AiDeskTemplate */
 const CATEGORY_EDITORIAL_HINTS: Record<string, string> = {
   weather:
-    "Weather desk: IMD or official alert attribution, district-wise impact, safety guidance — only from sources.",
+    "Weather desk: IMD or official alert attribution, state-wise impact, safety guidance — only from sources.",
   education:
     "Education desk: school, board, or exam facts; attribute to education department or named officials when present.",
   health:
@@ -53,11 +53,11 @@ export function resolveStoryLanguage(code?: string): AiStoryLanguage {
 export function languageInstruction(lang: AiStoryLanguage): string {
   switch (lang) {
     case "en":
-      return "Write in clear English suitable for Indian regional readers.";
+      return "Write in clear, authoritative English suitable for Indian national news readers.";
     case "hinglish":
       return "Write in Hinglish (Hindi in Latin script mixed with English news terms) for mobile readers.";
     default:
-      return "Write in Hindi (Devanagari) suitable for Chhattisgarh regional readers.";
+      return "Write in clear, natural Hindi (Devanagari) suitable for Indian national readers (भारत / देश).";
   }
 }
 
@@ -95,7 +95,7 @@ export function buildStorySystemPrompt(input: {
   deskTemplate: AiDeskTemplate;
 }): string {
   return [
-    "You are a senior editor at Jan Darpan, a Chhattisgarh regional digital newsroom.",
+    "You are a senior editor at Jan Darpan — India (जन दर्पण — भारत), an independent national Indian digital newsroom.",
     languageInstruction(input.language),
     TEMPLATE_HINTS[input.deskTemplate],
     "Output MUST be valid JSON only with this exact shape:",
@@ -161,7 +161,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
         ].join("\n");
 
   return [
-    "You are a senior editor at Jan Darpan, a Chhattisgarh regional digital newsroom.",
+    "You are a senior editor at Jan Darpan — India (जन दर्पण — भारत), an independent national Indian digital newsroom.",
     languageInstruction(lang),
     TEMPLATE_HINTS[input.deskTemplate],
     input.categoryHint ?? "",
@@ -200,7 +200,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
       : "- Prefer a complete evidence-based report over a wire summary when facts support it.",
     "- Optional intelligence fields: include only when supported; omit the key entirely when not applicable — never send empty arrays.",
     "STRICT NO CLICKBAIT POLICY: Headlines must be objective, factual, and non-sensational. Never withhold information in the headline. Lead paragraphs must be concise and front-load the most critical facts (who, what, where, when, why).",
-    "Always mention the relevant Chhattisgarh district explicitly if applicable.",
+    "Provide relevant state, city, or national context explicitly where supported by facts.",
     "No fabricated quotes.",
   ]
     .filter(Boolean)
@@ -212,7 +212,7 @@ export function buildCoverImagePrompt(input: {
   summary: string;
 }): string {
   return [
-    "Editorial news thumbnail for Indian regional newspaper website.",
+    "Editorial news thumbnail for Indian national newspaper platform.",
     "Professional photojournalism style, realistic, no text overlay, no logos, no watermarks.",
     `Story: ${input.headline}.`,
     `Context: ${input.summary.slice(0, 180)}.`,

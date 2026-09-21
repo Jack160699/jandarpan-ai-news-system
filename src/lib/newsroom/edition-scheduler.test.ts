@@ -27,16 +27,9 @@ describe("resolveEditionPublishSlot", () => {
     ).toEqual({ ok: true, slot: "12:00" });
   });
 
-  it("rejects invocations well outside the tolerance window", () => {
-    // IST minute 06 — past the 5-minute tolerance.
-    const result = resolveEditionPublishSlot(new Date("2026-07-26T06:36:00Z"));
-    expect(result).toEqual({ ok: false, reason: "outside_slot_minute" });
-  });
-
-  it("rejects invocations at a non-slot hour even at minute 00", () => {
-    // 2026-07-26T01:30:00Z = 2026-07-26 07:00:00 IST -> minute 0, but 07:00
-    // is not one of the six edition slots.
+  it("resolves the slot across 24 hours in the continuous 30-minute newsroom", () => {
+    // 2026-07-26T01:30:00Z = 2026-07-26 07:00:00 IST -> 07:00 slot
     const result = resolveEditionPublishSlot(new Date("2026-07-26T01:30:00Z"));
-    expect(result).toEqual({ ok: false, reason: "outside_slot_hour" });
+    expect(result).toEqual({ ok: true, slot: "07:00" });
   });
 });

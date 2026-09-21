@@ -12,24 +12,22 @@ import {
 import { getIstDayBounds } from "@/lib/autonomous/ist-day";
 
 export type EditionPublishSlot =
-  | "08:00"
-  | "20:00";
+  | "00:00" | "01:00" | "02:00" | "03:00" | "04:00" | "05:00"
+  | "06:00" | "07:00" | "08:00" | "09:00" | "10:00" | "11:00"
+  | "12:00" | "13:00" | "14:00" | "15:00" | "16:00" | "17:00"
+  | "18:00" | "19:00" | "20:00" | "21:00" | "22:00" | "23:00";
 
 const IST_TZ = "Asia/Kolkata";
-const SLOT_HOURS: Record<EditionPublishSlot, number> = {
-  "08:00": 8,
-  "20:00": 20,
-};
+const SLOT_HOURS: Record<EditionPublishSlot, number> = Object.fromEntries(
+  Array.from({ length: 24 }, (_, i) => [
+    `${String(i).padStart(2, "0")}:00` as EditionPublishSlot,
+    i,
+  ])
+) as Record<EditionPublishSlot, number>;
 
-/** Base (shadow / 40-day) slot limits before stage scaling. */
-function baseEditionPublishLimit(slot: EditionPublishSlot): number {
-  if (slot === "08:00") {
-    return Math.max(1, Math.floor(EDITORIAL_CAPACITY.editions.morning));
-  }
-  if (slot === "20:00") {
-    return EDITORIAL_CAPACITY.editions.evening;
-  }
-  return 0;
+/** Base (shadow / 200-day) slot limits before stage scaling. */
+function baseEditionPublishLimit(_slot: EditionPublishSlot): number {
+  return Math.max(10, Math.floor(EDITORIAL_CAPACITY.dailyLimit / 24));
 }
 
 function getIstHourMinute(now = new Date()): { hour: number; minute: number } {

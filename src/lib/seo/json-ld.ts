@@ -28,9 +28,8 @@ export function organizationJsonLd() {
     },
     foundingDate: String(BRAND.founded),
     areaServed: {
-      "@type": "State",
-      name: "Chhattisgarh",
-      containedInPlace: { "@type": "Country", name: "India" },
+      "@type": "Country",
+      name: "India",
     },
     publishingPrinciples: `${SITE_URL}/archive`,
     sameAs: [SITE_URL],

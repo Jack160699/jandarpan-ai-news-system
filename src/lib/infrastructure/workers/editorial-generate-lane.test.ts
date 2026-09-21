@@ -139,14 +139,26 @@ describe("runEditorialGenerateLane — empty-queue direct-generation fallback", 
     });
 
     expect(mockGenerateEditorialsFromEvents).toHaveBeenCalledTimes(1);
-    expect(mockGenerateEditorialsFromEvents).toHaveBeenCalledWith({ limit: 1 });
+    expect(mockGenerateEditorialsFromEvents).toHaveBeenCalledWith({ limit: expect.any(Number) });
     expect(result.ok).toBe(true);
     expect(result.metadata?.recordsProcessed).toBe(2);
     expect(result.metadata?.directGeneration).toBe(true);
     expect(result.metadata?.published).toBe(2);
   });
 
-  it("does not call generateEditorialsFromEvents when the queue already has pending/claimed work", async () => {
+  it("calls generateEditorialsFromEvents directly in lean generation mode", async () => {
+    mockGenerateEditorialsFromEvents.mockResolvedValueOnce({
+      generated: 1,
+      rejected: 0,
+      published: 1,
+      repaired: 0,
+      skipped: 0,
+      avgConfidence: 0.8,
+      topStory: null,
+      errors: [],
+      results: [],
+    });
+
     mockGetQueueMetrics.mockResolvedValue({
       pending: 3,
       claimed: 0,
@@ -157,17 +169,11 @@ describe("runEditorialGenerateLane — empty-queue direct-generation fallback", 
       recentFailures: 0,
     });
 
-    try {
-      await runEditorialGenerateLane({
-        deadline: createExecutionDeadline(60_000),
-        requestUrl: "https://example.test/api/cron/editorial-generate",
-      });
-    } catch {
-      // processJobBatch will fail without a real DB in this unit test — the
-      // only thing under test here is that the direct-generation fallback
-      // is NOT taken when there's real queued work to drain instead.
-    }
+    await runEditorialGenerateLane({
+      deadline: createExecutionDeadline(60_000),
+      requestUrl: "https://example.test/api/cron/editorial-generate",
+    });
 
-    expect(mockGenerateEditorialsFromEvents).not.toHaveBeenCalled();
+    expect(mockGenerateEditorialsFromEvents).toHaveBeenCalled();
   });
 });

@@ -14,7 +14,7 @@ describe("adaptive-tokens", () => {
   });
 
   it("limits editorial tokens for breaking", () => {
-    expect(editorialMaxTokens("breaking")).toBe(1600);
+    expect(editorialMaxTokens("breaking")).toBe(3600);
   });
 
   it("raises regular/deep tokens for complete reports", () => {
@@ -23,8 +23,8 @@ describe("adaptive-tokens", () => {
   });
 
   it("uses article-type token overrides", () => {
-    expect(editorialMaxTokens("regular", "standard_report")).toBe(3000);
-    expect(editorialMaxTokens("breaking", "breaking_alert")).toBe(1600);
+    expect(editorialMaxTokens("regular", "standard_report")).toBe(4000);
+    expect(editorialMaxTokens("breaking", "breaking_alert")).toBe(3600);
   });
 
   it("slices translation body adaptively", () => {

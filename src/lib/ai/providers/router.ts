@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Operation -> provider-chain routing. Free providers first; OpenAI only
  * ever appears in a chain when explicitly enabled — it is never a silent
  * default fallback (see AGENTS.md free-first mandate).
@@ -7,7 +7,7 @@
 import type { AiProviderId } from "@/lib/ai/providers/types";
 
 const WRITER_CHAIN: AiProviderId[] = ["codecraft"];
-// Independent review uses CodeCraft first, with Gemini/Groq fallback.
+// Independent review uses CodeCraft.
 const REVIEWER_CHAIN: AiProviderId[] = ["codecraft"];
 const LIGHTWEIGHT_CHAIN: AiProviderId[] = ["codecraft"];
 const EMBEDDING_CHAIN: AiProviderId[] = ["cloudflare", "openai"];

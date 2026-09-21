@@ -337,6 +337,7 @@ export function runEditorialQualityChecks(input: {
   event?: NewsEventRow | null;
   articleType?: ArticleType | null;
   evidenceSufficient?: boolean;
+  forcePublish?: boolean;
 }): EditorialQualityReport {
   const thresholds = getEditorialThresholds();
   const draftText = [

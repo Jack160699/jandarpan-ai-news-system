@@ -137,9 +137,9 @@ function wouldClusterDistrict(
   return false;
 }
 
-function isCgArticleLocal(article: HomeArticle, row?: GeneratedArticleRow): boolean {
-  if (CG_SECTIONS.has(article.section)) return true;
-  return isCgArticle(article, row);
+function isNationalArticleLocal(article: HomeArticle, row?: GeneratedArticleRow): boolean {
+  if (article.section === "india") return true;
+  return isNationalArticle(article);
 }
 
 function scoreHeroCandidate(
@@ -153,8 +153,8 @@ function scoreHeroCandidate(
   let score = article.priorityScore;
   const hours = hoursSince(article.publishedAt);
 
-  if (isCgArticleLocal(article, row)) score += 25;
-  if (article.ranking.isBreaking && isCgArticleLocal(article, row)) score += 20;
+  if (isNationalArticleLocal(article, row)) score += 25;
+  if (article.ranking.isBreaking) score += 20;
   if (article.urgency === "high") score += 12;
   if (hasStrongImage(article, row)) score += 15;
   score += article.aiConfidence * 20;
@@ -164,8 +164,6 @@ function scoreHeroCandidate(
 
   const clusterId = getDuplicateClusterId(article, index);
   if (clusterId) score -= 5;
-
-  if (article.section === "india" || article.section === "world") score -= 15;
 
   if (homeDistrict) {
     const geo = row ? geoFromRecord(row) : null;
@@ -193,8 +191,7 @@ function scoreTrendingCandidate(
   else if (hours <= 48) score += 6;
   else score -= 20;
 
-  if (isCgArticleLocal(article, row)) score += 22;
-  if (article.section === "raipur") score += 8;
+  if (isNationalArticleLocal(article, row)) score += 22;
   if (article.sourceCount >= 2) score += 8;
   if (article.summary.trim().length > 80) score += 6;
   if (hasStrongImage(article, row)) score += 5;
@@ -212,7 +209,7 @@ function scoreReelsCandidate(
   if (hours <= 24) score += 20;
   if (article.summary.length >= 60 && article.summary.length <= 280) score += 10;
   if (hasStrongImage(article, row)) score += 8;
-  if (isCgArticleLocal(article, row)) score += 6;
+  if (isNationalArticleLocal(article, row)) score += 6;
   if (isRoundupArticle(article)) score -= 50;
   return score;
 }
@@ -586,13 +583,12 @@ export function composeHomepageSlots(
   for (const t of trending) reserved.add(t.id);
 
   const districtWire = pickDeskBalancedArticles({
-    pool: ranked.filter((a) => isCgArticleLocal(a, rowsById.get(a.id))),
+    pool: ranked,
     limit: 14,
     reserved,
     index,
     rowsById,
-    preferDesks: ["district"],
-    balanceDistricts: true,
+    preferDesks: ["national", "politics", "district"],
     maxCrime: 2,
   });
   for (const d of districtWire) reserved.add(d.id);

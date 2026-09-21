@@ -18,13 +18,13 @@ const STALE_AFTER_HOURS = 48;
 // IMPORTANT: do not boost clickbait-y "breaking" phrases from text.
 
 const CATEGORY_WEIGHT: Record<HomeSectionId, number> = {
-  chhattisgarh: 1,
-  raipur: 0.95,
-  india: 0.72,
-  business: 0.68,
-  education: 0.65,
-  sports: 0.62,
-  world: 0.58,
+  india: 1.0,
+  business: 0.92,
+  education: 0.88,
+  sports: 0.85,
+  world: 0.82,
+  chhattisgarh: 0.80,
+  raipur: 0.75,
 };
 
 export type RankingFactorBreakdown = {
@@ -118,7 +118,7 @@ function inferSectionFromRow(row: GeneratedArticleRow): HomeSectionId {
   if (/\bindia\b|national|भारत/i.test(text)) return "india";
 
   const tagMap: Record<string, HomeSectionId> = {
-    local: "chhattisgarh",
+    local: "india",
     politics: "india",
     world: "world",
     business: "business",
@@ -127,7 +127,7 @@ function inferSectionFromRow(row: GeneratedArticleRow): HomeSectionId {
     technology: "business",
   };
 
-  return tagMap[tag] ?? "chhattisgarh";
+  return tagMap[tag] ?? "india";
 }
 
 function scoreFreshness(hours: number): number {
@@ -152,10 +152,10 @@ function scoreRegional(
 ): number {
   const mult = personalization?.regionBoostMultiplier ?? 1;
   let base = 0;
-  if (section === "chhattisgarh") base = 22;
-  else if (section === "raipur") base = 20;
-  else if (section === "india") base = 8;
-  else base = 4;
+  if (section === "india") base = 24;
+  else if (section === "business" || section === "education") base = 18;
+  else if (section === "sports" || section === "world") base = 14;
+  else base = 12;
 
   if (personalization?.preferredSections?.includes(section)) {
     base += 6;

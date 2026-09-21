@@ -1310,105 +1310,70 @@ async function runFullValidationSequence(input: {
   canPublish: boolean;
   failureCodes: string[];
 }> {
-  // Step 1: Structural validation (Check for empty fields and basic length)
-  const claimIssues: GenerationValidationIssue[] = [];
-  const bodyWords = input.draft.article_body.trim().split(/\s+/).filter(Boolean).length;
-  let hasStructuralIssue = false;
-  
-  if (!input.draft.headline?.trim() || input.draft.headline.length < 4) {
-    claimIssues.push({ code: "empty_headline" as any, message: "Empty headline", retryable: false });
-    hasStructuralIssue = true;
-  }
-  if (!input.draft.summary?.trim() || input.draft.summary.length < 12) {
-    claimIssues.push({ code: "empty_summary" as any, message: "Empty summary", retryable: false });
-    hasStructuralIssue = true;
-  }
-  if (bodyWords < 45 || input.draft.article_body.trim().length < 120) {
-    claimIssues.push({ code: "empty_content" as any, message: "Empty content", retryable: false });
-    hasStructuralIssue = true;
-  }
-
-  // Step 2: Fact-pack validation (Check against structured fact pack if provided)
-  if (input.structuredFactPack && !hasStructuralIssue) {
-    claimIssues.push(...validateClaimsAgainstFactPack({
-      headline: input.draft.headline,
-      summary: input.draft.summary,
-      articleBody: input.draft.article_body,
-      factPack: input.structuredFactPack,
-    }));
-  }
-
-  // Step 3: Unsupported-number validation
-  const draftText = [
-    input.draft.headline,
-    input.draft.summary,
-    input.draft.article_body,
-  ].join("\n");
-  const unsupportedNumbers = scanUnsupportedNumbers({
-    draftText,
+  // Step 1: Run deterministic editorial quality checks & scoring
+  const initialQuality = evaluateDraft({
+    draft: input.draft,
+    event: input.event,
+    signals: input.signals,
+    factPackText: input.factPackText,
     sourceTexts: input.sourceTexts,
+    existingHeadlines: input.existingHeadlines,
+    existingBodyFingerprints: input.storyIndex?.bodyFingerprints,
+    existingEventIds: input.storyIndex?.eventIds,
+    articleType: input.articleType,
+    evidenceSufficient: input.evidenceSufficient,
   });
 
-  const failureCodes = [
-    ...claimIssues.map((c) => `fact_pack:${c.code}`),
-    ...unsupportedNumbers.map((u) => `unsupported_number:${u.claimText}`),
-  ];
+  // Step 2: Human quality & evidence gates (unsupported numbers, risk, freshness)
+  const hqGate = applyHumanQualityAndEvidenceGate({
+    draft: input.draft,
+    event: input.event,
+    signals: input.signals,
+    sourceTexts: input.sourceTexts,
+    quality: initialQuality,
+    freshness: input.freshness,
+  });
 
-  const canPublish = claimIssues.length === 0 && unsupportedNumbers.length === 0 && !hasStructuralIssue;
+  // Step 3: Structured fact pack validation (claims, numbers, dates against fact pack)
+  const claimIssues: GenerationValidationIssue[] = [];
+  if (input.structuredFactPack) {
+    claimIssues.push(
+      ...validateClaimsAgainstFactPack({
+        headline: input.draft.headline,
+        summary: input.draft.summary,
+        articleBody: input.draft.article_body,
+        factPack: input.structuredFactPack,
+      })
+    );
+  }
 
-  // We construct a mock EditorialQualityReport because the downstream functions still expect one
-  const quality: EditorialQualityReport = {
-    passed: canPublish,
-    ai_confidence: canPublish ? 1.0 : 0.0,
-    source_overlap_score: 0,
-    duplicate_phrasing: [],
-    hallucination_flags: [],
-    clickbait_flags: [],
-    checks_run: ["deterministic_validation"],
-    rejectionReasons: failureCodes,
-    quality_breakdown: {
-      structure: canPublish ? 1.0 : 0.0,
-      originality: 1.0,
-      readability: 1.0,
-      local_relevance: 1.0,
-      seo_quality: 1.0,
-    },
-    hard_reject: !canPublish,
-    hard_reject_reasons: failureCodes,
-    borderline: false,
-    should_repair: !canPublish && failureCodes.length > 0,
-    publish_allowed: canPublish,
-    publishDecision: canPublish ? "publish" : "reject",
-    min_confidence_used: 0.9,
-    strict_mode: true,
-    intelligence: {
-      headlineQuality: 1,
-      spamScore: 0,
-      breakingScore: 0,
-      trendScore: 0,
-      localRelevance: 1,
-      source_diversity: 1,
-      originality: 1,
-      biasIndicators: [],
-      publishDecision: canPublish ? "publish" : "reject",
-    },
-    duplicate_cluster_id: null,
-  };
+  if (claimIssues.length > 0) {
+    hqGate.quality = {
+      ...hqGate.quality,
+      publish_allowed: false,
+      passed: false,
+      publishDecision: "reject",
+      rejectionReasons: [
+        ...hqGate.quality.rejectionReasons,
+        ...claimIssues.map((c) => `fact_pack:${c.code}`),
+      ],
+    };
+  }
 
-  const hqGate = {
-    quality,
-    humanScore: { score: canPublish ? 100 : 0, districtRelevance: 0, factualGrounding: 1, freshness: 1, headlineClarity: 1, readability: 1, sourceDiversity: 1, imagePresence: 0, passed: canPublish, decision: quality.publishDecision },
-    gate: { decision: quality.publishDecision },
-    unsupportedNumbers,
-    evidenceSummary: { signal_count: input.signals.length, source_url_count: 0, claim_count: unsupportedNumbers.length, unsupported_number_count: unsupportedNumbers.length },
-    holdReason: canPublish ? null : failureCodes[0] || "validation_failed"
-  } as any;
+  const canPublish = hqGate.quality.publish_allowed && claimIssues.length === 0;
+  const failureCodes = Array.from(
+    new Set([
+      ...hqGate.quality.rejectionReasons,
+      ...claimIssues.map((c) => `fact_pack:${c.code}`),
+      ...hqGate.unsupportedNumbers.map((u) => `unsupported_number:${u.claimText}`),
+    ])
+  );
 
   return {
-    quality,
+    quality: hqGate.quality,
     hqGate,
     claimIssues,
-    unsupportedNumbers,
+    unsupportedNumbers: hqGate.unsupportedNumbers,
     independentReview: undefined,
     canPublish,
     failureCodes,

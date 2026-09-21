@@ -30,10 +30,10 @@ export type ArticleDepthRule = {
 export const ARTICLE_DEPTH_RULES: Record<ArticleType, ArticleDepthRule> = {
   breaking_alert: {
     type: "breaking_alert",
-    minWords: 5,
+    minWords: 80,
     targetWords: 160,
     maxWords: 280,
-    minParagraphs: 1,
+    minParagraphs: 2,
     insufficientFallback: "breaking_alert",
     labelHi: "ब्रेकिंग अलर्ट",
     labelEn: "Breaking alert",
@@ -42,10 +42,10 @@ export const ARTICLE_DEPTH_RULES: Record<ArticleType, ArticleDepthRule> = {
   },
   short_update: {
     type: "short_update",
-    minWords: 5,
+    minWords: 220,
     targetWords: 320,
     maxWords: 450,
-    minParagraphs: 1,
+    minParagraphs: 2,
     insufficientFallback: "breaking_alert",
     labelHi: "संक्षिप्त अपडेट",
     labelEn: "Short update",

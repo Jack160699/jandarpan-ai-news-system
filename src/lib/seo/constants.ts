@@ -10,24 +10,24 @@ export { CANONICAL_SITE_URL } from "@/lib/seo/canonical-url";
 export const SITE_NAME = BRAND.nameEn;
 export const SITE_NAME_HI = BRAND.nameHi;
 
-/** Regional + brand keywords for layout defaults */
+/** National + brand keywords for layout defaults */
 export const REGIONAL_KEYWORDS = [
   BRAND.nameEn,
   BRAND.nameHi,
-  "Jan Darpan Chhattisgarh",
-  "जन दर्पण छत्तीसगढ़",
+  "Jan Darpan — India",
+  "जन दर्पण — भारत",
   "Jan Darpan",
   "जन दर्पण",
-  "Chhattisgarh news",
-  "Raipur news",
-  "Bastar news",
-  "Bilaspur news",
-  "Durg news",
-  "CG news Hindi",
-  "छत्तीसगढ़ समाचार",
-  "regional news India",
-  "live news Chhattisgarh",
-  "Google News Chhattisgarh",
+  "India news",
+  "National news India",
+  "Breaking news India",
+  "Top news in India",
+  "भारत समाचार",
+  "देश की ताज़ा खबरें",
+  "राष्ट्रीय समाचार",
+  "Hindi news India",
+  "live news India",
+  "Google News India",
 ];
 
 /** Default robots for public pages */

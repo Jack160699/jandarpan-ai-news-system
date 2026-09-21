@@ -64,7 +64,9 @@ export function inferSection(row: GeneratedArticleRow): HomeSectionId {
   }
 
   const tagMap: Record<string, HomeSectionId> = {
-    local: "chhattisgarh",
+    local: "india",
+    india: "india",
+    national: "india",
     politics: "india",
     world: "world",
     business: "business",
@@ -74,5 +76,5 @@ export function inferSection(row: GeneratedArticleRow): HomeSectionId {
     entertainment: "world",
   };
 
-  return tagMap[tag] ?? "chhattisgarh";
+  return tagMap[tag] ?? "india";
 }

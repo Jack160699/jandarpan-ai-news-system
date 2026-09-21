@@ -138,9 +138,9 @@ export function buildUtilityPageMetadata(input: {
 
 export function buildHomeMetadata(): Metadata {
   return buildPageMetadata({
-    title: `${BRAND.nameEn} — Chhattisgarh News`,
+    title: `${BRAND.nameEn} — Latest India News | ${BRAND.nameHi}`,
     description:
-      "Premium regional news from Chhattisgarh — calm, fast, and trustworthy. AI-edited stories from Raipur, Bastar, Bilaspur, and across the state.",
+      "Jan Darpan — India: Real-time, fact-grounded national news coverage across politics, business, technology, jobs, public policy, and public interest.",
     path: "/",
     keywords: REGIONAL_KEYWORDS,
     locale: "hi_IN",

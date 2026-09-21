@@ -12,9 +12,13 @@ vi.mock("@/lib/supabase", () => ({
         if (opts?.head) {
           const chain = {
             not: () => ({
-              in: () => publishedHead(),
+              in: () => ({
+                abortSignal: () => publishedHead(),
+              }),
             }),
-            eq: () => pendingHead(),
+            eq: () => ({
+              abortSignal: () => pendingHead(),
+            }),
           };
           return chain;
         }
@@ -23,6 +27,7 @@ vi.mock("@/lib/supabase", () => ({
           in: () => chain,
           order: () => chain,
           limit: () => chain,
+          abortSignal: () => chain,
           maybeSingle: () => maybeSingle(),
         };
         return chain;

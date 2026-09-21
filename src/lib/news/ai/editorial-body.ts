@@ -26,9 +26,10 @@ export function isDuplicateOfSummary(text: string, summary: string): boolean {
   const b = normalizeComparableText(summary);
   if (!a || !b) return false;
   if (a === b) return true;
-  if (a.length >= 80 && b.length >= 80) {
-    if (a.length >= 150 && b.length >= 150 && a.startsWith(b.slice(0, 150))) return true;
-    if (a.length >= 150 && b.length >= 150 && b.startsWith(a.slice(0, 150))) return true;
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  if (a.length >= 50 && b.length >= 50) {
+    const minPrefix = Math.min(a.length, b.length, 60);
+    if (a.slice(0, minPrefix) === b.slice(0, minPrefix)) return true;
   }
   return false;
 }

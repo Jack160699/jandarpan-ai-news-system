@@ -19,7 +19,7 @@ import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib
 import type { QuotaReservation } from "@/lib/ai/providers/quota";
 import { isGeminiConfigured, requestGeminiChat } from "@/lib/ai/providers/gemini";
 import { isCodeCraftConfigured, requestCodeCraftChat } from "@/lib/ai/providers/codecraft";
-import { resolveChatChain } from "@/lib/ai/providers/router";
+import { isOpenAiProviderEnabled, resolveChatChain } from "@/lib/ai/providers/router";
 import {
   buildUsageRecord,
   recordOpenAiUsage,
@@ -495,6 +495,22 @@ export async function requestChatCompletion(
     if (!configs) continue;
     for (const config of configs) {
       attempts.push({ id: providerId, model: config.model, invoke: () => requestFromProvider(config, request) });
+    }
+  }
+
+  if (!attempts.length) {
+    const fallbackProviders: AiProviderId[] = ["gemini", "groq", "openrouter", "openai"];
+    for (const providerId of fallbackProviders) {
+      if (providerId === "gemini") {
+        if (isGeminiConfigured()) attempts.push({ id: "gemini", model: null, invoke: () => requestGeminiChat(request) });
+        continue;
+      }
+      if (providerId === "openai" && !isOpenAiProviderEnabled()) continue;
+      const configs = restConfigs[providerId];
+      if (!configs) continue;
+      for (const config of configs) {
+        attempts.push({ id: providerId, model: config.model, invoke: () => requestFromProvider(config, request) });
+      }
     }
   }
 

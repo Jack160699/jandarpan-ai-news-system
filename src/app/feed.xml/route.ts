@@ -69,7 +69,7 @@ export async function GET() {
   <channel>
     <title>${escapeXml(org.organizationName)}</title>
     <link>${SITE_URL}</link>
-    <description>${escapeXml(`${org.organizationName} — Chhattisgarh news from district bureaus and the state desk.`)}</description>
+    <description>${escapeXml(`${org.organizationName} — Independent National Newsroom · India`)}</description>
     <language>hi-IN</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <managingEditor>${escapeXml(org.editorialEmail)} (${escapeXml(org.organizationName)})</managingEditor>

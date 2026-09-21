@@ -73,8 +73,14 @@ export function scoreEditorialCandidate(
   const districtCount = context?.recentDistrictCounts?.[district] ?? 0;
   const categoryCount = context?.recentCategoryCounts?.[category] ?? 0;
 
-  const districtBoost = districtCount === 0 ? 40 : Math.max(0, 35 - districtCount * 12);
-  const categoryBoost = categoryCount === 0 ? 25 : Math.max(0, 20 - categoryCount * 8);
+  // National relevance boost: prioritize stories with broad India-wide relevance
+  const isNational = event.region === "india" || event.region === "national" || !event.region || event.region === "unknown";
+  if (isNational) {
+    score += 50;
+  }
+
+  const districtBoost = districtCount === 0 ? 30 : Math.max(0, 25 - districtCount * 10);
+  const categoryBoost = categoryCount === 0 ? 40 : Math.max(0, 35 - categoryCount * 8);
   score += districtBoost + categoryBoost;
 
   return score;

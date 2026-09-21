@@ -14,20 +14,22 @@ export function generateTitleSuggestions(
   article: ExecutionArticle
 ): SuggestionDraft[] {
   const current = article.seo_title ?? article.headline;
-  const keyword = getPrimaryKeyword(article.headline) ?? article.district ?? "छत्तीसगढ़";
-  const district = article.district
+  const keyword = getPrimaryKeyword(article.headline) ?? article.district ?? "भारत";
+  const geoLabel = article.district
     ? article.district.charAt(0).toUpperCase() + article.district.slice(1)
-    : "Chhattisgarh";
+    : "India";
 
-  const primary = trimTitle(
-    `${district}: ${article.headline.replace(/^(ब्रेकिंग|Breaking)\s*/i, "").trim()}`
-  );
+  const primary = article.district
+    ? trimTitle(`${geoLabel}: ${article.headline.replace(/^(ब्रेकिंग|Breaking)\s*/i, "").trim()}`)
+    : trimTitle(article.headline.replace(/^(ब्रेकिंग|Breaking)\s*/i, "").trim());
 
-  const altA = trimTitle(`${article.headline} — ${district} अपडेट`);
+  const altA = article.district
+    ? trimTitle(`${article.headline} — ${geoLabel} अपडेट`)
+    : trimTitle(`${article.headline} — ताज़ा अपडेट`);
   const altB = trimTitle(`${keyword} | ${article.headline.slice(0, 45)}`);
   const breaking = trimTitle(`ब्रेकिंग: ${article.headline}`);
   const discover = trimTitle(`${article.headline} — जानें पूरी खबर`);
-  const googleNews = trimTitle(`${article.headline} | Jandarpan News`);
+  const googleNews = trimTitle(`${article.headline} | Jan Darpan — India`);
 
   const analysis = analyzeHeadline(current);
   const reason =

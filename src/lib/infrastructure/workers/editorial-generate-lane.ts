@@ -8,6 +8,7 @@ import { JOB_HANDLERS } from "@/lib/infrastructure/jobs/handlers";
 import { processJobBatch } from "@/lib/infrastructure/jobs/queue";
 import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
+import { EDITORIAL_LIMITS } from "@/lib/newsroom/editorial-capacity";
 import {
   completeWorkerResult,
   partialWorkerResult,
@@ -139,8 +140,9 @@ export async function runEditorialGenerateLane(
 
   // Directly fetch, rank, and select the best candidates.
   // We bypass the worker_jobs queue entirely.
+  const batchLimit = Math.max(12, EDITORIAL_LIMITS.defaultEditorialBatchLimit);
   const direct = await generateEditorialsFromEvents({
-    limit: 6, // Target exactly 6 per cycle
+    limit: batchLimit,
   });
 
   const madeProgress = direct.generated > 0 || direct.published > 0;

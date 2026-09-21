@@ -1,5 +1,5 @@
 /**
- * RSS provider — hardened Chhattisgarh regional ingestion
+ * RSS provider — hardened National India ingestion
  */
 
 import type Parser from "rss-parser";
@@ -365,7 +365,7 @@ export async function fetchRssAll(): Promise<RssFetchResult> {
 
     return {
       provider: "rss",
-      label: "RSS (Chhattisgarh regional)",
+      label: "RSS (National India)",
       articles: unique,
       fetched: totalFetched,
       valid: unique.length,
@@ -381,7 +381,7 @@ export async function fetchRssAll(): Promise<RssFetchResult> {
     console.error("[rss] Fatal (non-blocking):", msg);
     return {
       provider: "rss",
-      label: "RSS (Chhattisgarh regional)",
+      label: "RSS (National India)",
       articles: [],
       fetched: 0,
       valid: 0,
