@@ -23,16 +23,16 @@ export const INFRA_CONFIG = {
 
   aiQueueBatch: FREE_CAPACITY_MODE
     ? Math.min(20, Number(process.env.AI_QUEUE_BATCH) || 20)
-    : Number(process.env.AI_QUEUE_BATCH) || 40,
+    : Number(process.env.AI_QUEUE_BATCH) || 20,
   aiQueueBatchMax: FREE_CAPACITY_MODE
     ? Math.min(20, Number(process.env.AI_QUEUE_BATCH_MAX) || 20)
-    : Number(process.env.AI_QUEUE_BATCH_MAX) || 120,
+    : Number(process.env.AI_QUEUE_BATCH_MAX) || 40,
   aiQueueMicroBatch: FREE_CAPACITY_MODE
     ? 1
-    : Number(process.env.AI_QUEUE_MICRO_BATCH) || 10,
+    : Number(process.env.AI_QUEUE_MICRO_BATCH) || 4,
   aiQueueMicroBatchMax: FREE_CAPACITY_MODE
     ? 1
-    : Number(process.env.AI_QUEUE_MICRO_BATCH_MAX) || 25,
+    : Number(process.env.AI_QUEUE_MICRO_BATCH_MAX) || 5,
   /** Reclaim processing rows only after this long since processing_started_at */
   aiQueueStaleProcessingMs:
     Number(process.env.AI_QUEUE_STALE_PROCESSING_MS) || 10 * 60_000,
