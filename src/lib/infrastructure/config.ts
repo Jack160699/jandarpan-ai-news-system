@@ -45,7 +45,7 @@ export const INFRA_CONFIG = {
     FREE_CAPACITY_MODE ? 1 : 4,
     Math.max(
       1,
-      Number(process.env.EDITORIAL_CONCURRENCY) || (FREE_CAPACITY_MODE ? 1 : 2)
+      Number(process.env.EDITORIAL_CONCURRENCY) || (FREE_CAPACITY_MODE ? 1 : 4)
     )
   ),
   imageQueueBatch: Number(process.env.IMAGE_QUEUE_BATCH) || 12,
