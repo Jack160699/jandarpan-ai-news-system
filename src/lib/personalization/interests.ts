@@ -7,7 +7,7 @@ export type FeedInterest = {
 };
 
 export const FEED_INTERESTS: FeedInterest[] = [
-  { id: "cg-news", labelEn: "Chhattisgarh", labelHi: "छत्तीसगढ़" },
+  { id: "india-news", labelEn: "India", labelHi: "भारत" },
   { id: "national", labelEn: "National", labelHi: "राष्ट्रीय" },
   { id: "international", labelEn: "International", labelHi: "अंतर्राष्ट्रीय" },
   { id: "politics", labelEn: "Politics", labelHi: "राजनीति" },
@@ -22,7 +22,7 @@ export const FEED_INTERESTS: FeedInterest[] = [
   { id: "raipur", labelEn: "Raipur", labelHi: "रायपुर" },
 ];
 
-export const DEFAULT_FEED_INTERESTS = ["cg-news", "politics", "business"];
+export const DEFAULT_FEED_INTERESTS = ["india-news", "national", "politics", "business"];
 
 export const FEED_INTEREST_IDS = new Set(FEED_INTERESTS.map((i) => i.id));
 

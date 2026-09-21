@@ -16,7 +16,7 @@ export function FooterIntelligenceSection({ data }: FooterTrendingProps) {
     >
       <div className="nr-wrap">
         <h2 id="nr-footer-trending-title" className="nr-footer-trending__title">
-          Trending in Chhattisgarh
+          Trending in India
         </h2>
         <ul className="nr-footer-trending__chips">
           {data.trendingSearches.map((term) => (

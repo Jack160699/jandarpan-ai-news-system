@@ -20,10 +20,10 @@ export function RegionalHighlights({ articles }: RegionalHighlightsProps) {
       <div className="nr-wrap">
         <SectionHeader
           id="nr-regional-title"
-          kicker="छत्तीसगढ़ · CG"
-          title="Regional highlights"
-          titleHi="क्षेत्रीय खबरें"
-          description="Stories that matter closest to home — Raipur, Bastar, and across the state."
+          kicker="भारत · India"
+          title="National highlights"
+          titleHi="देश की बड़ी खबरें"
+          description="Stories that matter across India — politics, economy, policy, and national developments."
         />
 
         <div className="nr-regional-mosaic">

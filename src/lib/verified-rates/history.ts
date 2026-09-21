@@ -184,18 +184,18 @@ export function getRelatedSupportedLocations(category: RateCategory): Array<{
   return [
     {
       path: "/rates/chhattisgarh/gold-price-today",
-      labelHi: "छत्तीसगढ़ सोना 24K",
-      labelEn: "Chhattisgarh Gold 24K",
+      labelHi: "भारत सोना 24K",
+      labelEn: "India Gold 24K",
     },
     {
       path: "/rates/chhattisgarh/gold-22k-price-today",
-      labelHi: "छत्तीसगढ़ सोना 22K",
-      labelEn: "Chhattisgarh Gold 22K",
+      labelHi: "भारत सोना 22K",
+      labelEn: "India Gold 22K",
     },
     {
       path: "/rates/chhattisgarh/silver-price-today",
-      labelHi: "छत्तीसगढ़ चांदी",
-      labelEn: "Chhattisgarh Silver",
+      labelHi: "भारत चांदी",
+      labelEn: "India Silver",
     },
   ];
 }

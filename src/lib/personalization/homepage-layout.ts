@@ -72,7 +72,7 @@ function moduleBoost(
 ): number {
   let score = DEFAULT_HOMEPAGE_ORDER.indexOf(id);
   const hasRegional =
-    hints.interestIds.includes("cg-news") ||
+    hints.interestIds.includes("india-news") ||
     hints.interestIds.includes("raipur") ||
     Boolean(hints.homeDistrict) ||
     hints.followedDistricts.length > 0;

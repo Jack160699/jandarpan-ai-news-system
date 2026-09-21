@@ -27,7 +27,7 @@ export function buildLiveCoverageMetadata(
     `${bundle.event.canonical_title} Live Updates`;
   const description =
     bundle.event.event_summary ??
-    `Ongoing coverage from ${bundle.event.source_count} sources — Jan Darpan Chhattisgarh live desk.`;
+    `Ongoing coverage from ${bundle.event.source_count} sources — Jan Darpan India live desk.`;
 
   return buildPageMetadata({
     title,
@@ -37,7 +37,7 @@ export function buildLiveCoverageMetadata(
     section: bundle.event.category ?? "news",
     keywords: [
       bundle.event.category ?? "news",
-      bundle.event.region ?? "chhattisgarh",
+      bundle.event.region ?? "india",
       "live updates",
     ],
   });
@@ -80,7 +80,7 @@ export function EvolvingStoryPage({ bundle }: EvolvingStoryPageProps) {
     coverageStartTime: event.created_at,
     publisher: {
       "@type": "NewsMediaOrganization",
-      name: "Jan Darpan Chhattisgarh",
+      name: "Jan Darpan India",
     },
   };
 

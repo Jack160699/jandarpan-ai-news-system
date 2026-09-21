@@ -26,7 +26,7 @@ export function generateMetaSuggestions(
   const metaDesc = (
     currentDesc.length >= 80 && currentDesc.length <= 160
       ? currentDesc
-      : `${article.headline}. ${article.district ? `${article.district} समाचार` : "छत्तीसगढ़"} की ताज़ा खबर Jandarpan News पर पढ़ें।`
+      : `${article.headline}. ${article.district ? `${article.district} समाचार` : "भारत"} की ताज़ा खबर Jan Darpan पर पढ़ें।`
   ).slice(0, 155);
 
   const ogTitle = metaTitle;
@@ -34,7 +34,7 @@ export function generateMetaSuggestions(
   const twitterTitle = metaTitle.slice(0, 70);
   const twitterDesc = metaDesc.slice(0, 200);
   const slugRec = slugify(
-    `${article.district ?? "cg"}-${article.headline}`.replace(/\s+/g, "-")
+    `${article.district ?? "india"}-${article.headline}`.replace(/\s+/g, "-")
   );
 
   const suggestions: SuggestionDraft[] = [];

@@ -58,8 +58,8 @@ export function HomepageSeoHub() {
           <h2 id="seo-hub-title" className="seo-hub__title">
             {pickBilingualLabel(
               language,
-              "Chhattisgarh & India — full news directory",
-              "छत्तीसगढ़ और भारत — पूरी खबर निर्देशिका"
+              "India News & Topics — full news directory",
+              "भारत और राष्ट्रीय समाचार — पूरी खबर निर्देशिका"
             )}
           </h2>
           <p className="seo-hub__desc">

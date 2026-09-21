@@ -68,7 +68,7 @@ export async function getDatasetMetadata(opts: {
     purity: meta.purity,
     updateFrequencyHi: meta.group === "fuel" ? "दैनिक सत्यापन (जब स्रोत उपलब्ध)" : "कार्यदिवस पर सत्रानुसार",
     geographicCoverageHi:
-      meta.group === "fuel" ? "रायपुर, दुर्ग, भिलाई" : "भारत/छत्तीसगढ़ संकेतात्मक बेंचमार्क",
+      meta.group === "fuel" ? "रायपुर, दुर्ग, भिलाई" : "भारत संकेतात्मक बेंचमार्क",
     ...diag,
     citationSuggestionHi:
       "जन दर्पण सत्यापित दर श्रृंखला — स्रोत संख्या और प्रभावी तिथि सहित उद्धृत करें।",

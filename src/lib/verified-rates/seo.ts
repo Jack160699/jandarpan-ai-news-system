@@ -22,23 +22,23 @@ export function ratePageMetadata(opts: {
   const cityHi =
     opts.citySlug && isFuelCitySlug(opts.citySlug)
       ? cityDisplay(opts.citySlug, "hi")
-      : "छत्तीसगढ़";
+      : "भारत";
 
   const title = opts.noindex
     ? meta.group === "fuel"
       ? `${cityHi} ${meta.labelHi} भाव इतिहास — सत्यापन के बाद उपलब्ध | जन दर्पण`
-      : `छत्तीसगढ़ ${meta.labelHi} संकेतात्मक इतिहास — सत्यापन के बाद उपलब्ध | जन दर्पण`
+      : `भारत ${meta.labelHi} संकेतात्मक इतिहास — सत्यापन के बाद उपलब्ध | जन दर्पण`
     : meta.group === "fuel"
       ? `${cityHi} ${meta.labelHi} की कीमत आज – 7 दिन का भाव और इतिहास | जन दर्पण`
-      : `छत्तीसगढ़ ${meta.labelHi} कीमत आज – संकेतात्मक इतिहास | जन दर्पण`;
+      : `भारत ${meta.labelHi} कीमत आज – संकेतात्मक इतिहास | जन दर्पण`;
 
   const description = opts.noindex
     ? meta.group === "fuel"
       ? `${cityHi} ${meta.labelHi} की सत्यापित कीमत अभी प्रकाशित नहीं। जन दर्पण केवल सहमति-प्राप्त वास्तविक अवलोकन प्रकाशित करता है — काल्पनिक भाव नहीं।`
-      : `छत्तीसगढ़/भारत संकेतात्मक ${meta.labelHi} बेंचमार्क अभी सत्यापित श्रृंखला के बिना प्रकाशित नहीं। शहर-विशेष आधिकारिक MRP नहीं।`
+      : `भारत संकेतात्मक ${meta.labelHi} बेंचमार्क अभी सत्यापित श्रृंखला के बिना प्रकाशित नहीं। शहर-विशेष आधिकारिक MRP नहीं।`
     : meta.group === "fuel"
       ? `आज ${cityHi} में ${meta.labelHi} की सत्यापित कीमत, ${meta.unitLabelHi} दर, अपडेट समय, पिछले दिनों का ग्राफ और हाल का बदलाव देखें।`
-      : `छत्तीसगढ़/भारत संकेतात्मक ${meta.labelHi} बेंचमार्क, ${meta.unitLabelHi}, सत्यापन समय और उपलब्ध ऐतिहासिक श्रृंखला। शहर-विशेष आधिकारिक MRP नहीं।`;
+      : `भारत संकेतात्मक ${meta.labelHi} बेंचमार्क, ${meta.unitLabelHi}, सत्यापन समय और उपलब्ध ऐतिहासिक श्रृंखला। शहर-विशेष आधिकारिक MRP नहीं।`;
 
   return buildPageMetadata({
     title,
@@ -46,7 +46,7 @@ export function ratePageMetadata(opts: {
     path: opts.path,
     locale: "hi_IN",
     section: "rates",
-    keywords: [meta.labelHi, cityHi, "छत्तीसगढ़", "जन दर्पण", "सत्यापित दर"],
+    keywords: [meta.labelHi, cityHi, "भारत", "जन दर्पण", "सत्यापित दर"],
     noindex: opts.noindex === true,
   });
 }
@@ -60,7 +60,7 @@ export function rateBreadcrumbs(opts: {
   const items = [
     { name: "होम", href: "/" },
     { name: "दरें", href: "/rates" },
-    { name: "छत्तीसगढ़", href: "/rates/chhattisgarh" },
+    { name: "भारत", href: "/rates/chhattisgarh" },
   ];
   if (opts.citySlug && isFuelCitySlug(opts.citySlug)) {
     items.push({

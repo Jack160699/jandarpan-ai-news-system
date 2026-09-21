@@ -142,16 +142,16 @@ export function buildLocation(opts: {
 
   // Bullion: never city-specific unless methodology supports it (it does not).
   return {
-    geoScope: "state",
+    geoScope: "country",
     citySlug: null,
     cityNameHi: null,
     cityNameEn: null,
-    stateCode: "CG",
-    stateNameHi: "छत्तीसगढ़",
-    stateNameEn: "Chhattisgarh",
+    stateCode: "IN",
+    stateNameHi: "भारत",
+    stateNameEn: "India",
     countryCode: "IN",
-    honestyLabelHi: "भारत/छत्तीसगढ़ संकेतात्मक बेंचमार्क — शहर-विशेष आधिकारिक दर नहीं",
-    honestyLabelEn: "India/Chhattisgarh indicative benchmark — not a city-official jewellery MRP",
+    honestyLabelHi: "भारत संकेतात्मक बेंचमार्क — शहर-विशेष आधिकारिक दर नहीं",
+    honestyLabelEn: "India indicative benchmark — not a city-official jewellery MRP",
   };
 }
 

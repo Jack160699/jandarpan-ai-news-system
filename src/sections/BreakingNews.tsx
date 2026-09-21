@@ -14,7 +14,7 @@ export function BreakingNews({ headlines = [] }: BreakingNewsProps) {
   const ticker =
     headlines.length > 0
       ? headlines.join(" · ") + " · "
-      : `${t.common.breakingLabel} — Chhattisgarh live wire updating… · `;
+      : `${t.common.breakingLabel} — India live wire updating… · `;
 
   return (
     <section

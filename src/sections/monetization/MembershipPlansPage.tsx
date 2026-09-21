@@ -21,7 +21,7 @@ export function MembershipPlansPage({
     <article className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-semibold mb-2">Membership · {tenantName}</h1>
       <p className="text-[var(--ink-muted)] mb-8">
-        Support independent journalism in Chhattisgarh. Paid subscriptions are
+        Support independent journalism across India. Paid subscriptions are
         opening soon — join the newsletter below for launch updates.
       </p>
 

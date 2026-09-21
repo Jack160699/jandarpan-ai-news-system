@@ -4,27 +4,23 @@
  */
 
 export const DEFAULT_KEYWORD_GROUPS: Record<string, string[]> = {
-  "Chhattisgarh News": [
-    "छत्तीसगढ़ समाचार",
-    "छत्तीसगढ़ न्यूज़",
-    "Chhattisgarh news",
+  "India News": [
+    "भारत समाचार",
+    "देश की ताज़ा खबरें",
+    "India news",
+    "breaking news Hindi",
   ],
-  "Raipur News": ["रायपुर समाचार", "Raipur news"],
-  "Korba News": ["कोरबा समाचार", "Korba news"],
-  "Bilaspur News": ["बिलासपुर समाचार", "Bilaspur news"],
-  "Bastar News": ["बस्तर समाचार", "Bastar news"],
-  "Kanker News": ["कांकेर समाचार", "Kanker news"],
-  "Durg News": ["दुर्ग समाचार", "Durg news"],
-  Politics: ["छत्तीसगढ़ राजनीति", "Chhattisgarh politics"],
-  Crime: ["छत्तीसगढ़ अपराध", "Chhattisgarh crime"],
-  Weather: ["छत्तीसगढ़ मौसम", "Chhattisgarh weather"],
-  "Government Schemes": ["सरकारी योजना छत्तीसगढ़"],
-  Education: ["छत्तीसगढ़ शिक्षा", "Chhattisgarh education"],
-  Jobs: ["छत्तीसगढ़ नौकरी", "Chhattisgarh jobs"],
-  Sports: ["छत्तीसगढ़ खेल", "Chhattisgarh sports"],
-  Business: ["छत्तीसगढ़ व्यापार", "Chhattisgarh business"],
-  Technology: ["छत्तीसगढ़ तकनीक", "Chhattisgarh technology"],
-  Entertainment: ["बॉलीवुड समाचार", "Bollywood news Hindi"],
+  Politics: ["भारत राजनीति", "India politics", "संसद", "सरकार की योजना"],
+  Economy: ["भारतीय अर्थव्यवस्था", "economy news India", "GDP India", "महंगाई"],
+  Crime: ["अपराध समाचार", "India crime news"],
+  Weather: ["मौसम अपडेट", "India weather forecast", "मानसून"],
+  "Government Schemes": ["सरकारी योजना", "central government schemes", "पीएम योजना"],
+  Education: ["शिक्षा समाचार", "CBSE result", "board exam", "UPSC"],
+  Jobs: ["सरकारी नौकरी", "Sarkari naukri", "India jobs vacancy"],
+  Sports: ["खेल समाचार", "cricket news", "IPL", "Team India"],
+  Business: ["शेयर बाजार", "Stock market India", "Sensex", "Nifty", "व्यापार समाचार"],
+  Technology: ["तकनीक समाचार", "tech news Hindi", "AI news", "smartphone launch"],
+  Entertainment: ["बॉलीवुड समाचार", "Bollywood news Hindi", "मनोरंजन"],
 };
 
 export function normalizeKeyword(keyword: string): string {

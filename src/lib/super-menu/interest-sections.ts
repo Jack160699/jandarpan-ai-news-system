@@ -7,7 +7,7 @@ const INTEREST_SECTION_MAP: Record<string, HomeSectionId[]> = {
   cricket: ["sports"],
   sports: ["sports"],
   business: ["business"],
-  "cg-news": ["chhattisgarh"],
+  "india-news": ["india"],
   raipur: ["raipur"],
   education: ["education"],
   crime: ["india"],
@@ -17,9 +17,9 @@ const INTEREST_SECTION_MAP: Record<string, HomeSectionId[]> = {
   jobs: ["education", "india"],
   technology: ["education"],
   entertainment: ["india"],
-  farming: ["chhattisgarh"],
-  weather: ["chhattisgarh", "raipur"],
-  "live-tv": ["chhattisgarh"],
+  farming: ["business", "india"],
+  weather: ["india"],
+  "live-tv": ["india"],
 };
 
 /** Map super-menu interest ids to homepage section boosts */

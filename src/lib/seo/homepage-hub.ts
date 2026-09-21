@@ -34,10 +34,10 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
     titleEn: "Jobs & Careers",
     titleHi: "नौकरी और करियर",
     descriptionEn:
-      "Latest government jobs, private vacancies, and career news for Chhattisgarh youth.",
+      "Latest government jobs, private vacancies, and career news across India.",
     descriptionHi:
-      "छत्तीसगढ़ युवाओं के लिए सरकारी नौकरी, प्राइवेट वैकेंसी और करियर खबरें।",
-    keywords: ["CG jobs", "sarkari naukri", "रायपुर नौकरी"],
+      "देश के युवाओं के लिए सरकारी नौकरी, प्राइवेट वैकेंसी और करियर खबरें।",
+    keywords: ["India jobs", "sarkari naukri", "सरकारी नौकरी"],
     links: [
       { labelEn: "All jobs", labelHi: "सभी नौकरी", href: "/search?q=jobs" },
       { labelEn: "Government", labelHi: "सरकारी", href: "/search?q=sarkari" },
@@ -49,9 +49,9 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
     path: "/topics/yojana",
     titleEn: "Sarkari Yojana",
     titleHi: "सरकारी योजना",
-    descriptionEn: "Schemes, subsidies, and welfare updates for Chhattisgarh residents.",
-    descriptionHi: "छत्तीसगढ़ निवासियों के लिए योजना, सब्सिडी और लाभ अपडेट।",
-    keywords: ["yojana CG", "welfare scheme"],
+    descriptionEn: "Schemes, subsidies, and welfare updates for Indian citizens.",
+    descriptionHi: "नागरिकों के लिए सरकारी योजनाएँ, सब्सिडी और कल्याणकारी लाभ अपडेट।",
+    keywords: ["sarkari yojana", "welfare scheme", "सरकारी योजना"],
     links: [
       { labelEn: "Latest schemes", labelHi: "नई योजनाएँ", href: "/search?q=yojana" },
     ],
@@ -59,12 +59,12 @@ export const SEO_HOMEPAGE_CLUSTERS: SeoHubCluster[] = [
   {
     id: "gold",
     slug: "gold-silver",
-    path: "/search?q=gold+rate+chhattisgarh",
+    path: "/search?q=gold+rate+india",
     titleEn: "Gold & Silver Rates",
     titleHi: "सोना चाँदी भाव",
-    descriptionEn: "Daily gold and silver prices with CG market context.",
-    descriptionHi: "रोज़ाना सोना-चाँदी के भाव छत्तीसगढ़ संदर्भ के साथ।",
-    keywords: ["gold rate Raipur", "silver price CG"],
+    descriptionEn: "Daily gold and silver prices with national market context.",
+    descriptionHi: "रोज़ाना सोना-चाँदी के भाव राष्ट्रीय बाज़ार संदर्भ के साथ।",
+    keywords: ["gold rate today", "silver price India", "सोने का भाव"],
     links: [
       { labelEn: "Gold today", labelHi: "आज सोना", href: "/search?q=gold" },
       { labelEn: "Silver", labelHi: "चाँदी", href: "/search?q=silver" },

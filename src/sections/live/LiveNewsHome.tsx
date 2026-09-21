@@ -68,7 +68,7 @@ export function LiveNewsHome({ feed }: LiveNewsHomeProps) {
           aria-label="Just in"
         >
           <div className="feed-section__inner">
-            <FeedSectionHeader title="Just in — Chhattisgarh" href="#top-news" />
+            <FeedSectionHeader title="Just in — India" href="#top-news" />
             <div className="feed-grid feed-grid--2">
               {justIn.map((item, i) => (
                 <LiveNewsCard

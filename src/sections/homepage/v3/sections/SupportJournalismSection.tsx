@@ -98,15 +98,15 @@ export function SupportJournalismSection() {
       data-nosnippet
     >
       <p className="home-v31-support__kicker">
-        {hi ? "जन दर्पण छत्तीसगढ़" : "Jan Darpan Chhattisgarh"}
+        {hi ? "जन दर्पण भारत" : "Jan Darpan India"}
       </p>
       <h2 id="home-support-title" className="home-v31-support__title">
-        {hi ? "स्थानीय पत्रकारिता का साथ दें" : "Support local journalism"}
+        {hi ? "विश्वसनीय राष्ट्रीय पत्रकारिता का साथ दें" : "Support independent journalism"}
       </h2>
       <p className="home-v31-support__body">
         {hi
-          ? "आपका साथ हमारे ज़िला संवाददाताओं को स्वतंत्र, ज़मीनी रिपोर्टिंग जारी रखने में मदद करता है। सदस्य बनें — सेव की गई खबरें, ज़िला अलर्ट और ऑडियो ब्रीफिंग पाएँ।"
-          : "Your support keeps our district reporters doing independent, on-the-ground journalism. Become a member for saved stories, district alerts and audio briefings."}
+          ? "आपका साथ हमारे संवाददाताओं को स्वतंत्र, निष्पक्ष और तथ्यपरक रिपोर्टिंग जारी रखने में मदद करता है। सदस्य बनें — सेव की गई खबरें, राष्ट्रीय अलर्ट और ऑडियो ब्रीफिंग पाएँ।"
+          : "Your support keeps our reporters doing independent, factual journalism across India. Become a member for saved stories, national alerts and audio briefings."}
       </p>
 
       <p className="home-v31-support__district">

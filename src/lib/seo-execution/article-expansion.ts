@@ -17,7 +17,7 @@ export function generateExpansionSuggestions(
       suggestion_type: "expansion",
       field_key: "suggested_expansion",
       current_value: `${article.word_count} words`,
-      suggested_value: `पृष्ठभूमि: ${article.district ?? "छत्तीसगढ़"} में इस घटना का संदर्भ पाठकों के लिए महत्वपूर्ण है। ${article.summary ?? ""} इस मामले पर अधिकारियों की प्रतिक्रिया और आगे की कार्रवाई पर नज़र रखी जा रही है।`,
+      suggested_value: `पृष्ठभूमि: ${article.district ?? "देश"} में इस घटना का संदर्भ पाठकों के लिए महत्वपूर्ण है। ${article.summary ?? ""} इस मामले पर अधिकारियों की प्रतिक्रिया और आगे की कार्रवाई पर नज़र रखी जा रही है।`,
       reason: "Article under 200 words — thin content for competitive SERP rankings.",
       expected_impact: "Improved depth score and time-on-page",
       confidence: 0.82,

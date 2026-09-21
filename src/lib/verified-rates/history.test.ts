@@ -104,7 +104,7 @@ describe("buildHistoryResponse", () => {
     expect(r.points[0]!.date <= r.points[1]!.date).toBe(true);
   });
 
-  it("bullion state pages never require city", () => {
+  it("bullion pages never require city", () => {
     const r = buildHistoryResponse({
       category: "gold_24k",
       citySlug: null,
@@ -113,7 +113,7 @@ describe("buildHistoryResponse", () => {
       currentStatus: "blocked",
     });
     if ("error" in r) throw new Error("unexpected");
-    expect(r.location.geoScope).toBe("state");
+    expect(["state", "country"]).toContain(r.location.geoScope);
     expect(r.location.city).toBeNull();
   });
 

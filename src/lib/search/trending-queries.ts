@@ -3,16 +3,16 @@
  */
 
 export const DEFAULT_TRENDING_SEARCHES = [
-  "Raipur news today",
-  "Chhattisgarh politics latest",
-  "farmer news in Chhattisgarh",
-  "Bastar update",
-  "CG business news",
-  "Bilaspur crime",
-  "छत्तीसगढ़ समाचार आज",
-  "रायपुर खबर",
-  "latest CG politics",
-  "Durg Bhilai news",
+  "India news today",
+  "Breaking news India",
+  "Stock market live",
+  "Sarkari naukri updates",
+  "Weather forecast India",
+  "Tech news Hindi",
+  "भारत समाचार आज",
+  "देश की बड़ी खबरें",
+  "सरकारी योजना अपडेट",
+  "Gold silver price today",
 ] as const;
 
 export function getTrendingSearches(limit = 8): string[] {

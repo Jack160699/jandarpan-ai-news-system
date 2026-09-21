@@ -89,5 +89,5 @@ export const SHORT_STYLES: Record<HomeSectionId, ShortVisualStyle> = {
 };
 
 export function getShortStyle(section: HomeSectionId): ShortVisualStyle {
-  return SHORT_STYLES[section] ?? SHORT_STYLES.chhattisgarh;
+  return SHORT_STYLES[section] ?? SHORT_STYLES.india ?? SHORT_STYLES.chhattisgarh;
 }

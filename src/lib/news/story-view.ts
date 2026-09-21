@@ -23,7 +23,7 @@ export type StoryCategoryLink = {
 };
 
 const CATEGORY_TO_SECTION: Partial<Record<NewsCategory, HomeSectionId>> = {
-  local: "chhattisgarh",
+  local: "india",
   politics: "india",
   world: "world",
   business: "business",
@@ -47,10 +47,7 @@ export function buildStoryCategoryNav(
   category: NewsCategory,
   region?: string | null
 ): StoryCategoryLink[] {
-  const activeSection =
-    region === "chhattisgarh"
-      ? "chhattisgarh"
-      : CATEGORY_TO_SECTION[category] ?? "india";
+  const activeSection = CATEGORY_TO_SECTION[category] ?? "india";
 
   return REGIONAL_SECTIONS.map((def) => ({
     id: def.id,

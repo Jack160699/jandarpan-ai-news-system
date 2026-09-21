@@ -32,7 +32,7 @@ export function generateFaqSuggestions(
   if (hasFaq) return [];
 
   const keyword = getPrimaryKeyword(article.headline) ?? article.headline.slice(0, 40);
-  const district = article.district ?? "छत्तीसगढ़";
+  const district = article.district ?? "भारत";
   const summary = article.summary ?? article.headline;
 
   const faqs: FaqItem[] = [
@@ -41,13 +41,13 @@ export function generateFaqSuggestions(
       answer: summary.slice(0, 280),
     },
     {
-      question: `यह घटना ${district} में कहाँ हुई?`,
-      answer: `${district} से संबंधित यह खबर Jandarpan News द्वारा प्रकाशित की गई है। विस्तृत जानकारी ऊपर दी गई है।`,
+      question: `यह घटना या खबर किससे संबंधित है?`,
+      answer: `${district ? `${district} और ` : ""}देश से संबंधित यह खबर Jan Darpan द्वारा प्रकाशित की गई है। विस्तृत जानकारी ऊपर दी गई है।`,
     },
     {
       question: "इस खबर का स्रोत क्या है?",
       answer:
-        "यह रिपोर्ट Jandarpan News की संपादकीय टीम द्वारा सत्यापित स्रोतों के आधार पर तैयार की गई है।",
+        "यह रिपोर्ट Jan Darpan की संपादकीय टीम द्वारा सत्यापित स्रोतों के आधार पर तैयार की गई है।",
     },
   ];
 
