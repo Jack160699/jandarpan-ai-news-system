@@ -12,34 +12,24 @@ import {
 import { getIstDayBounds } from "@/lib/autonomous/ist-day";
 
 export type EditionPublishSlot =
-  | "06:00"
-  | "09:00"
-  | "12:00"
-    | "14:00"
-  | "15:00"
-  | "18:00"
-  | "16:00" | "17:00" | "19:00" | "20:00" | "21:00" | "22:00" | "23:00";
+  | "08:00"
+  | "20:00";
 
 const IST_TZ = "Asia/Kolkata";
 const SLOT_HOURS: Record<EditionPublishSlot, number> = {
-  "06:00": 6,
-  "09:00": 9,
-  "12:00": 12,
-    "14:00": 14,
-  "15:00": 15, "16:00": 16, "17:00": 17,
-  "18:00": 18, "19:00": 19, "20:00": 20,
-  "21:00": 21, "22:00": 22, "23:00": 23,
+  "08:00": 8,
+  "20:00": 20,
 };
 
 /** Base (shadow / 40-day) slot limits before stage scaling. */
 function baseEditionPublishLimit(slot: EditionPublishSlot): number {
-  if (slot === "06:00" || slot === "09:00") {
-    return Math.max(1, Math.floor(EDITORIAL_CAPACITY.editions.morning / 2));
+  if (slot === "08:00") {
+    return Math.max(1, Math.floor(EDITORIAL_CAPACITY.editions.morning));
   }
-  if (slot === "12:00" || slot === "14:00") return EDITORIAL_CAPACITY.editions.noon;
-  if (slot === "15:00" || slot === "16:00" || slot === "17:00") return EDITORIAL_CAPACITY.editions.afternoon;
-  if (slot === "18:00" || slot === "19:00" || slot === "20:00") return EDITORIAL_CAPACITY.editions.evening;
-  if (slot === "21:00" || slot === "22:00" || slot === "23:00") return EDITORIAL_CAPACITY.editions.night; return EDITORIAL_CAPACITY.editions.afternoon;
+  if (slot === "20:00") {
+    return EDITORIAL_CAPACITY.editions.evening;
+  }
+  return 0;
 }
 
 function getIstHourMinute(now = new Date()): { hour: number; minute: number } {
@@ -70,7 +60,16 @@ const SLOT_MINUTE_TOLERANCE = 59;
 export function resolveEditionPublishSlot(
   now = new Date()
 ): { ok: true; slot: EditionPublishSlot } | { ok: false; reason: string } {
-  return { ok: true, slot: "09:00" };
+  const { hour, minute } = getIstHourMinute(now);
+  if (minute > SLOT_MINUTE_TOLERANCE) {
+    return { ok: false, reason: "outside_slot_minute" };
+  }
+
+  const slot = (Object.keys(SLOT_HOURS) as EditionPublishSlot[]).find(
+    (s) => SLOT_HOURS[s] === hour
+  );
+  if (!slot) return { ok: false, reason: "outside_slot_hour" };
+  return { ok: true, slot };
 }
 
 /**
