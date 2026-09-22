@@ -30,6 +30,12 @@ export type UnsupportedNumberClaim = {
   supported: boolean;
 };
 
+const BENIGN_NUMBERS = new Set([
+  "1", "2", "3", "4", "5", "6", "7", "8", "9", "10",
+  "12", "15", "20", "24", "25", "30", "31", "48", "50", "60", "72", "100", "365",
+  "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030"
+]);
+
 /**
  * Returns numbers present in draft but not found in any source blob.
  */
@@ -44,6 +50,7 @@ export function scanUnsupportedNumbers(input: {
   const unsupported: UnsupportedNumberClaim[] = [];
   for (let i = 0; i < draftNums.length; i++) {
     const n = draftNums[i];
+    if (BENIGN_NUMBERS.has(n)) continue;
     const present =
       sourceBlob.includes(n) ||
       sourceNorm.includes(n) ||

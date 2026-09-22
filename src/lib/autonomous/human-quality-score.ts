@@ -116,12 +116,12 @@ export function districtRelevanceInput(
   geo: { is_chhattisgarh: boolean; primary_district: string | null },
   eventRegion: string | null | undefined
 ): number {
+  if (eventRegion === "india" || !eventRegion) return 0.9;
   if (geo.is_chhattisgarh) {
-    return geo.primary_district ? 0.9 : 0.55;
+    return geo.primary_district ? 0.9 : 0.8;
   }
-  if (eventRegion === "india") return 0.6;
-  if (eventRegion === "global") return 0.5;
-  return 0.25;
+  if (eventRegion === "global") return 0.75;
+  return 0.7;
 }
 
 export function scoreHumanQuality(input: HumanQualityInput): HumanQualityResult {

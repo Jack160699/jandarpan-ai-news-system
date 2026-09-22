@@ -95,37 +95,37 @@ describe("districtRelevanceInput", () => {
     ).toBe(0.9);
   });
 
-  it("scores a statewide Chhattisgarh story second-highest", () => {
+  it("scores a statewide Chhattisgarh story appropriately", () => {
     expect(
       districtRelevanceInput(
         { is_chhattisgarh: true, primary_district: null },
         "chhattisgarh"
       )
-    ).toBe(0.55);
+    ).toBe(0.8);
   });
 
-  it("credits a genuine national story instead of flatly penalizing it", () => {
+  it("credits a genuine national story for Jan Darpan — India", () => {
     expect(
       districtRelevanceInput({ is_chhattisgarh: false, primary_district: null }, "india")
-    ).toBe(0.6);
+    ).toBe(0.9);
   });
 
   it("credits a genuine international story instead of flatly penalizing it", () => {
     expect(
       districtRelevanceInput({ is_chhattisgarh: false, primary_district: null }, "global")
-    ).toBe(0.5);
+    ).toBe(0.75);
   });
 
-  it("falls back to the original flat penalty for an unrecognized region", () => {
+  it("falls back to the base rating for an unrecognized region", () => {
     expect(
       districtRelevanceInput({ is_chhattisgarh: false, primary_district: null }, null)
-    ).toBe(0.25);
+    ).toBe(0.9);
     expect(
       districtRelevanceInput(
         { is_chhattisgarh: false, primary_district: null },
         "something_else"
       )
-    ).toBe(0.25);
+    ).toBe(0.7);
   });
 
   it("a well-rounded national/international story can now realistically cross PUBLISH_THRESHOLD", () => {

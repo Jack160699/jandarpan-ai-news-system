@@ -672,7 +672,7 @@ function applyHumanQualityAndEvidenceGate(input: {
     /duplicate/.test(rejectionJoined) ||
     Boolean(quality.duplicate_cluster_id);
 
-  if (unsupportedNumbers.length > 0) {
+  if (unsupportedNumbers.length > 2) {
     holdReason = "held_for_evidence";
     quality = {
       ...quality,

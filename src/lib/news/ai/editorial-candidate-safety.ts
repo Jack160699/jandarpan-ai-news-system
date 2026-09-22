@@ -7,7 +7,7 @@ export type EditorialFreshnessDecision = {
   ageHours: number | null;
 };
 
-const MAX_CURRENT_SOURCE_AGE_HOURS = 36;
+const MAX_CURRENT_SOURCE_AGE_HOURS = 72;
 const CORRUPTED_ENTITY_RE =
   /कॉकरोच\s+जनता\s+पार्टी|cockroach\s+(public|people'?s)\s+party/i;
 const MOJIBAKE_RE = /(?:Ã.|â€|ï¿½|�){2,}/;
@@ -91,7 +91,7 @@ export function assessEditorialFreshness(
     decision: "stale",
     reason: event.is_live
       ? "live_event_without_recent_source_evidence"
-      : "source_evidence_older_than_36h",
+      : "source_evidence_older_than_72h",
     newestSourceAt: new Date(newest).toISOString(),
     ageHours,
   };

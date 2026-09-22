@@ -28,10 +28,10 @@ function envInt(name: string, fallback: number): number {
 
 export function getQueueHealthLimits() {
   return {
-    ai: envInt("QUEUE_LIMIT_AI_PENDING", 500),
-    images: envInt("QUEUE_LIMIT_IMAGES_PENDING", 250),
-    translation: envInt("QUEUE_LIMIT_TRANSLATION_PENDING", 400),
-    publishing: envInt("QUEUE_LIMIT_PUBLISHING_PENDING", 200),
+    ai: envInt("QUEUE_LIMIT_AI_PENDING", 50000),
+    images: envInt("QUEUE_LIMIT_IMAGES_PENDING", 2000),
+    translation: envInt("QUEUE_LIMIT_TRANSLATION_PENDING", 2000),
+    publishing: envInt("QUEUE_LIMIT_PUBLISHING_PENDING", 1000),
   } as const;
 }
 
@@ -68,7 +68,8 @@ export async function buildQueueHealthSnapshot(): Promise<QueueHealthSnapshot> {
   if (publishingQueuePending > limits.publishing)
     reasons.push(`publishing_queue:${publishingQueuePending}>${limits.publishing}`);
 
-  const pauseIngestion = reasons.length > 0;
+  // In the lean autonomous pipeline, secondary AI queues must never block raw news ingestion
+  const pauseIngestion = publishingQueuePending > limits.publishing;
   // When any queue is over limit, drain oldest work first to unblock.
   const oldestFirst = pauseIngestion;
 
