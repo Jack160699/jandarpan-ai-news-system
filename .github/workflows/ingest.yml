@@ -14,4 +14,4 @@ jobs:
             https://jandarpan.news|http://jandarpan.news|https://jandarpan.news/|http://jandarpan.news/)
               echo "APP_URL=https://www.jandarpan.news" >> "$GITHUB_ENV" ;;
           esac
-      - run: bash .github/scripts/invoke-cron-endpoint.sh "fetch_news" "/api/fetch-news" "POST" "{}"
+      - run: bash .github/scripts/invoke-cron-endpoint.sh "fetch_news" "/api/fetch-news" "POST" "{}" "300"
