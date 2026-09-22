@@ -6,7 +6,7 @@
 
 import type { AiProviderId } from "@/lib/ai/providers/types";
 
-const WRITER_CHAIN: AiProviderId[] = ["codecraft"];
+const WRITER_CHAIN: AiProviderId[] = ["codecraft", "gemini"];
 // Independent review uses CodeCraft.
 const REVIEWER_CHAIN: AiProviderId[] = ["codecraft"];
 const LIGHTWEIGHT_CHAIN: AiProviderId[] = ["codecraft"];

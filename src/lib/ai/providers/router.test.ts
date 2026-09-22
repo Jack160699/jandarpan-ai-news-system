@@ -13,8 +13,8 @@ afterEach(() => {
 });
 
 describe("resolveChatChain", () => {
-  it("returns codecraft for editorial_generate, without openai by default", () => {
-    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft"]);
+  it("returns codecraft and gemini for editorial_generate, without openai by default", () => {
+    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini"]);
   });
 
   it("returns codecraft for editorial_review, without openai by default", () => {
@@ -22,19 +22,19 @@ describe("resolveChatChain", () => {
   });
 
   it("falls back to the writer chain default for an unknown operation", () => {
-    expect(resolveChatChain("some_unknown_operation")).toEqual(["codecraft"]);
+    expect(resolveChatChain("some_unknown_operation")).toEqual(["codecraft", "gemini"]);
   });
 
-  it("keeps editorial chains strictly codecraft even when AI_PROVIDER_OPENAI_ENABLED=true", () => {
+  it("keeps editorial chains strictly codecraft/gemini even when AI_PROVIDER_OPENAI_ENABLED=true", () => {
     vi.stubEnv("AI_PROVIDER_OPENAI_ENABLED", "true");
-    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft"]);
+    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini"]);
     expect(resolveChatChain("editorial_review")).toEqual(["codecraft"]);
-    expect(resolveChatChain("some_unknown_operation")).toEqual(["codecraft"]);
+    expect(resolveChatChain("some_unknown_operation")).toEqual(["codecraft", "gemini"]);
   });
 
   it("removes openai again when the flag is set to anything other than 'true'", () => {
     vi.stubEnv("AI_PROVIDER_OPENAI_ENABLED", "false");
-    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft"]);
+    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini"]);
   });
 });
 

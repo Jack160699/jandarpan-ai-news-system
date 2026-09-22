@@ -1,4 +1,4 @@
-﻿import { after } from "next/server";
+import { after } from "next/server";
 import {
   isProviderHealthy,
   markProviderUnhealthy,
@@ -52,6 +52,18 @@ function classifyCodeCraftFailure(status: number, body: string): ClassifiedAiErr
 }
 
 function parseSseChunks(rawText: string): { content: string; error?: string } {
+  // Support direct non-SSE JSON responses from CodeCraft
+  try {
+    const directJson = JSON.parse(rawText);
+    if (directJson.error?.message) {
+      return { content: "", error: directJson.error.message };
+    }
+    const directContent = directJson.choices?.[0]?.message?.content || directJson.choices?.[0]?.text;
+    if (typeof directContent === "string" && directContent.trim()) {
+      return { content: directContent };
+    }
+  } catch {}
+
   let content = "";
   const lines = rawText.split("\n");
   for (const line of lines) {

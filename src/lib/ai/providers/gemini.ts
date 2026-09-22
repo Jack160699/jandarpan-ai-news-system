@@ -104,9 +104,15 @@ async function postGemini(request: ChatCompletionRequest, model: string): Promis
       contents: [{ role: "user", parts: [{ text: request.user }] }],
       generationConfig: {
         temperature: request.temperature ?? 0.35,
-        maxOutputTokens: request.maxTokens ?? 1400,
+        maxOutputTokens: request.maxTokens ?? 3600,
         ...(request.jsonMode ? { responseMimeType: "application/json" } : {}),
       },
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" },
+      ],
     };
 
     const res = await fetch(`${GEMINI_BASE_URL}/${model}:generateContent?key=${apiKey}`, {

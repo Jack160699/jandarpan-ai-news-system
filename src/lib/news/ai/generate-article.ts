@@ -283,7 +283,7 @@ function resolveLanguage(
   const langs = signals.map((s) => s.language?.toLowerCase()).filter(Boolean);
   const hiCount = langs.filter((l) => l?.startsWith("hi")).length;
   if (hiCount >= langs.length / 2) return "hi";
-  if (event.region === "chhattisgarh") return "hi";
+  if (event.region === "india" || event.region === "bharat" || event.region === "national" || !event.region) return "hi";
   return "en";
 }
 
