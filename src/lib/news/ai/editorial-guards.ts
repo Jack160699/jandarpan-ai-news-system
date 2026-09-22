@@ -508,13 +508,19 @@ export function runEditorialQualityChecks(input: {
       (ai_confidence < thresholds.minConfidence &&
         ai_confidence >= thresholds.minConfidence - BORDERLINE_WINDOW));
 
+  const depthAcceptable =
+    depth_quality.ok ||
+    (depth_quality.issues.every((i) => i.code === "body_too_short_for_type" || i.code === "insufficient_paragraphs") &&
+      depth_quality.metrics.words >= 75 &&
+      depth_quality.metrics.paragraphs >= 1);
+
   let publish_allowed =
     !hard_reject &&
     ai_confidence >= thresholds.minConfidence &&
     duplicate_phrasing.length <= thresholds.maxDuplicatePhrases &&
     source_overlap_score <= thresholds.maxSourceOverlap &&
     !intelligence.isSpam &&
-    depth_quality.ok;
+    depthAcceptable;
 
   if (thresholds.strictMode) {
     publish_allowed =

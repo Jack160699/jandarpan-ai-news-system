@@ -50,11 +50,11 @@ export function scoreRegionalTopic(input: {
     .join(" ")
     .toLowerCase();
 
-  let localRelevance = 0.4;
-  const topicSignals: string[] = [];
+  let localRelevance = 0.85;
+  const topicSignals: string[] = ["national_scope"];
 
   if (geo.is_chhattisgarh) {
-    localRelevance += 0.28;
+    localRelevance += 0.05;
     topicSignals.push("state_level");
   }
   if (geo.primary_district) {

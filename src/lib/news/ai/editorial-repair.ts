@@ -238,7 +238,21 @@ Fact Pack:\n${input.factPackText}`;
     const content = result.content;
     if (!content) return { draft: normalizeEditorialFormatting(input.draft), repaired: false };
 
-    const parsed = JSON.parse(content) as {
+    let cleaned = content.trim();
+    if (cleaned.startsWith("```")) {
+      const firstNewline = cleaned.indexOf("\n");
+      if (firstNewline !== -1) cleaned = cleaned.substring(firstNewline + 1);
+      if (cleaned.endsWith("```")) {
+        cleaned = cleaned.substring(0, cleaned.length - 3).trim();
+      }
+    }
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+      cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    }
+
+    const parsed = JSON.parse(cleaned) as {
       headline?: string;
       summary?: string;
       sections?: { lead?: string; details?: string; context?: string; };

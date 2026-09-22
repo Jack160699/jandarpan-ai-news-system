@@ -141,8 +141,21 @@ Return JSON only: {"summary":"2-3 sentence summary","headline":"max 12 words","c
     if (result.ok) {
 
       try {
+        let rawContent = result.content.trim();
+        if (rawContent.startsWith("```")) {
+          const firstNewline = rawContent.indexOf("\n");
+          if (firstNewline !== -1) rawContent = rawContent.substring(firstNewline + 1);
+          if (rawContent.endsWith("```")) {
+            rawContent = rawContent.substring(0, rawContent.length - 3).trim();
+          }
+        }
+        const firstBrace = rawContent.indexOf("{");
+        const lastBrace = rawContent.lastIndexOf("}");
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+          rawContent = rawContent.substring(firstBrace, lastBrace + 1);
+        }
 
-        const parsed = JSON.parse(result.content) as {
+        const parsed = JSON.parse(rawContent) as {
 
           summary?: string;
 

@@ -252,9 +252,11 @@ export function scoreLocalRelevance(input: {
   const blob = `${input.headline} ${input.summary} ${input.articleBody}`.toLowerCase();
   let score = topic.localRelevance;
 
-  if (input.region === "chhattisgarh") score = Math.max(score, 0.72);
-  if (input.category === "local") score += 0.08;
-  if (CG_REGIONAL_RE.test(blob)) score += 0.1;
+  if (input.region === "india" || input.region === "bharat" || input.region === "national" || !input.region) {
+    score = Math.max(score, 0.85);
+  }
+  if (input.category === "local" || input.category === "nation") score += 0.05;
+  if (CG_REGIONAL_RE.test(blob)) score += 0.05;
 
   return clamp01(score);
 }
