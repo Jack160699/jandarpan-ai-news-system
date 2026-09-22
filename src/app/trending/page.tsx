@@ -20,9 +20,9 @@ const PATH = "/trending";
 
 export const metadata: Metadata = buildHubPageMetadata({
   title: "Trending · Jan Darpan",
-  description: "Most-read Chhattisgarh stories in the last 24 hours — ट्रेंडिंग.",
+  description: "Most-read India stories in the last 24 hours — ट्रेंडिंग.",
   path: PATH,
-  keywords: ["trending news", "ट्रेंडिंग", "Chhattisgarh"],
+  keywords: ["trending news", "ट्रेंडिंग", "India", "भारत", "Jan Darpan"],
   locale: "hi_IN",
 });
 
@@ -37,7 +37,7 @@ export default async function TrendingPage() {
   const jsonLd = [
     collectionPageJsonLd({
       name: "Trending",
-      description: "Most-read Chhattisgarh stories.",
+      description: "Most-read India stories.",
       path: PATH,
       items: (articles ?? []).slice(0, 20).map((article) => ({
         url: `/story/${article.slug}`,

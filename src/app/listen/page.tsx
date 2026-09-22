@@ -53,7 +53,8 @@ export async function generateMetadata({
       "audio news",
       "listen headlines",
       "Hindi news briefing",
-      "Chhattisgarh audio news",
+      "India audio news",
+      "ऑडियो समाचार",
     ],
   });
 }

@@ -138,17 +138,82 @@ export async function runEditorialGenerateLane(
     );
   }
 
-  // Directly fetch, rank, and select the best candidates.
-  // We process a lean, serverless-safe batch per run to avoid 300s curl timeouts.
-  const batchLimit = Math.min(
-    6,
-    Number(process.env.EDITORIAL_BATCH_LIMIT) || 4
+  // Bounded iterative producer: processes safe sequential batches until target
+  // published count is reached or deadline runs low (50s reserve for graceful exit).
+  const batchSize = Math.max(
+    1,
+    Math.min(6, Number(process.env.EDITORIAL_BATCH_LIMIT) || 4)
   );
-  const direct = await generateEditorialsFromEvents({
-    limit: batchLimit,
-  });
+  const targetPublished = Math.max(
+    batchSize,
+    Number(process.env.EDITORIAL_TARGET_PUBLISHED) || 12
+  );
+  const maxBatches = Math.max(1, Math.min(8, Math.ceil(targetPublished / batchSize)));
 
-  const madeProgress = direct.generated > 0 || direct.published > 0;
+  let totalGenerated = 0;
+  let totalPublished = 0;
+  let totalRejected = 0;
+  let totalSkipped = 0;
+  let totalUpdates = 0;
+  const allGeneratedArticleIds: string[] = [];
+  const allErrors: string[] = [];
+  const combinedSkipReasonCounts: Record<string, number> = {};
+  let lastCandidatePool: any = null;
+
+  for (let batchIndex = 0; batchIndex < maxBatches; batchIndex++) {
+    // Only continue into subsequent batches if at least 50s remains before serverless deadline
+    if (batchIndex > 0 && shouldSkipForDeadline(ctx.deadline, 50_000)) {
+      break;
+    }
+    if (totalPublished >= targetPublished) {
+      break;
+    }
+
+    const direct = await generateEditorialsFromEvents({
+      limit: batchSize,
+    });
+
+    if (!direct) break;
+
+    totalGenerated += direct.generated ?? 0;
+    totalPublished += direct.published ?? 0;
+    totalRejected += direct.rejected ?? 0;
+    totalSkipped += direct.skipped ?? 0;
+    totalUpdates += direct.updates ?? 0;
+
+    if (direct.topStory?.storyId) {
+      allGeneratedArticleIds.push(direct.topStory.storyId);
+    }
+    for (const r of direct.results ?? []) {
+      if (r.articleId) {
+        allGeneratedArticleIds.push(r.articleId);
+      }
+    }
+    if (direct.errors?.length) {
+      allErrors.push(...direct.errors);
+    }
+    if (direct.skipReasonCounts) {
+      for (const [k, v] of Object.entries(direct.skipReasonCounts)) {
+        combinedSkipReasonCounts[k] = (combinedSkipReasonCounts[k] ?? 0) + v;
+      }
+    }
+    if (direct.candidatePool) {
+      lastCandidatePool = direct.candidatePool;
+    }
+
+    // If no stories were generated or published in this batch, stop iterating
+    if (
+      (direct.generated ?? 0) === 0 &&
+      (direct.published ?? 0) === 0 &&
+      (direct.skipped ?? 0) > 0 &&
+      (direct.rejected ?? 0) === 0
+    ) {
+      break;
+    }
+  }
+
+  const uniqueArticleIds = [...new Set(allGeneratedArticleIds)];
+  const madeProgress = totalGenerated > 0 || totalPublished > 0;
 
   let metrics: EditorialGenerateQueueMetrics;
   try {
@@ -168,9 +233,9 @@ export async function runEditorialGenerateLane(
 
   const outcome = classifyLaneOutcome({
     batch: {
-      processed: direct.generated + direct.skipped + (direct.updates ?? 0),
-      completed: direct.generated,
-      failed: direct.rejected,
+      processed: totalGenerated + totalSkipped + totalUpdates,
+      completed: totalGenerated,
+      failed: totalRejected,
       dead: 0,
     },
     incidents,
@@ -179,8 +244,8 @@ export async function runEditorialGenerateLane(
   });
 
   return completeWorkerResult("editorial_generate", started, ctx.deadline, {
-    recordsProcessed: direct.published,
-    recordsSkipped: direct.rejected + direct.skipped,
+    recordsProcessed: totalPublished,
+    recordsSkipped: totalRejected + totalSkipped,
     remainingQueue: 0,
     partial: false,
     extra: {
@@ -188,16 +253,16 @@ export async function runEditorialGenerateLane(
       queueDepth: 0,
       oldestPendingAgeMs: metrics.oldestPendingAgeMs,
       incidents,
-      generatedArticleIds: direct.topStory?.storyId ? [direct.topStory.storyId] : [],
+      generatedArticleIds: uniqueArticleIds,
       continuationRequired: false,
       directGeneration: true,
-      generated: direct.generated,
-      published: direct.published,
-      rejected: direct.rejected,
-      skipped: direct.skipped,
-      errors: direct.errors.slice(0, 5),
-      skipReasonCounts: direct.skipReasonCounts ?? {},
-      candidatePool: direct.candidatePool ?? null,
+      generated: totalGenerated,
+      published: totalPublished,
+      rejected: totalRejected,
+      skipped: totalSkipped,
+      errors: allErrors.slice(0, 10),
+      skipReasonCounts: combinedSkipReasonCounts,
+      candidatePool: lastCandidatePool,
     },
   });
 }

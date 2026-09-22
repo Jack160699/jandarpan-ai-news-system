@@ -42,7 +42,7 @@ type PageProps = {
 
 const BASE_SEARCH_TITLE = `Search · ${BRAND.nameEn}`;
 const BASE_SEARCH_DESCRIPTION =
-  "Search Chhattisgarh and Raipur news in Hindi and English — politics, crime, business, sports, and regional updates.";
+  "Search India national and regional news in Hindi and English — politics, economy, business, technology, sports, and updates.";
 
 function hasSearchFilters(params: SearchParams): boolean {
   return Boolean(
@@ -86,7 +86,7 @@ export async function generateMetadata({
     ? `${q} · Search · ${BRAND.nameEn}`
     : BASE_SEARCH_TITLE;
   const description = q
-    ? `Search results for "${q}" on ${BRAND.nameEn} — Chhattisgarh regional news.`
+    ? `Search results for "${q}" on ${BRAND.nameEn} — India national news.`
     : BASE_SEARCH_DESCRIPTION;
 
   return {
@@ -146,7 +146,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   let serverResult = null;
   if (q || district || category) {
     serverResult = await executeSearch(
-      q || "Chhattisgarh",
+      q || "India",
       {
         district: district ?? null,
         category: category ?? null,

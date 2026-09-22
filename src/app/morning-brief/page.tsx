@@ -17,7 +17,7 @@ export const revalidate = 60;
 
 const BASE_TITLE = `Morning Brief · ${BRAND.nameEn}`;
 const BASE_DESCRIPTION =
-  "Your personalized morning digest — breaking news, weather, traffic, jobs, and AI summary for Chhattisgarh.";
+  "Your personalized morning digest — breaking news, weather, traffic, jobs, and AI summary for India.";
 const BASE_PATH = "/morning-brief";
 
 export const metadata: Metadata = buildHubPageMetadata({
@@ -27,9 +27,10 @@ export const metadata: Metadata = buildHubPageMetadata({
   keywords: [
     "morning brief",
     "daily news digest",
-    "Chhattisgarh news",
+    "India news",
+    "भारत समाचार",
     "AI news summary",
-    "local weather traffic",
+    "national briefing",
   ],
 });
 

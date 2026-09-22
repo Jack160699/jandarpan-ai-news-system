@@ -6,7 +6,7 @@ import { janDarpanNewsDeskAuthor, webPageJsonLd } from "@/lib/seo/json-ld";
 import { SITE_NAME } from "@/lib/seo/constants";
 
 const SUMMARY =
-  "How Jan Darpan drafts, gates, and publishes Chhattisgarh district news — including AI-assisted drafting and quality controls.";
+  "How Jan Darpan drafts, gates, and publishes India and national news — including AI-assisted drafting and quality controls.";
 
 export async function generateMetadata() {
   return buildLegalPageMetadata({

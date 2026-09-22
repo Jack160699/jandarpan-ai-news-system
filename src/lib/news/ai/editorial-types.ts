@@ -97,6 +97,7 @@ export type BatchEditorialResult = {
   };
   results: Array<{
     eventId: string;
+    articleId?: string;
     ok: boolean;
     published?: boolean;
     repaired?: boolean;

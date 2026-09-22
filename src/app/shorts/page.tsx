@@ -19,7 +19,7 @@ export const revalidate = 60;
 
 const BASE_TITLE = `News Reels · ${BRAND.nameEn}`;
 const BASE_DESCRIPTION =
-  "Vertical 60-second news reels from Chhattisgarh and India — swipe to watch, read the full story anytime.";
+  "Vertical 60-second news reels from India — swipe to watch, read the full story anytime.";
 const BASE_PATH = "/shorts";
 
 type PageProps = {
@@ -46,7 +46,8 @@ export async function generateMetadata({
     keywords: [
       "news reels",
       "short news videos",
-      "Chhattisgarh shorts",
+      "India shorts",
+      "भारत रील्स",
       "vertical news",
     ],
   });

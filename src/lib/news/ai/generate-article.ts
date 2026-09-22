@@ -2037,7 +2037,7 @@ export async function generateEditorialsFromEvents(options?: {
     ranked: rankedPending,
     limit,
     concurrency: INFRA_CONFIG.editorialConcurrency,
-    maxAttempts: Math.max(limit * 2, 8),
+    maxAttempts: Math.max(limit * 4, 20),
     prepare: (event) =>
       prepareCandidate(
         event,
@@ -2122,6 +2122,7 @@ export async function generateEditorialsFromEvents(options?: {
 
       results.push({
         eventId: event.id,
+        articleId: saved.article?.id,
         ok: saved.ok,
         published: Boolean(saved.article?.published_at),
         repaired: candidate.repaired,

@@ -453,14 +453,7 @@ export function computeHomepagePriorityScore(
   let slugBoost = 0;
   if (personalization?.boostSlugs?.includes(row.slug)) slugBoost = 8;
 
-  // Reduce duplicate national stories: slightly downweight india section unless strongly regional.
   const meta = row.editorial_metadata ?? {};
-  const hasRegionalSignal =
-    geoFromRecord(row).is_chhattisgarh ||
-    Boolean(geoFromRecord(row).primary_district) ||
-    Number(meta.local_relevance ?? meta.quality_breakdown?.local_relevance ?? 0) >= 0.6;
-  const nationalCrowdPenalty =
-    section === "india" && !hasRegionalSignal ? 6 : 0;
 
   const raw =
     freshness +
@@ -475,8 +468,7 @@ export function computeHomepagePriorityScore(
     slugBoost -
     staleDecay -
     duplicatePenalty -
-    clickbaitPenalty -
-    nationalCrowdPenalty;
+    clickbaitPenalty;
 
   const score = Math.max(0, Math.min(100, Math.round(raw * 10) / 10));
 

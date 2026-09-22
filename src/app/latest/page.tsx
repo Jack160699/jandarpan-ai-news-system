@@ -23,15 +23,15 @@ const PATH = "/latest";
 
 export const metadata: Metadata = buildHubPageMetadata({
   title: "Latest News · Jan Darpan",
-  description: "Chronological latest news from Chhattisgarh — ताज़ा ख़बरें.",
+  description: "Chronological latest news from India — ताज़ा ख़बरें.",
   path: PATH,
-  keywords: ["latest news", "ताज़ा ख़बरें", "Chhattisgarh"],
+  keywords: ["latest news", "ताज़ा ख़बरें", "India", "भारत", "Jan Darpan"],
   locale: "hi_IN",
 });
 
 export default async function LatestPage() {
   const displayLanguage = await getServerReaderLanguage();
-  const pool = await fetchGeneratedArticlePool(80);
+  const pool = await fetchGeneratedArticlePool(120);
   const langPool = filterPoolByLanguage(pool, displayLanguage);
   const ranked = rankArticlesForHomepage(langPool);
   const fromPool = ranked
@@ -69,14 +69,14 @@ export default async function LatestPage() {
   }
   const articles = [...bySlug.values()]
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0, 40);
+    .slice(0, 100);
 
   const jsonLd = [
     collectionPageJsonLd({
       name: "Latest News",
-      description: "Chronological latest news from Chhattisgarh.",
+      description: "Chronological latest news from India.",
       path: PATH,
-      items: articles.slice(0, 20).map((article) => ({
+      items: articles.slice(0, 30).map((article) => ({
         url: `/story/${article.slug}`,
         name: article.headline,
       })),

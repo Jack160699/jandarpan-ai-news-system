@@ -20,7 +20,7 @@ export const revalidate = 60;
 
 const BASE_TITLE = `Live Desk · ${BRAND.nameEn}`;
 const BASE_DESCRIPTION =
-  "Breaking and live wire updates from Chhattisgarh — developing stories as they happen.";
+  "Breaking and live wire updates from India — developing stories as they happen.";
 const BASE_PATH = "/live";
 
 export const metadata = buildHubPageMetadata({
@@ -30,9 +30,10 @@ export const metadata = buildHubPageMetadata({
   keywords: [
     "live news",
     "breaking news",
-    "Chhattisgarh live wire",
+    "India live wire",
     "developing stories",
     "Jan Darpan live desk",
+    "भारत लाइव न्यूज़",
   ],
 });
 
