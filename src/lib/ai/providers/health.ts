@@ -11,7 +11,7 @@ import type {
 } from "@/lib/ai/providers/types";
 
 const AUTH_COOLDOWN_MS = 15 * 60 * 1000;
-const DEFAULT_COOLDOWN_MS = 5 * 60 * 1000;
+const DEFAULT_COOLDOWN_MS = 10_000;
 
 type ProviderState = {
   provider: HealthKey;

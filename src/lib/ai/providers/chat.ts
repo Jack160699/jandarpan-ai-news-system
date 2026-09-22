@@ -488,7 +488,16 @@ export async function requestChatCompletion(
       continue;
     }
     if (providerId === "gemini") {
-      if (isGeminiConfigured()) attempts.push({ id: "gemini", model: null, invoke: () => requestGeminiChat(request) });
+      if (isGeminiConfigured()) {
+        const premiumModel = process.env.GEMINI_PREMIUM_EDITORIAL_MODEL?.trim() || "gemini-3.6-flash";
+        const liteModel = process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-3.5-flash-lite";
+        if (request.premium) {
+          attempts.push({ id: "gemini", model: premiumModel, invoke: () => requestGeminiChat(request) });
+          attempts.push({ id: "gemini", model: liteModel, invoke: () => requestGeminiChat({ ...request, premium: false, model: liteModel }) });
+        } else {
+          attempts.push({ id: "gemini", model: liteModel, invoke: () => requestGeminiChat(request) });
+        }
+      }
       continue;
     }
     const configs = restConfigs[providerId];
@@ -502,7 +511,16 @@ export async function requestChatCompletion(
     const fallbackProviders: AiProviderId[] = ["gemini", "groq", "openrouter", "openai"];
     for (const providerId of fallbackProviders) {
       if (providerId === "gemini") {
-        if (isGeminiConfigured()) attempts.push({ id: "gemini", model: null, invoke: () => requestGeminiChat(request) });
+        if (isGeminiConfigured()) {
+          const premiumModel = process.env.GEMINI_PREMIUM_EDITORIAL_MODEL?.trim() || "gemini-3.6-flash";
+          const liteModel = process.env.GEMINI_EDITORIAL_MODEL?.trim() || "gemini-3.5-flash-lite";
+          if (request.premium) {
+            attempts.push({ id: "gemini", model: premiumModel, invoke: () => requestGeminiChat(request) });
+            attempts.push({ id: "gemini", model: liteModel, invoke: () => requestGeminiChat({ ...request, premium: false, model: liteModel }) });
+          } else {
+            attempts.push({ id: "gemini", model: liteModel, invoke: () => requestGeminiChat(request) });
+          }
+        }
         continue;
       }
       if (providerId === "openai" && !isOpenAiProviderEnabled()) continue;

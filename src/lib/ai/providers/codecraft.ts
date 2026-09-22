@@ -76,8 +76,12 @@ function parseSseChunks(rawText: string): { content: string; error?: string } {
       if (parsed.error?.message) {
         return { content: "", error: parsed.error.message };
       }
-      const delta = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content;
-      if (delta) content += delta;
+      const delta =
+        parsed.choices?.[0]?.delta?.content ||
+        parsed.choices?.[0]?.delta?.text ||
+        parsed.choices?.[0]?.message?.content ||
+        parsed.choices?.[0]?.text;
+      if (delta && typeof delta === "string") content += delta;
     } catch {}
   }
   return { content };
@@ -150,6 +154,7 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
     }
 
     if (!content.trim()) {
+      console.warn(`[codecraft] Empty response from ${model}. rawText sample: ${rawStreamText.slice(0, 300)}`);
       throw { code: "ai_empty_response", message: "Empty CodeCraft response", retryable: false, authFailure: false, invalidRequest: false, rateLimited: false };
     }
 

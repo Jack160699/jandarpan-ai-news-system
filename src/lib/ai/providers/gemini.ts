@@ -45,7 +45,9 @@ export function isGeminiConfigured(): boolean {
  * GEMINI_PREMIUM_EDITORIAL_MODEL.
  */
 export function resolveGeminiModel(operation: string, override?: string, premium?: boolean): string {
-  if (override?.trim()) return override.trim();
+  if (override?.trim() && (override.toLowerCase().startsWith("gemini") || override.toLowerCase().includes("flash") || override.toLowerCase().includes("pro"))) {
+    return override.trim();
+  }
   if (premium) {
     return process.env.GEMINI_PREMIUM_EDITORIAL_MODEL?.trim() || "gemini-3.6-flash";
   }
@@ -169,7 +171,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_unavailable", message: "GEMINI_API_KEY not set", retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
   }
 
-  const model = resolveGeminiModel(request.operation, request.model, request.premium);
+  let model = resolveGeminiModel(request.operation, request.model, request.premium);
 
   if (request.premium && !request.premiumReason) {
     // Fail loudly in dev rather than silently escalate cost/quota with no
@@ -177,11 +179,23 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     console.warn(`[gemini] premium escalation to ${model} requested with no premiumReason (operation=${request.operation})`);
   }
 
+  // Model-level resilience: If the selected model (e.g. gemini-3.6-flash) is unhealthy or in cooldown,
+  // fall back immediately to gemini-3.5-flash-lite rather than failing the entire story!
   if (!isProviderHealthy(healthKeyFor(model))) {
-    return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_provider_cooldown", message: `gemini/${model} temporarily unhealthy`, retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
+    if (model !== "gemini-3.5-flash-lite" && isProviderHealthy(healthKeyFor("gemini-3.5-flash-lite"))) {
+      console.warn(`[gemini] ${model} unhealthy; falling back to gemini-3.5-flash-lite`);
+      model = "gemini-3.5-flash-lite";
+    } else {
+      return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_provider_cooldown", message: `gemini/${model} temporarily unhealthy`, retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
+    }
   }
 
-  const quota = await reserveQuota({ provider: "gemini", model, operation: request.operation, priority: request.priority, estimatedTokens: request.maxTokens });
+  let quota = await reserveQuota({ provider: "gemini", model, operation: request.operation, priority: request.priority, estimatedTokens: request.maxTokens });
+  if (!quota.allowed && model !== "gemini-3.5-flash-lite") {
+    console.warn(`[gemini] ${model} quota exhausted (${quota.reason}); falling back to gemini-3.5-flash-lite`);
+    model = "gemini-3.5-flash-lite";
+    quota = await reserveQuota({ provider: "gemini", model, operation: request.operation, priority: request.priority, estimatedTokens: request.maxTokens });
+  }
   if (!quota.allowed) {
     return { ok: false, provider: "gemini", latencyMs: 0, error: { code: "ai_quota_exhausted", message: quota.reason ?? `gemini/${model} quota exhausted`, retryable: false, authFailure: false, invalidRequest: false, rateLimited: true } };
   }
