@@ -139,8 +139,11 @@ export async function runEditorialGenerateLane(
   }
 
   // Directly fetch, rank, and select the best candidates.
-  // We bypass the worker_jobs queue entirely.
-  const batchLimit = Math.max(12, EDITORIAL_LIMITS.defaultEditorialBatchLimit);
+  // We process a lean, serverless-safe batch per run to avoid 300s curl timeouts.
+  const batchLimit = Math.min(
+    6,
+    Number(process.env.EDITORIAL_BATCH_LIMIT) || 4
+  );
   const direct = await generateEditorialsFromEvents({
     limit: batchLimit,
   });

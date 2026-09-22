@@ -6,12 +6,14 @@ export async function prepareEditorialCandidateWaves<TEvent, TPrepared>({
   concurrency,
   prepare,
   isCandidate,
+  maxAttempts,
 }: {
   ranked: TEvent[];
   limit: number;
   concurrency: number;
   prepare: (event: TEvent) => Promise<TPrepared>;
   isCandidate: (prepared: TPrepared) => boolean;
+  maxAttempts?: number;
 }): Promise<{
   attempted: TEvent[];
   prepared: TPrepared[];
@@ -23,8 +25,14 @@ export async function prepareEditorialCandidateWaves<TEvent, TPrepared>({
   let candidateCount = 0;
   let cursor = 0;
 
-  while (cursor < ranked.length && candidateCount < target) {
-    const remaining = target - candidateCount;
+  while (
+    cursor < ranked.length &&
+    candidateCount < target &&
+    (!maxAttempts || attempted.length < maxAttempts)
+  ) {
+    const remaining = maxAttempts
+      ? Math.min(target - candidateCount, maxAttempts - attempted.length)
+      : target - candidateCount;
     const wave = ranked.slice(cursor, cursor + remaining);
     cursor += wave.length;
 

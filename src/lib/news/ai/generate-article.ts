@@ -2034,6 +2034,7 @@ export async function generateEditorialsFromEvents(options?: {
     ranked: rankedPending,
     limit,
     concurrency: INFRA_CONFIG.editorialConcurrency,
+    maxAttempts: Math.max(limit * 2, 8),
     prepare: (event) =>
       prepareCandidate(
         event,
