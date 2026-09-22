@@ -33,20 +33,24 @@ jobs:
           echo "Using APP_URL=${APP_URL}"
 
       - name: Stage A - AI enrichment
+        continue-on-error: true
         run: |
           bash .github/scripts/invoke-cron-endpoint.sh \
             "ai_enrich" \
             "/api/cron/orchestrate" \
             "POST" \
-            '{"workers":["ai_enrich"]}'
+            '{"workers":["ai_enrich"]}' \
+            "300"
 
       - name: Stage B - event/job processing
+        continue-on-error: true
         run: |
           bash .github/scripts/invoke-cron-endpoint.sh \
             "cron-jobs" \
             "/api/cron/jobs" \
             "POST" \
-            "{}"
+            "{}" \
+            "300"
 
       - name: Stage C - editorial generation
         run: |
@@ -63,7 +67,8 @@ jobs:
             "publish" \
             "/api/cron/edition-publish" \
             "POST" \
-            "{}"
+            "{}" \
+            "300"
 
       - name: Worker health check
         run: |
