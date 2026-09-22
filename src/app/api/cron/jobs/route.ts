@@ -9,6 +9,6 @@ import {
 } from "@/lib/infrastructure/cron/handlers";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export const { GET, POST } = cronMethodHandlers(handleCronJobs);

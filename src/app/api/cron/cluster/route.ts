@@ -14,7 +14,7 @@ import {
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   return handleCluster(request);

@@ -44,6 +44,16 @@ jobs:
             "{}" \
             "300"
 
+      - name: Stage 0b - Signal clustering
+        continue-on-error: true
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "cluster" \
+            "/api/cron/cluster" \
+            "POST" \
+            "{}" \
+            "300"
+
       - name: Stage A - AI enrichment
         continue-on-error: true
         run: |

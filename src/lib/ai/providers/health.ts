@@ -106,7 +106,7 @@ export function markProviderUnhealthy(
   const cooldownMs = input.authFailure
     ? AUTH_COOLDOWN_MS
     : input.rateLimited
-      ? DEFAULT_COOLDOWN_MS
+      ? 10_000
       : DEFAULT_COOLDOWN_MS;
 
   state.healthy = false;
