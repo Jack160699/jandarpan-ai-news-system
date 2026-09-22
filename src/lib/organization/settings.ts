@@ -19,6 +19,18 @@ export function mergeOrganizationSettings(
     const val = raw[key];
     if (typeof val === "string") merged[key] = val;
   }
+
+  // Purge legacy regional branding stored in database overrides
+  if (merged.organizationName && /chhattisgarh/i.test(merged.organizationName)) {
+    merged.organizationName = defaults.organizationName;
+  }
+  if (merged.state && /chhattisgarh/i.test(merged.state)) {
+    merged.state = defaults.state;
+  }
+  if (merged.city && /raipur/i.test(merged.city)) {
+    merged.city = defaults.city;
+  }
+
   return merged;
 }
 
@@ -38,7 +50,17 @@ export async function fetchOrganizationSettings(): Promise<OrganizationSettings>
     return defaults;
   }
 
-  return mergeOrganizationSettings(data?.config_value);
+  const merged = mergeOrganizationSettings(data?.config_value);
+  if (
+    data?.config_value &&
+    isRecord(data.config_value) &&
+    (/chhattisgarh/i.test(String(data.config_value.organizationName || "")) ||
+      /chhattisgarh/i.test(String(data.config_value.state || "")))
+  ) {
+    void updateOrganizationSettings(merged).catch(() => {});
+  }
+
+  return merged;
 }
 
 export async function updateOrganizationSettings(

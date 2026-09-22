@@ -20,8 +20,8 @@ export async function generateMetadata({ params }: PageProps) {
   const meta = await getPlatformDistrict(district);
   if (!meta) return { title: "District" };
   return buildHubPageMetadata({
-    title: `${meta.nameEn} News · Jan Darpan Chhattisgarh`,
-    description: `Latest news from ${meta.nameEn}, Chhattisgarh — hyperlocal coverage from the Jan Darpan district desk.`,
+    title: `${meta.nameEn} News · Jan Darpan — India`,
+    description: `Latest news from ${meta.nameEn} — regional coverage from the Jan Darpan desk.`,
     path: `/districts/${district}`,
     keywords: [meta.nameEn, meta.nameHi ?? meta.nameEn, "Chhattisgarh", "district news"],
   });

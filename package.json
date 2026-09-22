@@ -2,7 +2,7 @@
   "name": "jan-darpan-chhattisgarh",
   "version": "1.0.0",
   "private": true,
-  "description": "Jan Darpan Chhattisgarh — premium regional digital news for Chhattisgarh",
+  "description": "Jan Darpan — India — independent national digital news platform",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

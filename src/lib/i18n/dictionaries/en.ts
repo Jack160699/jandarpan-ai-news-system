@@ -2,14 +2,14 @@ import type { Dictionary } from "../types";
 
 export const en: Dictionary = {
   brand: {
-    tagline: "Chhattisgarh's premium digital news mirror — clear, trustworthy, regional",
+    tagline: "India's premier digital news platform — clear, trustworthy, national",
     conceptNote:
-      "Jan Darpan Chhattisgarh covers Raipur, Bilaspur, Bastar, and all 36 districts with editorial review before publish.",
+      "Jan Darpan — India covers national politics, economy, technology, governance, and key developments across India with editorial review before publish.",
   },
   gate: {
     editionLabel: "Today's edition",
     title: "Choose your reading language",
-    subtitle: "Read today's Chhattisgarh coverage in your language",
+    subtitle: "Read today's national coverage in your language",
     description:
       "The edition opens in the language you prefer. You can change this anytime from the menu.",
     confirm: "Open edition",
@@ -238,18 +238,18 @@ export const en: Dictionary = {
     deskNoteBody:
       "This report was prepared by our Chhattisgarh editorial team using verified public sources. Wire reports, district bureaus, and partner outlets are cross-checked and reviewed before publication.",
     deskNoteFine:
-      "Corrections and clarifications: sudhar@jandarpancg.in",
+      "Corrections and clarifications: hello@jandarpan.news",
     disclaimerTitle: "Editorial standards",
     disclaimerBody:
-      "Jan Darpan Chhattisgarh is an independent regional publisher. We verify claims against multiple sources, attribute reporting clearly, and correct errors promptly. We do not publish unverified rumours as fact.",
+      "Jan Darpan — India is an independent national publisher. We verify claims against multiple sources, attribute reporting clearly, and correct errors promptly. We do not publish unverified rumours as fact.",
     relatedStories: "Related stories",
     trendingNow: "Trending now",
     liveUpdating: "Live coverage is updating…",
   },
   footer: {
-    networkName: "Jan Darpan Chhattisgarh",
+    networkName: "Jan Darpan — India",
     mission:
-      "Your Chhattisgarh — district bureaus, state desk, and live coverage you can trust.",
+      "Independent national journalism — politics, economy, technology, and live coverage you can trust.",
     sectionsTitle: "Sections",
     newsroomTitle: "Newsroom",
     districtsTitle: "Districts",

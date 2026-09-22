@@ -428,7 +428,7 @@ export function AdminShell({
                 ) : (
                   <Image
                     src={JAN_DARPAN_BRAND_ASSETS.logo}
-                    alt="Jan Darpan Chhattisgarh"
+                    alt="Jan Darpan — India"
                     width={148}
                     height={30}
                     className="av3-brand-logo"

@@ -29,29 +29,29 @@ export const RITUAL_COPY: Record<
 > = {
   morning: {
     greeting: "आज का प्रधान संस्करण तैयार है",
-    subline: "Morning edition · Raipur desk · Filed 5:40 AM",
+    subline: "Morning edition · National desk · Filed 5:40 AM",
     closure: "The morning run is complete. The evening desk opens at four.",
   },
   afternoon: {
     greeting: "The afternoon filing is on your desk",
-    subline: "State desk refresh · Civic & business",
+    subline: "National desk refresh · Civic & business",
     closure: "Edition holds until the evening investigation update.",
   },
   evening: {
     greeting: "The evening edition has arrived",
-    subline: "Investigations · Culture · Final state filings",
+    subline: "Investigations · Culture · Final national filings",
     closure: "Tonight's edition rests. The record remains in the archive.",
   },
   late: {
     greeting: "Late desk · Final corrections",
-    subline: "Holding for dawn · Bastar & Raipur wires",
-    closure: "The newsroom grows quiet. Jan Darpan Chhattisgarh endures in the record.",
+    subline: "Holding for dawn · National wire feed",
+    closure: "The newsroom grows quiet. Jan Darpan — India endures in the record.",
   },
 };
 
 export function getEditionLineage(date = new Date()): string {
   const era = date.getFullYear() - INSTITUTION.founded;
-  return `Vol. ${INSTITUTION.volume} · Ed. ${INSTITUTION.editionNumber} · ${era} years in service to Chhattisgarh`;
+  return `Vol. ${INSTITUTION.volume} · Ed. ${INSTITUTION.editionNumber} · ${era} years in service to the nation`;
 }
 
 export function getPublishingLineage(): string {

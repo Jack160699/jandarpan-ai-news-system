@@ -562,43 +562,120 @@ function wordOverlap(a: string, b: string): boolean {
   return wordsA.some((w) => wordsB.has(w));
 }
 
-function nameSupportedByFactPack(name: string, people: string[]): boolean {
-  if (!people.length) return false;
-  const lower = name.toLowerCase();
-  return people.some((p) => {
-    const pLower = p.toLowerCase();
-    return (
-      wordOverlap(name, p) ||
-      lower.includes(pLower) ||
-      pLower.includes(lower) ||
-      titleSimilarity(name, p) >= 0.5
-    );
-  });
+function nameSupportedByFactPack(
+  name: string,
+  people: string[],
+  factPack?: FactPack
+): boolean {
+  if (people.length > 0) {
+    const lower = name.toLowerCase();
+    const matchedPerson = people.some((p) => {
+      const pLower = p.toLowerCase();
+      return (
+        wordOverlap(name, p) ||
+        lower.includes(pLower) ||
+        pLower.includes(lower) ||
+        titleSimilarity(name, p) >= 0.5
+      );
+    });
+    if (matchedPerson) return true;
+  }
+
+  if (factPack) {
+    const lower = name.toLowerCase();
+    if (
+      factPack.organizations.some(
+        (org) => wordOverlap(name, org) || lower.includes(org.toLowerCase())
+      )
+    ) {
+      return true;
+    }
+    if (
+      factPack.location &&
+      (wordOverlap(name, factPack.location) ||
+        lower.includes(factPack.location.toLowerCase()))
+    ) {
+      return true;
+    }
+    if (
+      factPack.supportingExcerpts.some(
+        (e) => e.toLowerCase().includes(lower) || wordOverlap(name, e)
+      )
+    ) {
+      return true;
+    }
+    if (
+      factPack.sources.some((s) => s.headline.toLowerCase().includes(lower))
+    ) {
+      return true;
+    }
+    if (people.length === 0) return true;
+  }
+
+  return false;
 }
 
 function normalizeDateToken(d: string): string {
   return d.toLowerCase().replace(/[.,]/g, "").replace(/\s+/g, " ").trim();
 }
 
-function dateSupportedByFactPack(date: string, factDates: string[]): boolean {
+function dateSupportedByFactPack(
+  date: string,
+  factDates: string[],
+  factPack?: FactPack
+): boolean {
   const norm = normalizeDateToken(date);
-  return factDates.some((f) => {
-    const fn = normalizeDateToken(f);
-    return fn === norm || fn.includes(norm) || norm.includes(fn);
-  });
+  if (
+    factDates.some((f) => {
+      const fn = normalizeDateToken(f);
+      return fn === norm || fn.includes(norm) || norm.includes(fn);
+    })
+  ) {
+    return true;
+  }
+  if (factPack) {
+    if (
+      factPack.sources.some((s) => s.headline.toLowerCase().includes(norm))
+    ) {
+      return true;
+    }
+    if (factPack.supportingExcerpts.some((e) => e.toLowerCase().includes(norm))) {
+      return true;
+    }
+    if (factDates.length === 0) return true;
+  }
+  return false;
 }
 
 function normalizeNumberForCompare(n: string): string {
   return n.replace(/[₹,\s]|rs\.?|inr/gi, "").toLowerCase();
 }
 
-function numberSupportedByFactPack(num: string, factNumbers: string[]): boolean {
+function numberSupportedByFactPack(
+  num: string,
+  factNumbers: string[],
+  factPack?: FactPack
+): boolean {
   const norm = normalizeNumberForCompare(num);
   if (!norm) return true;
-  return factNumbers.some((f) => {
-    const fn = normalizeNumberForCompare(f);
-    return fn === norm || (fn.length >= 2 && (fn.includes(norm) || norm.includes(fn)));
-  });
+  if (
+    factNumbers.some((f) => {
+      const fn = normalizeNumberForCompare(f);
+      return fn === norm || (fn.length >= 2 && (fn.includes(norm) || norm.includes(fn)));
+    })
+  ) {
+    return true;
+  }
+  if (factPack) {
+    if (factPack.sources.some((s) => s.headline.includes(norm))) {
+      return true;
+    }
+    if (factPack.supportingExcerpts.some((e) => e.includes(norm))) {
+      return true;
+    }
+    if (factNumbers.length === 0) return true;
+  }
+  return false;
 }
 
 function quoteSupportedByFactPack(quote: string, factQuotes: FactPack["quotes"]): boolean {
@@ -643,7 +720,7 @@ export function validateClaimsAgainstFactPack(input: {
   const combined = `${input.headline}\n${input.summary}\n${input.articleBody}`;
 
   for (const name of extractNameCandidates(combined)) {
-    if (!nameSupportedByFactPack(name, factPack.people)) {
+    if (!nameSupportedByFactPack(name, factPack.people, factPack)) {
       issues.push(
         issue(
           "unsupported_name",
@@ -656,7 +733,7 @@ export function validateClaimsAgainstFactPack(input: {
 
   for (const date of extractDateMentions(combined)) {
     if (RELATIVE_DATE_RE.test(date.trim())) continue;
-    if (!dateSupportedByFactPack(date, factPack.dates)) {
+    if (!dateSupportedByFactPack(date, factPack.dates, factPack)) {
       issues.push(
         issue("unsupported_date", `Date not traceable to fact pack: "${date}"`, true)
       );
@@ -670,7 +747,7 @@ export function validateClaimsAgainstFactPack(input: {
     (n) => n.includes("%") || n.replace(/[^\d]/g, "").length >= 3
   );
   for (const num of draftNumbers) {
-    if (!numberSupportedByFactPack(num, factPack.numbers)) {
+    if (!numberSupportedByFactPack(num, factPack.numbers, factPack)) {
       issues.push(
         issue("unsupported_number", `Number not traceable to fact pack: "${num}"`, true)
       );

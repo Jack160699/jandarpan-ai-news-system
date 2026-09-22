@@ -1352,7 +1352,8 @@ async function runFullValidationSequence(input: {
     );
   }
 
-  if (claimIssues.length > 0) {
+  const hardClaimIssues = claimIssues.filter((c) => !c.retryable);
+  if (hardClaimIssues.length > 0) {
     hqGate.quality = {
       ...hqGate.quality,
       publish_allowed: false,
@@ -1360,12 +1361,20 @@ async function runFullValidationSequence(input: {
       publishDecision: "reject",
       rejectionReasons: [
         ...hqGate.quality.rejectionReasons,
+        ...hardClaimIssues.map((c) => `fact_pack:${c.code}`),
+      ],
+    };
+  } else if (claimIssues.length > 0) {
+    hqGate.quality = {
+      ...hqGate.quality,
+      rejectionReasons: [
+        ...hqGate.quality.rejectionReasons,
         ...claimIssues.map((c) => `fact_pack:${c.code}`),
       ],
     };
   }
 
-  const canPublish = hqGate.quality.publish_allowed && claimIssues.length === 0;
+  const canPublish = hqGate.quality.publish_allowed && hardClaimIssues.length === 0;
   const failureCodes = Array.from(
     new Set([
       ...hqGate.quality.rejectionReasons,

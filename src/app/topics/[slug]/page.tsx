@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const topic = await getPlatformTopic(slug);
   if (!topic) return { title: "Topic" };
   return buildHubPageMetadata({
-    title: `${topic.titleEn} · Jan Darpan Chhattisgarh`,
+    title: `${topic.titleEn} · Jan Darpan — India`,
     description: topic.descriptionEn,
     path: `/topics/${slug}`,
     keywords: topic.keywords,
