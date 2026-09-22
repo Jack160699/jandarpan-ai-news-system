@@ -1,6 +1,8 @@
 name: Enterprise Workers
 
 on:
+  schedule:
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -31,6 +33,16 @@ jobs:
           esac
 
           echo "Using APP_URL=${APP_URL}"
+
+      - name: Stage 0 - News ingestion
+        continue-on-error: true
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "fetch_news" \
+            "/api/fetch-news" \
+            "POST" \
+            "{}" \
+            "300"
 
       - name: Stage A - AI enrichment
         continue-on-error: true

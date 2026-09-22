@@ -35,7 +35,7 @@ import { buildQueueHealthSnapshot } from "@/lib/infrastructure/queue/health-mana
 import { asJsonObject } from "@/types/json";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

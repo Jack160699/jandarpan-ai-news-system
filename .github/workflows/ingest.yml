@@ -1,5 +1,8 @@
 name: Ingest News
-on: workflow_dispatch
+on:
+  schedule:
+    - cron: "0,30 * * * *"
+  workflow_dispatch:
 jobs:
   ingest:
     runs-on: ubuntu-latest

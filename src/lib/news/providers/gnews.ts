@@ -17,8 +17,8 @@ import type { GnewsDistrictQuery } from "@/lib/autonomous/gnews-quota-planner";
 
 const GNEWS_HEADLINES = "https://gnews.io/api/v4/top-headlines";
 const GNEWS_SEARCH = "https://gnews.io/api/v4/search";
-const GNEWS_CATEGORY_BATCH_SIZE = 1;
-const GNEWS_CATEGORY_DELAY_MS = 600;
+const GNEWS_CATEGORY_BATCH_SIZE = 2;
+const GNEWS_CATEGORY_DELAY_MS = 250;
 const GNEWS_SHADOW_SAMPLE_QUERIES = 2;
 
 function sleep(ms: number): Promise<void> {
@@ -604,7 +604,8 @@ export async function fetchGNewsAll(): Promise<ProviderFetchResult> {
   const startedAt = Date.now();
   const env = process.env;
 
-  if (!isGNewsGapFirstEnabled(env)) {
+  // National newsroom (Jan Darpan - India): fetch national category headlines
+  if (env.NATIONAL_NEWSROOM !== "false" || !isGNewsGapFirstEnabled(env)) {
     return fetchGNewsCategoryLoop();
   }
 
