@@ -554,7 +554,11 @@ export async function requestChatCompletion(
   // Autonomous fallback if primary provider chain failed
   if (!lastFailure?.ok && isGeminiConfigured() && !attempts.some((a) => a.id === "gemini")) {
     console.warn(`[ai-fallback] Primary chain failed (${lastFailure?.error?.code}); invoking Gemini fallback`);
-    const geminiRes = await requestGeminiChat(request);
+    const fallbackRequest: ChatCompletionRequest = {
+      ...request,
+      model: undefined,
+    };
+    const geminiRes = await requestGeminiChat(fallbackRequest);
     if (geminiRes.ok) return geminiRes;
     lastFailure = geminiRes;
   }

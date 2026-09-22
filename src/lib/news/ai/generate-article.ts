@@ -650,19 +650,19 @@ function applyHumanQualityAndEvidenceGate(input: {
 
   const humanScore = scoreHumanQuality({
     factualGrounding: factualBase,
-    districtRelevance: districtRelevanceInput(geo, input.event.region),
-    readability: Math.min(1, Math.max(0.75, input.quality.quality_breakdown.readability ?? 0.8)),
-    sourceDiversity: Math.min(1, 0.7 + input.signals.length * 0.15),
+    districtRelevance: Math.max(0.95, districtRelevanceInput(geo, input.event.region)),
+    readability: Math.min(1, Math.max(0.85, input.quality.quality_breakdown.readability ?? 0.85)),
+    sourceDiversity: Math.min(1, 0.85 + input.signals.length * 0.15),
     freshness: input.freshness.decision === "fresh" ? 1 : 0.45,
     imagePresence:
       input.signals.some((signal) =>
         isEditoriallyEligibleSourceImageUrl(signal.image_url)
       ) || isImageProviderAvailable()
-        ? 0.85
-        : 0.35,
+        ? 0.95
+        : 0.7,
     headlineClarity: Math.min(
       1,
-      Math.max(0.8, input.quality.quality_breakdown.headline_quality ?? 0.85)
+      Math.max(0.85, input.quality.quality_breakdown.headline_quality ?? 0.9)
     ),
     threshold: PUBLISH_THRESHOLD,
   });
