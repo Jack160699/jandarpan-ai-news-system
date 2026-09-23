@@ -74,16 +74,6 @@ jobs:
             "{}" \
             "300"
 
-      - name: Stage C-pre - Flush stale AI quota keys
-        continue-on-error: true
-        run: |
-          bash .github/scripts/invoke-cron-endpoint.sh \
-            "quota-flush" \
-            "/api/admin/ops/quota-flush" \
-            "POST" \
-            "{}" \
-            "30"
-
       - name: Stage C - editorial generation
         run: |
           bash .github/scripts/invoke-cron-endpoint.sh \

@@ -24,6 +24,7 @@ import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { pipelineLog } from "@/lib/observability/production-log";
+import { flushDailyQuotaKeys } from "@/lib/ai/providers/quota";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -64,6 +65,19 @@ async function handleEditorialGenerate(request: Request) {
       { ok: false, error: "supabase_not_configured" },
       { status: 500, headers: noStoreHeaders() }
     );
+  }
+
+  // Flush stale daily quota Redis keys before every editorial run.
+  // Providers (Gemini, Groq, CodeCraft) reset their RPD limits at UTC midnight,
+  // but the in-app Redis keys were previously anchored to the first request of
+  // the day (86_400s flat TTL), causing up to 9h of phantom exhaustion per day.
+  // This call deletes those keys so the pipeline starts with a fresh quota window.
+  // Errors are non-fatal — the editorial run proceeds regardless.
+  try {
+    const flush = await flushDailyQuotaKeys();
+    pipelineLog("[quota_flush]", { flushed: flush.flushed.length, errors: flush.errors.length });
+  } catch (err) {
+    pipelineLog("[quota_flush_error]", { error: err instanceof Error ? err.message : String(err) });
   }
 
   const lockResult = await runWorkerEndpoint(
