@@ -51,14 +51,15 @@ async function buildFeedFromPool(
   scheduleMissingTranslations(pool, displayLanguage, { max: 12 });
 
   const langPool = filterPoolByLanguage(pool, displayLanguage);
+  const effectivePool = langPool.length > 0 ? langPool : pool;
   homeDebug("homepage language pool", {
     displayLanguage,
     total: pool.length,
-    eligible: langPool.length,
+    eligible: effectivePool.length,
   });
 
-  if (!langPool.length) {
-    warnLiveFeed("homepage_feed_no_language_match", {
+  if (!effectivePool.length) {
+    warnLiveFeed("homepage_feed_no_pool_articles", {
       displayLanguage,
       poolSize: pool.length,
     });
@@ -70,7 +71,7 @@ async function buildFeedFromPool(
     tenant
   );
 
-  const feed = buildGeneratedHomepageFeed(langPool, {
+  const feed = buildGeneratedHomepageFeed(effectivePool, {
     personalization,
     displayLanguage,
   });
