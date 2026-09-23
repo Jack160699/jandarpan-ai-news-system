@@ -211,156 +211,177 @@
     border-radius: 6px;
   }
 
-  .jd-desk-util {
+  /* SECTION 1 — Unified Main Masthead (Single Horizontal Section) */
+  .jd-desk-masthead {
     background: var(--jd-paper);
-    color: var(--jd-ink-2);
-    border-bottom: 1px solid var(--jd-line);
-    min-height: 32px;
-    font-size: 11.5px;
-  }
-
-  .jd-desk-util__inner {
+    border-bottom: 1.5px solid var(--jd-line, #E7E0D3);
+    min-height: 84px;
     display: flex;
     align-items: center;
+    box-sizing: border-box;
+    padding: 10px 0;
+  }
+
+  .jd-desk-masthead__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: 16px;
-    min-height: 32px;
+    width: 100%;
+    max-width: var(--jd-shell-max, 1240px);
+    margin: 0 auto;
+    padding: 0 16px;
+    box-sizing: border-box;
   }
 
-  .jd-desk-util__date {
-    color: var(--jd-ink-2);
-    font-weight: 600;
-  }
-
-  .jd-desk-util__wx {
+  /* Left: Date + Weather (Section 4 & Section 18: 16-18px) */
+  .jd-desk-masthead__meta {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 10px;
+    font-family: var(--jd-ff-ui);
+    font-size: 16px;
     font-weight: 600;
-    color: var(--jd-ink-2);
+    color: var(--jd-ink, #0E1B3D);
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
-  .jd-desk-util__district {
-    display: none;
+  .jd-desk-masthead__date {
+    color: var(--jd-ink, #0E1B3D);
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  .jd-desk-masthead__sep {
+    color: rgba(14, 27, 61, 0.25);
+    font-weight: 400;
+  }
+
+  .jd-desk-masthead__wx {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--jd-ink, #0E1B3D);
+    line-height: 1.2;
+  }
+
+  /* Main brand area: Left-aligned brand lockup */
+  .jd-desk-masthead__brand {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Right side: Search + Language switcher + Sign In + Member button */
+  .jd-desk-masthead__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .jd-desk-search {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #ffffff;
+    border: 1.5px solid var(--jd-line-dark, #D3CBBE);
+    border-radius: 4px;
+    padding: 7px 14px;
+    height: 38px;
+    width: clamp(140px, 15vw, 210px);
+    cursor: pointer;
+    color: var(--jd-ink-3, #657187);
+    font-family: var(--jd-ff-ui);
+    font-size: 15px;
+    font-weight: 500;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .jd-desk-search:hover,
+  .jd-desk-search:focus-visible {
+    border-color: var(--jd-navy);
+    outline: none;
   }
 
   .jd-desk-lang {
     display: inline-flex;
-    border: 1px solid var(--jd-line-dark, #cfc6b5);
-    border-radius: 2px;
+    border: 1.5px solid var(--jd-line-dark, #D3CBBE);
+    border-radius: 3px;
     overflow: hidden;
+    height: 34px;
   }
 
   .jd-desk-lang button {
     background: transparent;
     border: 0;
-    color: var(--jd-ink-2);
-    font-size: 10px;
+    color: var(--jd-ink-2, #3D485E);
+    font-family: var(--jd-ff-ui);
+    font-size: 13.5px;
     font-weight: 700;
-    padding: 2px 7px;
+    padding: 2px 10px;
     cursor: pointer;
+    line-height: 1;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   .jd-desk-lang button.is-active {
-    background: var(--jd-navy);
-    color: #fff;
+    background: var(--jd-navy, #0E1B3D);
+    color: #ffffff;
   }
 
-  .jd-desk-util__signin {
-    color: var(--jd-red-brand, #c8102e);
+  .jd-desk-masthead__signin {
+    color: var(--jd-navy, #0E1B3D);
     text-decoration: none;
+    font-family: var(--jd-ff-ui);
+    font-size: 15px;
     font-weight: 700;
+    padding: 6px 8px;
+    white-space: nowrap;
+    transition: color 0.15s ease;
   }
 
-  .jd-desk-brand {
-    background: var(--jd-paper);
-    border-bottom: 1px solid var(--jd-line);
-    min-height: 70px;
-  }
-
-  .jd-desk-brand__inner {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 70px;
-  }
-
-  .jd-desk-hamburger {
-    display: inline-flex;
-    background: none;
-    border: 0;
-    padding: 8px;
-    cursor: pointer;
-  }
-
-  .jd-desk-brand__logo {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-    color: var(--jd-ink);
-    margin: 0 auto;
-  }
-
-  .jd-desk-brand__word {
-    display: block;
-    font-size: var(--jd-type-masthead, 1.625rem);
-    line-height: var(--jd-lh-display, 1.35);
-    color: var(--jd-navy);
-    padding-block: 0.08em;
-  }
-
-  .jd-desk-brand__tag {
-    display: none;
-    font-size: 11px;
-    color: var(--jd-ink-3);
-    margin-top: 2px;
-  }
-
-  .jd-desk-search {
-    display: none;
-  }
-
-  .jd-desk-brand__actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+  .jd-desk-masthead__signin:hover {
+    color: var(--jd-red-brand, #C8102E);
   }
 
   .jd-desk-member-cta {
-    display: none;
-    background: var(--jd-gold);
-    color: var(--jd-navy-deep);
-    font-weight: 800;
-    font-size: 12px;
-    padding: 10px 14px;
-    border-radius: 2px;
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  .jd-desk-member-cta--sm {
-    display: inline-flex;
-    padding: 7px 10px;
-    font-size: 11px;
-  }
-
-  .jd-desk-icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    background: none;
-    border: 0;
-    cursor: pointer;
+    background: var(--jd-gold, #C9A24B);
+    color: var(--jd-navy-deep, #0E1B3D);
+    font-family: var(--jd-ff-ui);
+    font-weight: 800;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 3px;
     text-decoration: none;
+    white-space: nowrap;
+    height: 36px;
+    box-sizing: border-box;
+    transition: opacity 0.15s ease, transform 0.1s ease;
   }
 
+  .jd-desk-member-cta:hover {
+    opacity: 0.92;
+  }
+
+  /* SECTION 2 — Category / Desk Navigation (18-20px, Full-Width) */
   .jd-desk-catnav {
-    background: var(--jd-navy);
-    min-height: 42px;
+    background: var(--jd-navy, #0E1B3D);
+    min-height: 52px;
+    width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1.5px solid var(--jd-line, #E7E0D3);
     overflow-x: auto;
     scrollbar-width: none;
+    box-sizing: border-box;
   }
 
   .jd-desk-catnav::-webkit-scrollbar {
@@ -370,29 +391,36 @@
   .jd-desk-catnav__inner {
     display: flex;
     align-items: stretch;
-    gap: 0;
-    min-height: 42px;
+    justify-content: space-between;
+    width: 100%;
+    max-width: var(--jd-shell-max, 1240px);
+    margin: 0 auto;
+    padding: 0 16px;
+    box-sizing: border-box;
   }
 
   .jd-desk-catnav a {
     display: inline-flex;
     align-items: center;
-    padding: 0 12px;
-    color: #c7d0e2;
+    justify-content: center;
+    padding: 12px 4px;
+    color: #e2e8f4;
     text-decoration: none;
-    font-size: 12px;
-    font-weight: 700;
+    font-family: var(--jd-ff-ui);
+    font-size: clamp(16px, 1.25vw, 19px);
+    font-weight: 650;
     white-space: nowrap;
-    border-bottom: 2.5px solid transparent;
+    border-bottom: 3.5px solid transparent;
+    transition: color 0.15s ease, border-bottom-color 0.15s ease;
+  }
+
+  .jd-desk-catnav a:hover {
+    color: #ffffff;
   }
 
   .jd-desk-catnav a.is-active {
-    color: var(--jd-gold-soft);
-    border-bottom-color: var(--jd-gold);
-  }
-
-  .jd-desk-cat--wide {
-    display: none;
+    color: var(--jd-gold-soft, #dfc07c);
+    border-bottom-color: var(--jd-gold, #c9a24b);
   }
 
   .jd-desk-catnav__live {
@@ -687,32 +715,20 @@
     display: inline-flex;
   }
 
-  .jd-desk-util {
-    min-height: 32px;
+  .jd-desk-masthead {
+    min-height: 84px;
   }
 
-  .jd-desk-util__inner {
-    min-height: 32px;
-  }
-
-  .jd-desk-brand {
-    min-height: 64px;
-  }
-
-  .jd-desk-brand__inner {
-    min-height: 64px;
+  .jd-desk-masthead__inner {
+    min-height: 84px;
   }
 
   .jd-desk-catnav {
-    min-height: 44px;
+    min-height: 52px;
   }
 
   .jd-desk-catnav__inner {
-    min-height: 44px;
-  }
-
-  .jd-desk-cat--wide {
-    display: inline-flex;
+    min-height: 52px;
   }
 
   .jd-desk-drawer {

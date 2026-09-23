@@ -6,15 +6,14 @@ import type { NativeAdCreative } from "@/lib/monetization/native-feed-ads";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import {
   BreakingStrip,
-  DesktopPrimaryNav,
   LeadStory,
   LiveNewsTicker,
   Masthead,
+  MobileCategoryNav,
   ReaderShell,
   SectionHeader,
   SecondaryStory,
   TrendingRankRow,
-  UtilityRow,
 } from "../components";
 
 import { UtilTiles } from "../components/UtilTiles";
@@ -172,8 +171,7 @@ export function ReaderHomepage({
   return (
     <ReaderShell activeNav="home" bottomPad={showStickyAd ? 128 : 72}>
       <Masthead premiumBadge={isPremium} />
-      <DesktopPrimaryNav active="home" />
-      <UtilityRow />
+      <MobileCategoryNav />
       <LiveNewsTicker initialItems={breakingItems} />
 
 

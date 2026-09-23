@@ -173,8 +173,8 @@ export function UnifiedBrandLockup({
                 fontFamily: "var(--jd-ff-brand)",
                 fontWeight: 700,
                 fontSize: isRegular
-                  ? "clamp(1.35rem, 3.2vw, 1.65rem)"
-                  : "clamp(1.05rem, 3.8vw, 1.25rem)",
+                  ? "clamp(1.5rem, 3.2vw, 1.85rem)"
+                  : "clamp(1.15rem, 3.8vw, 1.35rem)",
                 lineHeight: 1.2,
                 whiteSpace: "nowrap",
                 letterSpacing: "-0.01em",
@@ -198,18 +198,18 @@ export function UnifiedBrandLockup({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 3,
+              gap: 4,
               background: isDark
                 ? "rgba(201, 162, 75, 0.14)"
                 : "rgba(14, 27, 61, 0.06)",
               border: isDark
                 ? "1px solid rgba(201, 162, 75, 0.35)"
-                : "1px solid rgba(14, 27, 61, 0.16)",
+                : "1px solid rgba(14, 27, 61, 0.18)",
               borderRadius: 3,
-              padding: isRegular ? "3px 8px" : "2px 6px",
+              padding: isRegular ? "3px 9px" : "2px 7px",
               color: isDark ? "var(--jd-gold-soft)" : "var(--jd-navy)",
               fontFamily: "var(--jd-ff-ui)",
-              fontSize: isRegular ? 13 : 11.5,
+              fontSize: isRegular ? 16 : 13,
               fontWeight: 750,
               cursor: "pointer",
               lineHeight: 1.3,
@@ -221,7 +221,7 @@ export function UnifiedBrandLockup({
             <span>{districtLabel}</span>
             <JdIcon
               name="chevD"
-              size={isRegular ? 11 : 9.5}
+              size={isRegular ? 13 : 10}
               stroke={2.4}
               color={isDark ? "var(--jd-gold-soft)" : "var(--jd-navy)"}
             />
@@ -272,8 +272,9 @@ export function UnifiedBrandLockup({
             boxSizing: "border-box",
             padding: isRegular ? "0 4px" : "0 3px",
             fontFamily: "var(--jd-ff-ui)",
-            fontSize: isRegular ? 10 : 8.5,
+            fontSize: isRegular ? 13.5 : 10,
             fontWeight: 800,
+            letterSpacing: isRegular ? "0.04em" : "0.02em",
             color: isDark ? "var(--jd-gold-soft)" : "#8B6B23",
             lineHeight: 1.2,
             userSelect: "none",

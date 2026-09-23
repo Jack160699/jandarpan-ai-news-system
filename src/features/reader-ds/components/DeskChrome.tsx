@@ -1,23 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { BrandMark } from "./BrandMark";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
-import { getDistrict } from "@/lib/regional/districts";
 import { useJdDsT } from "../i18n";
 import { useDeskChromeCondensed } from "../hooks/useDeskChromeCondensed";
 import { useDistrictWeather } from "../hooks/useDistrictWeather";
 import { JdIcon } from "./icons";
 import { UnifiedBrandLockup } from "./UnifiedBrandLockup";
-import {
-  DESK_CAT_ITEMS,
-  DESK_CAT_ITEMS_COMPACT,
-  resolveDeskCatActive,
-  type DeskCatKey,
-} from "./deskCatItems";
+import { DESK_CAT_ITEMS, resolveDeskCatActive } from "./deskCatItems";
 
 /**
  * Desktop / tablet editorial chrome (SoT H01–H04).
@@ -33,16 +26,6 @@ export function DeskChrome() {
   const districtSlug = prefs.homeDistrict?.trim() || "raipur";
   const weather = useDistrictWeather(districtSlug);
   const condensed = useDeskChromeCondensed();
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const district = getDistrict(districtSlug);
-  const districtLabel = district
-    ? locale === "en"
-      ? district.name
-      : district.nameHi
-    : locale === "en"
-      ? "Raipur"
-      : "रायपुर";
 
   const localeTag = locale === "en" ? "en-IN" : "hi-IN";
   let dateLabel = "";
@@ -63,7 +46,6 @@ export function DeskChrome() {
       : t("util.weatherUnavailable");
 
   const catItems = DESK_CAT_ITEMS;
-  const compactKeys = new Set<DeskCatKey>(DESK_CAT_ITEMS_COMPACT);
 
   return (
     <div className="jd-desk-chrome" data-jd-locale={locale} data-condensed={condensed ? "1" : "0"}>
@@ -105,84 +87,64 @@ export function DeskChrome() {
         </div>
       </div>
 
-      {/* Full header stack */}
+      {/* Full header stack — Exactly 2 sections here + Live Ticker below = 3 Sections total */}
       <div className="jd-desk-full">
-        <div className="jd-desk-util">
-          <div className="jd-desk-inner jd-desk-util__inner">
-            <span className="jd-desk-util__date">{dateLabel}</span>
-            <span className="jd-desk-util__wx" title={weather.fetchedAt ?? undefined}>
-              <JdIcon
-                name={weather.icon}
-                size={13}
-                stroke={1.8}
-                color="var(--jd-gold-soft)"
-              />
-              {weatherLabel}
-            </span>
-            <div className="jd-desk-lang" role="group" aria-label={t("desk.languageAria")}>
-              <button
-                type="button"
-                className={language === "hi" ? "is-active" : undefined}
-                onClick={() => setLanguage("hi")}
-              >
-                हिं
-              </button>
-              <button
-                type="button"
-                className={language === "en" ? "is-active" : undefined}
-                onClick={() => setLanguage("en")}
-              >
-                EN
-              </button>
+        {/* SECTION 1 — MAIN MASTHEAD */}
+        <div className="jd-desk-masthead jd-desk-brand">
+          <div className="jd-desk-inner jd-desk-masthead__inner">
+            {/* Left: Date + Weather */}
+            <div className="jd-desk-masthead__meta">
+              <span className="jd-desk-masthead__date">{dateLabel}</span>
+              <span className="jd-desk-masthead__sep" aria-hidden="true">|</span>
+              <span className="jd-desk-masthead__wx" title={weather.fetchedAt ?? undefined}>
+                <JdIcon
+                  name={weather.icon}
+                  size={18}
+                  stroke={1.9}
+                  color="var(--jd-navy)"
+                />
+                <span>{weatherLabel}</span>
+              </span>
             </div>
-            <Link href="/login" prefetch={false} className="jd-desk-util__signin">
-              {t("desk.signIn")}
-            </Link>
-          </div>
-        </div>
 
-        <div className="jd-desk-brand">
-          <div className="jd-desk-inner jd-desk-brand__inner">
-            <button
-              type="button"
-              className="jd-desk-hamburger"
-              aria-label={t("desk.menuAria")}
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              <JdIcon name="list" size={22} stroke={2} color="var(--jd-navy)" />
-            </button>
-
-            <div className="jd-desk-brand__left" style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+            {/* Main brand area: Jan Darpan logo + district selector + Chhattisgarh foundation label */}
+            <div className="jd-desk-masthead__brand">
               <UnifiedBrandLockup tone="light" size="regular" />
             </div>
 
-            <button
-              type="button"
-              className="jd-desk-search"
-              onClick={() => setSearchOpen(true)}
-              aria-label={t("masthead.searchAria")}
-            >
-              <JdIcon name="search" size={16} stroke={1.9} color="var(--jd-ink-3)" />
-              <span>{t("search.placeholder")}</span>
-            </button>
-
-            <div className="jd-desk-brand__actions">
+            {/* Right side: Search + Language switcher + Sign In + Member button */}
+            <div className="jd-desk-masthead__actions">
               <button
                 type="button"
-                className="jd-desk-icon-btn jd-desk-icon-btn--paper"
-                aria-label={t("masthead.searchAria")}
+                className="jd-desk-search"
                 onClick={() => setSearchOpen(true)}
+                aria-label={t("masthead.searchAria")}
               >
-                <JdIcon name="search" size={20} stroke={1.9} color="var(--jd-navy)" />
+                <JdIcon name="search" size={17} stroke={2} color="var(--jd-ink-3)" />
+                <span>{t("search.placeholder")}</span>
               </button>
-              <Link
-                href="/login"
-                className="jd-desk-icon-btn jd-desk-icon-btn--paper"
-                aria-label={t("masthead.profileAria")}
-              >
-                <JdIcon name="user" size={20} stroke={1.9} color="var(--jd-navy)" />
+
+              <div className="jd-desk-lang" role="group" aria-label={t("desk.languageAria")}>
+                <button
+                  type="button"
+                  className={language === "hi" ? "is-active" : undefined}
+                  onClick={() => setLanguage("hi")}
+                >
+                  हिं
+                </button>
+                <button
+                  type="button"
+                  className={language === "en" ? "is-active" : undefined}
+                  onClick={() => setLanguage("en")}
+                >
+                  EN
+                </button>
+              </div>
+
+              <Link href="/login" prefetch={false} className="jd-desk-masthead__signin">
+                {t("desk.signIn")}
               </Link>
+
               <Link href="/membership" prefetch={false} className="jd-desk-member-cta">
                 {t("desk.becomeMember")}
               </Link>
@@ -190,57 +152,22 @@ export function DeskChrome() {
           </div>
         </div>
 
+        {/* SECTION 2 — CATEGORY / DESK NAVIGATION (Full-Width, 13 canonical desks) */}
         <nav className="jd-desk-catnav" aria-label={t("desk.catNavAria")}>
           <div className="jd-desk-inner jd-desk-catnav__inner">
-            {catItems.map((it) => {
-              const compactOnly = !compactKeys.has(it.key);
-              return (
-                <Link
-                  key={it.key}
-                  href={it.href}
-                  prefetch={false}
-                  className={[
-                    active === it.key ? "is-active" : "",
-                    compactOnly ? "jd-desk-cat--wide" : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  aria-current={active === it.key ? "page" : undefined}
-                >
-                  {locale === "en" ? it.labelEn : it.labelHi}
-                </Link>
-              );
-            })}
-            <Link href="/live" prefetch={false} className="jd-desk-catnav__live">
-              <span className="jd-desk-dot" />
-              Live
-            </Link>
-            <Link href="/listen" prefetch={false} className="jd-desk-catnav__audio" aria-label={t("nav.listen")}>
-              <JdIcon name="headphone" size={16} stroke={1.9} color="var(--jd-gold-soft)" />
-            </Link>
-          </div>
-        </nav>
-
-        {menuOpen ? (
-          <div className="jd-desk-drawer" role="dialog" aria-label={t("desk.menuAria")}>
             {catItems.map((it) => (
               <Link
-                key={`drawer-${it.key}`}
+                key={it.key}
                 href={it.href}
-                onClick={() => setMenuOpen(false)}
+                prefetch={false}
                 className={active === it.key ? "is-active" : undefined}
+                aria-current={active === it.key ? "page" : undefined}
               >
                 {locale === "en" ? it.labelEn : it.labelHi}
               </Link>
             ))}
-            <Link href="/membership" prefetch={false} onClick={() => setMenuOpen(false)}>
-              {t("desk.becomeMember")}
-            </Link>
-            <Link href="/archive" prefetch={false} onClick={() => setMenuOpen(false)}>
-              {t("nav.more")}
-            </Link>
           </div>
-        ) : null}
+        </nav>
       </div>
     </div>
   );

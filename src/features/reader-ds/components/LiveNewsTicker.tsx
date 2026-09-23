@@ -110,7 +110,7 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
         borderBottom: "1px solid var(--jd-line, #E7E0D3)",
         borderTop: "1px solid rgba(201, 162, 75, 0.25)",
         boxSizing: "border-box",
-        minHeight: 38,
+        minHeight: 44,
         display: "flex",
         alignItems: "center",
         overflow: "hidden",
@@ -126,8 +126,8 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
           width: "100%",
           maxWidth: "var(--jd-shell-max, 1240px)",
           margin: "0 auto",
-          padding: "0 12px",
-          gap: 12,
+          padding: "0 16px",
+          gap: 14,
           minWidth: 0,
         }}
       >
@@ -139,12 +139,12 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: 6,
+            gap: 7,
             background: "var(--jd-red-brand, #C8102E)",
             color: "#ffffff",
-            padding: "3px 9px",
+            padding: "4px 11px",
             borderRadius: 3,
-            fontSize: 11,
+            fontSize: 15,
             fontWeight: 800,
             textDecoration: "none",
             whiteSpace: "nowrap",
@@ -156,8 +156,8 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
           <span
             className="jd-live-pulse-dot"
             style={{
-              width: 6,
-              height: 6,
+              width: 7,
+              height: 7,
               borderRadius: "50%",
               background: "#ffffff",
               display: "inline-block",
@@ -188,16 +188,16 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 8,
-                  paddingRight: 28,
+                  gap: 10,
+                  paddingRight: 32,
                   whiteSpace: "nowrap",
                 }}
               >
                 <span
                   style={{
                     color: "var(--jd-gold-soft, #C9A24B)",
-                    fontSize: 9,
-                    opacity: 0.8,
+                    fontSize: 10,
+                    opacity: 0.85,
                   }}
                   aria-hidden="true"
                 >
@@ -210,9 +210,9 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
                   style={{
                     color: "#FBF8F2",
                     textDecoration: "none",
-                    fontSize: "13px",
+                    fontSize: "clamp(15.5px, 1.25vw, 18px)",
                     fontWeight: 500,
-                    lineHeight: 1.3,
+                    lineHeight: 1.35,
                     outline: "none",
                   }}
                 >
