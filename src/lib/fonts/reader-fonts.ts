@@ -11,7 +11,7 @@ export const playfair = Playfair_Display({
   subsets: ["latin"],
   display: "swap",
   adjustFontFallback: true,
-  preload: true,
+  preload: false,
 });
 
 /** Body copy — primary reader typeface */
@@ -20,7 +20,7 @@ export const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
   display: "swap",
   adjustFontFallback: true,
-  preload: true,
+  preload: false,
 });
 
 /** Hindi / Chhattisgarhi (Devanagari) — preload to avoid matra clipping during swap */

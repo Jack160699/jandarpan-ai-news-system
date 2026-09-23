@@ -175,20 +175,28 @@ export function AppChrome({ children }: AppChromeProps) {
       pathname.startsWith("/system/") ||
       pathname === "/maintenance" ||
       pathname === "/login";
-    return (
-      <HeadlinesListenProvider>
-        <ArticleSpeechProvider>
-          <NavigationProvider>
-            <ReaderAccountProvider>
-              <NativeTouchLayer>
-                {skipOnboarding ? null : <OnboardingExperienceV3 />}
-                {children}
-              </NativeTouchLayer>
-            </ReaderAccountProvider>
-          </NavigationProvider>
-        </ArticleSpeechProvider>
-      </HeadlinesListenProvider>
+    const needsAudio =
+      pathname.startsWith("/listen") || pathname.startsWith("/story");
+    const content = (
+      <NavigationProvider>
+        <ReaderAccountProvider>
+          <NativeTouchLayer>
+            {skipOnboarding ? null : <OnboardingExperienceV3 />}
+            {children}
+          </NativeTouchLayer>
+        </ReaderAccountProvider>
+      </NavigationProvider>
     );
+
+    if (needsAudio) {
+      return (
+        <HeadlinesListenProvider>
+          <ArticleSpeechProvider>{content}</ArticleSpeechProvider>
+        </HeadlinesListenProvider>
+      );
+    }
+
+    return content;
   }
 
   if (pathname === "/shorts") {

@@ -22,6 +22,7 @@ export function MastheadProfileButton() {
   return (
     <Link
       href="/archive"
+      prefetch={false}
       aria-label={t("masthead.profileAria")}
       data-testid="jd-masthead-profile"
       className="jd-masthead__action"

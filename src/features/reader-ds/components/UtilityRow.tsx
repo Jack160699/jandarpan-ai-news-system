@@ -185,6 +185,7 @@ export function UtilityRow({
     >
       <Link
         href={districtHref}
+        prefetch={false}
         data-testid="jd-utility-district"
         style={{
           display: "flex",

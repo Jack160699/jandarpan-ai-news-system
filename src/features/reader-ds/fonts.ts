@@ -16,8 +16,8 @@ import { Mukta, Tiro_Devanagari_Hindi } from "next/font/google";
 export const mukta = Mukta({
   variable: "--jd-font-ui",
   subsets: ["devanagari", "latin"],
-  /** Skip 300/500 — unused optical weights; keeps Devanagari coverage. */
-  weight: ["400", "600", "700", "800"],
+  /** Essential UI weights: 400 (regular), 600 (semi), 700 (bold). */
+  weight: ["400", "600", "700"],
   display: "swap",
   adjustFontFallback: true,
   preload: true,

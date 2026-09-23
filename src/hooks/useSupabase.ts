@@ -72,7 +72,34 @@ function getSnapshot(): AuthSnapshot {
   return snapshot;
 }
 
-function ensureAuthBootstrap() {
+function hasPotentialAuthSession(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (
+      window.location.search.includes("code=") ||
+      window.location.search.includes("authError") ||
+      window.location.pathname.startsWith("/login") ||
+      window.location.pathname.startsWith("/auth/")
+    ) {
+      return true;
+    }
+    if (
+      document.cookie &&
+      (document.cookie.includes("sb-") || document.cookie.includes("auth-token"))
+    ) {
+      return true;
+    }
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith("sb-") || k.includes("auth-token"))) {
+        return true;
+      }
+    }
+  } catch {}
+  return false;
+}
+
+export function ensureAuthBootstrap() {
   if (initStarted) return;
   if (typeof window === "undefined" || !isSupabaseConfigured()) {
     snapshot = { ...snapshot, loading: false };
@@ -137,7 +164,9 @@ export function useSupabase(): UseSupabaseState {
     typeof window !== "undefined" && isSupabaseConfigured();
 
   useEffect(() => {
-    if (configured) ensureAuthBootstrap();
+    if (configured && hasPotentialAuthSession()) {
+      ensureAuthBootstrap();
+    }
   }, [configured]);
 
   const state = useSyncExternalStore(

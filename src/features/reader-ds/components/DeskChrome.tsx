@@ -118,7 +118,7 @@ export function DeskChrome() {
               />
               {weatherLabel}
             </span>
-            <Link href="/district?select=1" className="jd-desk-util__district">
+            <Link href="/district?select=1" prefetch={false} className="jd-desk-util__district">
               <JdIcon name="pin" size={12} stroke={2} color="var(--jd-gold)" />
               {districtLabel}
               <JdIcon name="chevD" size={11} stroke={2} color="#8ea0c4" />
@@ -139,7 +139,7 @@ export function DeskChrome() {
                 EN
               </button>
             </div>
-            <Link href="/login" className="jd-desk-util__signin">
+            <Link href="/login" prefetch={false} className="jd-desk-util__signin">
               {t("desk.signIn")}
             </Link>
           </div>
@@ -191,7 +191,7 @@ export function DeskChrome() {
               >
                 <JdIcon name="user" size={20} stroke={1.9} color="var(--jd-navy)" />
               </Link>
-              <Link href="/membership" className="jd-desk-member-cta">
+              <Link href="/membership" prefetch={false} className="jd-desk-member-cta">
                 {t("desk.becomeMember")}
               </Link>
             </div>
@@ -240,10 +240,10 @@ export function DeskChrome() {
                 {locale === "en" ? it.labelEn : it.labelHi}
               </Link>
             ))}
-            <Link href="/membership" onClick={() => setMenuOpen(false)}>
+            <Link href="/membership" prefetch={false} onClick={() => setMenuOpen(false)}>
               {t("desk.becomeMember")}
             </Link>
-            <Link href="/archive" onClick={() => setMenuOpen(false)}>
+            <Link href="/archive" prefetch={false} onClick={() => setMenuOpen(false)}>
               {t("nav.more")}
             </Link>
           </div>

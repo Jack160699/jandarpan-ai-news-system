@@ -23,6 +23,7 @@ export function MastheadNotifyButton({ unreadCount = 0 }: MastheadNotifyButtonPr
   return (
     <Link
       href="/notifications"
+      prefetch={false}
       aria-label={t("masthead.notifyAria")}
       data-testid="jd-masthead-notify"
       data-jd-unread={showBadge ? String(unreadCount) : "0"}
