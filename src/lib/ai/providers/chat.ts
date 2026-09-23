@@ -89,8 +89,16 @@ function resolveGroqModelChain(operation: string, override?: string): string[] {
     const fallback = process.env.GROQ_REVIEW_FALLBACK_MODEL?.trim() || "llama-3.3-70b-versatile";
     return primary === fallback ? [primary] : [primary, fallback];
   }
+  // For writing operations (generate, repair, translation) use the 70B model when
+  // Groq is the fallback writer — llama-3.1-8b-instant is too shallow for
+  // news-quality editorial output. llama-3.3-70b-versatile is verified live
+  // to accept json_object mode and produce structured, coherent Hindi/English copy.
+  if (operation === "editorial_generate" || operation === "editorial_repair" || operation === "translation") {
+    return [process.env.GROQ_WRITER_MODEL?.trim() || "llama-3.3-70b-versatile"];
+  }
   return [process.env.GROQ_LIGHTWEIGHT_MODEL?.trim() || "llama-3.1-8b-instant"];
 }
+
 
 /** REST configs for the OpenAI-compatible providers (openai, openrouter, groq) — excludes gemini, which has its own request shape (see gemini.ts). Each provider maps to an ordered array of configs since Groq can have more than one (primary reviewer model + in-provider fallback model). */
 function getRestProviderConfigs(operation: string, modelOverride?: string): Partial<Record<AiProviderId, ProviderConfig[]>> {

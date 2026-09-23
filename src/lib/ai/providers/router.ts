@@ -6,10 +6,14 @@
 
 import type { AiProviderId } from "@/lib/ai/providers/types";
 
-const WRITER_CHAIN: AiProviderId[] = ["codecraft", "gemini"];
-// Independent review uses CodeCraft.
-const REVIEWER_CHAIN: AiProviderId[] = ["codecraft"];
-const LIGHTWEIGHT_CHAIN: AiProviderId[] = ["codecraft"];
+// groq is included as a third fallback for editorial generation so that when
+// both codecraft and gemini hit their daily RPD caps, the newsroom can still
+// publish using Groq's llama-3.3-70b-versatile (rpd: 1000, tpd: 100K).
+// This prevents the total DEFERRED_QUOTA blackout seen after UTC midnight resets.
+const WRITER_CHAIN: AiProviderId[] = ["codecraft", "gemini", "groq"];
+// Independent review: codecraft primary, groq as fallback (same quota resilience).
+const REVIEWER_CHAIN: AiProviderId[] = ["codecraft", "groq"];
+const LIGHTWEIGHT_CHAIN: AiProviderId[] = ["codecraft", "groq"];
 const EMBEDDING_CHAIN: AiProviderId[] = ["cloudflare", "openai"];
 const IMAGE_CHAIN: AiProviderId[] = ["cloudflare", "openai"];
 
