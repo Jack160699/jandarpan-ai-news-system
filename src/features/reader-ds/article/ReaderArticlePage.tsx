@@ -20,7 +20,9 @@ import {
   SponsoredBanner,
 } from "./components/ArticleBanners";
 import { ArticleShareBar } from "./components/ArticleShareBar";
+import { ArticleActionBar } from "./components/ArticleActionBar";
 import { ArticleShareRail } from "../components/ArticleShareRail";
+
 import { AudioInline } from "./components/AudioInline";
 import { Byline } from "./components/Byline";
 import { ExplainerBody } from "./components/ExplainerBody";
@@ -353,18 +355,7 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
               {headline}
             </h1>
 
-            {variant === "breaking" ? (
-              <KeyPoints points={takeaways.slice(0, 3)} />
-            ) : null}
-
-            {variant !== "breaking" &&
-            variant !== "explainer" &&
-            variant !== "sponsored" &&
-            variant !== "no-image" &&
-            summary ? (
-              <AiSummary>{summary}</AiSummary>
-            ) : null}
-
+            {/* Dateline / Time / Byline */}
             {variant !== "breaking" &&
             variant !== "explainer" &&
             variant !== "sponsored" &&
@@ -378,16 +369,9 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
               />
             ) : null}
 
-            {variant === "standard" || variant === "premium" ? (
-              <AudioInline
-                durationLabel={
-                  readTime ? t("article.narrationWith", { time: readTime }) : t("article.narration")
-                }
-              />
-            ) : null}
-
+            {/* Hero Image */}
             {variant !== "no-image" && imageUrl ? (
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ margin: "14px 0 16px" }}>
                 <ArticleImage
                   src={imageUrl}
                   alt={headline}
@@ -418,6 +402,28 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
                 </div>
               </div>
             ) : null}
+
+            {/* Summary / KeyPoints */}
+            {variant === "breaking" ? (
+              <KeyPoints points={takeaways.slice(0, 3)} />
+            ) : null}
+
+            {variant !== "breaking" &&
+            variant !== "explainer" &&
+            variant !== "sponsored" &&
+            variant !== "no-image" &&
+            summary ? (
+              <AiSummary>{summary}</AiSummary>
+            ) : null}
+
+            {/* Share-first Action Bar: WhatsApp + Share + Listen + Save */}
+            <ArticleActionBar
+              headline={headline}
+              slug={slug}
+              readTime={readTime ?? undefined}
+            />
+
+
 
             {/* Official Video Embed if present */}
             {(() => {

@@ -30,5 +30,7 @@ export { TrendingRankRow } from "./TrendingRankRow";
 export { SearchOverlay } from "./SearchOverlay";
 export { DistrictSelector } from "./DistrictSelector";
 export { LatestRefreshBar } from "./LatestRefreshBar";
+export { MobileCategoryNav } from "./MobileCategoryNav";
 export { getPrimaryNavItems } from "./navItems";
 export type { PrimaryNavKey, PrimaryNavItem } from "./navItems";
+

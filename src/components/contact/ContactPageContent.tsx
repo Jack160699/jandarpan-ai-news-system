@@ -35,24 +35,26 @@ export function ContactPageContent({ settings, mission }: ContactPageContentProp
   );
 
   return (
-    <PageShell>
+    <PageShell pageTitle="Contact us">
       <JsonLdScript data={[orgJsonLd, pageJsonLd]} />
       <main
         id="main-content"
-        className="nr-root pl-container mx-auto max-w-2xl py-8 pb-24"
+        className="nr-root pl-container mx-auto max-w-3xl py-8 pb-24 px-4"
       >
-        <Link
-          href="/"
-          className="mb-6 inline-flex text-sm font-semibold text-[#a01830] no-underline dark:text-red-400"
-        >
-          ← Back
-        </Link>
-        <h1 className="m-0 font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
+        <nav aria-label="Breadcrumb" className="mb-6 text-xs text-stone-500">
+          <Link href="/" className="hover:underline text-[var(--jd-red)] font-semibold">
+            Home
+          </Link>
+          <span className="mx-2 text-stone-400">/</span>
+          <span className="text-stone-700 dark:text-stone-300 font-medium">Contact</span>
+        </nav>
+        <h1 className="m-0 jd-serif text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
           Contact us
         </h1>
         <p className="mt-2 text-[15px] leading-relaxed text-stone-600 dark:text-stone-300">
           {mission}
         </p>
+
 
         <section className="mt-8 space-y-4" aria-labelledby="contact-details">
           <h2 id="contact-details" className="m-0 text-base font-bold text-stone-800 dark:text-stone-100">

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Tag } from "./primitives";
 import { JdIcon } from "./icons";
+import { ArticleImage } from "./ArticleImage";
 import { storyHref, type ReaderStory } from "../utils";
 
-/** A5 trending ranked row — large rank numeral + tag + headline + views/growth. */
+/** A5 trending ranked row — large rank numeral + visual thumbnail + tag + headline + views/growth. */
 export function TrendingRankRow({
   story,
   rank,
@@ -19,9 +20,9 @@ export function TrendingRankRow({
       href={storyHref(story.slug)}
       style={{
         display: "flex",
-        gap: 13,
+        gap: 12,
         alignItems: "center",
-        padding: "13px 0",
+        padding: "11px 0",
         borderBottom: last ? "none" : "1px solid var(--jd-line-2)",
         color: "inherit",
         textDecoration: "none",
@@ -30,17 +31,26 @@ export function TrendingRankRow({
       <div
         className="jd-brand"
         style={{
-          fontSize: 30,
-          fontWeight: 700,
-          color: top ? "var(--jd-red)" : "var(--jd-line)",
-          width: 28,
+          fontSize: 26,
+          fontWeight: 800,
+          color: top ? "var(--jd-red)" : "var(--jd-muted)",
+          width: 24,
           textAlign: "center",
           flexShrink: 0,
-          lineHeight: 1.15,
-          paddingBlock: "0.05em",
+          lineHeight: 1,
         }}
       >
         {rank}
+      </div>
+      <div style={{ width: 84, height: 60, flexShrink: 0, borderRadius: 3, overflow: "hidden" }}>
+        <ArticleImage
+          src={story.imageUrl}
+          alt={story.headline}
+          altIsPhotoDescription={false}
+          ratio="thumb"
+          sizes="84px"
+          category={story.kicker ?? "trending"}
+        />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ marginBottom: 2 }}>
@@ -48,7 +58,7 @@ export function TrendingRankRow({
         </div>
         <div
           className="jd-serif jd-type-card-sm"
-          style={{ color: "var(--jd-ink)" }}
+          style={{ color: "var(--jd-ink)", fontWeight: 700, fontSize: 13.5, lineHeight: 1.35 }}
           title={story.headline}
         >
           {story.headline}
@@ -56,7 +66,7 @@ export function TrendingRankRow({
         {(story.viewCountLabel || story.growthLabel) && (
           <div
             className="jd-ui jd-type-meta"
-            style={{ display: "flex", gap: 12, marginTop: 6, color: "var(--jd-muted)" }}
+            style={{ display: "flex", gap: 12, marginTop: 4, color: "var(--jd-muted)" }}
           >
             {story.viewCountLabel ? (
               <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -73,3 +83,4 @@ export function TrendingRankRow({
     </Link>
   );
 }
+

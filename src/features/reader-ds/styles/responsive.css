@@ -91,9 +91,16 @@
   gap: 0;
 }
 
+.jd-home-section-lead-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .jd-home-phone-utils {
   display: none;
 }
+
 
 /* ---------- Tablet portrait+ (≥768) ---------- */
 @media (min-width: 768px) {
@@ -127,9 +134,11 @@
   .jd-ds .jd-nav-spacer,
   .jd-ds .jd-masthead,
   .jd-ds .jd-utility-row,
-  .jd-ds .jd-desktop-nav {
+  .jd-ds .jd-desktop-nav,
+  .jd-ds .jd-mobile-catnav {
     display: none !important;
   }
+
 
   .jd-desk-chrome-root {
     display: block;
@@ -452,6 +461,15 @@
     gap: 16px 20px;
     padding: 0 0 8px;
   }
+
+  .jd-home-section-lead-grid {
+    display: grid;
+    grid-template-columns: 58% 42%;
+    gap: 16px;
+    align-items: start;
+    padding: 0 0 8px;
+  }
+
 
   .jd-ds .jd-story-grid {
     display: grid;

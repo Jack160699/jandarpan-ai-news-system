@@ -31,14 +31,16 @@ export function Tag({
   );
 }
 
-/** Section header — colour bar + serif title + rule + optional "सभी" link. */
+/** Section header — colour bar + serif title + rule + optional subtitle + optional "और पढ़ें" link. */
 export function SectionHeader({
   title,
+  subtitle,
   color = "var(--jd-red)",
   moreHref,
   moreLabel = "सभी",
 }: {
   title: string;
+  subtitle?: string;
   color?: string;
   moreHref?: string;
   moreLabel?: string;
@@ -46,40 +48,64 @@ export function SectionHeader({
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 9,
         padding: "16px 14px 10px",
       }}
     >
-      <span
-        aria-hidden="true"
-        style={{ width: 4, height: 18, background: color, borderRadius: 1, flexShrink: 0 }}
-      />
-      <h2 className="jd-serif jd-type-section" style={{ margin: 0, color: "var(--jd-ink)" }}>
-        {title}
-      </h2>
-      <span style={{ flex: 1, height: 1, background: "var(--jd-line)" }} />
-      {moreHref ? (
-        <Link
-          href={moreHref}
-          className="jd-ui jd-type-button"
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 9,
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{ width: 4.5, height: 20, background: color, borderRadius: 2, flexShrink: 0 }}
+        />
+        <h2
+          className="jd-serif jd-type-section"
+          style={{ margin: 0, color: "var(--jd-ink)", fontWeight: 800, fontSize: "1.2rem", letterSpacing: "-0.01em" }}
+        >
+          {title}
+        </h2>
+        <span style={{ flex: 1, height: 1.5, background: "var(--jd-line)" }} />
+        {moreHref ? (
+          <Link
+            href={moreHref}
+            className="jd-ui jd-type-button"
+            style={{
+              fontWeight: 700,
+              fontSize: 12,
+              color,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              paddingBlock: "0.1em",
+              textDecoration: "none",
+            }}
+          >
+            {moreLabel}
+            <JdIcon name="chevR" size={13} stroke={2.2} />
+          </Link>
+        ) : null}
+      </div>
+      {subtitle ? (
+        <div
+          className="jd-ui"
           style={{
-            fontWeight: 700,
-            color: "var(--jd-red)",
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            paddingBlock: "0.1em",
+            margin: "4px 0 0 14px",
+            fontSize: 12,
+            color: "var(--jd-ink-3)",
+            fontWeight: 500,
           }}
         >
-          {moreLabel}
-          <JdIcon name="chevR" size={13} stroke={2} />
-        </Link>
+          {subtitle}
+        </div>
       ) : null}
     </div>
   );
 }
+
 
 /** Mandatory AI transparency summary — gold left rule. */
 export function AiSummary({ children }: { children: ReactNode }) {

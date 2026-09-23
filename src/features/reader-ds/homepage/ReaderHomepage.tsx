@@ -9,11 +9,14 @@ import {
   DesktopPrimaryNav,
   LeadStory,
   Masthead,
+  MobileCategoryNav,
   ReaderShell,
   SectionHeader,
   SecondaryStory,
+  TrendingRankRow,
   UtilityRow,
 } from "../components";
+
 import { UtilTiles } from "../components/UtilTiles";
 import { MandiRatesPanel } from "../utilities/MandiRatesPanel";
 import { VerifiedRatesLinks } from "../utilities/VerifiedRatesLinks";
@@ -169,9 +172,11 @@ export function ReaderHomepage({
   return (
     <ReaderShell activeNav="home" bottomPad={showStickyAd ? 128 : 72}>
       <Masthead premiumBadge={isPremium} />
+      <MobileCategoryNav />
       <DesktopPrimaryNav active="home" />
       <UtilityRow />
       <BreakingStrip items={breakingItems} />
+
 
       <main
         id="main-content"
@@ -319,36 +324,67 @@ export function ReaderHomepage({
 
         <div className="jd-home-sections">
           {sections.map((section, i) => (
-            <section key={section.key} data-jd-home-section={section.key}>
+            <section key={section.key} data-jd-home-section={section.key} style={{ marginBottom: 24 }}>
               <SectionHeader
                 title={section.title}
+                subtitle={section.subtitle}
                 color={section.color}
                 moreHref={section.moreHref}
                 moreLabel={seeAll}
               />
-              <div className="jd-home-section-cards">
-                {section.stories.map((s, idx) => {
-                  const source = articleBySlug.get(s.slug);
-                  if (aliveHome && source) {
-                    return (
-                      <FormatStoryCard
+              {section.key === "most-read" || section.layout === "ranked" ? (
+                <div className="jd-home-section-ranked" style={{ padding: "0 14px" }}>
+                  {section.stories.map((s, idx) => (
+                    <TrendingRankRow
+                      key={s.slug}
+                      story={s}
+                      rank={idx + 1}
+                      last={idx === section.stories.length - 1}
+                    />
+                  ))}
+                </div>
+              ) : section.layout === "lead-supporting" && section.stories.length >= 2 ? (
+                <div className="jd-home-section-lead-grid">
+                  <div className="jd-home-section-lead-col">
+                    <LeadStory story={section.stories[0]} priority={false} />
+                  </div>
+                  <div className="jd-home-section-supporting-col" style={{ padding: "0 14px" }}>
+                    {section.stories.slice(1).map((s, idx) => (
+                      <SecondaryStory
                         key={s.slug}
-                        story={toFormattedStory(source, locale)}
+                        story={s}
+                        last={idx === section.stories.length - 2}
+                        toneIndex={idx + 1}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="jd-home-section-cards">
+                  {section.stories.map((s, idx) => {
+                    const source = articleBySlug.get(s.slug);
+                    if (aliveHome && source) {
+                      return (
+                        <FormatStoryCard
+                          key={s.slug}
+                          story={toFormattedStory(source, locale)}
+                          last={idx === section.stories.length - 1}
+                          toneIndex={idx}
+                        />
+                      );
+                    }
+                    return (
+                      <SecondaryStory
+                        key={s.slug}
+                        story={s}
                         last={idx === section.stories.length - 1}
                         toneIndex={idx}
                       />
                     );
-                  }
-                  return (
-                    <SecondaryStory
-                      key={s.slug}
-                      story={s}
-                      last={idx === section.stories.length - 1}
-                      toneIndex={idx}
-                    />
-                  );
-                })}
-              </div>
+                  })}
+                </div>
+              )}
+
               {i === 0 && showAds ? (
                 <>
                   <DismissibleAd label="विज्ञापन · मिड-फ़ीड 300×250" height={96} />
