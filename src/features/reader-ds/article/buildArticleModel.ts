@@ -7,6 +7,7 @@ import {
   type ContinuingCoverageVm,
 } from "@/lib/events/continuing-coverage";
 import { SITE_URL } from "@/lib/seo/constants";
+import { resolveArticleDisplayImage } from "@/lib/news/images/resolve-article-display-image";
 import { resolveArticleVariant } from "./resolveVariant";
 import type { ArticleVariant, ReaderArticleModel } from "./types";
 
@@ -68,11 +69,16 @@ export function buildReaderArticleModel(input: {
       : paragraphs
           .flatMap((p) => p.split(/[।.!?]/).map((s) => s.trim()).filter(Boolean))
           .slice(0, 3);
-  const imageUrl =
-    article.image_url ||
-    editorialMeta?.image?.hero_url ||
-    editorialMeta?.image?.og_url ||
-    null;
+  const displayImage = resolveArticleDisplayImage({
+    hero_image_url: (article as Record<string, unknown>).hero_image_url as string | undefined || article.image_url,
+    image_url: article.image_url,
+    editorial_metadata: editorialMeta,
+    title: headline,
+    category: article.category,
+    region: (article as Record<string, unknown>).region as string | undefined ?? null,
+    source: article.source,
+  });
+  const imageUrl = displayImage.textOnly ? null : displayImage.displayUrl;
 
   const variant =
     forceVariant ??

@@ -6,9 +6,9 @@
 export const EDITORIAL_IMAGES = {
   civicOffice:
     "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=82",
-  /** City / civic street — curated stock (brand OG intentionally not used) */
+  /** City / civic street — authentic Indian regional civic visual */
   raipurCity:
-    "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=1600&q=82",
+    "https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=1600&q=82",
   schoolIndia:
     "https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=1200&q=82",
   assemblyPolitics:

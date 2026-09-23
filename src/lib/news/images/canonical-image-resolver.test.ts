@@ -44,4 +44,16 @@ describe("canonical-image-resolver", () => {
     });
     expect(result.sourceType).not.toBe("hero");
   });
+
+  it("rejects generic NYC street image when story is about agriculture", () => {
+    const result = resolveCanonicalImage({
+      heroUrl: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=1600&q=82",
+      title: "बस्तर में किसान ने नारियल की खेती से की लाखों की कमाई",
+      category: "local",
+    });
+    expect(result.sourceType).toBe("contextual_fallback");
+    expect(result.displayUrl).not.toContain("photo-1449824913935-59a10b8d2000");
+    // Resolves to agriculture visual
+    expect(result.displayUrl).toContain("photo-1500937386664-56d1dfef3854");
+  });
 });

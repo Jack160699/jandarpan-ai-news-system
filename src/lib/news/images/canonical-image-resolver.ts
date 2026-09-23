@@ -4,6 +4,7 @@
  */
 
 import {
+  detectSemanticTopic,
   resolveContextualFallback,
   type FallbackTier,
 } from "@/lib/news/images/editorial-visual-fallbacks";
@@ -48,11 +49,15 @@ export type CanonicalImageInput = {
   alt?: string | null;
 };
 
-function isAcceptableUrl(url: string | null | undefined): boolean {
+function isAcceptableUrl(url: string | null | undefined, topic?: string | null): boolean {
   if (!url?.trim()) return false;
   if (!validateImageUrlShape(url).ok) return false;
   if (isExpiredSignedUrl(url)) return false;
   if (isRejectedImageUrl(url).rejected) return false;
+  // If candidate is the legacy generic NYC city street image and story has a specific non-city topic, reject it
+  if (url.includes("photo-1449824913935-59a10b8d2000") && topic && topic !== "local" && topic !== "city") {
+    return false;
+  }
   return true;
 }
 
@@ -60,13 +65,14 @@ function pickPrimary(input: CanonicalImageInput): {
   url: string | null;
   sourceType: ImageSourceType;
 } {
+  const topic = detectSemanticTopic(input.category, input.title);
   const candidates: Array<{ url: string | null | undefined; sourceType: ImageSourceType }> = [
     { url: input.heroUrl, sourceType: "hero" },
     { url: input.ogUrl, sourceType: "og" },
     { url: input.bodyImageUrl, sourceType: "body" },
   ];
   for (const c of candidates) {
-    if (c.url && isAcceptableUrl(c.url)) {
+    if (c.url && isAcceptableUrl(c.url, topic)) {
       return { url: c.url, sourceType: c.sourceType };
     }
   }
@@ -105,6 +111,7 @@ export function resolveCanonicalImage(
     category: input.category ?? "general",
     region: input.region,
     source: input.source,
+    title: input.title,
   });
 
   if (isAcceptableUrl(fallback.url)) {
