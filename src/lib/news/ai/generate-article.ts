@@ -471,7 +471,14 @@ async function callEditorialLlm(
       message: result.error.message,
       provider: result.provider,
     });
-    if (result.error.code === "quota_exhausted" || result.error.code === "ai_quota_exhausted") {
+    // Only DEFER (mark as permanently blocked for this run) on daily RPD/TPD
+    // exhaustion. Per-minute rate limits (rateLimited=true) are transient —
+    // quota window resets within ≤60s — so return null (soft reject) instead
+    // and allow the candidate to be retried on the next 30-min pipeline run.
+    const isDailyExhaustion =
+      (result.error.code === "quota_exhausted" || result.error.code === "ai_quota_exhausted") &&
+      !result.error.rateLimited;
+    if (isDailyExhaustion) {
       throw new Error("DEFERRED_QUOTA");
     }
     return null;
