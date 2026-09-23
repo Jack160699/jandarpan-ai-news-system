@@ -154,7 +154,7 @@ export async function resolveLiveArticlePool(
 
   // Always rely on the database for live feed, do not fallback to wire
   // which consumes quotas during live traffic.
-  if (dbRows.length > 0 || diagnostics.supabaseConfigured) {
+  if (dbRows.length > 0) {
     diagnostics.ingestFirstSkippedWire = true;
     if (dbRows.length < AGGREGATION_CONFIG.dbHealthyThreshold) {
       warnLiveFeed("db_sparse_ingest_first", {
