@@ -8,6 +8,7 @@ import {
   BreakingStrip,
   DesktopPrimaryNav,
   LeadStory,
+  LiveNewsTicker,
   Masthead,
   ReaderShell,
   SectionHeader,
@@ -173,7 +174,7 @@ export function ReaderHomepage({
       <Masthead premiumBadge={isPremium} />
       <DesktopPrimaryNav active="home" />
       <UtilityRow />
-      <BreakingStrip items={breakingItems} />
+      <LiveNewsTicker initialItems={breakingItems} />
 
 
       <main

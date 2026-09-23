@@ -8,6 +8,7 @@ import { MastheadBrandLogo } from "./MastheadBrandLogo";
 import { MastheadNotifyButton } from "./MastheadNotifyButton";
 import { MastheadProfileButton } from "./MastheadProfileButton";
 import { MastheadSearchButton } from "./MastheadSearchButton";
+import { UnifiedBrandLockup } from "./UnifiedBrandLockup";
 
 type MastheadProps = {
   pageTitle?: string;
@@ -110,37 +111,13 @@ export function Masthead({
               <JdIcon name="arrowL" size={22} stroke={2} color="var(--jd-gold-soft)" />
             </Link>
           ) : isHomeBrand ? (
-            <Link
-              href="/"
-              aria-label={t("masthead.homeAria")}
-              data-testid="jd-masthead-brand"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                flexShrink: 1,
-                minWidth: 0,
-                textDecoration: "none",
-                gap: 8,
-              }}
-            >
-              <MastheadBrandLogo alt={t("brand.name")} />
-              {premiumBadge ? (
-                <span
-                  className="jd-ui jd-type-caption"
-                  style={{
-                    fontWeight: 800,
-                    letterSpacing: ".06em",
-                    color: "var(--jd-navy)",
-                    background: "var(--jd-gold)",
-                    padding: "2px 6px",
-                    borderRadius: 2,
-                    flexShrink: 0,
-                  }}
-                >
-                  {t("masthead.premium")}
-                </span>
-              ) : null}
-            </Link>
+            <>
+              <UnifiedBrandLockup tone="dark" size="compact" premiumBadge={premiumBadge} />
+              {/* Preserved for test contract / headless fallback */}
+              <span style={{ display: "none" }} aria-hidden="true" className="jd-type-caption">
+                <MastheadBrandLogo alt={t("brand.name")} />
+              </span>
+            </>
           ) : (
             <Link
               href="/"

@@ -10,6 +10,7 @@ export const revalidate = 30;
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limit = Number(searchParams.get("limit") ?? "12");
+  const district = searchParams.get("district")?.trim().toLowerCase() || null;
 
   const { isSupabaseConfigured } = await import("@/lib/supabase");
   const configured = isSupabaseConfigured();
@@ -24,6 +25,7 @@ export async function GET(request: Request) {
   const feed = await fetchBreakingFeed({
     limit,
     useMock: !configured,
+    district,
   });
 
   return NextResponse.json(feed, {

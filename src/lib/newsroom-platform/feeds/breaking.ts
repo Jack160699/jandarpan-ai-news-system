@@ -11,6 +11,7 @@ import { ISR } from "../config/isr";
 export type BreakingFeedOptions = {
   limit?: number;
   useMock?: boolean;
+  district?: string | null;
 };
 
 export async function fetchBreakingFeed(
@@ -18,6 +19,7 @@ export async function fetchBreakingFeed(
 ): Promise<FeedPage<BreakingTickerItem>> {
   const limit = options.limit ?? 12;
   const useMock = options.useMock ?? false;
+  const districtFilter = options.district?.trim().toLowerCase();
 
   if (!useMock && isSupabaseConfigured()) {
     const supabase = createAdminServerClient();

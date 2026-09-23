@@ -10,6 +10,7 @@ export { MastheadNotifyButton } from "./MastheadNotifyButton";
 export { MastheadProfileButton } from "./MastheadProfileButton";
 export { UtilityRow } from "./UtilityRow";
 export { BreakingStrip } from "./BreakingStrip";
+export { LiveNewsTicker } from "./LiveNewsTicker";
 export { LeadStory } from "./LeadStory";
 export { SecondaryStory } from "./SecondaryStory";
 export { Ad } from "./Ad";
@@ -33,4 +34,5 @@ export { LatestRefreshBar } from "./LatestRefreshBar";
 export { MobileCategoryNav } from "./MobileCategoryNav";
 export { getPrimaryNavItems } from "./navItems";
 export type { PrimaryNavKey, PrimaryNavItem } from "./navItems";
+export { UnifiedBrandLockup } from "./UnifiedBrandLockup";
 

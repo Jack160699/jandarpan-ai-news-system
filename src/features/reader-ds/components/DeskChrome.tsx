@@ -11,6 +11,7 @@ import { useJdDsT } from "../i18n";
 import { useDeskChromeCondensed } from "../hooks/useDeskChromeCondensed";
 import { useDistrictWeather } from "../hooks/useDistrictWeather";
 import { JdIcon } from "./icons";
+import { UnifiedBrandLockup } from "./UnifiedBrandLockup";
 import {
   DESK_CAT_ITEMS,
   DESK_CAT_ITEMS_COMPACT,
@@ -118,11 +119,6 @@ export function DeskChrome() {
               />
               {weatherLabel}
             </span>
-            <Link href="/district?select=1" prefetch={false} className="jd-desk-util__district">
-              <JdIcon name="pin" size={12} stroke={2} color="var(--jd-gold)" />
-              {districtLabel}
-              <JdIcon name="chevD" size={11} stroke={2} color="#8ea0c4" />
-            </Link>
             <div className="jd-desk-lang" role="group" aria-label={t("desk.languageAria")}>
               <button
                 type="button"
@@ -157,13 +153,9 @@ export function DeskChrome() {
               <JdIcon name="list" size={22} stroke={2} color="var(--jd-navy)" />
             </button>
 
-            <Link href="/" className="jd-desk-brand__logo" aria-label={t("masthead.homeAria")}>
-              <BrandMark size={36} radius={6} />
-              <span>
-                <span className="jd-brand jd-desk-brand__word">{t("brand.name")}</span>
-                <span className="jd-desk-brand__tag">{t("desk.tagline")}</span>
-              </span>
-            </Link>
+            <div className="jd-desk-brand__center" style={{ display: "flex", alignItems: "center" }}>
+              <UnifiedBrandLockup tone="light" size="regular" />
+            </div>
 
             <button
               type="button"

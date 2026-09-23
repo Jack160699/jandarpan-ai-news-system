@@ -20,11 +20,19 @@ export function LeadStory({ story, priority = true }: { story: ReaderStory; prio
           tone="city"
           category={story.kicker ?? "general"}
         />
-        <div style={{ display: "flex", gap: 7, alignItems: "center", margin: "10px 0 6px", flexWrap: "wrap" }}>
+        <div style={{ margin: "12px 0 6px", display: "flex", flexDirection: "column", gap: 3 }}>
           <Tag>{story.kicker ?? "प्रमुख"}</Tag>
           {time ? (
-            <span className="jd-ui jd-type-meta" style={{ color: "var(--jd-muted)" }}>
-              · {time}
+            <span
+              className="jd-ui"
+              style={{
+                color: "var(--jd-muted)",
+                fontSize: 12,
+                fontWeight: 500,
+                lineHeight: 1.3,
+              }}
+            >
+              {time}
             </span>
           ) : null}
         </div>

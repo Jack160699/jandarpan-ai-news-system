@@ -23,7 +23,7 @@
   --jd-type-caption: 0.75rem; /* 12 */
   --jd-type-footer-h: 0.75rem; /* 12 */
   --jd-type-footer-link: 0.8125rem; /* 13 */
-  --jd-type-tag: 0.6875rem; /* 11 */
+  --jd-type-tag: 0.875rem; /* 14px prominent category & location eyebrow */
 
   /* Devanagari-safe leading — never use 1.0–1.2 on Hindi UI text */
   --jd-lh-display: 1.35;
