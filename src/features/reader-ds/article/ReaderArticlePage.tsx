@@ -30,6 +30,8 @@ import { NoImagePlaceholder } from "./components/NoImagePlaceholder";
 import { OpinionBody } from "./components/OpinionBody";
 import { PhotoGallery } from "./components/PhotoGallery";
 import { VideoPlayer } from "./components/VideoPlayer";
+import { StoryMediaAttribution } from "@/components/story/StoryMediaAttribution";
+import { VideoEmbed } from "@/components/media/VideoEmbed";
 import { ArticleInlineAd } from "../monetization";
 import { ReservedAd } from "../components/ReservedAd";
 import { OfflineDownloadControl } from "../offline/OfflineDownloadControl";
@@ -300,8 +302,9 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
           className={`jd-article-layout${isOpinionLike ? " jd-article-layout--opinion" : ""}`}
           style={{ flex: 1, overflow: "auto" }}
         >
-          {variant === "standard" || isOpinionLike ? <ArticleShareRail /> : null}
-          <div>
+          <div className="jd-article-main">
+            {variant === "standard" || isOpinionLike ? <ArticleShareRail /> : null}
+            <div className="jd-article-body-wrapper">
           {variant === "video" ? (
             <VideoPlayer
               imageUrl={imageUrl}
@@ -383,16 +386,25 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
               />
             ) : null}
 
-            {variant === "standard" ? (
-              <>
+            {variant !== "no-image" && imageUrl ? (
+              <div style={{ marginBottom: 16 }}>
                 <ArticleImage
                   src={imageUrl}
                   alt={headline}
                   ratio="lead"
-                  tone="city"
                   priority
-                  sizes="100vw"
+                  sizes="(min-width: 1024px) 860px, 100vw"
                 />
+                <StoryMediaAttribution
+                  credit={article.source ?? undefined}
+                  sourceUrl={article.article_url ?? undefined}
+                  caption={imageCaption ?? undefined}
+                  rightsStatus={article.media_rights_status ?? (editorialMeta as any)?.media_rights_status}
+                />
+              </div>
+            ) : variant === "no-image" ? (
+              <div style={{ marginBottom: 16 }}>
+                <NoImagePlaceholder />
                 <div
                   className="jd-ui"
                   style={{
@@ -402,53 +414,23 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
                     fontStyle: "italic",
                   }}
                 >
-                  {imageCaption || (imageUrl ? t("article.photoCredit") : t("article.visualPlaceholder"))}
-                </div>
-              </>
-            ) : null}
-
-            {variant === "no-image" ? (
-              <>
-                <NoImagePlaceholder />
-                <div
-                  className="jd-ui"
-                  style={{
-                    fontSize: 10.5,
-                    color: "var(--jd-muted)",
-                    margin: "0 0 14px",
-                    fontStyle: "italic",
-                  }}
-                >
                   {t("article.photoUnavailable")}
                 </div>
-              </>
-            ) : null}
-
-            {variant === "breaking" ? (
-              <div style={{ marginBottom: 12 }}>
-                <ArticleImage
-                  src={imageUrl}
-                  alt={headline}
-                  ratio="lead"
-                  tone="court"
-                  priority
-                  sizes="100vw"
-                />
               </div>
             ) : null}
 
-            {variant === "sponsored" ? (
-              <div style={{ marginBottom: 12 }}>
-                <ArticleImage
-                  src={imageUrl}
-                  alt={headline}
-                  ratio="lead"
-                  tone="field"
-                  priority
-                  sizes="100vw"
-                />
-              </div>
-            ) : null}
+            {/* Official Video Embed if present */}
+            {(() => {
+              const videos = article.embedded_video || (editorialMeta as any)?.embedded_video || [];
+              if (Array.isArray(videos) && videos.length > 0 && videos[0]) {
+                return (
+                  <div style={{ marginBottom: 16 }}>
+                    <VideoEmbed video={videos[0]} />
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {variant === "explainer" ? (
               <ExplainerBody
@@ -614,6 +596,7 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
               ) : null}
             </div>
           </article>
+          </div>
           </div>
 
           {variant !== "explainer" ? (

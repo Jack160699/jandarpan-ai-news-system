@@ -11,14 +11,13 @@ import { isDisplayableImage } from "@/lib/news/images/validate";
 
 export type JdImageRatio = "lead" | "video" | "thumb" | "photo" | "square";
 
-/** Approved lead height (A1); thumbs match secondary-story 96×72. */
+/** Approved lead ratio 16:9; thumbs match secondary-story 96×72. */
 const FIXED_H: Partial<Record<JdImageRatio, number>> = {
-  lead: 190,
   thumb: 72,
 };
 
 const RATIO: Record<JdImageRatio, string> = {
-  lead: "3 / 2",
+  lead: "16 / 9",
   video: "16 / 9",
   thumb: "4 / 3",
   photo: "4 / 5",
@@ -26,7 +25,7 @@ const RATIO: Record<JdImageRatio, string> = {
 };
 
 const CDN_ASPECT: Record<JdImageRatio, "16:9" | "4:3" | "1:1" | "4:5"> = {
-  lead: "4:3",
+  lead: "16:9",
   video: "16:9",
   thumb: "4:3",
   photo: "4:5",
