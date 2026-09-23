@@ -55,11 +55,18 @@ export function getDefaultTenant(): TenantConfig {
   return getTenantBySlug(getDefaultTenantSlug()) ?? JAN_DARPAN_CHHATTISGARH_TENANT;
 }
 
-import { unstable_cache } from "next/cache";
+const tenantDbMemoryCache = new Map<string, { tenant: TenantConfig | null; expiresAt: number }>();
+const TENANT_CACHE_TTL_MS = 300_000; // 5 minutes
 
-async function loadTenantFromDatabaseRaw(
+export async function loadTenantFromDatabase(
   slug: string
 ): Promise<TenantConfig | null> {
+  const cached = tenantDbMemoryCache.get(slug);
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.tenant;
+  }
+
   try {
     const { createAdminServerClient } = await import("@/lib/supabase/admin");
     const supabase = createAdminServerClient();
@@ -70,7 +77,10 @@ async function loadTenantFromDatabaseRaw(
       .eq("status", "active")
       .maybeSingle();
 
-    if (error || !data) return null;
+    if (error || !data) {
+      tenantDbMemoryCache.set(slug, { tenant: null, expiresAt: now + TENANT_CACHE_TTL_MS });
+      return null;
+    }
 
     const row = data as {
       id: string;
@@ -90,30 +100,10 @@ async function loadTenantFromDatabaseRaw(
       updatedAt: row.updated_at,
     });
 
+    tenantDbMemoryCache.set(slug, { tenant: merged, expiresAt: now + TENANT_CACHE_TTL_MS });
     return merged;
   } catch {
     return null;
-  }
-}
-
-function getCachedTenantLoader(slug: string) {
-  return unstable_cache(
-    () => loadTenantFromDatabaseRaw(slug),
-    ["tenant-config", slug],
-    {
-      revalidate: 300,
-      tags: ["tenant-config", `tenant:${slug}`],
-    }
-  );
-}
-
-export async function loadTenantFromDatabase(
-  slug: string
-): Promise<TenantConfig | null> {
-  try {
-    return await getCachedTenantLoader(slug)();
-  } catch {
-    return loadTenantFromDatabaseRaw(slug);
   }
 }
 
