@@ -18,6 +18,13 @@ import {
   type ImageCandidate,
   type ImageCandidateSource,
 } from "@/lib/news/images/validate";
+import {
+  type MediaRecord,
+  type EmbeddedVideo,
+  buildYouTubeEmbed,
+  classifyMediaRights,
+} from "@/lib/media/media-record";
+import { evaluateMediaRelevance } from "@/lib/media/relevance";
 
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_RETRIES = 2;
@@ -142,18 +149,49 @@ export function extractImagesFromRssItem(
 ): ImageCandidate[] {
   const candidates: ImageCandidate[] = [];
 
-  const enclosure = item.enclosure?.url;
-  if (enclosure && isValidHttpUrl(enclosure)) {
-    candidates.push({ url: enclosure, source: "enclosure" });
+  const enclosure = item.enclosure as { url?: string; type?: string } | undefined;
+  if (enclosure?.url && isValidHttpUrl(enclosure.url)) {
+    // Only accept if type is not strictly audio/video
+    if (!enclosure.type || enclosure.type.startsWith("image/") || enclosure.type.startsWith("text/")) {
+      candidates.push({ url: enclosure.url, source: "enclosure" });
+    }
   }
 
-  const mediaContent = item.mediaContent as { $?: { url?: string } } | undefined;
-  if (mediaContent?.$?.url && isValidHttpUrl(mediaContent.$.url)) {
-    candidates.push({ url: mediaContent.$.url, source: "rss_media" });
+  const mediaContent = (item.mediaContent || item["media:content"]) as
+    | { $?: { url?: string; width?: string; height?: string } }
+    | Array<{ $?: { url?: string; width?: string; height?: string } }>
+    | undefined;
+  if (Array.isArray(mediaContent)) {
+    for (const mc of mediaContent) {
+      if (mc?.$?.url && isValidHttpUrl(mc.$.url)) {
+        candidates.push({
+          url: mc.$.url,
+          source: "rss_media",
+          width: mc.$.width ? Number(mc.$.width) : undefined,
+          height: mc.$.height ? Number(mc.$.height) : undefined,
+        });
+      }
+    }
+  } else if (mediaContent?.$?.url && isValidHttpUrl(mediaContent.$.url)) {
+    candidates.push({
+      url: mediaContent.$.url,
+      source: "rss_media",
+      width: mediaContent.$.width ? Number(mediaContent.$.width) : undefined,
+      height: mediaContent.$.height ? Number(mediaContent.$.height) : undefined,
+    });
   }
 
-  const mediaThumbnail = item.mediaThumbnail as { $?: { url?: string } } | undefined;
-  if (mediaThumbnail?.$?.url && isValidHttpUrl(mediaThumbnail.$.url)) {
+  const mediaThumbnail = (item.mediaThumbnail || item["media:thumbnail"]) as
+    | { $?: { url?: string } }
+    | Array<{ $?: { url?: string } }>
+    | undefined;
+  if (Array.isArray(mediaThumbnail)) {
+    for (const mt of mediaThumbnail) {
+      if (mt?.$?.url && isValidHttpUrl(mt.$.url)) {
+        candidates.push({ url: mt.$.url, source: "rss_media" });
+      }
+    }
+  } else if (mediaThumbnail?.$?.url && isValidHttpUrl(mediaThumbnail.$.url)) {
     candidates.push({ url: mediaThumbnail.$.url, source: "rss_media" });
   }
 
@@ -167,6 +205,98 @@ export function extractImagesFromRssItem(
   }
 
   return candidates;
+}
+
+/**
+ * Extract YouTube and official embeddable video links from RSS item.
+ */
+export function extractVideosFromRssItem(
+  item: Parser.Item & Record<string, unknown>,
+  articleUrl?: string
+): EmbeddedVideo[] {
+  const videos: EmbeddedVideo[] = [];
+  const seen = new Set<string>();
+
+  const checkUrl = (url?: string | null, title?: string | null) => {
+    if (!url) return;
+    const embed = buildYouTubeEmbed(url, title);
+    if (embed && !seen.has(embed.videoId)) {
+      seen.add(embed.videoId);
+      videos.push(embed);
+    }
+  };
+
+  checkUrl(item.link, item.title);
+  checkUrl(item.guid, item.title);
+  if (articleUrl) checkUrl(articleUrl, item.title);
+
+  const enclosure = item.enclosure as { url?: string; type?: string } | undefined;
+  if (enclosure?.url) {
+    checkUrl(enclosure.url, item.title);
+  }
+
+  const content = String(
+    item.contentEncoded ?? item.content ?? item["content:encoded"] ?? ""
+  );
+  if (content) {
+    const ytMatches = content.match(
+      /https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)[\w-]{11}/gi
+    );
+    if (ytMatches) {
+      for (const m of ytMatches) {
+        checkUrl(m, item.title);
+      }
+    }
+  }
+
+  return videos;
+}
+
+/**
+ * Extract structured MediaRecord objects with rights status and relevance validation.
+ */
+export function extractMediaRecordsFromRssItem(
+  item: Parser.Item & Record<string, unknown>,
+  articleUrl: string,
+  sourceName?: string | null
+): MediaRecord[] {
+  const candidates = extractImagesFromRssItem(item);
+  const records: MediaRecord[] = [];
+  const seen = new Set<string>();
+
+  for (const c of candidates) {
+    const normalized = normalizeImageUrl(c.url, articleUrl);
+    if (seen.has(normalized.toLowerCase())) continue;
+    seen.add(normalized.toLowerCase());
+
+    const relevance = evaluateMediaRelevance({
+      mediaUrl: normalized,
+      headline: item.title,
+      width: c.width,
+      height: c.height,
+    });
+    if (!relevance.eligible) continue;
+
+    const rights = classifyMediaRights(normalized, sourceName);
+
+    records.push({
+      media_url: normalized,
+      source_url: articleUrl,
+      media_type: "image",
+      width: c.width ?? null,
+      height: c.height ?? null,
+      source_domain: articleUrl ? new URL(articleUrl).hostname : null,
+      source_article_url: articleUrl,
+      discovered_at: new Date().toISOString(),
+      attribution_text: sourceName ?? null,
+      rights_status: rights,
+      usage_method: rights === "unknown" ? "generated_fallback" : "direct_display",
+      caption: item.title ?? null,
+      provider: "rss",
+    });
+  }
+
+  return records;
 }
 
 export function pickBestImageCandidate(

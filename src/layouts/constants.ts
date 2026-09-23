@@ -20,7 +20,7 @@ export const shellDimensions = {
   bottomNav: 56,
   sidebarCollapsed: 72,
   sidebarExpanded: 260,
-  sidebarMin: 200,
+  sidebarMin: 240,
   sidebarMax: 360,
 } as const;
 

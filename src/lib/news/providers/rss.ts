@@ -6,6 +6,8 @@ import type Parser from "rss-parser";
 import { detectLanguage } from "@/lib/news/language";
 import {
   extractImagesFromRssItem,
+  extractMediaRecordsFromRssItem,
+  extractVideosFromRssItem,
   normalizeImageUrl,
   pickBestImageCandidate,
 } from "@/lib/news/images/extract";
@@ -110,6 +112,14 @@ function mapRssItem(
     const rssCandidates = extractImagesFromRssItem(
       item as Parser.Item & Record<string, unknown>
     );
+    const mediaRecords = extractMediaRecordsFromRssItem(
+      item as Parser.Item & Record<string, unknown>,
+      articleUrl,
+      source.name
+    );
+    const embeddedVideos = extractVideosFromRssItem(
+      item as Parser.Item & Record<string, unknown>
+    );
     const bestImage = pickBestImageCandidate(rssCandidates);
     const imageUrl = bestImage
       ? normalizeImageUrl(bestImage.url, articleUrl)
@@ -134,6 +144,8 @@ function mapRssItem(
       provider: "rss",
       language: detectLanguage(`${title} ${description}`, source.language),
       region: regionToDbRegion(source.region),
+      media_records: mediaRecords,
+      embedded_video: embeddedVideos,
     };
   } catch {
     return null;

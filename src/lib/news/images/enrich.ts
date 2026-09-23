@@ -115,7 +115,7 @@ export async function enrichArticleImages(
 
         const sourceFb = getSourceFallback(article.source);
         const fallbackUrl =
-          sourceFb ?? getCategoryFallback(article.category);
+          sourceFb ?? getCategoryFallback(article.category, article.title);
 
         if (sourceFb) analytics.usedSourceFallback++;
         else analytics.usedCategoryFallback++;

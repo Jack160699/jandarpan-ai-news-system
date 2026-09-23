@@ -18,8 +18,8 @@ export function getSourceFallback(source: string | null | undefined): string | n
   return tier === "source_extracted" ? url : null;
 }
 
-export function getCategoryFallback(category: string): string {
-  return resolveContextualFallback({ category }).url;
+export function getCategoryFallback(category: string, title?: string | null): string {
+  return resolveContextualFallback({ category, title }).url;
 }
 
 export function resolveFallbackImage(input: {

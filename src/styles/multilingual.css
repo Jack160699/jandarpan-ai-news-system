@@ -18,6 +18,28 @@
   overflow-wrap: anywhere;
 }
 
+/* Navigation and UI chrome protection against character-by-character Hindi wrapping */
+.jdp-sidebar,
+.jdp-sidebar__link,
+.jdp-sidebar__label,
+.jdp-sidebar__section-title,
+.nr-quicknav,
+.nr-quicknav__label,
+.nr-chip,
+.category-navbar,
+.category-navbar__tab,
+.hp-district-switch,
+.hp-district-switch__chip,
+.nav-link,
+.nav-label,
+.tag,
+.badge,
+.tab {
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  white-space: nowrap;
+}
+
 [data-script="bengali"] .immersive-story__title,
 [data-script="bengali"] .editorial-body,
 [data-script="bengali"] .deck,

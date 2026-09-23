@@ -27,6 +27,13 @@ export type NewsArticleRow = {
   ai_processed_at: string | null;
   /** Present on generated_articles mapped rows — used for related-story dedup */
   event_id?: string | null;
+  /** Rights-aware media and official video embeds */
+  hero_media?: import("@/lib/media/media-record").MediaRecord | null;
+  embedded_video?: import("@/lib/media/media-record").EmbeddedVideo[];
+  source_attribution?: string | null;
+  media_rights_status?: import("@/lib/media/media-record").EditorialMediaRightsStatus;
+  media_source_url?: string | null;
+  media_caption?: string | null;
 };
 
 export type NewsCategory =

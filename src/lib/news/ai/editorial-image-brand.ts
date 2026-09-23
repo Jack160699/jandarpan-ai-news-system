@@ -21,6 +21,10 @@ export type CategoryFallbackKey =
   | "metroStreet"
   | "steelIndustry"
   | "cricketGround"
+  | "agricultureField"
+  | "weatherMonsoon"
+  | "legalCrime"
+  | "techDigital"
   | "folkCulture"
   | "waterCivic"
   | "pressConference"
@@ -62,6 +66,27 @@ const CATEGORY_TEMPLATES: Record<string, CategoryVisualTemplate> = {
     composition: "dynamic lower third action",
     fallbackKey: "cricketGround",
   },
+  agriculture: {
+    motifs:
+      "golden harvest fields, paddy crops, rural agrarian landscape, irrigation channels",
+    mood: "vital agrarian reporting, farmer resilience, seasonal harvest",
+    composition: "wide expansive horizon with lush crops in foreground",
+    fallbackKey: "agricultureField",
+  },
+  weather: {
+    motifs:
+      "monsoon storm clouds, atmospheric raindrops, meteorological barometer horizon, dramatic sky",
+    mood: "natural environmental forces, climate awareness",
+    composition: "expansive sky-dominant frame with grounded horizon",
+    fallbackKey: "weatherMonsoon",
+  },
+  crime: {
+    motifs:
+      "justice scales silhouette, legal gavel, courthouse portico lines, law enforcement cues",
+    mood: "serious, objective legal and civic reportage",
+    composition: "dignified, balanced framing without sensationalism",
+    fallbackKey: "legalCrime",
+  },
   health: {
     motifs:
       "clinic cross abstract, rural health outreach, caring hands silhouette (non-identifiable)",
@@ -81,7 +106,7 @@ const CATEGORY_TEMPLATES: Record<string, CategoryVisualTemplate> = {
       "digital network nodes, newsroom screens abstract, connectivity arcs",
     mood: "modern credible tech",
     composition: "balanced tech editorial",
-    fallbackKey: "newsroomDesk",
+    fallbackKey: "techDigital",
   },
   world: {
     motifs:

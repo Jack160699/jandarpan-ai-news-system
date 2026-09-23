@@ -106,6 +106,11 @@ import { buildEditorialImageBrief } from "@/lib/news/ai/editorial-image-brief";
 import { buildEditorialImageContext } from "@/lib/news/ai/editorial-image-context";
 import { decideEditorialImageStrategy } from "@/lib/news/ai/editorial-image-decision";
 import { assessStorySensitivity } from "@/lib/news/ai/editorial-image-moderation";
+import {
+  buildYouTubeEmbed,
+  type EmbeddedVideo,
+  type MediaRecord,
+} from "@/lib/media/media-record";
 import { isImageProviderAvailable } from "@/lib/news/ai/editorial-image-provider";
 import {
   logEditorialDecision,
@@ -1093,6 +1098,50 @@ async function persistGeneratedArticle(input: {
     };
   }
 
+  // Discover embedded videos from signals
+  const embeddedVideos: EmbeddedVideo[] = [];
+  for (const sig of input.signals) {
+    const meta = (sig.ingestion_metadata as Record<string, unknown> | null) ?? {};
+    if (Array.isArray(meta.embedded_video)) {
+      for (const v of meta.embedded_video) {
+        if (
+          v &&
+          typeof v === "object" &&
+          "videoId" in v &&
+          !embeddedVideos.some((x) => x.videoId === (v as any).videoId)
+        ) {
+          embeddedVideos.push(v as EmbeddedVideo);
+        }
+      }
+    }
+    if (embeddedVideos.length === 0 && sig.article_url) {
+      const fromUrl = buildYouTubeEmbed(sig.article_url, sig.title);
+      if (fromUrl && !embeddedVideos.some((x) => x.videoId === fromUrl.videoId)) {
+        embeddedVideos.push(fromUrl);
+      }
+    }
+  }
+
+  // Structured hero media record if hero image exists
+  const heroSource = (imageMeta as Record<string, unknown>)?.source as string | undefined;
+  const isSourceAuth = heroSource === "source_attached" || heroSource === "source_image";
+  const heroMedia: MediaRecord | null = resolvedHeroUrl
+    ? {
+        source_url: resolvedHeroUrl,
+        media_url: resolvedHeroUrl,
+        media_type: "image",
+        mime_type: "image/jpeg",
+        source_domain: input.attributions?.[0]?.source ?? "jandarpan.news",
+        source_article_url: input.attributions?.[0]?.article_url ?? null,
+        discovered_at: new Date().toISOString(),
+        attribution_text: input.attributions?.[0]?.source ?? "Jan Darpan Bureau",
+        rights_status: isSourceAuth ? "publisher_authorized" : "licensed",
+        usage_method: isSourceAuth ? "direct_display" : "generated_fallback",
+        thumbnail_url: resolvedHeroUrl,
+        caption: input.draft.headline,
+      }
+    : null;
+
   const row: GeneratedArticleInsert = {
     tenant_id: getPipelineTenantId(),
     event_id: input.event.id,
@@ -1116,6 +1165,11 @@ async function persistGeneratedArticle(input: {
     reviewed_at: breakingPatch?.reviewed_at ?? (autoPublish ? nowIso : null),
     geo_metadata: geo,
     editorial_metadata: {
+      hero_media: heroMedia,
+      embedded_video: embeddedVideos,
+      media_caption: heroMedia?.caption ?? null,
+      media_source_url: heroMedia?.source_url ?? null,
+      media_rights_status: heroMedia?.rights_status ?? "licensed",
       ai_confidence: input.quality.ai_confidence,
       source_attribution: input.attributions,
       quality_report: input.quality,

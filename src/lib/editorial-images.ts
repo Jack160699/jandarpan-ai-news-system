@@ -19,13 +19,23 @@ export const EDITORIAL_IMAGES = {
     "https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1200&q=82",
   steelIndustry:
     "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&w=1200&q=82",
-  /** Was photo-1531415071397 (404) */
+  /** Cricket ground / sports stadium */
   cricketGround:
-    "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=82",
-  /** Was photo-1516450360 (404) */
+    "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?auto=format&fit=crop&w=1200&q=82",
+  /** Agriculture / farming / crops */
+  agricultureField:
+    "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=1200&q=82",
+  /** Weather / monsoon / rain */
+  weatherMonsoon:
+    "https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?auto=format&fit=crop&w=1200&q=82",
+  /** Legal / crime / court / police */
+  legalCrime:
+    "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=82",
+  /** Technology / digital */
+  techDigital:
+    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=82",
   folkCulture:
     "https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1200&q=82",
-  /** Was photo-1629078023752 (404) */
   waterCivic:
     "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=82",
   pressConference:
@@ -33,3 +43,4 @@ export const EDITORIAL_IMAGES = {
   newsroomDesk:
     "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&q=82",
 } as const;
+

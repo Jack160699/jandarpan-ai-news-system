@@ -20,6 +20,7 @@ import {
 import type { SpeechLangHint } from "@/lib/speech/voice-utils";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { useLanguage } from "@/providers/LanguageProvider";
+import { Play } from "lucide-react";
 
 export type FeedNewsCardVariant = "standard" | "compact" | "lead";
 
@@ -54,6 +55,7 @@ export type FeedNewsCardProps = {
   sourceLabel?: string;
   /** Visual rhythm beat — emphasis / compact alternation */
   rhythm?: FeedRhythmLayout;
+  hasVideo?: boolean;
 };
 
 function imageSizes(variant: FeedNewsCardVariant): string {
@@ -103,6 +105,7 @@ export function FeedNewsCard({
   href,
   sourceLabel,
   rhythm,
+  hasVideo = false,
 }: FeedNewsCardProps) {
   const { t } = useLanguage();
   const { time } = useLocaleFormat();
@@ -160,6 +163,12 @@ export function FeedNewsCard({
                 liveLabel={t.common.live}
                 breakingLabel={t.common.breakingLabel}
               />
+              {hasVideo && (
+                <span className="absolute bottom-2 left-2 z-10 flex items-center gap-1 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow backdrop-blur-sm">
+                  <Play size={9} fill="white" aria-hidden />
+                  वीडियो
+                </span>
+              )}
             </div>
           ) : null}
 

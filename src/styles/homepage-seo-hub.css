@@ -310,6 +310,13 @@ html[data-theme="dark"] .seo-hub__item {
   }
 }
 
+@media (min-width: 1024px) {
+  .category-hub__list {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
 .category-hub__empty {
   color: var(--ink-muted, #5c5348);
   margin-top: 2rem;

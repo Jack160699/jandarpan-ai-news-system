@@ -105,7 +105,9 @@ export function normalizedToSignal(
       title_hash: meta?.title_hash,
       url_hash: meta?.url_hash,
       slug: meta?.slug,
-      geo,
+      geo,
+      embedded_video: article.embedded_video,
+      media_records: article.media_records,
       ...(meta ?? {}),
     }),
   };

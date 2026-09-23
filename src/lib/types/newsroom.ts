@@ -132,6 +132,9 @@ export type EditorialImageMeta = {
   provider?: string;
   model?: string;
   approval_status?: string;
+  caption?: string | null;
+  sourceUrl?: string | null;
+  rights_status?: import("@/lib/media/media-record").EditorialMediaRightsStatus | null;
 };
 
 export type EditorialMetadata = {
@@ -167,6 +170,12 @@ export type EditorialMetadata = {
   used_fallback?: boolean;
   batch_rescue?: boolean;
   image?: EditorialImageMeta;
+  hero_media?: import("@/lib/media/media-record").MediaRecord | null;
+  embedded_video?: import("@/lib/media/media-record").EmbeddedVideo[];
+  media_rights_status?: import("@/lib/media/media-record").EditorialMediaRightsStatus;
+  media_source_url?: string | null;
+  media_caption?: string | null;
+  source_attribution_text?: string | null;
   /** Timeline of material updates to an already-published story */
   updates?: Array<{
     timestamp: string;

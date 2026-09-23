@@ -22,6 +22,14 @@ export type NormalizedArticle = {
   language: string | null;
   region: NewsRegion;
   /**
+   * Discovered media candidates with rights classification
+   */
+  media_records?: import("@/lib/media/media-record").MediaRecord[];
+  /**
+   * Discovered embeddable videos (e.g. YouTube)
+   */
+  embedded_video?: import("@/lib/media/media-record").EmbeddedVideo[];
+  /**
    * Ingestion source-state key (e.g. rss:haribhoomi). Used to advance cursors
    * only after successful news_signals persistence.
    */

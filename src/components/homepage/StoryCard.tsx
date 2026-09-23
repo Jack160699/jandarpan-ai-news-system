@@ -73,6 +73,7 @@ export function StoryCard({
       langHint={article.language === "hi" ? "hi-IN" : "auto"}
       surface={variant === "breaking" ? "breaking" : "homepage"}
       listPosition={rank}
+      hasVideo={Boolean((article.ranking as Record<string, unknown> | undefined)?.hasVideo || (article as Record<string, unknown>).hasVideo || (article as Record<string, unknown>).embedded_video)}
     />
   );
 }

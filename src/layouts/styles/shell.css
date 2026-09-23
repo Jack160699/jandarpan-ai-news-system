@@ -270,6 +270,7 @@
   position: sticky;
   top: 0;
   height: 100dvh;
+  min-width: 240px;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--jds-color-border-subtle);
@@ -279,16 +280,18 @@
 }
 
 .jdp-sidebar--collapsed {
-  width: 72px;
+  width: 72px !important;
+  min-width: 72px !important;
+  max-width: 72px !important;
 }
 
 .jdp-sidebar__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--jds-space-lg);
+  padding: var(--jds-space-md) var(--jds-space-lg);
   border-bottom: 1px solid var(--jds-color-border-subtle);
-  min-height: 64px;
+  min-height: 60px;
 }
 
 .jdp-sidebar__toggle {
@@ -312,10 +315,28 @@
 .jdp-sidebar__nav {
   flex: 1;
   overflow-y: auto;
-  padding: var(--jds-space-md);
+  padding: var(--jds-space-sm) var(--jds-space-md);
   display: flex;
   flex-direction: column;
-  gap: var(--jds-space-xs);
+  gap: 2px;
+}
+
+.jdp-sidebar__section-title {
+  font-family: var(--jds-font-ui);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--jds-color-text-tertiary);
+  padding: var(--jds-space-xs) var(--jds-space-md);
+  margin-top: var(--jds-space-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jdp-sidebar--collapsed .jdp-sidebar__section-title {
+  display: none !important;
 }
 
 .jdp-sidebar__link {
@@ -331,6 +352,24 @@
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
+  min-height: 40px;
+}
+
+.jdp-sidebar__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}
+
+.jdp-sidebar--collapsed .jdp-sidebar__label {
+  display: none !important;
+}
+
+.jdp-sidebar--collapsed .jdp-sidebar__link {
+  justify-content: center;
+  padding-inline: 0;
 }
 
 .jdp-sidebar__link:hover {
@@ -355,10 +394,6 @@
 .jdp-sidebar__resize:hover,
 .jdp-sidebar__resize--active {
   background: var(--jds-color-brand-primary);
-}
-
-.jdp-sidebar--collapsed .jdp-sidebar__label {
-  display: none;
 }
 
 /* ── Bottom navigation ── */

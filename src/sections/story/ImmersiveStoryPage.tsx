@@ -22,6 +22,7 @@ import { StoryKnowledgeContext } from "@/components/story/StoryKnowledgeContext"
 import { StoryShareRail } from "@/components/story/StoryShareRail";
 import { StoryTimeline } from "@/components/story/StoryTimeline";
 import { StoryTopicChips } from "@/components/story/StoryTopicChips";
+import { VideoEmbed } from "@/components/media/VideoEmbed";
 import { isArticleLive } from "@/lib/news/home-ranking";
 import { buildEditorialHeroDisplay } from "@/lib/news/images/editorial-hero-display";
 import { StoryReadHelpers } from "@/components/story/StoryReadHelpers";
@@ -167,8 +168,27 @@ export function ImmersiveStoryPage(props: ImmersiveStoryPageProps) {
         publishedAtLabel={reader.publishedAtLabel}
         isLive={isLive}
         desk={attribution.desk}
-        imageCredit={heroDisplay.imageMeta?.source ?? null}
+        imageCredit={article.source_attribution || heroDisplay.imageMeta?.source || null}
+        imageCaption={article.media_caption || editorialMeta?.image?.caption || null}
+        sourceUrl={article.media_source_url || heroDisplay.imageMeta?.sourceUrl || null}
+        rightsStatus={article.media_rights_status || (heroDisplay.imageMeta as any)?.rights_status || null}
       />
+
+      {shareSummary && (
+        <div className="story-editorial-deck my-4 p-4 rounded-xl bg-[var(--jds-color-surface-secondary,#f9f9f9)] border-l-4 border-[var(--jds-color-brand-primary,#c41e24)]">
+          <p className="text-base sm:text-lg font-serif italic text-[var(--jds-color-text-primary,#222)] leading-relaxed m-0">
+            {shareSummary}
+          </p>
+        </div>
+      )}
+
+      {article.embedded_video && article.embedded_video.length > 0 && (
+        <div className="story-embedded-videos my-6">
+          {article.embedded_video.map((v, i) => (
+            <VideoEmbed key={v.videoId || i} video={v} />
+          ))}
+        </div>
+      )}
 
       <div className="immersive-story__shell">
         <ArticleCardActions
@@ -192,7 +212,7 @@ export function ImmersiveStoryPage(props: ImmersiveStoryPageProps) {
           vm={editorial}
           sourceCount={attribution.sourceCount}
           displayLanguage={displayLanguage}
-          omitConfidence={flags.omitEditorialConfidence}
+          omitConfidence={true}
         />
 
         {trust.hasLayer ? (
@@ -300,6 +320,25 @@ export function ImmersiveStoryPage(props: ImmersiveStoryPageProps) {
             className="immersive-story__aside"
             aria-label="Share and tools"
           >
+            <div className="p-4 rounded-xl border border-[var(--jds-color-border-subtle,#e5e5e5)] bg-[var(--jds-color-surface-primary,#fff)] shadow-sm">
+              <h4 className="text-xs uppercase tracking-wider font-bold text-[var(--jds-color-text-tertiary,#888)] mb-3">
+                {displayLanguage === "hi" ? "संपादकीय डेस्क" : "Editorial Desk"}
+              </h4>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[var(--jds-color-brand-primary,#c41e24)] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                  JD
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-[var(--jds-color-text-primary,#111)] m-0">
+                    {attribution.desk?.name ?? "Jan Darpan Bureau"}
+                  </p>
+                  <p className="text-xs text-[var(--jds-color-text-secondary,#666)] m-0">
+                    {displayLanguage === "hi" ? "सत्यापित ज़मीनी रिपोर्टिंग" : "Verified Ground Reporting"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <StoryShareRail url={canonicalUrl} title={headline} />
             <AdSlot slotId="story_sidebar" articleSlug={slug} />
             <AdSlot slotId="affiliate_rail" />

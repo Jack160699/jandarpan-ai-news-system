@@ -38,7 +38,7 @@ describe("Gemini-Only Robust Parsing", () => {
     expect(parsed?.sections?.details).toBe("Details paragraph.");
   });
 
-  it("I. Editorial routing routes to CodeCraft and Gemini", () => {
-    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini"]);
+  it("I. Editorial routing routes to CodeCraft, Gemini, and Groq", () => {
+    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini", "groq"]);
   });
 });

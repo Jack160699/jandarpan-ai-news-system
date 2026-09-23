@@ -61,5 +61,23 @@ export function generatedToNewsArticle(
     ai_headline: row.headline,
     ai_processed_at: row.created_at,
     event_id: row.event_id ?? null,
+    hero_media: row.editorial_metadata?.hero_media ?? null,
+    embedded_video: row.editorial_metadata?.embedded_video ?? undefined,
+    source_attribution:
+      row.editorial_metadata?.source_attribution_text ??
+      row.editorial_metadata?.image?.source ??
+      null,
+    media_rights_status:
+      row.editorial_metadata?.media_rights_status ??
+      (row.editorial_metadata?.image?.rights_status as import("@/lib/media/media-record").EditorialMediaRightsStatus | undefined) ??
+      "unknown",
+    media_source_url:
+      row.editorial_metadata?.media_source_url ??
+      row.editorial_metadata?.image?.sourceUrl ??
+      null,
+    media_caption:
+      row.editorial_metadata?.media_caption ??
+      row.editorial_metadata?.image?.caption ??
+      null,
   };
 }
