@@ -25,7 +25,7 @@ export const revalidate = 60;
 
 const BASE_TITLE = `Listen to Today's Headlines · ${BRAND.nameEn}`;
 const BASE_DESCRIPTION =
-  "Hear today's top headlines in Hindi — audio briefing from Jan Darpan — India.";
+  "Hear today's top headlines in Hindi — audio briefing from Jan Darpan.";
 const BASE_PATH = "/listen";
 
 type ListenPageProps = {

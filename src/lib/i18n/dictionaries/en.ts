@@ -2,14 +2,14 @@ import type { Dictionary } from "../types";
 
 export const en: Dictionary = {
   brand: {
-    tagline: "India's premier digital news platform — clear, trustworthy, national",
+    tagline: "A Chhattisgarh-rooted digital news platform expanding across India",
     conceptNote:
-      "Jan Darpan — India covers national politics, economy, technology, governance, and key developments across India with editorial review before publish.",
+      "Jan Darpan covers Chhattisgarh district reports and national developments across India with rigorous editorial review.",
   },
   gate: {
     editionLabel: "Today's edition",
     title: "Choose your reading language",
-    subtitle: "Read today's national coverage in your language",
+    subtitle: "Read today's regional and national coverage in your language",
     description:
       "The edition opens in the language you prefer. You can change this anytime from the menu.",
     confirm: "Open edition",
@@ -241,22 +241,22 @@ export const en: Dictionary = {
       "Corrections and clarifications: hello@jandarpan.news",
     disclaimerTitle: "Editorial standards",
     disclaimerBody:
-      "Jan Darpan — India is an independent national publisher. We verify claims against multiple sources, attribute reporting clearly, and correct errors promptly. We do not publish unverified rumours as fact.",
+      "Jan Darpan is an independent digital news platform rooted in Chhattisgarh and expanding across India. We verify claims against multiple sources, attribute reporting clearly, and correct errors promptly. We do not publish unverified rumours as fact.",
     relatedStories: "Related stories",
     trendingNow: "Trending now",
     liveUpdating: "Live coverage is updating…",
   },
   footer: {
-    networkName: "Jan Darpan — India",
+    networkName: "Jan Darpan",
     mission:
-      "Independent national journalism — politics, economy, technology, and live coverage you can trust.",
+      "Independent journalism rooted in Chhattisgarh and expanding across India — district ground reporting, national politics, economy, technology, and live coverage you can trust.",
     sectionsTitle: "Sections",
     newsroomTitle: "Newsroom",
     districtsTitle: "Districts",
     standardsTitle: "Standards",
     contactTitle: "Contact",
     followTitle: "Follow us",
-    taglineFooter: "Chhattisgarh's premium regional digital newsroom",
+    taglineFooter: "Jan Darpan — Chhattisgarh & India",
     quickLinksTitle: "Newsroom",
     todayLive: {
       title: "Today Live",

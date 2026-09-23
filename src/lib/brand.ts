@@ -17,8 +17,8 @@ export const BRAND = {
   founded: 2024,
   volume: "I",
   editionNumber: 1,
-  regionalEdition: "India",
-  registry: "National digital news platform · India",
+  regionalEdition: "Chhattisgarh & India",
+  registry: "Chhattisgarh-rooted digital news platform expanding across India",
   press: BRAND_VOICE.pressLineEn,
   voice: BRAND_VOICE,
 };

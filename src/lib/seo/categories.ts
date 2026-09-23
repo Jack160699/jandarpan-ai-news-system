@@ -26,9 +26,14 @@ export type CategorySeoConfig = {
 };
 
 const BASE_KEYWORDS = [
+  "Jan Darpan",
+  "जन दर्पण",
+  "Jan Darpan — Chhattisgarh & India",
+  "जन दर्पण — छत्तीसगढ़ और भारत",
+  "Chhattisgarh news",
+  "छत्तीसगढ़ समाचार",
   "India news",
-  "Jan Darpan — India",
-  "जन दर्पण — भारत",
+  "National news India",
   "भारत समाचार",
   "देश की ताज़ा खबरें",
 ];
@@ -50,24 +55,36 @@ export const CATEGORY_SEO: CategorySeoConfig[] = [
   {
     slug: "chhattisgarh",
     path: "/category/chhattisgarh",
-    titleEn: "State News & Reports",
-    titleHi: "राज्य समाचार",
-    descriptionEn: "State-level developments, public interest news, and ground reports.",
-    descriptionHi: "विभिन्न राज्यों की प्रमुख खबरें, नीतियां और महत्वपूर्ण घटनाक्रम।",
-    keywords: [...BASE_KEYWORDS, "state news", "regional updates"],
+    titleEn: "Chhattisgarh News",
+    titleHi: "छत्तीसगढ़ समाचार",
+    descriptionEn:
+      "Comprehensive news coverage from across Chhattisgarh: Raipur, Bilaspur, Bastar, Surguja, Durg, policy, and public interest ground reports.",
+    descriptionHi:
+      "छत्तीसगढ़ की ताज़ा और प्रामाणिक खबरें: रायपुर, बिलासपुर, बस्तर, दुर्ग, सरगुजा सहित सभी जिलों की प्रमुख खबरें और ज़मीनी रिपोर्ट।",
+    keywords: [
+      ...BASE_KEYWORDS,
+      "Chhattisgarh news",
+      "छत्तीसगढ़ समाचार",
+      "Raipur news",
+      "Bilaspur news",
+      "Bastar news",
+      "CG news in Hindi",
+    ],
     newsCategory: "local",
-    sectionId: "india",
+    sectionId: "chhattisgarh",
   },
   {
     slug: "raipur",
     path: "/category/raipur",
-    titleEn: "City & Civic News",
-    titleHi: "शहर व नागरिक समाचार",
-    descriptionEn: "Urban civic updates, infrastructure, and local administration reports.",
-    descriptionHi: "शहरी प्रशासन, नागरिक सुविधाएं और बुनियादी ढांचे से जुड़े समाचार।",
-    keywords: [...BASE_KEYWORDS, "city news", "civic updates"],
+    titleEn: "Raipur News & Civic Updates",
+    titleHi: "रायपुर समाचार व नागरिक हलचल",
+    descriptionEn:
+      "Raipur city news, administration, municipal corporation, and local developments in Chhattisgarh's capital.",
+    descriptionHi:
+      "छत्तीसगढ़ की राजधानी रायपुर की ताज़ा खबरें, नगर निगम, प्रशासनिक फैसले और स्थानीय गतिविधियां।",
+    keywords: [...BASE_KEYWORDS, "Raipur news", "रायपुर न्यूज़", "civic updates Raipur"],
     newsCategory: "local",
-    sectionId: "india",
+    sectionId: "raipur",
   },
   {
     slug: "politics",

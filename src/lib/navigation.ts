@@ -15,6 +15,12 @@ export const NAV_CATEGORIES: NavCategory[] = [
     href: "/category/chhattisgarh",
   },
   {
+    id: "india",
+    label: "India",
+    labelHi: "देश",
+    href: "/category/india",
+  },
+  {
     id: "raipur",
     label: "Raipur",
     labelHi: "रायपुर",

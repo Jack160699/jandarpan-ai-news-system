@@ -138,9 +138,9 @@ export function buildUtilityPageMetadata(input: {
 
 export function buildHomeMetadata(): Metadata {
   return buildPageMetadata({
-    title: `${BRAND.nameEn} — Latest India News | ${BRAND.nameHi}`,
+    title: "Jan Darpan — Chhattisgarh & India | जन दर्पण — छत्तीसगढ़ और भारत",
     description:
-      "Jan Darpan — India: Real-time, fact-grounded national news coverage across politics, business, technology, jobs, public policy, and public interest.",
+      "जन दर्पण: छत्तीसगढ़-आधारित डिजिटल समाचार मंच — राज्य के 33 जिलों की ज़मीनी रिपोर्टिंग और देश भर के प्रमुख राष्ट्रीय घटनाक्रम।",
     path: "/",
     keywords: REGIONAL_KEYWORDS,
     locale: "hi_IN",

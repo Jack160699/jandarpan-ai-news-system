@@ -127,8 +127,8 @@ export function SuperMenuDrawer() {
             <p className="super-menu__subtitle">
               {pickBilingualLabel(
                 safeLang,
-                "AI Regional Newsroom",
-                "AI क्षेत्रीय न्यूज़रूम"
+                "Chhattisgarh & National News",
+                "छत्तीसगढ़ और राष्ट्रीय समाचार"
               )}
             </p>
             <span id="super-menu-title" className="sr-only">

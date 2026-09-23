@@ -5,7 +5,7 @@ import { buildHubPageMetadata } from "@/lib/seo";
 export const revalidate = 90;
 
 export const metadata = buildHubPageMetadata({
-  title: "International News · Jan Darpan — India",
+  title: "International News · Jan Darpan",
   description:
     "World news, global affairs, and international coverage curated for Indian readers.",
   path: "/news/international",
@@ -14,7 +14,7 @@ export const metadata = buildHubPageMetadata({
     "international headlines",
     "global affairs",
     "world desk",
-    "Jan Darpan — India",
+    "Jan Darpan",
   ],
 });
 

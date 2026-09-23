@@ -5,7 +5,7 @@ import { buildHubPageMetadata } from "@/lib/seo";
 export const revalidate = 90;
 
 export const metadata = buildHubPageMetadata({
-  title: "National News · Jan Darpan — India",
+  title: "National News · Jan Darpan",
   description:
     "India national headlines, policy updates, and developing stories from the Jan Darpan national desk.",
   path: "/news/national",
@@ -14,7 +14,8 @@ export const metadata = buildHubPageMetadata({
     "national headlines",
     "Indian politics",
     "national desk",
-    "Jan Darpan — India",
+    "Jan Darpan",
+    "Jan Darpan — Chhattisgarh & India",
   ],
 });
 

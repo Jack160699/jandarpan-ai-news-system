@@ -26,7 +26,7 @@ export const POLICY_DOCUMENTS: Record<PolicySlug, PolicyDocument> = {
     sections: [
       {
         heading: "Acceptance",
-        body: "By using Jan Darpan — India you agree to these terms. If you do not agree, please do not use the service.",
+        body: "By using Jan Darpan you agree to these terms. If you do not agree, please do not use the service.",
       },
       {
         heading: "Editorial use",

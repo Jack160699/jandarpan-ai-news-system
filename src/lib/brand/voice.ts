@@ -1,33 +1,40 @@
 /**
- * Jan Darpan — India (जन दर्पण — भारत) — editorial voice & tone (Hindi & English)
+ * Jan Darpan (जन दर्पण) — editorial voice & tone (Hindi & English)
+ * Positioning: A Chhattisgarh-rooted digital news platform expanding across India.
+ * Contextual usage: "Jan Darpan — Chhattisgarh & India" / "जन दर्पण — छत्तीसगढ़ और भारत"
  */
 
 export const BRAND_VOICE = {
-  nameHi: "जन दर्पण — भारत",
-  nameEn: "Jan Darpan — India",
+  /** Canonical product brand */
+  nameHi: "जन दर्पण",
+  nameEn: "Jan Darpan",
   shortNameEn: "Jan Darpan",
   shortNameHi: "जन दर्पण",
+  /** Contextual branding */
+  contextualEn: "Jan Darpan — Chhattisgarh & India",
+  contextualHi: "जन दर्पण — छत्तीसगढ़ और भारत",
   /** One-line promise — use in metadata, OG, masthead */
-  promiseHi: "देश और भारत की ताज़ा खबरें, साफ़ और भरोसेमंद",
-  promiseEn: "Clear, trustworthy news from across India",
+  promiseHi: "छत्तीसगढ़ से देश तक — निष्पक्ष, तथ्यपरक और भरोसेमंद समाचार",
+  promiseEn: "A Chhattisgarh-rooted digital news platform expanding across India",
   /** How we speak */
   tone: [
     "सीधी, प्रामाणिक, विश्वसनीय — बिना किसी दिखावे या पक्षपात के",
-    "राष्ट्रीय महत्व और जनहित की खबरें पहले — त्वरित, तथ्यपरक और संतुलित",
+    "छत्तीसगढ़ के ज़मीनी मुद्दे और राष्ट्रीय महत्व के घटनाक्रम — त्वरित, तथ्यपरक और संतुलित",
     "भ्रामक या क्लिकबेट शब्द नहीं — स्पष्ट, गरिमापूर्ण और तथ्य-आधारित पत्रकारिता",
   ],
   /** What we avoid (legal + clarity) */
   avoid: [
     "Bhaskar, Dainik Bhaskar, Hamar Chhattisgarh legacy naming",
+    "Jan Darpan India / Jan Darpan Bharat as standalone primary brand",
     "AI-generated, neural, algorithm labels on reader UI",
     "Internal scores, confidence %, desk jargon",
     "Unverified sensationalism or clickbait headlines",
   ],
-  deskLabelHi: "जन दर्पण राष्ट्रीय डेस्क",
-  deskLabelEn: "Jan Darpan India Desk",
+  deskLabelHi: "जन दर्पण न्यूज़ डेस्क",
+  deskLabelEn: "Jan Darpan News Desk",
   correctionsEmail: "editor@jandarpan.news",
-  pressLineHi: "जन दर्पण — भारत · नई दिल्ली / देश",
-  pressLineEn: "Jan Darpan — India · New Delhi, India",
+  pressLineHi: "जन दर्पण · रायपुर / नई दिल्ली",
+  pressLineEn: "Jan Darpan · Raipur / New Delhi, India",
 } as const;
 
 export function newsroomByline(language: "hi" | "en" | string): string {

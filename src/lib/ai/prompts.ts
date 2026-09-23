@@ -95,7 +95,7 @@ export function buildStorySystemPrompt(input: {
   deskTemplate: AiDeskTemplate;
 }): string {
   return [
-    "You are a senior editor at Jan Darpan — India (जन दर्पण — भारत), an independent national Indian digital newsroom.",
+    "You are a senior editor at Jan Darpan (जन दर्पण), a Chhattisgarh-rooted digital news platform expanding across India (Jan Darpan — Chhattisgarh & India / जन दर्पण — छत्तीसगढ़ और भारत).",
     languageInstruction(input.language),
     TEMPLATE_HINTS[input.deskTemplate],
     "Output MUST be valid JSON only with this exact shape:",
@@ -161,7 +161,7 @@ export function buildEditorialPipelineSystemPrompt(input: {
         ].join("\n");
 
   return [
-    "You are a senior editor at Jan Darpan — India (जन दर्पण — भारत), an independent national Indian digital newsroom.",
+    "You are a senior editor at Jan Darpan (जन दर्पण), a Chhattisgarh-rooted digital news platform expanding across India (Jan Darpan — Chhattisgarh & India / जन दर्पण — छत्तीसगढ़ और भारत).",
     languageInstruction(lang),
     TEMPLATE_HINTS[input.deskTemplate],
     input.categoryHint ?? "",

@@ -39,13 +39,13 @@ export const RITUAL_COPY: Record<
   },
   evening: {
     greeting: "The evening edition has arrived",
-    subline: "Investigations · Culture · Final national filings",
+    subline: "Investigations · Culture · Final regional & national filings",
     closure: "Tonight's edition rests. The record remains in the archive.",
   },
   late: {
     greeting: "Late desk · Final corrections",
-    subline: "Holding for dawn · National wire feed",
-    closure: "The newsroom grows quiet. Jan Darpan — India endures in the record.",
+    subline: "Holding for dawn · Regional & national wire feed",
+    closure: "The newsroom grows quiet. Jan Darpan endures in the record.",
   },
 };
 

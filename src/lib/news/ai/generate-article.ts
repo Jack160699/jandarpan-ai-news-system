@@ -1472,7 +1472,7 @@ async function prepareCandidate(
   // region classification (already assigned at clustering time).
   if (event.region === "chhattisgarh") {
     if (!evidenceGeo.is_chhattisgarh) {
-      // Platform is Jan Darpan — India. Non-CG stories are national/India stories!
+      // Platform is Jan Darpan (CG-rooted, expanding across India). Non-CG stories are national/India stories!
       event.region = "india";
     } else if (evidenceGeo.confidence < 0.65) {
       event.region = "india";

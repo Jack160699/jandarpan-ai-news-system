@@ -29,7 +29,7 @@ export function generateTitleSuggestions(
   const altB = trimTitle(`${keyword} | ${article.headline.slice(0, 45)}`);
   const breaking = trimTitle(`ब्रेकिंग: ${article.headline}`);
   const discover = trimTitle(`${article.headline} — जानें पूरी खबर`);
-  const googleNews = trimTitle(`${article.headline} | Jan Darpan — India`);
+  const googleNews = trimTitle(`${article.headline} | Jan Darpan`);
 
   const analysis = analyzeHeadline(current);
   const reason =

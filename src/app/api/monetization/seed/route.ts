@@ -22,10 +22,10 @@ export async function POST(request: Request) {
     {
       tenant_id: tenant.id,
       slug: "daily-briefing",
-      name_en: "Jan Darpan — India Daily",
-      name_hi: "जन दर्पण — भारत दैनिक",
+      name_en: "Jan Darpan Daily Briefing",
+      name_hi: "जन दर्पण दैनिक समाचार",
       frequency: "daily",
-      description: "Morning digest of India headlines",
+      description: "Morning digest of Chhattisgarh and national headlines",
       active: true,
     },
     { onConflict: "tenant_id,slug" }

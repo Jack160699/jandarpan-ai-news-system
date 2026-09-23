@@ -10,14 +10,19 @@ export { CANONICAL_SITE_URL } from "@/lib/seo/canonical-url";
 export const SITE_NAME = BRAND.nameEn;
 export const SITE_NAME_HI = BRAND.nameHi;
 
-/** National + brand keywords for layout defaults */
+/** Regional (Chhattisgarh) + National (India) brand keywords for layout defaults */
 export const REGIONAL_KEYWORDS = [
   BRAND.nameEn,
   BRAND.nameHi,
-  "Jan Darpan — India",
-  "जन दर्पण — भारत",
   "Jan Darpan",
   "जन दर्पण",
+  "Jan Darpan — Chhattisgarh & India",
+  "जन दर्पण — छत्तीसगढ़ और भारत",
+  "Chhattisgarh news",
+  "छत्तीसगढ़ समाचार",
+  "Raipur news",
+  "Bilaspur news",
+  "Bastar news",
   "India news",
   "National news India",
   "Breaking news India",

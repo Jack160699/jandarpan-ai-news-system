@@ -23,7 +23,7 @@ const hi = {
   "masthead.notifyAria": "सूचनाएँ",
   "masthead.profileAria": "प्रोफ़ाइल",
   "masthead.premium": "प्रीमियम",
-  "brand.name": "जनदर्पण",
+  "brand.name": "जन दर्पण",
   "util.chooseDistrict": "ज़िला चुनें",
   "util.weatherUnavailable": "—",
   "util.weatherLoading": "मौसम लोड हो रहा है",

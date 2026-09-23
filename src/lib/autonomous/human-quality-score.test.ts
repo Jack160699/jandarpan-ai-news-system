@@ -104,7 +104,7 @@ describe("districtRelevanceInput", () => {
     ).toBe(0.8);
   });
 
-  it("credits a genuine national story for Jan Darpan — India", () => {
+  it("credits a genuine national story for Jan Darpan", () => {
     expect(
       districtRelevanceInput({ is_chhattisgarh: false, primary_district: null }, "india")
     ).toBe(0.9);
