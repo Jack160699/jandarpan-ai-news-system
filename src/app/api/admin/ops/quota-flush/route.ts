@@ -16,18 +16,20 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export async function POST(request: Request): Promise<Response> {
-  // Accept either a super-admin session cookie or the cron secret header
-  // (so this can be called from a GitHub Actions step without browser auth).
-  const authHeader = request.headers.get("x-cron-secret") ?? "";
+  // Accept x-cron-secret, Authorization: Bearer, or URL ?secret param
   const cronSecret = process.env.CRON_API_SECRET?.trim() ?? process.env.CRON_SECRET?.trim() ?? "";
+  const xCronHeader = request.headers.get("x-cron-secret") ?? "";
+  const authHeader = request.headers.get("authorization") ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  const url = new URL(request.url);
+  const paramSecret = url.searchParams.get("secret") ?? "";
 
-  if (!cronSecret || authHeader !== cronSecret) {
-    // Fall back: check URL param for emergency recovery without a browser
-    const url = new URL(request.url);
-    const param = url.searchParams.get("secret") ?? "";
-    if (!param || param !== cronSecret) {
-      return new Response("Forbidden", { status: 403 });
-    }
+  const authorized =
+    cronSecret &&
+    (xCronHeader === cronSecret || bearerToken === cronSecret || paramSecret === cronSecret);
+
+  if (!authorized) {
+    return new Response("Forbidden", { status: 403 });
   }
 
   try {
