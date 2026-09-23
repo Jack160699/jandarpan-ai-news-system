@@ -75,7 +75,7 @@ function ActionButton({
   };
   if (href) {
     return (
-      <Link href={href} className="jd-ui jd-type-button" style={style} data-action={icon}>
+      <Link href={href} prefetch={false} className="jd-ui jd-type-button" style={style} data-action={icon}>
         <JdIcon name={icon} size={16} stroke={1.8} />
         {label}
       </Link>

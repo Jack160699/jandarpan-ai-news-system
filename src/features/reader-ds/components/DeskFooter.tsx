@@ -87,7 +87,7 @@ export function DeskFooter({ socialLinks, publisherLine }: DeskFooterProps = {})
               <ul className="jd-desk-footer__list">
                 {col.links.map((l) => (
                   <li key={`${col.id ?? col.title}-${l.href}`}>
-                    <Link href={l.href}>{l.label}</Link>
+                    <Link href={l.href} prefetch={false}>{l.label}</Link>
                   </li>
                 ))}
               </ul>

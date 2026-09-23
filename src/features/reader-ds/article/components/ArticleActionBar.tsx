@@ -141,6 +141,7 @@ export function ArticleActionBar({ headline, slug, readTime }: ArticleActionBarP
       {/* 3. Audio: Secondary Pill */}
       <Link
         href={slug ? `/listen?story=${encodeURIComponent(slug)}` : "/listen"}
+        prefetch={false}
         aria-label={t("action.listen")}
         style={{
           display: "inline-flex",
