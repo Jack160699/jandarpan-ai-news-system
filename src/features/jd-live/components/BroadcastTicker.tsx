@@ -8,9 +8,9 @@ type TickerItem = { id: string; text: string };
 /**
  * Slow continuous news ticker — latest headlines scroll left.
  */
-export function BroadcastTicker() {
+export function BroadcastTicker({ showLiveLabel = false }: { showLiveLabel?: boolean }) {
   const { state } = useBroadcast();
-  const { queue, language } = state;
+  const { queue, language, isPlaying } = state;
   const [items, setItems] = useState<TickerItem[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -31,8 +31,11 @@ export function BroadcastTicker() {
   const doubled = [...items, ...items];
 
   return (
-    <div className="jdl-ticker" aria-label={language === "hi" ? "ताज़ा समाचार" : "Latest News"}>
-      <div className="jdl-ticker__live-label">{liveLabel}</div>
+    <div
+      className={`jdl-ticker ${!isPlaying ? "jdl-ticker--paused" : ""}`}
+      aria-label={language === "hi" ? "ताज़ा समाचार" : "Latest News"}
+    >
+      {showLiveLabel && <div className="jdl-ticker__live-label">{liveLabel}</div>}
       <div className="jdl-ticker__track-wrap" ref={containerRef}>
         <div className="jdl-ticker__track">
           {doubled.map((item, i) => (

@@ -26,6 +26,9 @@ const initialState: BroadcastState = {
   amplitude: 0,
   scriptReady: false,
   audioReady: false,
+  isPlaying: true,
+  isMuted: true,
+  audioBlocked: false,
 };
 
 function broadcastReducer(
@@ -110,6 +113,16 @@ function broadcastReducer(
       return { ...state, audioReady: action.ready };
     case "SET_SCRIPT_READY":
       return { ...state, scriptReady: action.ready };
+    case "SET_PLAYING":
+      return { ...state, isPlaying: action.isPlaying };
+    case "TOGGLE_PLAY":
+      return { ...state, isPlaying: !state.isPlaying };
+    case "SET_MUTED":
+      return { ...state, isMuted: action.isMuted };
+    case "TOGGLE_MUTE":
+      return { ...state, isMuted: !state.isMuted };
+    case "SET_AUDIO_BLOCKED":
+      return { ...state, audioBlocked: action.blocked };
     default:
       return state;
   }
@@ -121,6 +134,10 @@ type BroadcastContextValue = {
   setLanguage: (lang: BroadcastLanguage) => void;
   nextSegment: () => void;
   interruptBreaking: (segment: BroadcastSegment) => void;
+  togglePlay: () => void;
+  toggleMute: () => void;
+  setPlaying: (playing: boolean) => void;
+  setMuted: (muted: boolean) => void;
 };
 
 const BroadcastContext = createContext<BroadcastContextValue | null>(null);
@@ -156,9 +173,33 @@ export function BroadcastProvider({
     []
   );
 
+  const togglePlay = useCallback(() => dispatch({ type: "TOGGLE_PLAY" }), []);
+
+  const toggleMute = useCallback(() => dispatch({ type: "TOGGLE_MUTE" }), []);
+
+  const setPlaying = useCallback(
+    (playing: boolean) => dispatch({ type: "SET_PLAYING", isPlaying: playing }),
+    []
+  );
+
+  const setMuted = useCallback(
+    (muted: boolean) => dispatch({ type: "SET_MUTED", isMuted: muted }),
+    []
+  );
+
   return (
     <BroadcastContext.Provider
-      value={{ state, dispatch, setLanguage, nextSegment, interruptBreaking }}
+      value={{
+        state,
+        dispatch,
+        setLanguage,
+        nextSegment,
+        interruptBreaking,
+        togglePlay,
+        toggleMute,
+        setPlaying,
+        setMuted,
+      }}
     >
       {children}
     </BroadcastContext.Provider>

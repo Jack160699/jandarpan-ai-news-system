@@ -9,7 +9,7 @@ import type { BroadcastLanguage } from "./types";
  * Falls back to Web Speech API when server TTS is unavailable.
  */
 export function useAnchorVoice() {
-  const { dispatch } = useBroadcast();
+  const { state, dispatch } = useBroadcast();
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | MediaElementAudioSourceNode | null>(null);
@@ -92,7 +92,14 @@ export function useAnchorVoice() {
           resolve(45_000); // fallback duration
         };
 
-        void ctx.resume().then(() => audio.play().catch(() => resolve(45_000)));
+        void ctx
+          .resume()
+          .then(() => audio.play())
+          .catch(() => {
+            dispatch({ type: "SET_AUDIO_BLOCKED", blocked: true });
+            dispatch({ type: "SET_MUTED", isMuted: true });
+            resolve(10_000);
+          });
       });
     },
     [getAudioCtx, dispatch, startAmplitudeLoop, stopAmplitudeLoop]
@@ -103,7 +110,7 @@ export function useAnchorVoice() {
     (text: string, language: BroadcastLanguage): Promise<number> => {
       return new Promise((resolve) => {
         if (!("speechSynthesis" in window)) {
-          resolve(45_000);
+          resolve(10_000);
           return;
         }
         if (utteranceRef.current) {
@@ -128,11 +135,25 @@ export function useAnchorVoice() {
         if (femaleVoice) utter.voice = femaleVoice;
 
         const startedAt = Date.now();
+        let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+        const cleanup = () => {
+          if (fallbackTimer) clearTimeout(fallbackTimer);
+          stopAmplitudeLoop();
+          setIsPlaying(false);
+          dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
+        };
+
+        // Safety fallback timer: auto-resolve after max 15 seconds if browser speech synthesis hangs
+        const maxDuration = Math.min(15_000, Math.max(8_000, Math.round(text.length * 60)));
+        fallbackTimer = setTimeout(() => {
+          cleanup();
+          resolve(maxDuration);
+        }, maxDuration + 1000);
 
         utter.onstart = () => {
           setIsPlaying(true);
           dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
-          // Simulate amplitude with a simple oscillating value for Web Speech
           let tick = 0;
           const fakeLoop = () => {
             tick += 0.15;
@@ -146,53 +167,29 @@ export function useAnchorVoice() {
         };
 
         utter.onend = () => {
-          setIsPlaying(false);
-          dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
-          stopAmplitudeLoop();
+          cleanup();
           resolve(Date.now() - startedAt);
         };
 
-        utter.onerror = () => {
-          setIsPlaying(false);
-          dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
-          stopAmplitudeLoop();
-          resolve(45_000);
+        utter.onerror = (e) => {
+          cleanup();
+          if (e.error === "not-allowed") {
+            dispatch({ type: "SET_AUDIO_BLOCKED", blocked: true });
+            dispatch({ type: "SET_MUTED", isMuted: true });
+          }
+          resolve(maxDuration);
         };
 
         utteranceRef.current = utter;
-        window.speechSynthesis.speak(utter);
+        try {
+          window.speechSynthesis.speak(utter);
+        } catch {
+          cleanup();
+          resolve(maxDuration);
+        }
       });
     },
     [dispatch, stopAmplitudeLoop]
-  );
-
-  /**
-   * Speak a script. Tries server TTS first, falls back to Web Speech.
-   * Returns the actual playback duration in ms.
-   */
-  const speak = useCallback(
-    async (params: {
-      script: string;
-      language: BroadcastLanguage;
-      ttsPath?: string;
-    }): Promise<number> => {
-      stop();
-      dispatch({ type: "SET_AUDIO_READY", ready: false });
-
-      // Try server TTS
-      if (params.ttsPath) {
-        try {
-          const durationMs = await playServerTts(params.ttsPath);
-          return durationMs;
-        } catch {
-          // Fall through to Web Speech
-        }
-      }
-
-      // Web Speech fallback
-      return playWebSpeech(params.script, params.language);
-    },
-    [dispatch, playServerTts, playWebSpeech]
   );
 
   const stop = useCallback(() => {
@@ -207,6 +204,48 @@ export function useAnchorVoice() {
     setIsPlaying(false);
     dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
   }, [dispatch, stopAmplitudeLoop]);
+
+  /**
+   * Speak a script. If muted, runs a silent visual timer.
+   * If unmuted, tries server TTS first, falls back to Web Speech.
+   * Returns playback duration in ms.
+   */
+  const speak = useCallback(
+    async (params: {
+      script: string;
+      language: BroadcastLanguage;
+      ttsPath?: string;
+    }): Promise<number> => {
+      stop();
+      dispatch({ type: "SET_AUDIO_READY", ready: false });
+
+      if (state.isMuted) {
+        // Visual-only silent timer (reading duration ~10s)
+        const silentDuration = Math.min(14_000, Math.max(9_000, Math.round(params.script.length * 60)));
+        return new Promise<number>((resolve) => {
+          dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
+          setTimeout(() => {
+            dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
+            resolve(silentDuration);
+          }, silentDuration);
+        });
+      }
+
+      // Try server TTS
+      if (params.ttsPath) {
+        try {
+          const durationMs = await playServerTts(params.ttsPath);
+          return durationMs;
+        } catch {
+          // Fall through to Web Speech
+        }
+      }
+
+      // Web Speech fallback
+      return playWebSpeech(params.script, params.language);
+    },
+    [dispatch, playServerTts, playWebSpeech, state.isMuted, stop]
+  );
 
   // Cleanup on unmount
   useEffect(() => {

@@ -35,9 +35,11 @@ const JanDarpanLiveLazy = dynamic(
       <div
         className="jdl-studio-loading-placeholder"
         style={{
-          minHeight: 480,
+          width: "100%",
+          aspectRatio: "16 / 9",
+          maxHeight: 640,
           background: "#0a1628",
-          borderRadius: 8,
+          borderRadius: 4,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

@@ -54,6 +54,9 @@ export type BroadcastState = {
   amplitude: number; // 0–1, drives lip-sync
   scriptReady: boolean;
   audioReady: boolean;
+  isPlaying: boolean;
+  isMuted: boolean;
+  audioBlocked: boolean;
 };
 
 export type BroadcastAction =
@@ -67,4 +70,9 @@ export type BroadcastAction =
   | { type: "SET_AMPLITUDE"; amplitude: number }
   | { type: "SET_SCRIPT"; segmentId: string; script: string; durationSec: number }
   | { type: "SET_AUDIO_READY"; ready: boolean }
-  | { type: "SET_SCRIPT_READY"; ready: boolean };
+  | { type: "SET_SCRIPT_READY"; ready: boolean }
+  | { type: "SET_PLAYING"; isPlaying: boolean }
+  | { type: "TOGGLE_PLAY" }
+  | { type: "SET_MUTED"; isMuted: boolean }
+  | { type: "TOGGLE_MUTE" }
+  | { type: "SET_AUDIO_BLOCKED"; blocked: boolean };
