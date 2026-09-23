@@ -58,6 +58,7 @@ const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library
 const READER_DS_EXACT = new Set([
   "/",
   "/district",
+  "/districts",
   "/latest",
   "/trending",
   "/search",
@@ -68,10 +69,32 @@ const READER_DS_EXACT = new Set([
   "/maintenance",
   "/login",
   "/offline-unavailable",
+  "/about",
+  "/contact",
+  "/editorial-policy",
+  "/corrections",
+  "/privacy",
+  "/terms",
+  "/copyright-content-removal",
+  "/advertise",
+  "/ads-policy",
+  "/community-guidelines",
+  "/how-we-report",
+  "/fact-check-policy",
+  "/cookies",
+  "/safety",
+  "/rates",
+  "/morning-brief",
+  "/saved",
+  "/profile",
+  "/notifications",
+  "/ai-assistant",
 ]);
 const READER_DS_PREFIXES = [
   "/district/",
+  "/districts/",
   "/category/",
+  "/news/",
   "/topics/",
   "/live/",
   "/story/",
@@ -80,6 +103,7 @@ const READER_DS_PREFIXES = [
   "/archive/",
   "/membership/",
   "/system/",
+  "/rates/",
 ];
 
 function isReaderDsRoute(pathname: string): boolean {
