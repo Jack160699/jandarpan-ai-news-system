@@ -192,7 +192,7 @@
     height: 22px;
     border-radius: 5px;
     background: var(--jd-red);
-    color: var(--jd-gold);
+    color: #ffffff;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -270,49 +270,30 @@
   }
 
   /* Main brand area: Left-aligned brand lockup */
-  .jd-desk-masthead__brand {
+  .jd-desk-masthead__left {
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
   }
 
-  /* Right side: Search + Language switcher + Sign In + Member button */
-  .jd-desk-masthead__actions {
+  /* Center: intentionally open / minimal */
+  .jd-desk-masthead__center {
+    flex: 1 1 auto;
+    min-width: 20px;
+  }
+
+  /* Right side: Date + Weather + Language switcher + Theme toggle + Sign In + Member */
+  .jd-desk-masthead__right {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     flex-shrink: 0;
-  }
-
-  .jd-desk-search {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: #ffffff;
-    border: 1.5px solid var(--jd-line-dark, #D3CBBE);
-    border-radius: 4px;
-    padding: 7px 14px;
-    height: 38px;
-    width: clamp(140px, 15vw, 210px);
-    cursor: pointer;
-    color: var(--jd-ink-3, #657187);
-    font-family: var(--jd-ff-ui);
-    font-size: 15px;
-    font-weight: 500;
-    box-sizing: border-box;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .jd-desk-search:hover,
-  .jd-desk-search:focus-visible {
-    border-color: var(--jd-navy);
-    outline: none;
   }
 
   .jd-desk-lang {
     display: inline-flex;
     border: 1.5px solid var(--jd-line-dark, #D3CBBE);
-    border-radius: 3px;
+    border-radius: 4px;
     overflow: hidden;
     height: 34px;
   }
@@ -335,6 +316,26 @@
     color: #ffffff;
   }
 
+  .jd-desk-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1.5px solid var(--jd-line-dark, #D3CBBE);
+    border-radius: 4px;
+    width: 36px;
+    height: 34px;
+    padding: 0;
+    cursor: pointer;
+    color: var(--jd-navy, #0E1B3D);
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .jd-desk-theme-toggle:hover {
+    background: rgba(14, 27, 61, 0.05);
+    border-color: var(--jd-navy, #0E1B3D);
+  }
+
   .jd-desk-masthead__signin {
     color: var(--jd-navy, #0E1B3D);
     text-decoration: none;
@@ -354,22 +355,25 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--jd-gold, #C9A24B);
-    color: var(--jd-navy-deep, #0E1B3D);
+    background: var(--jd-navy-deep, #0E1B3D);
+    color: #ffffff;
     font-family: var(--jd-ff-ui);
-    font-weight: 800;
+    font-weight: 750;
     font-size: 14px;
-    padding: 8px 16px;
-    border-radius: 3px;
+    padding: 7px 15px;
+    border-radius: 4px;
+    border: 1.5px solid var(--jd-navy-deep, #0E1B3D);
     text-decoration: none;
     white-space: nowrap;
-    height: 36px;
+    height: 34px;
     box-sizing: border-box;
-    transition: opacity 0.15s ease, transform 0.1s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   }
 
   .jd-desk-member-cta:hover {
-    opacity: 0.92;
+    background: var(--jd-red-brand, #C8102E);
+    border-color: var(--jd-red-brand, #C8102E);
+    color: #ffffff;
   }
 
   /* SECTION 2 — Category / Desk Navigation (18-20px, Full-Width) */
@@ -403,12 +407,14 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 12px 4px;
+    flex: 1 1 auto;
+    text-align: center;
+    padding: 13px 6px;
     color: #e2e8f4;
     text-decoration: none;
     font-family: var(--jd-ff-ui);
-    font-size: clamp(16px, 1.25vw, 19px);
-    font-weight: 650;
+    font-size: clamp(17px, 1.28vw, 20px);
+    font-weight: 700;
     white-space: nowrap;
     border-bottom: 3.5px solid transparent;
     transition: color 0.15s ease, border-bottom-color 0.15s ease;
@@ -419,8 +425,8 @@
   }
 
   .jd-desk-catnav a.is-active {
-    color: var(--jd-gold-soft, #dfc07c);
-    border-bottom-color: var(--jd-gold, #c9a24b);
+    color: #ffffff;
+    border-bottom-color: var(--jd-red-brand, #C8102E);
   }
 
   .jd-desk-catnav__live {

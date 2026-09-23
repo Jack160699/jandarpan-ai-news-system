@@ -12,6 +12,7 @@ export type BreakingFeedOptions = {
   limit?: number;
   useMock?: boolean;
   district?: string | null;
+  language?: string | null;
 };
 
 export async function fetchBreakingFeed(
@@ -88,7 +89,7 @@ export async function fetchBreakingFeed(
     }
   }
 
-  const active = filterActiveBreaking(buildMockBreakingTicker());
+  const active = filterActiveBreaking(buildMockBreakingTicker(options.language || "hi"));
   const sorted = sortByPriority(active).slice(0, limit);
 
   return {

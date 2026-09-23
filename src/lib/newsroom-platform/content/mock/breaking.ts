@@ -4,12 +4,14 @@ import { MOCK_ARTICLES } from "./articles";
 
 const BREAKING_TTL_HOURS = 6;
 
-export function buildMockBreakingTicker(): BreakingTickerItem[] {
+export function buildMockBreakingTicker(lang: string = "hi"): BreakingTickerItem[] {
   const now = Date.now();
   const items = MOCK_ARTICLES.filter((a) => a.breaking || a.category === "breaking_news")
     .map((a) => ({
       id: a.id,
-      headline: a.title,
+      headline: lang === "en" ? a.title : (a.titleHi || a.title),
+      headlineHi: a.titleHi || a.title,
+      headlineEn: a.title,
       slug: a.slug,
       category: a.category,
       priority: a.priority,

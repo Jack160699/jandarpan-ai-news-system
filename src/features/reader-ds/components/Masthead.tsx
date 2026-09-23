@@ -10,13 +10,16 @@ import { MastheadProfileButton } from "./MastheadProfileButton";
 import { MastheadSearchButton } from "./MastheadSearchButton";
 import { UnifiedBrandLockup } from "./UnifiedBrandLockup";
 
+import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
+import { useLanguage } from "@/providers/LanguageProvider";
+
 type MastheadProps = {
   pageTitle?: string;
   back?: boolean;
   backHref?: string;
   /** Hide Search / Notifications / Profile (focused overlays). */
   hideActions?: boolean;
-  /** Gold premium badge beside brand (E43 member home). */
+  /** Premium badge beside brand */
   premiumBadge?: boolean;
   /** Replace back/brand with close control (E36 overlay). */
   closeHref?: string;
@@ -24,8 +27,8 @@ type MastheadProps = {
 
 /**
  * Compact sticky phone masthead:
- * Left — approved compact-dark lockup on home; mark + title on inner pages.
- * Right — Search · Notifications · Profile/More.
+ * Left — approved compact lockup on home; mark + title on inner pages.
+ * Right — Day/Night toggle + Language toggle on home; Search · Notifications · Profile on inner pages.
  */
 export function Masthead({
   pageTitle,
@@ -36,6 +39,8 @@ export function Masthead({
   closeHref,
 }: MastheadProps) {
   const { t, locale } = useJdDsT();
+  const { prefs, toggleTheme } = useReaderPreferences();
+  const { language, setLanguage } = useLanguage();
   const isHomeBrand = !closeHref && !back && !pageTitle;
 
   return (
@@ -87,11 +92,11 @@ export function Masthead({
                 minHeight: 44,
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--jd-gold-soft)",
+                color: "#ffffff",
                 marginLeft: -6,
               }}
             >
-              <JdIcon name="close" size={22} stroke={2} color="var(--jd-gold-soft)" />
+              <JdIcon name="close" size={22} stroke={2} color="#ffffff" />
             </Link>
           ) : back ? (
             <Link
@@ -104,11 +109,11 @@ export function Masthead({
                 minHeight: 44,
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--jd-gold-soft)",
+                color: "#ffffff",
                 marginLeft: -6,
               }}
             >
-              <JdIcon name="arrowL" size={22} stroke={2} color="var(--jd-gold-soft)" />
+              <JdIcon name="arrowL" size={22} stroke={2} color="#ffffff" />
             </Link>
           ) : isHomeBrand ? (
             <>
@@ -144,13 +149,115 @@ export function Masthead({
           ) : null}
         </div>
 
+        {isHomeBrand ? (
+          <div
+            className="jd-mobile-masthead-controls"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              flexShrink: 0,
+            }}
+          >
+            {/* Language toggle: हिंदी | EN */}
+            <div
+              className="jd-mobile-lang"
+              role="group"
+              aria-label={t("desk.languageAria")}
+              style={{
+                display: "inline-flex",
+                border: "1px solid rgba(255, 255, 255, 0.25)",
+                borderRadius: 3,
+                overflow: "hidden",
+                height: 28,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setLanguage("hi")}
+                style={{
+                  background: language === "hi" ? "rgba(255, 255, 255, 0.22)" : "transparent",
+                  color: "#ffffff",
+                  border: 0,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "0 6px",
+                  cursor: "pointer",
+                }}
+              >
+                हिंदी
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage("en")}
+                style={{
+                  background: language === "en" ? "rgba(255, 255, 255, 0.22)" : "transparent",
+                  color: "#ffffff",
+                  border: 0,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "0 6px",
+                  cursor: "pointer",
+                }}
+              >
+                EN
+              </button>
+            </div>
+
+            {/* Day / Night toggle: ☀ / 🌙 */}
+            <button
+              type="button"
+              className="jd-mobile-theme-toggle"
+              onClick={toggleTheme}
+              aria-label={
+                prefs.theme === "dark"
+                  ? locale === "en"
+                    ? "Switch to light mode"
+                    : "लाइट मोड चुनें"
+                  : locale === "en"
+                  ? "Switch to dark mode"
+                  : "डार्क मोड चुनें"
+              }
+              title={
+                prefs.theme === "dark"
+                  ? locale === "en"
+                    ? "Light mode"
+                    : "लाइट मोड"
+                  : locale === "en"
+                  ? "Dark mode"
+                  : "डार्क मोड"
+              }
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 32,
+                height: 28,
+                background: "rgba(255, 255, 255, 0.1)",
+                border: "1px solid rgba(255, 255, 255, 0.25)",
+                borderRadius: 3,
+                cursor: "pointer",
+                padding: 0,
+                color: "#ffffff",
+              }}
+            >
+              <JdIcon
+                name={prefs.theme === "dark" ? "sun" : "moon"}
+                size={16}
+                stroke={2}
+                color="#ffffff"
+              />
+            </button>
+          </div>
+        ) : null}
+
         {!hideActions ? (
           <nav
             className="jd-masthead__actions"
             aria-label={t("masthead.actionsAria")}
             data-testid="jd-masthead-actions"
             style={{
-              display: "flex",
+              display: isHomeBrand ? "none" : "flex",
               alignItems: "center",
               justifyContent: "flex-end",
               gap: 0,

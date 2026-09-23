@@ -135,20 +135,19 @@ export function UnifiedBrandLockup({
         data-tone={tone}
         style={{
           display: "inline-flex",
-          flexDirection: "column",
-          alignItems: "stretch",
+          alignItems: "center",
           position: "relative",
           minWidth: 0,
-          flexShrink: 1,
+          flexShrink: 0,
         }}
       >
-        {/* Top row: [BrandMark] जन दर्पण  +  [दुर्ग ▾] */}
+        {/* Brand Lockup: [BrandMark] जन दर्पण  +  [दुर्ग ▾] */}
         <div
           className="jd-unified-brand-lockup__row"
           style={{
             display: "flex",
             alignItems: "center",
-            gap: isRegular ? 8 : 6,
+            gap: isRegular ? 10 : 7,
             minWidth: 0,
           }}
         >
@@ -177,11 +176,11 @@ export function UnifiedBrandLockup({
                   : "clamp(1.15rem, 3.8vw, 1.35rem)",
                 lineHeight: 1.2,
                 whiteSpace: "nowrap",
-                letterSpacing: "-0.01em",
+                letterSpacing: locale === "en" ? "0.03em" : "-0.01em",
                 color: isDark ? "#FBF8F2" : "var(--jd-navy)",
               }}
             >
-              {t("brand.name")}
+              {locale === "en" ? "JAN DARPAN" : "जन दर्पण"}
             </span>
           </Link>
 
@@ -192,7 +191,7 @@ export function UnifiedBrandLockup({
             className="jd-unified-brand-lockup__district-btn"
             data-testid="district-selector-trigger"
             data-brand-district-trigger="true"
-            aria-label={`जिला चुनें, वर्तमान: ${districtLabel}`}
+            aria-label={locale === "en" ? `Select district, current: ${districtLabel}` : `जिला चुनें, वर्तमान: ${districtLabel}`}
             aria-haspopup="dialog"
             aria-expanded={pickerOpen}
             style={{
@@ -200,14 +199,14 @@ export function UnifiedBrandLockup({
               alignItems: "center",
               gap: 4,
               background: isDark
-                ? "rgba(201, 162, 75, 0.14)"
-                : "rgba(14, 27, 61, 0.06)",
+                ? "rgba(255, 255, 255, 0.08)"
+                : "rgba(14, 27, 61, 0.05)",
               border: isDark
-                ? "1px solid rgba(201, 162, 75, 0.35)"
+                ? "1px solid rgba(255, 255, 255, 0.22)"
                 : "1px solid rgba(14, 27, 61, 0.18)",
               borderRadius: 3,
               padding: isRegular ? "3px 9px" : "2px 7px",
-              color: isDark ? "var(--jd-gold-soft)" : "var(--jd-navy)",
+              color: isDark ? "#FBF8F2" : "var(--jd-navy)",
               fontFamily: "var(--jd-ff-ui)",
               fontSize: isRegular ? 16 : 13,
               fontWeight: 750,
@@ -223,7 +222,7 @@ export function UnifiedBrandLockup({
               name="chevD"
               size={isRegular ? 13 : 10}
               stroke={2.4}
-              color={isDark ? "var(--jd-gold-soft)" : "var(--jd-navy)"}
+              color={isDark ? "rgba(255, 255, 255, 0.85)" : "var(--jd-navy)"}
             />
           </button>
 
@@ -233,8 +232,8 @@ export function UnifiedBrandLockup({
               style={{
                 fontWeight: 800,
                 letterSpacing: ".06em",
-                color: "var(--jd-navy)",
-                background: "var(--jd-gold)",
+                color: "#ffffff",
+                background: "var(--jd-red-brand, #C8102E)",
                 padding: "2px 5px",
                 borderRadius: 2,
                 fontSize: 10,
@@ -245,47 +244,6 @@ export function UnifiedBrandLockup({
             </span>
           ) : null}
         </div>
-
-        {/* Foundation line across the full width of the combined logo + district lockup */}
-        <div
-          className="jd-unified-brand-lockup__rule"
-          aria-hidden="true"
-          style={{
-            height: 1,
-            marginTop: 3,
-            marginBottom: 2,
-            background: isDark
-              ? "linear-gradient(90deg, rgba(201, 162, 75, 0.3) 0%, rgba(201, 162, 75, 0.75) 50%, rgba(201, 162, 75, 0.3) 100%)"
-              : "linear-gradient(90deg, rgba(201, 162, 75, 0.4) 0%, rgba(201, 162, 75, 0.9) 50%, rgba(201, 162, 75, 0.4) 100%)",
-            width: "100%",
-          }}
-        />
-
-        {/* Small supporting state label spanning the combined lockup width */}
-        <div
-          className="jd-unified-brand-lockup__state"
-          aria-label="छत्तीसगढ़"
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            width: "100%",
-            boxSizing: "border-box",
-            padding: isRegular ? "0 4px" : "0 3px",
-            fontFamily: "var(--jd-ff-ui)",
-            fontSize: isRegular ? 13.5 : 10,
-            fontWeight: 800,
-            letterSpacing: isRegular ? "0.04em" : "0.02em",
-            color: isDark ? "var(--jd-gold-soft)" : "#8B6B23",
-            lineHeight: 1.2,
-            userSelect: "none",
-          }}
-        >
-          <span aria-hidden="true">छ</span>
-          <span aria-hidden="true">त्ती</span>
-          <span aria-hidden="true">स</span>
-          <span aria-hidden="true">ग</span>
-          <span aria-hidden="true">ढ़</span>
-        </div>
       </div>
 
       {/* Accessible District Selection Dialog */}
@@ -293,7 +251,7 @@ export function UnifiedBrandLockup({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="छत्तीसगढ़ जिला चुनें"
+          aria-label={locale === "en" ? "Select Chhattisgarh district" : "छत्तीसगढ़ जिला चुनें"}
           data-testid="jd-district-picker-dialog"
           style={{
             position: "fixed",
@@ -347,7 +305,7 @@ export function UnifiedBrandLockup({
                     color: "var(--jd-navy, #0E1B3D)",
                   }}
                 >
-                  अपना जिला चुनें
+                  {locale === "en" ? "Select Your District" : "अपना जिला चुनें"}
                 </h3>
                 <span
                   style={{
@@ -356,13 +314,15 @@ export function UnifiedBrandLockup({
                     fontFamily: "var(--jd-ff-ui)",
                   }}
                 >
-                  स्थानीय समाचार और लाइव अपडेट के लिए
+                  {locale === "en"
+                    ? "For local news and verified live updates"
+                    : "स्थानीय समाचार और लाइव अपडेट के लिए"}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setPickerOpen(false)}
-                aria-label="बंद करें"
+                aria-label={locale === "en" ? "Close" : "बंद करें"}
                 style={{
                   background: "transparent",
                   border: "none",
@@ -405,7 +365,11 @@ export function UnifiedBrandLockup({
                 <JdIcon name="pin" size={15} stroke={2} color="#fff" />
                 <span>
                   {locating
-                    ? "स्थान पहचाना जा रहा है..."
+                    ? locale === "en"
+                      ? "Detecting location..."
+                      : "स्थान पहचाना जा रहा है..."
+                    : locale === "en"
+                    ? "Detect nearest district (Use location)"
                     : "निकटतम जिला पहचानें (स्थान का उपयोग करें)"}
                 </span>
               </button>
@@ -426,7 +390,11 @@ export function UnifiedBrandLockup({
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="जिला खोजें... (उदा. दुर्ग, रायपुर, बिलासपुर)"
+                  placeholder={
+                    locale === "en"
+                      ? "Search district... (e.g. Durg, Raipur, Bilaspur)"
+                      : "जिला खोजें... (उदा. दुर्ग, रायपुर, बिलासपुर)"
+                  }
                   autoFocus
                   style={{
                     border: "none",

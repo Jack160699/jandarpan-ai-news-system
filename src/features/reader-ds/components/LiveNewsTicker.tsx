@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storyHref } from "../utils";
 import type { BreakingItem } from "../homepage/breaking";
+import { useJdDsT } from "../i18n";
 
 export type LiveTickerItem = {
   id: string;
@@ -17,56 +18,121 @@ type LiveNewsTickerProps = {
   initialItems?: BreakingItem[];
 };
 
+const DEFAULT_HEADLINES: Record<"hi" | "en", LiveTickerItem[]> = {
+  hi: [
+    {
+      id: "live-default-hi-1",
+      slug: "",
+      headline: "छत्तीसगढ़: प्रदेश व सभी 33 जिलों की ताज़ा खबरें सीधे जन दर्पण न्यूज़रूम से",
+      href: "/latest",
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: "live-default-hi-2",
+      slug: "",
+      headline: "दुर्ग एवं रायपुर: प्रशासनिक समीक्षा में विकास कार्यों और जनसुविधाओं पर जोर",
+      href: "/latest",
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: "live-default-hi-3",
+      slug: "",
+      headline: "बिलासपुर व बस्तर: मौसम एवं क्षेत्रीय योजनाओं को लेकर महत्वपूर्ण निर्देश जारी",
+      href: "/latest",
+      publishedAt: new Date().toISOString(),
+    },
+  ],
+  en: [
+    {
+      id: "live-default-en-1",
+      slug: "",
+      headline: "Chhattisgarh: Latest verified news and live updates from all 33 districts",
+      href: "/latest",
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: "live-default-en-2",
+      slug: "",
+      headline: "Raipur & Durg: Administration reviews regional development and infrastructure projects",
+      href: "/latest",
+      publishedAt: new Date().toISOString(),
+    },
+    {
+      id: "live-default-en-3",
+      slug: "",
+      headline: "Bilaspur & Bastar: Key state announcements and administrative updates",
+      href: "/latest",
+      publishedAt: new Date().toISOString(),
+    },
+  ],
+};
+
 /**
- * Simplified Live News Ticker (Requirements #9-#15):
- * 🔴 LIVE  |  latest verified news headlines continuously scrolling slow and smooth
+ * Simplified Live News Ticker (Requirements #11-#15):
+ * 🔴 LIVE / 🔴 लाइव  |  latest verified news headlines continuously scrolling slow and smooth
  *
  * - Compact red LIVE label with subtle pulsing indicator.
- * - Continuous, calm, slow-scrolling newswire.
+ * - Continuous, calm, slow-scrolling newswire (~70s).
  * - Seamless loop without jumps.
  * - Tap/click on any headline opens corresponding story.
  * - Pauses on hover/focus.
  * - Respects prefers-reduced-motion.
+ * - Fully localized: Hindi mode = Hindi ticker & headlines; English mode = English ticker & headlines.
+ * - Palette strictly Navy + Red + White/Paper (zero yellow/gold).
  */
 export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
-  const [items, setItems] = useState<LiveTickerItem[]>(() => {
-    if (initialItems && initialItems.length > 0) {
-      return initialItems.map((b, idx) => ({
-        id: b.slug || `live-${idx}`,
-        slug: b.slug || "",
-        headline: b.headline,
-        href: b.href || (b.slug ? storyHref(b.slug) : "#"),
-        publishedAt: new Date().toISOString(),
-      }));
-    }
-    return [
-      {
-        id: "live-default-1",
-        slug: "",
-        headline: "छत्तीसगढ़: प्रदेश व सभी 33 जिलों की ताज़ा खबरें सीधे जन दर्पण न्यूज़रूम से",
-        href: "/latest",
-        publishedAt: new Date().toISOString(),
-      },
-    ];
-  });
+  const { locale, isEnglish } = useJdDsT();
+  const currentLang = isEnglish ? "en" : "hi";
 
-  const lastFetchRef = useRef(Date.now());
+  const mapInitial = useCallback(
+    (lang: "hi" | "en") => {
+      if (initialItems && initialItems.length > 0) {
+        const filtered = initialItems.filter((b) => {
+          const hasDevanagari = /[\u0900-\u097F]/.test(b.headline);
+          return lang === "hi" ? hasDevanagari : !hasDevanagari;
+        });
+        if (filtered.length > 0) {
+          return filtered.map((b, idx) => ({
+            id: b.slug || `live-${lang}-${idx}`,
+            slug: b.slug || "",
+            headline: b.headline,
+            href: b.href || (b.slug ? storyHref(b.slug) : "#"),
+            publishedAt: new Date().toISOString(),
+          }));
+        }
+      }
+      return DEFAULT_HEADLINES[lang];
+    },
+    [initialItems]
+  );
+
+  const [items, setItems] = useState<LiveTickerItem[]>(() => mapInitial(currentLang));
+
+  // Re-sync ticker items whenever the reader changes language
+  useEffect(() => {
+    setItems(mapInitial(currentLang));
+  }, [currentLang, mapInitial]);
+
+  const lastFetchRef = useRef(0);
   const fetchLiveUpdates = useCallback(() => {
     if (typeof document === "undefined" || document.visibilityState !== "visible") {
       return;
     }
     const elapsed = Date.now() - lastFetchRef.current;
-    if (elapsed < 60_000) return;
+    if (elapsed < 30_000) return;
     lastFetchRef.current = Date.now();
 
-    fetch("/api/newsroom/breaking?limit=10")
+    fetch(`/api/newsroom/breaking?limit=10&lang=${currentLang}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
           const fresh: LiveTickerItem[] = data.items.map((row: any, i: number) => ({
-            id: row.id || row.slug || `live-poll-${i}`,
+            id: row.id || row.slug || `live-poll-${currentLang}-${i}`,
             slug: row.slug || "",
-            headline: row.headline,
+            headline:
+              currentLang === "en"
+                ? row.headlineEn || row.headline
+                : row.headlineHi || row.headline,
             href: row.slug ? storyHref(row.slug) : row.href || "#",
             publishedAt: row.publishedAt || new Date().toISOString(),
           }));
@@ -74,7 +140,7 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [currentLang]);
 
   useEffect(() => {
     const interval = setInterval(fetchLiveUpdates, 90_000);
@@ -103,12 +169,12 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
       className="jd-live-ticker-wrap"
       data-testid="jd-live-news-ticker"
       role="region"
-      aria-label="लाइव समाचार"
+      aria-label={isEnglish ? "Live News Ticker" : "लाइव समाचार"}
       style={{
         width: "100%",
         background: "var(--jd-navy, #0E1B3D)",
-        borderBottom: "1px solid var(--jd-line, #E7E0D3)",
-        borderTop: "1px solid rgba(201, 162, 75, 0.25)",
+        borderBottom: "1.5px solid var(--jd-line, #E7E0D3)",
+        borderTop: "1px solid rgba(255, 255, 255, 0.12)",
         boxSizing: "border-box",
         minHeight: 44,
         display: "flex",
@@ -144,7 +210,7 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
             color: "#ffffff",
             padding: "4px 11px",
             borderRadius: 3,
-            fontSize: 15,
+            fontSize: 14.5,
             fontWeight: 800,
             textDecoration: "none",
             whiteSpace: "nowrap",
@@ -163,7 +229,7 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
               display: "inline-block",
             }}
           />
-          <span>LIVE</span>
+          <span>{isEnglish ? "LIVE" : "लाइव"}</span>
         </Link>
 
         {/* Marquee viewport */}
@@ -195,9 +261,8 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
               >
                 <span
                   style={{
-                    color: "var(--jd-gold-soft, #C9A24B)",
-                    fontSize: 10,
-                    opacity: 0.85,
+                    color: "rgba(255, 255, 255, 0.45)",
+                    fontSize: 9,
                   }}
                   aria-hidden="true"
                 >
@@ -260,7 +325,7 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
         }
         .jd-live-headline-link:hover,
         .jd-live-headline-link:focus {
-          color: var(--jd-gold-soft, #dfc07c) !important;
+          color: #ffffff !important;
           text-decoration: underline;
         }
         @media (prefers-reduced-motion: reduce) {

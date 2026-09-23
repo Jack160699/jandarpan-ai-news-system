@@ -32,6 +32,7 @@ export type PlatformArticle = {
   id: string;
   slug: string;
   title: string;
+  titleHi?: string;
   excerpt: string;
   content: string;
   image: string;
@@ -52,6 +53,8 @@ export type PlatformArticle = {
 export type BreakingTickerItem = {
   id: string;
   headline: string;
+  headlineHi?: string;
+  headlineEn?: string;
   slug: string;
   category: ContentType;
   priority: number;

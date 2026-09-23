@@ -20,7 +20,7 @@ import { DESK_CAT_ITEMS, resolveDeskCatActive } from "./deskCatItems";
 export function DeskChrome() {
   const { t, locale } = useJdDsT();
   const { language, setLanguage } = useLanguage();
-  const { prefs, setSearchOpen } = useReaderPreferences();
+  const { prefs, setSearchOpen, toggleTheme } = useReaderPreferences();
   const pathname = usePathname() || "/";
   const active = resolveDeskCatActive(pathname);
   const districtSlug = prefs.homeDistrict?.trim() || "raipur";
@@ -54,7 +54,9 @@ export function DeskChrome() {
         <div className="jd-desk-inner jd-desk-sticky__inner">
           <Link href="/" className="jd-desk-sticky__brand" aria-label={t("masthead.homeAria")}>
             <BrandMark size={22} radius={5} />
-            <span className="jd-brand jd-desk-sticky__word">{t("brand.name")}</span>
+            <span className="jd-brand jd-desk-sticky__word">
+              {locale === "en" ? "JAN DARPAN" : t("brand.name")}
+            </span>
           </Link>
           <nav className="jd-desk-sticky__nav" aria-label={t("nav.aria")}>
             {catItems.slice(0, 7).map((it) => (
@@ -75,10 +77,10 @@ export function DeskChrome() {
               aria-label={t("masthead.searchAria")}
               onClick={() => setSearchOpen(true)}
             >
-              <JdIcon name="search" size={18} stroke={1.9} color="var(--jd-gold-soft)" />
+              <JdIcon name="search" size={18} stroke={1.9} color="rgba(255, 255, 255, 0.75)" />
             </button>
             <Link href="/live" className="jd-desk-live-pill">
-              Live
+              {locale === "en" ? "Live" : "लाइव"}
             </Link>
             <Link href="/membership" className="jd-desk-member-cta jd-desk-member-cta--sm">
               {t("desk.becomeMember")}
@@ -92,45 +94,39 @@ export function DeskChrome() {
         {/* SECTION 1 — MAIN MASTHEAD */}
         <div className="jd-desk-masthead jd-desk-brand">
           <div className="jd-desk-inner jd-desk-masthead__inner">
-            {/* Left: Date + Weather */}
-            <div className="jd-desk-masthead__meta">
-              <span className="jd-desk-masthead__date">{dateLabel}</span>
-              <span className="jd-desk-masthead__sep" aria-hidden="true">|</span>
-              <span className="jd-desk-masthead__wx" title={weather.fetchedAt ?? undefined}>
-                <JdIcon
-                  name={weather.icon}
-                  size={18}
-                  stroke={1.9}
-                  color="var(--jd-navy)"
-                />
-                <span>{weatherLabel}</span>
-              </span>
-            </div>
-
-            {/* Main brand area: Jan Darpan logo + district selector + Chhattisgarh foundation label */}
-            <div className="jd-desk-masthead__brand">
+            {/* LEFT: Jan Darpan logo + District selector */}
+            <div className="jd-desk-masthead__left">
               <UnifiedBrandLockup tone="light" size="regular" />
             </div>
 
-            {/* Right side: Search + Language switcher + Sign In + Member button */}
-            <div className="jd-desk-masthead__actions">
-              <button
-                type="button"
-                className="jd-desk-search"
-                onClick={() => setSearchOpen(true)}
-                aria-label={t("masthead.searchAria")}
-              >
-                <JdIcon name="search" size={17} stroke={2} color="var(--jd-ink-3)" />
-                <span>{t("search.placeholder")}</span>
-              </button>
+            {/* CENTER: Intentionally open / minimal */}
+            <div className="jd-desk-masthead__center" aria-hidden="true" />
 
+            {/* RIGHT: Date + Weather + Lang + Theme Toggle + Sign In + Member */}
+            <div className="jd-desk-masthead__right">
+              {/* Date + Weather */}
+              <div className="jd-desk-masthead__meta">
+                <span className="jd-desk-masthead__date">{dateLabel}</span>
+                <span className="jd-desk-masthead__sep" aria-hidden="true">|</span>
+                <span className="jd-desk-masthead__wx" title={weather.fetchedAt ?? undefined}>
+                  <JdIcon
+                    name={weather.icon}
+                    size={17}
+                    stroke={1.9}
+                    color="var(--jd-navy)"
+                  />
+                  <span>{weatherLabel}</span>
+                </span>
+              </div>
+
+              {/* Language Switcher */}
               <div className="jd-desk-lang" role="group" aria-label={t("desk.languageAria")}>
                 <button
                   type="button"
                   className={language === "hi" ? "is-active" : undefined}
                   onClick={() => setLanguage("hi")}
                 >
-                  हिं
+                  हिंदी
                 </button>
                 <button
                   type="button"
@@ -141,10 +137,36 @@ export function DeskChrome() {
                 </button>
               </div>
 
+              {/* Day / Night Mode Toggle */}
+              <button
+                type="button"
+                className="jd-desk-theme-toggle"
+                onClick={toggleTheme}
+                aria-label={
+                  prefs.theme === "dark"
+                    ? (locale === "en" ? "Switch to light mode" : "लाइट मोड चुनें")
+                    : (locale === "en" ? "Switch to dark mode" : "डार्क मोड चुनें")
+                }
+                title={
+                  prefs.theme === "dark"
+                    ? (locale === "en" ? "Light mode" : "लाइट मोड")
+                    : (locale === "en" ? "Dark mode" : "डार्क मोड")
+                }
+              >
+                <JdIcon
+                  name={prefs.theme === "dark" ? "sun" : "moon"}
+                  size={17}
+                  stroke={1.9}
+                  color="var(--jd-navy)"
+                />
+              </button>
+
+              {/* Sign In */}
               <Link href="/login" prefetch={false} className="jd-desk-masthead__signin">
                 {t("desk.signIn")}
               </Link>
 
+              {/* Member button */}
               <Link href="/membership" prefetch={false} className="jd-desk-member-cta">
                 {t("desk.becomeMember")}
               </Link>
