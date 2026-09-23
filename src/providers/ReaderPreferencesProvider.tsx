@@ -70,8 +70,16 @@ export function ReaderPreferencesProvider({
   useEffect(() => {
     const loaded = loadPreferences();
     const langState = loadStoredLanguage();
-    const merged = {
+    const domTheme =
+      document.documentElement.dataset.theme === "dark" ||
+      document.documentElement.classList.contains("dark") ||
+      (typeof localStorage !== "undefined" && localStorage.getItem("theme") === "dark")
+        ? "dark"
+        : "light";
+    const initialTheme: ReaderTheme = loaded.theme || domTheme;
+    const merged: ReaderPreferences = {
       ...loaded,
+      theme: initialTheme,
       language: langState.language,
       languageChosen: langState.chosen,
     };
@@ -116,15 +124,24 @@ export function ReaderPreferencesProvider({
   }, []);
 
   const setTheme = useCallback(
-    (theme: ReaderTheme) => update({ theme }),
-    [update]
+    (theme: ReaderTheme) => {
+      setPrefs((prev) => {
+        const next = { ...prev, theme };
+        savePreferences(next);
+        return next;
+      });
+    },
+    []
   );
 
-  const toggleTheme = useCallback(
-    () =>
-      update({ theme: prefs.theme === "light" ? "dark" : "light" }),
-    [update, prefs.theme]
-  );
+  const toggleTheme = useCallback(() => {
+    setPrefs((prev) => {
+      const nextTheme: ReaderTheme = prev.theme === "dark" ? "light" : "dark";
+      const next = { ...prev, theme: nextTheme };
+      savePreferences(next);
+      return next;
+    });
+  }, []);
 
   const setReadingMode = useCallback(
     (readingMode: ReadingMode) => update({ readingMode }),

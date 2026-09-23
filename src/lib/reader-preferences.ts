@@ -54,14 +54,22 @@ export function loadPreferences(): ReaderPreferences {
 
 export function savePreferences(prefs: Partial<ReaderPreferences>) {
   if (typeof window === "undefined") return;
-  const next = { ...loadPreferences(), ...prefs };
+  const current = loadPreferences();
+  const next = { ...current, ...prefs };
   localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(next));
+  if (next.theme) {
+    localStorage.setItem("theme", next.theme);
+  }
   applyPreferencesToDocument(next);
 }
 
 export function applyPreferencesToDocument(prefs: ReaderPreferences) {
+  if (typeof document === "undefined") return;
   const root = document.documentElement;
+  const isDark = prefs.theme === "dark";
   root.setAttribute("data-theme", prefs.theme);
+  root.dataset.theme = prefs.theme;
+  root.classList.toggle("dark", isDark);
   root.setAttribute("data-reading-mode", prefs.readingMode);
   root.setAttribute("data-font-scale", prefs.fontScale ?? "base");
   root.setAttribute("data-language", prefs.language);

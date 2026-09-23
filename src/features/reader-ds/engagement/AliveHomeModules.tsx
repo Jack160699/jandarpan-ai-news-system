@@ -51,7 +51,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       <p className="jd-ui jd-alive__tone" aria-live="polite">
         {toneLabel}
       </p>
-      {briefing ? <AajKaDarpan briefing={briefing} /> : null}
+      {briefing ? <AajKaDarpan briefing={briefing} feed={feed} /> : null}
     </div>
   );
 }

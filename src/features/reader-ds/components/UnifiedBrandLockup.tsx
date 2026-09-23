@@ -124,7 +124,7 @@ export function UnifiedBrandLockup({
     );
   }, [searchQuery]);
 
-  const isDark = tone === "dark";
+  const isDark = tone === "dark" || prefs.theme === "dark";
   const isRegular = size === "regular";
 
   return (
@@ -132,7 +132,7 @@ export function UnifiedBrandLockup({
       <div
         className="jd-unified-brand-lockup"
         data-testid="jd-unified-brand-lockup"
-        data-tone={tone}
+        data-tone={isDark ? "dark" : tone}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -147,7 +147,7 @@ export function UnifiedBrandLockup({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: isRegular ? 10 : 7,
+            gap: isRegular ? 9 : 7,
             minWidth: 0,
           }}
         >
@@ -165,14 +165,14 @@ export function UnifiedBrandLockup({
               minWidth: 0,
             }}
           >
-            <BrandMark size={isRegular ? 32 : 22} radius={isRegular ? 6 : 4} />
+            <BrandMark size={isRegular ? 28 : 22} radius={isRegular ? 5 : 4} />
             <span
               className="jd-brand jd-unified-brand-lockup__title"
               style={{
                 fontFamily: "var(--jd-ff-brand)",
                 fontWeight: 700,
                 fontSize: isRegular
-                  ? "clamp(1.5rem, 3.2vw, 1.85rem)"
+                  ? "clamp(1.35rem, 2.6vw, 1.65rem)"
                   : "clamp(1.15rem, 3.8vw, 1.35rem)",
                 lineHeight: 1.2,
                 whiteSpace: "nowrap",

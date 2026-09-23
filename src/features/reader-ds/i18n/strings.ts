@@ -1174,7 +1174,7 @@ const en: Record<JdDsStringKey, string> = {
   "offline.favoriteOn": "Favorited",
   "offline.favoriteOff": "Unfavorite",
   "offline.cleanupDone": "Removed {n}",
-  "darpan.title": "Aaj Ka Darpan",
+  "darpan.title": "Today's Brief",
   "darpan.listenCta": "Listen in 3 minutes",
   "darpan.allCaughtUp": "You're caught up on today's essentials",
   "pulse.title": "{district} Pulse",

@@ -108,18 +108,13 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
 
   const [items, setItems] = useState<LiveTickerItem[]>(() => mapInitial(currentLang));
 
-  // Re-sync ticker items whenever the reader changes language
-  useEffect(() => {
-    setItems(mapInitial(currentLang));
-  }, [currentLang, mapInitial]);
-
   const lastFetchRef = useRef(0);
   const fetchLiveUpdates = useCallback(() => {
     if (typeof document === "undefined" || document.visibilityState !== "visible") {
       return;
     }
     const elapsed = Date.now() - lastFetchRef.current;
-    if (elapsed < 30_000) return;
+    if (elapsed < 30_000 && lastFetchRef.current !== 0) return;
     lastFetchRef.current = Date.now();
 
     fetch(`/api/newsroom/breaking?limit=10&lang=${currentLang}`)
@@ -141,6 +136,13 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
       })
       .catch(() => {});
   }, [currentLang]);
+
+  // Re-sync ticker items whenever the reader changes language
+  useEffect(() => {
+    setItems(mapInitial(currentLang));
+    lastFetchRef.current = 0;
+    fetchLiveUpdates();
+  }, [currentLang, mapInitial, fetchLiveUpdates]);
 
   useEffect(() => {
     const interval = setInterval(fetchLiveUpdates, 90_000);
@@ -176,7 +178,7 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
         borderBottom: "1.5px solid var(--jd-line, #E7E0D3)",
         borderTop: "1px solid rgba(255, 255, 255, 0.12)",
         boxSizing: "border-box",
-        minHeight: 44,
+        minHeight: 40,
         display: "flex",
         alignItems: "center",
         overflow: "hidden",
@@ -190,8 +192,8 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
           display: "flex",
           alignItems: "center",
           width: "100%",
-          maxWidth: "var(--jd-shell-max, 1240px)",
-          margin: "0 auto",
+          maxWidth: "100%",
+          margin: 0,
           padding: "0 16px",
           gap: 14,
           minWidth: 0,

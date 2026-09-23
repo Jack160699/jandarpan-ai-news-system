@@ -60,7 +60,7 @@ export function ReaderShell({
           minHeight: "100dvh",
           display: "flex",
           flexDirection: "column",
-          background: dark ? "#05080f" : "var(--jd-paper)",
+          background: "var(--jd-paper)",
         }}
       >
         <OfflineServiceWorkerRegister />

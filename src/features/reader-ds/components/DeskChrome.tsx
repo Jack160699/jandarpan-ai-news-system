@@ -82,9 +82,6 @@ export function DeskChrome() {
             <Link href="/live" className="jd-desk-live-pill">
               {locale === "en" ? "Live" : "लाइव"}
             </Link>
-            <Link href="/membership" className="jd-desk-member-cta jd-desk-member-cta--sm">
-              {t("desk.becomeMember")}
-            </Link>
           </div>
         </div>
       </div>
@@ -102,7 +99,7 @@ export function DeskChrome() {
             {/* CENTER: Intentionally open / minimal */}
             <div className="jd-desk-masthead__center" aria-hidden="true" />
 
-            {/* RIGHT: Date + Weather + Lang + Theme Toggle + Sign In + Member */}
+            {/* RIGHT: Date + Weather + Lang + Theme Toggle + Sign In (NO Member button) */}
             <div className="jd-desk-masthead__right">
               {/* Date + Weather */}
               <div className="jd-desk-masthead__meta">
@@ -113,11 +110,13 @@ export function DeskChrome() {
                     name={weather.icon}
                     size={17}
                     stroke={1.9}
-                    color="var(--jd-navy)"
+                    color="currentColor"
                   />
                   <span>{weatherLabel}</span>
                 </span>
               </div>
+
+              <span className="jd-desk-masthead__sep" aria-hidden="true">|</span>
 
               {/* Language Switcher */}
               <div className="jd-desk-lang" role="group" aria-label={t("desk.languageAria")}>
@@ -136,6 +135,8 @@ export function DeskChrome() {
                   EN
                 </button>
               </div>
+
+              <span className="jd-desk-masthead__sep" aria-hidden="true">|</span>
 
               {/* Day / Night Mode Toggle */}
               <button
@@ -157,18 +158,15 @@ export function DeskChrome() {
                   name={prefs.theme === "dark" ? "sun" : "moon"}
                   size={17}
                   stroke={1.9}
-                  color="var(--jd-navy)"
+                  color="currentColor"
                 />
               </button>
+
+              <span className="jd-desk-masthead__sep" aria-hidden="true">|</span>
 
               {/* Sign In */}
               <Link href="/login" prefetch={false} className="jd-desk-masthead__signin">
                 {t("desk.signIn")}
-              </Link>
-
-              {/* Member button */}
-              <Link href="/membership" prefetch={false} className="jd-desk-member-cta">
-                {t("desk.becomeMember")}
               </Link>
             </div>
           </div>

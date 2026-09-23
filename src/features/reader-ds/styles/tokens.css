@@ -84,7 +84,11 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.jd-ds[data-theme="dark"] {
+.jd-ds[data-theme="dark"],
+html[data-theme="dark"] .jd-ds,
+html.dark .jd-ds,
+html[data-theme="dark"],
+html.dark {
   --jd-paper: var(--jd-d-bg);
   --jd-paper-2: var(--jd-d-surface);
   --jd-ink: var(--jd-d-text);
