@@ -7,12 +7,10 @@ import { buildDailyDarpan } from "@/lib/engagement/daily-darpan";
 import { buildLocalPulse } from "@/lib/engagement/local-pulse";
 import { pickDevelopingStory } from "@/lib/engagement/pick-developing";
 import { toFormattedStory } from "@/lib/engagement/story-format";
-import { getDayPartCopy } from "@/lib/engagement/time-of-day";
 import { useReaderPreferencesOptional } from "@/providers/ReaderPreferencesProvider";
 import { DEFAULT_DISTRICT_SLUG } from "@/lib/district-intelligence";
 import { useJdDsT } from "../i18n";
 import { SectionHeader } from "../components";
-import { AajKaDarpan } from "./AajKaDarpan";
 import { DevelopingStoryTeaserCard } from "./DevelopingStoryTeaserCard";
 import { FormatStoryCard } from "./FormatStoryCard";
 
@@ -22,37 +20,73 @@ const LocalPulseLazy = dynamic(
   { ssr: false, loading: () => null }
 );
 
+const JanDarpanLivePreviewLazy = dynamic(
+  () =>
+    import("@/features/jd-live").then((m) => ({ default: m.JanDarpanLivePreview })),
+  { ssr: false, loading: () => null }
+);
+
+const JanDarpanLiveLazy = dynamic(
+  () =>
+    import("@/features/jd-live").then((m) => ({ default: m.JanDarpanLive })),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="jdl-studio-loading-placeholder"
+        style={{
+          minHeight: 480,
+          background: "#0a1628",
+          borderRadius: 8,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: 12,
+          color: "rgba(255,255,255,0.6)",
+          fontFamily: "sans-serif",
+          fontSize: 14,
+          marginTop: 10,
+          marginBottom: 24,
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            border: "3px solid rgba(255,255,255,0.1)",
+            borderTopColor: "#c8102e",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+        <span>जन दर्पण लाइव लोड हो रहा है…</span>
+      </div>
+    ),
+  }
+);
+
 type SlotProps = {
   feed: GeneratedHomepageFeed;
   excludeSlugs: Set<string>;
 };
 
-/** Daypart tone + आज का दर्पण — sits above the lead story. */
+/**
+ * Jan Darpan Live newsroom — primary first-content experience on the homepage.
+ * Replaces the previous "आज का दर्पण / Today's Brief" module.
+ */
 export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
   const { locale } = useJdDsT();
-  const prefs = useReaderPreferencesOptional();
-  const districtSlug =
-    prefs?.prefs.homeDistrict?.trim() || DEFAULT_DISTRICT_SLUG;
-  const dayPart = getDayPartCopy();
-
-  const briefing = useMemo(
-    () => buildDailyDarpan(feed, { districtSlug, excludeSlugs }),
-    [feed, districtSlug, excludeSlugs]
-  );
-
-  const toneLabel = locale === "en" ? dayPart.toneEn : dayPart.toneHi;
+  const broadcastLang = locale === "en" ? "en" : "hi";
 
   return (
-    <div
-      className="jd-alive"
-      data-testid="jd-alive-home"
-      data-daypart={dayPart.dayPart}
+    <section
+      className="jd-home-live-newsroom"
+      data-testid="jd-live-newsroom"
+      aria-label={broadcastLang === "en" ? "Jan Darpan Live Newsroom" : "जन दर्पण लाइव न्यूज़रूम"}
     >
-      <p className="jd-ui jd-alive__tone" aria-live="polite">
-        {toneLabel}
-      </p>
-      {briefing ? <AajKaDarpan briefing={briefing} feed={feed} /> : null}
-    </div>
+      <JanDarpanLiveLazy initialLanguage={broadcastLang} embedded />
+    </section>
   );
 }
 
@@ -134,6 +168,23 @@ export function AliveHomeSecondarySlot({ feed, excludeSlugs }: SlotProps) {
 
       {developing ? <DevelopingStoryTeaserCard teaser={developing} /> : null}
     </div>
+  );
+}
+
+/**
+ * Compact Jan Darpan Live preview for the homepage sidebar.
+ * Lazy loaded — does NOT initialize audio or broadcast engine.
+ */
+export function AliveHomeLiveSlot({ feed }: { feed: SlotProps["feed"] }) {
+  const { locale } = useJdDsT();
+  // Pick the top story image + headline for the preview
+  const topStory = feed.breakingTicker[0] ?? feed.liveWire[0] ?? feed.editorsPicks?.lead;
+  return (
+    <JanDarpanLivePreviewLazy
+      headline={topStory?.headline}
+      imageUrl={topStory?.imageUrl}
+      language={locale === "en" ? "en" : "hi"}
+    />
   );
 }
 

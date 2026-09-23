@@ -1,9 +1,5 @@
-import { PageShell } from "@/components/layout/PageShell";
+import dynamic from "next/dynamic";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
-import { LiveV3Page } from "@/features/live-v3";
-import { isLiveV3Enabled } from "@/features/live-v3/config";
-import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
-import { LiveNewsPageView } from "@/features/reader-ds/pages";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { BRAND } from "@/lib/brand";
 import {
@@ -12,15 +8,13 @@ import {
   collectionPageJsonLd,
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
-import { Footer } from "@/sections/Footer";
 import { HomepageEmpty } from "@/sections/homepage";
-import { LiveDeskLiveView } from "@/sections/live/LiveDeskLiveView";
 
 export const revalidate = 60;
 
-const BASE_TITLE = `Live Desk · ${BRAND.nameEn}`;
+const BASE_TITLE = `Jan Darpan Live · ${BRAND.nameEn}`;
 const BASE_DESCRIPTION =
-  "Breaking and live wire updates from India — developing stories as they happen.";
+  "Jan Darpan Live — AI-powered 24/7 newsroom with a virtual anchor, breaking news, and continuous Chhattisgarh coverage.";
 const BASE_PATH = "/live";
 
 export const metadata = buildHubPageMetadata({
@@ -28,33 +22,37 @@ export const metadata = buildHubPageMetadata({
   description: BASE_DESCRIPTION,
   path: BASE_PATH,
   keywords: [
-    "live news",
+    "jan darpan live",
+    "live news chhattisgarh",
+    "AI newsroom",
     "breaking news",
-    "India live wire",
-    "developing stories",
-    "Jan Darpan live desk",
-    "भारत लाइव न्यूज़",
+    "जन दर्पण लाइव",
+    "छत्तीसगढ़ लाइव न्यूज़",
+    "virtual anchor",
   ],
 });
+
+import { LiveClientView } from "./LiveClientView";
 
 export default async function LivePage() {
   const feed = await getCachedGeneratedHomepageFeed();
 
   if (!feed) {
     return (
-      <PageShell variant="news">
-        <main id="main-content" role="main">
-          <HomepageEmpty />
-        </main>
-        <Footer />
-      </PageShell>
+      <main
+        id="main-content"
+        role="main"
+        style={{ minHeight: "100svh", background: "#0a1628" }}
+      >
+        <HomepageEmpty />
+      </main>
     );
   }
 
   const liveArticles = [...feed.breakingTicker, ...feed.liveWire].slice(0, 20);
   const jsonLd = [
     collectionPageJsonLd({
-      name: "Live Desk",
+      name: "Jan Darpan Live",
       description: BASE_DESCRIPTION,
       path: BASE_PATH,
       items: liveArticles.map((article) => ({
@@ -64,48 +62,25 @@ export default async function LivePage() {
     }),
     breadcrumbListJsonLd([
       buildHomeBreadcrumb(),
-      { name: "Live Desk", href: BASE_PATH },
+      { name: "Jan Darpan Live", href: BASE_PATH },
     ]),
   ];
 
-  if (isReaderDesignSystemEnabled()) {
-    const articles = [...feed.breakingTicker, ...feed.liveWire].slice(0, 20);
-    const isLiveActive =
-      feed.breakingTicker.length > 0 ||
-      articles.some((a) => a.isLive) ||
-      feed.liveWire.length > 0;
-
-    return (
-      <>
-        <JsonLdScript data={jsonLd} />
-        <LiveNewsPageView
-          articles={articles}
-          isLiveActive={isLiveActive}
-          heroTitle={articles[0]?.headline}
-        />
-      </>
-    );
-  }
-
-  if (isLiveV3Enabled()) {
-    return (
-      <PageShell variant="news">
-        <JsonLdScript data={jsonLd} />
-        <main id="main-content" className="live-page lv3-route-root nr-root" role="main">
-          <LiveV3Page feed={feed} />
-        </main>
-        <Footer />
-      </PageShell>
-    );
-  }
-
   return (
-    <PageShell variant="news">
+    <>
       <JsonLdScript data={jsonLd} />
-      <main id="main-content" className="live-page nr-root" role="main">
-        <LiveDeskLiveView feed={feed} />
+      {/*
+        The studio page is fullscreen — no site nav/footer.
+        The studio provides its own brand header and lang switcher.
+      */}
+      <main
+        id="main-content"
+        role="main"
+        style={{ minHeight: "100svh", overflow: "hidden" }}
+      >
+        <LiveClientView />
       </main>
-      <Footer />
-    </PageShell>
+    </>
   );
 }
+
