@@ -113,11 +113,7 @@ function getCachedHomepageFeedBuild(
       );
 
       if (!pool.length) {
-        return {
-          feed: null,
-          diagnostics,
-          freshWire: isFreshWireSource(diagnostics.source),
-        };
+        throw new Error("empty_pool_do_not_cache");
       }
 
       const feed = await buildFeedFromPool(
@@ -126,13 +122,17 @@ function getCachedHomepageFeedBuild(
         tenant,
         readerPrefs
       );
+      if (!feed) {
+        throw new Error("empty_feed_do_not_cache");
+      }
+
       return {
         feed,
         diagnostics,
         freshWire: isFreshWireSource(diagnostics.source),
       };
     },
-    ["homepage-generated-feed-v10", tenant.slug, displayLanguage, prefSignature],
+    ["homepage-generated-feed-v11", tenant.slug, displayLanguage, prefSignature],
     {
       revalidate: INFRA_CONFIG.homepageCacheSeconds,
       tags: [
@@ -166,12 +166,28 @@ export async function getGeneratedHomepageFeed(): Promise<GeneratedHomepageFeed 
     return redisCached;
   }
 
-  const built = await getCachedHomepageFeedBuild(
-    tenant,
-    displayLanguage,
-    prefSignature,
-    readerPrefs
-  )();
+  let built: HomepageFeedBuild;
+  try {
+    built = await getCachedHomepageFeedBuild(
+      tenant,
+      displayLanguage,
+      prefSignature,
+      readerPrefs
+    )();
+  } catch {
+    const { rows: pool, diagnostics } = await resolveLiveArticlePool(
+      HOMEPAGE_POOL_LIMIT,
+      { select: "homepage" }
+    );
+    const feed = pool.length
+      ? await buildFeedFromPool(pool, displayLanguage, tenant, readerPrefs)
+      : null;
+    built = {
+      feed,
+      diagnostics,
+      freshWire: isFreshWireSource(diagnostics.source),
+    };
+  }
 
   logLiveFeed("homepage_feed_build", {
     source: built.diagnostics.source,
