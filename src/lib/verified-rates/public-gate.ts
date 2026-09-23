@@ -38,23 +38,45 @@ export async function isRatePathIndexable(opts: {
   });
 }
 
+import { unstable_cache } from "next/cache";
+import { verifiedRatesDb } from "@/lib/verified-rates/db";
+
+async function checkAnyAcceptedSnapshot(): Promise<boolean> {
+  try {
+    const supabase = verifiedRatesDb();
+    const { data, error } = await supabase
+      .from("verified_rate_snapshots")
+      .select("id")
+      .eq("status", "accepted")
+      .limit(1);
+    if (error) return false;
+    return Boolean(data && data.length > 0);
+  } catch {
+    return false;
+  }
+}
+
+async function isVerifiedRatesPublicNavEnabledRaw(): Promise<boolean> {
+  if (process.env.VERIFIED_RATES_PUBLIC_NAV === "0") return false;
+  return checkAnyAcceptedSnapshot();
+}
+
+const getCachedVerifiedRatesPublicNav = unstable_cache(
+  isVerifiedRatesPublicNavEnabledRaw,
+  ["verified-rates-nav-enabled"],
+  {
+    revalidate: 300,
+    tags: ["verified-rates-nav-enabled"],
+  }
+);
+
 /** Homepage links to empty detail pages stay hidden until any series has data. */
 export async function isVerifiedRatesPublicNavEnabled(): Promise<boolean> {
-  if (process.env.VERIFIED_RATES_PUBLIC_NAV === "0") return false;
-  if (process.env.VERIFIED_RATES_PUBLIC_NAV === "1") {
-    // Explicit allow still requires at least one accepted snapshot (no empty SEO funnel).
+  try {
+    return await getCachedVerifiedRatesPublicNav();
+  } catch {
+    return isVerifiedRatesPublicNavEnabledRaw();
   }
-  const fuelCities: FuelCitySlug[] = ["raipur", "durg", "bhilai"];
-  const fuelCats: RateCategory[] = ["petrol", "diesel"];
-  for (const city of fuelCities) {
-    for (const category of fuelCats) {
-      if (await seriesHasAcceptedSnapshot({ category, citySlug: city })) return true;
-    }
-  }
-  for (const category of ["gold_24k", "gold_22k", "silver_999"] as RateCategory[]) {
-    if (await seriesHasAcceptedSnapshot({ category, citySlug: null })) return true;
-  }
-  return false;
 }
 
 /** Skip Production cron noise when no provider is enabled. */

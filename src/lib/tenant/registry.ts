@@ -55,7 +55,9 @@ export function getDefaultTenant(): TenantConfig {
   return getTenantBySlug(getDefaultTenantSlug()) ?? JAN_DARPAN_CHHATTISGARH_TENANT;
 }
 
-export async function loadTenantFromDatabase(
+import { unstable_cache } from "next/cache";
+
+async function loadTenantFromDatabaseRaw(
   slug: string
 ): Promise<TenantConfig | null> {
   try {
@@ -91,6 +93,27 @@ export async function loadTenantFromDatabase(
     return merged;
   } catch {
     return null;
+  }
+}
+
+function getCachedTenantLoader(slug: string) {
+  return unstable_cache(
+    () => loadTenantFromDatabaseRaw(slug),
+    ["tenant-config", slug],
+    {
+      revalidate: 300,
+      tags: ["tenant-config", `tenant:${slug}`],
+    }
+  );
+}
+
+export async function loadTenantFromDatabase(
+  slug: string
+): Promise<TenantConfig | null> {
+  try {
+    return await getCachedTenantLoader(slug)();
+  } catch {
+    return loadTenantFromDatabaseRaw(slug);
   }
 }
 

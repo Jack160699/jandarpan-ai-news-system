@@ -34,7 +34,10 @@ export function mergeOrganizationSettings(
   return merged;
 }
 
-export async function fetchOrganizationSettings(): Promise<OrganizationSettings> {
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
+
+async function fetchOrganizationSettingsRaw(): Promise<OrganizationSettings> {
   const defaults = defaultOrganizationSettings();
   if (!isSupabaseConfigured()) return defaults;
 
@@ -62,6 +65,23 @@ export async function fetchOrganizationSettings(): Promise<OrganizationSettings>
 
   return merged;
 }
+
+const getCachedOrgSettings = unstable_cache(
+  fetchOrganizationSettingsRaw,
+  ["organization-settings"],
+  {
+    revalidate: 300,
+    tags: ["organization-settings"],
+  }
+);
+
+export const fetchOrganizationSettings = cache(async (): Promise<OrganizationSettings> => {
+  try {
+    return await getCachedOrgSettings();
+  } catch {
+    return fetchOrganizationSettingsRaw();
+  }
+});
 
 export async function updateOrganizationSettings(
   value: OrganizationSettings

@@ -6,7 +6,7 @@ import { hindiRelativeTime, storyHref, type ReaderStory } from "../utils";
 
 const TONES = ["city", "field", "market", "sport", "court"] as const;
 
-/** Horizontal story row: text left, 96×72 thumb right (approved A1). */
+/** Horizontal story row: image left, headline/text right. */
 export function SecondaryStory({
   story,
   last = false,
@@ -23,14 +23,26 @@ export function SecondaryStory({
       href={storyHref(story.slug)}
       style={{
         display: "flex",
-        gap: 11,
+        gap: 12,
         padding: "11px 0",
         borderBottom: last ? "none" : "1px solid var(--jd-line-2)",
         color: "inherit",
         textDecoration: "none",
+        alignItems: "flex-start",
       }}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ width: 96, flexShrink: 0, borderRadius: 4, overflow: "hidden" }}>
+        <ArticleImage
+          src={story.imageUrl}
+          alt={story.headline}
+          altIsPhotoDescription={false}
+          ratio="thumb"
+          sizes="96px"
+          tone={tone}
+          category={story.kicker ?? "general"}
+        />
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <div style={{ marginBottom: 3 }}>
           <Tag>{story.kicker ?? "ख़बर"}</Tag>
         </div>
@@ -39,6 +51,12 @@ export function SecondaryStory({
           style={{
             margin: 0,
             color: "var(--jd-ink)",
+            fontWeight: 700,
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            lineHeight: 1.35,
           }}
           title={story.headline}
         >
@@ -59,17 +77,6 @@ export function SecondaryStory({
             {time}
           </div>
         ) : null}
-      </div>
-      <div style={{ width: 96, flexShrink: 0 }}>
-        <ArticleImage
-          src={story.imageUrl}
-          alt={story.headline}
-          altIsPhotoDescription={false}
-          ratio="thumb"
-          sizes="96px"
-          tone={tone}
-          category={story.kicker ?? "general"}
-        />
       </div>
     </Link>
   );

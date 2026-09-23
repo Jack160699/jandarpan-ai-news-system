@@ -9,7 +9,6 @@ import {
   DesktopPrimaryNav,
   LeadStory,
   Masthead,
-  MobileCategoryNav,
   ReaderShell,
   SectionHeader,
   SecondaryStory,
@@ -105,7 +104,7 @@ export function ReaderHomepage({
   });
 
   const breakingItems = pickBreakingItems(feed);
-  const sections = buildHomeSections(feed, used, t);
+  const sections = buildHomeSections(feed, used, t, { homeDistrict });
   for (const section of sections) {
     for (const s of section.stories) used.add(s.slug);
   }
@@ -172,7 +171,6 @@ export function ReaderHomepage({
   return (
     <ReaderShell activeNav="home" bottomPad={showStickyAd ? 128 : 72}>
       <Masthead premiumBadge={isPremium} />
-      <MobileCategoryNav />
       <DesktopPrimaryNav active="home" />
       <UtilityRow />
       <BreakingStrip items={breakingItems} />

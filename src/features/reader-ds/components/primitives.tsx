@@ -31,13 +31,13 @@ export function Tag({
   );
 }
 
-/** Section header — colour bar + serif title + rule + optional subtitle + optional "और पढ़ें" link. */
+/** Section header — bold editorial divider + title + rule + optional subtitle + "और पढ़ें →" link. */
 export function SectionHeader({
   title,
   subtitle,
   color = "var(--jd-red)",
   moreHref,
-  moreLabel = "सभी",
+  moreLabel = "और पढ़ें",
 }: {
   title: string;
   subtitle?: string;
@@ -48,44 +48,54 @@ export function SectionHeader({
   return (
     <div
       style={{
-        padding: "16px 14px 10px",
+        padding: "22px 14px 12px",
+        borderTop: "1px solid var(--jd-line-2)",
+        marginTop: 8,
       }}
     >
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 9,
+          gap: 10,
         }}
       >
         <span
           aria-hidden="true"
-          style={{ width: 4.5, height: 20, background: color, borderRadius: 2, flexShrink: 0 }}
+          style={{ width: 5, height: 24, background: color, borderRadius: 2, flexShrink: 0 }}
         />
         <h2
           className="jd-serif jd-type-section"
-          style={{ margin: 0, color: "var(--jd-ink)", fontWeight: 800, fontSize: "1.2rem", letterSpacing: "-0.01em" }}
+          style={{
+            margin: 0,
+            color: "var(--jd-ink)",
+            fontWeight: 850,
+            fontSize: "clamp(1.25rem, 4vw, 1.45rem)",
+            letterSpacing: "-0.02em",
+            lineHeight: 1.2,
+          }}
         >
           {title}
         </h2>
-        <span style={{ flex: 1, height: 1.5, background: "var(--jd-line)" }} />
+        <span style={{ flex: 1, height: 2, background: "var(--jd-line)", borderRadius: 1 }} />
         {moreHref ? (
           <Link
             href={moreHref}
             className="jd-ui jd-type-button"
             style={{
-              fontWeight: 700,
-              fontSize: 12,
+              fontWeight: 750,
+              fontSize: 13,
               color,
               display: "flex",
               alignItems: "center",
-              gap: 2,
-              paddingBlock: "0.1em",
+              gap: 3,
+              paddingBlock: "0.15em",
               textDecoration: "none",
+              flexShrink: 0,
             }}
           >
             {moreLabel}
-            <JdIcon name="chevR" size={13} stroke={2.2} />
+            <JdIcon name="chevR" size={14} stroke={2.4} />
           </Link>
         ) : null}
       </div>
@@ -93,9 +103,9 @@ export function SectionHeader({
         <div
           className="jd-ui"
           style={{
-            margin: "4px 0 0 14px",
-            fontSize: 12,
-            color: "var(--jd-ink-3)",
+            margin: "5px 0 0 15px",
+            fontSize: 12.5,
+            color: "var(--jd-ink-2)",
             fontWeight: 500,
           }}
         >

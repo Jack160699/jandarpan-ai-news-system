@@ -35,12 +35,19 @@ function mergeSettings(
   };
 }
 
-export async function fetchMonetizationPayload(
-  tenant: TenantConfig
-): Promise<MonetizationPayload> {
-  const empty: MonetizationPayload = {
-    tenantSlug: tenant.slug,
-    settings: tenant.monetization ?? defaultMonetizationSettings(),
+import { unstable_cache } from "next/cache";
+
+type DbPayloadResult = {
+  dbPlacements: PlacementUnit[];
+  plans: ReaderPlan[];
+  newsletters: NewsletterOffer[];
+  affiliates: AffiliateUnit[];
+  premiumReports: PremiumReportTeaser[];
+};
+
+async function fetchMonetizationDbRaw(tenantId: string): Promise<DbPayloadResult> {
+  const empty: DbPayloadResult = {
+    dbPlacements: [],
     plans: [],
     newsletters: [],
     affiliates: [],
@@ -50,7 +57,6 @@ export async function fetchMonetizationPayload(
   if (!isSupabaseConfigured()) return empty;
 
   const supabase = createAdminServerClient();
-  const tenantId = tenant.id;
 
   const [placementsRes, plansRes, newslettersRes, affiliatesRes, reportsRes] =
     await Promise.all([
@@ -94,51 +100,106 @@ export async function fetchMonetizationPayload(
     config: (r.config ?? {}) as PlacementUnit["config"],
   }));
 
-  const settings = mergeSettings(tenant, dbPlacements);
+  const plans: ReaderPlan[] = (plansRes.data ?? []).map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    nameEn: p.name_en,
+    nameHi: p.name_hi,
+    priceInr: p.price_inr,
+    billingInterval: p.billing_interval as ReaderPlan["billingInterval"],
+    features: Array.isArray(p.features)
+      ? (p.features as string[])
+      : [],
+  }));
+
+  const newsletters: NewsletterOffer[] = (newslettersRes.data ?? []).map((n) => ({
+    id: n.id,
+    slug: n.slug,
+    nameEn: n.name_en,
+    nameHi: n.name_hi,
+    frequency: n.frequency,
+    description: n.description,
+  }));
+
+  const affiliates: AffiliateUnit[] = (affiliatesRes.data ?? []).map((a) => ({
+    id: a.id,
+    slotId: a.slot_id,
+    partnerName: a.partner_name,
+    title: a.title,
+    description: a.description,
+    imageUrl: a.image_url,
+    targetUrl: a.target_url,
+    disclosureEn: a.disclosure_en ?? "Affiliate link",
+    disclosureHi: a.disclosure_hi ?? "सहबद्ध लिंक",
+  }));
+
+  const premiumReports: PremiumReportTeaser[] = (reportsRes.data ?? []).map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    excerpt: r.excerpt,
+    heroImageUrl: r.hero_image_url,
+    priceInr: r.price_inr,
+    isPaywalled: r.is_paywalled,
+  }));
 
   return {
-    tenantSlug: tenant.slug,
-    settings,
-    plans: (plansRes.data ?? []).map((p) => ({
-      id: p.id,
-      slug: p.slug,
-      nameEn: p.name_en,
-      nameHi: p.name_hi,
-      priceInr: p.price_inr,
-      billingInterval: p.billing_interval as ReaderPlan["billingInterval"],
-      features: Array.isArray(p.features)
-        ? (p.features as string[])
-        : [],
-    })),
-    newsletters: (newslettersRes.data ?? []).map((n) => ({
-      id: n.id,
-      slug: n.slug,
-      nameEn: n.name_en,
-      nameHi: n.name_hi,
-      frequency: n.frequency,
-      description: n.description,
-    })),
-    affiliates: (affiliatesRes.data ?? []).map((a) => ({
-      id: a.id,
-      slotId: a.slot_id,
-      partnerName: a.partner_name,
-      title: a.title,
-      description: a.description,
-      imageUrl: a.image_url,
-      targetUrl: a.target_url,
-      disclosureEn: a.disclosure_en ?? "Affiliate link",
-      disclosureHi: a.disclosure_hi ?? "सहबद्ध लिंक",
-    })),
-    premiumReports: (reportsRes.data ?? []).map((r) => ({
-      id: r.id,
-      slug: r.slug,
-      title: r.title,
-      excerpt: r.excerpt,
-      heroImageUrl: r.hero_image_url,
-      priceInr: r.price_inr,
-      isPaywalled: r.is_paywalled,
-    })),
+    dbPlacements,
+    plans,
+    newsletters,
+    affiliates,
+    premiumReports,
   };
+}
+
+function getCachedMonetizationLoader(tenantId: string, tenantSlug: string) {
+  return unstable_cache(
+    () => fetchMonetizationDbRaw(tenantId),
+    ["monetization-payload", tenantSlug],
+    {
+      revalidate: 300,
+      tags: ["monetization", `monetization:${tenantSlug}`],
+    }
+  );
+}
+
+export async function fetchMonetizationPayload(
+  tenant: TenantConfig
+): Promise<MonetizationPayload> {
+  const empty: MonetizationPayload = {
+    tenantSlug: tenant.slug,
+    settings: tenant.monetization ?? defaultMonetizationSettings(),
+    plans: [],
+    newsletters: [],
+    affiliates: [],
+    premiumReports: [],
+  };
+
+  if (!isSupabaseConfigured()) return empty;
+
+  try {
+    const data = await getCachedMonetizationLoader(tenant.id, tenant.slug)();
+    const settings = mergeSettings(tenant, data.dbPlacements);
+    return {
+      tenantSlug: tenant.slug,
+      settings,
+      plans: data.plans,
+      newsletters: data.newsletters,
+      affiliates: data.affiliates,
+      premiumReports: data.premiumReports,
+    };
+  } catch {
+    const data = await fetchMonetizationDbRaw(tenant.id);
+    const settings = mergeSettings(tenant, data.dbPlacements);
+    return {
+      tenantSlug: tenant.slug,
+      settings,
+      plans: data.plans,
+      newsletters: data.newsletters,
+      affiliates: data.affiliates,
+      premiumReports: data.premiumReports,
+    };
+  }
 }
 
 export async function fetchSponsoredStory(

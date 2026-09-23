@@ -112,14 +112,14 @@ export function ArticleActionBar({ headline, slug, readTime }: ArticleActionBarP
         }}
       >
         <WhatsAppIcon size={18} />
-        <span>{locale === "en" ? "WhatsApp" : "व्हाट्सएप"}</span>
+        <span>WhatsApp</span>
       </button>
 
       {/* 2. Secondary Share: Native Share or Copy Link */}
       <button
         type="button"
         onClick={handleNativeShare}
-        aria-label={t("action.share")}
+        aria-label="Share"
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -135,7 +135,7 @@ export function ArticleActionBar({ headline, slug, readTime }: ArticleActionBarP
         }}
       >
         <JdIcon name="share" size={15} stroke={1.9} color="var(--jd-ink)" />
-        <span>{copied ? (locale === "en" ? "Link Copied!" : "लिंक कॉपी हुआ!") : t("action.share")}</span>
+        <span>{copied ? (locale === "en" ? "Link Copied!" : "लिंक कॉपी हुआ!") : (locale === "en" ? "Share" : "शेयर")}</span>
       </button>
 
       {/* 3. Audio: Secondary Pill */}
@@ -162,35 +162,8 @@ export function ArticleActionBar({ headline, slug, readTime }: ArticleActionBarP
           stroke={1.8}
           color="var(--jd-ink-2)"
         />
-        <span>{readTime ? `${t("action.listen")} (${readTime})` : t("action.listen")}</span>
+        <span>{t("action.listen")}</span>
       </Link>
-
-      {/* 4. Bookmark: Subtle Action */}
-      <button
-        type="button"
-        aria-label={t("action.save")}
-        onClick={() => {
-          if (!slug) return;
-          void import("@/lib/reading-memory").then(({ loadReadingMemory, toggleBookmark }) => {
-            toggleBookmark(loadReadingMemory(), slug);
-          });
-        }}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "transparent",
-          color: "var(--jd-ink-3)",
-          border: "1px solid var(--jd-line-2)",
-          borderRadius: 20,
-          padding: "8px 10px",
-          cursor: "pointer",
-          marginLeft: "auto",
-        }}
-        title={t("action.save")}
-      >
-        <JdIcon name="bookmark" size={15} stroke={1.8} color="var(--jd-ink-3)" />
-      </button>
     </div>
   );
 }
