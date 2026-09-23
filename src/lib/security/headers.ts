@@ -19,6 +19,7 @@ export function buildContentSecurityPolicy(nonce?: string): string {
     `img-src 'self' data: blob: https: ${SUPABASE_HOST}`,
     "font-src 'self' data:",
     `connect-src 'self' https: wss: ${SUPABASE_HOST}`,
+    "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com",
     "frame-ancestors 'self'",
     "base-uri 'self'",
     "form-action 'self'",
