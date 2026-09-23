@@ -30,6 +30,7 @@ export function FormatStoryCard({
   return (
     <Link
       href={storyHref(story.slug)}
+      prefetch={false}
       className={formatClass}
       style={{
         display: "flex",

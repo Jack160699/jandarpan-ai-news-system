@@ -42,7 +42,7 @@ export const JAN_DARPAN_BRAND_ASSETS = {
   markSvg: `${ROOT}/mark/mark.svg`,
   faviconSvg: `${ROOT}/icons/favicon.svg`,
 
-  paperTexture: "/backgrounds/newspaper-light-texture.png",
+  paperTexture: "/backgrounds/newspaper-light-texture.webp",
 } as const;
 
 /** Paths that must never be used as the reader masthead wordmark. */

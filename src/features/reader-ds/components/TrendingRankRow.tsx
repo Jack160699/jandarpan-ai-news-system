@@ -18,6 +18,7 @@ export function TrendingRankRow({
   return (
     <Link
       href={storyHref(story.slug)}
+      prefetch={false}
       style={{
         display: "flex",
         gap: 12,

@@ -5,8 +5,9 @@
  */
 
 :root {
-  --paper-texture-path: /backgrounds/newspaper-light-texture.png;
-  --paper-texture-url: url("/backgrounds/newspaper-light-texture.png");
+  --paper-texture-path: /backgrounds/newspaper-light-texture.webp;
+  --paper-texture-url: url("/backgrounds/newspaper-light-texture.webp");
+  --paper-texture-fallback-url: url("/backgrounds/newspaper-light-texture.png");
   --paper-texture-tint: #f5f1e8;
   --paper-texture-wash: rgb(245 241 232 / 0.62);
   --paper-texture-wash-top: rgb(245 241 232 / 0.72);

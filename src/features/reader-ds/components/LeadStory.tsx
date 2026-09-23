@@ -8,7 +8,7 @@ export function LeadStory({ story, priority = true }: { story: ReaderStory; prio
   const time = story.timeLabel ?? hindiRelativeTime(story.publishedAt);
   return (
     <article style={{ padding: "10px 14px 4px" }}>
-      <Link href={storyHref(story.slug)} style={{ display: "block", color: "inherit", textDecoration: "none" }}>
+      <Link href={storyHref(story.slug)} prefetch={priority} style={{ display: "block", color: "inherit", textDecoration: "none" }}>
         <ArticleImage
           src={story.imageUrl}
           alt={story.headline}
