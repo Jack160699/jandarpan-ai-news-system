@@ -64,6 +64,23 @@ async function audit() {
     console.log(`  ${(r.size / 1024).toFixed(1)} KB : ${name} (${r.url.slice(0, 80)})`);
   });
 
+  console.log("\n--- BREAKDOWN BY RESOURCE TYPE ---");
+  const byType = {};
+  resources.forEach(r => {
+    byType[r.type] = (byType[r.type] || 0) + 1;
+  });
+  console.log(byType);
+
+  console.log("\nAll Fonts Requested:");
+  resources.filter(r => r.type === "font" || r.url.includes(".woff")).forEach(r => {
+    console.log(`  Font (${(r.size/1024).toFixed(1)} KB): ${r.url}`);
+  });
+
+  console.log("\nAll Fetch / XHR / RSC Requested:");
+  fetchResources.forEach(r => {
+    console.log(`  Fetch (${(r.size/1024).toFixed(1)} KB) [${r.status}]: ${r.url}`);
+  });
+
   await browser.close();
 }
 

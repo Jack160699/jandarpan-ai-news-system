@@ -6,7 +6,7 @@ const executablePath = "C:\\Users\\shriyansh chandrakar\\AppData\\Local\\ms-play
 
 async function capture() {
   const browser = await chromium.launch({ executablePath, headless: true });
-  const articleUrl = "https://www.jandarpan.news/story/security-forces-recover-ak-47-live-rounds-naxal-dump-bij-b07c76bf";
+  let articleUrl = "https://www.jandarpan.news/story/security-forces-recover-ak-47-live-rounds-naxal-dump-bij-b07c76bf";
 
   console.log("1. Desktop 1440px Homepage...");
   const ctxDesktop = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -21,6 +21,13 @@ async function capture() {
   await p1.evaluate(() => {
     document.querySelectorAll('[role="dialog"]').forEach((d) => d.remove());
   });
+  const liveStoryHref = await p1.evaluate(() => {
+    const a = document.querySelector("a[href^='/story/']");
+    return a ? a.href : null;
+  });
+  if (liveStoryHref) articleUrl = liveStoryHref;
+  console.log("Using article URL:", articleUrl);
+
   await p1.waitForTimeout(500);
   await p1.screenshot({ path: path.join(ARTIFACTS_DIR, "post-01-home-desktop.png"), fullPage: false });
 

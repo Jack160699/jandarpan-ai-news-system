@@ -25,7 +25,7 @@ export const mukta = Mukta({
 
 export const tiroDevanagari = Tiro_Devanagari_Hindi({
   variable: "--jd-font-brand",
-  subsets: ["devanagari", "latin"],
+  subsets: ["devanagari"],
   weight: ["400"],
   display: "swap",
   adjustFontFallback: true,

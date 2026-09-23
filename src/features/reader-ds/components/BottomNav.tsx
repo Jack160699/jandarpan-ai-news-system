@@ -56,6 +56,7 @@ export function BottomNav({
           <Link
             key={it.key}
             href={it.href}
+            prefetch={false}
             aria-current={on ? "page" : undefined}
             data-jd-nav-key={it.key}
             title={it.label}

@@ -206,6 +206,7 @@ export function DeskChrome() {
                 <Link
                   key={it.key}
                   href={it.href}
+                  prefetch={false}
                   className={[
                     active === it.key ? "is-active" : "",
                     compactOnly ? "jd-desk-cat--wide" : "",
@@ -218,11 +219,11 @@ export function DeskChrome() {
                 </Link>
               );
             })}
-            <Link href="/live" className="jd-desk-catnav__live">
+            <Link href="/live" prefetch={false} className="jd-desk-catnav__live">
               <span className="jd-desk-dot" />
               Live
             </Link>
-            <Link href="/listen" className="jd-desk-catnav__audio" aria-label={t("nav.listen")}>
+            <Link href="/listen" prefetch={false} className="jd-desk-catnav__audio" aria-label={t("nav.listen")}>
               <JdIcon name="headphone" size={16} stroke={1.9} color="var(--jd-gold-soft)" />
             </Link>
           </div>

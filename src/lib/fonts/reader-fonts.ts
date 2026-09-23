@@ -27,7 +27,7 @@ export const sourceSerif = Source_Serif_4({
 export const notoDevanagari = Noto_Serif_Devanagari({
   variable: "--font-hindi",
   subsets: ["devanagari", "latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "600"],
   display: "swap",
   adjustFontFallback: true,
   preload: true,
