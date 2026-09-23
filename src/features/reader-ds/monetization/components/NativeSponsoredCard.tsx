@@ -58,12 +58,16 @@ export function NativeSponsoredCard({
         href={href}
         style={{
           display: "flex",
-          gap: 11,
+          gap: 12,
           padding: "8px 12px 12px",
           textDecoration: "none",
           color: "inherit",
+          alignItems: "flex-start",
         }}
       >
+        <div style={{ width: 88, flexShrink: 0, borderRadius: 2, overflow: "hidden" }}>
+          <ArticleImage src={imageUrl} alt="" ratio="thumb" tone="field" />
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             className="jd-serif"
@@ -77,9 +81,6 @@ export function NativeSponsoredCard({
           >
             {ctaLabel} ›
           </div>
-        </div>
-        <div style={{ width: 88, flexShrink: 0, borderRadius: 2, overflow: "hidden" }}>
-          <ArticleImage src={imageUrl} alt="" ratio="thumb" tone="field" />
         </div>
       </Link>
     </aside>

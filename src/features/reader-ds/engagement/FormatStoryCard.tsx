@@ -33,27 +33,51 @@ export function FormatStoryCard({
       className={formatClass}
       style={{
         display: "flex",
-        gap: 11,
+        gap: 12,
         padding: "11px 0",
         borderBottom: last ? "none" : "1px solid var(--jd-line-2)",
         color: "inherit",
         textDecoration: "none",
+        alignItems: "flex-start",
       }}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ marginBottom: 3, display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {story.formatLabel ? (
-            <span className="jd-ui jd-format-chip">{story.formatLabel}</span>
-          ) : null}
-          <Tag>{story.kicker ?? "ख़बर"}</Tag>
+      <div style={{ width: 104, flexShrink: 0, borderRadius: 3, overflow: "hidden" }}>
+        <ArticleImage
+          src={story.imageUrl}
+          alt={story.headline}
+          altIsPhotoDescription={false}
+          ratio="thumb"
+          sizes="104px"
+          tone={tone}
+          category={story.kicker ?? "general"}
+        />
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ marginBottom: 3, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+            {story.formatLabel ? (
+              <span className="jd-ui jd-format-chip">{story.formatLabel}</span>
+            ) : null}
+            <Tag>{story.kicker ?? "ख़बर"}</Tag>
+          </div>
+          <h3
+            className="jd-serif jd-sec-title jd-type-card"
+            style={{
+              margin: 0,
+              color: "var(--jd-ink)",
+              fontSize: 16,
+              fontWeight: 700,
+              lineHeight: 1.34,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+            title={story.headline}
+          >
+            {story.headline}
+          </h3>
         </div>
-        <h3
-          className="jd-serif jd-sec-title jd-type-card"
-          style={{ margin: 0, color: "var(--jd-ink)" }}
-          title={story.headline}
-        >
-          {story.headline}
-        </h3>
         {time ? (
           <div
             className="jd-ui jd-type-meta"
@@ -63,23 +87,13 @@ export function FormatStoryCard({
               gap: 4,
               color: "var(--jd-muted)",
               marginTop: 6,
+              fontSize: 12,
             }}
           >
             <JdIcon name="clock" size={13} stroke={1.7} color="var(--jd-muted)" />
             {time}
           </div>
         ) : null}
-      </div>
-      <div style={{ width: 96, flexShrink: 0 }}>
-        <ArticleImage
-          src={story.imageUrl}
-          alt={story.headline}
-          altIsPhotoDescription={false}
-          ratio="thumb"
-          sizes="96px"
-          tone={tone}
-          category={story.kicker ?? "general"}
-        />
       </div>
     </Link>
   );
