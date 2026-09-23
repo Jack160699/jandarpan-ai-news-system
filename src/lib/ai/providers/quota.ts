@@ -25,7 +25,7 @@
  * provider/model in the chain (see router.ts) or fail the operation.
  */
 
-import { isRedisConfigured, redisEval, redisGet, redisIncrBy } from "@/lib/infrastructure/cache/redis";
+import { isRedisConfigured, redisEval, redisGet, redisIncrBy, redisDel } from "@/lib/infrastructure/cache/redis";
 import type { AiProviderId } from "@/lib/ai/providers/types";
 
 export type QuotaScope = "rpm" | "tpm" | "rpd" | "tpd";
@@ -176,6 +176,23 @@ export function getTrackedQuotaBuckets(): Array<{ provider: AiProviderId; model:
 }
 
 // --- Atomic multi-scope reservation ------------------------------------
+
+/**
+ * Seconds from now until the next UTC midnight — used as the Redis TTL for
+ * rpd/tpd keys so that in-app daily quota windows expire at the same moment
+ * provider quotas actually reset (all major providers reset at UTC 00:00).
+ * A flat 86_400s TTL would anchor the window to the first request of the
+ * day, causing exhaustion to persist 9-10 hours past midnight.
+ */
+function secondsUntilUtcMidnight(): number {
+  const now = Date.now();
+  const todayMidnightUtc = new Date(now);
+  todayMidnightUtc.setUTCHours(0, 0, 0, 0);
+  const nextMidnightMs = todayMidnightUtc.getTime() + 86_400_000;
+  // Never return 0 — add a 60s minimum so a request right at midnight still
+  // gets a proper TTL rather than an instant-expire key.
+  return Math.max(60, Math.floor((nextMidnightMs - now) / 1_000));
+}
 
 /**
  * Checks all four scopes and, only if every one has room, increments all
@@ -342,20 +359,23 @@ export async function reserveQuota(input: {
   let result: { ok: true } | { ok: false; scope: QuotaScope };
 
   if (isRedisConfigured()) {
+    const longTtlSecs = secondsUntilUtcMidnight();
     const evalResult = await redisEval<[number, string]>(
       RESERVE_SCRIPT,
       keys,
-      [1, tokenWeight, limits.rpm, limits.tpm, rpdLimit, tpdLimit, 60, 86_400]
+      [1, tokenWeight, limits.rpm, limits.tpm, rpdLimit, tpdLimit, 60, longTtlSecs]
     );
     if (evalResult === null) {
       // Redis reachable-but-erroring or unreachable mid-request — degrade to
       // the in-memory counter rather than fail the whole operation closed.
-      result = reserveInMemory(keys, 1, tokenWeight, [limits.rpm, limits.tpm, rpdLimit, tpdTracked ? tpdLimit : null], [60_000, 60_000, 86_400_000, 86_400_000]);
+      const longTtlMs = longTtlSecs * 1_000;
+      result = reserveInMemory(keys, 1, tokenWeight, [limits.rpm, limits.tpm, rpdLimit, tpdTracked ? tpdLimit : null], [60_000, 60_000, longTtlMs, longTtlMs]);
     } else {
       result = evalResult[0] === 1 ? { ok: true } : { ok: false, scope: evalResult[1] as QuotaScope };
     }
   } else {
-    result = reserveInMemory(keys, 1, tokenWeight, [limits.rpm, limits.tpm, rpdLimit, tpdTracked ? tpdLimit : null], [60_000, 60_000, 86_400_000, 86_400_000]);
+    const longTtlMs = secondsUntilUtcMidnight() * 1_000;
+    result = reserveInMemory(keys, 1, tokenWeight, [limits.rpm, limits.tpm, rpdLimit, tpdTracked ? tpdLimit : null], [60_000, 60_000, longTtlMs, longTtlMs]);
   }
 
   if (!result.ok) {
@@ -541,6 +561,43 @@ export function getInFlightCount(provider: AiProviderId): number {
   return inFlight.get(provider) ?? 0;
 }
 
+/**
+ * Deletes all RPD and TPD Redis keys for every tracked provider+model bucket.
+ * Call this from an admin endpoint when daily quota counters need to be
+ * manually flushed (e.g. after the UTC midnight anchor bug left stale keys
+ * with 9+ hours remaining TTL). Silently no-ops when Redis is not configured.
+ */
+export async function flushDailyQuotaKeys(): Promise<{ flushed: string[]; errors: string[] }> {
+  if (!isRedisConfigured()) return { flushed: [], errors: ["redis_not_configured"] };
+
+  const buckets = getTrackedQuotaBuckets();
+  const keys: string[] = [];
+  for (const { provider, model } of buckets) {
+    keys.push(bucketKey(provider, model, "rpd"));
+    keys.push(bucketKey(provider, model, "tpd"));
+  }
+
+  const flushed: string[] = [];
+  const errors: string[] = [];
+
+  await Promise.all(
+    keys.map(async (key) => {
+      try {
+        await redisDel(key);
+        flushed.push(key);
+      } catch (err) {
+        errors.push(`${key}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    })
+  );
+
+  // Also clear in-memory counters — the process that flushed Redis may still
+  // hold stale values in its local Map.
+  __resetQuotaCountersForTests();
+
+  return { flushed, errors };
+}
+
 // --- Cloudflare neuron accounting ------------------------------------------
 //
 // Cloudflare's free tier is a single shared daily *neuron* budget, not a
@@ -601,7 +658,7 @@ export async function reserveCloudflareNeurons(
   const cap = priority === "breaking" ? dailyCap : Math.floor(dailyCap * (1 - getBreakingNewsReserveFraction()));
 
   if (isRedisConfigured()) {
-    const result = await redisEval<[number, number]>(NEURON_RESERVE_SCRIPT, [NEURON_KEY], [estimatedNeurons, cap, 86_400]);
+    const result = await redisEval<[number, number]>(NEURON_RESERVE_SCRIPT, [NEURON_KEY], [estimatedNeurons, cap, secondsUntilUtcMidnight()]);
     if (result !== null) {
       const [ok, used] = result;
       return ok === 1
@@ -613,7 +670,7 @@ export async function reserveCloudflareNeurons(
   const now = Date.now();
   if (memoryNeuronsResetAt <= now) {
     memoryNeuronsUsed = 0;
-    memoryNeuronsResetAt = now + 86_400_000;
+    memoryNeuronsResetAt = now + secondsUntilUtcMidnight() * 1_000;
   }
   if (memoryNeuronsUsed + estimatedNeurons > cap) {
     return { allowed: false, used: memoryNeuronsUsed, remaining: Math.max(0, dailyCap - memoryNeuronsUsed), cap, reason: `cloudflare daily neuron budget exhausted (priority=${priority})` };
