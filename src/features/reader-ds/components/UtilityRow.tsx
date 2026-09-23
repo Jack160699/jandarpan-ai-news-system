@@ -16,6 +16,8 @@ type UtilityRowProps = {
   temp?: string;
   /** Skip live fetch when parent supplies temp (legacy / tests). */
   disableLiveWeather?: boolean;
+  /** When true, omits duplicate district trigger (since UnifiedBrandLockup already hosts it). */
+  hideDistrict?: boolean;
 };
 
 function formatShortDate(localeTag: string): string {
@@ -41,6 +43,7 @@ export function UtilityRow({
   dateLabel,
   temp: tempProp,
   disableLiveWeather = false,
+  hideDistrict = true,
 }: UtilityRowProps) {
   const { t, locale } = useJdDsT();
   const { prefs } = useReaderPreferences();
@@ -188,7 +191,7 @@ export function UtilityRow({
         prefetch={false}
         data-testid="jd-utility-district"
         style={{
-          display: "flex",
+          display: hideDistrict ? "none" : "flex",
           alignItems: "center",
           gap: 5,
           fontWeight: 700,
@@ -221,8 +224,9 @@ export function UtilityRow({
           color: "#8ea0c4",
           whiteSpace: "nowrap",
           flexShrink: 0,
-          textAlign: "center",
-          justifySelf: "center",
+          textAlign: hideDistrict ? "left" : "center",
+          justifySelf: hideDistrict ? "start" : "center",
+          gridColumn: hideDistrict ? "1 / span 2" : "2",
         }}
       >
         {date}

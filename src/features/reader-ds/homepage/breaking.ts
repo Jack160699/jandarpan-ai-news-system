@@ -45,6 +45,21 @@ export function pickBreakingItems(feed: GeneratedHomepageFeed, limit = 5): Break
     if (out.length >= limit) return out;
   }
 
+  for (const a of feed.liveWire ?? []) {
+    push(a.slug, a.headline);
+    if (out.length >= limit) return out;
+  }
+
+  for (const a of feed.trending ?? []) {
+    push(a.slug, a.headline);
+    if (out.length >= limit) return out;
+  }
+
+  for (const a of feed.regionalHighlights ?? []) {
+    push(a.slug, a.headline);
+    if (out.length >= limit) return out;
+  }
+
   return out;
 }
 

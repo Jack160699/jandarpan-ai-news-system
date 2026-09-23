@@ -190,7 +190,8 @@ export function UnifiedBrandLockup({
             type="button"
             onClick={() => setPickerOpen(true)}
             className="jd-unified-brand-lockup__district-btn"
-            data-testid="jd-brand-district-trigger"
+            data-testid="district-selector-trigger"
+            data-brand-district-trigger="true"
             aria-label={`जिला चुनें, वर्तमान: ${districtLabel}`}
             aria-haspopup="dialog"
             aria-expanded={pickerOpen}

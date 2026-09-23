@@ -50,13 +50,24 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
 
   // Normalized items
   const [items, setItems] = useState<LiveTickerItem[]>(() => {
-    return initialItems.map((b, idx) => ({
-      id: b.slug || `live-${idx}`,
-      slug: b.slug || "",
-      headline: b.headline,
-      href: b.href || (b.slug ? storyHref(b.slug) : "#"),
-      publishedAt: new Date().toISOString(),
-    }));
+    if (initialItems && initialItems.length > 0) {
+      return initialItems.map((b, idx) => ({
+        id: b.slug || `live-${idx}`,
+        slug: b.slug || "",
+        headline: b.headline,
+        href: b.href || (b.slug ? storyHref(b.slug) : "#"),
+        publishedAt: new Date().toISOString(),
+      }));
+    }
+    return [
+      {
+        id: "live-default-1",
+        slug: "",
+        headline: "छत्तीसगढ़: प्रदेश व सभी 33 जिलों की ताज़ा खबरें सीधे जन दर्पण न्यूज़रूम से",
+        href: "/latest",
+        publishedAt: new Date().toISOString(),
+      },
+    ];
   });
 
   const [filterMode, setFilterMode] = useState<"all" | "district">("all");
