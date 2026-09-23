@@ -212,39 +212,40 @@
   }
 
   .jd-desk-util {
-    background: var(--jd-navy-deep);
-    color: #c7d0e2;
-    min-height: 34px;
-    font-size: 11px;
+    background: var(--jd-paper);
+    color: var(--jd-ink-2);
+    border-bottom: 1px solid var(--jd-line);
+    min-height: 32px;
+    font-size: 11.5px;
   }
 
   .jd-desk-util__inner {
     display: flex;
     align-items: center;
-    gap: 14px;
-    min-height: 34px;
+    gap: 16px;
+    min-height: 32px;
+  }
+
+  .jd-desk-util__date {
+    color: var(--jd-ink-2);
+    font-weight: 600;
   }
 
   .jd-desk-util__wx {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
     font-weight: 600;
+    color: var(--jd-ink-2);
   }
 
   .jd-desk-util__district {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--jd-gold-soft);
-    font-weight: 700;
-    text-decoration: none;
-    margin-left: auto;
+    display: none;
   }
 
   .jd-desk-lang {
     display: inline-flex;
-    border: 1px solid rgba(142, 160, 196, 0.35);
+    border: 1px solid var(--jd-line-dark, #cfc6b5);
     border-radius: 2px;
     overflow: hidden;
   }
@@ -252,20 +253,20 @@
   .jd-desk-lang button {
     background: transparent;
     border: 0;
-    color: #8ea0c4;
+    color: var(--jd-ink-2);
     font-size: 10px;
     font-weight: 700;
-    padding: 3px 7px;
+    padding: 2px 7px;
     cursor: pointer;
   }
 
   .jd-desk-lang button.is-active {
     background: var(--jd-navy);
-    color: var(--jd-gold-soft);
+    color: #fff;
   }
 
   .jd-desk-util__signin {
-    color: var(--jd-gold-soft);
+    color: var(--jd-red-brand, #c8102e);
     text-decoration: none;
     font-weight: 700;
   }
@@ -666,13 +667,13 @@
     align-items: center;
     gap: 8px;
     flex: 1;
-    max-width: 280px;
+    max-width: 360px;
     height: 40px;
-    margin-left: 24px;
-    padding: 0 12px;
+    margin-left: 20px;
+    padding: 0 14px;
     background: #fff;
-    border: 1px solid var(--jd-line);
-    border-radius: 2px;
+    border: 1px solid var(--jd-line-dark, #cfc6b5);
+    border-radius: 4px;
     color: var(--jd-ink-3);
     font-size: 13px;
     cursor: pointer;
@@ -687,19 +688,19 @@
   }
 
   .jd-desk-util {
-    min-height: var(--jd-util-h);
+    min-height: 32px;
   }
 
   .jd-desk-util__inner {
-    min-height: var(--jd-util-h);
+    min-height: 32px;
   }
 
   .jd-desk-brand {
-    min-height: 80px;
+    min-height: 64px;
   }
 
   .jd-desk-brand__inner {
-    min-height: 80px;
+    min-height: 64px;
   }
 
   .jd-desk-catnav {

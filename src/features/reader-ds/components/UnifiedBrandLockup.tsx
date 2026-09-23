@@ -261,22 +261,29 @@ export function UnifiedBrandLockup({
           }}
         />
 
-        {/* Small supporting state label centered underneath */}
+        {/* Small supporting state label spanning the combined lockup width */}
         <div
           className="jd-unified-brand-lockup__state"
+          aria-label="छत्तीसगढ़"
           style={{
-            textAlign: "center",
+            display: "flex",
+            justifyContent: "space-between",
+            width: "100%",
+            boxSizing: "border-box",
+            padding: isRegular ? "0 4px" : "0 3px",
             fontFamily: "var(--jd-ff-ui)",
-            fontSize: isRegular ? 10.5 : 9,
+            fontSize: isRegular ? 10 : 8.5,
             fontWeight: 800,
-            letterSpacing: "0.22em",
-            color: isDark ? "var(--jd-gold-soft)" : "var(--jd-navy-light, #3d4a66)",
+            color: isDark ? "var(--jd-gold-soft)" : "#8B6B23",
             lineHeight: 1.2,
-            textTransform: "uppercase",
             userSelect: "none",
           }}
         >
-          छत्तीसगढ़
+          <span aria-hidden="true">छ</span>
+          <span aria-hidden="true">त्ती</span>
+          <span aria-hidden="true">स</span>
+          <span aria-hidden="true">ग</span>
+          <span aria-hidden="true">ढ़</span>
         </div>
       </div>
 

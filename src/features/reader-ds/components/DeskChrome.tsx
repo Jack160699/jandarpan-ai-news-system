@@ -153,7 +153,7 @@ export function DeskChrome() {
               <JdIcon name="list" size={22} stroke={2} color="var(--jd-navy)" />
             </button>
 
-            <div className="jd-desk-brand__center" style={{ display: "flex", alignItems: "center" }}>
+            <div className="jd-desk-brand__left" style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
               <UnifiedBrandLockup tone="light" size="regular" />
             </div>
 
