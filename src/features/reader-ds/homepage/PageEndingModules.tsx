@@ -87,7 +87,7 @@ export function PageEndingModules({
           <ul className="jd-page-ending__chips jd-ui">
             {cats.map((c) => (
               <li key={c.href}>
-                <Link href={c.href}>{c.label}</Link>
+                <Link href={c.href} prefetch={false}>{c.label}</Link>
               </li>
             ))}
           </ul>
@@ -100,11 +100,11 @@ export function PageEndingModules({
           <ul className="jd-page-ending__chips jd-ui">
             {districts.map((d) => (
               <li key={d.href}>
-                <Link href={d.href}>{d.label}</Link>
+                <Link href={d.href} prefetch={false}>{d.label}</Link>
               </li>
             ))}
             <li>
-              <Link href="/district?select=1">{t("footer.allDistricts")}</Link>
+              <Link href="/district?select=1" prefetch={false}>{t("footer.allDistricts")}</Link>
             </li>
           </ul>
         </div>
@@ -116,7 +116,7 @@ export function PageEndingModules({
       >
         <h2 className="jd-serif jd-page-ending__title">{t("home.supportJournalism")}</h2>
         <p className="jd-ui jd-page-ending__support-copy">{t("home.supportJournalismSub")}</p>
-        <Link className="jd-page-ending__cta jd-ui" href="/membership">
+        <Link className="jd-page-ending__cta jd-ui" href="/membership" prefetch={false}>
           {t("desk.becomeMember")} →
         </Link>
       </div>
@@ -141,14 +141,14 @@ function EndingStoryList({
     <div className="jd-page-ending__block" data-testid={testId}>
       <div className="jd-page-ending__head">
         <h2 className="jd-serif jd-page-ending__title">{title}</h2>
-        <Link className="jd-ui jd-page-ending__more" href={moreHref}>
+        <Link className="jd-ui jd-page-ending__more" href={moreHref} prefetch={false}>
           {moreLabel}
         </Link>
       </div>
       <ol className="jd-page-ending__stories jd-ui">
         {items.map((s, i) => (
           <li key={s.slug}>
-            <Link href={storyHref(s.slug)}>
+            <Link href={storyHref(s.slug)} prefetch={false}>
               <span className="jd-page-ending__rank" aria-hidden>
                 {i + 1}
               </span>

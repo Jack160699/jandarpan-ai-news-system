@@ -23,7 +23,7 @@ function PulseList({
       <ul className="jd-pulse__list">
         {stories.map((s) => (
           <li key={s.slug}>
-            <Link href={storyHref(s.slug)} className="jd-serif jd-pulse__link">
+            <Link href={storyHref(s.slug)} prefetch={false} className="jd-serif jd-pulse__link">
               {s.headline}
             </Link>
           </li>
@@ -74,7 +74,7 @@ export function LocalPulseModule({ pulse }: LocalPulseModuleProps) {
           <ul className="jd-pulse__list">
             {pulse.stateStories.map((s) => (
               <li key={s.slug}>
-                <Link href={storyHref(s.slug)} className="jd-serif jd-pulse__link">
+                <Link href={storyHref(s.slug)} prefetch={false} className="jd-serif jd-pulse__link">
                   {s.headline}
                 </Link>
               </li>

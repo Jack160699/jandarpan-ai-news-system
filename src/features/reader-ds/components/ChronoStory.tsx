@@ -30,6 +30,7 @@ export function ChronoStory({
   return (
     <Link
       href={storyHref(story.slug)}
+      prefetch={false}
       style={{
         display: "flex",
         gap: 12,

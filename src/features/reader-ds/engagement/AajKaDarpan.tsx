@@ -116,6 +116,7 @@ export function AajKaDarpan({ briefing }: AajKaDarpanProps) {
                 >
                   <Link
                     href={storyHref(item.slug)}
+                    prefetch={false}
                     className="jd-darpan__link"
                     onClick={() => onOpen(item.slug)}
                   >

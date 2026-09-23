@@ -52,6 +52,7 @@ export function BreakingStrip({ headline, href = "#", items }: BreakingStripProp
                 <li key={`${copy}-${item.slug}`} aria-hidden={copy === 1 ? true : undefined}>
                   <Link
                     href={item.href}
+                    prefetch={false}
                     className="jd-breaking-strip__item"
                     tabIndex={copy === 1 ? -1 : undefined}
                     title={item.headline}
@@ -68,6 +69,7 @@ export function BreakingStrip({ headline, href = "#", items }: BreakingStripProp
       ) : (
         <Link
           href={primary.href}
+          prefetch={false}
           className="jd-breaking-strip__item jd-breaking-strip__item--solo"
           title={primary.headline}
         >

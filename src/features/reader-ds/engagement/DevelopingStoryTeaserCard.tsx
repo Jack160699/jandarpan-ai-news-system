@@ -26,17 +26,18 @@ export function DevelopingStoryTeaserCard({
         {hint}
       </div>
       <h2 className="jd-serif jd-developing__title">
-        <Link href={storyHref(teaser.slug)}>{teaser.headline}</Link>
+        <Link href={storyHref(teaser.slug)} prefetch={false}>{teaser.headline}</Link>
       </h2>
       {teaser.summary ? (
         <p className="jd-ui jd-developing__summary">{teaser.summary}</p>
       ) : null}
       <div className="jd-developing__actions">
-        <Link href={storyHref(teaser.slug)} className="jd-ui jd-developing__cta">
+        <Link href={storyHref(teaser.slug)} prefetch={false} className="jd-ui jd-developing__cta">
           {t("developing.openTimeline")} →
         </Link>
         <Link
           href={`/hub/${encodeURIComponent(teaser.slug)}`}
+          prefetch={false}
           className="jd-ui jd-developing__hub"
         >
           {t("developing.openHub")}
