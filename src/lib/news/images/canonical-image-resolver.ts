@@ -54,11 +54,12 @@ function isAcceptableUrl(url: string | null | undefined, topic?: string | null):
   if (!validateImageUrlShape(url).ok) return false;
   if (isExpiredSignedUrl(url)) return false;
   if (isRejectedImageUrl(url).rejected) return false;
-  // If candidate is the legacy generic NYC city street image and story has a specific non-city topic, reject it
-  if (url.includes("photo-1449824913935-59a10b8d2000") && topic && topic !== "local" && topic !== "city") {
+  // Unconditionally reject the legacy generic NYC city street skyscraper image
+  if (url.includes("photo-1449824913935-59a10b8d2000")) {
     return false;
   }
   return true;
+
 }
 
 function pickPrimary(input: CanonicalImageInput): {

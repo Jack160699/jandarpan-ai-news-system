@@ -27,9 +27,9 @@ export type ImageCandidate = {
 const PLACEHOLDER_RE =
   /placeholder|placehold\.co|via\.placeholder|default\.(jpg|png|gif)|no-?image|1x1|pixel\.|spacer\.|blank\.|dummy|data:image|about:blank/i;
 
-/** Hard-coded URLs that consistently 404 — skip before Next/Image fetch. */
+/** Hard-coded URLs that consistently 404 or generic banned images — skip before Next/Image fetch. */
 const KNOWN_BROKEN_IMAGE_RE =
-  /photo-1529107386315-e1a269ed48e0/i;
+  /photo-1529107386315-e1a269ed48e0|photo-1449824913935-59a10b8d2000/i;
 
 const LOGO_ICON_RE =
   /\/(logo|icon|favicon|avatar|badge|sprite|emoji|button|banner-ad|ads?|advert|promo-thumb|brand-mark|app-icon|apple-touch)[\/._-]|logo\.|icon\.|favicon\.|\.svg(\?|$)|sprite|avatar-|profile-pic|apple-touch-icon/i;
