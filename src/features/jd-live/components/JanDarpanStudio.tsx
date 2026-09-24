@@ -88,6 +88,19 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     };
   }, [segmentToken, isPlaying, language, currentSegment?.script, speak, stop, dispatch]);
 
+  // Safety watchdog: force-advance if a segment stays active more than 35s
+  // Protects against any speak() / voice callback failure silently hanging the broadcast.
+  useEffect(() => {
+    if (!isPlaying || !currentSegment?.script) return;
+    const token = segmentToken;
+    const id = setTimeout(() => {
+      if (token === segmentTokenRef.current && isPlayingRef.current) {
+        dispatch({ type: "NEXT_SEGMENT" });
+      }
+    }, 35_000);
+    return () => clearTimeout(id);
+  }, [segmentToken, isPlaying, currentSegment?.script, dispatch]);
+
   return (
     <div
       className={`jdl-tv ${embedded ? "jdl-tv--embedded" : ""}`}
