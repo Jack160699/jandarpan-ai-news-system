@@ -54,12 +54,16 @@ function buildBroadcastQueue(
   };
 
   // The first 10 stories form the Top 10 Countdown (10 down to 1)
+  // rawQueue[0] = most important story → rank 1 (played LAST in countdown)
+  // rawQueue[9] = least important in top 10 → rank 10 (played FIRST)
   const top10Count = Math.min(10, rawQueue.length);
   const top10Slice = rawQueue.slice(0, top10Count);
+  // Assign ranks: most important (idx 0) → rank 1, least important → rank 10
+  // Then reverse so broadcast plays 10→9→...→1
   const countdownItems = top10Slice
     .map((seg, idx) => ({
       ...seg,
-      countdownRank: top10Count - idx,
+      countdownRank: idx + 1,
     }))
     .reverse();
 
@@ -136,25 +140,7 @@ function broadcastReducer(
         };
       }
 
-      // First load initialization
-      if (breaking.length > 0) {
-        const firstBreaking = breaking[0];
-        return {
-          ...state,
-          queue: fullQueue,
-          breakingQueue: breaking,
-          currentSegment: firstBreaking,
-          currentIndex: -1,
-          countdownRank: 0,
-          isIntro: false,
-          mode: "breaking",
-          status: "loading",
-          scriptReady: false,
-          audioReady: false,
-          segmentToken: state.segmentToken + 1,
-        };
-      }
-
+      // First load initialization: Always start with the primary broadcast queue
       const first = fullQueue[0];
       return {
         ...state,
@@ -257,18 +243,21 @@ function broadcastReducer(
         playedIds: updatedPlayed,
       };
     }
-    case "INTERRUPT_BREAKING":
+    case "INTERRUPT_BREAKING": {
+      const segIdx = state.queue.findIndex((s) => s.id === action.segment.id);
       return {
         ...state,
         currentSegment: action.segment,
+        currentIndex: segIdx >= 0 ? segIdx : state.currentIndex,
         countdownRank: action.segment.countdownRank || 0,
         isIntro: false,
-        mode: "breaking",
+        mode: action.segment.isBreaking ? "breaking" : "normal",
         status: "loading",
         scriptReady: false,
         audioReady: false,
         segmentToken: state.segmentToken + 1,
       };
+    }
     case "SET_ANCHOR_STATE":
       return { ...state, anchorState: action.state };
     case "SET_AMPLITUDE":

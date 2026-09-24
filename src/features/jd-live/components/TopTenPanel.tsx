@@ -11,7 +11,10 @@ export function TopTenPanel() {
   const { state, dispatch } = useBroadcast();
   const { queue, currentSegment, language } = state;
 
-  const topTen = queue.filter((s) => !s.isIntro).slice(0, 10);
+  const topTen = queue
+    .filter((s) => !s.isIntro)
+    .slice(0, 10)
+    .sort((a, b) => (a.countdownRank ?? 99) - (b.countdownRank ?? 99));
   const panelTitle =
     language === "hi" ? "आज की 10 बड़ी खबरें" : "TOP 10 STORIES TODAY";
 
@@ -28,7 +31,7 @@ export function TopTenPanel() {
           const district =
             language === "hi" ? (seg.districtHi || seg.district) : seg.district;
           const isActive = currentSegment?.id === seg.id;
-          const rank = seg.countdownRank ?? (10 - idx);
+          const rank = seg.countdownRank ?? (idx + 1);
 
           return (
             <li

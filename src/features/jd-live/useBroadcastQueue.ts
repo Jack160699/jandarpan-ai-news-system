@@ -41,8 +41,8 @@ export function useBroadcastQueue() {
       // so NEXT_SEGMENT has stories to advance into after breaking ends.
       dispatch({ type: "SET_QUEUE", queue: data.queue, breaking: data.breaking });
 
-      // Then, if there's a new breaking story we haven't shown, interrupt into it
-      if (data.breaking && data.breaking.length > 0 && modeRef.current !== "breaking") {
+      // If there's a new breaking story we haven't shown, interrupt into it during active broadcast
+      if (data.breaking && data.breaking.length > 0 && modeRef.current === "normal") {
         const latestBreaking = data.breaking[0];
         const alreadyPlayed = playedBreakingIdsRef.current.includes(latestBreaking.id);
         const isCurrent = latestBreaking.id === currentSegmentRef.current?.id;

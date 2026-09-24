@@ -128,61 +128,66 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
       className={`jdl-tv ${embedded ? "jdl-tv--embedded" : ""}`}
       aria-label={language === "hi" ? "जन दर्पण लाइव टेलीविज़न न्यूज़रूम" : "Jan Darpan Live Television Newsroom"}
     >
-      {/* Studio */}
-      <div className="jdl-studio">
-        {/* LIVE badge */}
-        <div className="jdl-studio__live-bug">
-          <span className="jdl-studio__live-dot" />
-          {language === "hi" ? "जन दर्पण लाइव" : "Jan Darpan Live"}
-        </div>
-
-        {/* Anchor */}
-        <div className="jdl-studio__anchor-wrapper">
-          <Image
-            src="/jd-live/anchor-female.png"
-            alt="Jan Darpan Anchor"
-            width={520}
-            height={520}
-            priority
-            className="jdl-studio__anchor"
-            style={{ objectFit: "contain" }}
-          />
-          {/* Lip-sync indicator */}
-          {state.anchorState === "speaking" && (
-            <div
-              className="jdl-studio__speak-indicator"
-              style={{ opacity: state.amplitude * 0.6 + 0.4 }}
+      {/* Television Viewport — 16:9 Landscape Broadcast on Desktop & Mobile */}
+      <div className="jdl-tv__viewport">
+        {/* Main Broadcast Zone (Anchor, Monitor, Watermark, Lower Third, Breaking Banner) */}
+        <div className="jdl-tv__broadcast-area">
+          {/* Master Studio Plate: photorealistic studio background with seated anchor and desk */}
+          <div className="jdl-tv__bg" aria-hidden>
+            <Image
+              src="/jd-live/master-studio.jpg"
+              alt=""
+              fill
+              priority
+              quality={90}
+              sizes="(max-width: 900px) 100vw, 1100px"
+              style={{ objectFit: "cover", objectPosition: "center" }}
             />
+          </div>
+
+          {/* Television broadcast bug / watermark (top-left) */}
+          <div className="jdl-tv__watermark" aria-hidden>
+            <span className="jdl-tv__live-dot" />
+            <span className="jdl-tv__watermark-text">
+              {language === "hi" ? "जन दर्पण लाइव" : "JAN DARPAN LIVE"}
+            </span>
+          </div>
+
+          {/* Center overlay play button if paused */}
+          {!isPlaying && (
+            <button
+              type="button"
+              className="jdl-tv__center-play"
+              onClick={() => dispatch({ type: "SET_PLAYING", isPlaying: true })}
+              aria-label={language === "hi" ? "प्रसारण शुरू करें" : "Start Broadcast"}
+            >
+              <span className="jdl-tv__center-play-icon" aria-hidden>▶</span>
+              <span>{language === "hi" ? "प्रसारण शुरू करें" : "Resume Broadcast"}</span>
+            </button>
           )}
+
+          {/* Dynamic News Screen overlay — fitted over the studio wall video monitor */}
+          <div className="jdl-tv__screen-area">
+            <NewsScreen />
+          </div>
+
+          {/* Broadcast graphics zone: Lower Third or Breaking News banner */}
+          <div className="jdl-tv__graphics">
+            <LowerThird />
+            <BreakingBanner />
+          </div>
         </div>
 
-        {/* Studio monitor showing current story */}
-        <NewsScreen />
-
-        {/* Jan Darpan studio branding */}
-        <div className="jdl-studio__brand">
-          <Image
-            src="/jd-live/jd-logo-white.svg"
-            alt="Jan Darpan"
-            width={100}
-            height={30}
-            className="jdl-studio__logo"
-          />
+        {/* Top 10 Stories Panel — visible on desktop, hidden on mobile */}
+        <div className="jdl-tv__top10-area">
+          <TopTenPanel />
         </div>
       </div>
 
-      {/* Lower Third / Breaking */}
-      {state.mode === "breaking" && currentSegment?.isBreaking ? (
-        <BreakingBanner />
-      ) : (
-        <LowerThird />
-      )}
-
-      {/* Controls */}
-      <BroadcastControlBar />
-
-      {/* Desktop Top 10 */}
-      <TopTenPanel />
+      {/* Docked television control strip & ticker */}
+      <div className="jdl-tv__bar-wrap">
+        <BroadcastControlBar />
+      </div>
     </div>
   );
 }
