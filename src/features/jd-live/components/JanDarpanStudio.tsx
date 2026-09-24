@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { NewsScreen } from "./NewsScreen";
 import { TopTenPanel } from "./TopTenPanel";
-import { LowerThird } from "./LowerThird";
 import { BreakingBanner } from "./BreakingBanner";
 import { BroadcastControlBar } from "./BroadcastControlBar";
 import { useBroadcast } from "../BroadcastContext";
@@ -42,6 +41,20 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
 
   const segmentTokenRef = useRef(segmentToken);
   segmentTokenRef.current = segmentToken;
+
+  const [currentTime, setCurrentTime] = useState<string>("");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const hours = now.getHours().toString().padStart(2, "0");
+      const minutes = now.getMinutes().toString().padStart(2, "0");
+      setCurrentTime(`${hours}:${minutes} IST`);
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Generate script whenever a new segment is loaded
   useEffect(() => {
@@ -145,12 +158,17 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
             />
           </div>
 
-          {/* Television broadcast bug / watermark (top-left) */}
-          <div className="jdl-tv__watermark" aria-hidden>
-            <span className="jdl-tv__live-dot" />
-            <span className="jdl-tv__watermark-text">
-              {language === "hi" ? "जन दर्पण लाइव" : "JAN DARPAN LIVE"}
-            </span>
+          {/* TV Channel Identity Corner Bug (upper-right) */}
+          <div className="jdl-tv__corner-bug" aria-hidden>
+            <div className="jdl-tv__bug-top">
+              <span className="jdl-tv__bug-dot" />
+              <span className="jdl-tv__bug-name">
+                {language === "hi" ? "जन दर्पण" : "JAN DARPAN"}
+              </span>
+            </div>
+            {currentTime && (
+              <div className="jdl-tv__bug-time">{currentTime}</div>
+            )}
           </div>
 
           {/* Center overlay play button if paused */}
@@ -175,9 +193,8 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
             <NewsScreen />
           </div>
 
-          {/* Broadcast graphics zone: Lower Third or Breaking News banner */}
+          {/* Broadcast graphics zone: Breaking News alert overlay if breaking */}
           <div className="jdl-tv__graphics">
-            <LowerThird />
             <BreakingBanner />
           </div>
         </div>

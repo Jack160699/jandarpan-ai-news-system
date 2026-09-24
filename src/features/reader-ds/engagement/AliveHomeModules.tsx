@@ -94,8 +94,27 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
     const seen = new Set(excludeSlugs);
     const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
 
+    const isCgStory = (a: any) => {
+      const combined = `${a.headline || ""} ${a.summary || ""} ${(a.tags || []).join(" ")} ${a.section || ""}`.toLowerCase();
+      const mentionsExclude = [
+        "मध्य प्रदेश", "madhya pradesh", "पश्चिम बंगाल", "west bengal", "बंगाल में",
+        "महाराष्ट्र", "iit बॉम्बे", "उत्तर प्रदेश", "बिहार", "राजस्थान", "पंजाब", "हरियाणा",
+        "ट्रंप", "trump", "अमेरिका", "america", "रूस", "russia", "यूक्रेन", "ukraine",
+        "इसराइल", "israel", "ईरान", "iran", "राशिफल", "नाखून टूटने"
+      ].some((sig) => combined.includes(sig));
+      const mentionsCg = [
+        "छत्तीसगढ़", "chhattisgarh", "रायपुर", "raipur", "दुर्ग", "durg", "भिलाई", "bhilai",
+        "बिलासपुर", "bilaspur", "बस्तर", "bastar", "कोरबा", "korba", "राजनंदगांव", "rajnandgaon",
+        "रायगढ़", "raigarh", "अंबिकापुर", "जगदलपुर", "कांकेर", "दंतेवाड़ा", "सुकमा", "धमतरी",
+        "महासमुंद", "कबीरधाम", "बालोद", "बेमेतरा", "विष्णु देव साय", "साय कैबिनेट"
+      ].some((sig) => combined.includes(sig));
+      if (mentionsExclude && !mentionsCg) return false;
+      return true;
+    };
+
     for (const a of candidates) {
       if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
+      if (!isCgStory(a)) continue;
       const hasDev = isDevanagari(a.headline);
       if (locale === "en" && hasDev) continue;
       if (locale === "hi" && !hasDev && a.language !== "hi") continue;
@@ -108,6 +127,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
     if (out.length < 3) {
       for (const a of candidates) {
         if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
+        if (!isCgStory(a)) continue;
         seen.add(a.slug);
         out.push(toReaderStory(a));
         if (out.length >= 5) break;

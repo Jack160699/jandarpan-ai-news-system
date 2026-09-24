@@ -209,10 +209,19 @@ function broadcastReducer(
 
       const nextIndex = state.currentIndex + 1;
       if (nextIndex >= state.queue.length) {
-        // Continuous 48-Hour Loop: Wrap around to the first real story and continue forever!
+        // Continuous 48-Hour Loop: Prefer unplayed stories first, avoid repeating exhausted stories prematurely
+        const unplayedIdx = state.queue.findIndex(
+          (s) => !s.isIntro && !updatedPlayed.includes(s.id)
+        );
         const firstStoryIdx = state.queue.findIndex((s) => !s.isIntro);
-        const wrapIndex = firstStoryIdx >= 0 ? firstStoryIdx : 0;
+        const wrapIndex =
+          unplayedIdx >= 0
+            ? unplayedIdx
+            : firstStoryIdx >= 0
+            ? firstStoryIdx
+            : 0;
         const loopSeg = state.queue[wrapIndex];
+        const nextPlayed = unplayedIdx >= 0 ? updatedPlayed : [];
         return {
           ...state,
           currentIndex: wrapIndex,
@@ -224,7 +233,7 @@ function broadcastReducer(
           scriptReady: !!loopSeg?.script,
           audioReady: false,
           segmentToken: state.segmentToken + 1,
-          playedIds: updatedPlayed,
+          playedIds: nextPlayed,
         };
       }
 

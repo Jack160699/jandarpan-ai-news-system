@@ -2,15 +2,15 @@
 
 import React from "react";
 import { useBroadcast } from "../BroadcastContext";
-import { BroadcastTicker } from "./BroadcastTicker";
 
 /**
- * Compact broadcast control and ticker bar.
- * Integrates Play/Pause, Mute/Unmute, Live indicator, and Ticker into a professional television graphic bar.
+ * Primary bottom broadcast bar.
+ * Contains:
+ *   [small Play/Pause] [small Mute/Unmute] मुख्य खबर | IMPORTANT CHHATTISGARH HEADLINE
  */
 export function BroadcastControlBar() {
   const { state, togglePlay, toggleMute, setMuted, setPlaying } = useBroadcast();
-  const { isPlaying, isMuted, language, mode } = state;
+  const { isPlaying, isMuted, language, mode, currentSegment } = state;
 
   const playLabel = isPlaying
     ? language === "hi"
@@ -33,22 +33,23 @@ export function BroadcastControlBar() {
     setMuted(false);
   };
 
-  const primaryTag =
-    mode === "breaking"
-      ? language === "hi"
-        ? "ब्रेकिंग"
-        : "BREAKING"
-      : language === "hi"
-      ? "मुख्य खबर"
-      : "MAIN STORY";
+  const isBreaking = mode === "breaking" || !!currentSegment?.isBreaking;
+
+  const primaryTag = isBreaking
+    ? language === "hi"
+      ? "ब्रेकिंग न्यूज़"
+      : "BREAKING NEWS"
+    : language === "hi"
+    ? "मुख्य खबर"
+    : "MAIN STORY";
+
+  const currentHeadline =
+    language === "hi"
+      ? (currentSegment?.headlineHi || currentSegment?.headline || "")
+      : (currentSegment?.headline || "");
 
   return (
-    <div className="jdl-bar" role="region" aria-label="Broadcast controls & news ticker">
-      {/* Primary editorial label: मुख्य खबर */}
-      <div className="jdl-bar__label">
-        <span className="jdl-bar__label-text">{primaryTag}</span>
-      </div>
-
+    <div className="jdl-bar" role="region" aria-label="Broadcast controls & headline">
       {/* Clean premium SVG player controls: [▶] [🔊] */}
       <div className="jdl-bar__controls">
         <button
@@ -124,9 +125,15 @@ export function BroadcastControlBar() {
         </button>
       </div>
 
-      {/* Continuous scrolling ticker */}
-      <div className="jdl-bar__ticker-wrap">
-        <BroadcastTicker />
+      {/* Small primary editorial label: मुख्य खबर */}
+      <div className={`jdl-bar__label ${isBreaking ? "jdl-bar__label--breaking" : ""}`}>
+        <span className="jdl-bar__label-text">{primaryTag}</span>
+      </div>
+
+      {/* Dominant Headline Area: Headline gets majority of the bar */}
+      <div className="jdl-bar__headline-area" aria-live="polite">
+        <span className="jdl-bar__headline-sep">|</span>
+        <span className="jdl-bar__headline-text">{currentHeadline}</span>
       </div>
     </div>
   );

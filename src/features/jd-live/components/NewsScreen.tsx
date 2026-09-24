@@ -10,7 +10,7 @@ import { useBroadcast } from "../BroadcastContext";
  */
 export function NewsScreen() {
   const { state } = useBroadcast();
-  const { currentSegment, language, mode } = state;
+  const { currentSegment, language } = state;
   const [displayedSegment, setDisplayedSegment] = useState(currentSegment);
   const [fading, setFading] = useState(false);
 
@@ -28,16 +28,8 @@ export function NewsScreen() {
   const seg = displayedSegment;
   const headline =
     language === "hi" ? (seg?.headlineHi || seg?.headline) : seg?.headline;
-  const category =
-    language === "hi" ? (seg?.categoryLabelHi || seg?.categoryLabel) : seg?.categoryLabel;
   const district =
     language === "hi" ? (seg?.districtHi || seg?.district) : seg?.district;
-  const isBreaking = !!seg?.isBreaking || mode === "breaking";
-
-  const categoryLabel =
-    language === "hi"
-      ? isBreaking ? "ब्रेकिंग न्यूज़" : "मुख्य खबर"
-      : isBreaking ? "BREAKING NEWS" : "MAIN STORY";
 
   return (
     <div className={`jdl-newsscreen ${fading ? "jdl-newsscreen--fade" : ""}`} aria-live="polite">
@@ -57,27 +49,14 @@ export function NewsScreen() {
         ) : (
           <div className="jdl-newsscreen__placeholder" />
         )}
-        {/* Dark gradient overlay for text readability */}
+        {/* Dark gradient overlay for visual depth */}
         <div className="jdl-newsscreen__overlay" />
       </div>
 
-      {/* Category badge */}
-      <div className={`jdl-newsscreen__badge ${isBreaking ? "jdl-newsscreen__badge--breaking" : ""}`}>
-        {categoryLabel}
-      </div>
-
-      {/* District/location label */}
+      {/* Subtle district/location tag */}
       {district && (
         <div className="jdl-newsscreen__location">{district}</div>
       )}
-
-      {/* Headline */}
-      <div className="jdl-newsscreen__headline-wrap">
-        <h2 className="jdl-newsscreen__headline">{headline}</h2>
-        {category && category !== categoryLabel && (
-          <div className="jdl-newsscreen__category">{category}</div>
-        )}
-      </div>
     </div>
   );
 }

@@ -122,6 +122,101 @@ function getPseudoRandom(seedStr: string, index: number): number {
   return Math.abs(hash % 1000) / 1000;
 }
 
+/** Detect district name from text */
+function detectDistrict(text: string): string | null {
+  const t = text.toLowerCase();
+  if (t.includes("दुर्ग") || t.includes("durg")) return "durg";
+  if (t.includes("भिलाई") || t.includes("bhilai")) return "bhilai";
+  if (t.includes("रायपुर") || t.includes("raipur")) return "raipur";
+  if (t.includes("बिलासपुर") || t.includes("bilaspur")) return "bilaspur";
+  if (t.includes("बस्तर") || t.includes("bastar") || t.includes("जगदलपुर") || t.includes("jagdalpur")) return "bastar";
+  if (t.includes("कोरबा") || t.includes("korba")) return "korba";
+  if (t.includes("राजनंदगांव") || t.includes("rajnandgaon")) return "rajnandgaon";
+  if (t.includes("रायगढ़") || t.includes("raigarh")) return "raigarh";
+  if (t.includes("अंबिकापुर") || t.includes("ambikapur") || t.includes("सरगुजा") || t.includes("surguja")) return "surguja";
+  if (t.includes("दंतेवाड़ा") || t.includes("dantewada")) return "dantewada";
+  if (t.includes("कांकेर") || t.includes("kanker")) return "kanker";
+  if (t.includes("सुकमा") || t.includes("sukma")) return "sukma";
+  if (t.includes("बीजापुर") || t.includes("bijapur")) return "bijapur";
+  if (t.includes("धमतरी") || t.includes("dhamtari")) return "dhamtari";
+  if (t.includes("महासमुंद") || t.includes("mahasamund")) return "mahasamund";
+  if (t.includes("कबीरधाम") || t.includes("kabirdham") || t.includes("कवर्धा") || t.includes("kawardha")) return "kabirdham";
+  if (t.includes("बालोद") || t.includes("balod")) return "balod";
+  if (t.includes("बेमेतरा") || t.includes("bemetara")) return "bemetara";
+  if (t.includes("गरियाबंद") || t.includes("gariaband")) return "gariaband";
+  if (t.includes("बलौदाबाजार") || t.includes("बलौदाबाज़ार") || t.includes("balodabazar")) return "balodabazar";
+  if (t.includes("जांजगीर") || t.includes("चांपा") || t.includes("janjgir")) return "janjgir";
+  if (t.includes("जशपुर") || t.includes("jashpur")) return "jashpur";
+  if (t.includes("कोरिया") || t.includes("korea")) return "korea";
+  if (t.includes("मनेंद्रगढ़") || t.includes("manendragarh")) return "manendragarh";
+  if (t.includes("मोहला") || t.includes("mohla")) return "mohla";
+  if (t.includes("सक्ती") || t.includes("sakti")) return "sakti";
+  if (t.includes("सारंगढ़") || t.includes("sarangarh")) return "sarangarh";
+  if (t.includes("खैरागढ़") || t.includes("khairagarh")) return "khairagarh";
+  if (t.includes("पेंड्रा") || t.includes("pendra") || t.includes("गौरेला") || t.includes("gaurela")) return "pendra";
+  return null;
+}
+
+const CG_TEXT_SIGNALS = [
+  "छत्तीसगढ़", "chhattisgarh", "chattisgarh", "cg",
+  "रायपुर", "raipur", "दुर्ग", "durg", "भिलाई", "bhilai",
+  "बिलासपुर", "bilaspur", "बस्तर", "bastar", "कोरबा", "korba",
+  "राजनंदगांव", "rajnandgaon", "रायगढ़", "raigarh", "अंबिकापुर", "ambikapur",
+  "जगदलपुर", "jagdalpur", "कांकेर", "kanker", "दंतेवाड़ा", "dantewada",
+  "सुकमा", "sukma", "बीजापुर", "bijapur", "धमतरी", "dhamtari",
+  "महासमुंद", "mahasamund", "कबीरधाम", "kabirdham", "कवर्धा", "kawardha",
+  "बालोद", "balod", "बेमेतरा", "bemetara", "गरियाबंद", "gariaband",
+  "बलौदाबाजार", "balodabazar", "जांजगीर", "janjgir", "चांपा", "champa",
+  "सरगुजा", "surguja", "जशपुर", "jashpur", "कोरिया", "korea",
+  "मनेंद्रगढ़", "manendragarh", "मोहला", "mohla", "सक्ती", "sakti",
+  "सारंगढ़", "sarangarh", "खैरागढ़", "khairagarh", "पेंड्रा", "pendra",
+  "गौरेला", "gaurela", "विष्णु देव साय", "विष्णुदेव साय", "साय कैबिनेट",
+  "महानदी", "इंद्रावती", "हसदेव", "भिलाई स्टील", "bsp", "secl", "nmdc", "cspdcl"
+];
+
+// Negative filters: purely outside / generic topics with no Chhattisgarh connection
+const EXCLUDE_SIGNALS = [
+  "मध्य प्रदेश", "madhya pradesh",
+  "पश्चिम बंगाल", "west bengal", "बंगाल में",
+  "जम्मू-कश्मीर", "jammu", "kashmir",
+  "महाराष्ट्र", "maharashtra", "iit बॉम्बे", "iit bombay",
+  "उत्तर प्रदेश", "uttar pradesh",
+  "बिहार", "bihar",
+  "राजस्थान", "rajasthan",
+  "गुजरात", "gujarat",
+  "पंजाब", "punjab",
+  "हरियाणा", "haryana",
+  "तमिलनाडु", "tamil nadu",
+  "केरल", "kerala",
+  "कर्नाटक", "karnataka",
+  "झारखंड", "jharkhand",
+  "ट्रंप", "trump",
+  "अमेरिका", "america",
+  "रूस", "russia", "यूक्रेन", "ukraine",
+  "इसराइल", "israel", "ईरान", "iran",
+  "अंक ज्योतिष", "horoscope", "राशिफल",
+  "नाखून टूटने"
+];
+
+function isChhattisgarhOnlyStory(c: BroadcastCandidate): boolean {
+  const combined = `${c.headline} ${c.summary} ${c.tags.join(" ")} ${c.section}`.toLowerCase();
+
+  const mentionsCgDirectly = CG_TEXT_SIGNALS.some((sig) => combined.includes(sig.toLowerCase()));
+  const hasExcludeSignal = EXCLUDE_SIGNALS.some((sig) => combined.includes(sig.toLowerCase()));
+
+  // If it mentions an outside state or generic national topic AND does NOT mention Chhattisgarh directly, exclude
+  if (hasExcludeSignal && !mentionsCgDirectly) {
+    return false;
+  }
+
+  // Positive signals
+  if (c.districtSlug && CG_DISTRICT_KEYS.has(c.districtSlug)) return true;
+  if (mentionsCgDirectly) return true;
+  if (c.section === "chhattisgarh" || c.section === "raipur") return true;
+
+  return false;
+}
+
 /** Standard story item for broadcast ranking */
 type BroadcastCandidate = {
   id: string;
@@ -139,7 +234,10 @@ type BroadcastCandidate = {
 };
 
 function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
-  const districtTag = a.tags?.find((t) => t.startsWith("district:"))?.replace("district:", "")?.toLowerCase() || null;
+  let districtTag = a.tags?.find((t) => t.startsWith("district:"))?.replace("district:", "")?.toLowerCase() || null;
+  if (!districtTag) {
+    districtTag = detectDistrict(`${a.headline} ${a.summary || ""}`);
+  }
   return {
     id: a.id,
     slug: a.slug,
@@ -157,7 +255,12 @@ function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
 }
 
 function normalizeGeneratedRow(r: GeneratedArticleRow): BroadcastCandidate {
-  const districtTag = r.tags?.find((t) => t.startsWith("district:"))?.replace("district:", "")?.toLowerCase() || null;
+  const geo = r.geo_metadata as { district?: string; districtSlug?: string; state?: string } | undefined;
+  const districtFromGeo = geo?.districtSlug?.toLowerCase() || null;
+  let districtTag = r.tags?.find((t) => t.startsWith("district:"))?.replace("district:", "")?.toLowerCase() || districtFromGeo;
+  if (!districtTag) {
+    districtTag = detectDistrict(`${r.headline} ${r.summary || ""}`);
+  }
   const sectionTag = r.tags?.find((t) => ["chhattisgarh", "raipur", "india", "world", "business", "sports", "politics"].includes(t)) || "chhattisgarh";
   const isBreaking = !!(
     r.editorial_metadata &&
@@ -264,10 +367,13 @@ export async function GET(req: NextRequest) {
 
     const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
 
-    // Filter by Language & 48-Hour validity
+    // Filter strictly by Language, 48-Hour validity, and CHHATTISGARH RELEVANCE
     let pool = candidates.filter((c) => {
       // Must have valid headline and slug
       if (!c.headline || !c.slug) return false;
+
+      // HARD RULE: Only Chhattisgarh-relevant stories
+      if (!isChhattisgarhOnlyStory(c)) return false;
 
       // Language check
       const hasDev = isDevanagari(c.headline);
@@ -277,50 +383,42 @@ export async function GET(req: NextRequest) {
       // 48-hour timestamp check
       const pubTime = new Date(c.publishedAt).getTime();
       if (!isNaN(pubTime)) {
-        // Within 48 hours and not > 2 hours in the future
         return pubTime >= cutoff && pubTime <= now + 2 * 3600 * 1000;
       }
       return false;
     });
 
-    // Fallback: If 48-hour strictly filtered pool is small, take the newest candidates for this language
+    // Fallback: If 48-hour strictly filtered pool is small, take all valid Chhattisgarh candidates
     if (pool.length < 5) {
       pool = candidates.filter((c) => {
+        if (!c.headline || !c.slug) return false;
+        if (!isChhattisgarhOnlyStory(c)) return false;
         const hasDev = isDevanagari(c.headline);
         return lang === "hi" ? (hasDev || c.language === "hi") : (!hasDev || c.language === "en");
       });
     }
 
-    // 3. Separate Breaking Stories
+    // 3. Separate Breaking Stories (only Chhattisgarh breaking)
     const breakingCandidates = pool.filter((c) => c.isBreaking);
     const nonBreakingCandidates = pool.filter((c) => !c.isBreaking);
 
-    // 4. Priority Tiers for Chhattisgarh-first newsroom:
-    //  Tier 1: CG local districts (Durg, Bhilai, Raipur, Rajnandgaon, Bilaspur, Korba, Bastar, etc.)
+    // 4. Priority Tiers for Chhattisgarh-only newsroom:
+    //  Tier 1: CG local districts (Durg, Bhilai, Raipur, Rajnandgaon, Bilaspur, Korba, Bastar, Surguja, etc.)
     //  Tier 2: CG state news
-    //  Tier 3: National India
-    //  Tier 4: World / other
+    //  NO generic India or world stories allowed in Jan Darpan!
     const cgDistrictStories = nonBreakingCandidates.filter((c) =>
       c.districtSlug && CG_DISTRICT_KEYS.has(c.districtSlug)
     );
     const cgStateStories = nonBreakingCandidates.filter((c) =>
-      !cgDistrictStories.includes(c) && CG_SECTIONS.has(c.section)
-    );
-    const indiaStories = nonBreakingCandidates.filter((c) =>
-      !cgDistrictStories.includes(c) && !cgStateStories.includes(c) && c.section === "india"
-    );
-    const worldStories = nonBreakingCandidates.filter((c) =>
-      !cgDistrictStories.includes(c) && !cgStateStories.includes(c) && c.section !== "india"
+      !cgDistrictStories.includes(c)
     );
 
     // 5. Session Rotation Seed:
     // Shuffle/rotate within tiers deterministically per session seed so different visitors get varied orders
     const sortBySeedAndScore = (arr: BroadcastCandidate[]) => {
       return arr.sort((a, b) => {
-        // High priority scores stay ahead
         const scoreDiff = (b.priorityScore ?? 50) - (a.priorityScore ?? 50);
         if (Math.abs(scoreDiff) >= 30) return scoreDiff;
-        // Deterministic session variation for stories with similar priority
         const randA = getPseudoRandom(seed, a.id.charCodeAt(0) || 0);
         const randB = getPseudoRandom(seed, b.id.charCodeAt(0) || 0);
         return randB - randA;
@@ -330,15 +428,13 @@ export async function GET(req: NextRequest) {
     const orderedRegular = [
       ...sortBySeedAndScore(cgDistrictStories),
       ...sortBySeedAndScore(cgStateStories),
-      ...sortBySeedAndScore(indiaStories),
-      ...sortBySeedAndScore(worldStories),
     ];
 
     // 6. Handle Exclusions (Unseen stories first, then played stories)
     const unseen = orderedRegular.filter((c) => !excludeIds.has(c.id));
     const seen = orderedRegular.filter((c) => excludeIds.has(c.id));
 
-    // If unseen pool has stories, place unseen first, followed by seen
+    // If unseen pool has stories, place unseen first, followed by seen for smooth continuous loop
     const finalQueue = unseen.length >= 3 ? [...unseen, ...seen] : orderedRegular;
 
     return NextResponse.json({
