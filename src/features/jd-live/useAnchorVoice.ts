@@ -11,52 +11,164 @@ import {
 } from "./audioStings";
 
 /**
- * Manages TTS audio playback, television audio stings, and lip-sync amplitude extraction.
- * Integrates Web Audio API stings and falls back gracefully to Web Speech API.
+ * Module-scoped reference to active SpeechSynthesisUtterance to prevent
+ * premature garbage collection in Chromium browsers.
+ */
+let globalActiveUtterance: SpeechSynthesisUtterance | null = null;
+
+/**
+ * Cache for browser speech voices to prevent repeated lookup or race conditions.
+ */
+let cachedVoices: SpeechSynthesisVoice[] = [];
+
+/**
+ * Ensures voices are loaded asynchronously in Chrome/Edge/Safari.
+ */
+async function loadBrowserVoices(): Promise<SpeechSynthesisVoice[]> {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    return [];
+  }
+  if (cachedVoices.length > 0) {
+    return cachedVoices;
+  }
+  const current = window.speechSynthesis.getVoices();
+  if (current.length > 0) {
+    cachedVoices = current;
+    return cachedVoices;
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const onVoicesChanged = () => {
+      if (!settled) {
+        settled = true;
+        cachedVoices = window.speechSynthesis.getVoices();
+        window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+        resolve(cachedVoices);
+      }
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged);
+    setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        cachedVoices = window.speechSynthesis.getVoices();
+        window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+        resolve(cachedVoices);
+      }
+    }, 300);
+  });
+}
+
+/**
+ * Select the most natural Indian television news anchor voice.
+ */
+async function selectAnchorVoice(language: BroadcastLanguage): Promise<SpeechSynthesisVoice | null> {
+  const voices = await loadBrowserVoices();
+  if (!voices || voices.length === 0) return null;
+
+  if (language === "hi") {
+    // 1. Google हिन्दी (Chrome / Android)
+    // 2. Microsoft Swara / Heera / Kalpana (Edge / Windows)
+    // 3. Natural / Online Hindi
+    // 4. Any hi-IN voice
+    return (
+      voices.find((v) => (v.lang === "hi-IN" || v.lang.startsWith("hi")) && (v.name.includes("Google") || v.name.includes("Natural"))) ||
+      voices.find((v) => (v.lang === "hi-IN" || v.lang.startsWith("hi")) && (v.name.includes("Swara") || v.name.includes("Heera") || v.name.includes("Kalpana"))) ||
+      voices.find((v) => v.lang === "hi-IN" && v.name.toLowerCase().includes("female")) ||
+      voices.find((v) => v.lang === "hi-IN") ||
+      voices.find((v) => v.lang.startsWith("hi")) ||
+      null
+    );
+  } else {
+    // 1. Indian English female (Google / Microsoft Neerja / Kalpana)
+    // 2. en-IN voices
+    // 3. Natural en female
+    return (
+      voices.find((v) => (v.lang === "en-IN" || v.name.toLowerCase().includes("india")) && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Neerja") || v.name.includes("Kalpana"))) ||
+      voices.find((v) => (v.lang === "en-IN" || v.name.toLowerCase().includes("india")) && v.name.toLowerCase().includes("female")) ||
+      voices.find((v) => v.lang === "en-IN" || v.name.toLowerCase().includes("india")) ||
+      voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Google") || v.name.includes("Natural") || v.name.toLowerCase().includes("female"))) ||
+      voices.find((v) => v.lang.startsWith("en")) ||
+      null
+    );
+  }
+}
+
+/**
+ * Format raw script into natural television news spoken delivery.
+ * Paces sentences with proper pauses, ranking transitions, and cadence.
+ */
+export function formatAnchorSpokenScript(
+  text: string,
+  params: {
+    isIntro?: boolean;
+    countdownRank?: number;
+    isBreaking?: boolean;
+    language: BroadcastLanguage;
+  }
+): string {
+  const { isIntro, countdownRank, isBreaking, language } = params;
+  if (isIntro) return text;
+
+  if (language === "hi") {
+    let prefix = "";
+    if (isBreaking) {
+      prefix = "ब्रेकिंग न्यूज़। ";
+    } else if (countdownRank && countdownRank > 0) {
+      prefix = `नंबर ${countdownRank}। `;
+    }
+    // Clean whitespace and pace sentences
+    const cleaned = text
+      .replace(/[\r\n]+/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/।\s*/g, "। ... ")
+      .trim();
+    return `${prefix}${cleaned}`;
+  } else {
+    let prefix = "";
+    if (isBreaking) {
+      prefix = "Breaking News. ";
+    } else if (countdownRank && countdownRank > 0) {
+      prefix = `Story number ${countdownRank}. `;
+    }
+    const cleaned = text
+      .replace(/[\r\n]+/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/\.\s*/g, ". ... ")
+      .trim();
+    return `${prefix}${cleaned}`;
+  }
+}
+
+/**
+ * Manages zero-cost, browser-native television anchor voice playback,
+ * broadcast sound stings, lip-sync amplitude extraction, and continuous queue progression.
  */
 export function useAnchorVoice() {
   const { state, dispatch } = useBroadcast();
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<AudioBufferSourceNode | MediaElementAudioSourceNode | null>(null);
-  const audioElRef = useRef<HTMLAudioElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Ensure AudioContext is initialized (must happen after user gesture)
+  // Initialize or resume Web Audio context for broadcast stings
   const getAudioCtx = useCallback(() => {
-    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      audioCtxRef.current = new AudioCtx();
-      analyserRef.current = audioCtxRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
-      analyserRef.current.connect(audioCtxRef.current.destination);
+    if (typeof window === "undefined") return null;
+    try {
+      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioCtxRef.current = new AudioCtx();
+      }
+      if (audioCtxRef.current.state === "suspended") {
+        void audioCtxRef.current.resume().catch(() => {});
+      }
+      return audioCtxRef.current;
+    } catch {
+      return null;
     }
-    if (audioCtxRef.current.state === "suspended") {
-      void audioCtxRef.current.resume().catch(() => {});
-    }
-    return { ctx: audioCtxRef.current, analyser: analyserRef.current! };
   }, []);
-
-  // Poll analyser for amplitude → dispatch to context
-  const startAmplitudeLoop = useCallback(() => {
-    const analyser = analyserRef.current;
-    if (!analyser) return;
-    const data = new Uint8Array(analyser.frequencyBinCount);
-
-    const loop = () => {
-      analyser.getByteFrequencyData(data);
-      // Average mid-range frequencies for speech amplitude
-      const sum = data.slice(4, 20).reduce((a, b) => a + b, 0);
-      const amplitude = Math.min(1, sum / (16 * 180));
-      dispatch({ type: "SET_AMPLITUDE", amplitude });
-      animFrameRef.current = requestAnimationFrame(loop);
-    };
-    animFrameRef.current = requestAnimationFrame(loop);
-  }, [dispatch]);
 
   const stopAmplitudeLoop = useCallback(() => {
     if (animFrameRef.current) {
@@ -66,179 +178,26 @@ export function useAnchorVoice() {
     dispatch({ type: "SET_AMPLITUDE", amplitude: 0 });
   }, [dispatch]);
 
-  /** Play via server TTS (OpenAI / Edge TTS) */
-  const playServerTts = useCallback(
-    async (ttsUrl: string): Promise<number> => {
-      return new Promise((resolve, reject) => {
-        const { ctx, analyser } = getAudioCtx();
-
-        if (audioElRef.current) {
-          audioElRef.current.pause();
-        }
-
-        const audio = new Audio(ttsUrl);
-        audio.crossOrigin = "anonymous";
-        audioElRef.current = audio;
-
-        try {
-          const source = ctx.createMediaElementSource(audio);
-          source.connect(analyser);
-          sourceRef.current = source;
-        } catch {
-          // MediaElementSource might already be connected
-        }
-
-        audio.onplay = () => {
-          setIsPlaying(true);
-          dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
-          startAmplitudeLoop();
-        };
-
-        audio.onended = () => {
-          setIsPlaying(false);
-          dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
-          stopAmplitudeLoop();
-          resolve(audio.duration * 1000 || 12_000);
-        };
-
-        audio.onerror = () => {
-          setIsPlaying(false);
-          dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
-          stopAmplitudeLoop();
-          reject(new Error("Audio load error"));
-        };
-
-        void ctx
-          .resume()
-          .then(() => audio.play())
-          .catch(() => {
-            dispatch({ type: "SET_AUDIO_BLOCKED", blocked: true });
-            dispatch({ type: "SET_MUTED", isMuted: true });
-            resolve(10_000);
-          });
-      });
-    },
-    [getAudioCtx, dispatch, startAmplitudeLoop, stopAmplitudeLoop]
-  );
-
-  /** Natural Indian news presentation via Web Speech API */
-  const playWebSpeech = useCallback(
-    (text: string, language: BroadcastLanguage): Promise<number> => {
-      return new Promise((resolve) => {
-        if (!("speechSynthesis" in window)) {
-          resolve(10_000);
-          return;
-        }
-        if (utteranceRef.current) {
-          window.speechSynthesis.cancel();
-        }
-
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = language === "hi" ? "hi-IN" : "en-IN";
-        // Natural Indian news presentation speed and pitch
-        utter.rate = 0.95;
-        utter.pitch = 1.0;
-
-        // Select the most natural Indian broadcast voice
-        const voices = window.speechSynthesis.getVoices();
-        let selectedVoice = null;
-
-        if (language === "hi") {
-          // Priority: Google हिन्दी -> Swara -> Hindi Female -> Any Hindi
-          selectedVoice =
-            voices.find((v) => v.lang === "hi-IN" && (v.name.includes("Google") || v.name.includes("Natural"))) ||
-            voices.find((v) => v.lang === "hi-IN" && (v.name.toLowerCase().includes("female") || v.name.includes("Swara") || v.name.includes("Heera"))) ||
-            voices.find((v) => v.lang.startsWith("hi")) ||
-            null;
-        } else {
-          // Priority: Indian English female -> Natural English -> en-IN
-          selectedVoice =
-            voices.find((v) => v.lang === "en-IN" && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Kalpana") || v.name.includes("Neerja"))) ||
-            voices.find((v) => v.lang === "en-IN" && v.name.toLowerCase().includes("female")) ||
-            voices.find((v) => v.lang === "en-IN") ||
-            voices.find((v) => v.lang.startsWith("en") && v.name.toLowerCase().includes("female")) ||
-            null;
-        }
-
-        if (selectedVoice) {
-          utter.voice = selectedVoice;
-        }
-
-        const startedAt = Date.now();
-        let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
-
-        const cleanup = () => {
-          if (fallbackTimer) clearTimeout(fallbackTimer);
-          stopAmplitudeLoop();
-          setIsPlaying(false);
-          dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
-        };
-
-        // Safety fallback timer: auto-resolve after max 18 seconds if speech synthesis stalls
-        const maxDuration = Math.min(18_000, Math.max(7_000, Math.round(text.length * 62)));
-        fallbackTimer = setTimeout(() => {
-          cleanup();
-          resolve(maxDuration);
-        }, maxDuration + 1000);
-
-        utter.onstart = () => {
-          setIsPlaying(true);
-          dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
-          let tick = 0;
-          const fakeLoop = () => {
-            tick += 0.18;
-            const amp = (Math.sin(tick) * 0.35 + 0.45) * 0.75;
-            dispatch({ type: "SET_AMPLITUDE", amplitude: amp });
-            if (window.speechSynthesis && window.speechSynthesis.speaking) {
-              animFrameRef.current = requestAnimationFrame(fakeLoop);
-            }
-          };
-          animFrameRef.current = requestAnimationFrame(fakeLoop);
-        };
-
-        utter.onend = () => {
-          cleanup();
-          resolve(Date.now() - startedAt);
-        };
-
-        utter.onerror = (e) => {
-          cleanup();
-          if (e.error === "not-allowed") {
-            dispatch({ type: "SET_AUDIO_BLOCKED", blocked: true });
-            dispatch({ type: "SET_MUTED", isMuted: true });
-          }
-          resolve(maxDuration);
-        };
-
-        utteranceRef.current = utter;
-        try {
-          window.speechSynthesis.speak(utter);
-        } catch {
-          cleanup();
-          resolve(maxDuration);
-        }
-      });
-    },
-    [dispatch, stopAmplitudeLoop]
-  );
+  const stopWatchdog = useCallback(() => {
+    if (watchdogRef.current) {
+      clearInterval(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+  }, []);
 
   const stop = useCallback(() => {
-    if (audioElRef.current) {
-      audioElRef.current.pause();
-      audioElRef.current = null;
-    }
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
+    globalActiveUtterance = null;
+    stopWatchdog();
     stopAmplitudeLoop();
     setIsPlaying(false);
     dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
-  }, [dispatch, stopAmplitudeLoop]);
+  }, [dispatch, stopAmplitudeLoop, stopWatchdog]);
 
   /**
-   * Speak a story script with appropriate broadcast audio stings.
-   * If muted, runs a natural reading timer.
-   * If unmuted, plays supporting news sting, then presents story script.
+   * Speak anchor script via the Web Speech API with natural broadcast cadence.
    */
   const speak = useCallback(
     async (params: {
@@ -250,51 +209,146 @@ export function useAnchorVoice() {
       isBreaking?: boolean;
     }): Promise<number> => {
       stop();
-      dispatch({ type: "SET_AUDIO_READY", ready: false });
+      dispatch({ type: "SET_AUDIO_READY", ready: true });
 
+      const spokenText = formatAnchorSpokenScript(params.script, {
+        isIntro: params.isIntro,
+        countdownRank: params.countdownRank,
+        isBreaking: params.isBreaking,
+        language: params.language,
+      });
+
+      // Target speech duration: ~10-25 seconds depending on text length
+      const targetDurationMs = Math.min(
+        25_000,
+        Math.max(9_000, Math.round(spokenText.length * 75))
+      );
+
+      // If muted, run silent visual timer so newsroom continues advancing without sound
       if (state.isMuted) {
-        // Visual-only silent timer (reading duration ~10-12s)
-        const silentDuration = Math.min(14_000, Math.max(8_000, Math.round(params.script.length * 55)));
         return new Promise<number>((resolve) => {
           dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
+          let tick = 0;
+          const fakeLoop = () => {
+            tick += 0.16;
+            const amp = (Math.sin(tick) * 0.3 + 0.4) * 0.7;
+            dispatch({ type: "SET_AMPLITUDE", amplitude: amp });
+            animFrameRef.current = requestAnimationFrame(fakeLoop);
+          };
+          animFrameRef.current = requestAnimationFrame(fakeLoop);
+
           setTimeout(() => {
+            stopAmplitudeLoop();
             dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
-            resolve(silentDuration);
-          }, silentDuration);
+            resolve(targetDurationMs);
+          }, targetDurationMs);
         });
       }
 
-      // Play appropriate supporting broadcast news sting
-      const { ctx } = getAudioCtx();
-      if (params.isIntro) {
-        playIntroSting(ctx);
-        // Short pause for intro fanfare
-        await new Promise((r) => setTimeout(r, 600));
-      } else if (params.isBreaking) {
-        playBreakingSting(ctx);
-        await new Promise((r) => setTimeout(r, 500));
-      } else if (params.countdownRank) {
-        playNumberSting(params.countdownRank, ctx);
-        await new Promise((r) => setTimeout(r, 350));
-      } else {
-        playTransitionSting(ctx);
-        await new Promise((r) => setTimeout(r, 300));
+      // Play appropriate supporting broadcast news sound sting
+      const ctx = getAudioCtx();
+      if (ctx) {
+        try {
+          if (params.isIntro) {
+            playIntroSting(ctx);
+            await new Promise((r) => setTimeout(r, 550));
+          } else if (params.isBreaking) {
+            playBreakingSting(ctx);
+            await new Promise((r) => setTimeout(r, 450));
+          } else if (params.countdownRank) {
+            playNumberSting(params.countdownRank, ctx);
+            await new Promise((r) => setTimeout(r, 320));
+          } else {
+            playTransitionSting(ctx);
+            await new Promise((r) => setTimeout(r, 280));
+          }
+        } catch {
+          // Audio sting play blocked or failed; proceed with voice
+        }
       }
 
-      // 1. Try server TTS if ttsPath exists or server endpoint is available
-      const ttsUrl =
-        params.ttsPath ||
-        `/api/broadcast/tts?text=${encodeURIComponent(params.script.slice(0, 300))}&lang=${params.language}`;
-      try {
-        const durationMs = await playServerTts(ttsUrl);
-        return durationMs;
-      } catch {
-        // 2. Fallback to Web Speech API
-      }
+      // Execute SpeechSynthesis
+      return new Promise<number>(async (resolve) => {
+        if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+          resolve(targetDurationMs);
+          return;
+        }
 
-      return playWebSpeech(params.script, params.language);
+        const utter = new SpeechSynthesisUtterance(spokenText);
+        globalActiveUtterance = utter;
+
+        utter.lang = params.language === "hi" ? "hi-IN" : "en-IN";
+        utter.rate = params.language === "hi" ? 0.92 : 0.95;
+        utter.pitch = 1.0;
+
+        const voice = await selectAnchorVoice(params.language);
+        if (voice) {
+          utter.voice = voice;
+        }
+
+        const startTime = Date.now();
+        let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+        const finish = (finalDuration: number) => {
+          if (fallbackTimer) clearTimeout(fallbackTimer);
+          stopWatchdog();
+          stopAmplitudeLoop();
+          setIsPlaying(false);
+          dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
+          globalActiveUtterance = null;
+          resolve(finalDuration);
+        };
+
+        // Safety watchdog: Chromium speech synthesis stalls after 14s if resume() is not nudged
+        watchdogRef.current = setInterval(() => {
+          if (window.speechSynthesis && window.speechSynthesis.speaking) {
+            window.speechSynthesis.pause();
+            window.speechSynthesis.resume();
+          }
+        }, 3500);
+
+        // Safety fallback timer if onend fails to fire
+        fallbackTimer = setTimeout(() => {
+          finish(targetDurationMs);
+        }, targetDurationMs + 2000);
+
+        utter.onstart = () => {
+          setIsPlaying(true);
+          dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
+
+          let tick = 0;
+          const animLoop = () => {
+            tick += 0.2;
+            const amp = Math.max(0.1, (Math.sin(tick) * 0.35 + 0.45) * 0.85);
+            dispatch({ type: "SET_AMPLITUDE", amplitude: amp });
+            if (window.speechSynthesis && window.speechSynthesis.speaking) {
+              animFrameRef.current = requestAnimationFrame(animLoop);
+            }
+          };
+          animFrameRef.current = requestAnimationFrame(animLoop);
+        };
+
+        utter.onend = () => {
+          const elapsed = Date.now() - startTime;
+          finish(Math.max(elapsed, 7000));
+        };
+
+        utter.onerror = (e) => {
+          if (e.error === "not-allowed") {
+            dispatch({ type: "SET_AUDIO_BLOCKED", blocked: true });
+            dispatch({ type: "SET_MUTED", isMuted: true });
+          }
+          finish(targetDurationMs);
+        };
+
+        try {
+          window.speechSynthesis.speak(utter);
+        } catch {
+          finish(targetDurationMs);
+        }
+      });
     },
-    [dispatch, getAudioCtx, playServerTts, playWebSpeech, state.isMuted, stop]
+    [dispatch, getAudioCtx, state.isMuted, stop, stopAmplitudeLoop, stopWatchdog]
   );
 
   // Cleanup on unmount
@@ -302,7 +356,7 @@ export function useAnchorVoice() {
     return () => {
       stop();
       if (audioCtxRef.current) {
-        void audioCtxRef.current.close();
+        void audioCtxRef.current.close().catch(() => {});
       }
     };
   }, [stop]);

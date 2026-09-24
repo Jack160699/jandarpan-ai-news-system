@@ -99,7 +99,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           <div className="jdl-tv__watermark" aria-hidden>
             <span className="jdl-tv__live-dot" />
             <span className="jdl-tv__watermark-text">
-              {language === "hi" ? "जन दर्पण LIVE" : "JAN DARPAN LIVE"}
+              {language === "hi" ? "जन दर्पण लाइव" : "JAN DARPAN LIVE"}
             </span>
           </div>
 

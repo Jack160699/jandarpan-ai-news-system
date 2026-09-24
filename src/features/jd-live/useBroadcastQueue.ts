@@ -15,7 +15,7 @@ export function useBroadcastQueue() {
 
   const fetchFeed = useCallback(async () => {
     try {
-      const res = await fetch("/api/broadcast/feed", { cache: "no-store" });
+      const res = await fetch(`/api/broadcast/feed?lang=${state.language}`, { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json() as { queue: BroadcastSegment[]; breaking: BroadcastSegment[] };
       lastFetchRef.current = Date.now();
@@ -33,12 +33,12 @@ export function useBroadcastQueue() {
     } catch {
       // Silently ignore — keep existing queue
     }
-  }, [dispatch, state.mode, state.currentSegment?.id]);
+  }, [dispatch, state.mode, state.language, state.currentSegment?.id]);
 
-  // Initial fetch
+  // Initial fetch and refetch on language change
   useEffect(() => {
     void fetchFeed();
-  }, [fetchFeed]);
+  }, [fetchFeed, state.language]);
 
   // Periodic refresh every 60s
   useEffect(() => {

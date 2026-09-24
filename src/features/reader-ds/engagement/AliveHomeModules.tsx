@@ -92,14 +92,30 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
     ];
     const out: ReaderStory[] = [];
     const seen = new Set(excludeSlugs);
+    const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
+
     for (const a of candidates) {
       if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
+      const hasDev = isDevanagari(a.headline);
+      if (locale === "en" && hasDev) continue;
+      if (locale === "hi" && !hasDev && a.language !== "hi") continue;
+
       seen.add(a.slug);
       out.push(toReaderStory(a));
       if (out.length >= 5) break;
     }
+
+    if (out.length < 3) {
+      for (const a of candidates) {
+        if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
+        seen.add(a.slug);
+        out.push(toReaderStory(a));
+        if (out.length >= 5) break;
+      }
+    }
+
     return out;
-  }, [feed, excludeSlugs]);
+  }, [feed, excludeSlugs, locale]);
 
   return (
     <section

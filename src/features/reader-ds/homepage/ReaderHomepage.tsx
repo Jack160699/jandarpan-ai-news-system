@@ -7,7 +7,6 @@ import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import {
   BreakingStrip,
   LeadStory,
-  LiveNewsTicker,
   Masthead,
   MobileCategoryNav,
   ReaderShell,
@@ -36,7 +35,6 @@ import { toFormattedStory } from "@/lib/engagement/story-format";
 import { isAdPreviewMode, shouldMountStickyAd } from "../ads/ad-display";
 import { AliveHomeBriefingSlot, AliveHomeSecondarySlot } from "../engagement/AliveHomeModules";
 import { FormatStoryCard } from "../engagement/FormatStoryCard";
-import { pickBreakingItems } from "./breaking";
 import { buildHomeSections, toStory } from "./build-home-sections";
 import { PageEndingModules } from "./PageEndingModules";
 
@@ -103,7 +101,6 @@ export function ReaderHomepage({
     return toStory(a);
   });
 
-  const breakingItems = pickBreakingItems(feed);
   const sections = buildHomeSections(feed, used, t, { homeDistrict });
   for (const section of sections) {
     for (const s of section.stories) used.add(s.slug);
@@ -172,7 +169,6 @@ export function ReaderHomepage({
     <ReaderShell activeNav="home" bottomPad={showStickyAd ? 128 : 72}>
       <Masthead premiumBadge={isPremium} />
       <MobileCategoryNav />
-      <LiveNewsTicker initialItems={breakingItems} />
 
       {aliveHome ? (
         <AliveHomeBriefingSlot

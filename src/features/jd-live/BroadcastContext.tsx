@@ -261,6 +261,8 @@ type BroadcastContextValue = {
 
 const BroadcastContext = createContext<BroadcastContextValue | null>(null);
 
+const AUDIO_CONSENT_KEY = "jdl_audio_unlocked";
+
 export function BroadcastProvider({
   children,
   initialLanguage = "hi",
@@ -272,6 +274,15 @@ export function BroadcastProvider({
     ...initialState,
     language: initialLanguage,
   });
+
+  // Check saved audio consent on client mount
+  React.useEffect(() => {
+    try {
+      if (typeof window !== "undefined" && localStorage.getItem(AUDIO_CONSENT_KEY) === "1") {
+        dispatch({ type: "SET_MUTED", isMuted: false });
+      }
+    } catch {}
+  }, []);
 
   React.useEffect(() => {
     if (initialLanguage && initialLanguage !== state.language) {
@@ -292,17 +303,28 @@ export function BroadcastProvider({
     []
   );
 
-  const togglePlay = useCallback(() => dispatch({ type: "TOGGLE_PLAY" }), []);
-
-  const toggleMute = useCallback(() => dispatch({ type: "TOGGLE_MUTE" }), []);
-
-  const setPlaying = useCallback(
-    (playing: boolean) => dispatch({ type: "SET_PLAYING", isPlaying: playing }),
+  const setMuted = useCallback(
+    (muted: boolean) => {
+      try {
+        if (!muted) {
+          localStorage.setItem(AUDIO_CONSENT_KEY, "1");
+        } else {
+          localStorage.removeItem(AUDIO_CONSENT_KEY);
+        }
+      } catch {}
+      dispatch({ type: "SET_MUTED", isMuted: muted });
+    },
     []
   );
 
-  const setMuted = useCallback(
-    (muted: boolean) => dispatch({ type: "SET_MUTED", isMuted: muted }),
+  const toggleMute = useCallback(() => {
+    setMuted(!state.isMuted);
+  }, [state.isMuted, setMuted]);
+
+  const togglePlay = useCallback(() => dispatch({ type: "TOGGLE_PLAY" }), []);
+
+  const setPlaying = useCallback(
+    (playing: boolean) => dispatch({ type: "SET_PLAYING", isPlaying: playing }),
     []
   );
 
