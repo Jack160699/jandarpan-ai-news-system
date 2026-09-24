@@ -79,9 +79,6 @@ export function DeskChrome() {
             >
               <JdIcon name="search" size={18} stroke={1.9} color="rgba(255, 255, 255, 0.75)" />
             </button>
-            <Link href="/live" className="jd-desk-live-pill">
-              {locale === "en" ? "Live" : "लाइव"}
-            </Link>
           </div>
         </div>
       </div>

@@ -11,7 +11,7 @@ export function TopTenPanel() {
   const { state, dispatch } = useBroadcast();
   const { queue, currentSegment, language } = state;
 
-  const topTen = queue.slice(0, 10);
+  const topTen = queue.filter((s) => !s.isIntro).slice(0, 10);
   const panelTitle =
     language === "hi" ? "आज की 10 बड़ी खबरें" : "TOP 10 STORIES TODAY";
 
@@ -28,6 +28,7 @@ export function TopTenPanel() {
           const district =
             language === "hi" ? (seg.districtHi || seg.district) : seg.district;
           const isActive = currentSegment?.id === seg.id;
+          const rank = seg.countdownRank ?? (10 - idx);
 
           return (
             <li
@@ -45,7 +46,7 @@ export function TopTenPanel() {
               }}
               aria-current={isActive ? "true" : undefined}
             >
-              <span className="jdl-top10__rank">{idx + 1}</span>
+              <span className="jdl-top10__rank">{rank}</span>
 
               {seg.imageUrl && (
                 <div className="jdl-top10__thumb">

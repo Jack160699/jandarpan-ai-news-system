@@ -3,10 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useBroadcast } from "./BroadcastContext";
 import type { BroadcastLanguage } from "./types";
+import {
+  playIntroSting,
+  playNumberSting,
+  playTransitionSting,
+  playBreakingSting,
+} from "./audioStings";
 
 /**
- * Manages TTS audio playback and lip-sync amplitude extraction.
- * Falls back to Web Speech API when server TTS is unavailable.
+ * Manages TTS audio playback, television audio stings, and lip-sync amplitude extraction.
+ * Integrates Web Audio API stings and falls back gracefully to Web Speech API.
  */
 export function useAnchorVoice() {
   const { state, dispatch } = useBroadcast();
@@ -20,11 +26,17 @@ export function useAnchorVoice() {
 
   // Ensure AudioContext is initialized (must happen after user gesture)
   const getAudioCtx = useCallback(() => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      audioCtxRef.current = new AudioCtx();
       analyserRef.current = audioCtxRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
       analyserRef.current.connect(audioCtxRef.current.destination);
+    }
+    if (audioCtxRef.current.state === "suspended") {
+      void audioCtxRef.current.resume().catch(() => {});
     }
     return { ctx: audioCtxRef.current, analyser: analyserRef.current! };
   }, []);
@@ -54,10 +66,10 @@ export function useAnchorVoice() {
     dispatch({ type: "SET_AMPLITUDE", amplitude: 0 });
   }, [dispatch]);
 
-  /** Play via server TTS (OpenAI) */
+  /** Play via server TTS (OpenAI / Edge TTS) */
   const playServerTts = useCallback(
     async (ttsUrl: string): Promise<number> => {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         const { ctx, analyser } = getAudioCtx();
 
         if (audioElRef.current) {
@@ -68,9 +80,13 @@ export function useAnchorVoice() {
         audio.crossOrigin = "anonymous";
         audioElRef.current = audio;
 
-        const source = ctx.createMediaElementSource(audio);
-        source.connect(analyser);
-        sourceRef.current = source;
+        try {
+          const source = ctx.createMediaElementSource(audio);
+          source.connect(analyser);
+          sourceRef.current = source;
+        } catch {
+          // MediaElementSource might already be connected
+        }
 
         audio.onplay = () => {
           setIsPlaying(true);
@@ -82,14 +98,14 @@ export function useAnchorVoice() {
           setIsPlaying(false);
           dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
           stopAmplitudeLoop();
-          resolve(audio.duration * 1000 || 45_000);
+          resolve(audio.duration * 1000 || 12_000);
         };
 
         audio.onerror = () => {
           setIsPlaying(false);
           dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
           stopAmplitudeLoop();
-          resolve(45_000); // fallback duration
+          reject(new Error("Audio load error"));
         };
 
         void ctx
@@ -105,7 +121,7 @@ export function useAnchorVoice() {
     [getAudioCtx, dispatch, startAmplitudeLoop, stopAmplitudeLoop]
   );
 
-  /** Fallback: Web Speech API */
+  /** Natural Indian news presentation via Web Speech API */
   const playWebSpeech = useCallback(
     (text: string, language: BroadcastLanguage): Promise<number> => {
       return new Promise((resolve) => {
@@ -119,20 +135,34 @@ export function useAnchorVoice() {
 
         const utter = new SpeechSynthesisUtterance(text);
         utter.lang = language === "hi" ? "hi-IN" : "en-IN";
-        utter.rate = 0.9;
-        utter.pitch = 1.05;
+        // Natural Indian news presentation speed and pitch
+        utter.rate = 0.95;
+        utter.pitch = 1.0;
 
-        // Pick a female voice if available
+        // Select the most natural Indian broadcast voice
         const voices = window.speechSynthesis.getVoices();
-        const femaleVoice = voices.find(
-          (v) =>
-            v.lang.startsWith(language === "hi" ? "hi" : "en") &&
-            (v.name.toLowerCase().includes("female") ||
-              v.name.toLowerCase().includes("woman") ||
-              v.name.toLowerCase().includes("priya") ||
-              v.name.toLowerCase().includes("heera"))
-        );
-        if (femaleVoice) utter.voice = femaleVoice;
+        let selectedVoice = null;
+
+        if (language === "hi") {
+          // Priority: Google हिन्दी -> Swara -> Hindi Female -> Any Hindi
+          selectedVoice =
+            voices.find((v) => v.lang === "hi-IN" && (v.name.includes("Google") || v.name.includes("Natural"))) ||
+            voices.find((v) => v.lang === "hi-IN" && (v.name.toLowerCase().includes("female") || v.name.includes("Swara") || v.name.includes("Heera"))) ||
+            voices.find((v) => v.lang.startsWith("hi")) ||
+            null;
+        } else {
+          // Priority: Indian English female -> Natural English -> en-IN
+          selectedVoice =
+            voices.find((v) => v.lang === "en-IN" && (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Kalpana") || v.name.includes("Neerja"))) ||
+            voices.find((v) => v.lang === "en-IN" && v.name.toLowerCase().includes("female")) ||
+            voices.find((v) => v.lang === "en-IN") ||
+            voices.find((v) => v.lang.startsWith("en") && v.name.toLowerCase().includes("female")) ||
+            null;
+        }
+
+        if (selectedVoice) {
+          utter.voice = selectedVoice;
+        }
 
         const startedAt = Date.now();
         let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
@@ -144,8 +174,8 @@ export function useAnchorVoice() {
           dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
         };
 
-        // Safety fallback timer: auto-resolve after max 15 seconds if browser speech synthesis hangs
-        const maxDuration = Math.min(15_000, Math.max(8_000, Math.round(text.length * 60)));
+        // Safety fallback timer: auto-resolve after max 18 seconds if speech synthesis stalls
+        const maxDuration = Math.min(18_000, Math.max(7_000, Math.round(text.length * 62)));
         fallbackTimer = setTimeout(() => {
           cleanup();
           resolve(maxDuration);
@@ -156,10 +186,10 @@ export function useAnchorVoice() {
           dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
           let tick = 0;
           const fakeLoop = () => {
-            tick += 0.15;
-            const amp = (Math.sin(tick) * 0.3 + 0.4) * 0.8;
+            tick += 0.18;
+            const amp = (Math.sin(tick) * 0.35 + 0.45) * 0.75;
             dispatch({ type: "SET_AMPLITUDE", amplitude: amp });
-            if (window.speechSynthesis.speaking) {
+            if (window.speechSynthesis && window.speechSynthesis.speaking) {
               animFrameRef.current = requestAnimationFrame(fakeLoop);
             }
           };
@@ -197,7 +227,7 @@ export function useAnchorVoice() {
       audioElRef.current.pause();
       audioElRef.current = null;
     }
-    if ("speechSynthesis" in window) {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
     stopAmplitudeLoop();
@@ -206,22 +236,25 @@ export function useAnchorVoice() {
   }, [dispatch, stopAmplitudeLoop]);
 
   /**
-   * Speak a script. If muted, runs a silent visual timer.
-   * If unmuted, tries server TTS first, falls back to Web Speech.
-   * Returns playback duration in ms.
+   * Speak a story script with appropriate broadcast audio stings.
+   * If muted, runs a natural reading timer.
+   * If unmuted, plays supporting news sting, then presents story script.
    */
   const speak = useCallback(
     async (params: {
       script: string;
       language: BroadcastLanguage;
       ttsPath?: string;
+      isIntro?: boolean;
+      countdownRank?: number;
+      isBreaking?: boolean;
     }): Promise<number> => {
       stop();
       dispatch({ type: "SET_AUDIO_READY", ready: false });
 
       if (state.isMuted) {
-        // Visual-only silent timer (reading duration ~10s)
-        const silentDuration = Math.min(14_000, Math.max(9_000, Math.round(params.script.length * 60)));
+        // Visual-only silent timer (reading duration ~10-12s)
+        const silentDuration = Math.min(14_000, Math.max(8_000, Math.round(params.script.length * 55)));
         return new Promise<number>((resolve) => {
           dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
           setTimeout(() => {
@@ -231,20 +264,37 @@ export function useAnchorVoice() {
         });
       }
 
-      // Try server TTS
-      if (params.ttsPath) {
-        try {
-          const durationMs = await playServerTts(params.ttsPath);
-          return durationMs;
-        } catch {
-          // Fall through to Web Speech
-        }
+      // Play appropriate supporting broadcast news sting
+      const { ctx } = getAudioCtx();
+      if (params.isIntro) {
+        playIntroSting(ctx);
+        // Short pause for intro fanfare
+        await new Promise((r) => setTimeout(r, 600));
+      } else if (params.isBreaking) {
+        playBreakingSting(ctx);
+        await new Promise((r) => setTimeout(r, 500));
+      } else if (params.countdownRank) {
+        playNumberSting(params.countdownRank, ctx);
+        await new Promise((r) => setTimeout(r, 350));
+      } else {
+        playTransitionSting(ctx);
+        await new Promise((r) => setTimeout(r, 300));
       }
 
-      // Web Speech fallback
+      // 1. Try server TTS if ttsPath exists or server endpoint is available
+      const ttsUrl =
+        params.ttsPath ||
+        `/api/broadcast/tts?text=${encodeURIComponent(params.script.slice(0, 300))}&lang=${params.language}`;
+      try {
+        const durationMs = await playServerTts(ttsUrl);
+        return durationMs;
+      } catch {
+        // 2. Fallback to Web Speech API
+      }
+
       return playWebSpeech(params.script, params.language);
     },
-    [dispatch, playServerTts, playWebSpeech, state.isMuted, stop]
+    [dispatch, getAudioCtx, playServerTts, playWebSpeech, state.isMuted, stop]
   );
 
   // Cleanup on unmount

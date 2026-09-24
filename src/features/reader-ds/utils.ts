@@ -44,6 +44,24 @@ export function hindiRelativeTime(iso?: string): string {
   return `${mon} माह पहले`;
 }
 
+/** Localized relative time for stories in Hindi and English */
+export function formatStoryTime(iso?: string, locale: string = "hi"): string {
+  if (!iso) return "";
+  if (locale !== "en") return hindiRelativeTime(iso);
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const diffMs = Date.now() - then;
+  const min = Math.round(diffMs / 60000);
+  if (min < 1) return "Just now";
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.round(hr / 24);
+  if (day < 30) return `${day}d ago`;
+  const mon = Math.round(day / 30);
+  return `${mon}mo ago`;
+}
+
 /** Build a canonical story href. */
 export function storyHref(slug: string): string {
   return `/story/${slug}`;

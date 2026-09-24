@@ -14,12 +14,69 @@ import type {
   BroadcastState,
 } from "./types";
 
+function buildCountdownQueue(
+  rawQueue: BroadcastSegment[],
+  lang: BroadcastLanguage
+): BroadcastSegment[] {
+  if (!rawQueue || rawQueue.length === 0) return [];
+
+  // Top 10 stories
+  const topSlice = rawQueue.slice(0, 10);
+  const total = topSlice.length;
+
+  // Intro segment
+  const introSegment: BroadcastSegment = {
+    id: "jd-live-intro",
+    slug: "",
+    headline:
+      lang === "hi"
+        ? "जन दर्पण LIVE: आज छत्तीसगढ़ की 10 बड़ी खबरें"
+        : "Jan Darpan Live: Top 10 Stories from Chhattisgarh",
+    headlineHi: "जन दर्पण LIVE: आज छत्तीसगढ़ की 10 बड़ी खबरें",
+    summary:
+      lang === "hi"
+        ? "नमस्कार, आप देख रहे हैं जन दर्पण लाइव। आइए जानते हैं आज छत्तीसगढ़ की 10 बड़ी खबरें।"
+        : "Hello, you’re watching Jan Darpan Live. Here are the top 10 stories from Chhattisgarh today.",
+    summaryHi:
+      "नमस्कार, आप देख रहे हैं जन दर्पण लाइव। आइए जानते हैं आज छत्तीसगढ़ की 10 बड़ी खबरें।",
+    script:
+      lang === "hi"
+        ? "नमस्कार, आप देख रहे हैं जन दर्पण लाइव। आइए जानते हैं आज छत्तीसगढ़ की 10 बड़ी खबरें।"
+        : "Hello, you’re watching Jan Darpan Live. Here are the top 10 stories from Chhattisgarh today.",
+    imageUrl: topSlice[0]?.imageUrl || "/jd-live/master-studio.jpg",
+    categoryLabel: lang === "hi" ? "लाइव बुलेटिन" : "Live Bulletin",
+    categoryLabelHi: "लाइव बुलेटिन",
+    district: lang === "hi" ? "छत्तीसगढ़" : "Chhattisgarh",
+    districtHi: "छत्तीसगढ़",
+    section: "lead",
+    isBreaking: false,
+    isLive: true,
+    priorityScore: 100,
+    publishedAt: new Date().toISOString(),
+    durationSec: 6,
+    isIntro: true,
+  };
+
+  // Order countdown: 10 down to 1
+  // Rank 10 is the 10th story, Rank 1 is the lead/top story
+  const countdownItems = topSlice
+    .map((seg, idx) => ({
+      ...seg,
+      countdownRank: total - idx,
+    }))
+    .reverse();
+
+  return [introSegment, ...countdownItems];
+}
+
 const initialState: BroadcastState = {
   status: "initializing",
   mode: "intro",
   language: "hi",
   currentSegment: null,
-  currentIndex: -1,
+  currentIndex: 0,
+  countdownRank: 10,
+  isIntro: true,
   queue: [],
   breakingQueue: [],
   anchorState: "idle",
@@ -37,51 +94,95 @@ function broadcastReducer(
 ): BroadcastState {
   switch (action.type) {
     case "SET_QUEUE": {
-      const queue = action.queue;
       const breaking = action.breaking;
-      if (queue.length === 0) return { ...state, status: "idle", queue: [], breakingQueue: breaking };
-      // Start with breaking story if present, else first in queue
-      const startWithBreaking = breaking.length > 0;
-      const first = startWithBreaking ? breaking[0] : queue[0];
-      return {
-        ...state,
-        queue,
-        breakingQueue: breaking,
-        currentSegment: first,
-        currentIndex: startWithBreaking ? -1 : 0,
-        mode: startWithBreaking ? "breaking" : "intro",
-        status: "loading",
-        scriptReady: false,
-        audioReady: false,
-      };
-    }
-    case "SET_LANGUAGE":
-      return { ...state, language: action.language, scriptReady: false, audioReady: false };
-    case "SET_MODE":
-      return { ...state, mode: action.mode };
-    case "SET_STATUS":
-      return { ...state, status: action.status };
-    case "NEXT_SEGMENT": {
-      const nextIndex = state.currentIndex + 1;
-      if (nextIndex >= state.queue.length) {
-        // Loop back to start
+      const fullQueue = buildCountdownQueue(action.queue, state.language);
+      if (fullQueue.length === 0) {
         return {
           ...state,
-          currentIndex: 0,
-          currentSegment: state.queue[0] ?? null,
-          mode: "transition",
+          status: "idle",
+          queue: [],
+          breakingQueue: breaking,
+          currentSegment: null,
+        };
+      }
+
+      // If breaking news exists on load, prioritize it, else start at intro
+      if (breaking.length > 0) {
+        const firstBreaking = breaking[0];
+        return {
+          ...state,
+          queue: fullQueue,
+          breakingQueue: breaking,
+          currentSegment: firstBreaking,
+          currentIndex: -1,
+          countdownRank: 0,
+          isIntro: false,
+          mode: "breaking",
           status: "loading",
           scriptReady: false,
           audioReady: false,
         };
       }
+
+      const first = fullQueue[0];
+      return {
+        ...state,
+        queue: fullQueue,
+        breakingQueue: breaking,
+        currentSegment: first,
+        currentIndex: 0,
+        countdownRank: first.countdownRank || 10,
+        isIntro: !!first.isIntro,
+        mode: "intro",
+        status: "loading",
+        scriptReady: !!first.script,
+        audioReady: false,
+      };
+    }
+    case "SET_LANGUAGE": {
+      const updatedQueue = buildCountdownQueue(state.queue, action.language);
+      const curr = updatedQueue[state.currentIndex] || updatedQueue[0] || null;
+      return {
+        ...state,
+        language: action.language,
+        queue: updatedQueue,
+        currentSegment: curr,
+        scriptReady: false,
+        audioReady: false,
+      };
+    }
+    case "SET_MODE":
+      return { ...state, mode: action.mode };
+    case "SET_STATUS":
+      return { ...state, status: action.status };
+    case "NEXT_SEGMENT": {
+      if (state.queue.length === 0) return state;
+      const nextIndex = state.currentIndex + 1;
+      if (nextIndex >= state.queue.length) {
+        // Loop back to intro (index 0) or countdown start
+        const loopSeg = state.queue[0];
+        return {
+          ...state,
+          currentIndex: 0,
+          currentSegment: loopSeg,
+          countdownRank: loopSeg.countdownRank || 10,
+          isIntro: !!loopSeg.isIntro,
+          mode: "intro",
+          status: "loading",
+          scriptReady: !!loopSeg.script,
+          audioReady: false,
+        };
+      }
+      const seg = state.queue[nextIndex];
       return {
         ...state,
         currentIndex: nextIndex,
-        currentSegment: state.queue[nextIndex],
-        mode: nextIndex === 0 ? "intro" : "transition",
+        currentSegment: seg,
+        countdownRank: seg.countdownRank || 10,
+        isIntro: !!seg.isIntro,
+        mode: seg.isIntro ? "intro" : "normal",
         status: "loading",
-        scriptReady: false,
+        scriptReady: !!seg.script,
         audioReady: false,
       };
     }
@@ -89,6 +190,8 @@ function broadcastReducer(
       return {
         ...state,
         currentSegment: action.segment,
+        countdownRank: action.segment.countdownRank || 0,
+        isIntro: false,
         mode: "breaking",
         status: "loading",
         scriptReady: false,

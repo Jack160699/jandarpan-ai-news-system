@@ -10,6 +10,8 @@ import { toFormattedStory } from "@/lib/engagement/story-format";
 import { useReaderPreferencesOptional } from "@/providers/ReaderPreferencesProvider";
 import { DEFAULT_DISTRICT_SLUG } from "@/lib/district-intelligence";
 import { useJdDsT } from "../i18n";
+import Link from "next/link";
+import { toReaderStory, formatStoryTime, type ReaderStory } from "../utils";
 import { SectionHeader } from "../components";
 import { DevelopingStoryTeaserCard } from "./DevelopingStoryTeaserCard";
 import { FormatStoryCard } from "./FormatStoryCard";
@@ -74,20 +76,98 @@ type SlotProps = {
 };
 
 /**
- * Jan Darpan Live newsroom — primary first-content experience on the homepage.
- * Replaces the previous "आज का दर्पण / Today's Brief" module.
+ * Jan Darpan Live newsroom — compact television broadcast anchored to the upper-left
+ * with a live editorial news column (ताज़ा खबरें) on desktop, and a single 16:9 frame on mobile.
  */
 export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
   const { locale } = useJdDsT();
   const broadcastLang = locale === "en" ? "en" : "hi";
 
+  const freshStories = useMemo(() => {
+    const candidates = [
+      ...(feed.liveWire ?? []),
+      ...(feed.trending ?? []),
+      ...(feed.regionalHighlights ?? []),
+      ...(feed.editorsPicks?.supporting ?? []),
+    ];
+    const out: ReaderStory[] = [];
+    const seen = new Set(excludeSlugs);
+    for (const a of candidates) {
+      if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
+      seen.add(a.slug);
+      out.push(toReaderStory(a));
+      if (out.length >= 4) break;
+    }
+    return out;
+  }, [feed, excludeSlugs]);
+
   return (
     <section
-      className="jd-home-live-newsroom-fullbleed"
+      className="jd-home-broadcast-layout"
       data-testid="jd-live-newsroom"
-      aria-label={broadcastLang === "en" ? "Jan Darpan Live Newsroom" : "जन दर्पण लाइव न्यूज़रूम"}
+      aria-label={broadcastLang === "en" ? "Jan Darpan Live Television Newsroom" : "जन दर्पण लाइव टेलीविज़न न्यूज़रूम"}
     >
-      <JanDarpanLiveLazy initialLanguage={broadcastLang} embedded />
+      {/* 68% Left column: Compact Jan Darpan Live TV Newsroom anchored upper-left */}
+      <div className="jd-home-broadcast-tv">
+        <JanDarpanLiveLazy initialLanguage={broadcastLang} embedded />
+      </div>
+
+      {/* 32% Right column: Live Editorial / Fresh Stories Column (Desktop only, hidden on mobile) */}
+      <aside
+        className="jd-home-broadcast-aside"
+        aria-label={locale === "en" ? "Latest News Updates" : "ताज़ा खबरें अपडेट"}
+      >
+        <div className="jd-fresh-col">
+          <div className="jd-fresh-col__head">
+            <div className="jd-fresh-col__title-row">
+              <span className="jd-fresh-col__dot" aria-hidden="true" />
+              <h2 className="jd-fresh-col__title">
+                {locale === "en" ? "Latest Updates" : "ताज़ा खबरें"}
+              </h2>
+            </div>
+            <Link href="/latest" className="jd-fresh-col__more">
+              {locale === "en" ? "See all ›" : "सभी देखें ›"}
+            </Link>
+          </div>
+
+          <div className="jd-fresh-col__list">
+            {freshStories.map((story) => (
+              <Link
+                key={story.slug}
+                href={`/story/${story.slug}`}
+                className="jd-fresh-col__item"
+                prefetch={false}
+              >
+                <div className="jd-fresh-col__thumb-wrap">
+                  {story.imageUrl ? (
+                    <img
+                      src={story.imageUrl}
+                      alt=""
+                      className="jd-fresh-col__thumb"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="jd-fresh-col__thumb-ph" />
+                  )}
+                </div>
+                <div className="jd-fresh-col__body">
+                  <div className="jd-fresh-col__meta">
+                    <span className="jd-fresh-col__tag">
+                      {story.kicker || (locale === "en" ? "Latest" : "ताज़ा")}
+                    </span>
+                    {story.publishedAt && (
+                      <span className="jd-fresh-col__time">
+                        {formatStoryTime(story.publishedAt, locale)}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="jd-fresh-col__headline">{story.headline}</h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </aside>
     </section>
   );
 }

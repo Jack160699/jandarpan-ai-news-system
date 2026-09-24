@@ -199,9 +199,9 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
           minWidth: 0,
         }}
       >
-        {/* Simple red LIVE label with small pulsing indicator */}
+        {/* Simple red BREAKING label with small pulsing indicator */}
         <Link
-          href="/live"
+          href="/latest"
           prefetch={false}
           className="jd-live-pill"
           style={{
@@ -212,7 +212,7 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
             color: "#ffffff",
             padding: "4px 11px",
             borderRadius: 3,
-            fontSize: 14.5,
+            fontSize: 14,
             fontWeight: 800,
             textDecoration: "none",
             whiteSpace: "nowrap",
@@ -231,7 +231,7 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
               display: "inline-block",
             }}
           />
-          <span>{isEnglish ? "LIVE" : "लाइव"}</span>
+          <span>{isEnglish ? "BREAKING" : "ब्रेकिंग"}</span>
         </Link>
 
         {/* Marquee viewport */}

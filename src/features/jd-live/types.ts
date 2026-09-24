@@ -40,6 +40,10 @@ export type BroadcastSegment = {
   ttsPath?: string;
   /** Estimated duration seconds for this segment */
   durationSec?: number;
+  /** Countdown rank for TV presentation (10 down to 1) */
+  countdownRank?: number;
+  /** True if this is the opening broadcast intro segment */
+  isIntro?: boolean;
 };
 
 export type BroadcastState = {
@@ -48,6 +52,8 @@ export type BroadcastState = {
   language: BroadcastLanguage;
   currentSegment: BroadcastSegment | null;
   currentIndex: number;
+  countdownRank: number;
+  isIntro: boolean;
   queue: BroadcastSegment[];
   breakingQueue: BroadcastSegment[];
   anchorState: AnchorSpeakState;

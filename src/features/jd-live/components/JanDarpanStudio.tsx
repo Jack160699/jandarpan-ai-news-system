@@ -57,6 +57,9 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
         script: currentSegment.script!,
         language,
         ttsPath: currentSegment.ttsPath,
+        isIntro: !!currentSegment.isIntro,
+        countdownRank: currentSegment.countdownRank,
+        isBreaking: !!currentSegment.isBreaking,
       });
       // Advance to next segment after speech / visual duration
       timer = advanceAfterSegment(durationMs + 1000);

@@ -70,20 +70,36 @@ function buildFallbackScript(
   segment: BroadcastSegment,
   lang: "hi" | "en"
 ): { script: string; durationSec: number } {
+  if (segment.isIntro) {
+    const script =
+      lang === "hi"
+        ? "नमस्कार, आप देख रहे हैं जन दर्पण लाइव। आइए जानते हैं आज छत्तीसगढ़ की 10 बड़ी खबरें।"
+        : "Hello, you’re watching Jan Darpan Live. Here are the top 10 stories from Chhattisgarh today.";
+    return { script, durationSec: 6 };
+  }
+
   const headline = lang === "hi" ? (segment.headlineHi || segment.headline) : segment.headline;
   const summary = lang === "hi" ? (segment.summaryHi || segment.summary) : segment.summary;
   const location = lang === "hi" ? (segment.districtHi || segment.district || "छत्तीसगढ़") : (segment.district || "Chhattisgarh");
 
   let script: string;
   if (lang === "hi") {
-    script = segment.isBreaking
-      ? `ब्रेकिंग न्यूज़। ${location} से बड़ी खबर। ${headline}। ${summary}`
-      : `नमस्कार, जन दर्पण लाइव में आपका स्वागत है। ${location} से खबर — ${headline}। ${summary}`;
+    if (segment.isBreaking) {
+      script = `ब्रेकिंग न्यूज़। ${location} से बड़ी खबर। ${headline}। ${summary}`;
+    } else if (segment.countdownRank) {
+      script = `नंबर ${segment.countdownRank} की खबर। ${location} से — ${headline}। ${summary}`;
+    } else {
+      script = `${location} से खबर — ${headline}। ${summary}`;
+    }
   } else {
-    script = segment.isBreaking
-      ? `Breaking news from ${location}. ${headline}. ${summary}`
-      : `Welcome to Jan Darpan Live. From ${location} — ${headline}. ${summary}`;
+    if (segment.isBreaking) {
+      script = `Breaking news from ${location}. ${headline}. ${summary}`;
+    } else if (segment.countdownRank) {
+      script = `Story number ${segment.countdownRank}. From ${location} — ${headline}. ${summary}`;
+    } else {
+      script = `From ${location} — ${headline}. ${summary}`;
+    }
   }
 
-  return { script, durationSec: Math.ceil(script.length / 14) };
+  return { script, durationSec: Math.min(22, Math.max(8, Math.ceil(script.length / 15))) };
 }

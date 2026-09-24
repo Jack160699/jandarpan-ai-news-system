@@ -25,11 +25,22 @@ export function LowerThird() {
       ? (currentSegment.districtHi || currentSegment.district)
       : currentSegment.district;
 
+  const rankLabel = currentSegment.countdownRank
+    ? language === "hi"
+      ? `नंबर ${currentSegment.countdownRank}`
+      : `NO. ${currentSegment.countdownRank}`
+    : currentSegment.isIntro
+    ? language === "hi"
+      ? "आज की 10 बड़ी खबरें"
+      : "TOP 10 COUNTDOWN"
+    : null;
+
   const locationLabel = district ? `${district}` : category;
+  const categoryBadge = rankLabel ? `${rankLabel} · ${locationLabel}` : locationLabel;
 
   return (
     <div className="jdl-lower3" aria-live="polite" aria-atomic="true">
-      <div className="jdl-lower3__category">{locationLabel}</div>
+      <div className="jdl-lower3__category">{categoryBadge}</div>
       <div className="jdl-lower3__headline">{headline}</div>
     </div>
   );
