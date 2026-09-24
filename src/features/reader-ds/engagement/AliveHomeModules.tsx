@@ -95,20 +95,32 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
     const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
 
     const isCgStory = (a: any) => {
-      const combined = `${a.headline || ""} ${a.summary || ""} ${(a.tags || []).join(" ")} ${a.section || ""}`.toLowerCase();
+      const text = `${a.headline || ""} ${a.summary || ""}`.toLowerCase();
+      const hlLower = (a.headline || "").toLowerCase();
+      const mentionsCg = [
+        "छत्तीसगढ़", "chhattisgarh", "chattisgarh",
+        "रायपुर", "raipur", "दुर्ग", "durg", "भिलाई", "bhilai",
+        "बिलासपुर", "bilaspur", "बस्तर", "bastar", "कोरबा", "korba",
+        "राजनंदगांव", "rajnandgaon", "रायगढ़", "raigarh", "अंबिकापुर", "जगदलपुर",
+        "कांकेर", "दंतेवाड़ा", "सुकमा", "धमतरी", "महासमुंद", "कबीरधाम", "बालोद",
+        "बेमेतरा", "विष्णु देव साय", "साय कैबिनेट", "महानदी"
+      ].some((sig) => text.includes(sig));
+
+      if (!mentionsCg) return false;
+
       const mentionsExclude = [
         "मध्य प्रदेश", "madhya pradesh", "पश्चिम बंगाल", "west bengal", "बंगाल में",
-        "महाराष्ट्र", "iit बॉम्बे", "उत्तर प्रदेश", "बिहार", "राजस्थान", "पंजाब", "हरियाणा",
-        "ट्रंप", "trump", "अमेरिका", "america", "रूस", "russia", "यूक्रेन", "ukraine",
-        "इसराइल", "israel", "ईरान", "iran", "राशिफल", "नाखून टूटने"
-      ].some((sig) => combined.includes(sig));
-      const mentionsCg = [
-        "छत्तीसगढ़", "chhattisgarh", "रायपुर", "raipur", "दुर्ग", "durg", "भिलाई", "bhilai",
-        "बिलासपुर", "bilaspur", "बस्तर", "bastar", "कोरबा", "korba", "राजनंदगांव", "rajnandgaon",
-        "रायगढ़", "raigarh", "अंबिकापुर", "जगदलपुर", "कांकेर", "दंतेवाड़ा", "सुकमा", "धमतरी",
-        "महासमुंद", "कबीरधाम", "बालोद", "बेमेतरा", "विष्णु देव साय", "साय कैबिनेट"
-      ].some((sig) => combined.includes(sig));
-      if (mentionsExclude && !mentionsCg) return false;
+        "जम्मू-कश्मीर", "jammu", "kashmir", "महाराष्ट्र", "iit बॉम्बे", "उत्तर प्रदेश",
+        "बिहार", "राजस्थान", "पंजाब", "हरियाणा", "देश-दुनिया", "राशिफल", "नाखून टूटने",
+        "खाद्य तेल सस्ता होने का अनुमान"
+      ].some((sig) => text.includes(sig));
+
+      if (mentionsExclude) {
+        const hlHasCg = ["छत्तीसगढ़", "chhattisgarh", "रायपुर", "दुर्ग", "भिलाई", "बिलासपुर", "बस्तर", "साय"].some((sig) => hlLower.includes(sig));
+        if (!hlHasCg) return false;
+      }
+
+      if (hlLower.includes("देश-दुनिया") || hlLower.includes("राशिफल")) return false;
       return true;
     };
 

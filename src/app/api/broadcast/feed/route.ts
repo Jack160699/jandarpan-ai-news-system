@@ -158,7 +158,7 @@ function detectDistrict(text: string): string | null {
 }
 
 const CG_TEXT_SIGNALS = [
-  "छत्तीसगढ़", "chhattisgarh", "chattisgarh", "cg",
+  "छत्तीसगढ़", "chhattisgarh", "chattisgarh",
   "रायपुर", "raipur", "दुर्ग", "durg", "भिलाई", "bhilai",
   "बिलासपुर", "bilaspur", "बस्तर", "bastar", "कोरबा", "korba",
   "राजनंदगांव", "rajnandgaon", "रायगढ़", "raigarh", "अंबिकापुर", "ambikapur",
@@ -174,7 +174,7 @@ const CG_TEXT_SIGNALS = [
   "महानदी", "इंद्रावती", "हसदेव", "भिलाई स्टील", "bsp", "secl", "nmdc", "cspdcl"
 ];
 
-// Negative filters: purely outside / generic topics with no Chhattisgarh connection
+// Negative filters: purely outside states or generic national topics with no Chhattisgarh connection
 const EXCLUDE_SIGNALS = [
   "मध्य प्रदेश", "madhya pradesh",
   "पश्चिम बंगाल", "west bengal", "बंगाल में",
@@ -190,31 +190,38 @@ const EXCLUDE_SIGNALS = [
   "केरल", "kerala",
   "कर्नाटक", "karnataka",
   "झारखंड", "jharkhand",
-  "ट्रंप", "trump",
-  "अमेरिका", "america",
-  "रूस", "russia", "यूक्रेन", "ukraine",
-  "इसराइल", "israel", "ईरान", "iran",
-  "अंक ज्योतिष", "horoscope", "राशिफल",
-  "नाखून टूटने"
+  "देश-दुनिया", "राशिफल", "अंक ज्योतिष", "नाखून टूटने",
+  "खाद्य तेल सस्ता होने का अनुमान"
 ];
 
 function isChhattisgarhOnlyStory(c: BroadcastCandidate): boolean {
-  const combined = `${c.headline} ${c.summary} ${c.tags.join(" ")} ${c.section}`.toLowerCase();
+  const text = `${c.headline} ${c.summary}`.toLowerCase();
+  const hlLower = c.headline.toLowerCase();
 
-  const mentionsCgDirectly = CG_TEXT_SIGNALS.some((sig) => combined.includes(sig.toLowerCase()));
-  const hasExcludeSignal = EXCLUDE_SIGNALS.some((sig) => combined.includes(sig.toLowerCase()));
+  // Must mention Chhattisgarh or a specific Chhattisgarh district/entity in headline, summary, or district tag
+  const hasCgMention =
+    CG_TEXT_SIGNALS.some((sig) => text.includes(sig.toLowerCase())) ||
+    (c.districtSlug && CG_DISTRICT_KEYS.has(c.districtSlug));
 
-  // If it mentions an outside state or generic national topic AND does NOT mention Chhattisgarh directly, exclude
-  if (hasExcludeSignal && !mentionsCgDirectly) {
+  if (!hasCgMention) {
     return false;
   }
 
-  // Positive signals
-  if (c.districtSlug && CG_DISTRICT_KEYS.has(c.districtSlug)) return true;
-  if (mentionsCgDirectly) return true;
-  if (c.section === "chhattisgarh" || c.section === "raipur") return true;
+  // If it mentions an outside state or generic national topic, only accept if headline is explicitly about Chhattisgarh
+  const hasExcludeSignal = EXCLUDE_SIGNALS.some((sig) => text.includes(sig.toLowerCase()));
+  if (hasExcludeSignal) {
+    const hlHasCg = CG_TEXT_SIGNALS.some((sig) => hlLower.includes(sig.toLowerCase()));
+    if (!hlHasCg) {
+      return false;
+    }
+  }
 
-  return false;
+  // Disallow generic national roundups or astrology
+  if (hlLower.includes("देश-दुनिया") || hlLower.includes("राशिफल") || hlLower.includes("अंक ज्योतिष")) {
+    return false;
+  }
+
+  return true;
 }
 
 /** Standard story item for broadcast ranking */
