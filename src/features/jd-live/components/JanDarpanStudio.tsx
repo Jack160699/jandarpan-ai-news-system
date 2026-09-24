@@ -35,6 +35,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   } = state;
   const { generateScript } = useBroadcastScript();
   const { speak, stop } = useAnchorVoice();
+  useBroadcastQueue();
 
   const isPlayingRef = useRef(isPlaying);
   isPlayingRef.current = isPlaying;
