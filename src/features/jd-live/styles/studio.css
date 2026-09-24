@@ -11,7 +11,7 @@
   --jdl-red: #c8102e;
   --jdl-red-dark: #a00d24;
   --jdl-red-bright: #e8152f;
-  --jdl-gold: #c19a3e;
+  --jdl-silver: rgba(255, 255, 255, 0.85);
   --jdl-white: #ffffff;
   --jdl-offwhite: #f0f4fa;
   --jdl-text-muted: rgba(255,255,255,0.55);
@@ -23,28 +23,26 @@
 .jdl-tv {
   position: relative;
   width: 100%;
+  max-width: 100%;
   background: var(--jdl-navy);
   overflow: hidden;
   font-family: 'Noto Sans', 'Noto Serif Devanagari', 'Inter', system-ui, sans-serif;
   color: var(--jdl-white);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
   box-sizing: border-box;
 }
 
 .jdl-tv--embedded {
-  margin-top: 10px;
-  margin-bottom: 24px;
+  margin: 0;
+  border-radius: 0;
+  border: none;
 }
 
 @media (max-width: 767px) {
   .jdl-tv--embedded {
-    margin-top: 6px;
-    margin-bottom: 16px;
-    border-radius: 4px;
+    margin: 0;
+    border-radius: 0;
   }
 }
 
@@ -52,10 +50,74 @@
 .jdl-tv__viewport {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: 640px;
   overflow: hidden;
   background: #060d18;
+}
+
+@media (min-width: 900px) {
+  .jdl-tv__viewport {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    height: clamp(420px, calc(72vw * 9 / 16), 580px);
+  }
+
+  .jdl-tv__broadcast-area {
+    position: relative;
+    flex: 0 0 72%;
+    width: 72%;
+    height: 100%;
+    overflow: hidden;
+    background: #060d18;
+  }
+
+  .jdl-tv__top10-area {
+    position: relative;
+    flex: 0 0 28%;
+    width: 28%;
+    height: 100%;
+    z-index: 6;
+    background: rgba(10, 22, 40, 0.95);
+    backdrop-filter: blur(10px);
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .jdl-tv__graphics {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 8;
+  }
+}
+
+@media (max-width: 899px) {
+  .jdl-tv__viewport {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    height: auto;
+  }
+
+  .jdl-tv__broadcast-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .jdl-tv__top10-area {
+    display: none !important;
+  }
+
+  .jdl-tv__graphics {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 8;
+  }
 }
 
 .jdl-tv__bg {
@@ -147,42 +209,6 @@
     top: 8%;
     width: 42.5%;
     height: 52%;
-  }
-}
-
-/* Top 10 Stories Panel — visible on desktop, hidden on mobile */
-.jdl-tv__top10-area {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 290px;
-  z-index: 6;
-  background: rgba(10, 22, 40, 0.88);
-  backdrop-filter: blur(10px);
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
-  overflow: hidden;
-}
-
-/* STRICT USER REQUIREMENT: Completely hide Top 10 from mobile/tablet */
-@media (max-width: 899px) {
-  .jdl-tv__top10-area {
-    display: none !important;
-  }
-}
-
-/* Broadcast graphics overlay (Lower-third / Breaking) */
-.jdl-tv__graphics {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 290px;
-  z-index: 8;
-}
-
-@media (max-width: 899px) {
-  .jdl-tv__graphics {
-    right: 0;
   }
 }
 
@@ -584,7 +610,7 @@
 }
 
 .jdl-ticker__sep {
-  color: var(--jdl-gold);
+  color: rgba(255, 255, 255, 0.45);
   margin-right: 8px;
   font-size: 7px;
 }
@@ -602,7 +628,7 @@
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.06em;
-  color: var(--jdl-gold);
+  color: var(--jdl-white);
   border-bottom: 1px solid var(--jdl-border);
   text-transform: uppercase;
   flex-shrink: 0;

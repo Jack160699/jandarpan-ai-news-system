@@ -90,10 +90,10 @@ export function DeskChrome() {
       <div className="jd-desk-full">
         {/* SECTION 1 — MAIN MASTHEAD */}
         <div className="jd-desk-masthead jd-desk-brand">
-          <div className="jd-desk-inner jd-desk-masthead__inner">
+          <div className="jd-desk-masthead__inner">
             {/* LEFT: Jan Darpan logo + District selector */}
             <div className="jd-desk-masthead__left">
-              <UnifiedBrandLockup tone="light" size="regular" />
+              <UnifiedBrandLockup tone="light" size="compact" />
             </div>
 
             {/* CENTER: Intentionally open / minimal */}
@@ -174,7 +174,7 @@ export function DeskChrome() {
 
         {/* SECTION 2 — CATEGORY / DESK NAVIGATION (Full-Width, 13 canonical desks) */}
         <nav className="jd-desk-catnav" aria-label={t("desk.catNavAria")}>
-          <div className="jd-desk-inner jd-desk-catnav__inner">
+          <div className="jd-desk-catnav__inner">
             {catItems.map((it) => (
               <Link
                 key={it.key}

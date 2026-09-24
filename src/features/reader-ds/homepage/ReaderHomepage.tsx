@@ -174,6 +174,14 @@ export function ReaderHomepage({
       <MobileCategoryNav />
       <LiveNewsTicker initialItems={breakingItems} />
 
+      {aliveHome ? (
+        <AliveHomeBriefingSlot
+          feed={feed}
+          excludeSlugs={
+            new Set(leadArticle?.slug ? [leadArticle.slug] : [])
+          }
+        />
+      ) : null}
 
       <main
         id="main-content"
@@ -184,15 +192,6 @@ export function ReaderHomepage({
           background: "var(--jd-paper)",
         }}
       >
-        {aliveHome ? (
-          <AliveHomeBriefingSlot
-            feed={feed}
-            excludeSlugs={
-              new Set(leadArticle?.slug ? [leadArticle.slug] : [])
-            }
-          />
-        ) : null}
-
         <div className="jd-home-hero">
           <div className="jd-home-lead">
             {lead ? <LeadStory story={lead} /> : null}

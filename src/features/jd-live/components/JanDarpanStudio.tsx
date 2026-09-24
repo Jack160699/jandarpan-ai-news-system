@@ -75,56 +75,59 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
       className={`jdl-tv ${embedded ? "jdl-tv--embedded" : ""}`}
       aria-label={language === "hi" ? "जन दर्पण लाइव टेलीविज़न न्यूज़रूम" : "Jan Darpan Live Television Newsroom"}
     >
-      {/* 16:9 Television Viewport */}
+      {/* Television Viewport — 16:9 Landscape Broadcast on Desktop & Mobile */}
       <div className="jdl-tv__viewport">
-        {/* Master Studio Plate: photorealistic studio background with seated anchor and desk */}
-        <div className="jdl-tv__bg" aria-hidden>
-          <Image
-            src="/jd-live/master-studio.jpg"
-            alt=""
-            fill
-            priority
-            quality={90}
-            sizes="(max-width: 900px) 100vw, 1280px"
-            style={{ objectFit: "cover", objectPosition: "center" }}
-          />
-        </div>
+        {/* Main Broadcast Zone (Anchor, Monitor, Watermark, Lower Third, Breaking Banner) */}
+        <div className="jdl-tv__broadcast-area">
+          {/* Master Studio Plate: photorealistic studio background with seated anchor and desk */}
+          <div className="jdl-tv__bg" aria-hidden>
+            <Image
+              src="/jd-live/master-studio.jpg"
+              alt=""
+              fill
+              priority
+              quality={90}
+              sizes="(max-width: 900px) 100vw, 1100px"
+              style={{ objectFit: "cover", objectPosition: "center" }}
+            />
+          </div>
 
-        {/* Television broadcast bug / watermark (top-left) */}
-        <div className="jdl-tv__watermark" aria-hidden>
-          <span className="jdl-tv__live-dot" />
-          <span className="jdl-tv__watermark-text">
-            {language === "hi" ? "जन दर्पण LIVE" : "JAN DARPAN LIVE"}
-          </span>
-        </div>
+          {/* Television broadcast bug / watermark (top-left) */}
+          <div className="jdl-tv__watermark" aria-hidden>
+            <span className="jdl-tv__live-dot" />
+            <span className="jdl-tv__watermark-text">
+              {language === "hi" ? "जन दर्पण LIVE" : "JAN DARPAN LIVE"}
+            </span>
+          </div>
 
-        {/* Center overlay play button if paused */}
-        {!isPlaying && (
-          <button
-            type="button"
-            className="jdl-tv__center-play"
-            onClick={() => dispatch({ type: "SET_PLAYING", isPlaying: true })}
-            aria-label={language === "hi" ? "प्रसारण शुरू करें" : "Start Broadcast"}
-          >
-            <span className="jdl-tv__center-play-icon" aria-hidden>▶</span>
-            <span>{language === "hi" ? "प्रसारण शुरू करें" : "Resume Broadcast"}</span>
-          </button>
-        )}
+          {/* Center overlay play button if paused */}
+          {!isPlaying && (
+            <button
+              type="button"
+              className="jdl-tv__center-play"
+              onClick={() => dispatch({ type: "SET_PLAYING", isPlaying: true })}
+              aria-label={language === "hi" ? "प्रसारण शुरू करें" : "Start Broadcast"}
+            >
+              <span className="jdl-tv__center-play-icon" aria-hidden>▶</span>
+              <span>{language === "hi" ? "प्रसारण शुरू करें" : "Resume Broadcast"}</span>
+            </button>
+          )}
 
-        {/* Dynamic News Screen overlay — fitted over the studio wall video monitor */}
-        <div className="jdl-tv__screen-area">
-          <NewsScreen />
+          {/* Dynamic News Screen overlay — fitted over the studio wall video monitor */}
+          <div className="jdl-tv__screen-area">
+            <NewsScreen />
+          </div>
+
+          {/* Broadcast graphics zone: Lower Third or Breaking News banner */}
+          <div className="jdl-tv__graphics">
+            <LowerThird />
+            <BreakingBanner />
+          </div>
         </div>
 
         {/* Top 10 Stories Panel — visible on desktop, hidden on mobile */}
         <div className="jdl-tv__top10-area">
           <TopTenPanel />
-        </div>
-
-        {/* Broadcast graphics zone: Lower Third or Breaking News banner */}
-        <div className="jdl-tv__graphics">
-          <LowerThird />
-          <BreakingBanner />
         </div>
       </div>
 

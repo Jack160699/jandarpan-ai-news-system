@@ -83,7 +83,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
 
   return (
     <section
-      className="jd-home-live-newsroom"
+      className="jd-home-live-newsroom-fullbleed"
       data-testid="jd-live-newsroom"
       aria-label={broadcastLang === "en" ? "Jan Darpan Live Newsroom" : "जन दर्पण लाइव न्यूज़रूम"}
     >

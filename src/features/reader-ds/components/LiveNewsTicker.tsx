@@ -175,10 +175,10 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
       style={{
         width: "100%",
         background: "var(--jd-navy, #0E1B3D)",
-        borderBottom: "1.5px solid var(--jd-line, #E7E0D3)",
+        borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
         borderTop: "1px solid rgba(255, 255, 255, 0.12)",
         boxSizing: "border-box",
-        minHeight: 40,
+        minHeight: 36,
         display: "flex",
         alignItems: "center",
         overflow: "hidden",
