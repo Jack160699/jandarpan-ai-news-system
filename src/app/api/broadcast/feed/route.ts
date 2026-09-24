@@ -302,6 +302,19 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
   const catHi = SECTION_NAMES_HI[c.section] || "राज्य डेस्क";
   const catEn = SECTION_NAMES_EN[c.section] || "State Desk";
 
+  const headline = targetLang === "hi" ? (isDevanagari ? c.headline : c.headline) : c.headline;
+  const summary = targetLang === "hi" ? (isDevanagari ? c.summary : c.summary) : c.summary;
+  const location = targetLang === "hi" ? districtHi : districtEn;
+
+  // Build broadcast anchor script immediately
+  const script = targetLang === "hi"
+    ? (c.isBreaking
+        ? `ब्रेकिंग न्यूज़। ${location} से बड़ी खबर। ${headline}। ${summary}`
+        : `${location} से खबर। ${headline}। ${summary}`)
+    : (c.isBreaking
+        ? `Breaking news from ${location}. ${headline}. ${summary}`
+        : `From ${location}. ${headline}. ${summary}`);
+
   return {
     id: c.id,
     slug: c.slug,
@@ -309,6 +322,8 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     headlineHi: isDevanagari ? c.headline : undefined,
     summary: c.summary,
     summaryHi: isDevanagari ? c.summary : undefined,
+    script,
+    durationSec: Math.min(25, Math.max(9, Math.round(script.length * 0.075))),
     imageUrl: c.imageUrl,
     categoryLabel: targetLang === "hi" ? catHi : catEn,
     categoryLabelHi: catHi,
@@ -445,6 +460,14 @@ export async function GET(req: NextRequest) {
     const finalQueue = unseen.length >= 3 ? [...unseen, ...seen] : orderedRegular;
 
     return NextResponse.json({
+      meta: {
+        feedCount: candidates.length,
+        eligibleCount: pool.length,
+        rejectedCount: candidates.length - pool.length,
+        dedupeCount: finalQueue.length,
+        queueCount: finalQueue.length,
+        breakingCount: breakingCandidates.length,
+      },
       queue: finalQueue.map((c) => toSegment(c, lang)),
       breaking: breakingCandidates.slice(0, 3).map((c) => toSegment(c, lang)),
     }, {

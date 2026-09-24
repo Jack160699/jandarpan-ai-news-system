@@ -26,6 +26,10 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   const {
     language,
     currentSegment,
+    currentIndex,
+    queue,
+    mode,
+    anchorState,
     status,
     scriptReady,
     isPlaying,
@@ -125,7 +129,10 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     // Calculate max duration: intro=8s, breaking=15s, normal=25s, +5s buffer
     const isIntro = currentSegment.isIntro;
     const isBreaking = currentSegment.isBreaking;
-    const maxDuration = isIntro ? 8_000 : isBreaking ? 20_000 : 30_000;
+    const isAccelerated =
+      typeof window !== "undefined" &&
+      !!(window as unknown as { __JD_TEST_ACCELERATED__?: boolean }).__JD_TEST_ACCELERATED__;
+    const maxDuration = isAccelerated ? 3_500 : (isIntro ? 8_000 : isBreaking ? 20_000 : 30_000);
 
     const id = setTimeout(() => {
       if (token === segmentTokenRef.current && isPlayingRef.current) {
@@ -136,11 +143,45 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segmentToken, isPlaying, currentSegment?.script]);
 
+  // Instrument broadcast runtime state for E2E testing and diagnostics
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const nextStory = queue[(currentIndex + 1) % Math.max(1, queue.length)];
+      (window as unknown as { __JD_BROADCAST_STATE__?: unknown }).__JD_BROADCAST_STATE__ = {
+        currentIndex,
+        currentStoryId: currentSegment?.id || "",
+        nextStoryId: nextStory?.id || "",
+        queueCount: queue.length,
+        broadcastMode: mode,
+        segmentToken,
+        speechState: anchorState,
+        playbackState: isPlaying ? "playing" : "paused",
+        headline: currentSegment?.headline || "",
+        district: currentSegment?.district || "",
+        imageUrl: currentSegment?.imageUrl || "",
+      };
+    }
+  }, [currentIndex, currentSegment, queue, mode, segmentToken, anchorState, isPlaying]);
+
   return (
     <div
       className={`jdl-tv ${embedded ? "jdl-tv--embedded" : ""}`}
       aria-label={language === "hi" ? "जन दर्पण लाइव टेलीविज़न न्यूज़रूम" : "Jan Darpan Live Television Newsroom"}
     >
+      {/* Hidden instrumentation container for automated E2E tests */}
+      <div
+        data-testid="jd-broadcast-instrumentation"
+        data-current-index={currentIndex}
+        data-current-id={currentSegment?.id || ""}
+        data-next-id={queue[(currentIndex + 1) % Math.max(1, queue.length)]?.id || ""}
+        data-queue-count={queue.length}
+        data-mode={mode}
+        data-segment-token={segmentToken}
+        data-speech-state={anchorState}
+        data-is-playing={isPlaying ? "true" : "false"}
+        style={{ display: "none" }}
+        aria-hidden="true"
+      />
       {/* Television Viewport — 16:9 Landscape Broadcast on Desktop & Mobile */}
       <div className="jdl-tv__viewport">
         {/* Main Broadcast Zone (Anchor, Monitor, Watermark, Lower Third, Breaking Banner) */}

@@ -67,6 +67,7 @@ export type BroadcastState = {
   playedBreakingIds: string[];
   sessionSeed: string;
   segmentToken: number;
+  preBreakingIndex?: number;
 };
 
 export type BroadcastAction =

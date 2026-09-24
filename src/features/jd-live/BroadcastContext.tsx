@@ -183,9 +183,11 @@ function broadcastReducer(
         ? Array.from(new Set([...state.playedIds, currentId]))
         : state.playedIds;
 
-      // If we were in breaking mode, return to the live program at current index
+      // If we were in breaking mode, return to the live program at next normal index (preBreakingIndex + 1)
       if (state.mode === "breaking") {
-        const returnIndex = Math.max(0, state.currentIndex);
+        const returnIndex = typeof state.preBreakingIndex === "number"
+          ? (state.preBreakingIndex + 1) % Math.max(1, state.queue.length)
+          : (state.currentIndex + 1) % Math.max(1, state.queue.length);
         const returnSeg = state.queue[returnIndex] || state.queue[0];
         // Track the played breaking story so it doesn't re-interrupt
         const playedBreaking = currentId
@@ -195,6 +197,7 @@ function broadcastReducer(
           ...state,
           currentIndex: returnIndex,
           currentSegment: returnSeg,
+          preBreakingIndex: undefined,
           countdownRank: returnSeg?.countdownRank || 0,
           isIntro: !!returnSeg?.isIntro,
           mode: returnSeg?.isIntro ? "intro" : "normal",
@@ -253,16 +256,20 @@ function broadcastReducer(
       };
     }
     case "INTERRUPT_BREAKING": {
+      const savedIndex = state.mode !== "breaking"
+        ? state.currentIndex
+        : (state.preBreakingIndex ?? state.currentIndex);
       const segIdx = state.queue.findIndex((s) => s.id === action.segment.id);
       return {
         ...state,
         currentSegment: action.segment,
         currentIndex: segIdx >= 0 ? segIdx : state.currentIndex,
+        preBreakingIndex: savedIndex,
         countdownRank: action.segment.countdownRank || 0,
         isIntro: false,
         mode: action.segment.isBreaking ? "breaking" : "normal",
         status: "loading",
-        scriptReady: false,
+        scriptReady: !!action.segment.script,
         audioReady: false,
         segmentToken: state.segmentToken + 1,
       };

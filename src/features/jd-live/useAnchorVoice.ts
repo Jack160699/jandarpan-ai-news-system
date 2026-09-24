@@ -233,10 +233,13 @@ export function useAnchorVoice() {
       });
 
       // Target speech duration: ~10-25 seconds depending on text length
-      const targetDurationMs = Math.min(
-        25_000,
-        Math.max(9_000, Math.round(spokenText.length * 72))
-      );
+      const isAcceleratedTest =
+        typeof window !== "undefined" &&
+        !!(window as unknown as { __JD_TEST_ACCELERATED__?: boolean }).__JD_TEST_ACCELERATED__;
+
+      const targetDurationMs = isAcceleratedTest
+        ? 2_000
+        : Math.min(25_000, Math.max(8_000, Math.round(spokenText.length * 72)));
 
       // If muted, run silent visual timer so newsroom continues advancing smoothly
       if (isMutedRef.current) {
@@ -333,18 +336,22 @@ export function useAnchorVoice() {
           resolve(finalDuration);
         };
 
-        // Safety watchdog: Chromium speech synthesis stalls after 14s if resume() is not nudged
+        // Safety watchdog: nudge resume if paused or if speaking for >14s (Chromium timer bug)
         watchdogRef.current = setInterval(() => {
-          if (window.speechSynthesis && window.speechSynthesis.speaking) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
+          if (typeof window !== "undefined" && window.speechSynthesis) {
+            if (window.speechSynthesis.paused) {
+              window.speechSynthesis.resume();
+            } else if (Date.now() - startTime > 14000 && window.speechSynthesis.speaking) {
+              window.speechSynthesis.pause();
+              window.speechSynthesis.resume();
+            }
           }
-        }, 3500);
+        }, 4000);
 
         // Safety fallback timer if onend fails to fire
         fallbackTimer = setTimeout(() => {
           finish(targetDurationMs);
-        }, targetDurationMs + 2000);
+        }, targetDurationMs + (isAcceleratedTest ? 500 : 2000));
 
         utter.onstart = () => {
           if (params.segmentToken !== activeTokenRef.current) return;
@@ -367,7 +374,7 @@ export function useAnchorVoice() {
         utter.onend = () => {
           if (params.segmentToken !== activeTokenRef.current) return;
           const elapsed = Date.now() - startTime;
-          finish(Math.max(elapsed, 7000));
+          finish(elapsed);
         };
 
         utter.onerror = (e) => {
@@ -408,6 +415,19 @@ export function useAnchorVoice() {
     },
     [dispatch, getAudioCtx, stopAmplitudeLoop, stopWatchdog]
   );
+
+  // Resume clean playback when returning to visible tab
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (typeof window !== "undefined" && !document.hidden && "speechSynthesis" in window) {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {

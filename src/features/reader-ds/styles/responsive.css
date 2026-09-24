@@ -128,11 +128,24 @@
    Normal layout flow reserves the TV's full 16:9 physical height, so it never floats
    over Latest stories or obscures content when scrolling. */
 @media (max-width: 767px) {
-  .jd-home-broadcast-tv .jdl-tv {
+  .jd-home-broadcast-layout {
+    overflow: visible;
+  }
+
+  .jd-home-broadcast-tv {
     position: relative;
+    overflow: visible;
+    width: 100%;
+  }
+
+  .jd-home-broadcast-tv .jdl-tv {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 56px;
+    z-index: 30;
     width: 100%;
     margin: 0;
-    z-index: 10;
+    box-shadow: 0 4px 16px rgba(10, 22, 40, 0.4);
   }
 }
 
