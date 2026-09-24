@@ -69,8 +69,7 @@ async function selectAnchorVoice(language: BroadcastLanguage): Promise<SpeechSyn
   if (language === "hi") {
     // 1. Google हिन्दी (Chrome / Android)
     // 2. Microsoft Swara / Heera / Kalpana (Edge / Windows)
-    // 3. Natural / Online Hindi
-    // 4. Any hi-IN voice
+    // 3. Any hi-IN voice
     return (
       voices.find((v) => (v.lang === "hi-IN" || v.lang.startsWith("hi")) && (v.name.includes("Google") || v.name.includes("Natural"))) ||
       voices.find((v) => (v.lang === "hi-IN" || v.lang.startsWith("hi")) && (v.name.includes("Swara") || v.name.includes("Heera") || v.name.includes("Kalpana"))) ||
@@ -96,7 +95,7 @@ async function selectAnchorVoice(language: BroadcastLanguage): Promise<SpeechSyn
 
 /**
  * Format raw script into natural television news spoken delivery.
- * Paces sentences with proper pauses, ranking transitions, and cadence.
+ * Paces sentences with proper punctuation, ranking transitions, and news cadence.
  */
 export function formatAnchorSpokenScript(
   text: string,
@@ -117,11 +116,10 @@ export function formatAnchorSpokenScript(
     } else if (countdownRank && countdownRank > 0) {
       prefix = `नंबर ${countdownRank}। `;
     }
-    // Clean whitespace and pace sentences
     const cleaned = text
       .replace(/[\r\n]+/g, " ")
       .replace(/\s+/g, " ")
-      .replace(/।\s*/g, "। ... ")
+      .replace(/।+/g, "।")
       .trim();
     return `${prefix}${cleaned}`;
   } else {
@@ -134,7 +132,7 @@ export function formatAnchorSpokenScript(
     const cleaned = text
       .replace(/[\r\n]+/g, " ")
       .replace(/\s+/g, " ")
-      .replace(/\.\s*/g, ". ... ")
+      .replace(/\.+/g, ".")
       .trim();
     return `${prefix}${cleaned}`;
   }
@@ -143,12 +141,15 @@ export function formatAnchorSpokenScript(
 /**
  * Manages zero-cost, browser-native television anchor voice playback,
  * broadcast sound stings, lip-sync amplitude extraction, and continuous queue progression.
+ * Features stale callback protection and automatic voice error recovery.
  */
 export function useAnchorVoice() {
   const { state, dispatch } = useBroadcast();
   const audioCtxRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeTokenRef = useRef<number>(0);
+  const retryCountRef = useRef<Record<number, number>>({});
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Initialize or resume Web Audio context for broadcast stings
@@ -198,6 +199,7 @@ export function useAnchorVoice() {
 
   /**
    * Speak anchor script via the Web Speech API with natural broadcast cadence.
+   * Protects against stale callbacks with segmentToken matching.
    */
   const speak = useCallback(
     async (params: {
@@ -207,8 +209,18 @@ export function useAnchorVoice() {
       isIntro?: boolean;
       countdownRank?: number;
       isBreaking?: boolean;
+      segmentToken: number;
     }): Promise<number> => {
-      stop();
+      // Set active token
+      activeTokenRef.current = params.segmentToken;
+
+      // Cancel previous speech before starting new story
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      stopWatchdog();
+      stopAmplitudeLoop();
+
       dispatch({ type: "SET_AUDIO_READY", ready: true });
 
       const spokenText = formatAnchorSpokenScript(params.script, {
@@ -221,15 +233,16 @@ export function useAnchorVoice() {
       // Target speech duration: ~10-25 seconds depending on text length
       const targetDurationMs = Math.min(
         25_000,
-        Math.max(9_000, Math.round(spokenText.length * 75))
+        Math.max(9_000, Math.round(spokenText.length * 72))
       );
 
-      // If muted, run silent visual timer so newsroom continues advancing without sound
+      // If muted, run silent visual timer so newsroom continues advancing smoothly
       if (state.isMuted) {
         return new Promise<number>((resolve) => {
           dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
           let tick = 0;
           const fakeLoop = () => {
+            if (activeTokenRef.current !== params.segmentToken) return;
             tick += 0.16;
             const amp = (Math.sin(tick) * 0.3 + 0.4) * 0.7;
             dispatch({ type: "SET_AMPLITUDE", amplitude: amp });
@@ -238,9 +251,11 @@ export function useAnchorVoice() {
           animFrameRef.current = requestAnimationFrame(fakeLoop);
 
           setTimeout(() => {
-            stopAmplitudeLoop();
-            dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
-            resolve(targetDurationMs);
+            if (activeTokenRef.current === params.segmentToken) {
+              stopAmplitudeLoop();
+              dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
+              resolve(targetDurationMs);
+            }
           }, targetDurationMs);
         });
       }
@@ -267,6 +282,11 @@ export function useAnchorVoice() {
         }
       }
 
+      // If token changed while playing sting, abort cleanly
+      if (activeTokenRef.current !== params.segmentToken) {
+        return targetDurationMs;
+      }
+
       // Execute SpeechSynthesis
       return new Promise<number>(async (resolve) => {
         if (typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -278,7 +298,7 @@ export function useAnchorVoice() {
         globalActiveUtterance = utter;
 
         utter.lang = params.language === "hi" ? "hi-IN" : "en-IN";
-        utter.rate = params.language === "hi" ? 0.92 : 0.95;
+        utter.rate = params.language === "hi" ? 0.94 : 0.96;
         utter.pitch = 1.0;
 
         const voice = await selectAnchorVoice(params.language);
@@ -290,6 +310,7 @@ export function useAnchorVoice() {
         let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
         const finish = (finalDuration: number) => {
+          if (params.segmentToken !== activeTokenRef.current) return;
           if (fallbackTimer) clearTimeout(fallbackTimer);
           stopWatchdog();
           stopAmplitudeLoop();
@@ -313,11 +334,13 @@ export function useAnchorVoice() {
         }, targetDurationMs + 2000);
 
         utter.onstart = () => {
+          if (params.segmentToken !== activeTokenRef.current) return;
           setIsPlaying(true);
           dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
 
           let tick = 0;
           const animLoop = () => {
+            if (params.segmentToken !== activeTokenRef.current) return;
             tick += 0.2;
             const amp = Math.max(0.1, (Math.sin(tick) * 0.35 + 0.45) * 0.85);
             dispatch({ type: "SET_AMPLITUDE", amplitude: amp });
@@ -329,15 +352,37 @@ export function useAnchorVoice() {
         };
 
         utter.onend = () => {
+          if (params.segmentToken !== activeTokenRef.current) return;
           const elapsed = Date.now() - startTime;
           finish(Math.max(elapsed, 7000));
         };
 
         utter.onerror = (e) => {
+          if (params.segmentToken !== activeTokenRef.current) return;
           if (e.error === "not-allowed") {
             dispatch({ type: "SET_AUDIO_BLOCKED", blocked: true });
             dispatch({ type: "SET_MUTED", isMuted: true });
+            finish(targetDurationMs);
+            return;
           }
+
+          // Voice Error Recovery (Requirement 20): retry once after 500ms
+          const retries = retryCountRef.current[params.segmentToken] || 0;
+          if (retries === 0 && e.error !== "canceled") {
+            retryCountRef.current[params.segmentToken] = 1;
+            setTimeout(() => {
+              if (params.segmentToken === activeTokenRef.current) {
+                try {
+                  window.speechSynthesis.speak(utter);
+                } catch {
+                  finish(targetDurationMs);
+                }
+              }
+            }, 500);
+            return;
+          }
+
+          // Second failure: advance smoothly without freezing visual broadcast
           finish(targetDurationMs);
         };
 
@@ -348,7 +393,7 @@ export function useAnchorVoice() {
         }
       });
     },
-    [dispatch, getAudioCtx, state.isMuted, stop, stopAmplitudeLoop, stopWatchdog]
+    [dispatch, getAudioCtx, state.isMuted, stopAmplitudeLoop, stopWatchdog]
   );
 
   // Cleanup on unmount

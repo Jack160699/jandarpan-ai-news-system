@@ -15,7 +15,9 @@ export function useBroadcastQueue() {
 
   const fetchFeed = useCallback(async () => {
     try {
-      const res = await fetch(`/api/broadcast/feed?lang=${state.language}`, { cache: "no-store" });
+      const recentExclude = state.playedIds.slice(-20).join(",");
+      const url = `/api/broadcast/feed?lang=${state.language}&seed=${encodeURIComponent(state.sessionSeed)}&exclude=${encodeURIComponent(recentExclude)}`;
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json() as { queue: BroadcastSegment[]; breaking: BroadcastSegment[] };
       lastFetchRef.current = Date.now();
@@ -33,14 +35,14 @@ export function useBroadcastQueue() {
     } catch {
       // Silently ignore — keep existing queue
     }
-  }, [dispatch, state.mode, state.language, state.currentSegment?.id]);
+  }, [dispatch, state.mode, state.language, state.sessionSeed, state.playedIds, state.currentSegment?.id]);
 
   // Initial fetch and refetch on language change
   useEffect(() => {
     void fetchFeed();
   }, [fetchFeed, state.language]);
 
-  // Periodic refresh every 60s
+  // Periodic refresh every 60s to incorporate newly published 48-hour news
   useEffect(() => {
     intervalRef.current = setInterval(() => {
       void fetchFeed();
@@ -59,6 +61,10 @@ export function useBroadcastQueue() {
     },
     [dispatch]
   );
+
+  const advanceToNext = useCallback(() => {
+    dispatch({ type: "NEXT_SEGMENT" });
+  }, [dispatch]);
 
   return {
     queue: state.queue,

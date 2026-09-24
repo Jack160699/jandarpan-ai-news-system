@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Image from "next/image";
 import { NewsScreen } from "./NewsScreen";
 import { TopTenPanel } from "./TopTenPanel";
@@ -31,47 +31,61 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     scriptReady,
     isPlaying,
     isMuted,
+    segmentToken,
   } = state;
-  const { advanceAfterSegment } = useBroadcastQueue();
   const { generateScript } = useBroadcastScript();
   const { speak, stop } = useAnchorVoice();
 
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+
+  const segmentTokenRef = useRef(segmentToken);
+  segmentTokenRef.current = segmentToken;
+
   // Generate script whenever a new segment is loaded
   useEffect(() => {
-    if (!currentSegment || status !== "loading") return;
-    dispatch({ type: "SET_STATUS", status: "playing" });
-    void generateScript(currentSegment);
-  }, [currentSegment?.id, status, generateScript, dispatch]);
+    if (!currentSegment) return;
+    if (!currentSegment.script) {
+      dispatch({ type: "SET_STATUS", status: "loading" });
+      void generateScript(currentSegment);
+    }
+  }, [currentSegment?.id, currentSegment?.script, generateScript, dispatch]);
 
-  // Speech and auto-advance playback loop
+  // Continuous broadcast runner: delivers story and advances atomically
   useEffect(() => {
     if (!isPlaying) {
       stop();
       return;
     }
-    if (!currentSegment || !scriptReady || !currentSegment.script) return;
+    if (!currentSegment || !currentSegment.script) return;
 
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const run = async () => {
-      const durationMs = await speak({
+    const token = segmentToken;
+    let cancelled = false;
+
+    const runBroadcast = async () => {
+      dispatch({ type: "SET_STATUS", status: "playing" });
+      await speak({
         script: currentSegment.script!,
         language,
         ttsPath: currentSegment.ttsPath,
         isIntro: !!currentSegment.isIntro,
         countdownRank: currentSegment.countdownRank,
         isBreaking: !!currentSegment.isBreaking,
+        segmentToken: token,
       });
-      // Advance to next segment after speech / visual duration
-      timer = advanceAfterSegment(durationMs + 1000);
+
+      // Atomically advance to next story if this segmentToken is still current
+      if (!cancelled && token === segmentTokenRef.current && isPlayingRef.current) {
+        dispatch({ type: "NEXT_SEGMENT" });
+      }
     };
-    void run();
+
+    void runBroadcast();
 
     return () => {
-      stop();
-      if (timer) clearTimeout(timer);
+      cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSegment?.id, scriptReady, isPlaying, isMuted, language]);
+  }, [segmentToken, isPlaying, isMuted, language, currentSegment?.script, speak, stop, dispatch]);
 
   return (
     <div

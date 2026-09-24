@@ -32,7 +32,7 @@ export function NewsScreen() {
     language === "hi" ? (seg?.categoryLabelHi || seg?.categoryLabel) : seg?.categoryLabel;
   const district =
     language === "hi" ? (seg?.districtHi || seg?.district) : seg?.district;
-  const isBreaking = mode === "breaking";
+  const isBreaking = !!seg?.isBreaking || mode === "breaking";
 
   const categoryLabel =
     language === "hi"
