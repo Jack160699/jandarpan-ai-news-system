@@ -16,6 +16,9 @@ export function useBroadcastQueue() {
   const playedIdsRef = useRef(state.playedIds);
   playedIdsRef.current = state.playedIds;
 
+  const playedBreakingIdsRef = useRef(state.playedBreakingIds);
+  playedBreakingIdsRef.current = state.playedBreakingIds;
+
   const sessionSeedRef = useRef(state.sessionSeed);
   sessionSeedRef.current = state.sessionSeed;
 
@@ -34,10 +37,12 @@ export function useBroadcastQueue() {
       const data = await res.json() as { queue: BroadcastSegment[]; breaking: BroadcastSegment[] };
       lastFetchRef.current = Date.now();
 
-      // Check if newly arrived breaking story should interrupt live program
+      // Only interrupt with breaking news if it's a story we haven't already presented this session
       if (data.breaking && data.breaking.length > 0 && modeRef.current !== "breaking") {
         const latestBreaking = data.breaking[0];
-        if (latestBreaking.id !== currentSegmentRef.current?.id) {
+        const alreadyPlayed = playedBreakingIdsRef.current.includes(latestBreaking.id);
+        const isCurrent = latestBreaking.id === currentSegmentRef.current?.id;
+        if (!alreadyPlayed && !isCurrent) {
           dispatch({ type: "INTERRUPT_BREAKING", segment: latestBreaking });
           return;
         }

@@ -64,6 +64,7 @@ export type BroadcastState = {
   isMuted: boolean;
   audioBlocked: boolean;
   playedIds: string[];
+  playedBreakingIds: string[];
   sessionSeed: string;
   segmentToken: number;
 };

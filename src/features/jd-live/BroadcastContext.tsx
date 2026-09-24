@@ -103,6 +103,7 @@ const initialState: BroadcastState = {
   isMuted: true,
   audioBlocked: false,
   playedIds: [],
+  playedBreakingIds: [],
   sessionSeed: getSafeSessionSeed(),
   segmentToken: 1,
 };
@@ -200,6 +201,10 @@ function broadcastReducer(
       if (state.mode === "breaking") {
         const returnIndex = Math.max(0, state.currentIndex);
         const returnSeg = state.queue[returnIndex] || state.queue[0];
+        // Track the played breaking story so it doesn't re-interrupt
+        const playedBreaking = currentId
+          ? Array.from(new Set([...state.playedBreakingIds, currentId]))
+          : state.playedBreakingIds;
         return {
           ...state,
           currentIndex: returnIndex,
@@ -212,6 +217,7 @@ function broadcastReducer(
           audioReady: false,
           segmentToken: state.segmentToken + 1,
           playedIds: updatedPlayed,
+          playedBreakingIds: playedBreaking,
         };
       }
 
