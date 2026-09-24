@@ -19,11 +19,21 @@ export function useBroadcastQueue() {
       if (!res.ok) return;
       const data = await res.json() as { queue: BroadcastSegment[]; breaking: BroadcastSegment[] };
       lastFetchRef.current = Date.now();
+
+      // Check if newly arrived breaking story should interrupt live program
+      if (data.breaking && data.breaking.length > 0 && state.mode !== "breaking") {
+        const latestBreaking = data.breaking[0];
+        if (latestBreaking.id !== state.currentSegment?.id) {
+          dispatch({ type: "INTERRUPT_BREAKING", segment: latestBreaking });
+          return;
+        }
+      }
+
       dispatch({ type: "SET_QUEUE", queue: data.queue, breaking: data.breaking });
     } catch {
       // Silently ignore — keep existing queue
     }
-  }, [dispatch]);
+  }, [dispatch, state.mode, state.currentSegment?.id]);
 
   // Initial fetch
   useEffect(() => {

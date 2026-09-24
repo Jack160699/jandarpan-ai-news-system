@@ -330,6 +330,11 @@ export function LiveNewsTicker({ initialItems = [] }: LiveNewsTickerProps) {
           color: #ffffff !important;
           text-decoration: underline;
         }
+        @media (max-width: 767px) {
+          .jd-live-ticker-wrap {
+            display: none !important;
+          }
+        }
         @media (prefers-reduced-motion: reduce) {
           .jd-live-marquee-track {
             animation: none !important;

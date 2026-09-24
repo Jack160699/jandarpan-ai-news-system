@@ -35,7 +35,7 @@ export function BroadcastControlBar() {
 
   return (
     <div className="jdl-bar" role="region" aria-label="Broadcast controls & news ticker">
-      {/* Controls cluster: Play/Pause, Mute, Live Indicator */}
+      {/* Small premium television-player controls: ▶ / ⏸, 🔊 / 🔇, Live Indicator */}
       <div className="jdl-bar__controls">
         <button
           type="button"
@@ -47,28 +47,23 @@ export function BroadcastControlBar() {
           <span className="jdl-bar__icon" aria-hidden>
             {isPlaying ? "⏸" : "▶"}
           </span>
-          <span className="jdl-bar__btn-text">{playLabel}</span>
         </button>
 
         <button
           type="button"
-          className={`jdl-bar__btn ${isMuted ? "jdl-bar__btn--muted" : ""}`}
-          onClick={toggleMute}
+          className={`jdl-bar__btn ${isMuted ? "jdl-bar__btn--muted jdl-bar__btn--sound-prompt" : ""}`}
+          onClick={isMuted ? handleStartWithSound : toggleMute}
           aria-label={soundLabel}
           title={soundLabel}
         >
           <span className="jdl-bar__icon" aria-hidden>
             {isMuted ? "🔇" : "🔊"}
           </span>
-          <span className="jdl-bar__btn-text">
-            {isMuted
-              ? language === "hi"
-                ? "आवाज़"
-                : "Sound"
-              : language === "hi"
-              ? "चालू"
-              : "On"}
-          </span>
+          {isMuted && (
+            <span className="jdl-bar__mini-label">
+              {language === "hi" ? "आवाज़" : "Sound"}
+            </span>
+          )}
         </button>
 
         {/* Small live badge */}
@@ -79,18 +74,6 @@ export function BroadcastControlBar() {
           </span>
         </div>
       </div>
-
-      {/* Prominent one-tap sound prompt if muted/blocked */}
-      {isMuted && isPlaying && (
-        <button
-          type="button"
-          className="jdl-bar__sound-prompt"
-          onClick={handleStartWithSound}
-          aria-label={language === "hi" ? "आवाज़ चालू करें" : "Turn on sound"}
-        >
-          🔊 {language === "hi" ? "आवाज़ चालू करें" : "Turn on sound"}
-        </button>
-      )}
 
       {/* Continuous scrolling ticker */}
       <div className="jdl-bar__ticker-wrap">

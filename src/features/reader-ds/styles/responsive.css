@@ -204,22 +204,22 @@
     bottom: 0 !important;
   }
 
-  /* Compact Jan Darpan Live TV broadcast layout + Desktop Fresh News column */
+  /* Full-width editorial grid for Jan Darpan Live TV + Fresh News editorial rail */
   .jd-home-broadcast-layout {
     display: flex;
     flex-direction: row;
     align-items: stretch;
     gap: 16px;
     width: 100%;
-    max-width: var(--jd-shell-max);
-    margin: 8px auto 14px;
-    padding: 0 var(--jd-gutter-x);
+    max-width: 100%;
+    margin: 6px 0 10px;
+    padding: 0 clamp(16px, 1.8vw, 24px);
     box-sizing: border-box;
   }
 
   .jd-home-broadcast-tv {
-    flex: 0 0 68%;
-    max-width: 68%;
+    flex: 0 0 72%;
+    max-width: 72%;
     min-width: 0;
     border-radius: 6px;
     overflow: hidden;
@@ -235,8 +235,8 @@
 
   .jd-home-broadcast-aside {
     display: flex !important;
-    flex: 0 0 calc(32% - 16px);
-    max-width: calc(32% - 16px);
+    flex: 0 0 calc(28% - 16px);
+    max-width: calc(28% - 16px);
     min-width: 0;
     flex-direction: column;
   }

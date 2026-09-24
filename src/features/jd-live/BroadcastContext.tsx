@@ -157,6 +157,22 @@ function broadcastReducer(
       return { ...state, status: action.status };
     case "NEXT_SEGMENT": {
       if (state.queue.length === 0) return state;
+      // If we were in breaking mode, return to the live program at current index
+      if (state.mode === "breaking") {
+        const returnIndex = Math.max(0, state.currentIndex);
+        const returnSeg = state.queue[returnIndex];
+        return {
+          ...state,
+          currentIndex: returnIndex,
+          currentSegment: returnSeg,
+          countdownRank: returnSeg?.countdownRank || 10,
+          isIntro: !!returnSeg?.isIntro,
+          mode: returnSeg?.isIntro ? "intro" : "normal",
+          status: "loading",
+          scriptReady: !!returnSeg?.script,
+          audioReady: false,
+        };
+      }
       const nextIndex = state.currentIndex + 1;
       if (nextIndex >= state.queue.length) {
         // Loop back to intro (index 0) or countdown start

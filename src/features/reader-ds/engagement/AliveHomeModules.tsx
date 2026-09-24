@@ -96,7 +96,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
       seen.add(a.slug);
       out.push(toReaderStory(a));
-      if (out.length >= 4) break;
+      if (out.length >= 5) break;
     }
     return out;
   }, [feed, excludeSlugs]);
@@ -107,7 +107,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       data-testid="jd-live-newsroom"
       aria-label={broadcastLang === "en" ? "Jan Darpan Live Television Newsroom" : "जन दर्पण लाइव टेलीविज़न न्यूज़रूम"}
     >
-      {/* 68% Left column: Compact Jan Darpan Live TV Newsroom anchored upper-left */}
+      {/* 72% Left column: Compact Jan Darpan Live TV Newsroom anchored upper-left */}
       <div className="jd-home-broadcast-tv">
         <JanDarpanLiveLazy initialLanguage={broadcastLang} embedded />
       </div>
