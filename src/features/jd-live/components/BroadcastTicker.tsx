@@ -27,7 +27,8 @@ export function BroadcastTicker({ showLiveLabel = false }: { showLiveLabel?: boo
 
   if (items.length === 0) return null;
 
-  // Duplicate for seamless looping
+  // Target 110-130 seconds per complete cycle for calm, comfortable reading
+  const durationSec = Math.max(110, Math.min(150, items.length * 5.2));
   const doubled = [...items, ...items];
 
   return (
@@ -37,7 +38,10 @@ export function BroadcastTicker({ showLiveLabel = false }: { showLiveLabel?: boo
     >
       {showLiveLabel && <div className="jdl-ticker__live-label">{liveLabel}</div>}
       <div className="jdl-ticker__track-wrap" ref={containerRef}>
-        <div className="jdl-ticker__track">
+        <div
+          className="jdl-ticker__track"
+          style={{ animationDuration: `${durationSec}s` }}
+        >
           {doubled.map((item, i) => (
             <span key={`${item.id}-${i}`} className="jdl-ticker__item">
               <span className="jdl-ticker__sep" aria-hidden>◆</span>

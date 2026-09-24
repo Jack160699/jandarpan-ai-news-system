@@ -57,6 +57,8 @@ export function Masthead({
         background: "var(--jd-navy)",
         color: "var(--jd-paper)",
         padding: "6px 10px 6px 12px",
+        height: "56px",
+        boxSizing: "border-box",
       }}
     >
       <div
