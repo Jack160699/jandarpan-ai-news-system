@@ -16,10 +16,15 @@ export type ReaderStory = {
 };
 
 export function toReaderStory(a: HomeArticle, kicker?: string): ReaderStory {
+  const rawTag = a.districtHi || a.district || (a.isStatewide ? a.desk?.nameHi || "राज्य डेस्क" : a.categoryLabel);
+  const resolvedKicker = rawTag === "छत्तीसगढ़" || rawTag === "Chhattisgarh"
+    ? (a.desk?.nameHi || "राज्य डेस्क")
+    : rawTag;
+
   return {
     slug: a.slug,
     headline: a.headline,
-    kicker: kicker ?? (a.categoryLabel || a.desk?.nameHi || a.desk?.name),
+    kicker: kicker ?? (resolvedKicker || a.desk?.nameHi || a.desk?.name),
     summary: a.summary,
     imageUrl: a.imageUrl,
     publishedAt: a.publishedAt,

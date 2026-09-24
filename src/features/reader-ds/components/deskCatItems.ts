@@ -4,6 +4,7 @@
  */
 
 export type DeskCatKey =
+  | "live"
   | "home"
   | "latest"
   | "cg"
@@ -25,9 +26,10 @@ export type DeskCatItem = {
   labelEn: string;
 };
 
-/** Full desktop set — SoT CatNav order */
+/** Full desktop set — SoT CatNav order: Live | Home | ... */
 export const DESK_CAT_ITEMS: DeskCatItem[] = [
-  { key: "home", href: "/", labelHi: "होम", labelEn: "Home" },
+  { key: "live", href: "/", labelHi: "लाइव", labelEn: "Live" },
+  { key: "home", href: "/home", labelHi: "होम", labelEn: "Home" },
   { key: "latest", href: "/latest", labelHi: "ताज़ा", labelEn: "Latest" },
   { key: "cg", href: "/category/chhattisgarh", labelHi: "छत्तीसगढ़", labelEn: "Chhattisgarh" },
   { key: "districts", href: "/district?select=1", labelHi: "ज़िले", labelEn: "Districts" },
@@ -44,6 +46,7 @@ export const DESK_CAT_ITEMS: DeskCatItem[] = [
 
 /** Tablet portrait truncated set (SoT H04) */
 export const DESK_CAT_ITEMS_COMPACT: DeskCatKey[] = [
+  "live",
   "home",
   "latest",
   "cg",
@@ -53,7 +56,8 @@ export const DESK_CAT_ITEMS_COMPACT: DeskCatKey[] = [
 ];
 
 export function resolveDeskCatActive(pathname: string): DeskCatKey {
-  if (!pathname || pathname === "/") return "home";
+  if (!pathname || pathname === "/" || pathname === "/live") return "live";
+  if (pathname.startsWith("/home")) return "home";
   if (pathname.startsWith("/latest")) return "latest";
   if (pathname.startsWith("/trending")) return "latest";
   if (pathname.startsWith("/district")) return "districts";

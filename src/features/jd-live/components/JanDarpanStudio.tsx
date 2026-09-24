@@ -203,9 +203,14 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           <div className="jdl-tv__corner-bug" aria-hidden>
             <div className="jdl-tv__bug-top">
               <span className="jdl-tv__bug-dot" />
-              <span className="jdl-tv__bug-name">
-                {language === "hi" ? "जन दर्पण" : "JAN DARPAN"}
-              </span>
+              <Image
+                src="/brand/jan-darpan/logo/compact-dark.svg"
+                alt="Jan Darpan"
+                width={86}
+                height={18}
+                className="jdl-tv__bug-logo"
+                priority
+              />
             </div>
             {currentTime && (
               <div className="jdl-tv__bug-time">{currentTime}</div>

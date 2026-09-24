@@ -101,11 +101,18 @@ export function MobileInteractiveQueue() {
               language === "hi"
                 ? story.categoryLabelHi || story.categoryLabel
                 : story.categoryLabel;
-            const district =
+            const rawDistrict =
               language === "hi"
                 ? story.districtHi || story.district
                 : story.district;
-            const locationTag = district || category || (language === "hi" ? "समाचार" : "News");
+            const validDistrict =
+              rawDistrict && rawDistrict !== "छत्तीसगढ़" && rawDistrict !== "Chhattisgarh"
+                ? rawDistrict
+                : null;
+            const locationTag =
+              validDistrict ||
+              (category && category !== "छत्तीसगढ़" && category !== "Chhattisgarh" ? category : null) ||
+              (language === "hi" ? "राज्य डेस्क" : "State Desk");
             const timeLabel = formatRelativeTime(story.publishedAt, language);
 
             return (

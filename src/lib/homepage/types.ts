@@ -46,6 +46,10 @@ export type HomeArticle = {
   sourceCount: number;
   categoryLabel: string;
   desk: NewsDeskLabel;
+  district?: string;
+  districtSlug?: string | null;
+  districtHi?: string;
+  isStatewide?: boolean;
   /** @deprecated Language filtering happens before feed assembly */
   localeMatch?: boolean;
 };

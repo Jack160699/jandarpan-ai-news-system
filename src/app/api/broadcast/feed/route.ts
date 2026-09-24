@@ -4,6 +4,7 @@ import { resolveLiveArticlePool } from "@/lib/news/live-feed";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { HomeArticle } from "@/lib/homepage/types";
 import type { BroadcastSegment } from "@/features/jd-live/types";
+import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -241,10 +242,15 @@ type BroadcastCandidate = {
 };
 
 function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
-  let districtTag = a.tags?.find((t) => t.startsWith("district:"))?.replace("district:", "")?.toLowerCase() || null;
-  if (!districtTag) {
-    districtTag = detectDistrict(`${a.headline} ${a.summary || ""}`);
-  }
+  const districtRes = resolveCanonicalStoryDistrict({
+    explicitDistrict: a.districtSlug || a.district,
+    tags: a.tags,
+    headline: a.headline,
+    summary: a.summary,
+    section: a.section,
+    categoryLabel: a.categoryLabel,
+  });
+
   return {
     id: a.id,
     slug: a.slug,
@@ -257,24 +263,27 @@ function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
     publishedAt: a.publishedAt,
     isBreaking: !!(a.ranking?.isBreaking),
     priorityScore: a.priorityScore ?? a.trendScore ?? 50,
-    districtSlug: districtTag,
+    districtSlug: districtRes.districtSlug,
   };
 }
 
 function normalizeGeneratedRow(r: GeneratedArticleRow): BroadcastCandidate {
-  const geo = r.geo_metadata as { district?: string; districtSlug?: string; state?: string } | undefined;
-  const districtFromGeo = geo?.districtSlug?.toLowerCase() || null;
-  let districtTag = r.tags?.find((t) => t.startsWith("district:"))?.replace("district:", "")?.toLowerCase() || districtFromGeo;
-  if (!districtTag) {
-    districtTag = detectDistrict(`${r.headline} ${r.summary || ""}`);
-  }
-  const sectionTag = r.tags?.find((t) => ["chhattisgarh", "raipur", "india", "world", "business", "sports", "politics"].includes(t)) || "chhattisgarh";
   const isBreaking = !!(
     r.editorial_metadata &&
     typeof r.editorial_metadata === "object" &&
     "is_breaking" in r.editorial_metadata &&
     r.editorial_metadata.is_breaking
   );
+  const sectionTag = r.tags?.find((t) => ["chhattisgarh", "raipur", "india", "world", "business", "sports", "politics"].includes(t)) || "chhattisgarh";
+
+  const districtRes = resolveCanonicalStoryDistrict({
+    geo_metadata: r.geo_metadata,
+    tags: r.tags,
+    headline: r.headline,
+    summary: r.summary,
+    body: r.article_body,
+    section: sectionTag,
+  });
 
   return {
     id: r.id,
@@ -288,32 +297,46 @@ function normalizeGeneratedRow(r: GeneratedArticleRow): BroadcastCandidate {
     publishedAt: r.published_at || r.created_at,
     isBreaking,
     priorityScore: r.homepage_pin ? 90 : isBreaking ? 95 : 50,
-    districtSlug: districtTag,
+    districtSlug: districtRes.districtSlug,
   };
 }
 
 /** Map candidate → BroadcastSegment */
 function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSegment {
   const isDevanagari = /[\u0900-\u097F]/.test(c.headline || "");
-  const districtSlug = c.districtSlug;
-  const districtHi = districtSlug ? (DISTRICT_NAMES_HI[districtSlug] || "छत्तीसगढ़") : "छत्तीसगढ़";
-  const districtEn = districtSlug ? (districtSlug.charAt(0).toUpperCase() + districtSlug.slice(1)) : "Chhattisgarh";
+  const districtRes = resolveCanonicalStoryDistrict({
+    explicitDistrict: c.districtSlug,
+    tags: c.tags,
+    headline: c.headline,
+    summary: c.summary,
+    section: c.section,
+  });
 
   const catHi = SECTION_NAMES_HI[c.section] || "राज्य डेस्क";
   const catEn = SECTION_NAMES_EN[c.section] || "State Desk";
 
   const headline = targetLang === "hi" ? (isDevanagari ? c.headline : c.headline) : c.headline;
   const summary = targetLang === "hi" ? (isDevanagari ? c.summary : c.summary) : c.summary;
-  const location = targetLang === "hi" ? districtHi : districtEn;
+
+  // Clean visible district vs statewide label — Never substitute "Chhattisgarh" for a district
+  const locationHi = districtRes.nameHi || (districtRes.isStatewide ? "राज्य डेस्क" : catHi);
+  const locationEn = districtRes.nameEn || (districtRes.isStatewide ? "State Desk" : catEn);
+  const location = targetLang === "hi" ? locationHi : locationEn;
 
   // Build broadcast anchor script immediately
+  const scriptLocation = districtRes.nameHi
+    ? `${districtRes.nameHi} से`
+    : targetLang === "hi"
+    ? "छत्तीसगढ़ से"
+    : "from Chhattisgarh";
+
   const script = targetLang === "hi"
     ? (c.isBreaking
-        ? `ब्रेकिंग न्यूज़। ${location} से बड़ी खबर। ${headline}। ${summary}`
-        : `${location} से खबर। ${headline}। ${summary}`)
+        ? `ब्रेकिंग न्यूज़। ${scriptLocation} बड़ी खबर। ${headline}। ${summary}`
+        : `${scriptLocation} खबर। ${headline}। ${summary}`)
     : (c.isBreaking
-        ? `Breaking news from ${location}. ${headline}. ${summary}`
-        : `From ${location}. ${headline}. ${summary}`);
+        ? `Breaking news ${scriptLocation}. ${headline}. ${summary}`
+        : `From ${districtRes.nameEn || "Chhattisgarh"}. ${headline}. ${summary}`);
 
   return {
     id: c.id,
@@ -327,8 +350,8 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     imageUrl: c.imageUrl,
     categoryLabel: targetLang === "hi" ? catHi : catEn,
     categoryLabelHi: catHi,
-    district: targetLang === "hi" ? districtHi : districtEn,
-    districtHi,
+    district: location,
+    districtHi: locationHi,
     section: c.section,
     isBreaking: c.isBreaking,
     isLive: true,

@@ -6,7 +6,7 @@ import { jdDsT, type JdDsLocale } from "../i18n/strings";
  * Four reading destinations only — Videos (`/shorts`) is not a bottom-nav tab.
  * Search stays header-only; More/Profile is header-only.
  */
-export type PrimaryNavKey = "home" | "district" | "latest" | "listen";
+export type PrimaryNavKey = "live" | "home" | "district" | "latest" | "listen";
 
 export type PrimaryNavItem = {
   key: PrimaryNavKey;
@@ -21,7 +21,8 @@ const NAV_DEFS: Array<{
   labelKey: Parameters<typeof jdDsT>[1];
   href: string;
 }> = [
-  { key: "home", icon: "home", labelKey: "nav.home", href: "/" },
+  { key: "live", icon: "live", labelKey: "nav.live", href: "/" },
+  { key: "home", icon: "home", labelKey: "nav.home", href: "/home" },
   { key: "district", icon: "pin", labelKey: "nav.district", href: "/district" },
   { key: "latest", icon: "bolt", labelKey: "nav.latest", href: "/latest" },
   { key: "listen", icon: "headphone", labelKey: "nav.listen", href: "/listen" },

@@ -29,10 +29,15 @@ export function toStory(a: HomeArticle): ReaderStory {
     });
     img = res.displayUrl || "";
   }
+  const rawTag = a.districtHi || a.district || (a.isStatewide ? a.desk?.nameHi || "राज्य डेस्क" : a.categoryLabel);
+  const kicker = rawTag === "छत्तीसगढ़" || rawTag === "Chhattisgarh"
+    ? (a.desk?.nameHi || "राज्य डेस्क")
+    : rawTag;
+
   return {
     slug: a.slug,
     headline: a.headline,
-    kicker: a.categoryLabel || a.desk?.nameHi || a.desk?.name,
+    kicker: kicker || a.desk?.nameHi || a.desk?.name,
     summary: a.summary,
     imageUrl: img,
     publishedAt: a.publishedAt,

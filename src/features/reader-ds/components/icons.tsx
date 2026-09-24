@@ -6,6 +6,7 @@ import type { SVGProps } from "react";
  */
 
 export type JdIconName =
+  | "live"
   | "home"
   | "pin"
   | "bolt"
@@ -68,6 +69,12 @@ export function jdIconStroke(
 const FILLED_ICONS = new Set<JdIconName>(["play", "prev", "next", "pause"]);
 
 const PATHS: Record<JdIconName, React.ReactNode> = {
+  live: (
+    <>
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M17 2l-5 5-5-5" />
+    </>
+  ),
   home: <path d="M3 10.5 12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5" />,
   pin: (
     <>

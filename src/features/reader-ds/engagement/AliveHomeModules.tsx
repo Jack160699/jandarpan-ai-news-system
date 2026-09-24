@@ -201,7 +201,11 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
                 <div className="jd-fresh-col__body">
                   <div className="jd-fresh-col__meta">
                     <span className="jd-fresh-col__tag">
-                      {story.kicker || (locale === "en" ? "Latest" : "ताज़ा")}
+                      {story.kicker && story.kicker !== "छत्तीसगढ़" && story.kicker !== "Chhattisgarh"
+                        ? story.kicker
+                        : locale === "en"
+                        ? "State Desk"
+                        : "राज्य डेस्क"}
                     </span>
                     {story.publishedAt && (
                       <span className="jd-fresh-col__time">

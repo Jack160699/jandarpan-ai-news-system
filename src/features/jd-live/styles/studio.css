@@ -160,11 +160,11 @@
   animation: jdl-live-pulse 1.4s infinite;
 }
 
-.jdl-tv__bug-name {
-  font-size: 10.5px;
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: 0.04em;
+.jdl-tv__bug-logo {
+  height: 18px;
+  width: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .jdl-tv__bug-time {

@@ -8,6 +8,7 @@ export type JdDsLocale = "hi" | "en";
 
 const hi = {
   "nav.aria": "मुख्य नेविगेशन",
+  "nav.live": "लाइव",
   "nav.home": "होम",
   "nav.district": "मेरा जिला",
   "nav.latest": "ताज़ा",
@@ -609,6 +610,7 @@ export type JdDsStringKey = keyof typeof hi;
 
 const en: Record<JdDsStringKey, string> = {
   "nav.aria": "Main navigation",
+  "nav.live": "Live",
   "nav.home": "Home",
   "nav.district": "My District",
   "nav.latest": "Latest",

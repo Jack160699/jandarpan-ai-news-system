@@ -28,6 +28,7 @@ import {
   type NewsroomLanguage,
 } from "@/lib/i18n/languages";
 import { getSectionLabel } from "@/lib/i18n/section-labels";
+import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { pickBilingualLabel } from "@/lib/i18n/pick-label";
 import { resolveEditorialDesk } from "@/lib/newsroom/desk-branding";
@@ -132,6 +133,15 @@ export function toHomeArticle(
     : 0;
   const sourceCount = (meta.source_count ?? attributionCount) || 1;
 
+  const districtRes = resolveCanonicalStoryDistrict({
+    geo_metadata: row.geo_metadata,
+    tags: row.tags ?? [],
+    headline: localized.headline,
+    summary: localized.summary,
+    body: row.article_body,
+    section,
+  });
+
   return {
     id: row.id,
     slug: row.slug,
@@ -162,6 +172,10 @@ export function toHomeArticle(
       section,
       section === "chhattisgarh" || section === "raipur"
     ),
+    district: displayLanguage === "en" ? (districtRes.nameEn || districtRes.displayTagEn) : (districtRes.nameHi || districtRes.displayTagHi),
+    districtSlug: districtRes.districtSlug,
+    districtHi: districtRes.nameHi || districtRes.displayTagHi,
+    isStatewide: districtRes.isStatewide,
   };
 }
 

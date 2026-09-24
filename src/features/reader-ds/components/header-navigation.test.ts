@@ -121,10 +121,11 @@ describe("masthead header actions", () => {
 });
 
 describe("bottom navigation destinations", () => {
-  it("keeps exactly four primary reading destinations without Videos", () => {
+  it("keeps primary reading destinations starting with Live then Home", () => {
     const items = getPrimaryNavItems("hi");
-    expect(items).toHaveLength(4);
+    expect(items).toHaveLength(5);
     expect(items.map((i) => i.key)).toEqual([
+      "live",
       "home",
       "district",
       "latest",
@@ -132,10 +133,12 @@ describe("bottom navigation destinations", () => {
     ]);
     expect(items.map((i) => i.href)).toEqual([
       "/",
+      "/home",
       "/district",
       "/latest",
       "/listen",
     ]);
+    expect(items.find((i) => i.key === "live")?.label).toBe("लाइव");
     expect(items.find((i) => i.key === "district")?.label).toBe("मेरा जिला");
     expect(items.some((i) => i.href === "/shorts")).toBe(false);
   });
@@ -143,11 +146,13 @@ describe("bottom navigation destinations", () => {
   it("exposes English labels for the same routes", () => {
     const items = getPrimaryNavItems("en");
     expect(items.map((i) => i.key)).toEqual([
+      "live",
       "home",
       "district",
       "latest",
       "listen",
     ]);
+    expect(items.find((i) => i.key === "live")?.label).toBe("Live");
     expect(items.find((i) => i.key === "district")?.label).toBe("My District");
     expect(items.find((i) => i.key === "listen")?.label).toBe("Listen");
     expect(items.some((i) => /video/i.test(i.label))).toBe(false);
