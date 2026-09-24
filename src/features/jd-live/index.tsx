@@ -13,6 +13,14 @@ const JanDarpanStudio = dynamic(
   { ssr: false }
 );
 
+const MobileInteractiveQueue = dynamic(
+  () =>
+    import("./components/MobileInteractiveQueue").then((m) => ({
+      default: m.MobileInteractiveQueue,
+    })),
+  { ssr: false }
+);
+
 type Props = {
   initialLanguage?: BroadcastLanguage;
   embedded?: boolean;
@@ -20,12 +28,13 @@ type Props = {
 
 /**
  * Jan Darpan Live root entry point.
- * Wraps the broadcast context and lazily loads the studio compositor.
+ * Wraps the broadcast context and lazily loads the studio compositor and mobile queue.
  */
 export function JanDarpanLive({ initialLanguage = "hi", embedded = false }: Props) {
   return (
     <BroadcastProvider initialLanguage={initialLanguage}>
       <JanDarpanStudio embedded={embedded} />
+      <MobileInteractiveQueue />
     </BroadcastProvider>
   );
 }

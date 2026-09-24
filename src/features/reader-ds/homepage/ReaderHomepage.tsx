@@ -8,7 +8,6 @@ import {
   BreakingStrip,
   LeadStory,
   Masthead,
-  MobileCategoryNav,
   ReaderShell,
   SectionHeader,
   SecondaryStory,
@@ -168,7 +167,6 @@ export function ReaderHomepage({
   return (
     <ReaderShell activeNav="home" bottomPad={showStickyAd ? 128 : 72}>
       <Masthead premiumBadge={isPremium} />
-      <MobileCategoryNav />
 
       {aliveHome ? (
         <AliveHomeBriefingSlot
@@ -182,7 +180,7 @@ export function ReaderHomepage({
       <main
         id="main-content"
         role="main"
-        className="jd-shell"
+        className="jd-shell jd-home-editorial-sections"
         style={{
           flex: 1,
           background: "var(--jd-paper)",
