@@ -33,8 +33,6 @@ export const DESK_CAT_ITEMS: DeskCatItem[] = [
   { key: "latest", href: "/latest", labelHi: "ताज़ा", labelEn: "Latest" },
   { key: "cg", href: "/category/chhattisgarh", labelHi: "छत्तीसगढ़", labelEn: "Chhattisgarh" },
   { key: "districts", href: "/district?select=1", labelHi: "ज़िले", labelEn: "Districts" },
-  { key: "india", href: "/news/national", labelHi: "भारत", labelEn: "India" },
-  { key: "world", href: "/news/international", labelHi: "विश्व", labelEn: "World" },
   { key: "politics", href: "/category/politics", labelHi: "राजनीति", labelEn: "Politics" },
   { key: "business", href: "/category/business", labelHi: "व्यापार", labelEn: "Business" },
   { key: "sports", href: "/category/sports", labelHi: "खेल", labelEn: "Sports" },
@@ -50,7 +48,6 @@ export const DESK_CAT_ITEMS_COMPACT: DeskCatKey[] = [
   "home",
   "latest",
   "cg",
-  "india",
   "sports",
   "opinion",
 ];

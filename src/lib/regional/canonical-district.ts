@@ -195,6 +195,11 @@ export function resolveCanonicalStoryDistrict(
       for (const alias of d.aliases) {
         const aLower = alias.toLowerCase();
         if (aLower === "capital" || aLower === "cg" || aLower === "bsp") continue;
+        if (aLower === "kota" || aLower === "कोटा") {
+          if (/औसत\s+कोटा|बारिश\s+का\s+कोटा|वर्षा\s+का\s+कोटा|कोटा\s+पूरा|आरक्षण\s+कोटा|गेहूं\s+का\s+कोटा/i.test(text)) {
+            continue;
+          }
+        }
         if (lower.includes(aLower) || text.includes(alias)) {
           return d;
         }

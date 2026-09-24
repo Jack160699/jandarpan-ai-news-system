@@ -4,13 +4,13 @@ import React from "react";
 import { useBroadcast } from "../BroadcastContext";
 
 /**
- * Primary bottom broadcast bar.
- * Contains:
- *   [small Play/Pause] [small Mute/Unmute] मुख्य खबर | IMPORTANT CHHATTISGARH HEADLINE
+ * Primary bottom television broadcast bar.
+ * Matches broadcast standard:
+ *   [⏸/▶] [🔊/🔇] | 📍 [District] | [Summary / Details]
  */
 export function BroadcastControlBar() {
   const { state, togglePlay, toggleMute, setMuted, setPlaying } = useBroadcast();
-  const { isPlaying, isMuted, language, mode, currentSegment } = state;
+  const { isPlaying, isMuted, language, currentSegment } = state;
 
   const playLabel = isPlaying
     ? language === "hi"
@@ -33,23 +33,18 @@ export function BroadcastControlBar() {
     setMuted(false);
   };
 
-  const isBreaking = mode === "breaking" || !!currentSegment?.isBreaking;
-
-  const primaryTag = isBreaking
-    ? language === "hi"
-      ? "ब्रेकिंग न्यूज़"
-      : "BREAKING NEWS"
-    : language === "hi"
-    ? "मुख्य खबर"
-    : "MAIN STORY";
-
-  const currentHeadline =
+  const currentDistrict =
     language === "hi"
-      ? (currentSegment?.headlineHi || currentSegment?.headline || "")
-      : (currentSegment?.headline || "");
+      ? (currentSegment?.districtHi || currentSegment?.district || "")
+      : (currentSegment?.district || "");
+
+  const currentSummary =
+    language === "hi"
+      ? (currentSegment?.summaryHi || currentSegment?.summary || "")
+      : (currentSegment?.summary || "");
 
   return (
-    <div className="jdl-bar" role="region" aria-label="Broadcast controls & headline">
+    <div className="jdl-bar" role="region" aria-label="Broadcast controls & district update">
       {/* Clean premium SVG player controls: [▶] [🔊] */}
       <div className="jdl-bar__controls">
         <button
@@ -97,7 +92,7 @@ export function BroadcastControlBar() {
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="2.2"
               strokeLinecap="round"
               strokeLinejoin="round"
               aria-hidden="true"
@@ -113,7 +108,7 @@ export function BroadcastControlBar() {
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="2.2"
               strokeLinecap="round"
               strokeLinejoin="round"
               aria-hidden="true"
@@ -125,15 +120,22 @@ export function BroadcastControlBar() {
         </button>
       </div>
 
-      {/* Small primary editorial label: मुख्य खबर */}
-      <div className={`jdl-bar__label ${isBreaking ? "jdl-bar__label--breaking" : ""}`}>
-        <span className="jdl-bar__label-text">{primaryTag}</span>
-      </div>
+      <span className="jdl-bar__sep" aria-hidden="true">|</span>
 
-      {/* Dominant Headline Area: Headline gets majority of the bar */}
-      <div className="jdl-bar__headline-area" aria-live="polite">
-        <span className="jdl-bar__headline-sep">|</span>
-        <span className="jdl-bar__headline-text">{currentHeadline}</span>
+      {/* District / Location */}
+      {currentDistrict && (
+        <>
+          <div className="jdl-bar__district">
+            <span className="jdl-bar__district-pin" aria-hidden="true">📍</span>
+            <span className="jdl-bar__district-name">{currentDistrict}</span>
+          </div>
+          <span className="jdl-bar__sep" aria-hidden="true">|</span>
+        </>
+      )}
+
+      {/* Story Summary / Ticker */}
+      <div className="jdl-bar__summary-area" aria-live="polite">
+        <span className="jdl-bar__summary-text">{currentSummary}</span>
       </div>
     </div>
   );

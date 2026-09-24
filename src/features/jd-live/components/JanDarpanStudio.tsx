@@ -3,8 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { NewsScreen } from "./NewsScreen";
-import { TopTenPanel } from "./TopTenPanel";
-import { BreakingBanner } from "./BreakingBanner";
 import { BroadcastControlBar } from "./BroadcastControlBar";
 import { useBroadcast } from "../BroadcastContext";
 import { useBroadcastQueue } from "../useBroadcastQueue";
@@ -14,12 +12,12 @@ import { useAnchorVoice } from "../useAnchorVoice";
 /**
  * Root Jan Darpan Live TV Studio Compositor.
  *
- * Designed as a coherent 16:9 television broadcast experience on both desktop and mobile:
- *   - Master studio plate: Anchor seated naturally at news desk with Jan Darpan identity and lighting.
- *   - Dynamic studio monitor: Active story visual, headline, location, and breaking status.
- *   - Top 10 panel: Visible on desktop, completely hidden on mobile.
- *   - Broadcast graphics: Lower-third / breaking overlay and live bug.
- *   - Bottom control bar: Touch-friendly Play/Pause, Mute/Unmute, Live indicator, and scrolling ticker.
+ * Implements the broadcast standard 16:9 television newsroom:
+ *   - Story media star: 70% dynamic monitor screen on the left.
+ *   - News anchor: Seated female anchor in navy blazer at news desk on the right.
+ *   - Channel bug: Top-right corner bug with emblem, "जन दर्पण", LIVE pill, and IST clock.
+ *   - Lower third: Angled "मुख्य खबर" badge + connected headline banner.
+ *   - Unified bottom bar: [▶/⏸] [🔊/🔇] | 📍 District | Summary.
  */
 export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   const { state, dispatch } = useBroadcast();
@@ -60,7 +58,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Generate script whenever a new segment is loaded
+  // Generate script whenever a new segment is loaded if not already present
   useEffect(() => {
     if (!currentSegment) return;
     if (!currentSegment.script) {
@@ -70,12 +68,9 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   }, [currentSegment?.id, currentSegment?.script, generateScript, dispatch]);
 
   // ─── CORE BROADCAST ENGINE ───────────────────────────────────────────────
-  // Two independent mechanisms guarantee story advancement:
-  //
+  // Two independent mechanisms guarantee continuous story advancement:
   // 1. speak() → resolve → NEXT_SEGMENT  (normal path)
   // 2. Deterministic timer → NEXT_SEGMENT (safety net, fires at max segment duration)
-  //
-  // This ensures the broadcast NEVER freezes regardless of speech API behavior.
   // ──────────────────────────────────────────────────────────────────────────
 
   // Mechanism 1: Speak the story, then advance
@@ -120,13 +115,10 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   }, [segmentToken, isPlaying, language, currentSegment?.script]);
 
   // Mechanism 2: Hard safety timer — force advance after max segment duration
-  // This fires independently of speak() and guarantees the broadcast progresses
-  // even if speech synthesis hangs, Promise never resolves, or any other failure.
   useEffect(() => {
     if (!isPlaying || !currentSegment?.script) return;
     const token = segmentToken;
 
-    // Calculate max duration: intro=8s, breaking=15s, normal=25s, +5s buffer
     const isIntro = currentSegment.isIntro;
     const isBreaking = currentSegment.isBreaking;
     const isAccelerated =
@@ -143,7 +135,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segmentToken, isPlaying, currentSegment?.script]);
 
-  // Instrument broadcast runtime state for E2E testing and diagnostics
+  // Instrument broadcast runtime state for automated E2E testing and diagnostics
   useEffect(() => {
     if (typeof window !== "undefined") {
       const nextStory = queue[(currentIndex + 1) % Math.max(1, queue.length)];
@@ -162,6 +154,13 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
       };
     }
   }, [currentIndex, currentSegment, queue, mode, segmentToken, anchorState, isPlaying]);
+
+  const currentHeadline =
+    language === "hi"
+      ? (currentSegment?.headlineHi || currentSegment?.headline || "")
+      : (currentSegment?.headline || "");
+
+  const isBreaking = mode === "breaking" || !!currentSegment?.isBreaking;
 
   return (
     <div
@@ -182,76 +181,88 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
         style={{ display: "none" }}
         aria-hidden="true"
       />
-      {/* Television Viewport — 16:9 Landscape Broadcast on Desktop & Mobile */}
-      <div className="jdl-tv__viewport">
-        {/* Main Broadcast Zone (Anchor, Monitor, Watermark, Lower Third, Breaking Banner) */}
-        <div className="jdl-tv__broadcast-area">
-          {/* Master Studio Plate: photorealistic studio background with seated anchor and desk */}
-          <div className="jdl-tv__bg" aria-hidden>
-            <Image
-              src="/jd-live/master-studio.jpg"
-              alt=""
-              fill
-              priority
-              quality={90}
-              sizes="(max-width: 900px) 100vw, 1100px"
-              style={{ objectFit: "cover", objectPosition: "center" }}
-            />
-          </div>
 
-          {/* TV Channel Identity Corner Bug (upper-right) */}
-          <div className="jdl-tv__corner-bug" aria-hidden>
-            <div className="jdl-tv__bug-top">
+      {/* 16:9 Television Viewport */}
+      <div className="jdl-tv__viewport">
+        {/* Layer 1: Dynamic story media screen (sits inside the TV monitor cutout) */}
+        <div className="jdl-tv__screen-area">
+          <NewsScreen />
+        </div>
+
+        {/* Layer 2: Master Studio Plate Cutout with metallic bezel, female anchor on lower right, newsroom on right, and desk */}
+        <div className="jdl-tv__studio-overlay" aria-hidden="true">
+          <Image
+            src="/jd-live/studio-plate-cutout.png"
+            alt=""
+            fill
+            priority
+            quality={92}
+            sizes="(max-width: 900px) 100vw, 1100px"
+            style={{ objectFit: "cover", objectPosition: "center", pointerEvents: "none" }}
+          />
+        </div>
+
+        {/* Layer 3: TV Channel Identity Bug (upper right) */}
+        <div className="jdl-tv__corner-bug" aria-hidden="true">
+          <div className="jdl-tv__bug-top">
+            <div className="jdl-tv__bug-emblem">
+              <svg viewBox="0 0 100 100" width="20" height="20">
+                <circle cx="50" cy="50" r="46" fill="none" stroke="#C9A24B" strokeWidth="4" opacity="0.75" />
+                <circle cx="50" cy="38" r="8" fill="#C9A24B" />
+                <path d="M22 56 A28 28 0 0 1 78 56 Z" fill="#C8102E" />
+                <rect x="18" y="54" width="64" height="3.5" rx="1.75" fill="#C9A24B" />
+              </svg>
+            </div>
+            <div className="jdl-tv__bug-text">
+              <span className="jdl-tv__bug-title">{language === "hi" ? "जन दर्पण" : "JAN DARPAN"}</span>
+              <span className="jdl-tv__bug-subtitle">{language === "hi" ? "छत्तीसगढ़ की आवाज़" : "Voice of Chhattisgarh"}</span>
+            </div>
+          </div>
+          <div className="jdl-tv__bug-bottom">
+            <div className="jdl-tv__bug-live-pill">
               <span className="jdl-tv__bug-dot" />
-              <Image
-                src="/brand/jan-darpan/logo/compact-dark.svg"
-                alt="Jan Darpan"
-                width={86}
-                height={18}
-                className="jdl-tv__bug-logo"
-                priority
-              />
+              <span>LIVE</span>
             </div>
             {currentTime && (
-              <div className="jdl-tv__bug-time">{currentTime}</div>
+              <span className="jdl-tv__bug-time">{currentTime}</span>
             )}
-          </div>
-
-          {/* Center overlay play button if paused */}
-          {!isPlaying && (
-            <button
-              type="button"
-              className="jdl-tv__center-play"
-              onClick={() => dispatch({ type: "SET_PLAYING", isPlaying: true })}
-              aria-label={language === "hi" ? "प्रसारण शुरू करें" : "Start Broadcast"}
-            >
-              <span className="jdl-tv__center-play-icon" aria-hidden>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M6 4.5l14 7.5-14 7.5v-15z" />
-                </svg>
-              </span>
-              <span>{language === "hi" ? "प्रसारण शुरू करें" : "Resume Broadcast"}</span>
-            </button>
-          )}
-
-          {/* Dynamic News Screen overlay — fitted over the studio wall video monitor */}
-          <div className="jdl-tv__screen-area">
-            <NewsScreen />
-          </div>
-
-          {/* Broadcast graphics zone: Breaking News alert overlay if breaking */}
-          <div className="jdl-tv__graphics">
-            <BreakingBanner />
           </div>
         </div>
 
-        {/* Top 10 Stories Panel — visible on desktop, hidden on mobile */}
-        <div className="jdl-tv__top10-area">
-          <TopTenPanel />
+        {/* Center overlay play button if paused */}
+        {!isPlaying && (
+          <button
+            type="button"
+            className="jdl-tv__center-play"
+            onClick={() => dispatch({ type: "SET_PLAYING", isPlaying: true })}
+            aria-label={language === "hi" ? "प्रसारण शुरू करें" : "Start Broadcast"}
+          >
+            <span className="jdl-tv__center-play-icon" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6 4.5l14 7.5-14 7.5v-15z" />
+              </svg>
+            </span>
+            <span>{language === "hi" ? "प्रसारण शुरू करें" : "Resume Broadcast"}</span>
+          </button>
+        )}
+
+        {/* Layer 4: Lower-Third Headline Bar (matches reference image) */}
+        <div className="jdl-tv__lower-third" aria-live="polite">
+          <div className={`jdl-tv__lt-badge ${isBreaking ? "jdl-tv__lt-badge--breaking" : ""}`}>
+            <span>
+              {isBreaking
+                ? (language === "hi" ? "ब्रेकिंग न्यूज़" : "BREAKING")
+                : (language === "hi" ? "मुख्य खबर" : "TOP STORY")}
+            </span>
+          </div>
+          <div className="jdl-tv__lt-headline-wrap">
+            <h2 className="jdl-tv__lt-headline">{currentHeadline}</h2>
+            <div className="jdl-tv__lt-accent-edge" />
+          </div>
         </div>
       </div>
 
-      {/* Docked television control strip & ticker */}
+      {/* Layer 5: Docked television control strip & ticker */}
       <div className="jdl-tv__bar-wrap">
         <BroadcastControlBar />
       </div>

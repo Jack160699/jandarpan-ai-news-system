@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { resolveLiveArticlePool } from "@/lib/news/live-feed";
+import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { HomeArticle } from "@/lib/homepage/types";
 import type { BroadcastSegment } from "@/features/jd-live/types";
@@ -403,6 +404,20 @@ export async function GET(req: NextRequest) {
       }
     } catch {
       // Live pool query error fallback
+    }
+
+    // Pull directly from database table generated_articles
+    try {
+      const dbArticles = await fetchGeneratedArticlePool(120, { select: "homepage" });
+      for (const r of (dbArticles || [])) {
+        if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
+        if (seenIds.has(r.id) || seenSlugs.has(r.slug)) continue;
+        seenIds.add(r.id);
+        seenSlugs.add(r.slug);
+        candidates.push(normalizeGeneratedRow(r));
+      }
+    } catch {
+      // DB pool query error fallback
     }
 
     // 2. Strict 48-Hour Filtering: published_at >= now - 48 hours
