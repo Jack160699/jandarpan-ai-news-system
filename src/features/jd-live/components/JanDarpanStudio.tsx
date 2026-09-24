@@ -86,7 +86,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [segmentToken, isPlaying, isMuted, language, currentSegment?.script, speak, stop, dispatch]);
+  }, [segmentToken, isPlaying, language, currentSegment?.script, speak, stop, dispatch]);
 
   return (
     <div

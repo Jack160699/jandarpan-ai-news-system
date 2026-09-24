@@ -150,6 +150,8 @@ export function useAnchorVoice() {
   const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeTokenRef = useRef<number>(0);
   const retryCountRef = useRef<Record<number, number>>({});
+  const isMutedRef = useRef(state.isMuted);
+  isMutedRef.current = state.isMuted;
   const [isPlaying, setIsPlaying] = useState(false);
 
   // Initialize or resume Web Audio context for broadcast stings
@@ -237,7 +239,7 @@ export function useAnchorVoice() {
       );
 
       // If muted, run silent visual timer so newsroom continues advancing smoothly
-      if (state.isMuted) {
+      if (isMutedRef.current) {
         return new Promise<number>((resolve) => {
           dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
           let tick = 0;
@@ -393,7 +395,7 @@ export function useAnchorVoice() {
         }
       });
     },
-    [dispatch, getAudioCtx, state.isMuted, stopAmplitudeLoop, stopWatchdog]
+    [dispatch, getAudioCtx, stopAmplitudeLoop, stopWatchdog]
   );
 
   // Cleanup on unmount
