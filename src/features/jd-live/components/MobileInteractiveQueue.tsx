@@ -143,7 +143,16 @@ export function MobileInteractiveQueue() {
                   )}
                   {/* Overlay small play badge on thumbnail */}
                   <span className="jdl-mobile-queue__thumb-play" aria-hidden="true">
-                    {isActive ? "🔊" : "▶"}
+                    {isActive ? (
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                    ) : (
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6 4.5l14 7.5-14 7.5v-15z" />
+                      </svg>
+                    )}
                   </span>
                 </div>
 
@@ -169,7 +178,10 @@ export function MobileInteractiveQueue() {
                       </span>
                     ) : (
                       <span className="jdl-mobile-queue__indicator">
-                        ▶ {language === "hi" ? "देखें" : "Watch"}
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                          <path d="M6 4.5l14 7.5-14 7.5v-15z" />
+                        </svg>
+                        <span>{language === "hi" ? "देखें" : "Watch"}</span>
                       </span>
                     )}
                   </div>

@@ -124,14 +124,15 @@
   border: none;
 }
 
-/* Pinned/Sticky 16:9 TV on mobile (< 768px) directly below compact header */
+/* Mobile TV: Firmly anchored in its dedicated slot directly below the compact header.
+   Normal layout flow reserves the TV's full 16:9 physical height, so it never floats
+   over Latest stories or obscures content when scrolling. */
 @media (max-width: 767px) {
   .jd-home-broadcast-tv .jdl-tv {
-    position: -webkit-sticky;
-    position: sticky;
-    top: var(--jd-mobile-header-h, 56px);
-    z-index: 30;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    position: relative;
+    width: 100%;
+    margin: 0;
+    z-index: 10;
   }
 }
 

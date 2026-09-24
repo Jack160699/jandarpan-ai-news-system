@@ -26,20 +26,13 @@ export function LowerThird() {
       : currentSegment.district;
 
   const broadcastLabel =
-    currentSegment.isIntro
-      ? language === "hi"
-        ? "आज की 10 बड़ी खबरें"
-        : "TOP 10 STORIES"
-      : language === "hi"
+    language === "hi"
       ? "मुख्य खबर"
       : "MAIN STORY";
 
-  const locationLabel = district ? `${district}` : category;
-  const categoryBadge = locationLabel ? `${broadcastLabel} · ${locationLabel}` : broadcastLabel;
-
   return (
     <div className="jdl-lower3" aria-live="polite" aria-atomic="true">
-      <div className="jdl-lower3__category">{categoryBadge}</div>
+      <div className="jdl-lower3__category">{broadcastLabel}</div>
       <div className="jdl-lower3__headline">{headline}</div>
     </div>
   );

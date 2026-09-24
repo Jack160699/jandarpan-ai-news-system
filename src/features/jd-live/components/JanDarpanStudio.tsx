@@ -161,7 +161,11 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
               onClick={() => dispatch({ type: "SET_PLAYING", isPlaying: true })}
               aria-label={language === "hi" ? "प्रसारण शुरू करें" : "Start Broadcast"}
             >
-              <span className="jdl-tv__center-play-icon" aria-hidden>▶</span>
+              <span className="jdl-tv__center-play-icon" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 4.5l14 7.5-14 7.5v-15z" />
+                </svg>
+              </span>
               <span>{language === "hi" ? "प्रसारण शुरू करें" : "Resume Broadcast"}</span>
             </button>
           )}
