@@ -243,8 +243,18 @@ export function useAnchorVoice() {
         return new Promise<number>((resolve) => {
           dispatch({ type: "SET_ANCHOR_STATE", state: "speaking" });
           let tick = 0;
+          let resolved = false;
           const fakeLoop = () => {
-            if (activeTokenRef.current !== params.segmentToken) return;
+            if (resolved || activeTokenRef.current !== params.segmentToken) {
+              // Token changed — stop the loop but don't double-resolve
+              if (!resolved) {
+                resolved = true;
+                stopAmplitudeLoop();
+                dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
+                resolve(0);
+              }
+              return;
+            }
             tick += 0.16;
             const amp = (Math.sin(tick) * 0.3 + 0.4) * 0.7;
             dispatch({ type: "SET_AMPLITUDE", amplitude: amp });
@@ -253,7 +263,8 @@ export function useAnchorVoice() {
           animFrameRef.current = requestAnimationFrame(fakeLoop);
 
           setTimeout(() => {
-            if (activeTokenRef.current === params.segmentToken) {
+            if (!resolved) {
+              resolved = true;
               stopAmplitudeLoop();
               dispatch({ type: "SET_ANCHOR_STATE", state: "idle" });
               resolve(targetDurationMs);

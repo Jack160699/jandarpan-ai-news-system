@@ -37,18 +37,19 @@ export function useBroadcastQueue() {
       const data = await res.json() as { queue: BroadcastSegment[]; breaking: BroadcastSegment[] };
       lastFetchRef.current = Date.now();
 
-      // Only interrupt with breaking news if it's a story we haven't already presented this session
+      // ALWAYS populate the queue first — this must happen before any breaking interruption
+      // so NEXT_SEGMENT has stories to advance into after breaking ends.
+      dispatch({ type: "SET_QUEUE", queue: data.queue, breaking: data.breaking });
+
+      // Then, if there's a new breaking story we haven't shown, interrupt into it
       if (data.breaking && data.breaking.length > 0 && modeRef.current !== "breaking") {
         const latestBreaking = data.breaking[0];
         const alreadyPlayed = playedBreakingIdsRef.current.includes(latestBreaking.id);
         const isCurrent = latestBreaking.id === currentSegmentRef.current?.id;
         if (!alreadyPlayed && !isCurrent) {
           dispatch({ type: "INTERRUPT_BREAKING", segment: latestBreaking });
-          return;
         }
       }
-
-      dispatch({ type: "SET_QUEUE", queue: data.queue, breaking: data.breaking });
     } catch {
       // Silently ignore — keep existing queue
     }
