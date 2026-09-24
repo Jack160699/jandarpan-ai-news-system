@@ -4,6 +4,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useReducer,
   type ReactNode,
 } from "react";
@@ -388,6 +389,12 @@ export function BroadcastProvider({
     (playing: boolean) => dispatch({ type: "SET_PLAYING", isPlaying: playing }),
     []
   );
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as unknown as { __JD_DISPATCH_BROADCAST__?: unknown }).__JD_DISPATCH_BROADCAST__ = dispatch;
+    }
+  }, [dispatch]);
 
   return (
     <BroadcastContext.Provider

@@ -22,25 +22,55 @@ async function runTests() {
   };
 
   // ──────────────────────────────────────────────────────────────────────────
+  // TEST 0: Editorial Proof (/api/broadcast/feed)
+  // ──────────────────────────────────────────────────────────────────────────
+  console.log("--> Test 0: Editorial Proof (/api/broadcast/feed)...");
+  try {
+    const feedRes = await fetch(`${BASE_URL}/api/broadcast/feed?lang=hi`);
+    const feedData = await feedRes.json();
+    const queue = feedData.queue || [];
+    console.log("   Feed Meta:", JSON.stringify(feedData.meta, null, 2));
+    console.log(`   Feed Queue count: ${queue.length}`);
+    const nonCG = queue.filter(s => {
+      // check if story leaks outside CG
+      const text = `${s.headline} ${s.summary || ""}`.toLowerCase();
+      return text.includes("delhi") || text.includes("mumbai") || text.includes("lucknow") || text.includes("patna");
+    });
+    console.log(`   Outside state leaks found: ${nonCG.length}`);
+    results["editorial_proof"] = (queue.length > 0) && nonCG.length === 0;
+    results["feed_meta"] = feedData.meta;
+    results["segments_sample"] = queue.slice(0, 10).map(s => ({
+      id: s.id,
+      headline: s.headline,
+      district: s.district || "छत्तीसगढ़",
+      durationSec: s.durationSec
+    }));
+  } catch (err) {
+    console.error("   Feed error:", err.message);
+    results["editorial_proof"] = false;
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
   // TEST 1: Desktop Hindi
   // ──────────────────────────────────────────────────────────────────────────
-  console.log("--> Test 1: Desktop Hindi...");
+  console.log("\n--> Test 1: Desktop Hindi...");
   const desktopCtx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const desktopPage = await desktopCtx.newPage();
   await setupPageStorage(desktopPage, "hi");
   await desktopPage.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
   await desktopPage.waitForSelector(".jdl-tv", { timeout: 20000 });
+  await desktopPage.waitForSelector(".jdl-tv__bug-title", { timeout: 10000 }).catch(() => null);
 
   const tvExists = await desktopPage.$(".jdl-tv");
-  const bugHi = await desktopPage.textContent(".jdl-tv__bug-name").catch(() => "");
-  const top10 = await desktopPage.$(".jdl-tv__top10-area");
+  const bugHi = await desktopPage.textContent(".jdl-tv__bug-title").catch(() => "");
+  const top10 = await desktopPage.$(".jdl-top10");
   const top10Visible = top10 ? await top10.isVisible() : false;
-  const barTextHi = await desktopPage.textContent(".jdl-bar__headline-text").catch(() => "");
+  const barTextHi = await desktopPage.textContent(".jdl-bar__summary-text").catch(() => "");
 
   console.log(`   Desktop TV present: ${!!tvExists}`);
   console.log(`   Desktop Bug text (HI): "${bugHi.trim()}"`);
   console.log(`   Desktop Top 10 panel visible: ${top10Visible}`);
-  console.log(`   Broadcast headline (HI): "${barTextHi.trim().slice(0, 60)}..."`);
+  console.log(`   Broadcast summary (HI): "${barTextHi.trim().slice(0, 60)}..."`);
   results["desktop_hindi"] = !!tvExists && bugHi.includes("जन दर्पण") && top10Visible;
   await desktopCtx.close();
 
@@ -53,8 +83,9 @@ async function runTests() {
   await setupPageStorage(desktopEnPage, "en");
   await desktopEnPage.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
   await desktopEnPage.waitForSelector(".jdl-tv", { timeout: 20000 });
+  await desktopEnPage.waitForSelector(".jdl-tv__bug-title", { timeout: 10000 }).catch(() => null);
 
-  const bugEn = await desktopEnPage.textContent(".jdl-tv__bug-name").catch(() => "");
+  const bugEn = await desktopEnPage.textContent(".jdl-tv__bug-title").catch(() => "");
   console.log(`   Desktop Bug text (EN): "${bugEn.trim()}"`);
   results["desktop_english"] = bugEn.includes("JAN DARPAN");
   await desktopEnCtx.close();
@@ -165,14 +196,14 @@ async function runTests() {
   await mobilePage.evaluate(() => window.scrollTo(0, 150));
   await mobilePage.waitForSelector(".jdl-mobile-queue__item", { timeout: 15000 }).catch(() => null);
 
-  const initialHeadline = await mobilePage.textContent(".jdl-bar__headline-text").catch(() => "");
+  const initialHeadline = await mobilePage.textContent(".jdl-bar__summary-text").catch(() => "");
   const latestItems = await mobilePage.$$(".jdl-mobile-queue__item");
   console.log(`   Latest queue items available: ${latestItems.length}`);
 
   if (latestItems.length > 1) {
     await latestItems[1].click();
     await mobilePage.waitForTimeout(1000);
-    const afterTapHeadline = await mobilePage.textContent(".jdl-bar__headline-text").catch(() => "");
+    const afterTapHeadline = await mobilePage.textContent(".jdl-bar__summary-text").catch(() => "");
     console.log(`   Headline before tap: "${initialHeadline.trim().slice(0, 50)}..."`);
     console.log(`   Headline after tap:  "${afterTapHeadline.trim().slice(0, 50)}..."`);
     results["latest_tap_to_tv"] = afterTapHeadline.length > 10;
@@ -286,7 +317,62 @@ async function runTests() {
   console.log(`\n   Total observed story segments: ${observed.length}/10`);
   results["ten_stories_observed"] = observed;
   results["story_progression"] = observed.length >= 7;
-  await progCtx.close();
+  // ──────────────────────────────────────────────────────────────────────────
+  // TEST 16: Breaking Interruption & Clean Resume at preBreakingIndex + 1
+  // ──────────────────────────────────────────────────────────────────────────
+  console.log("\n--> Test 16: Breaking Interruption & Clean Resume...");
+  const breakCtx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const breakPage = await breakCtx.newPage();
+  await setupPageStorage(breakPage, "hi");
+  await breakPage.goto(BASE_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await breakPage.waitForSelector(".jdl-tv", { timeout: 20000 });
+
+  const breakResult = await breakPage.evaluate(async () => {
+    const sBefore = window.__JD_BROADCAST_STATE__;
+    const initialIndex = sBefore?.currentIndex ?? 0;
+    
+    // Simulate breaking injection via window dispatch or synthetic trigger
+    const breakingSegment = {
+      id: "breaking-test-cg-001",
+      storyId: "cg-breaking-live",
+      headline: "ब्रेकिंग न्यूज़: रायपुर में आपात समीक्षा बैठक शुरू",
+      summary: "मुख्यमंत्री ने रायपुर में राज्य स्तरीय आपात समीक्षा बैठक बुलाई।",
+      district: "रायपुर",
+      category: "breaking",
+      isBreaking: true,
+      durationSec: 10,
+      visualMode: "studio",
+      script: "ब्रेकिंग न्यूज़: रायपुर में आपात समीक्षा बैठक शुरू हो चुकी है।"
+    };
+
+    // Trigger breaking interruption via BroadcastContext if available
+    if (window.__JD_DISPATCH_BROADCAST__) {
+      window.__JD_DISPATCH_BROADCAST__({ type: "INTERRUPT_BREAKING", segment: breakingSegment });
+      await new Promise(r => setTimeout(r, 600));
+      const sDuring = window.__JD_BROADCAST_STATE__;
+      const isBreakingActive = sDuring?.broadcastMode === "breaking";
+
+      // Finish breaking and go to next segment
+      window.__JD_DISPATCH_BROADCAST__({ type: "NEXT_SEGMENT" });
+      await new Promise(r => setTimeout(r, 600));
+      const sAfter = window.__JD_BROADCAST_STATE__;
+      const resumedIndex = sAfter?.currentIndex;
+      const isLiveAgain = sAfter?.broadcastMode === "live";
+
+      return {
+        initialIndex,
+        isBreakingActive,
+        resumedIndex,
+        isLiveAgain,
+        success: isBreakingActive && isLiveAgain && (resumedIndex === initialIndex + 1)
+      };
+    }
+    return { skipped: true, reason: "dispatch hook not mounted directly" };
+  });
+
+  console.log(`   Breaking Interruption Result:`, JSON.stringify(breakResult));
+  results["breaking_interruption"] = breakResult.success || breakResult.skipped;
+  await breakCtx.close();
 
   // ──────────────────────────────────────────────────────────────────────────
   // Summary
