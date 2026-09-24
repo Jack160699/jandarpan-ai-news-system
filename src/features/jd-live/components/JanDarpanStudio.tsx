@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { NewsScreen } from "./NewsScreen";
 import { BroadcastControlBar } from "./BroadcastControlBar";
 import { useBroadcast } from "../BroadcastContext";
@@ -11,14 +10,70 @@ import { useAnchorVoice } from "../useAnchorVoice";
 import { speechController } from "../speechController";
 
 /**
+ * MarqueeHeadline — Smooth, readable, controlled headline marquee.
+ *
+ * Rules:
+ * - Full available width utilization.
+ * - No clipping of beginning (holds static at start for 2s).
+ * - Smooth controlled horizontal scroll when headline text exceeds width.
+ * - Resets smoothly when headline changes.
+ */
+function MarqueeHeadline({ headline }: { headline: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLHeadingElement>(null);
+  const [scrollDist, setScrollDist] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      if (containerRef.current && textRef.current) {
+        const containerW = containerRef.current.clientWidth;
+        const textW = textRef.current.scrollWidth;
+        if (textW > containerW + 6) {
+          setScrollDist(textW - containerW + 28);
+        } else {
+          setScrollDist(0);
+        }
+      }
+    };
+    measure();
+    const handleResize = () => measure();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [headline]);
+
+  const isOverflowing = scrollDist > 0;
+  const durationSec = Math.max(8, Math.round(scrollDist / 32));
+
+  return (
+    <div ref={containerRef} className="jdl-tv__lt-headline-wrap">
+      <h2
+        ref={textRef}
+        key={headline}
+        className={`jdl-tv__lt-headline ${isOverflowing ? "jdl-tv__lt-headline--marquee" : ""}`}
+        style={
+          isOverflowing
+            ? ({
+                "--marquee-dist": `-${scrollDist}px`,
+                "--marquee-duration": `${durationSec}s`,
+              } as React.CSSProperties)
+            : undefined
+        }
+      >
+        {headline}
+      </h2>
+    </div>
+  );
+}
+
+/**
  * Root Jan Darpan Live TV Studio Compositor.
  *
  * Professional 16:9 television newsroom broadcast:
- *   - Main story display: Dominant virtual broadcast screen on the left with clean single frame.
+ *   - Main story visual: Dominant virtual broadcast screen occupying the left/dominant area.
  *   - News anchor: Lower-right female anchor seamlessly integrated with the studio desk.
- *   - Channel bug: Approved official Jan Darpan logo + LIVE pill + IST clock in the upper-right.
- *   - Lower third: "मुख्य खबर" / "ब्रेकिंग न्यूज़" badge + prominent headline banner.
- *   - Unified control strip: [▶/⏸] [🔊/🔇] | 📍 District | Summary ticker.
+ *   - NO corner bug / LIVE+time overlay (space reserved cleanly for the anchor).
+ *   - Full-width lower third: RED "मुख्य खबर" badge + WHITE / contrasted full-width headline with marquee.
+ *   - Control row directly below: [Pause] [Mute] [ DURG SOLAR AD ] [Share] [WhatsApp].
  */
 export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   const { state, dispatch, setMuted, setPlaying } = useBroadcast();
@@ -42,20 +97,6 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
 
   const segmentTokenRef = useRef(segmentToken);
   segmentTokenRef.current = segmentToken;
-
-  const [currentTime, setCurrentTime] = useState<string>("");
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const hours = now.getHours().toString().padStart(2, "0");
-      const minutes = now.getMinutes().toString().padStart(2, "0");
-      setCurrentTime(`${hours}:${minutes} IST`);
-    };
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Pre-generate / cache scripts for current and next story
   useEffect(() => {
@@ -216,29 +257,6 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           <NewsScreen />
         </div>
 
-        {/* Layer 3: TV Channel Identity Bug (upper right corner) */}
-        <div className="jdl-tv__corner-bug" aria-hidden="true">
-          <div className="jdl-tv__bug-top">
-            <Image
-              src="/brand/jan-darpan/logo/compact-dark.svg"
-              alt="Jan Darpan"
-              width={100}
-              height={22}
-              priority
-              className="jdl-tv__bug-logo-img"
-            />
-          </div>
-          <div className="jdl-tv__bug-bottom">
-            <div className="jdl-tv__bug-live-pill">
-              <span className="jdl-tv__bug-dot" />
-              <span>LIVE</span>
-            </div>
-            {currentTime && (
-              <span className="jdl-tv__bug-time">{currentTime}</span>
-            )}
-          </div>
-        </div>
-
         {/* Sound Unlock Prompt (Minimal, non-intrusive when muted by autoplay policy) */}
         {isMuted && isPlaying && (
           <button
@@ -269,7 +287,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           </button>
         )}
 
-        {/* Layer 4: Lower-Third Headline Bar */}
+        {/* Layer 3: Lower-Third Headline Bar (Full available width, no duplicate headline below) */}
         <div className="jdl-tv__lower-third" aria-live="polite">
           <div className={`jdl-tv__lt-badge ${isBreaking ? "jdl-tv__lt-badge--breaking" : ""}`}>
             <span>
@@ -278,14 +296,11 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
                 : (language === "hi" ? "मुख्य खबर" : "TOP STORY")}
             </span>
           </div>
-          <div className="jdl-tv__lt-headline-wrap">
-            <h2 className="jdl-tv__lt-headline">{currentHeadline}</h2>
-            <div className="jdl-tv__lt-accent-edge" />
-          </div>
+          <MarqueeHeadline headline={currentHeadline} />
         </div>
       </div>
 
-      {/* Layer 5: Docked television control strip & ticker */}
+      {/* Control / Advertisement Row directly below the main headline */}
       <div className="jdl-tv__bar-wrap">
         <BroadcastControlBar />
       </div>

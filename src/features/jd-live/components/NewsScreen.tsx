@@ -1,21 +1,29 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useBroadcast } from "../BroadcastContext";
+import { detectSemanticTopic } from "@/lib/news/images/editorial-visual-fallbacks";
+import { getCategoryVisualTemplate } from "@/lib/news/ai/editorial-image-brand";
+import { EDITORIAL_IMAGES } from "@/lib/editorial-images";
+import { optimizeCdnImageUrl } from "@/lib/news/images/responsive-sizes";
+import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 
 /**
  * Single clean virtual broadcast display for Jan Darpan Live TV.
- * Dynamically adapts to story media proportions:
- *   - Widescreen 16:9 media: edge-to-edge full bleed (object-fit: cover).
- *   - Non-standard media (portrait, 4:3, square): object-fit: contain with ambient blurred studio bleed.
- *   - Preloads next story media in the background for zero-blank transitions.
- *   - Fallback broadcast card ensures zero broken image placeholders.
+ *
+ * Rules:
+ * - One coherent virtual story display filling the designated news screen area cleanly.
+ * - Upper-right inside the story screen: exactly ONE location badge (📍 [District] or 📍 राज्य डेस्क).
+ * - Deterministic fallback hierarchy: Primary Story Media -> Validated Contextual Media -> Broadcast Card.
+ * - Never shows broken image icon or empty black void.
+ * - Synchronized dynamically with current story.
  */
 export function NewsScreen() {
   const { state } = useBroadcast();
   const { currentSegment, currentIndex, queue, language } = state;
   const [imageError, setImageError] = useState(false);
+  const [fallbackError, setFallbackError] = useState(false);
   const [aspectFit, setAspectFit] = useState<"cover" | "contain">("cover");
 
   // Next story preload
@@ -29,43 +37,92 @@ export function NewsScreen() {
     }
   }, [currentIndex, queue]);
 
-  // Reset error state on story change
+  // Reset error states on story change
   useEffect(() => {
     setImageError(false);
+    setFallbackError(false);
   }, [currentSegment?.id]);
 
   const seg = currentSegment;
   const headline =
     language === "hi" ? (seg?.headlineHi || seg?.headline) : seg?.headline;
-  const district =
+  const rawDistrict =
     language === "hi" ? (seg?.districtHi || seg?.district) : seg?.district;
-  const category =
-    language === "hi" ? (seg?.categoryLabelHi || seg?.categoryLabel) : seg?.categoryLabel;
 
-  const validDistrict =
-    district && district !== "छत्तीसगढ़" && district !== "Chhattisgarh" && district !== "राज्य डेस्क"
-      ? district
-      : null;
+  // Resolve Canonical Location: Real district (Durg, Raipur, Bilaspur, Bastar, etc.) or "राज्य डेस्क"
+  const displayLocation = useMemo(() => {
+    if (!seg) return null;
+    if (rawDistrict && rawDistrict !== "छत्तीसगढ़" && rawDistrict !== "Chhattisgarh") {
+      return rawDistrict;
+    }
+    // Attempt district resolution from headline and summary
+    const resolved = resolveCanonicalStoryDistrict({
+      headline: seg.headline,
+      summary: seg.summary,
+      section: seg.section,
+    });
+    if (resolved.nameHi && !resolved.isStatewide) {
+      return language === "hi" ? resolved.nameHi : resolved.nameEn;
+    }
+    return language === "hi" ? "राज्य डेस्क" : "State Desk";
+  }, [seg?.id, seg?.headline, seg?.summary, seg?.section, rawDistrict, language]);
+
+  // Validated contextual fallback media if primary image is missing, generic, or broken
+  const fallbackMediaUrl = useMemo(() => {
+    if (!seg) return "";
+    const text = `${seg.headline || ""} ${seg.summary || ""}`;
+    const topic = detectSemanticTopic(seg.categoryLabel, text);
+    if (topic) {
+      const template = getCategoryVisualTemplate(topic);
+      if (template && EDITORIAL_IMAGES[template.fallbackKey]) {
+        return optimizeCdnImageUrl(EDITORIAL_IMAGES[template.fallbackKey], 1200);
+      }
+    }
+    if (displayLocation) {
+      const loc = displayLocation.toLowerCase();
+      if (loc.includes("बस्तर") || loc.includes("bastar")) {
+        return optimizeCdnImageUrl(EDITORIAL_IMAGES.folkCulture, 1200);
+      }
+      if (loc.includes("दुर्ग") || loc.includes("भिलाई") || loc.includes("durg") || loc.includes("bhilai")) {
+        return optimizeCdnImageUrl(EDITORIAL_IMAGES.steelIndustry, 1200);
+      }
+      if (loc.includes("बिलासपुर") || loc.includes("bilaspur")) {
+        return optimizeCdnImageUrl(EDITORIAL_IMAGES.legalCrime, 1200);
+      }
+    }
+    return optimizeCdnImageUrl(EDITORIAL_IMAGES.civicOffice, 1200);
+  }, [seg?.id, seg?.headline, seg?.summary, seg?.categoryLabel, displayLocation]);
+
+  // Determine active media URL
+  const activeMediaUrl = useMemo(() => {
+    if (seg?.imageUrl && !imageError) {
+      return seg.imageUrl;
+    }
+    if (fallbackMediaUrl && !fallbackError) {
+      return fallbackMediaUrl;
+    }
+    return null;
+  }, [seg?.imageUrl, imageError, fallbackMediaUrl, fallbackError]);
 
   return (
     <div className="jdl-virtual-screen" aria-live="polite">
       {/* Story media container */}
       <div className="jdl-virtual-screen__media-box">
-        {seg?.imageUrl && !imageError ? (
+        {activeMediaUrl ? (
           <>
-            {/* Ambient matching background bleed (prevents black/gray voids when aspect ratio is contained) */}
+            {/* Ambient background matching the news photograph */}
             <div
               className="jdl-virtual-screen__ambient-bg"
               style={{
-                backgroundImage: `url(${seg.imageUrl})`,
+                backgroundImage: `url(${activeMediaUrl})`,
               }}
               aria-hidden="true"
             />
 
             {/* Sharp foreground news photograph */}
             <Image
-              key={seg.id}
-              src={seg.imageUrl}
+              key={`${seg?.id || ""}_${activeMediaUrl}`}
+              src={activeMediaUrl}
               alt={headline || ""}
               fill
               sizes="(max-width: 767px) 100vw, 68vw"
@@ -76,18 +133,23 @@ export function NewsScreen() {
                 const img = e.currentTarget;
                 if (img.naturalWidth && img.naturalHeight) {
                   const ratio = img.naturalWidth / img.naturalHeight;
-                  // If within safe widescreen range (1.5 - 1.85), cover. Otherwise contain to protect faces/notices.
                   setAspectFit(ratio >= 1.45 && ratio <= 1.88 ? "cover" : "contain");
                 }
               }}
-              onError={() => setImageError(true)}
+              onError={() => {
+                if (!imageError && seg?.imageUrl) {
+                  setImageError(true);
+                } else {
+                  setFallbackError(true);
+                }
+              }}
             />
 
-            {/* Subtle television display scanline & gradient overlay for depth */}
+            {/* Subtle television display gradient overlay for depth */}
             <div className="jdl-virtual-screen__overlay" aria-hidden="true" />
           </>
         ) : (
-          /* High-resolution broadcast fallback graphic (never shows broken browser image icon) */
+          /* High-resolution broadcast fallback graphic (clean neutral fallback) */
           <div className="jdl-virtual-screen__fallback" aria-hidden="true">
             <div className="jdl-virtual-screen__fallback-bg" />
             <div className="jdl-virtual-screen__fallback-content">
@@ -103,18 +165,18 @@ export function NewsScreen() {
                 {language === "hi" ? "जन दर्पण लाइव" : "JAN DARPAN LIVE"}
               </span>
               <span className="jdl-virtual-screen__fallback-tag">
-                {validDistrict || category || (language === "hi" ? "विशेष कवरेज" : "Special Coverage")}
+                {displayLocation || (language === "hi" ? "विशेष कवरेज" : "Special Coverage")}
               </span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Floating location tag inside the virtual display */}
-      {validDistrict && (
+      {/* Floating location tag inside the story image/video in the UPPER-RIGHT */}
+      {displayLocation && (
         <div className="jdl-virtual-screen__location-tag" aria-hidden="true">
           <span className="jdl-virtual-screen__pin">📍</span>
-          <span>{validDistrict}</span>
+          <span>{displayLocation}</span>
         </div>
       )}
     </div>

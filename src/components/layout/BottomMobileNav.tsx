@@ -16,6 +16,7 @@ import {
   IconListen,
   IconLive,
   IconMenu,
+  IconProfile,
   IconReels,
 } from "@/components/navigation/NavIcons";
 
@@ -24,14 +25,16 @@ const ICONS: Record<
   typeof IconHome
 > = {
   home: IconHome,
+  profile: IconProfile,
   listen: IconListen,
   reels: IconReels,
   live: IconLive,
 };
 
-const TAB_KEYS: Record<string, keyof ReturnType<typeof useLanguage>["t"]["nav"]> =
+const TAB_KEYS: Record<string, string> =
   {
     home: "home",
+    profile: "account",
     listen: "listen",
     reels: "shorts",
     live: "live",
@@ -88,7 +91,10 @@ export function BottomMobileNav() {
               ? menuOpen
               : isBottomNavActive(tab, pathname, hash) ||
                 isBottomNavPending(tab, pendingPath);
-            const label = t.nav[TAB_KEYS[tab.id] ?? "home"];
+            const label =
+              (t.nav as Record<string, string>)[TAB_KEYS[tab.id] ?? "home"] ||
+              tab.labelHi ||
+              tab.label;
             const isLive = tab.id === "live";
 
             if (isMenu) {

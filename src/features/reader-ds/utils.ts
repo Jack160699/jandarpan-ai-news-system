@@ -1,6 +1,5 @@
-/** Reader-DS view model + helpers (framework-agnostic, server-safe). */
-
 import type { HomeArticle } from "@/lib/homepage/types";
+import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 
 export type ReaderStory = {
   slug: string;
@@ -16,15 +15,26 @@ export type ReaderStory = {
 };
 
 export function toReaderStory(a: HomeArticle, kicker?: string): ReaderStory {
-  const rawTag = a.districtHi || a.district || (a.isStatewide ? a.desk?.nameHi || "राज्य डेस्क" : a.categoryLabel);
-  const resolvedKicker = rawTag === "छत्तीसगढ़" || rawTag === "Chhattisgarh"
-    ? (a.desk?.nameHi || "राज्य डेस्क")
-    : rawTag;
+  const canonical = resolveCanonicalStoryDistrict({
+    explicitDistrict: a.districtSlug || a.district,
+    tags: a.tags,
+    headline: a.headline,
+    summary: a.summary,
+    section: a.section,
+    categoryLabel: a.categoryLabel,
+  });
+
+  const resolvedKicker =
+    kicker ??
+    (canonical.nameHi ||
+      (canonical.isStatewide
+        ? "राज्य डेस्क"
+        : (a.categoryLabel || "राज्य डेस्क")));
 
   return {
     slug: a.slug,
     headline: a.headline,
-    kicker: kicker ?? (resolvedKicker || a.desk?.nameHi || a.desk?.name),
+    kicker: resolvedKicker,
     summary: a.summary,
     imageUrl: a.imageUrl,
     publishedAt: a.publishedAt,

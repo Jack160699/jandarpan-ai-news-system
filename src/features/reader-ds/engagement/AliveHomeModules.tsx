@@ -12,6 +12,7 @@ import { DEFAULT_DISTRICT_SLUG } from "@/lib/district-intelligence";
 import { useJdDsT } from "../i18n";
 import Link from "next/link";
 import { toReaderStory, formatStoryTime, type ReaderStory } from "../utils";
+import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 import { SectionHeader } from "../components";
 import { DevelopingStoryTeaserCard } from "./DevelopingStoryTeaserCard";
 import { FormatStoryCard } from "./FormatStoryCard";
@@ -174,6 +175,18 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       seen.add(a.id);
       seen.add(a.slug);
 
+      const districtRes = resolveCanonicalStoryDistrict({
+        explicitDistrict: a.districtSlug || a.district,
+        tags: a.tags,
+        headline: a.headline,
+        summary: a.summary,
+        section: a.section,
+        categoryLabel: a.categoryLabel,
+      });
+
+      const distHi = districtRes.nameHi || (districtRes.isStatewide ? "राज्य डेस्क" : (a.categoryLabel || "राज्य डेस्क"));
+      const distEn = districtRes.nameEn || (districtRes.isStatewide ? "State Desk" : (a.categoryLabel || "State Desk"));
+
       queue.push({
         id: a.id,
         slug: a.slug,
@@ -182,10 +195,10 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
         summary: a.summary || "",
         summaryHi: hasDev ? a.summary : undefined,
         imageUrl: a.imageUrl || a.ogImageUrl || "",
-        categoryLabel: a.categoryLabel || "राज्य डेस्क",
-        categoryLabelHi: a.categoryLabel || "राज्य डेस्क",
-        district: a.district || a.districtSlug || "छत्तीसगढ़",
-        districtHi: a.districtHi || a.district || "छत्तीसगढ़",
+        categoryLabel: broadcastLang === "en" ? distEn : distHi,
+        categoryLabelHi: distHi,
+        district: broadcastLang === "en" ? distEn : distHi,
+        districtHi: distHi,
         section: a.section || "chhattisgarh",
         isBreaking: a.tags?.includes("breaking") || (a as { isBreaking?: boolean }).isBreaking === true,
         isLive: true,

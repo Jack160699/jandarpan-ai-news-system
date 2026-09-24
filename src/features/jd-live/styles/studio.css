@@ -205,99 +205,37 @@
   50% { transform: translateY(-2px); }
 }
 
-/* Channel Bug / Watermark (Upper Right Corner) */
-.jdl-tv__corner-bug {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  z-index: 12;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  pointer-events: none;
-}
 
-.jdl-tv__bug-top {
-  display: flex;
-  align-items: center;
-  padding: 4px 8px;
-  background: rgba(6, 13, 24, 0.9);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-}
 
-.jdl-tv__bug-logo-img {
-  height: clamp(16px, 1.8vw, 22px);
-  width: auto;
-  object-fit: contain;
-}
-
-.jdl-tv__bug-bottom {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 1px;
-}
-
-.jdl-tv__bug-live-pill {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1.5px 6px;
-  background: #c8102e;
-  border-radius: 3px;
-  font-size: clamp(8px, 0.85vw, 10px);
-  font-weight: 900;
-  color: #ffffff;
-  letter-spacing: 0.06em;
-  box-shadow: 0 0 8px rgba(200, 16, 46, 0.6);
-}
-
-.jdl-tv__bug-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #ffffff;
-  animation: jdl-live-pulse 1.4s infinite;
-}
-
-.jdl-tv__bug-time {
-  font-size: clamp(8.5px, 0.9vw, 10.5px);
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.8);
-  letter-spacing: 0.02em;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
-}
-
-/* Lower-Third Headline Bar (matches reference image) */
+/* Lower-Third Headline Bar (Full available width) */
 .jdl-tv__lower-third {
   position: absolute;
-  bottom: 16px;
-  left: 3.5%;
-  right: 18%;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: clamp(32px, 3.8vw, 38px);
   z-index: 10;
   display: flex;
   align-items: stretch;
   pointer-events: none;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.7));
+  background: transparent;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.4);
 }
 
 .jdl-tv__lt-badge {
   background: linear-gradient(135deg, #c8102e 0%, #9e1025 100%);
-  clip-path: polygon(0 0, 100% 0, 84% 100%, 0% 100%);
-  padding: 6px 18px 6px 12px;
+  padding: 0 clamp(12px, 1.4vw, 18px);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(10px, 1.2vw, 13px);
+  font-size: clamp(10px, 1.15vw, 13px);
   font-weight: 800;
   color: #ffffff;
   letter-spacing: 0.05em;
   white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+  border-right: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .jdl-tv__lt-badge--breaking {
@@ -307,26 +245,45 @@
 
 .jdl-tv__lt-headline-wrap {
   position: relative;
-  background: linear-gradient(to right, #ffffff 0%, #f6f8fb 92%, #e5eaf3 100%);
-  clip-path: polygon(0 0, 100% 0, 98% 100%, 0% 100%);
-  padding: 6px 22px 6px 14px;
+  background: linear-gradient(to right, #ffffff 0%, #f6f8fb 94%, #e5eaf3 100%);
+  padding: 0 clamp(10px, 1.2vw, 16px);
   flex: 1;
   min-width: 0;
+  height: 100%;
   display: flex;
   align-items: center;
-  border-right: 4px solid #c8102e;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .jdl-tv__lt-headline {
   color: #0b1626;
-  font-size: clamp(11px, 1.35vw, 16px);
+  font-size: clamp(11.5px, 1.3vw, 15px);
   font-weight: 800;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   margin: 0;
-  line-height: 1.3;
+  line-height: 1;
   font-family: 'Noto Sans', 'Noto Serif Devanagari', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+}
+
+@keyframes jdl-marquee-scroll {
+  0%, 20% {
+    transform: translateX(0);
+  }
+  75%, 90% {
+    transform: translateX(var(--marquee-dist, 0px));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.jdl-tv__lt-headline--marquee {
+  display: inline-block;
+  white-space: nowrap;
+  animation: jdl-marquee-scroll var(--marquee-duration, 10s) linear infinite;
+  will-change: transform;
 }
 
 /* Over-the-air resume prompt if paused */
@@ -372,17 +329,25 @@
 .jdl-bar {
   display: flex;
   align-items: center;
-  height: 38px;
-  background: rgba(6, 13, 24, 0.96);
+  justify-content: space-between;
+  height: clamp(36px, 4vw, 42px);
+  background: rgba(6, 13, 24, 0.98);
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  padding: 0 12px;
-  gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 0 clamp(8px, 1.2vw, 14px);
+  gap: 8px;
   overflow: hidden;
   box-sizing: border-box;
 }
 
-.jdl-bar__controls {
+.jdl-bar__left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.jdl-bar__right {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -393,15 +358,16 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 50%;
+  border-radius: 4px;
   color: #ffffff;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
+  flex-shrink: 0;
 }
 
 .jdl-bar__btn:hover,
@@ -416,61 +382,100 @@
   color: #e05a63;
 }
 
-.jdl-bar__sep {
-  color: rgba(255, 255, 255, 0.25);
-  font-weight: 300;
-  font-size: 13px;
+.jdl-bar__btn--action {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.jdl-bar__btn--whatsapp {
+  color: #25d366;
+  border-color: rgba(37, 211, 102, 0.35);
+  background: rgba(37, 211, 102, 0.1);
+}
+
+.jdl-bar__btn--whatsapp:hover {
+  background: #25d366;
+  border-color: #25d366;
+  color: #ffffff;
+}
+
+/* Center Compact Durg Solar Advertisement */
+.jdl-bar__ad-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 0.8vw, 8px);
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 clamp(6px, 1vw, 12px);
+  background: linear-gradient(90deg, rgba(201, 162, 75, 0.14) 0%, rgba(200, 16, 46, 0.14) 100%);
+  border: 1px solid rgba(201, 162, 75, 0.35);
+  border-radius: 4px;
+  text-decoration: none;
+  overflow: hidden;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.jdl-bar__ad-slot:hover {
+  background: linear-gradient(90deg, rgba(201, 162, 75, 0.24) 0%, rgba(200, 16, 46, 0.24) 100%);
+  border-color: rgba(201, 162, 75, 0.65);
+}
+
+.jdl-bar__ad-sun {
+  color: #fbbf24;
+  font-size: clamp(11px, 1.2vw, 13px);
   flex-shrink: 0;
 }
 
-.jdl-bar__district {
+.jdl-bar__ad-brand {
+  font-weight: 800;
+  font-size: clamp(9.5px, 1.1vw, 11.5px);
+  color: #ffffff;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.jdl-bar__ad-divider {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.jdl-bar__ad-price {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-weight: 700;
-  color: #ffffff;
-  font-size: clamp(11px, 1.1vw, 13px);
+  font-size: clamp(9px, 1vw, 11px);
+  color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.jdl-bar__district-pin {
-  color: #e05a63;
-  font-size: 11px;
-}
-
-.jdl-bar__district-name {
-  color: #ffffff;
-}
-
-.jdl-bar__summary-area {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-}
-
-.jdl-bar__summary-text {
-  font-size: clamp(11px, 1.1vw, 13px);
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
-  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
 }
 
-@media (max-width: 600px) {
+.jdl-bar__ad-price strong {
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+.jdl-bar__ad-dot {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+@media (max-width: 480px) {
   .jdl-bar {
-    height: 34px;
-    padding: 0 8px;
-    gap: 6px;
+    padding: 0 6px;
+    gap: 4px;
   }
   .jdl-bar__btn {
-    width: 23px;
-    height: 23px;
+    width: 25px;
+    height: 25px;
+  }
+  .jdl-bar__ad-slot {
+    height: 25px;
+    padding: 0 4px;
+    gap: 3px;
   }
 }
 

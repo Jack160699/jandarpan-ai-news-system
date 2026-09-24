@@ -7,6 +7,11 @@ import type { HomeArticle } from "@/lib/homepage/types";
 import type { BroadcastSegment } from "@/features/jd-live/types";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 import { generateAnchorSpokenScript } from "@/lib/broadcast/anchor-script-engine";
+import { detectSemanticTopic } from "@/lib/news/images/editorial-visual-fallbacks";
+import { getCategoryVisualTemplate } from "@/lib/news/ai/editorial-image-brand";
+import { EDITORIAL_IMAGES } from "@/lib/editorial-images";
+import { optimizeCdnImageUrl } from "@/lib/news/images/responsive-sizes";
+import { isRejectedImageUrl } from "@/lib/news/images/validate";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -336,6 +341,39 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     language: targetLang,
   });
 
+  // Resolve relevant story image (deterministic fallback hierarchy)
+  const isGenericOrRepeated =
+    !c.imageUrl ||
+    c.imageUrl.includes("photo-1596176530529-78163a4f7af2") ||
+    c.imageUrl.includes("photo-1449824913935-59a10b8d2000") ||
+    c.imageUrl.includes("photo-1529107386315-e1a269ed48e0") ||
+    c.imageUrl.includes("googleusercontent.com") ||
+    isRejectedImageUrl(c.imageUrl).rejected;
+
+  let finalImageUrl = c.imageUrl;
+
+  if (isGenericOrRepeated) {
+    const text = `${c.headline || ""} ${c.summary || ""}`;
+    const topic = detectSemanticTopic(c.section, text);
+    if (topic) {
+      const template = getCategoryVisualTemplate(topic);
+      if (template && EDITORIAL_IMAGES[template.fallbackKey]) {
+        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES[template.fallbackKey], 1200);
+      }
+    }
+    if (!finalImageUrl || isGenericOrRepeated) {
+      if (districtRes.districtSlug === "bastar") {
+        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES.folkCulture, 1200);
+      } else if (districtRes.districtSlug === "durg" || districtRes.districtSlug === "bhilai") {
+        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES.steelIndustry, 1200);
+      } else if (districtRes.districtSlug === "bilaspur") {
+        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES.legalCrime, 1200);
+      } else {
+        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES.civicOffice, 1200);
+      }
+    }
+  }
+
   return {
     id: c.id,
     slug: c.slug,
@@ -345,7 +383,7 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     summaryHi: isDevanagari ? c.summary : undefined,
     script: scriptData.script,
     durationSec: scriptData.durationSec,
-    imageUrl: c.imageUrl,
+    imageUrl: finalImageUrl,
     categoryLabel: targetLang === "hi" ? catHi : catEn,
     categoryLabelHi: catHi,
     district: location,

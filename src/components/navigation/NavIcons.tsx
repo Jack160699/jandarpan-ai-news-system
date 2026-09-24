@@ -12,6 +12,7 @@ import {
   Radio,
   Search,
   Sun,
+  User,
   type LucideIcon,
 } from "lucide-react";
 
@@ -29,6 +30,10 @@ function navIcon(Icon: LucideIcon, { className }: IconProps) {
 
 export function IconHome({ className }: IconProps) {
   return navIcon(Home, { className });
+}
+
+export function IconProfile({ className }: IconProps) {
+  return navIcon(User, { className });
 }
 
 export function IconListen({ className }: IconProps) {

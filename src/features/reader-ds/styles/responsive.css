@@ -149,8 +149,28 @@
   }
 }
 
+.jd-home-broadcast-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.jd-home-broadcast-tv {
+  width: 100%;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
 .jd-home-broadcast-aside {
-  display: none !important;
+  display: block !important;
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 12px 28px;
+  box-sizing: border-box;
 }
 
 /* TV-First Mobile Homepage: Hide old article-heavy editorial sections on mobile (< 768px) */
