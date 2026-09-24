@@ -14,6 +14,8 @@ import type {
   BroadcastSegment,
   BroadcastState,
 } from "./types";
+import { generateAnchorSpokenScript } from "@/lib/broadcast/anchor-script-engine";
+import { speechController } from "./speechController";
 
 function buildBroadcastQueue(
   rawQueue: BroadcastSegment[],
@@ -21,60 +23,39 @@ function buildBroadcastQueue(
 ): BroadcastSegment[] {
   if (!rawQueue || rawQueue.length === 0) return [];
 
-  // Intro segment
-  const introSegment: BroadcastSegment = {
-    id: "jd-live-intro",
-    slug: "",
-    headline:
-      lang === "hi"
-        ? "जन दर्पण LIVE: आज छत्तीसगढ़ की 10 बड़ी खबरें"
-        : "Jan Darpan Live: Top 10 Stories from Chhattisgarh",
-    headlineHi: "जन दर्पण LIVE: आज छत्तीसगढ़ की 10 बड़ी खबरें",
-    summary:
-      lang === "hi"
-        ? "नमस्कार, आप देख रहे हैं जन दर्पण लाइव। आइए जानते हैं आज छत्तीसगढ़ की 10 बड़ी खबरें।"
-        : "Hello, you’re watching Jan Darpan Live. Here are the top 10 stories from Chhattisgarh today.",
-    summaryHi:
-      "नमस्कार, आप देख रहे हैं जन दर्पण लाइव। आइए जानते हैं आज छत्तीसगढ़ की 10 बड़ी खबरें।",
-    script:
-      lang === "hi"
-        ? "नमस्कार, आप देख रहे हैं जन दर्पण लाइव। आइए जानते हैं आज छत्तीसगढ़ की 10 बड़ी खबरें।"
-        : "Hello, you’re watching Jan Darpan Live. Here are the top 10 stories from Chhattisgarh today.",
-    imageUrl: rawQueue[0]?.imageUrl || "/jd-live/master-studio.jpg",
-    categoryLabel: lang === "hi" ? "लाइव बुलेटिन" : "Live Bulletin",
-    categoryLabelHi: "लाइव बुलेटिन",
-    district: lang === "hi" ? "छत्तीसगढ़" : "Chhattisgarh",
-    districtHi: "छत्तीसगढ़",
-    section: "lead",
-    isBreaking: false,
-    isLive: true,
-    priorityScore: 100,
-    publishedAt: new Date().toISOString(),
-    durationSec: 6,
-    isIntro: true,
-  };
+  // Filter out any stale intro placeholders and ensure each real story has an anchor script
+  const realStories = rawQueue.filter((s) => s.id !== "jd-live-intro" && !s.isIntro);
 
-  // The first 10 stories form the Top 10 Countdown (10 down to 1)
-  // rawQueue[0] = most important story → rank 1 (played LAST in countdown)
-  // rawQueue[9] = least important in top 10 → rank 10 (played FIRST)
-  const top10Count = Math.min(10, rawQueue.length);
-  const top10Slice = rawQueue.slice(0, top10Count);
-  // Assign ranks: most important (idx 0) → rank 1, least important → rank 10
-  // Then reverse so broadcast plays 10→9→...→1
-  const countdownItems = top10Slice
-    .map((seg, idx) => ({
+  return realStories.map((seg) => {
+    const headline = lang === "hi" ? (seg.headlineHi || seg.headline) : seg.headline;
+    const summary = lang === "hi" ? (seg.summaryHi || seg.summary) : seg.summary;
+    const district = lang === "hi" ? (seg.districtHi || seg.district) : seg.district;
+
+    let script = seg.script;
+    let durationSec = seg.durationSec || 12;
+
+    if (!script || script.includes("नंबर ") || script.includes("Story number") || script.includes("10 बड़ी खबरें")) {
+      const generated = generateAnchorSpokenScript({
+        headline,
+        summary,
+        district,
+        section: seg.section,
+        categoryLabel: seg.categoryLabel,
+        isBreaking: seg.isBreaking,
+        language: lang,
+      });
+      script = generated.script;
+      durationSec = generated.durationSec;
+    }
+
+    return {
       ...seg,
-      countdownRank: idx + 1,
-    }))
-    .reverse();
-
-  // The remaining 48-hour pool stories continue indefinitely as the live program
-  const continuationItems = rawQueue.slice(top10Count).map((seg) => ({
-    ...seg,
-    countdownRank: undefined,
-  }));
-
-  return [introSegment, ...countdownItems, ...continuationItems];
+      script,
+      durationSec,
+      countdownRank: 0,
+      isIntro: false,
+    };
+  });
 }
 
 function getSafeSessionSeed(): string {
@@ -90,14 +71,16 @@ function getSafeSessionSeed(): string {
   }
 }
 
+const AUDIO_CONSENT_KEY = "jdl_audio_unlocked";
+
 const initialState: BroadcastState = {
   status: "initializing",
-  mode: "intro",
+  mode: "normal",
   language: "hi",
   currentSegment: null,
   currentIndex: 0,
-  countdownRank: 10,
-  isIntro: true,
+  countdownRank: 0,
+  isIntro: false,
   queue: [],
   breakingQueue: [],
   anchorState: "idle",
@@ -119,7 +102,7 @@ function broadcastReducer(
 ): BroadcastState {
   switch (action.type) {
     case "SET_QUEUE": {
-      const breaking = action.breaking;
+      const breaking = action.breaking ? buildBroadcastQueue(action.breaking, state.language) : [];
       const fullQueue = buildBroadcastQueue(action.queue, state.language);
       if (fullQueue.length === 0) {
         return {
@@ -141,7 +124,7 @@ function broadcastReducer(
         };
       }
 
-      // First load initialization: Always start with the primary broadcast queue
+      // First load initialization: Always start with the primary broadcast queue (FIRST REAL STORY)
       const first = fullQueue[0];
       return {
         ...state,
@@ -149,10 +132,10 @@ function broadcastReducer(
         breakingQueue: breaking,
         currentSegment: first,
         currentIndex: 0,
-        countdownRank: first.countdownRank || 10,
-        isIntro: !!first.isIntro,
-        mode: "intro",
-        status: "loading",
+        countdownRank: 0,
+        isIntro: false,
+        mode: first.isBreaking ? "breaking" : "normal",
+        status: "playing",
         scriptReady: !!first.script,
         audioReady: false,
         segmentToken: state.segmentToken + 1,
@@ -166,7 +149,7 @@ function broadcastReducer(
         language: action.language,
         queue: updatedQueue,
         currentSegment: curr,
-        scriptReady: false,
+        scriptReady: !!curr?.script,
         audioReady: false,
         segmentToken: state.segmentToken + 1,
       };
@@ -178,31 +161,30 @@ function broadcastReducer(
     case "NEXT_SEGMENT": {
       if (state.queue.length === 0) return state;
 
-      // Track story as played in this broadcast cycle
       const currentId = state.currentSegment?.id;
-      const updatedPlayed = currentId && !state.currentSegment?.isIntro
+      const updatedPlayed = currentId
         ? Array.from(new Set([...state.playedIds, currentId]))
         : state.playedIds;
 
-      // If we were in breaking mode, return to the live program at next normal index (preBreakingIndex + 1)
+      // If returning from breaking story
       if (state.mode === "breaking") {
         const returnIndex = typeof state.preBreakingIndex === "number"
           ? (state.preBreakingIndex + 1) % Math.max(1, state.queue.length)
           : (state.currentIndex + 1) % Math.max(1, state.queue.length);
         const returnSeg = state.queue[returnIndex] || state.queue[0];
-        // Track the played breaking story so it doesn't re-interrupt
         const playedBreaking = currentId
           ? Array.from(new Set([...state.playedBreakingIds, currentId]))
           : state.playedBreakingIds;
+
         return {
           ...state,
           currentIndex: returnIndex,
           currentSegment: returnSeg,
           preBreakingIndex: undefined,
-          countdownRank: returnSeg?.countdownRank || 0,
-          isIntro: !!returnSeg?.isIntro,
-          mode: returnSeg?.isIntro ? "intro" : "normal",
-          status: "loading",
+          countdownRank: 0,
+          isIntro: false,
+          mode: returnSeg?.isBreaking ? "breaking" : "normal",
+          status: "playing",
           scriptReady: !!returnSeg?.script,
           audioReady: false,
           segmentToken: state.segmentToken + 1,
@@ -213,27 +195,22 @@ function broadcastReducer(
 
       const nextIndex = state.currentIndex + 1;
       if (nextIndex >= state.queue.length) {
-        // Continuous 48-Hour Loop: Prefer unplayed stories first, avoid repeating exhausted stories prematurely
+        // Continuous 48-Hour Loop: Prefer unplayed stories first
         const unplayedIdx = state.queue.findIndex(
-          (s) => !s.isIntro && !updatedPlayed.includes(s.id)
+          (s) => !updatedPlayed.includes(s.id)
         );
-        const firstStoryIdx = state.queue.findIndex((s) => !s.isIntro);
-        const wrapIndex =
-          unplayedIdx >= 0
-            ? unplayedIdx
-            : firstStoryIdx >= 0
-            ? firstStoryIdx
-            : 0;
+        const wrapIndex = unplayedIdx >= 0 ? unplayedIdx : 0;
         const loopSeg = state.queue[wrapIndex];
         const nextPlayed = unplayedIdx >= 0 ? updatedPlayed : [];
+
         return {
           ...state,
           currentIndex: wrapIndex,
           currentSegment: loopSeg,
-          countdownRank: loopSeg?.countdownRank || 0,
-          isIntro: !!loopSeg?.isIntro,
-          mode: "normal",
-          status: "loading",
+          countdownRank: 0,
+          isIntro: false,
+          mode: loopSeg?.isBreaking ? "breaking" : "normal",
+          status: "playing",
           scriptReady: !!loopSeg?.script,
           audioReady: false,
           segmentToken: state.segmentToken + 1,
@@ -246,10 +223,10 @@ function broadcastReducer(
         ...state,
         currentIndex: nextIndex,
         currentSegment: seg,
-        countdownRank: seg.countdownRank || 0,
-        isIntro: !!seg.isIntro,
-        mode: seg.isIntro ? "intro" : "normal",
-        status: "loading",
+        countdownRank: 0,
+        isIntro: false,
+        mode: seg.isBreaking ? "breaking" : "normal",
+        status: "playing",
         scriptReady: !!seg.script,
         audioReady: false,
         segmentToken: state.segmentToken + 1,
@@ -266,10 +243,10 @@ function broadcastReducer(
         currentSegment: action.segment,
         currentIndex: segIdx >= 0 ? segIdx : state.currentIndex,
         preBreakingIndex: savedIndex,
-        countdownRank: action.segment.countdownRank || 0,
+        countdownRank: 0,
         isIntro: false,
         mode: action.segment.isBreaking ? "breaking" : "normal",
-        status: "loading",
+        status: "playing",
         scriptReady: !!action.segment.script,
         audioReady: false,
         segmentToken: state.segmentToken + 1,
@@ -323,30 +300,52 @@ type BroadcastContextValue = {
 
 const BroadcastContext = createContext<BroadcastContextValue | null>(null);
 
-const AUDIO_CONSENT_KEY = "jdl_audio_unlocked";
-
 export function BroadcastProvider({
   children,
   initialLanguage = "hi",
+  initialQueue = [],
 }: {
   children: ReactNode;
   initialLanguage?: BroadcastLanguage;
+  initialQueue?: BroadcastSegment[];
 }) {
-  const [state, dispatch] = useReducer(broadcastReducer, {
-    ...initialState,
-    language: initialLanguage,
-  });
+  const [state, dispatch] = useReducer(
+    broadcastReducer,
+    { initialLanguage, initialQueue },
+    ({ initialLanguage, initialQueue }) => {
+      const fullQueue = initialQueue && initialQueue.length > 0
+        ? buildBroadcastQueue(initialQueue, initialLanguage)
+        : [];
+      const first = fullQueue[0] || null;
+      return {
+        ...initialState,
+        language: initialLanguage,
+        queue: fullQueue,
+        currentSegment: first,
+        currentIndex: 0,
+        countdownRank: 0,
+        isIntro: false,
+        status: (first ? "playing" : "initializing") as BroadcastState["status"],
+        mode: (first?.isBreaking ? "breaking" : "normal") as BroadcastState["mode"],
+        scriptReady: !!first?.script,
+        segmentToken: 1,
+      };
+    }
+  );
 
   // Check saved audio consent on client mount
-  React.useEffect(() => {
+  useEffect(() => {
     try {
       if (typeof window !== "undefined" && localStorage.getItem(AUDIO_CONSENT_KEY) === "1") {
+        speechController.setMuted(false);
         dispatch({ type: "SET_MUTED", isMuted: false });
+      } else {
+        speechController.setMuted(true);
       }
     } catch {}
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialLanguage && initialLanguage !== state.language) {
       dispatch({ type: "SET_LANGUAGE", language: initialLanguage });
     }
@@ -374,6 +373,7 @@ export function BroadcastProvider({
           localStorage.removeItem(AUDIO_CONSENT_KEY);
         }
       } catch {}
+      speechController.setMuted(muted);
       dispatch({ type: "SET_MUTED", isMuted: muted });
     },
     []
@@ -383,12 +383,21 @@ export function BroadcastProvider({
     setMuted(!state.isMuted);
   }, [state.isMuted, setMuted]);
 
-  const togglePlay = useCallback(() => dispatch({ type: "TOGGLE_PLAY" }), []);
-
   const setPlaying = useCallback(
-    (playing: boolean) => dispatch({ type: "SET_PLAYING", isPlaying: playing }),
+    (playing: boolean) => {
+      if (!playing) {
+        speechController.pause();
+      } else {
+        speechController.resume();
+      }
+      dispatch({ type: "SET_PLAYING", isPlaying: playing });
+    },
     []
   );
+
+  const togglePlay = useCallback(() => {
+    setPlaying(!state.isPlaying);
+  }, [state.isPlaying, setPlaying]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {

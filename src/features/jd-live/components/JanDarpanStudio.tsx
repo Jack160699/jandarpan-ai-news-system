@@ -8,19 +8,20 @@ import { useBroadcast } from "../BroadcastContext";
 import { useBroadcastQueue } from "../useBroadcastQueue";
 import { useBroadcastScript } from "../useBroadcastScript";
 import { useAnchorVoice } from "../useAnchorVoice";
+import { speechController } from "../speechController";
 
 /**
  * Root Jan Darpan Live TV Studio Compositor.
  *
- * Implements the broadcast standard 16:9 television newsroom:
- *   - Story media star: 70% dynamic monitor screen on the left.
- *   - News anchor: Seated female anchor in navy blazer at news desk on the right.
- *   - Channel bug: Top-right corner bug with emblem, "जन दर्पण", LIVE pill, and IST clock.
- *   - Lower third: Angled "मुख्य खबर" badge + connected headline banner.
- *   - Unified bottom bar: [▶/⏸] [🔊/🔇] | 📍 District | Summary.
+ * Professional 16:9 television newsroom broadcast:
+ *   - Main story display: Dominant virtual broadcast screen on the left with clean single frame.
+ *   - News anchor: Lower-right female anchor seamlessly integrated with the studio desk.
+ *   - Channel bug: Approved official Jan Darpan logo + LIVE pill + IST clock in the upper-right.
+ *   - Lower third: "मुख्य खबर" / "ब्रेकिंग न्यूज़" badge + prominent headline banner.
+ *   - Unified control strip: [▶/⏸] [🔊/🔇] | 📍 District | Summary ticker.
  */
 export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
-  const { state, dispatch } = useBroadcast();
+  const { state, dispatch, setMuted, setPlaying } = useBroadcast();
   const {
     language,
     currentSegment,
@@ -28,8 +29,6 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     queue,
     mode,
     anchorState,
-    status,
-    scriptReady,
     isPlaying,
     isMuted,
     segmentToken,
@@ -58,22 +57,27 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     return () => clearInterval(timer);
   }, []);
 
-  // Generate script whenever a new segment is loaded if not already present
+  // Pre-generate / cache scripts for current and next story
   useEffect(() => {
     if (!currentSegment) return;
     if (!currentSegment.script) {
-      dispatch({ type: "SET_STATUS", status: "loading" });
       void generateScript(currentSegment);
     }
-  }, [currentSegment?.id, currentSegment?.script, generateScript, dispatch]);
+    // Preload next story script
+    if (queue.length > 1) {
+      const nextSeg = queue[(currentIndex + 1) % queue.length];
+      if (nextSeg && !nextSeg.script) {
+        void generateScript(nextSeg);
+      }
+    }
+  }, [currentSegment?.id, currentSegment?.script, currentIndex, queue, generateScript]);
 
-  // ─── CORE BROADCAST ENGINE ───────────────────────────────────────────────
-  // Two independent mechanisms guarantee continuous story advancement:
-  // 1. speak() → resolve → NEXT_SEGMENT  (normal path)
-  // 2. Deterministic timer → NEXT_SEGMENT (safety net, fires at max segment duration)
+  // ─── UNIFIED BROADCAST RUNTIME ENGINE ─────────────────────────────────────
+  // Deterministic state machine:
+  // - PLAYING: speak story -> onEnd -> natural pause -> NEXT_SEGMENT
+  // - PAUSED: immediately cancel speech, freeze all timers, keep current story visible
+  // - MUTED: silent visual timer continues, advancing smoothly without sound
   // ──────────────────────────────────────────────────────────────────────────
-
-  // Mechanism 1: Speak the story, then advance
   useEffect(() => {
     if (!isPlaying) {
       stop();
@@ -83,59 +87,68 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
 
     const token = segmentToken;
     let cancelled = false;
+    let transitionTimer: ReturnType<typeof setTimeout> | null = null;
+    let hardSafetyTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const runBroadcast = async () => {
+    const isAccelerated =
+      typeof window !== "undefined" &&
+      !!(window as unknown as { __JD_TEST_ACCELERATED__?: boolean }).__JD_TEST_ACCELERATED__;
+
+    const maxSafetyMs = isAccelerated ? 3000 : 28000;
+
+    const advanceToNext = () => {
+      if (
+        !cancelled &&
+        token === segmentTokenRef.current &&
+        isPlayingRef.current &&
+        !speechController.getIsPaused()
+      ) {
+        dispatch({ type: "NEXT_SEGMENT" });
+      }
+    };
+
+    const runStoryCycle = async () => {
       dispatch({ type: "SET_STATUS", status: "playing" });
+
+      // Armed hard safety timeout in case of unexpected hanging
+      hardSafetyTimer = setTimeout(() => {
+        advanceToNext();
+      }, maxSafetyMs);
+
       try {
         await speak({
           script: currentSegment.script!,
           language,
-          ttsPath: currentSegment.ttsPath,
-          isIntro: !!currentSegment.isIntro,
-          countdownRank: currentSegment.countdownRank,
           isBreaking: !!currentSegment.isBreaking,
           segmentToken: token,
         });
-      } catch {
-        // speech failed — safety timer handles advancement
-      }
+      } catch {}
 
-      // Advance if this segment is still current
-      if (!cancelled && token === segmentTokenRef.current && isPlayingRef.current) {
-        dispatch({ type: "NEXT_SEGMENT" });
+      if (hardSafetyTimer) clearTimeout(hardSafetyTimer);
+
+      // Natural anchor pause between stories (~450ms) before transitioning visuals
+      if (
+        !cancelled &&
+        token === segmentTokenRef.current &&
+        isPlayingRef.current &&
+        !speechController.getIsPaused()
+      ) {
+        transitionTimer = setTimeout(() => {
+          advanceToNext();
+        }, isAccelerated ? 100 : 450);
       }
     };
 
-    void runBroadcast();
+    void runStoryCycle();
 
     return () => {
       cancelled = true;
+      if (transitionTimer) clearTimeout(transitionTimer);
+      if (hardSafetyTimer) clearTimeout(hardSafetyTimer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [segmentToken, isPlaying, language, currentSegment?.script]);
+  }, [segmentToken, isPlaying, isMuted, language, currentSegment?.id, currentSegment?.script]);
 
-  // Mechanism 2: Hard safety timer — force advance after max segment duration
-  useEffect(() => {
-    if (!isPlaying || !currentSegment?.script) return;
-    const token = segmentToken;
-
-    const isIntro = currentSegment.isIntro;
-    const isBreaking = currentSegment.isBreaking;
-    const isAccelerated =
-      typeof window !== "undefined" &&
-      !!(window as unknown as { __JD_TEST_ACCELERATED__?: boolean }).__JD_TEST_ACCELERATED__;
-    const maxDuration = isAccelerated ? 3_500 : (isIntro ? 8_000 : isBreaking ? 20_000 : 30_000);
-
-    const id = setTimeout(() => {
-      if (token === segmentTokenRef.current && isPlayingRef.current) {
-        dispatch({ type: "NEXT_SEGMENT" });
-      }
-    }, maxDuration);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [segmentToken, isPlaying, currentSegment?.script]);
-
-  // Instrument broadcast runtime state for automated E2E testing and diagnostics
+  // Instrument broadcast runtime state for automated E2E testing
   useEffect(() => {
     if (typeof window !== "undefined") {
       const nextStory = queue[(currentIndex + 1) % Math.max(1, queue.length)];
@@ -184,39 +197,36 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
 
       {/* 16:9 Television Viewport */}
       <div className="jdl-tv__viewport">
-        {/* Layer 1: Dynamic story media screen (sits inside the TV monitor cutout) */}
+        {/* Layer 1: Professional television newsroom studio background with seated female anchor */}
+        <div className="jdl-tv__studio-bg" aria-hidden="true">
+          <picture>
+            <source srcSet="/jd-live/clean-studio-anchor.webp" type="image/webp" />
+            <img
+              src="/jd-live/clean-studio-anchor.jpg"
+              alt=""
+              className="jdl-tv__studio-img"
+              loading="eager"
+              decoding="async"
+            />
+          </picture>
+        </div>
+
+        {/* Layer 2: Main dynamic story screen (dominant virtual broadcast display on left) */}
         <div className="jdl-tv__screen-area">
           <NewsScreen />
         </div>
 
-        {/* Layer 2: Master Studio Plate Cutout with metallic bezel, female anchor on lower right, newsroom on right, and desk */}
-        <div className="jdl-tv__studio-overlay" aria-hidden="true">
-          <Image
-            src="/jd-live/studio-plate-cutout.png"
-            alt=""
-            fill
-            priority
-            quality={92}
-            sizes="(max-width: 900px) 100vw, 1100px"
-            style={{ objectFit: "cover", objectPosition: "center", pointerEvents: "none" }}
-          />
-        </div>
-
-        {/* Layer 3: TV Channel Identity Bug (upper right) */}
+        {/* Layer 3: TV Channel Identity Bug (upper right corner) */}
         <div className="jdl-tv__corner-bug" aria-hidden="true">
           <div className="jdl-tv__bug-top">
-            <div className="jdl-tv__bug-emblem">
-              <svg viewBox="0 0 100 100" width="20" height="20">
-                <circle cx="50" cy="50" r="46" fill="none" stroke="#C9A24B" strokeWidth="4" opacity="0.75" />
-                <circle cx="50" cy="38" r="8" fill="#C9A24B" />
-                <path d="M22 56 A28 28 0 0 1 78 56 Z" fill="#C8102E" />
-                <rect x="18" y="54" width="64" height="3.5" rx="1.75" fill="#C9A24B" />
-              </svg>
-            </div>
-            <div className="jdl-tv__bug-text">
-              <span className="jdl-tv__bug-title">{language === "hi" ? "जन दर्पण" : "JAN DARPAN"}</span>
-              <span className="jdl-tv__bug-subtitle">{language === "hi" ? "छत्तीसगढ़ की आवाज़" : "Voice of Chhattisgarh"}</span>
-            </div>
+            <Image
+              src="/brand/jan-darpan/logo/compact-dark.svg"
+              alt="Jan Darpan"
+              width={100}
+              height={22}
+              priority
+              className="jdl-tv__bug-logo-img"
+            />
           </div>
           <div className="jdl-tv__bug-bottom">
             <div className="jdl-tv__bug-live-pill">
@@ -229,24 +239,37 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           </div>
         </div>
 
+        {/* Sound Unlock Prompt (Minimal, non-intrusive when muted by autoplay policy) */}
+        {isMuted && isPlaying && (
+          <button
+            type="button"
+            className="jdl-tv__sound-unlock"
+            onClick={() => setMuted(false)}
+            aria-label={language === "hi" ? "आवाज़ चालू करें" : "Turn on audio"}
+          >
+            <span className="jdl-tv__sound-unlock-icon" aria-hidden="true">🔊</span>
+            <span>{language === "hi" ? "आवाज़ चालू करें" : "Tap for Sound"}</span>
+          </button>
+        )}
+
         {/* Center overlay play button if paused */}
         {!isPlaying && (
           <button
             type="button"
             className="jdl-tv__center-play"
-            onClick={() => dispatch({ type: "SET_PLAYING", isPlaying: true })}
-            aria-label={language === "hi" ? "प्रसारण शुरू करें" : "Start Broadcast"}
+            onClick={() => setPlaying(true)}
+            aria-label={language === "hi" ? "प्रसारण जारी रखें" : "Resume Broadcast"}
           >
             <span className="jdl-tv__center-play-icon" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M6 4.5l14 7.5-14 7.5v-15z" />
               </svg>
             </span>
-            <span>{language === "hi" ? "प्रसारण शुरू करें" : "Resume Broadcast"}</span>
+            <span>{language === "hi" ? "प्रसारण जारी रखें" : "Resume Broadcast"}</span>
           </button>
         )}
 
-        {/* Layer 4: Lower-Third Headline Bar (matches reference image) */}
+        {/* Layer 4: Lower-Third Headline Bar */}
         <div className="jdl-tv__lower-third" aria-live="polite">
           <div className={`jdl-tv__lt-badge ${isBreaking ? "jdl-tv__lt-badge--breaking" : ""}`}>
             <span>

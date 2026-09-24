@@ -149,6 +149,54 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
     return out;
   }, [feed, excludeSlugs, locale]);
 
+  const initialBroadcastQueue = useMemo(() => {
+    if (!feed) return [];
+    const candidates = [
+      ...(feed.breakingTicker ?? []),
+      ...(feed.liveWire ?? []),
+      ...(feed.editorsPicks ? [feed.editorsPicks.lead, ...feed.editorsPicks.supporting] : []),
+      ...(feed.regionalHighlights ?? []),
+      ...(feed.trending ?? []),
+    ];
+
+    const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
+    const queue: any[] = [];
+    const seen = new Set<string>();
+
+    for (const a of candidates) {
+      if (!a?.id || !a?.slug || !a?.headline?.trim()) continue;
+      if (seen.has(a.id) || seen.has(a.slug)) continue;
+
+      const hasDev = isDevanagari(a.headline);
+      if (broadcastLang === "en" && hasDev) continue;
+      if (broadcastLang === "hi" && !hasDev && a.language !== "hi") continue;
+
+      seen.add(a.id);
+      seen.add(a.slug);
+
+      queue.push({
+        id: a.id,
+        slug: a.slug,
+        headline: a.headline,
+        headlineHi: hasDev ? a.headline : undefined,
+        summary: a.summary || "",
+        summaryHi: hasDev ? a.summary : undefined,
+        imageUrl: a.imageUrl || a.ogImageUrl || "",
+        categoryLabel: a.categoryLabel || "राज्य डेस्क",
+        categoryLabelHi: a.categoryLabel || "राज्य डेस्क",
+        district: a.district || a.districtSlug || "छत्तीसगढ़",
+        districtHi: a.districtHi || a.district || "छत्तीसगढ़",
+        section: a.section || "chhattisgarh",
+        isBreaking: a.tags?.includes("breaking") || (a as { isBreaking?: boolean }).isBreaking === true,
+        isLive: true,
+        priorityScore: a.priorityScore || 50,
+        publishedAt: a.publishedAt || new Date().toISOString(),
+      });
+      if (queue.length >= 15) break;
+    }
+    return queue;
+  }, [feed, broadcastLang]);
+
   return (
     <section
       className="jd-home-broadcast-layout"
@@ -157,7 +205,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
     >
       {/* 72% Left column: Compact Jan Darpan Live TV Newsroom anchored upper-left */}
       <div className="jd-home-broadcast-tv">
-        <JanDarpanLiveLazy initialLanguage={broadcastLang} embedded />
+        <JanDarpanLiveLazy initialLanguage={broadcastLang} initialQueue={initialBroadcastQueue} embedded />
       </div>
 
       {/* 32% Right column: Live Editorial / Fresh Stories Column (Desktop only, hidden on mobile) */}

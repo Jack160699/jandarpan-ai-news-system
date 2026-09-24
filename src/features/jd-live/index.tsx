@@ -3,15 +3,8 @@
 import dynamic from "next/dynamic";
 import { BroadcastProvider } from "./BroadcastContext";
 import "./styles/studio.css";
-import type { BroadcastLanguage } from "./types";
-
-const JanDarpanStudio = dynamic(
-  () =>
-    import("./components/JanDarpanStudio").then((m) => ({
-      default: m.JanDarpanStudio,
-    })),
-  { ssr: false }
-);
+import type { BroadcastLanguage, BroadcastSegment } from "./types";
+import { JanDarpanStudio } from "./components/JanDarpanStudio";
 
 const MobileInteractiveQueue = dynamic(
   () =>
@@ -23,16 +16,17 @@ const MobileInteractiveQueue = dynamic(
 
 type Props = {
   initialLanguage?: BroadcastLanguage;
+  initialQueue?: BroadcastSegment[];
   embedded?: boolean;
 };
 
 /**
  * Jan Darpan Live root entry point.
- * Wraps the broadcast context and lazily loads the studio compositor and mobile queue.
+ * Direct rendering of JanDarpanStudio prevents nested chunk waterfalls.
  */
-export function JanDarpanLive({ initialLanguage = "hi", embedded = false }: Props) {
+export function JanDarpanLive({ initialLanguage = "hi", initialQueue, embedded = false }: Props) {
   return (
-    <BroadcastProvider initialLanguage={initialLanguage}>
+    <BroadcastProvider initialLanguage={initialLanguage} initialQueue={initialQueue}>
       <JanDarpanStudio embedded={embedded} />
       <MobileInteractiveQueue />
     </BroadcastProvider>

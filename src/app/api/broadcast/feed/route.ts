@@ -6,6 +6,7 @@ import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { HomeArticle } from "@/lib/homepage/types";
 import type { BroadcastSegment } from "@/features/jd-live/types";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
+import { generateAnchorSpokenScript } from "@/lib/broadcast/anchor-script-engine";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -324,20 +325,16 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
   const locationEn = districtRes.nameEn || (districtRes.isStatewide ? "State Desk" : catEn);
   const location = targetLang === "hi" ? locationHi : locationEn;
 
-  // Build broadcast anchor script immediately
-  const scriptLocation = districtRes.nameHi
-    ? `${districtRes.nameHi} से`
-    : targetLang === "hi"
-    ? "छत्तीसगढ़ से"
-    : "from Chhattisgarh";
-
-  const script = targetLang === "hi"
-    ? (c.isBreaking
-        ? `ब्रेकिंग न्यूज़। ${scriptLocation} बड़ी खबर। ${headline}। ${summary}`
-        : `${scriptLocation} खबर। ${headline}। ${summary}`)
-    : (c.isBreaking
-        ? `Breaking news ${scriptLocation}. ${headline}. ${summary}`
-        : `From ${districtRes.nameEn || "Chhattisgarh"}. ${headline}. ${summary}`);
+  // Build natural broadcast anchor script immediately (no numbering, context-aware lead-in)
+  const scriptData = generateAnchorSpokenScript({
+    headline,
+    summary,
+    district: location,
+    section: c.section,
+    categoryLabel: targetLang === "hi" ? catHi : catEn,
+    isBreaking: c.isBreaking,
+    language: targetLang,
+  });
 
   return {
     id: c.id,
@@ -346,8 +343,8 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     headlineHi: isDevanagari ? c.headline : undefined,
     summary: c.summary,
     summaryHi: isDevanagari ? c.summary : undefined,
-    script,
-    durationSec: Math.min(25, Math.max(9, Math.round(script.length * 0.075))),
+    script: scriptData.script,
+    durationSec: scriptData.durationSec,
     imageUrl: c.imageUrl,
     categoryLabel: targetLang === "hi" ? catHi : catEn,
     categoryLabelHi: catHi,
