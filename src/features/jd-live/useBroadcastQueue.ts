@@ -13,19 +13,31 @@ export function useBroadcastQueue() {
   const lastFetchRef = useRef<number>(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const playedIdsRef = useRef(state.playedIds);
+  playedIdsRef.current = state.playedIds;
+
+  const sessionSeedRef = useRef(state.sessionSeed);
+  sessionSeedRef.current = state.sessionSeed;
+
+  const modeRef = useRef(state.mode);
+  modeRef.current = state.mode;
+
+  const currentSegmentRef = useRef(state.currentSegment);
+  currentSegmentRef.current = state.currentSegment;
+
   const fetchFeed = useCallback(async () => {
     try {
-      const recentExclude = state.playedIds.slice(-20).join(",");
-      const url = `/api/broadcast/feed?lang=${state.language}&seed=${encodeURIComponent(state.sessionSeed)}&exclude=${encodeURIComponent(recentExclude)}`;
+      const recentExclude = playedIdsRef.current.slice(-20).join(",");
+      const url = `/api/broadcast/feed?lang=${state.language}&seed=${encodeURIComponent(sessionSeedRef.current)}&exclude=${encodeURIComponent(recentExclude)}`;
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json() as { queue: BroadcastSegment[]; breaking: BroadcastSegment[] };
       lastFetchRef.current = Date.now();
 
       // Check if newly arrived breaking story should interrupt live program
-      if (data.breaking && data.breaking.length > 0 && state.mode !== "breaking") {
+      if (data.breaking && data.breaking.length > 0 && modeRef.current !== "breaking") {
         const latestBreaking = data.breaking[0];
-        if (latestBreaking.id !== state.currentSegment?.id) {
+        if (latestBreaking.id !== currentSegmentRef.current?.id) {
           dispatch({ type: "INTERRUPT_BREAKING", segment: latestBreaking });
           return;
         }
@@ -35,7 +47,7 @@ export function useBroadcastQueue() {
     } catch {
       // Silently ignore — keep existing queue
     }
-  }, [dispatch, state.mode, state.language, state.sessionSeed, state.playedIds, state.currentSegment?.id]);
+  }, [dispatch, state.language]);
 
   // Initial fetch and refetch on language change
   useEffect(() => {

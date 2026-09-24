@@ -153,14 +153,6 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
       <div className="jdl-tv__bar-wrap">
         <BroadcastControlBar />
       </div>
-
-      {/* Loading state overlay */}
-      {status === "initializing" && (
-        <div className="jdl-studio__loading" aria-live="polite">
-          <div className="jdl-studio__loading-spinner" aria-hidden />
-          <p>{language === "hi" ? "जन दर्पण लाइव लोड हो रहा है…" : "Loading Jan Darpan Live…"}</p>
-        </div>
-      )}
     </div>
   );
 }

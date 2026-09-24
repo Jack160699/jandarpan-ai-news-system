@@ -72,6 +72,19 @@ function buildBroadcastQueue(
   return [introSegment, ...countdownItems, ...continuationItems];
 }
 
+function getSafeSessionSeed(): string {
+  if (typeof window === "undefined") return "default_seed";
+  try {
+    const existing = sessionStorage.getItem("jdl_seed");
+    if (existing) return existing;
+    const s = Math.random().toString(36).slice(2, 9);
+    sessionStorage.setItem("jdl_seed", s);
+    return s;
+  } catch {
+    return "seed_" + Math.random().toString(36).slice(2, 7);
+  }
+}
+
 const initialState: BroadcastState = {
   status: "initializing",
   mode: "intro",
@@ -90,7 +103,7 @@ const initialState: BroadcastState = {
   isMuted: true,
   audioBlocked: false,
   playedIds: [],
-  sessionSeed: typeof window !== "undefined" ? (sessionStorage.getItem("jdl_seed") || (() => { const s = Math.random().toString(36).slice(2, 9); sessionStorage.setItem("jdl_seed", s); return s; })()) : "default_seed",
+  sessionSeed: getSafeSessionSeed(),
   segmentToken: 1,
 };
 
