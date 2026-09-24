@@ -1,5 +1,7 @@
 import type { HomeArticle } from "@/lib/homepage/types";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
+import { detectSemanticTopic } from "@/lib/news/images/editorial-visual-fallbacks";
+import { EDITORIAL_IMAGES } from "@/lib/editorial-images";
 
 export type ReaderStory = {
   slug: string;
@@ -31,12 +33,23 @@ export function toReaderStory(a: HomeArticle, kicker?: string): ReaderStory {
         ? "राज्य डेस्क"
         : (a.categoryLabel || "राज्य डेस्क")));
 
+  let safeImageUrl = a.imageUrl;
+  if (
+    !safeImageUrl ||
+    safeImageUrl.includes("googleusercontent.com") ||
+    safeImageUrl.includes("google.com/news") ||
+    safeImageUrl.includes("placeholder")
+  ) {
+    const semantic = detectSemanticTopic(a.headline + " " + (a.summary || ""));
+    safeImageUrl = (semantic ? EDITORIAL_IMAGES[semantic as keyof typeof EDITORIAL_IMAGES] : null) || EDITORIAL_IMAGES.raipurCity;
+  }
+
   return {
     slug: a.slug,
     headline: a.headline,
     kicker: resolvedKicker,
     summary: a.summary,
-    imageUrl: a.imageUrl,
+    imageUrl: safeImageUrl,
     publishedAt: a.publishedAt,
     isLive: a.isLive,
   };
