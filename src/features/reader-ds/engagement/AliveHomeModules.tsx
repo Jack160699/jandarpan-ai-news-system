@@ -85,12 +85,27 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
   const broadcastLang = locale === "en" ? "en" : "hi";
 
   const freshStories = useMemo(() => {
-    const candidates = [
+    const rawCandidates = [
       ...(feed.liveWire ?? []),
       ...(feed.trending ?? []),
       ...(feed.regionalHighlights ?? []),
       ...(feed.editorsPicks?.supporting ?? []),
+      ...(feed.breakingTicker ?? []),
     ];
+
+    // Priority-rank 48-hour candidates: breaking first, then highest priority, then most recent
+    const candidates = [...rawCandidates].sort((a, b) => {
+      const isBrkA = a.tags?.includes("breaking") || (a as { isBreaking?: boolean }).isBreaking ? 1 : 0;
+      const isBrkB = b.tags?.includes("breaking") || (b as { isBreaking?: boolean }).isBreaking ? 1 : 0;
+      if (isBrkB !== isBrkA) return isBrkB - isBrkA;
+      const pA = a.priorityScore || (a.ranking?.priorityScore ?? 50);
+      const pB = b.priorityScore || (b.ranking?.priorityScore ?? 50);
+      if (pB !== pA) return pB - pA;
+      const tA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const tB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return tB - tA;
+    });
+
     const out: ReaderStory[] = [];
     const seen = new Set(excludeSlugs);
     const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
@@ -134,16 +149,16 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
 
       seen.add(a.slug);
       out.push(toReaderStory(a));
-      if (out.length >= 5) break;
+      if (out.length >= 40) break;
     }
 
-    if (out.length < 3) {
+    if (out.length < 5) {
       for (const a of candidates) {
         if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
         if (!isCgStory(a)) continue;
         seen.add(a.slug);
         out.push(toReaderStory(a));
-        if (out.length >= 5) break;
+        if (out.length >= 40) break;
       }
     }
 
@@ -254,6 +269,9 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
                       alt=""
                       className="jd-fresh-col__thumb"
                       loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/brand/jan-darpan/mark/jan-darpan-mark-square-light.svg";
+                      }}
                     />
                   ) : (
                     <div className="jd-fresh-col__thumb-ph" />

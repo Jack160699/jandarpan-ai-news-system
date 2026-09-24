@@ -4,10 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useBroadcast } from "./BroadcastContext";
 import type { BroadcastLanguage } from "./types";
 import { speechController } from "./speechController";
-import {
-  playTransitionSting,
-  playBreakingSting,
-} from "./audioStings";
 
 /**
  * Hook interface to the singleton broadcast speech controller.
@@ -16,27 +12,8 @@ import {
  */
 export function useAnchorVoice() {
   const { state, dispatch } = useBroadcast();
-  const audioCtxRef = useRef<AudioContext | null>(null);
   const activeTokenRef = useRef<number>(0);
   const [isPlaying, setIsPlaying] = useState(false);
-
-  const getAudioCtx = useCallback(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-        const AudioCtx =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        audioCtxRef.current = new AudioCtx();
-      }
-      if (audioCtxRef.current.state === "suspended") {
-        void audioCtxRef.current.resume().catch(() => {});
-      }
-      return audioCtxRef.current;
-    } catch {
-      return null;
-    }
-  }, []);
 
   const stop = useCallback(() => {
     speechController.cancelSpeechOnly();
@@ -52,26 +29,10 @@ export function useAnchorVoice() {
       isBreaking?: boolean;
       segmentToken: number;
     }): Promise<number> => {
-      const { script, language, isBreaking, segmentToken } = params;
+      const { script, language, segmentToken } = params;
       activeTokenRef.current = segmentToken;
 
       dispatch({ type: "SET_AUDIO_READY", ready: true });
-
-      // Play audio sting if unmuted
-      if (!speechController.getIsMuted() && !speechController.getIsPaused()) {
-        const ctx = getAudioCtx();
-        if (ctx) {
-          try {
-            if (isBreaking) {
-              playBreakingSting(ctx);
-              await new Promise((r) => setTimeout(r, 400));
-            } else {
-              playTransitionSting(ctx);
-              await new Promise((r) => setTimeout(r, 220));
-            }
-          } catch {}
-        }
-      }
 
       if (activeTokenRef.current !== segmentToken || speechController.getIsPaused()) {
         return 0;
@@ -118,7 +79,7 @@ export function useAnchorVoice() {
         });
       });
     },
-    [dispatch, getAudioCtx]
+    [dispatch]
   );
 
   // Resume clean playback when returning to visible tab if unmuted
@@ -144,9 +105,6 @@ export function useAnchorVoice() {
   useEffect(() => {
     return () => {
       stop();
-      if (audioCtxRef.current) {
-        void audioCtxRef.current.close().catch(() => {});
-      }
     };
   }, [stop]);
 

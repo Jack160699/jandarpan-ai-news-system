@@ -406,10 +406,10 @@
   gap: clamp(4px, 0.8vw, 8px);
   flex: 1;
   min-width: 0;
-  height: 28px;
-  padding: 0 clamp(6px, 1vw, 12px);
-  background: linear-gradient(90deg, rgba(201, 162, 75, 0.14) 0%, rgba(200, 16, 46, 0.14) 100%);
-  border: 1px solid rgba(201, 162, 75, 0.35);
+  height: 30px;
+  padding: 0 clamp(5px, 0.9vw, 10px);
+  background: linear-gradient(90deg, rgba(201, 162, 75, 0.16) 0%, rgba(200, 16, 46, 0.16) 100%);
+  border: 1px solid rgba(201, 162, 75, 0.45);
   border-radius: 4px;
   text-decoration: none;
   overflow: hidden;
@@ -418,43 +418,58 @@
 }
 
 .jdl-bar__ad-slot:hover {
-  background: linear-gradient(90deg, rgba(201, 162, 75, 0.24) 0%, rgba(200, 16, 46, 0.24) 100%);
-  border-color: rgba(201, 162, 75, 0.65);
+  background: linear-gradient(90deg, rgba(201, 162, 75, 0.28) 0%, rgba(200, 16, 46, 0.28) 100%);
+  border-color: rgba(201, 162, 75, 0.75);
 }
 
-.jdl-bar__ad-sun {
-  color: #fbbf24;
-  font-size: clamp(11px, 1.2vw, 13px);
+.jdl-bar__ad-thumb-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(251, 191, 36, 0.4);
+}
+
+.jdl-bar__ad-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.jdl-bar__ad-main {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.7vw, 8px);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .jdl-bar__ad-brand {
   font-weight: 800;
-  font-size: clamp(9.5px, 1.1vw, 11.5px);
+  font-size: clamp(9px, 1.05vw, 11px);
   color: #ffffff;
   letter-spacing: 0.04em;
   white-space: nowrap;
   flex-shrink: 0;
 }
 
-.jdl-bar__ad-divider {
-  color: rgba(255, 255, 255, 0.3);
-  font-size: 10px;
+.jdl-bar__ad-pricing {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: clamp(8.5px, 0.95vw, 10.5px);
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
-.jdl-bar__ad-price {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: clamp(9px, 1vw, 11px);
-  color: rgba(255, 255, 255, 0.9);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.jdl-bar__ad-price strong {
+.jdl-bar__ad-tier strong {
   color: #fbbf24;
   font-weight: 800;
 }
@@ -463,19 +478,45 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
+.jdl-bar__ad-call {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: clamp(8.5px, 0.9vw, 10px);
+  font-weight: 700;
+  color: #22c55e;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: rgba(34, 197, 94, 0.12);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.jdl-bar__ad-call-icon {
+  flex-shrink: 0;
+}
+
 @media (max-width: 480px) {
   .jdl-bar {
-    padding: 0 6px;
-    gap: 4px;
+    padding: 0 4px;
+    gap: 3px;
   }
   .jdl-bar__btn {
     width: 25px;
     height: 25px;
   }
   .jdl-bar__ad-slot {
-    height: 25px;
-    padding: 0 4px;
+    height: 26px;
+    padding: 0 3px;
     gap: 3px;
+  }
+  .jdl-bar__ad-thumb-box {
+    width: 18px;
+    height: 18px;
+  }
+  .jdl-bar__ad-call {
+    display: none;
   }
 }
 

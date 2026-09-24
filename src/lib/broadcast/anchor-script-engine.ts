@@ -15,6 +15,7 @@
 export type AnchorScriptInput = {
   headline: string;
   summary?: string | null;
+  articleBody?: string | null;
   district?: string | null;
   section?: string | null;
   categoryLabel?: string | null;
@@ -26,7 +27,7 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): {
   script: string;
   durationSec: number;
 } {
-  const { headline, summary, district, section, categoryLabel, isBreaking, language } = input;
+  const { headline, summary, articleBody, district, section, categoryLabel, isBreaking, language } = input;
 
   const cleanHeadline = (headline || "")
     .replace(/^\[.*?\]\s*/, "")
@@ -41,9 +42,19 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): {
     .replace(/\s+/g, " ")
     .trim();
 
+  const cleanBody = (articleBody || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/!\[.*?\]\(.*?\)/g, "")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Full article content takes priority over short summary teaser
+  const fullContent = cleanBody.length > cleanSummary.length + 30 ? cleanBody : cleanSummary;
+
   if (language === "hi") {
     // Detect context from headline, summary, section, and category
-    const corpus = `${cleanHeadline} ${cleanSummary} ${section || ""} ${categoryLabel || ""}`.toLowerCase();
+    const corpus = `${cleanHeadline} ${fullContent} ${section || ""} ${categoryLabel || ""}`.toLowerCase();
 
     // Clean valid district name
     const validDistrict =
@@ -55,106 +66,37 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): {
 
     if (isBreaking) {
       leadIn = validDistrict
-        ? `ब्रेकिंग न्यूज़। ${validDistrict} से इस वक्त की बड़ी खबर सामने आ रही है। `
-        : `इस वक्त की बड़ी और अहम खबर। `;
+        ? `ब्रेकिंग न्यूज़। ${validDistrict} से इस वक्त की बड़ी खबर। `
+        : `इस वक्त की बड़ी खबर। `;
     } else if (
       corpus.includes("मौसम") ||
       corpus.includes("बारिश") ||
       corpus.includes("तापमान") ||
-      corpus.includes("ठंड") ||
-      corpus.includes("गर्मी") ||
-      corpus.includes("आंधी") ||
       corpus.includes("अलर्ट")
     ) {
       leadIn = validDistrict
         ? `${validDistrict} में मौसम को लेकर महत्वपूर्ण जानकारी। `
-        : `मौसम को लेकर छत्तीसगढ़ से बड़ी खबर सामने आई है। `;
+        : `मौसम विभाग से जुड़ी जानकारी। `;
     } else if (
-      corpus.includes("पुलिस") ||
-      corpus.includes("गिरफ्तार") ||
       corpus.includes("हादसा") ||
       corpus.includes("दुर्घटना") ||
-      corpus.includes("अपराध") ||
-      corpus.includes("चोरी") ||
-      corpus.includes("मुठभेड़") ||
-      corpus.includes("नक्सल")
+      corpus.includes("मुठभेड़")
     ) {
       leadIn = validDistrict
-        ? `${validDistrict} से कानून व्यवस्था और पुलिस से जुड़ी इस खबर में। `
-        : `पुलिस और कानून व्यवस्था से जुड़ी इस अहम खबर में। `;
-    } else if (
-      corpus.includes("सरकार") ||
-      corpus.includes("कैबिनेट") ||
-      corpus.includes("मुख्यमंत्री") ||
-      corpus.includes("विष्णु देव साय") ||
-      corpus.includes("साय कैबिनेट") ||
-      corpus.includes("प्रशासन") ||
-      corpus.includes("फैसला") ||
-      corpus.includes("बजट")
-    ) {
-      leadIn = validDistrict
-        ? `${validDistrict} से शासन और प्रशासनिक स्तर की बड़ी जानकारी। `
-        : `सरकार के इस फैसले से जुड़ी बड़ी जानकारी। `;
-    } else if (
-      corpus.includes("परीक्षा") ||
-      corpus.includes("छात्र") ||
-      corpus.includes("स्कूल") ||
-      corpus.includes("कॉलेज") ||
-      corpus.includes("यूनिवर्सिटी") ||
-      corpus.includes("अभ्यर्थी") ||
-      corpus.includes("शिक्षा") ||
-      corpus.includes("भर्ती")
-    ) {
-      leadIn = validDistrict
-        ? `${validDistrict} के छात्रों और शिक्षण संस्थानों से जुड़ी जरूरी खबर। `
-        : `छात्रों और अभ्यर्थियों के लिए महत्वपूर्ण खबर। `;
-    } else if (
-      corpus.includes("किसान") ||
-      corpus.includes("धान") ||
-      corpus.includes("फसल") ||
-      corpus.includes("खेती") ||
-      corpus.includes("कृषि") ||
-      corpus.includes("मंडी") ||
-      corpus.includes("खाद")
-    ) {
-      leadIn = validDistrict
-        ? `${validDistrict} से किसानों और खेती-किसानी से जुड़ी खबर। `
-        : `किसानों और कृषि क्षेत्र से जुड़ी इस खबर में। `;
-    } else if (
-      corpus.includes("व्यापार") ||
-      corpus.includes("बाजार") ||
-      corpus.includes("उद्योग") ||
-      corpus.includes("कारोबार") ||
-      corpus.includes("सोना") ||
-      corpus.includes("शेयर")
-    ) {
-      leadIn = validDistrict
-        ? `${validDistrict} के व्यापार और आर्थिक जगत से जुड़ी खबर। `
-        : `व्यापार और उद्योग जगत से जुड़ी बड़ी खबर। `;
-    } else if (
-      corpus.includes("खेल") ||
-      corpus.includes("क्रिकेट") ||
-      corpus.includes("टूर्नामेंट") ||
-      corpus.includes("मैच")
-    ) {
-      leadIn = validDistrict
-        ? `${validDistrict} के खेल मैदान से बड़ी खबर। `
-        : `खेल जगत से जुड़ी इस वक्त की खबर। `;
-    } else if (validDistrict) {
-      leadIn = `${validDistrict} से इस वक्त की एक अहम खबर। `;
-    } else {
-      leadIn = `छत्तीसगढ़ के ताजा घटनाक्रम में। `;
+        ? `${validDistrict} से सामने आ रहे इस घटनाक्रम में। `
+        : `सामने आ रहे इस ताजा घटनाक्रम में। `;
     }
 
-    // Build complete script: [leadIn] + [cleanHeadline] + [cleanSummary]
-    const script = `${leadIn}${cleanHeadline}। ${cleanSummary}`
+    // Build complete script: [leadIn] + [cleanHeadline] + [fullContent]
+    // Seamless, natural professional delivery without robotic filler
+    const script = `${leadIn}${cleanHeadline}। ${fullContent}`
       .replace(/[\r\n]+/g, " ")
       .replace(/\s+/g, " ")
       .replace(/।+/g, "।")
       .trim();
 
-    // Natural duration: ~14 characters per second of Hindi speech
-    const durationSec = Math.min(26, Math.max(9, Math.ceil(script.length / 14)));
+    // Natural duration: ~13 characters per second of Hindi speech
+    const durationSec = Math.max(14, Math.ceil(script.length / 13));
     return { script, durationSec };
   } else {
     // Indian English broadcast delivery
@@ -168,19 +110,15 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): {
       leadIn = validDistrict
         ? `Breaking news from ${validDistrict}. `
         : `Breaking news at this hour. `;
-    } else if (validDistrict) {
-      leadIn = `Turning now to ${validDistrict}. `;
-    } else {
-      leadIn = `In key developments from Chhattisgarh. `;
     }
 
-    const script = `${leadIn}${cleanHeadline}. ${cleanSummary}`
+    const script = `${leadIn}${cleanHeadline}. ${fullContent}`
       .replace(/[\r\n]+/g, " ")
       .replace(/\s+/g, " ")
       .replace(/\.+/g, ".")
       .trim();
 
-    const durationSec = Math.min(26, Math.max(9, Math.ceil(script.length / 15)));
+    const durationSec = Math.max(14, Math.ceil(script.length / 14));
     return { script, durationSec };
   }
 }

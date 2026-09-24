@@ -238,6 +238,7 @@ type BroadcastCandidate = {
   slug: string;
   headline: string;
   summary: string;
+  articleBody?: string;
   imageUrl: string;
   section: string;
   language: string;
@@ -263,6 +264,7 @@ function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
     slug: a.slug,
     headline: a.headline,
     summary: a.summary || "",
+    articleBody: a.summary || "",
     imageUrl: a.imageUrl || a.ogImageUrl || "",
     section: a.section || "chhattisgarh",
     language: a.language || "hi",
@@ -297,6 +299,7 @@ function normalizeGeneratedRow(r: GeneratedArticleRow): BroadcastCandidate {
     slug: r.slug,
     headline: r.headline,
     summary: r.summary || "",
+    articleBody: r.article_body || r.summary || "",
     imageUrl: r.hero_image_url || "",
     section: sectionTag,
     language: r.language || "hi",
@@ -316,6 +319,7 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     tags: c.tags,
     headline: c.headline,
     summary: c.summary,
+    body: c.articleBody,
     section: c.section,
   });
 
@@ -330,10 +334,11 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
   const locationEn = districtRes.nameEn || (districtRes.isStatewide ? "State Desk" : catEn);
   const location = targetLang === "hi" ? locationHi : locationEn;
 
-  // Build natural broadcast anchor script immediately (no numbering, context-aware lead-in)
+  // Build natural broadcast anchor script immediately (no numbering, full story content)
   const scriptData = generateAnchorSpokenScript({
     headline,
     summary,
+    articleBody: c.articleBody,
     district: location,
     section: c.section,
     categoryLabel: targetLang === "hi" ? catHi : catEn,

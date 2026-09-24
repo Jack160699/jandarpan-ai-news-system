@@ -168,20 +168,40 @@ export function BroadcastControlBar() {
 
       {/* CENTER: DURG SOLAR ADVERTISEMENT */}
       <a
-        href="https://durgsolar.com"
-        target="_blank"
-        rel="noopener noreferrer"
+        href="tel:+917777812777"
         className="jdl-bar__ad-slot"
-        title="DURG SOLAR — 3 kW ₹72,000* | 5 kW ₹1,82,000*"
-        aria-label="Durg Solar advertisement"
+        title="DURG SOLAR: 3 kW — ₹72,000* | 5 kW — ₹1,82,000* | Call: +91 77778 12777"
+        aria-label="DURG SOLAR advertisement"
       >
-        <span className="jdl-bar__ad-sun" aria-hidden="true">☀</span>
-        <span className="jdl-bar__ad-brand">DURG SOLAR</span>
-        <span className="jdl-bar__ad-divider" aria-hidden="true">|</span>
-        <span className="jdl-bar__ad-price">
-          <span className="jdl-bar__ad-tier">3 kW <strong>₹72,000*</strong></span>
-          <span className="jdl-bar__ad-dot" aria-hidden="true">·</span>
-          <span className="jdl-bar__ad-tier">5 kW <strong>₹1,82,000*</strong></span>
+        <span className="jdl-bar__ad-thumb-box" aria-hidden="true">
+          <img
+            src="/jd-live/solar-rooftop.jpg"
+            alt="DURG SOLAR Rooftop"
+            className="jdl-bar__ad-thumb"
+            width={24}
+            height={24}
+          />
+        </span>
+        <span className="jdl-bar__ad-main">
+          <span className="jdl-bar__ad-brand">DURG SOLAR</span>
+          <span className="jdl-bar__ad-pricing">
+            <span className="jdl-bar__ad-tier">3 kW — <strong>₹72,000*</strong></span>
+            <span className="jdl-bar__ad-dot" aria-hidden="true">·</span>
+            <span className="jdl-bar__ad-tier">5 kW — <strong>₹1,82,000*</strong></span>
+          </span>
+          <span className="jdl-bar__ad-call">
+            <svg
+              width="9"
+              height="9"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="jdl-bar__ad-call-icon"
+              aria-hidden="true"
+            >
+              <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-2.2 2.2a15.053 15.053 0 0 1-6.59-6.59l2.2-2.21a.96.96 0 0 0 .25-1A11.36 11.36 0 0 1 8.5 3.99c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1 0 9.39 7.61 17 17 17 .55 0 1-.45 1-1v-3.61c0-.55-.45-1-.99-1z" />
+            </svg>
+            <span>Call: +91 77778 12777</span>
+          </span>
         </span>
       </a>
 

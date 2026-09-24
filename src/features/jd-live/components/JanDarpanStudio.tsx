@@ -10,17 +10,26 @@ import { useAnchorVoice } from "../useAnchorVoice";
 import { speechController } from "../speechController";
 
 /**
- * MarqueeHeadline — Smooth, readable, controlled headline marquee.
+ * TeleprompterReadingStrip — Live broadcast synchronized reading strip.
  *
  * Rules:
- * - Full available width utilization.
- * - No clipping of beginning (holds static at start for 2s).
- * - Smooth controlled horizontal scroll when headline text exceeds width.
- * - Resets smoothly when headline changes.
+ * - Displays the full story broadcast narration text beside "मुख्य खबर".
+ * - Utilizes 100% of the available TV width without leaving it empty.
+ * - Scrolls in synchronization with anchor narration duration.
+ * - Freezes immediately when broadcast is paused; resumes when playing.
+ * - Resets smoothly when story switches.
  */
-function MarqueeHeadline({ headline }: { headline: string }) {
+function TeleprompterReadingStrip({
+  text,
+  isPlaying,
+  durationSec,
+}: {
+  text: string;
+  isPlaying: boolean;
+  durationSec: number;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLHeadingElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
   const [scrollDist, setScrollDist] = useState(0);
 
   useEffect(() => {
@@ -28,8 +37,8 @@ function MarqueeHeadline({ headline }: { headline: string }) {
       if (containerRef.current && textRef.current) {
         const containerW = containerRef.current.clientWidth;
         const textW = textRef.current.scrollWidth;
-        if (textW > containerW + 6) {
-          setScrollDist(textW - containerW + 28);
+        if (textW > containerW + 4) {
+          setScrollDist(textW - containerW + 32);
         } else {
           setScrollDist(0);
         }
@@ -39,28 +48,29 @@ function MarqueeHeadline({ headline }: { headline: string }) {
     const handleResize = () => measure();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [headline]);
+  }, [text]);
 
   const isOverflowing = scrollDist > 0;
-  const durationSec = Math.max(8, Math.round(scrollDist / 32));
+  const effectiveDuration = Math.max(12, durationSec || Math.round(scrollDist / 28));
 
   return (
     <div ref={containerRef} className="jdl-tv__lt-headline-wrap">
-      <h2
+      <div
         ref={textRef}
-        key={headline}
+        key={text}
         className={`jdl-tv__lt-headline ${isOverflowing ? "jdl-tv__lt-headline--marquee" : ""}`}
         style={
           isOverflowing
             ? ({
                 "--marquee-dist": `-${scrollDist}px`,
-                "--marquee-duration": `${durationSec}s`,
+                "--marquee-duration": `${effectiveDuration}s`,
+                animationPlayState: isPlaying ? "running" : "paused",
               } as React.CSSProperties)
             : undefined
         }
       >
-        {headline}
-      </h2>
+        {text}
+      </div>
     </div>
   );
 }
@@ -296,7 +306,16 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
                 : (language === "hi" ? "मुख्य खबर" : "TOP STORY")}
             </span>
           </div>
-          <MarqueeHeadline headline={currentHeadline} />
+          <TeleprompterReadingStrip
+            text={
+              currentSegment?.script ||
+              (currentHeadline
+                ? `${currentHeadline} — ${currentSegment?.summary || ""}`
+                : "")
+            }
+            isPlaying={isPlaying}
+            durationSec={currentSegment?.durationSec || 16}
+          />
         </div>
       </div>
 
