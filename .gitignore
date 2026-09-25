@@ -45,3 +45,8 @@ next-env.d.ts
 
 # Phase 3 recovery CLI runtime artifacts
 /docs/audits/production-recovery/logs/
+
+# Test reports & run artifacts
+/playwright-report/
+/test-results/
+supabase/.temp/

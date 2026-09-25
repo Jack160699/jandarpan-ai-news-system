@@ -31,6 +31,7 @@ const ADMIN_ROUTE_PERMISSIONS: Record<string, DashboardPermission> = {
   "/admin/images": "editorial:write",
   "/admin/media": "editorial:write",
   "/admin/analytics": "analytics:read",
+  "/admin/compliance": "editorial:write",
   "/admin/settings": "editorial:write",
   "/admin/settings/organization": "editorial:write",
   "/admin/ingestion": "monitoring:read",

@@ -221,8 +221,20 @@ export default function ProfilePage() {
             <ProfileRow
               href="/about"
               icon="star"
-              title={isHi ? "जन दर्पण परिचय" : "About Jan Darpan"}
-              subtitle={isHi ? "छत्तीसगढ़ का स्वायत्त स्थानीय समाचार नेटवर्क" : "Chhattisgarh's hyperlocal news network"}
+              title={isHi ? "जन दर्पण परिचय एवं स्वामित्व" : "About Jan Darpan & Publisher"}
+              subtitle={isHi ? "स्वामित्व, कंपनी विवरण एवं संपादकीय उत्तरदायित्व" : "Ownership, publisher CIN & editorial accountability"}
+            />
+            <ProfileRow
+              href="/grievance-redressal"
+              icon="flag"
+              title={isHi ? "शिकायत निवारण (Grievance Redressal)" : "Grievance Redressal (Rule 11)"}
+              subtitle={isHi ? "शिकायत अधिकारी, 24 घंटे पावती, व्हाट्सएप एवं ई-प्रपत्र" : "Statutory Grievance Officer, 24h ack & WhatsApp intake"}
+            />
+            <ProfileRow
+              href="/compliance"
+              icon="check"
+              title={isHi ? "मासिक अनुपालन रिपोर्ट" : "Monthly Compliance Disclosures"}
+              subtitle={isHi ? "डिजिटल मीडिया आचार संहिता व मासिक शिकायत विवरण" : "Digital media Code of Ethics & monthly reports"}
             />
             <ProfileRow
               href="/how-we-report"
@@ -358,24 +370,38 @@ export default function ProfilePage() {
               subtitle={isHi ? "संपादकीय टीम से संपर्क करें" : "Reach editorial bureau"}
             />
             <ProfileRow
-              href="mailto:contact@jandarpan.news"
-              icon="star"
-              title="Email: contact@jandarpan.news"
-              subtitle={isHi ? "संपादकीय एवं तकनीकी पत्राचार" : "Editorial and technical desk"}
+              href="https://wa.me/919584735857?text=Namaste%20Grievance%20Officer,%20I%20wish%20to%20file%20a%20grievance."
+              icon="share"
+              title="Grievance WhatsApp (+91 95847 35857)"
+              subtitle={isHi ? "शिकायत निवारण अधिकारी का संपर्क (त्वरित व्हाट्सएप पंजीकरण)" : "Statutory Grievance Officer (direct intake)"}
               external
             />
             <ProfileRow
-              href="https://wa.me/919584735857"
+              href="mailto:shriyanshchandrakar@gmail.com"
+              icon="star"
+              title="Grievance: shriyanshchandrakar@gmail.com"
+              subtitle={isHi ? "वैधानिक शिकायत निवारण ईमेल" : "Statutory grievance redressal inbox"}
+              external
+            />
+            <ProfileRow
+              href="https://wa.me/917777812777"
               icon="share"
-              title="WhatsApp Bureau (+91 95847 35857)"
-              subtitle={isHi ? "समाचार सूचना एवं त्वरित संदेश" : "News tips and instant messaging"}
+              title="Business WhatsApp (+91 77778 12777)"
+              subtitle={isHi ? "अतिरिक्त जन दर्पण / व्यवसाय एवं सूचना संपर्क" : "Additional Jan Darpan / business contact"}
+              external
+            />
+            <ProfileRow
+              href="mailto:contact@jandarpan.news"
+              icon="star"
+              title="Email: contact@jandarpan.news"
+              subtitle={isHi ? "संपादकीय एवं सामान्य पत्राचार" : "Editorial and newsroom desk"}
               external
               last
             />
           </div>
         </section>
 
-        {/* Section 6: App Information */}
+        {/* Section 6: App Information & Legal Publisher Disclosure */}
         <section
           id="profile-app-info"
           style={{
@@ -398,11 +424,12 @@ export default function ProfilePage() {
             className="jd-ui"
             style={{
               fontSize: 12,
-              color: "var(--jd-muted)",
+              fontWeight: 600,
+              color: "var(--jd-ink)",
               marginTop: 4,
             }}
           >
-            v2.4 Production Build · Chhattisgarh Hyperlocal App
+            Operated & Published by STRATXCEL SOLUTIONS (OPC) PRIVATE LIMITED
           </div>
           <div
             className="jd-ui"
@@ -412,7 +439,17 @@ export default function ProfilePage() {
               marginTop: 2,
             }}
           >
-            © {new Date().getFullYear()} Jan Darpan News Network. सर्वाधिकार सुरक्षित.
+            CIN: U70200CT2025OPC017739 · Registered Office: Bhilai, Durg, CG – 490006
+          </div>
+          <div
+            className="jd-ui"
+            style={{
+              fontSize: 11,
+              color: "var(--jd-muted)",
+              marginTop: 4,
+            }}
+          >
+            © {new Date().getFullYear()} Jan Darpan. All rights reserved.
           </div>
         </section>
       </main>

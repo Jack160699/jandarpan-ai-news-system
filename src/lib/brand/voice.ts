@@ -32,9 +32,9 @@ export const BRAND_VOICE = {
   ],
   deskLabelHi: "जन दर्पण न्यूज़ डेस्क",
   deskLabelEn: "Jan Darpan News Desk",
-  correctionsEmail: "editor@jandarpan.news",
-  pressLineHi: "जन दर्पण · रायपुर / नई दिल्ली",
-  pressLineEn: "Jan Darpan · Raipur / New Delhi, India",
+  correctionsEmail: "shriyanshchandrakar@gmail.com",
+  pressLineHi: "जन दर्पण · भिलाई / रायपुर, छत्तीसगढ़",
+  pressLineEn: "Jan Darpan · Bhilai / Raipur, Chhattisgarh, India",
 } as const;
 
 export function newsroomByline(language: "hi" | "en" | string): string {

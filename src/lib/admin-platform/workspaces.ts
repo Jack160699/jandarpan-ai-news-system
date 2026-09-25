@@ -289,6 +289,12 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
         tier: "primary",
       },
       {
+        href: "/admin/compliance",
+        label: "Compliance & Grievance",
+        iconKey: "shield",
+        tier: "primary",
+      },
+      {
         href: "/admin/settings/organization",
         label: "Organization",
         iconKey: "settings",
@@ -374,7 +380,7 @@ export function resolveWorkspaceFromPath(pathname: string): AdminWorkspaceId {
     return "technical";
   }
   if (base.startsWith("/admin/team")) return "team";
-  if (base.startsWith("/admin/settings")) return "settings";
+  if (base.startsWith("/admin/settings") || base.startsWith("/admin/compliance")) return "settings";
   return "editorial";
 }
 

@@ -238,7 +238,7 @@ export const en: Dictionary = {
     deskNoteBody:
       "This report was prepared by our Chhattisgarh editorial team using verified public sources. Wire reports, district bureaus, and partner outlets are cross-checked and reviewed before publication.",
     deskNoteFine:
-      "Corrections and clarifications: hello@jandarpan.news",
+      "Corrections & statutory grievances: shriyanshchandrakar@gmail.com / WhatsApp: +91 95847 35857",
     disclaimerTitle: "Editorial standards",
     disclaimerBody:
       "Jan Darpan is an independent digital news platform rooted in Chhattisgarh and expanding across India. We verify claims against multiple sources, attribute reporting clearly, and correct errors promptly. We do not publish unverified rumours as fact.",
