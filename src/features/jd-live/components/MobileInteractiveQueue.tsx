@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, Fragment } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useBroadcast } from "../BroadcastContext";
 import type { BroadcastSegment } from "../types";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
+import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
 
 function formatRelativeTime(dateStr?: string, lang: "hi" | "en" = "hi"): string {
   if (!dateStr) return lang === "hi" ? "अभी" : "Just now";
@@ -129,7 +130,7 @@ export function MobileInteractiveQueue() {
             ))}
           </div>
         ) : (
-          stories.map((story) => {
+          stories.map((story, idx) => {
             const isActive = currentSegment?.id === story.id;
             const headline =
               language === "hi"
@@ -154,73 +155,77 @@ export function MobileInteractiveQueue() {
             const timeLabel = formatRelativeTime(story.publishedAt, language);
 
             return (
-              <button
-                type="button"
-                key={story.id}
-                onClick={() => handleSelectStory(story)}
-                className={`jdl-mobile-queue__item ${
-                  isActive ? "jdl-mobile-queue__item--active" : ""
-                }`}
-                aria-pressed={isActive}
-                aria-label={`${headline} — ${
-                  isActive
-                    ? language === "hi"
-                      ? "टीवी पर चल रहा है"
-                      : "Now playing on TV"
-                    : language === "hi"
-                    ? "टीवी पर देखें"
-                    : "Watch on TV"
-                }`}
-              >
-                {/* Thumbnail */}
-                <div className="jdl-mobile-queue__thumb-wrap">
-                  <QueueThumbnail src={story.imageUrl} alt="" />
-                  {/* Overlay small play badge on thumbnail */}
-                  <span className="jdl-mobile-queue__thumb-play" aria-hidden="true">
-                    {isActive ? (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                      </svg>
-                    ) : (
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M6 4.5l14 7.5-14 7.5v-15z" />
-                      </svg>
-                    )}
-                  </span>
-                </div>
-
-                {/* Body Content */}
-                <div className="jdl-mobile-queue__body">
-                  <div className="jdl-mobile-queue__meta-row">
-                    <span className="jdl-mobile-queue__tag">{locationTag}</span>
-                    {story.isBreaking && (
-                      <span className="jdl-mobile-queue__breaking-badge">
-                        {language === "hi" ? "ब्रेकिंग" : "BREAKING"}
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="jdl-mobile-queue__headline">{headline}</h3>
-
-                  <div className="jdl-mobile-queue__foot-row">
-                    <span className="jdl-mobile-queue__time">{timeLabel}</span>
-                    {isActive ? (
-                      <span className="jdl-mobile-queue__indicator jdl-mobile-queue__indicator--active">
-                        <span className="jdl-mobile-queue__active-dot" aria-hidden="true" />
-                        {language === "hi" ? "चल रहा है" : "Playing"}
-                      </span>
-                    ) : (
-                      <span className="jdl-mobile-queue__indicator">
-                        <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <Fragment key={story.id}>
+                <button
+                  type="button"
+                  onClick={() => handleSelectStory(story)}
+                  className={`jdl-mobile-queue__item ${
+                    isActive ? "jdl-mobile-queue__item--active" : ""
+                  }`}
+                  aria-pressed={isActive}
+                  aria-label={`${headline} — ${
+                    isActive
+                      ? language === "hi"
+                        ? "टीवी पर चल रहा है"
+                        : "Now playing on TV"
+                      : language === "hi"
+                      ? "टीवी पर देखें"
+                      : "Watch on TV"
+                  }`}
+                >
+                  {/* Thumbnail */}
+                  <div className="jdl-mobile-queue__thumb-wrap">
+                    <QueueThumbnail src={story.imageUrl} alt="" />
+                    {/* Overlay small play badge on thumbnail */}
+                    <span className="jdl-mobile-queue__thumb-play" aria-hidden="true">
+                      {isActive ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M6 4.5l14 7.5-14 7.5v-15z" />
                         </svg>
-                        <span>{language === "hi" ? "देखें" : "Watch"}</span>
-                      </span>
-                    )}
+                      )}
+                    </span>
                   </div>
-                </div>
-              </button>
+
+                  {/* Body Content */}
+                  <div className="jdl-mobile-queue__body">
+                    <div className="jdl-mobile-queue__meta-row">
+                      <span className="jdl-mobile-queue__tag">{locationTag}</span>
+                      {story.isBreaking && (
+                        <span className="jdl-mobile-queue__breaking-badge">
+                          {language === "hi" ? "ब्रेकिंग" : "BREAKING"}
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="jdl-mobile-queue__headline">{headline}</h3>
+
+                    <div className="jdl-mobile-queue__foot-row">
+                      <span className="jdl-mobile-queue__time">{timeLabel}</span>
+                      {isActive ? (
+                        <span className="jdl-mobile-queue__indicator jdl-mobile-queue__indicator--active">
+                          <span className="jdl-mobile-queue__active-dot" aria-hidden="true" />
+                          {language === "hi" ? "चल रहा है" : "Playing"}
+                        </span>
+                      ) : (
+                        <span className="jdl-mobile-queue__indicator">
+                          <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M6 4.5l14 7.5-14 7.5v-15z" />
+                          </svg>
+                          <span>{language === "hi" ? "देखें" : "Watch"}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+                {(idx + 1) % 3 === 0 && (
+                  <DurgSolarInlineAd index={Math.floor((idx + 1) / 3)} />
+                )}
+              </Fragment>
             );
           })
         )}

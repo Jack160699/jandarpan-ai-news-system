@@ -17,11 +17,11 @@ function fetchPage(url) {
 }
 
 async function waitForDeployment() {
-  console.log('Waiting for latest deployment (commit eb0b3ae) to be active on production...');
-  for (let i = 1; i <= 25; i++) {
-    const res = await fetchPage(`${PROD_URL}/profile?_t=${Date.now()}`);
-    if (res.status === 200 && res.data.includes('id="profile-about"')) {
-      console.log(`Commit eb0b3ae is LIVE on production! (Detected at attempt ${i})`);
+  console.log('Waiting for latest deployment (commit 92fc05e) to be active on production...');
+  for (let i = 1; i <= 30; i++) {
+    const res = await fetchPage(`${PROD_URL}/home?_t=${Date.now()}`);
+    if (res.status === 200 && !res.data.includes('has-bottom-nav') && res.data.includes('jd-unified-brand-lockup')) {
+      console.log(`Commit 92fc05e is LIVE on production! (Detected at attempt ${i})`);
       return true;
     }
     console.log(`[Attempt ${i}] Waiting for Vercel deployment...`);
