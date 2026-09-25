@@ -271,13 +271,12 @@ async function runAcceptanceTest() {
       const imgBox = await adImg?.boundingBox();
       if (imgBox) {
         const computedRatio = imgBox.width / imgBox.height;
-        console.log(`Ad image dimensions: ${imgBox.width.toFixed(1)} x ${imgBox.height.toFixed(1)}, ratio: ${computedRatio.toFixed(3)} (ideal: 3.357)`);
-        // Preserved within 10% of 3.36:1
-        results.step8_ad_aspect_ratio_preserved = (computedRatio > 3.0 && computedRatio < 3.7);
+        console.log(`Ad image dimensions: ${imgBox.width.toFixed(1)} x ${imgBox.height.toFixed(1)}, ratio: ${computedRatio.toFixed(3)} (ideal: 3.984)`);
+        results.step8_ad_aspect_ratio_preserved = (computedRatio > 3.6 && computedRatio < 4.4);
       }
 
       const href = await adLink?.getAttribute("href");
-      console.log("Ad phone link:", href);
+      console.log("Ad link:", href);
     }
 
     // ─── STEP 9: LATEST NEWS FEED STRUCTURE ─────────────────────────────────────

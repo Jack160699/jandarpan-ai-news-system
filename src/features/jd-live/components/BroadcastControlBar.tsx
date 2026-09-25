@@ -16,17 +16,19 @@ export function BroadcastControlBar() {
   return (
     <div className="jdl-ad-banner" role="region" aria-label="Durg Solar Advertisement">
       <a
-        href="tel:+917777812777"
+        href="https://durgsolar.com"
+        target="_blank"
+        rel="noopener noreferrer"
         className="jdl-ad-banner__link"
-        title="Durg Solar: Waaree 3 kW ₹72,000* | 5 kW ₹1,82,000* — Call +91 77778 12777"
+        title="Durg Solar: Waaree 3 kW ₹72,000* | 5 kW ₹1,82,000* — Call +91 77778 12777 | durgsolar.com"
         aria-label="Durg Solar Advertisement"
       >
         <img
           src="/jd-live/durg-solar-creative.png"
-          alt="Durg Solar: Waaree 3 kW ₹72,000*, 5 kW ₹1,82,000*, Call +91 77778 12777"
+          alt="Durg Solar: Waaree 3 kW ₹72,000*, 5 kW ₹1,82,000*, Call +91 77778 12777, durgsolar.com"
           className="jdl-ad-banner__img"
           width={1024}
-          height={305}
+          height={257}
           loading="eager"
           decoding="async"
         />
