@@ -235,7 +235,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
         priorityScore: a.priorityScore || 50,
         publishedAt: a.publishedAt || new Date().toISOString(),
       });
-      if (queue.length >= 15) break;
+      if (queue.length >= 45) break;
     }
     return queue;
   }, [feed, broadcastLang]);
@@ -254,14 +254,14 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       {/* 32% Right column: Live Editorial / Fresh Stories Column (Desktop only, hidden on mobile) */}
       <aside
         className="jd-home-broadcast-aside"
-        aria-label={locale === "en" ? "Latest News Updates" : "ताज़ा खबरें अपडेट"}
+        aria-label={locale === "en" ? "Latest News" : "ताज़ा खबरें"}
       >
         <div className="jd-fresh-col">
           <div className="jd-fresh-col__head">
             <div className="jd-fresh-col__title-row">
               <span className="jd-fresh-col__dot" aria-hidden="true" />
               <h2 className="jd-fresh-col__title">
-                {locale === "en" ? "Latest Updates" : "ताज़ा खबरें"}
+                {locale === "en" ? "Latest News" : "ताज़ा खबरें"}
               </h2>
             </div>
             <Link href="/latest" className="jd-fresh-col__more">

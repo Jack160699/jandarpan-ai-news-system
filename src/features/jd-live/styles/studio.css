@@ -132,7 +132,8 @@
 .jdl-virtual-screen__location-tag {
   position: absolute;
   top: 8px;
-  right: 8px;
+  left: 8px;
+  right: auto;
   z-index: 3;
   display: flex;
   align-items: center;
@@ -181,7 +182,8 @@
 .jdl-tv__sound-unlock {
   position: absolute;
   top: 10px;
-  left: 12px;
+  right: 12px;
+  left: auto;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -267,22 +269,25 @@
   letter-spacing: -0.01em;
 }
 
-@keyframes jdl-marquee-scroll {
-  0%, 20% {
+@keyframes jdl-teleprompter-scroll {
+  0% {
     transform: translateX(0);
   }
-  75%, 90% {
+  3% {
+    transform: translateX(0);
+  }
+  97% {
     transform: translateX(var(--marquee-dist, 0px));
   }
   100% {
-    transform: translateX(0);
+    transform: translateX(var(--marquee-dist, 0px));
   }
 }
 
 .jdl-tv__lt-headline--marquee {
   display: inline-block;
   white-space: nowrap;
-  animation: jdl-marquee-scroll var(--marquee-duration, 10s) linear infinite;
+  animation: jdl-teleprompter-scroll var(--marquee-duration, 18s) linear infinite;
   will-change: transform;
 }
 

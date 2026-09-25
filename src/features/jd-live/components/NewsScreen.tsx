@@ -172,7 +172,7 @@ export function NewsScreen() {
         )}
       </div>
 
-      {/* Floating location tag inside the story image/video in the UPPER-RIGHT */}
+      {/* Floating location tag inside the story image/video in the UPPER-LEFT */}
       {displayLocation && (
         <div className="jdl-virtual-screen__location-tag" aria-hidden="true">
           <span className="jdl-virtual-screen__pin">📍</span>

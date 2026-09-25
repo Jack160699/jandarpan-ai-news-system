@@ -166,11 +166,7 @@
 }
 
 .jd-home-broadcast-aside {
-  display: block !important;
-  width: 100%;
-  max-width: 100%;
-  padding: 10px 12px 28px;
-  box-sizing: border-box;
+  display: none !important;
 }
 
 /* TV-First Mobile Homepage: Hide old article-heavy editorial sections on mobile (< 768px) */

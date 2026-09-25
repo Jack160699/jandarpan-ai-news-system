@@ -51,7 +51,9 @@ function TeleprompterReadingStrip({
   }, [text]);
 
   const isOverflowing = scrollDist > 0;
-  const effectiveDuration = Math.max(12, durationSec || Math.round(scrollDist / 28));
+  // Calibrate reading strip to anchor speech delivery: rate 0.94 averages ~9.8 chars/sec
+  const naturalSpokenSec = Math.max(16, Math.ceil(text.length / 9.8));
+  const effectiveDuration = Math.max(durationSec || 0, naturalSpokenSec);
 
   return (
     <div ref={containerRef} className="jdl-tv__lt-headline-wrap">
