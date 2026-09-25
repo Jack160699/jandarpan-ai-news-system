@@ -341,35 +341,33 @@
   will-change: transform;
 }
 
-/* ─── PAUSED BROADCAST CONTROL OVERLAY INSIDE TV ─────────────────────────── */
-/* Positioned centered over the story screen (left area of studio), completely clear of anchor on right */
-.jdl-tv__paused-overlay {
+/* ─── CENTERED ICON-ONLY CONTROLS INSIDE TV WHEN PAUSED ─────────────────── */
+.jdl-tv__center-controls {
   position: absolute;
-  top: 37.5%;
-  left: 34.9%;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 25;
+  z-index: 30;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 9px;
-  background: rgba(6, 13, 24, 0.90);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  justify-content: center;
+  gap: clamp(10px, 2vw, 18px);
+  background: rgba(6, 13, 24, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1.5px solid rgba(255, 255, 255, 0.22);
-  border-radius: 10px;
-  padding: 10px 16px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(200, 16, 46, 0.35);
+  border-radius: 9999px;
+  padding: clamp(8px, 1.2vw, 12px) clamp(16px, 2.5vw, 24px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.1);
   pointer-events: auto;
-  animation: jdl-paused-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: jdl-center-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-sizing: border-box;
-  max-width: 85%;
 }
 
-@keyframes jdl-paused-fade-in {
+@keyframes jdl-center-fade-in {
   from {
     opacity: 0;
-    transform: translate(-50%, -46%) scale(0.96);
+    transform: translate(-50%, -46%) scale(0.94);
   }
   to {
     opacity: 1;
@@ -377,301 +375,146 @@
   }
 }
 
-.jdl-tv__paused-badge {
-  display: flex;
+.jdl-tv__icon-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(200, 16, 46, 0.25);
-  border: 1px solid rgba(200, 16, 46, 0.6);
-  padding: 2.5px 9px;
-  border-radius: 9999px;
-}
-
-.jdl-tv__paused-pulse {
-  width: 6px;
-  height: 6px;
+  justify-content: center;
+  width: clamp(40px, 5.2vw, 50px);
+  height: clamp(40px, 5.2vw, 50px);
   border-radius: 50%;
-  background: #f87171;
-  box-shadow: 0 0 6px #ef4444;
-}
-
-.jdl-tv__paused-label {
-  font-size: clamp(9.5px, 0.95vw, 11px);
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.jdl-tv__paused-actions {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: nowrap;
-}
-
-.jdl-tv__paused-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: clamp(10.5px, 1.05vw, 12.5px);
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  user-select: none;
-  touch-action: manipulation;
-}
-
-.jdl-tv__paused-btn--resume {
-  background: linear-gradient(135deg, #c8102e 0%, #a00d24 100%);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 4px 14px rgba(200, 16, 46, 0.4);
-}
-
-.jdl-tv__paused-btn--resume:hover {
-  background: linear-gradient(135deg, #e8152f 0%, #c8102e 100%);
-  transform: translateY(-1px);
-}
-
-.jdl-tv__paused-btn--share {
+  border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  touch-action: manipulation;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
 }
 
-.jdl-tv__paused-btn--share:hover {
-  background: rgba(255, 255, 255, 0.22);
-  transform: translateY(-1px);
+.jdl-tv__icon-btn:hover {
+  transform: scale(1.08);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
-.jdl-tv__paused-btn--whatsapp {
+.jdl-tv__icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* Play / Resume Icon Button */
+.jdl-tv__icon-btn--play {
+  background: linear-gradient(135deg, #c8102e 0%, #a00d24 100%);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 14px rgba(200, 16, 46, 0.45);
+  color: #ffffff;
+}
+
+.jdl-tv__icon-btn--play:hover {
+  background: linear-gradient(135deg, #e8152f 0%, #c8102e 100%);
+  box-shadow: 0 6px 20px rgba(200, 16, 46, 0.65);
+}
+
+/* Mute / Unmute Icon Button */
+.jdl-tv__icon-btn--mute {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.jdl-tv__icon-btn--mute:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.jdl-tv__icon-btn--muted {
+  background: rgba(224, 90, 99, 0.24);
+  border-color: rgba(224, 90, 99, 0.65);
+  color: #f87171;
+}
+
+.jdl-tv__icon-btn--muted:hover {
+  background: rgba(224, 90, 99, 0.35);
+  border-color: #ef4444;
+}
+
+/* Share Icon Button */
+.jdl-tv__icon-btn--share {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.jdl-tv__icon-btn--share:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* WhatsApp Icon Button */
+.jdl-tv__icon-btn--whatsapp {
   background: rgba(37, 211, 102, 0.18);
+  border-color: rgba(37, 211, 102, 0.45);
   color: #25d366;
-  border: 1px solid rgba(37, 211, 102, 0.4);
 }
 
-.jdl-tv__paused-btn--whatsapp:hover {
-  background: rgba(37, 211, 102, 0.28);
-  transform: translateY(-1px);
+.jdl-tv__icon-btn--whatsapp:hover {
+  background: rgba(37, 211, 102, 0.32);
+  border-color: #25d366;
+  color: #ffffff;
 }
 
-@media (max-width: 600px) {
-  .jdl-tv__paused-overlay {
-    padding: 7px 10px;
-    gap: 6px;
-    left: 34.5%;
+@media (max-width: 540px) {
+  .jdl-tv__center-controls {
+    gap: 8px;
+    padding: 6px 12px;
   }
-  .jdl-tv__paused-btn {
-    padding: 5px 8px;
-    gap: 3.5px;
-    font-size: 10px;
+  .jdl-tv__icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+  .jdl-tv__icon-btn svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
-/* ─── DOCKED BROADCAST CONTROL BAR ───────────────────────────────────────── */
+/* ─── DEDICATED DURG SOLAR ADVERTISEMENT BANNER (BELOW TV) ───────────────── */
 .jdl-tv__bar-wrap {
   position: relative;
   z-index: 10;
   width: 100%;
 }
 
-.jdl-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: clamp(36px, 4vw, 42px);
-  background: rgba(6, 13, 24, 0.98);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  padding: 0 clamp(8px, 1.2vw, 14px);
-  gap: 8px;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-.jdl-bar__left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.jdl-bar__right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.jdl-bar__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 4px;
-  color: #ffffff;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-  flex-shrink: 0;
-}
-
-.jdl-bar__btn:hover,
-.jdl-bar__btn:active {
-  background: #c8102e;
-  border-color: #c8102e;
-  transform: scale(1.05);
-}
-
-.jdl-bar__btn--muted {
-  border-color: rgba(224, 90, 99, 0.6);
-  color: #e05a63;
-}
-
-.jdl-bar__btn--action {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.jdl-bar__btn--whatsapp {
-  color: #25d366;
-  border-color: rgba(37, 211, 102, 0.35);
-  background: rgba(37, 211, 102, 0.1);
-}
-
-.jdl-bar__btn--whatsapp:hover {
-  background: #25d366;
-  border-color: #25d366;
-  color: #ffffff;
-}
-
-/* Center Compact Durg Solar Advertisement */
-.jdl-bar__ad-slot {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(4px, 0.8vw, 8px);
-  flex: 1;
-  min-width: 0;
-  height: 30px;
-  padding: 0 clamp(5px, 0.9vw, 10px);
-  background: linear-gradient(90deg, rgba(201, 162, 75, 0.16) 0%, rgba(200, 16, 46, 0.16) 100%);
-  border: 1px solid rgba(201, 162, 75, 0.45);
-  border-radius: 4px;
-  text-decoration: none;
-  overflow: hidden;
-  transition: background 0.2s ease, border-color 0.2s ease;
-  box-sizing: border-box;
-}
-
-.jdl-bar__ad-slot:hover {
-  background: linear-gradient(90deg, rgba(201, 162, 75, 0.28) 0%, rgba(200, 16, 46, 0.28) 100%);
-  border-color: rgba(201, 162, 75, 0.75);
-}
-
-.jdl-bar__ad-thumb-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 3px;
-  overflow: hidden;
-  border: 1px solid rgba(251, 191, 36, 0.4);
-}
-
-.jdl-bar__ad-thumb {
+.jdl-ad-banner {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.jdl-bar__ad-main {
+  margin: 0;
+  padding: 0;
+  background: #060d18;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-sizing: border-box;
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: clamp(4px, 0.7vw, 8px);
-  min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
 }
 
-.jdl-bar__ad-brand {
-  font-weight: 800;
-  font-size: clamp(9px, 1.05vw, 11px);
-  color: #ffffff;
-  letter-spacing: 0.04em;
-  white-space: nowrap;
-  flex-shrink: 0;
+.jdl-ad-banner__link {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  text-decoration: none;
+  line-height: 0;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+  cursor: pointer;
 }
 
-.jdl-bar__ad-pricing {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: clamp(8.5px, 0.95vw, 10.5px);
-  color: rgba(255, 255, 255, 0.9);
-  white-space: nowrap;
-  flex-shrink: 0;
+.jdl-ad-banner__link:hover {
+  filter: brightness(1.03);
 }
 
-.jdl-bar__ad-tier strong {
-  color: #fbbf24;
-  font-weight: 800;
-}
-
-.jdl-bar__ad-dot {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.jdl-bar__ad-call {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: clamp(8.5px, 0.9vw, 10px);
-  font-weight: 700;
-  color: #22c55e;
-  white-space: nowrap;
-  flex-shrink: 0;
-  background: rgba(34, 197, 94, 0.12);
-  padding: 1px 4px;
-  border-radius: 3px;
-  border: 1px solid rgba(34, 197, 94, 0.25);
-}
-
-.jdl-bar__ad-call-icon {
-  flex-shrink: 0;
-}
-
-@media (max-width: 480px) {
-  .jdl-bar {
-    padding: 0 4px;
-    gap: 3px;
-  }
-  .jdl-bar__btn {
-    width: 25px;
-    height: 25px;
-  }
-  .jdl-bar__ad-slot {
-    height: 26px;
-    padding: 0 3px;
-    gap: 3px;
-  }
-  .jdl-bar__ad-thumb-box {
-    width: 18px;
-    height: 18px;
-  }
-  .jdl-bar__ad-call {
-    display: none;
-  }
+.jdl-ad-banner__img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1024 / 305;
+  object-fit: contain;
+  display: block;
+  border: 0;
 }
 
 /* ─── NEWS SCREEN ────────────────────────────────────────────────────────── */

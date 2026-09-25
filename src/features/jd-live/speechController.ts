@@ -101,7 +101,7 @@ class AnchorSpeechController {
   private activeUtterance: SpeechSynthesisUtterance | null = null;
   private activeToken: number = 0;
   private isPaused: boolean = false;
-  private isMuted: boolean = true;
+  private isMuted: boolean = false;
   private tokenProgress: Record<number, { charIndex: number; startTime: number; totalEstimatedMs: number }> = {};
   private watchdogTimer: ReturnType<typeof setInterval> | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;

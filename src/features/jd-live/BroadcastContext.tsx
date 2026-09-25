@@ -88,7 +88,7 @@ const initialState: BroadcastState = {
   scriptReady: false,
   audioReady: false,
   isPlaying: true,
-  isMuted: true,
+  isMuted: false,
   audioBlocked: false,
   playedIds: [],
   playedBreakingIds: [],
@@ -333,14 +333,19 @@ export function BroadcastProvider({
     }
   );
 
-  // Check saved audio consent on client mount
+  // Attempt unmuted audio playback on client mount by default
   useEffect(() => {
     try {
-      if (typeof window !== "undefined" && localStorage.getItem(AUDIO_CONSENT_KEY) === "1") {
-        speechController.setMuted(false);
-        dispatch({ type: "SET_MUTED", isMuted: false });
-      } else {
-        speechController.setMuted(true);
+      if (typeof window !== "undefined") {
+        if (localStorage.getItem(AUDIO_CONSENT_KEY) === "0") {
+          // Explicitly muted by user
+          speechController.setMuted(true);
+          dispatch({ type: "SET_MUTED", isMuted: true });
+        } else {
+          // Default: attempt unmuted audio
+          speechController.setMuted(false);
+          dispatch({ type: "SET_MUTED", isMuted: false });
+        }
       }
     } catch {}
   }, []);
@@ -370,7 +375,7 @@ export function BroadcastProvider({
         if (!muted) {
           localStorage.setItem(AUDIO_CONSENT_KEY, "1");
         } else {
-          localStorage.removeItem(AUDIO_CONSENT_KEY);
+          localStorage.setItem(AUDIO_CONSENT_KEY, "0");
         }
       } catch {}
       speechController.setMuted(muted);
