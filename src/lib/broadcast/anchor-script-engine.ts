@@ -8,9 +8,11 @@
  * 1. Zero story numbering ("news number 9", "नंबर 8", etc. are strictly forbidden).
  * 2. Zero robotic repetition (no repeated "छत्तीसगढ़ की latest खबरें" or dynamic "ब्रेकिंग न्यूज़" filler).
  * 3. Natural anchor structure:
- *    [Headline spoken ONCE] -> [2 to 4 distinct supporting factual sentences]
- * 4. Deduplication against the headline (token similarity check).
- * 5. Minimum 2 supporting factual sentences required for Live TV broadcast eligibility.
+ *    [Headline spoken ONCE] -> [COMPLETE AI SUMMARY from beginning to end]
+ * 4. Deduplication against the headline:
+ *    If the AI summary begins with the headline or a near-identical sentence,
+ *    it is intelligently removed from the spoken body so the headline is not repeated.
+ * 5. Full summary coverage: NO artificial truncation to 2–4 sentences.
  * 6. Paced with natural punctuation (Devanagari danda '।' and commas ',') for speech synthesis.
  */
 
@@ -33,7 +35,7 @@ export type AnchorScriptResult = {
   isEligibleForLiveBroadcast: boolean;
 };
 
-function cleanText(t: string | null | undefined): string {
+export function cleanText(t: string | null | undefined): string {
   if (!t) return "";
   return t
     .replace(/<[^>]*>/g, " ")
@@ -45,17 +47,21 @@ function cleanText(t: string | null | undefined): string {
     .trim();
 }
 
-function tokenize(str: string): Set<string> {
+export function normalizeKey(str: string): string {
+  return str.replace(/[^\p{L}\p{M}\p{N}]/gu, "").toLowerCase();
+}
+
+export function tokenize(str: string): Set<string> {
   return new Set(
     str
       .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
       .split(/\s+/)
-      .filter((w) => w.length > 2)
+      .filter((w) => w.length >= 2)
   );
 }
 
-function similarity(tokensA: Set<string>, tokensB: Set<string>): number {
+export function similarity(tokensA: Set<string>, tokensB: Set<string>): number {
   if (!tokensA.size || !tokensB.size) return 0;
   let matches = 0;
   for (const t of tokensA) {
@@ -64,38 +70,49 @@ function similarity(tokensA: Set<string>, tokensB: Set<string>): number {
   return matches / Math.min(tokensA.size, tokensB.size);
 }
 
-export function extractDistinctSupportingSentences(
+/**
+ * Extracts all distinct factual sentences comprising the complete AI summary.
+ * Removes duplicate openings that repeat the headline, drops metadata boilerplate,
+ * and preserves all remaining sentences in natural chronological order.
+ */
+export function extractCompleteSummarySentences(
   headline: string,
   summary: string | null | undefined,
   body: string | null | undefined,
-  maxSentences = 4
+  maxSentences?: number
 ): string[] {
   const cleanHl = cleanText(headline);
+  const hlKey = normalizeKey(cleanHl);
   const hlTokens = tokenize(cleanHl);
 
-  const rawText = `${cleanText(summary)} ${cleanText(body)}`;
+  // Combine summary and body into unified story content
+  const rawText = `${cleanText(summary)}\n\n${cleanText(body)}`;
   const rawSentences = rawText
     .split(/[।\.!\?\n\r]+/)
     .map((s) => cleanText(s))
-    .filter((s) => s.length >= 18);
+    .filter((s) => s.length >= 15);
 
   const distinct: string[] = [];
+  const seenKeys = new Set<string>([hlKey]);
   const seenTokens: Set<string>[] = [hlTokens];
 
   for (const sent of rawSentences) {
     // Skip if contains metadata/source boilerplate or promotional links
     if (
-      /स्रोत\s*:|source\s*:|फोटो\s*:|photo\s*:|ब्यूरो द्वारा|कॉपीराइट|copyright|read more|फॉलो करें|follow us|bhilai times|ibc24/i.test(
-        sent
-      )
+      /^(?:स्रोत|source|फोटो|photo|सौजन्य|क्रेडिट|credit|रिपोर्टर|ब्यूरो)\s*:/i.test(sent) ||
+      /(?:जन दर्पण ब्यूरो द्वारा सत्यापित|jan darpan bureau|कॉपीराइट|copyright|read more|फॉलो करें|follow us|bhilai times|ibc24)/i.test(sent)
     ) {
       continue;
     }
 
+    const key = normalizeKey(sent);
+    if (!key || seenKeys.has(key)) continue;
+
+    // Check token similarity against headline (skip duplicate opening) and previous sentences
     const sentTokens = tokenize(sent);
     let isDupe = false;
     for (const prev of seenTokens) {
-      if (similarity(prev, sentTokens) > 0.50) {
+      if (similarity(prev, sentTokens) > 0.65) {
         isDupe = true;
         break;
       }
@@ -103,29 +120,33 @@ export function extractDistinctSupportingSentences(
 
     if (!isDupe) {
       distinct.push(sent);
+      seenKeys.add(key);
       seenTokens.push(sentTokens);
-      if (distinct.length >= maxSentences) break;
+      if (maxSentences && distinct.length >= maxSentences) break;
     }
   }
 
   return distinct;
 }
 
+/** Backwards-compatible alias for callers requesting distinct supporting sentences */
+export const extractDistinctSupportingSentences = extractCompleteSummarySentences;
+
 export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScriptResult {
   const { headline, summary, articleBody, language } = input;
   const cleanHeadline = cleanText(headline);
 
-  const supportingSentences = extractDistinctSupportingSentences(
+  // Complete AI summary without artificial truncation
+  const supportingSentences = extractCompleteSummarySentences(
     cleanHeadline,
     summary,
-    articleBody,
-    4
+    articleBody
   );
 
-  const isEligibleForLiveBroadcast = supportingSentences.length >= 2;
+  const isEligibleForLiveBroadcast = supportingSentences.length >= 1;
 
   if (language === "hi") {
-    // Clean Hindi broadcast script: Headline spoken ONCE + 2 to 4 distinct factual sentences
+    // Clean Hindi broadcast script: Headline spoken ONCE + COMPLETE AI summary
     const script = supportingSentences.length > 0
       ? `${cleanHeadline}। ${supportingSentences.join("। ")}।`
       : `${cleanHeadline}।`;
@@ -136,7 +157,8 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScri
       .replace(/।+/g, "।")
       .trim();
 
-    const durationSec = Math.max(14, Math.ceil(normalizedScript.length / 13));
+    // Natural reading pace: ~11.5 characters per second at 0.94 rate
+    const durationSec = Math.max(16, Math.ceil(normalizedScript.length / 11.5));
     return {
       script: normalizedScript,
       durationSec,
@@ -156,7 +178,7 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScri
       .replace(/\.+/g, ".")
       .trim();
 
-    const durationSec = Math.max(14, Math.ceil(normalizedScript.length / 14));
+    const durationSec = Math.max(16, Math.ceil(normalizedScript.length / 12.5));
     return {
       script: normalizedScript,
       durationSec,

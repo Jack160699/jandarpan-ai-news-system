@@ -150,7 +150,9 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
       typeof window !== "undefined" &&
       !!(window as unknown as { __JD_TEST_ACCELERATED__?: boolean }).__JD_TEST_ACCELERATED__;
 
-    const maxSafetyMs = isAccelerated ? 3000 : 28000;
+    // Generous dead-man fallback (min 90s) in case browser speech engine crashes
+    const scriptLen = currentSegment.script?.length || 100;
+    const deadManSafetyMs = isAccelerated ? 3000 : Math.max(90000, scriptLen * 180);
 
     const advanceToNext = () => {
       if (
@@ -166,10 +168,10 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     const runStoryCycle = async () => {
       dispatch({ type: "SET_STATUS", status: "playing" });
 
-      // Armed hard safety timeout in case of unexpected hanging
+      // Armed dead-man safety timeout only in case of complete browser failure
       hardSafetyTimer = setTimeout(() => {
         advanceToNext();
-      }, maxSafetyMs);
+      }, deadManSafetyMs);
 
       try {
         await speak({
@@ -180,7 +182,10 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
         });
       } catch {}
 
-      if (hardSafetyTimer) clearTimeout(hardSafetyTimer);
+      if (hardSafetyTimer) {
+        clearTimeout(hardSafetyTimer);
+        hardSafetyTimer = null;
+      }
 
       // Natural anchor pause between stories (~450ms) before transitioning visuals
       if (
