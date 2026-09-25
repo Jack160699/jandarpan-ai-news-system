@@ -160,12 +160,16 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       if (!hasVerifiedRealMedia(imgUrl)) continue;
 
       if (!isCgStory(a)) continue;
-      const hasDev = isDevanagari(a.headline);
-      if (locale === "en" && hasDev) continue;
-      if (locale === "hi" && !hasDev && a.language !== "hi") continue;
+      const enBundle = (a as any).translations?.en || (a as any).editorial_metadata?.translations?.en;
+      const displayHeadline = locale === "en" ? (enBundle?.headline || a.headline) : a.headline;
+      const displaySummary = locale === "en" ? (enBundle?.summary || a.summary) : a.summary;
 
       seen.add(a.slug);
-      out.push(toReaderStory(a));
+      out.push({
+        ...toReaderStory(a),
+        headline: displayHeadline,
+        summary: displaySummary,
+      });
       if (out.length >= 40) break;
     }
 
@@ -202,8 +206,8 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       if (!verifiedImg || !hasVerifiedRealMedia(verifiedImg)) continue;
 
       const hasDev = isDevanagari(a.headline);
-      if (broadcastLang === "en" && hasDev) continue;
-      if (broadcastLang === "hi" && !hasDev && a.language !== "hi") continue;
+      const enTrans = (a as any).translations?.en || (a as any).editorial_metadata?.translations?.en;
+      const hiTrans = (a as any).translations?.hi || (a as any).editorial_metadata?.translations?.hi;
 
       seen.add(a.id);
       seen.add(a.slug);
@@ -229,18 +233,30 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
         categoryLabel: a.categoryLabel,
       });
 
+      const headlineHi = hiTrans?.headline || (hasDev ? a.headline : a.headline);
+      const headlineEn = enTrans?.headline || (!hasDev ? a.headline : undefined);
+      const activeHeadline = broadcastLang === "en" ? (headlineEn || a.headline) : (headlineHi || a.headline);
+
+      const summaryHi = hiTrans?.summary || (hasDev ? a.summary : a.summary);
+      const summaryEn = enTrans?.summary || (!hasDev ? a.summary : undefined);
+      const activeSummary = broadcastLang === "en" ? (summaryEn || a.summary || "") : (summaryHi || a.summary || "");
+
       queue.push({
         id: a.id,
         slug: a.slug,
-        headline: a.headline,
-        headlineHi: hasDev ? a.headline : undefined,
-        summary: a.summary || "",
-        summaryHi: hasDev ? a.summary : undefined,
+        headline: activeHeadline,
+        headlineHi,
+        headlineEn,
+        summary: activeSummary,
+        summaryHi,
+        summaryEn,
         imageUrl: verifiedImg,
         categoryLabel: broadcastLang === "en" ? distEn : distHi,
         categoryLabelHi: distHi,
+        categoryLabelEn: distEn,
         district: broadcastLang === "en" ? distEn : distHi,
         districtHi: distHi,
+        districtEn: distEn,
         section: a.section || "chhattisgarh",
         canonicalCategories: catRes.categories,
         primaryCategory: catRes.primaryCategory,

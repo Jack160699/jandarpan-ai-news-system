@@ -28,20 +28,29 @@ function buildBroadcastQueue(
   const realStories = rawQueue.filter((s) => s.id !== "jd-live-intro" && !s.isIntro);
 
   return realStories.map((seg) => {
-    const headline = lang === "hi" ? (seg.headlineHi || seg.headline) : seg.headline;
-    const summary = lang === "hi" ? (seg.summaryHi || seg.summary) : seg.summary;
-    const district = lang === "hi" ? (seg.districtHi || seg.district) : seg.district;
+    const headline = lang === "en" ? (seg.headlineEn || seg.headline) : (seg.headlineHi || seg.headline);
+    const summary = lang === "en" ? (seg.summaryEn || seg.summary) : (seg.summaryHi || seg.summary);
+    const district = lang === "en" ? (seg.districtEn || seg.district) : (seg.districtHi || seg.district);
+    const categoryLabel = lang === "en" ? (seg.categoryLabelEn || seg.categoryLabel) : (seg.categoryLabelHi || seg.categoryLabel);
 
     let script = seg.script;
     let durationSec = seg.durationSec || 12;
 
-    if (!script || script.includes("नंबर ") || script.includes("Story number") || script.includes("10 बड़ी खबरें")) {
+    const needsScriptRegen =
+      !script ||
+      script.includes("नंबर ") ||
+      script.includes("Story number") ||
+      script.includes("10 बड़ी खबरें") ||
+      (lang === "en" && /[\u0900-\u097F]/.test(script)) ||
+      (lang === "hi" && !/[\u0900-\u097F]/.test(script));
+
+    if (needsScriptRegen) {
       const generated = generateAnchorSpokenScript({
         headline,
         summary,
         district,
         section: seg.section,
-        categoryLabel: seg.categoryLabel,
+        categoryLabel,
         isBreaking: seg.isBreaking,
         language: lang,
       });
@@ -51,6 +60,10 @@ function buildBroadcastQueue(
 
     return {
       ...seg,
+      headline,
+      summary,
+      district,
+      categoryLabel,
       script,
       durationSec,
       countdownRank: 0,

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useLanguage } from "@/providers/LanguageProvider";
 import { BroadcastProvider, useBroadcast } from "./BroadcastContext";
 import "./styles/studio.css";
 import type { BroadcastLanguage, BroadcastSegment } from "./types";
@@ -81,8 +82,16 @@ type Props = {
  * Jan Darpan Live root entry point.
  */
 export function JanDarpanLive({ initialLanguage = "hi", initialQueue, embedded = false }: Props) {
+  let activeLang: BroadcastLanguage = initialLanguage;
+  try {
+    const langContext = useLanguage();
+    if (langContext?.language) {
+      activeLang = langContext.language === "en" ? "en" : "hi";
+    }
+  } catch {}
+
   return (
-    <BroadcastProvider initialLanguage={initialLanguage} initialQueue={initialQueue}>
+    <BroadcastProvider initialLanguage={activeLang} initialQueue={initialQueue}>
       <LiveBroadcastLayout embedded={embedded} />
     </BroadcastProvider>
   );
