@@ -3,10 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useBroadcast } from "../BroadcastContext";
-import { detectSemanticTopic } from "@/lib/news/images/editorial-visual-fallbacks";
-import { getCategoryVisualTemplate } from "@/lib/news/ai/editorial-image-brand";
-import { EDITORIAL_IMAGES } from "@/lib/editorial-images";
-import { optimizeCdnImageUrl } from "@/lib/news/images/responsive-sizes";
+import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 
 /**
@@ -15,15 +12,14 @@ import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district
  * Rules:
  * - One coherent virtual story display filling the designated news screen area cleanly.
  * - Upper-right inside the story screen: exactly ONE location badge (📍 [District] or 📍 राज्य डेस्क).
- * - Deterministic fallback hierarchy: Primary Story Media -> Validated Contextual Media -> Broadcast Card.
- * - Never shows broken image icon or empty black void.
+ * - REAL SOURCE MEDIA ONLY: Every story displays its verified genuine publisher photograph.
+ * - Never shows generic stock Unsplash images, AI placeholders, or fake graphics.
  * - Synchronized dynamically with current story.
  */
 export function NewsScreen() {
   const { state } = useBroadcast();
   const { currentSegment, currentIndex, queue, language } = state;
   const [imageError, setImageError] = useState(false);
-  const [fallbackError, setFallbackError] = useState(false);
   const [aspectFit, setAspectFit] = useState<"cover" | "contain">("cover");
 
   // Next story preload
@@ -31,7 +27,7 @@ export function NewsScreen() {
     if (typeof window === "undefined" || !queue || queue.length <= 1) return;
     const nextIdx = (currentIndex + 1) % queue.length;
     const nextSeg = queue[nextIdx];
-    if (nextSeg?.imageUrl) {
+    if (nextSeg?.imageUrl && hasVerifiedRealMedia(nextSeg.imageUrl)) {
       const preloadImg = new window.Image();
       preloadImg.src = nextSeg.imageUrl;
     }
@@ -40,7 +36,6 @@ export function NewsScreen() {
   // Reset error states on story change
   useEffect(() => {
     setImageError(false);
-    setFallbackError(false);
   }, [currentSegment?.id]);
 
   const seg = currentSegment;
@@ -67,46 +62,17 @@ export function NewsScreen() {
     return language === "hi" ? "राज्य डेस्क" : "State Desk";
   }, [seg?.id, seg?.headline, seg?.summary, seg?.section, rawDistrict, language]);
 
-  // Validated contextual fallback media if primary image is missing, generic, or broken
-  const fallbackMediaUrl = useMemo(() => {
-    if (!seg) return "";
-    const text = `${seg.headline || ""} ${seg.summary || ""}`;
-    const topic = detectSemanticTopic(seg.categoryLabel, text);
-    if (topic) {
-      const template = getCategoryVisualTemplate(topic);
-      if (template && EDITORIAL_IMAGES[template.fallbackKey]) {
-        return optimizeCdnImageUrl(EDITORIAL_IMAGES[template.fallbackKey], 1200);
-      }
-    }
-    if (displayLocation) {
-      const loc = displayLocation.toLowerCase();
-      if (loc.includes("बस्तर") || loc.includes("bastar")) {
-        return optimizeCdnImageUrl(EDITORIAL_IMAGES.folkCulture, 1200);
-      }
-      if (loc.includes("दुर्ग") || loc.includes("भिलाई") || loc.includes("durg") || loc.includes("bhilai")) {
-        return optimizeCdnImageUrl(EDITORIAL_IMAGES.steelIndustry, 1200);
-      }
-      if (loc.includes("बिलासपुर") || loc.includes("bilaspur")) {
-        return optimizeCdnImageUrl(EDITORIAL_IMAGES.legalCrime, 1200);
-      }
-    }
-    return optimizeCdnImageUrl(EDITORIAL_IMAGES.civicOffice, 1200);
-  }, [seg?.id, seg?.headline, seg?.summary, seg?.categoryLabel, displayLocation]);
-
-  // Determine active media URL — Priority 1: Real article image
+  // Determine active media URL — Genuine Real Source Media Only
   const activeMediaUrl = useMemo(() => {
     let img = seg?.imageUrl?.trim() || "";
     if (img.startsWith("http://")) {
       img = img.replace(/^http:\/\//i, "https://");
     }
-    if (img && !imageError) {
+    if (img && !imageError && hasVerifiedRealMedia(img)) {
       return img;
     }
-    if (fallbackMediaUrl && !fallbackError) {
-      return fallbackMediaUrl;
-    }
     return null;
-  }, [seg?.id, seg?.imageUrl, imageError, fallbackMediaUrl, fallbackError]);
+  }, [seg?.id, seg?.imageUrl, imageError]);
 
   return (
     <div className="jdl-virtual-screen" aria-live="polite">
@@ -152,9 +118,6 @@ export function NewsScreen() {
                     e.type
                   );
                   setImageError(true);
-                } else {
-                  console.warn("[JanDarpan Live TV] Fallback media load failed for story:", seg?.id, fallbackMediaUrl);
-                  setFallbackError(true);
                 }
               }}
             />

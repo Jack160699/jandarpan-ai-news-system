@@ -11,6 +11,7 @@ import {
 import { getCachedPageHtml, setCachedPageHtml } from "@/lib/news/images/cache";
 import { decodeHtmlEntities } from "@/lib/news/rss-fetch";
 import { parsePublishedAt } from "@/lib/news/normalize";
+import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import type { NormalizedArticle } from "@/lib/news/types";
 
 const PAGE_TIMEOUT_MS = 8_000;
@@ -97,7 +98,7 @@ async function fetchPageHtml(url: string): Promise<string | null> {
 
 function needsEnrichment(article: NormalizedArticle): boolean {
   const descLen = (article.description ?? article.content ?? "").trim().length;
-  return descLen < 20 || !article.image_url || !article.published_at;
+  return descLen < 20 || !hasVerifiedRealMedia(article.image_url) || !article.published_at;
 }
 
 export async function enrichRssArticleFromPage(
@@ -128,8 +129,8 @@ export async function enrichRssArticleFromPage(
       ? meta.description
       : article.description ?? article.content?.slice(0, 600) ?? article.title;
 
-  let image_url = article.image_url;
-  if (!image_url && meta.imageUrl) {
+  let image_url = hasVerifiedRealMedia(article.image_url) ? article.image_url : null;
+  if (!image_url && meta.imageUrl && hasVerifiedRealMedia(meta.imageUrl)) {
     image_url = normalizeImageUrl(meta.imageUrl, article.article_url);
     recovered = true;
   }
@@ -140,7 +141,7 @@ export async function enrichRssArticleFromPage(
       providerImage: null,
       htmlContent: html,
     });
-    if (extracted.url) {
+    if (extracted.url && hasVerifiedRealMedia(extracted.url)) {
       image_url = extracted.url;
       recovered = true;
     }

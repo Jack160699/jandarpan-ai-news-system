@@ -13,6 +13,7 @@ import { useJdDsT } from "../i18n";
 import Link from "next/link";
 import { toReaderStory, formatStoryTime, type ReaderStory } from "../utils";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
+import { hasVerifiedRealMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
 import { SectionHeader } from "../components";
 import { DevelopingStoryTeaserCard } from "./DevelopingStoryTeaserCard";
 import { FormatStoryCard } from "./FormatStoryCard";
@@ -93,14 +94,8 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       ...(feed.breakingTicker ?? []),
     ];
 
-    // Priority-rank 48-hour candidates: breaking first, then highest priority, then most recent
+    // Chronological ordering: NEWEST ARTICLE FIRST (strictly chronological by original published_at)
     const candidates = [...rawCandidates].sort((a, b) => {
-      const isBrkA = a.tags?.includes("breaking") || (a as { isBreaking?: boolean }).isBreaking ? 1 : 0;
-      const isBrkB = b.tags?.includes("breaking") || (b as { isBreaking?: boolean }).isBreaking ? 1 : 0;
-      if (isBrkB !== isBrkA) return isBrkB - isBrkA;
-      const pA = a.priorityScore || (a.ranking?.priorityScore ?? 50);
-      const pB = b.priorityScore || (b.ranking?.priorityScore ?? 50);
-      if (pB !== pA) return pB - pA;
       const tA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
       const tB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
       return tB - tA;
@@ -157,6 +152,11 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
 
     for (const a of candidates) {
       if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
+
+      // ABSOLUTE MEDIA RULE: ONLY SHOW REAL NEWS WITH REAL SOURCE MEDIA
+      const imgUrl = extractVerifiedRealMediaUrl(a) || a.imageUrl;
+      if (!hasVerifiedRealMedia(imgUrl)) continue;
+
       if (!isCgStory(a)) continue;
       const hasDev = isDevanagari(a.headline);
       if (locale === "en" && hasDev) continue;
@@ -165,16 +165,6 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       seen.add(a.slug);
       out.push(toReaderStory(a));
       if (out.length >= 40) break;
-    }
-
-    if (out.length < 5) {
-      for (const a of candidates) {
-        if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
-        if (!isCgStory(a)) continue;
-        seen.add(a.slug);
-        out.push(toReaderStory(a));
-        if (out.length >= 40) break;
-      }
     }
 
     return out;
@@ -190,13 +180,24 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       ...(feed.trending ?? []),
     ];
 
+    // Chronological ordering: NEWEST ARTICLE FIRST
+    const sortedCandidates = [...candidates].sort((a, b) => {
+      const tA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const tB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return tB - tA;
+    });
+
     const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
     const queue: any[] = [];
     const seen = new Set<string>();
 
-    for (const a of candidates) {
+    for (const a of sortedCandidates) {
       if (!a?.id || !a?.slug || !a?.headline?.trim()) continue;
       if (seen.has(a.id) || seen.has(a.slug)) continue;
+
+      // ABSOLUTE MEDIA RULE: ONLY PUBLISH IF HAS VERIFIED REAL SOURCE MEDIA
+      const verifiedImg = extractVerifiedRealMediaUrl(a);
+      if (!verifiedImg || !hasVerifiedRealMedia(verifiedImg)) continue;
 
       const hasDev = isDevanagari(a.headline);
       if (broadcastLang === "en" && hasDev) continue;
@@ -217,33 +218,6 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       const distHi = districtRes.nameHi || (districtRes.isStatewide ? "राज्य डेस्क" : (a.categoryLabel || "राज्य डेस्क"));
       const distEn = districtRes.nameEn || (districtRes.isStatewide ? "State Desk" : (a.categoryLabel || "State Desk"));
 
-      const imgCandidates = [
-        (a as any).editorial_metadata?.media_source_url,
-        (a as any).editorial_metadata?.hero_media?.media_url,
-        (a as any).editorial_metadata?.hero_media?.source_url,
-        (a as any).editorial_metadata?.source_attribution?.[0]?.image_url,
-        (a as any).editorial_metadata?.embedded_video?.[0]?.thumbnailUrl,
-        a.imageUrl,
-        a.ogImageUrl,
-        (a as any).hero_image_url,
-      ];
-      let bestImg = "";
-      for (const c of imgCandidates) {
-        if (c && typeof c === "string" && c.trim()) {
-          const u = c.trim();
-          if (!u.includes("unsplash.com") && !u.includes("J6_coFbogxh") && !u.includes("placeholder")) {
-            bestImg = u;
-            break;
-          }
-        }
-      }
-      if (!bestImg) {
-        bestImg = (a.imageUrl || a.ogImageUrl || (a as any).hero_image_url || "").trim();
-      }
-      if (bestImg.startsWith("http://")) {
-        bestImg = bestImg.replace(/^http:\/\//i, "https://");
-      }
-
       queue.push({
         id: a.id,
         slug: a.slug,
@@ -251,7 +225,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
         headlineHi: hasDev ? a.headline : undefined,
         summary: a.summary || "",
         summaryHi: hasDev ? a.summary : undefined,
-        imageUrl: bestImg,
+        imageUrl: verifiedImg,
         categoryLabel: broadcastLang === "en" ? distEn : distHi,
         categoryLabelHi: distHi,
         district: broadcastLang === "en" ? distEn : distHi,
@@ -305,7 +279,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
                 prefetch={false}
               >
                 <div className="jd-fresh-col__thumb-wrap">
-                  {story.imageUrl ? (
+                  {story.imageUrl && (
                     <img
                       src={story.imageUrl}
                       alt=""
@@ -315,8 +289,6 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
                         (e.target as HTMLImageElement).src = "/brand/jan-darpan/mark/jan-darpan-mark-square-light.svg";
                       }}
                     />
-                  ) : (
-                    <div className="jd-fresh-col__thumb-ph" />
                   )}
                 </div>
                 <div className="jd-fresh-col__body">

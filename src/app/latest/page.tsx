@@ -15,6 +15,7 @@ import {
   collectionPageJsonLd,
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
+import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import { Footer } from "@/sections/Footer";
 
 export const revalidate = 60;
@@ -68,6 +69,7 @@ export default async function LatestPage() {
     if (a?.slug && !bySlug.has(a.slug)) bySlug.set(a.slug, a);
   }
   const articles = [...bySlug.values()]
+    .filter((a) => hasVerifiedRealMedia(a.imageUrl))
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, 100);
 

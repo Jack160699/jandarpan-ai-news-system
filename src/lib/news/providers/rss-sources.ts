@@ -250,7 +250,27 @@ export const RSS_SOURCES: RSSSource[] = [
     priority: 78,
     tier: "aggregator",
   },
-  // ── Chhattisgarh News Radar — Tier A Major Regional Publishers ──
+  // ── Chhattisgarh News Radar — Direct Regional Feeds & Tier A Publishers ──
+  {
+    id: "ibc24-cg-direct",
+    name: "IBC24 Chhattisgarh (Direct Feed)",
+    category: "chhattisgarh",
+    language: "hi",
+    region: "cg",
+    url: "https://www.ibc24.in/chhattisgarh/feed",
+    priority: 120,
+    tier: "publisher",
+  },
+  {
+    id: "bhilai-times-direct",
+    name: "Bhilai Times (Direct Feed)",
+    category: "chhattisgarh",
+    language: "hi",
+    region: "cg",
+    url: "https://bhilaitimes.com/feed/",
+    priority: 118,
+    tier: "publisher",
+  },
   {
     id: "gnews-cg-lalluram",
     name: "Google News — Lalluram CG (Tier A)",

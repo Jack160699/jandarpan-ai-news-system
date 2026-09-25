@@ -31,6 +31,14 @@ const PLACEHOLDER_RE =
 const KNOWN_BROKEN_IMAGE_RE =
   /photo-1529107386315-e1a269ed48e0|photo-1449824913935-59a10b8d2000/i;
 
+/** Stock photography domains that must never be used for real news articles */
+const STOCK_MEDIA_RE =
+  /unsplash\.com|pexels\.com|pixabay\.com|shutterstock\.com|gettyimages\.com|istockphoto\.com|freepik\.com|stock\.adobe\.com/i;
+
+/** AI image generation or mockups */
+const AI_PLACEHOLDER_RE =
+  /midjourney|dall-e|stability\.ai|dreamstudio|ai-generated|newsroom-desk|raipur-city-ai/i;
+
 const LOGO_ICON_RE =
   /\/(logo|icon|favicon|avatar|sprite|emoji|banner-ad|ads?|advert|promo-thumb|brand-mark|app-icon|apple-touch)[\/._-]|logo\.|icon\.|favicon\.|\.svg(\?|$)|sprite|avatar-|profile-pic|apple-touch-icon/i;
 
@@ -158,6 +166,66 @@ export function isRejectedImageUrl(url: string): { rejected: boolean; reason?: s
   }
 
   return { rejected: false };
+}
+
+/**
+ * Hard publication gate: verify that a media asset is genuine, real source news media.
+ * Rejects all stock photography, AI images, placeholders, generic provider logos, and broken URLs.
+ */
+export function hasVerifiedRealMedia(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  const lower = trimmed.toLowerCase();
+  if (STOCK_MEDIA_RE.test(lower)) return false;
+  if (AI_PLACEHOLDER_RE.test(lower)) return false;
+  const { rejected } = isRejectedImageUrl(trimmed);
+  return !rejected;
+}
+
+/**
+ * Extract the best verified real media URL from any story or article record.
+ * Checks all possible media fields in prioritized sequence.
+ * Returns null if no genuine real source media exists.
+ */
+export function extractVerifiedRealMediaUrl(item: any): string | null {
+  if (!item || typeof item !== "object") return null;
+
+  const meta = item.editorial_metadata as any;
+  const metaImage = meta?.image;
+
+  const candidates: Array<string | null | undefined> = [
+    item.hero_image_url,
+    item.heroUrl,
+    meta?.media_source_url,
+    meta?.hero_media?.media_url,
+    meta?.hero_media?.source_url,
+    meta?.hero_media?.thumbnail_url,
+    meta?.source_attribution?.[0]?.image_url,
+    meta?.source_attribution?.[0]?.source_image,
+    meta?.embedded_video?.[0]?.thumbnailUrl,
+    meta?.embedded_video?.[0]?.thumbnail_url,
+    item.media_records?.[0]?.media_url,
+    item.media_records?.[0]?.source_url,
+    item.media_records?.[0]?.thumbnail_url,
+    item.source_image,
+    item.thumbnail_url,
+    metaImage?.hero_url,
+    metaImage?.sourceUrl,
+    metaImage?.og_url,
+    item.imageUrl,
+    item.image_url,
+    item.ogImageUrl,
+    item.og_image_url,
+  ];
+
+  for (const c of candidates) {
+    if (c && typeof c === "string" && hasVerifiedRealMedia(c)) {
+      return ensureHttpsImageUrl(c);
+    }
+  }
+
+  return null;
 }
 
 /** 0–100 editorial suitability score */

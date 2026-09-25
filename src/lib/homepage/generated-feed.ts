@@ -16,6 +16,7 @@ import {
   optimizeCdnImageUrl,
 } from "@/lib/news/ai/editorial-image-compress";
 import { resolveArticleDisplayImage } from "@/lib/news/images/resolve-article-display-image";
+import { hasVerifiedRealMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import {
   resolveLocalizedFieldsStrict,
@@ -71,24 +72,13 @@ function pickFeedRegion(row: GeneratedArticleRow): string | null {
 }
 
 function resolveImageUrls(row: GeneratedArticleRow): { hero: string; og: string } {
-  const resolved = resolveArticleDisplayImage({
-    hero_image_url: row.hero_image_url,
-    editorial_metadata: row.editorial_metadata,
-    tags: row.tags,
-    headline: row.headline,
-    category: row.tags?.[0] ?? null,
-    source: pickFeedSource(row),
-    region: pickFeedRegion(row),
-  });
-
-  if (resolved.textOnly || !resolved.displayUrl) {
+  const verifiedUrl = extractVerifiedRealMediaUrl(row);
+  if (!verifiedUrl || !hasVerifiedRealMedia(verifiedUrl)) {
     return { hero: "", og: "" };
   }
 
-  const hero = optimizeCdnImageUrl(resolved.displayUrl, 1200);
-  const og = resolved.ogUrl
-    ? optimizeCdnImageUrl(resolved.ogUrl, 1200)
-    : buildOpenGraphImageUrl(hero);
+  const hero = optimizeCdnImageUrl(verifiedUrl, 1200);
+  const og = buildOpenGraphImageUrl(hero);
 
   return { hero, og };
 }
@@ -120,6 +110,11 @@ export function toHomeArticle(
   if (!localized?.headline?.trim()) return null;
 
   const { hero, og } = resolveImageUrls(row);
+  // ABSOLUTE MEDIA RULE: ONLY SHOW REAL NEWS WITH REAL SOURCE MEDIA.
+  // If NO REAL USABLE MEDIA = DO NOT PUBLISH
+  if (!hero || !hasVerifiedRealMedia(hero)) {
+    return null;
+  }
   const hours = hoursSince(row.published_at);
   const meta = row.editorial_metadata ?? {};
   const confidence = meta.ai_confidence ?? 0.55;

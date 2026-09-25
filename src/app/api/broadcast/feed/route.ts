@@ -7,11 +7,9 @@ import type { HomeArticle } from "@/lib/homepage/types";
 import type { BroadcastSegment } from "@/features/jd-live/types";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 import { generateAnchorSpokenScript } from "@/lib/broadcast/anchor-script-engine";
-import { detectSemanticTopic } from "@/lib/news/images/editorial-visual-fallbacks";
-import { getCategoryVisualTemplate } from "@/lib/news/ai/editorial-image-brand";
-import { EDITORIAL_IMAGES } from "@/lib/editorial-images";
+import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import { optimizeCdnImageUrl } from "@/lib/news/images/responsive-sizes";
-import { isRejectedImageUrl } from "@/lib/news/images/validate";
+import { hasVerifiedRealMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -269,51 +267,14 @@ function resolveCandidateMediaUrl(
   meta?: any,
   row?: any
 ): string {
-  const candidates: Array<string | null | undefined> = [
-    primary,
-    meta?.media_source_url,
-    meta?.hero_media?.media_url,
-    meta?.hero_media?.source_url,
-    meta?.hero_media?.thumbnail_url,
-    meta?.source_attribution?.[0]?.image_url,
-    meta?.source_attribution?.[0]?.source_image,
-    meta?.embedded_video?.[0]?.thumbnailUrl,
-    meta?.embedded_video?.[0]?.thumbnail_url,
-    row?.media_records?.[0]?.media_url,
-    row?.media_records?.[0]?.source_url,
-    row?.media_records?.[0]?.thumbnail_url,
-    row?.source_image,
-    row?.thumbnail_url,
-    row?.hero_image_url,
-    meta?.image?.hero_url,
-    meta?.image?.sourceUrl,
-    meta?.image?.og_url,
-    row?.image_url,
-    row?.og_image_url,
-  ];
-
-  // 1. First pass: genuine non-stock real news photo
-  for (const c of candidates) {
-    if (c && typeof c === "string" && c.trim()) {
-      let u = c.trim();
-      if (u.startsWith("http://")) u = u.replace(/^http:\/\//i, "https://");
-      if (!isStockOrGenericMediaUrl(u)) {
-        return u;
-      }
-    }
+  const verified = extractVerifiedRealMediaUrl({
+    hero_image_url: primary,
+    editorial_metadata: meta,
+    ...row,
+  });
+  if (verified && hasVerifiedRealMedia(verified)) {
+    return verified;
   }
-
-  // 2. Second pass: fallback if no genuine news photo found
-  for (const c of candidates) {
-    if (c && typeof c === "string" && c.trim()) {
-      let u = c.trim();
-      if (u.startsWith("http://")) u = u.replace(/^http:\/\//i, "https://");
-      if (!u.includes("placeholder") && !u.startsWith("data:") && !u.includes("J6_coFbogxh")) {
-        return u;
-      }
-    }
-  }
-
   return "";
 }
 
@@ -432,36 +393,9 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     finalImageUrl = finalImageUrl.replace(/^http:\/\//i, "https://");
   }
 
-  // Only fall back to contextual/generated visual if no usable real article image exists
-  const isBannedOrBroken =
-    !finalImageUrl ||
-    finalImageUrl.includes("photo-1529107386315-e1a269ed48e0") ||
-    finalImageUrl.includes("photo-1449824913935-59a10b8d2000") ||
-    finalImageUrl.includes("via.placeholder.com") ||
-    finalImageUrl.includes("default.jpg") ||
-    finalImageUrl.includes("J6_coFbogxh") ||
-    finalImageUrl.startsWith("data:");
-
-  if (isBannedOrBroken) {
-    const text = `${c.headline || ""} ${c.summary || ""}`;
-    const topic = detectSemanticTopic(c.section, text);
-    if (topic) {
-      const template = getCategoryVisualTemplate(topic);
-      if (template && EDITORIAL_IMAGES[template.fallbackKey]) {
-        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES[template.fallbackKey], 1200);
-      }
-    }
-    if (!finalImageUrl || isBannedOrBroken) {
-      if (districtRes.districtSlug === "bastar") {
-        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES.folkCulture, 1200);
-      } else if (districtRes.districtSlug === "durg" || districtRes.districtSlug === "bhilai") {
-        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES.steelIndustry, 1200);
-      } else if (districtRes.districtSlug === "bilaspur") {
-        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES.legalCrime, 1200);
-      } else {
-        finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES.civicOffice, 1200);
-      }
-    }
+  // Absolute Media Rule: Verified Real News Media Only — ZERO visual fallbacks
+  if (!hasVerifiedRealMedia(finalImageUrl)) {
+    finalImageUrl = "";
   }
 
   return {
@@ -545,17 +479,32 @@ export async function GET(req: NextRequest) {
       // DB pool query error fallback
     }
 
-    // 2. Strict 48-Hour Filtering: published_at >= now - 48 hours
-    const now = Date.now();
-    const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
-    const cutoff = now - FORTY_EIGHT_HOURS_MS;
+    // Also pull 100% verified real Chhattisgarh static article pool
+    try {
+      const staticArticles = getStaticFallbackArticlePool();
+      for (const r of staticArticles) {
+        if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
+        if (seenIds.has(r.id) || seenSlugs.has(r.slug)) continue;
+        seenIds.add(r.id);
+        seenSlugs.add(r.slug);
+        candidates.push(normalizeGeneratedRow(r));
+      }
+    } catch {
+      // Static pool load fallback
+    }
 
+    // 2. Strict Media & 24-Hour Filtering
+    const now = Date.now();
     const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
 
-    // Filter strictly by Language, 48-Hour validity, and CHHATTISGARH RELEVANCE
+    // Filter strictly by Real Media, Language, 24-Hour validity, and CHHATTISGARH RELEVANCE
     let pool = candidates.filter((c) => {
       // Must have valid headline and slug
       if (!c.headline || !c.slug) return false;
+
+      // ABSOLUTE MEDIA RULE: ONLY SHOW REAL NEWS WITH REAL SOURCE MEDIA
+      // Hard gate: zero stock photos, zero placeholders, zero AI visuals
+      if (!hasVerifiedRealMedia(c.imageUrl)) return false;
 
       // HARD RULE: Only Chhattisgarh-relevant stories
       if (!isChhattisgarhOnlyStory(c)) return false;
@@ -565,57 +514,49 @@ export async function GET(req: NextRequest) {
       const langMatches = lang === "hi" ? (hasDev || c.language === "hi") : (!hasDev || c.language === "en");
       if (!langMatches) return false;
 
-      // 48-hour timestamp check (grace up to 72 hours for continuous weekend coverage)
+      // 24-hour pool: articles automatically disappear when publication_time >= 24 hours old
       const pubTime = new Date(c.publishedAt).getTime();
       if (!isNaN(pubTime)) {
-        return pubTime >= (now - 72 * 3600 * 1000) && pubTime <= now + 2 * 3600 * 1000;
+        return pubTime >= (now - 24 * 3600 * 1000) && pubTime <= now + 2 * 3600 * 1000;
       }
       return true;
     });
 
-    // Fallback: If filtered pool is small, take all valid Chhattisgarh candidates so news stream is continuous
-    if (pool.length < 25) {
+    // Grace window up to 48 hours if 24h pool is small, while still strictly enforcing verified real media
+    if (pool.length < 20) {
       pool = candidates.filter((c) => {
         if (!c.headline || !c.slug) return false;
+        if (!hasVerifiedRealMedia(c.imageUrl)) return false;
         if (!isChhattisgarhOnlyStory(c)) return false;
         const hasDev = isDevanagari(c.headline);
-        return lang === "hi" ? (hasDev || c.language === "hi") : (!hasDev || c.language === "en");
+        const langMatches = lang === "hi" ? (hasDev || c.language === "hi") : (!hasDev || c.language === "en");
+        if (!langMatches) return false;
+        const pubTime = new Date(c.publishedAt).getTime();
+        if (!isNaN(pubTime)) {
+          return pubTime >= (now - 48 * 3600 * 1000) && pubTime <= now + 2 * 3600 * 1000;
+        }
+        return true;
       });
     }
 
-    // 3. Separate Breaking Stories (only Chhattisgarh breaking)
+    // 3. Separate Breaking Stories (only Chhattisgarh breaking with verified real media)
     const breakingCandidates = pool.filter((c) => c.isBreaking);
     const nonBreakingCandidates = pool.filter((c) => !c.isBreaking);
 
-    // 4. Priority Tiers for Chhattisgarh-only newsroom:
-    //  Tier 1: CG local districts (Durg, Bhilai, Raipur, Rajnandgaon, Bilaspur, Korba, Bastar, Surguja, etc.)
-    //  Tier 2: CG state news
-    //  NO generic India or world stories allowed in Jan Darpan!
-    const cgDistrictStories = nonBreakingCandidates.filter((c) =>
-      c.districtSlug && CG_DISTRICT_KEYS.has(c.districtSlug)
-    );
-    const cgStateStories = nonBreakingCandidates.filter((c) =>
-      !cgDistrictStories.includes(c)
-    );
-
-    // 5. Session Rotation Seed:
-    // Shuffle/rotate within tiers deterministically per session seed so different visitors get varied orders
-    const sortBySeedAndScore = (arr: BroadcastCandidate[]) => {
-      return arr.sort((a, b) => {
-        const scoreDiff = (b.priorityScore ?? 50) - (a.priorityScore ?? 50);
-        if (Math.abs(scoreDiff) >= 30) return scoreDiff;
-        const randA = getPseudoRandom(seed, a.id.charCodeAt(0) || 0);
-        const randB = getPseudoRandom(seed, b.id.charCodeAt(0) || 0);
-        return randB - randA;
+    // 4. Chronological ordering: NEWEST ARTICLE FIRST
+    // Strictly chronological by original published_at, no seriousness or artificial priority score overrides
+    const sortByPublishedAtDesc = (arr: BroadcastCandidate[]) => {
+      return [...arr].sort((a, b) => {
+        const tA = new Date(a.publishedAt).getTime() || 0;
+        const tB = new Date(b.publishedAt).getTime() || 0;
+        return tB - tA;
       });
     };
 
-    const orderedRegular = [
-      ...sortBySeedAndScore(cgDistrictStories),
-      ...sortBySeedAndScore(cgStateStories),
-    ];
+    const orderedRegular = sortByPublishedAtDesc(nonBreakingCandidates);
+    const orderedBreaking = sortByPublishedAtDesc(breakingCandidates);
 
-    // 6. Handle Exclusions (Unseen stories first, then played stories)
+    // 5. Handle Exclusions (Unseen stories first, then played stories)
     const unseen = orderedRegular.filter((c) => !excludeIds.has(c.id));
     const seen = orderedRegular.filter((c) => excludeIds.has(c.id));
 
@@ -629,10 +570,10 @@ export async function GET(req: NextRequest) {
         rejectedCount: candidates.length - pool.length,
         dedupeCount: finalQueue.length,
         queueCount: finalQueue.length,
-        breakingCount: breakingCandidates.length,
+        breakingCount: orderedBreaking.length,
       },
       queue: finalQueue.map((c) => toSegment(c, lang)),
-      breaking: breakingCandidates.slice(0, 3).map((c) => toSegment(c, lang)),
+      breaking: orderedBreaking.slice(0, 3).map((c) => toSegment(c, lang)),
     }, {
       headers: {
         "Cache-Control": "public, max-age=30, stale-while-revalidate=60",

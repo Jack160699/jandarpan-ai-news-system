@@ -41,6 +41,7 @@ import { resolveStorySlug } from "@/lib/news/related-stories";
 import { bodySections } from "@/lib/news/story-markdown";
 import { SITE_URL } from "@/lib/seo/constants";
 import { resolveArticleDisplayImage } from "@/lib/news/images/resolve-article-display-image";
+import { hasVerifiedRealMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
 
 export const revalidate = 60;
 
@@ -68,6 +69,10 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
 
   const generated = await getStoryArticleBySlug(slug);
   if (generated) {
+    const verified = extractVerifiedRealMediaUrl(generated);
+    if (!verified || !hasVerifiedRealMedia(verified)) {
+      return { title: "Story not found" };
+    }
     const ogImage = resolveArticleDisplayImage(generated).ogUrl;
     return buildLocalizedStoryMetadata(generated, {
       displayLanguage: displayLang,
@@ -75,17 +80,7 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
     });
   }
 
-  const editorial = getArticle(slug);
-  if (!editorial) return { title: "Story not found" };
-
-  return buildPageMetadata({
-    title: editorial.title,
-    description: editorial.deck,
-    path: `/story/${slug}`,
-    ogImage: editorial.image,
-    ogType: "article",
-    noindex: true,
-  });
+  return { title: "Story not found" };
 }
 
 export default async function StoryPage({ params, searchParams }: PageProps) {
@@ -96,14 +91,19 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
     : await getServerReaderLanguage();
 
   const generatedRow = await getStoryArticleBySlug(slug);
+  if (!generatedRow) notFound();
 
-  if (generatedRow) {
-    if (
-      generatedRow.slug &&
-      shouldRedirectToCanonicalSlug(slug, generatedRow.slug)
-    ) {
-      permanentRedirect(`/story/${generatedRow.slug}`);
-    }
+  const verifiedMedia = extractVerifiedRealMediaUrl(generatedRow);
+  if (!verifiedMedia || !hasVerifiedRealMedia(verifiedMedia)) {
+    notFound();
+  }
+
+  if (
+    generatedRow.slug &&
+    shouldRedirectToCanonicalSlug(slug, generatedRow.slug)
+  ) {
+    permanentRedirect(`/story/${generatedRow.slug}`);
+  }
 
     const [localized, relatedResult, eventViewModel, clusterArticles, tenant] =
       await Promise.all([
@@ -225,27 +225,4 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
         </main>
       </PageShell>
     );
-  }
-
-  const editorial = getArticle(slug);
-  if (!editorial) notFound();
-
-  return (
-    <PageShell variant="news">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(articleJsonLd(editorial)),
-        }}
-      />
-      <main
-        id="main-content"
-        role="main"
-        data-narrative-root
-        className="home-news-flow mobile-comfort thumb-zone relative z-[2]"
-      >
-        <ArticleView article={editorial} />
-      </main>
-    </PageShell>
-  );
 }

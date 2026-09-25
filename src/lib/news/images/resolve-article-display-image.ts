@@ -22,59 +22,10 @@ export type ArticleDisplayImageInput = CanonicalImageInput & {
   headline?: string | null;
 };
 
+import { extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
+
 function pickBestRealMediaUrl(article: ArticleDisplayImageInput): string | null {
-  const meta = article.editorial_metadata as any;
-  const metaImage = meta?.image;
-
-  const isStock = (u?: string | null) => {
-    if (!u) return true;
-    const l = u.toLowerCase();
-    return (
-      l.includes("images.unsplash.com") ||
-      l.includes("plus.unsplash.com") ||
-      l.includes("pexels.com") ||
-      l.includes("pixabay.com") ||
-      l.includes("googleusercontent.com/j6_cofbogxh")
-    );
-  };
-
-  // Candidates in priority order: genuine source article media first
-  const candidates: Array<string | null | undefined> = [
-    article.heroUrl,
-    meta?.media_source_url,
-    meta?.hero_media?.media_url,
-    meta?.hero_media?.source_url,
-    meta?.hero_media?.thumbnail_url,
-    meta?.source_attribution?.[0]?.image_url,
-    meta?.source_attribution?.[0]?.source_image,
-    meta?.embedded_video?.[0]?.thumbnailUrl,
-    meta?.embedded_video?.[0]?.thumbnail_url,
-    (article as any).media_records?.[0]?.media_url,
-    (article as any).media_records?.[0]?.source_url,
-    (article as any).media_records?.[0]?.thumbnail_url,
-    (article as any).source_image,
-    (article as any).thumbnail_url,
-    article.hero_image_url,
-    metaImage?.hero_url,
-    metaImage?.sourceUrl,
-    article.image_url,
-  ];
-
-  // 1. Try first candidate that is a genuine non-stock real news photo
-  for (const c of candidates) {
-    if (c && typeof c === "string" && c.trim() && !isStock(c)) {
-      return c.trim();
-    }
-  }
-
-  // 2. Fall back to stock / contextual only if no genuine real image exists
-  for (const c of candidates) {
-    if (c && typeof c === "string" && c.trim()) {
-      return c.trim();
-    }
-  }
-
-  return null;
+  return extractVerifiedRealMediaUrl(article);
 }
 
 /**

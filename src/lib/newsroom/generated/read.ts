@@ -148,7 +148,10 @@ export async function fetchGeneratedArticlePool(
       reason: "supabase_not_configured",
       hint: "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on Vercel",
     });
-    return [];
+    const { getStaticFallbackArticlePool } = await import(
+      "@/lib/news/fallback/wire-articles"
+    );
+    return getStaticFallbackArticlePool();
   }
 
   const mode: GeneratedPoolSelectMode = options?.select ?? "full";
@@ -229,6 +232,14 @@ export async function fetchGeneratedArticlePool(
     select: mode,
     limit: bounded,
   });
+
+  if (publicRows.length === 0) {
+    const { getStaticFallbackArticlePool } = await import(
+      "@/lib/news/fallback/wire-articles"
+    );
+    return getStaticFallbackArticlePool();
+  }
+
   return publicRows;
 }
 
@@ -323,11 +334,14 @@ export async function fetchGoogleNewsArticlePool(
 export async function getGeneratedArticleBySlug(
   slug: string
 ): Promise<GeneratedArticleRow | null> {
+  const { getStaticFallbackArticlePool } = await import(
+    "@/lib/news/fallback/wire-articles"
+  );
+  const staticMatch = getStaticFallbackArticlePool().find((r) => r.slug === slug);
+  if (staticMatch) return staticMatch;
+
   if (!isSupabaseConfigured()) {
-    const { getStaticFallbackArticlePool } = await import(
-      "@/lib/news/fallback/wire-articles"
-    );
-    return getStaticFallbackArticlePool().find((r) => r.slug === slug) ?? null;
+    return null;
   }
 
   const supabase = createAnonServerClient();

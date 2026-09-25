@@ -1,7 +1,6 @@
 import type { HomeArticle } from "@/lib/homepage/types";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
-import { detectSemanticTopic } from "@/lib/news/images/editorial-visual-fallbacks";
-import { EDITORIAL_IMAGES } from "@/lib/editorial-images";
+import { hasVerifiedRealMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
 
 export type ReaderStory = {
   slug: string;
@@ -33,30 +32,8 @@ export function toReaderStory(a: HomeArticle, kicker?: string): ReaderStory {
         ? "राज्य डेस्क"
         : (a.categoryLabel || "राज्य डेस्क")));
 
-  let safeImageUrl = (
-    a.imageUrl ||
-    a.ogImageUrl ||
-    (a as any).hero_image_url ||
-    (a as any).editorial_metadata?.media_source_url ||
-    (a as any).editorial_metadata?.hero_media?.media_url ||
-    ""
-  ).trim();
-
-  if (safeImageUrl.startsWith("http://")) {
-    safeImageUrl = safeImageUrl.replace(/^http:\/\//i, "https://");
-  }
-
-  const isBannedOrBroken =
-    !safeImageUrl ||
-    safeImageUrl.includes("J6_coFbogxh") ||
-    safeImageUrl.includes("placeholder") ||
-    safeImageUrl.includes("default.jpg") ||
-    safeImageUrl.startsWith("data:");
-
-  if (isBannedOrBroken) {
-    const semantic = detectSemanticTopic(a.headline + " " + (a.summary || ""));
-    safeImageUrl = (semantic ? EDITORIAL_IMAGES[semantic as keyof typeof EDITORIAL_IMAGES] : null) || EDITORIAL_IMAGES.raipurCity;
-  }
+  const candidateImg = extractVerifiedRealMediaUrl(a) || a.imageUrl || a.ogImageUrl || null;
+  const safeImageUrl = hasVerifiedRealMedia(candidateImg) ? candidateImg : null;
 
   return {
     slug: a.slug,
