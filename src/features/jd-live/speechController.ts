@@ -102,6 +102,7 @@ class AnchorSpeechController {
   private activeToken: number = 0;
   private isPaused: boolean = false;
   private isMuted: boolean = true;
+  private tokenProgress: Record<number, { charIndex: number; startTime: number; totalEstimatedMs: number }> = {};
   private watchdogTimer: ReturnType<typeof setInterval> | null = null;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private silentTimer: ReturnType<typeof setTimeout> | null = null;
@@ -148,10 +149,22 @@ class AnchorSpeechController {
   }
 
   /**
-   * PAUSE: Freezes speech immediately, marks paused, and cancels utterances.
+   * PAUSE: Freezes speech immediately, marks paused, records current progress, and cancels utterances.
    */
   public pause() {
     this.isPaused = true;
+    if (this.activeToken && this.tokenProgress[this.activeToken]) {
+      const prog = this.tokenProgress[this.activeToken];
+      const elapsed = Date.now() - prog.startTime;
+      if (prog.totalEstimatedMs > 0 && this.activeUtterance?.text) {
+        const estimatedChar = Math.floor(
+          (elapsed / prog.totalEstimatedMs) * this.activeUtterance.text.length
+        );
+        if (estimatedChar > prog.charIndex) {
+          prog.charIndex = estimatedChar;
+        }
+      }
+    }
     this.cancelSpeechOnly();
   }
 
@@ -163,11 +176,12 @@ class AnchorSpeechController {
   }
 
   /**
-   * STOP: Complete shutdown of active speech and resets callbacks.
+   * STOP: Complete shutdown of active speech and resets callbacks and progress.
    */
   public stop() {
     this.cancelSpeechOnly();
     this.activeToken = 0;
+    this.tokenProgress = {};
   }
 
   private stopWatchdog() {
@@ -202,6 +216,7 @@ class AnchorSpeechController {
    * Speaks a story narration cleanly.
    * If muted: runs a silent timer with simulated amplitude, advancing naturally.
    * If paused: does nothing.
+   * If resuming same token: continues from the recorded position.
    */
   public async speakStory(
     text: string,
@@ -231,9 +246,41 @@ class AnchorSpeechController {
       typeof window !== "undefined" &&
       !!(window as unknown as { __JD_TEST_ACCELERATED__?: boolean }).__JD_TEST_ACCELERATED__;
 
-    const estimatedDurationMs = isAccelerated
+    const fullEstimatedDurationMs = isAccelerated
       ? 2000
       : Math.min(26000, Math.max(8000, Math.round(cleanText.length * 72)));
+
+    // Check if we are resuming an already-in-progress story
+    const existingProgress = this.tokenProgress[token];
+    let textToSpeak = cleanText;
+    let estimatedDurationMs = fullEstimatedDurationMs;
+
+    if (existingProgress && existingProgress.charIndex > 0 && existingProgress.charIndex < cleanText.length - 12) {
+      // Find clean word boundary
+      const spaceIdx = cleanText.indexOf(" ", existingProgress.charIndex);
+      if (spaceIdx > 0 && spaceIdx < cleanText.length - 10) {
+        textToSpeak = cleanText.slice(spaceIdx).trim();
+        const ratio = textToSpeak.length / Math.max(1, cleanText.length);
+        estimatedDurationMs = Math.max(3000, Math.round(fullEstimatedDurationMs * ratio));
+      }
+    }
+
+    const startTime = Date.now();
+    this.tokenProgress[token] = {
+      charIndex: existingProgress ? existingProgress.charIndex : 0,
+      startTime,
+      totalEstimatedMs: estimatedDurationMs,
+    };
+
+    const settleEnd = (durationMs: number) => {
+      if (this.activeToken !== token) return;
+      delete this.tokenProgress[token];
+      this.stopWatchdog();
+      this.stopAnimation();
+      this.activeUtterance = null;
+      callbacks.onAmplitude?.(0);
+      callbacks.onEnd?.(durationMs);
+    };
 
     // ─── MUTED MODE ────────────────────────────────────────────────────────
     if (this.isMuted) {
@@ -256,7 +303,7 @@ class AnchorSpeechController {
         if (this.activeToken === token && !this.isPaused) {
           this.stopAnimation();
           callbacks.onAmplitude?.(0);
-          callbacks.onEnd?.(estimatedDurationMs);
+          settleEnd(estimatedDurationMs);
         }
       }, estimatedDurationMs);
 
@@ -267,12 +314,12 @@ class AnchorSpeechController {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       callbacks.onStart?.();
       this.silentTimer = setTimeout(() => {
-        callbacks.onEnd?.(estimatedDurationMs);
+        settleEnd(estimatedDurationMs);
       }, estimatedDurationMs);
       return;
     }
 
-    const utter = new SpeechSynthesisUtterance(cleanText);
+    const utter = new SpeechSynthesisUtterance(textToSpeak);
     this.activeUtterance = utter;
 
     utter.lang = language === "hi" ? "hi-IN" : "en-IN";
@@ -284,17 +331,13 @@ class AnchorSpeechController {
       utter.voice = voice;
     }
 
-    const startTime = Date.now();
-    let settled = false;
-
-    const settleEnd = (durationMs: number) => {
-      if (settled || this.activeToken !== token) return;
-      settled = true;
-      this.stopWatchdog();
-      this.stopAnimation();
-      this.activeUtterance = null;
-      callbacks.onAmplitude?.(0);
-      callbacks.onEnd?.(durationMs);
+    utter.onboundary = (e: SpeechSynthesisEvent) => {
+      if (this.activeToken === token && e.charIndex !== undefined && e.charIndex > 0) {
+        const baseChar = existingProgress?.charIndex || 0;
+        if (this.tokenProgress[token]) {
+          this.tokenProgress[token].charIndex = baseChar + e.charIndex;
+        }
+      }
     };
 
     utter.onstart = () => {

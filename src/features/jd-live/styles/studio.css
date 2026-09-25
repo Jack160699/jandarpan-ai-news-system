@@ -53,6 +53,56 @@
   aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #060d18;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.jdl-tv__viewport:focus-visible {
+  outline: 2px solid var(--jdl-red);
+  outline-offset: -2px;
+}
+
+/* Channel Bug / Watermark in Upper-Right */
+.jdl-tv__channel-bug {
+  position: absolute;
+  top: 9px;
+  right: 11px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(6, 13, 24, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  padding: 3px 8px;
+  pointer-events: none;
+}
+
+.jdl-tv__channel-bug-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c8102e;
+  box-shadow: 0 0 6px #e8152f;
+}
+
+.jdl-tv__channel-bug-name {
+  color: #ffffff;
+  font-size: clamp(9px, 0.9vw, 11px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.jdl-tv__channel-bug-tag {
+  color: #c9a24b;
+  font-size: clamp(8px, 0.8vw, 9.5px);
+  font-weight: 700;
+  background: rgba(201, 162, 75, 0.15);
+  padding: 1px 4px;
+  border-radius: 2px;
 }
 
 /* Photorealistic studio background with seated female anchor */
@@ -291,37 +341,136 @@
   will-change: transform;
 }
 
-/* Over-the-air resume prompt if paused */
-.jdl-tv__center-play {
+/* ─── PAUSED BROADCAST CONTROL OVERLAY INSIDE TV ─────────────────────────── */
+/* Positioned centered over the story screen (left area of studio), completely clear of anchor on right */
+.jdl-tv__paused-overlay {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 37.5%;
+  left: 34.9%;
   transform: translate(-50%, -50%);
   z-index: 25;
-  background: rgba(10, 22, 40, 0.92);
-  backdrop-filter: blur(10px);
-  border: 2px solid var(--jdl-red);
-  color: #ffffff;
-  border-radius: 6px;
-  padding: 10px 22px;
-  font-size: clamp(12px, 1.4vw, 15px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  background: rgba(6, 13, 24, 0.90);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  padding: 10px 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(200, 16, 46, 0.35);
+  pointer-events: auto;
+  animation: jdl-paused-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  max-width: 85%;
+}
+
+@keyframes jdl-paused-fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.jdl-tv__paused-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(200, 16, 46, 0.25);
+  border: 1px solid rgba(200, 16, 46, 0.6);
+  padding: 2.5px 9px;
+  border-radius: 9999px;
+}
+
+.jdl-tv__paused-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f87171;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.jdl-tv__paused-label {
+  font-size: clamp(9.5px, 0.95vw, 11px);
   font-weight: 800;
+  color: #ffffff;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jdl-tv__paused-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: nowrap;
+}
+
+.jdl-tv__paused-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: clamp(10.5px, 1.05vw, 12.5px);
+  font-weight: 700;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
-  transition: transform 0.2s, background 0.2s;
+  border: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+  touch-action: manipulation;
 }
 
-.jdl-tv__center-play:hover {
-  transform: translate(-50%, -50%) scale(1.05);
-  background: rgba(200, 16, 46, 0.95);
+.jdl-tv__paused-btn--resume {
+  background: linear-gradient(135deg, #c8102e 0%, #a00d24 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 14px rgba(200, 16, 46, 0.4);
 }
 
-.jdl-tv__center-play-icon {
-  display: flex;
-  align-items: center;
+.jdl-tv__paused-btn--resume:hover {
+  background: linear-gradient(135deg, #e8152f 0%, #c8102e 100%);
+  transform: translateY(-1px);
+}
+
+.jdl-tv__paused-btn--share {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.jdl-tv__paused-btn--share:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+}
+
+.jdl-tv__paused-btn--whatsapp {
+  background: rgba(37, 211, 102, 0.18);
+  color: #25d366;
+  border: 1px solid rgba(37, 211, 102, 0.4);
+}
+
+.jdl-tv__paused-btn--whatsapp:hover {
+  background: rgba(37, 211, 102, 0.28);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 600px) {
+  .jdl-tv__paused-overlay {
+    padding: 7px 10px;
+    gap: 6px;
+    left: 34.5%;
+  }
+  .jdl-tv__paused-btn {
+    padding: 5px 8px;
+    gap: 3.5px;
+    font-size: 10px;
+  }
 }
 
 /* ─── DOCKED BROADCAST CONTROL BAR ───────────────────────────────────────── */
