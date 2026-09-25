@@ -88,6 +88,16 @@ export default async function DistrictPage({ params }: PageProps) {
     filterRowsForDistrict(langPool, slug),
     slug
   );
+
+  const { getStaticFallbackArticlePool } = await import("@/lib/news/fallback/wire-articles");
+  const fallbackMatches = filterRowsForDistrict(getStaticFallbackArticlePool(), slug);
+  const seenIds = new Set(districtRows.map((r) => r.id || r.slug));
+  for (const r of fallbackMatches) {
+    if (!seenIds.has(r.id || r.slug)) {
+      seenIds.add(r.id || r.slug);
+      districtRows.push(r);
+    }
+  }
   const personalization = buildRegionalRankingPersonalization({
     homeDistrict: slug,
     regionBoostMultiplier: 1.3,

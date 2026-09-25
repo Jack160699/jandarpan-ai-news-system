@@ -78,19 +78,35 @@ export function DistrictHomepage({
         newsCountLabel={countLabel}
       />
 
-      <main id="main-content" role="main" className="jd-shell" style={{ flex: 1, background: "var(--jd-paper)" }}>
+      <main
+        id="main-content"
+        role="main"
+        className="jd-shell"
+        style={{
+          flex: 1,
+          background: "var(--jd-paper)",
+          maxWidth: 1200,
+          margin: "0 auto",
+          width: "100%",
+          boxSizing: "border-box",
+          padding: "16px 14px 48px",
+        }}
+      >
         {/* Prominent District Identity Header */}
         <section
           style={{
-            padding: "16px 14px 14px",
+            padding: "18px 20px",
             background: "#ffffff",
-            borderBottom: "1px solid var(--jd-line)",
+            border: "1px solid var(--jd-line, #e2e8f0)",
+            borderLeft: "4px solid var(--jd-red)",
+            borderRadius: 4,
+            marginBottom: 20,
           }}
           data-testid="jd-district-header"
         >
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
                 <span
                   style={{
                     fontSize: 11,
@@ -106,12 +122,16 @@ export function DistrictHomepage({
                 <span style={{ fontSize: 13, fontWeight: 800, color: "var(--jd-red)", letterSpacing: ".04em" }}>
                   {displayName.toUpperCase()}
                 </span>
+                <span style={{ color: "var(--jd-line-2)" }}>•</span>
+                <span style={{ fontSize: 11.5, color: "var(--jd-muted)", fontWeight: 600 }}>
+                  {locale === "en" ? "Updated in real-time" : "सत्यापित स्थानीय समाचार"}
+                </span>
               </div>
               <h1
                 className="jd-serif"
                 style={{
                   margin: "2px 0 4px",
-                  fontSize: "clamp(20px, 4vw, 28px)",
+                  fontSize: "clamp(22px, 4vw, 30px)",
                   fontWeight: 800,
                   color: "var(--jd-ink)",
                   lineHeight: 1.25,
@@ -119,7 +139,7 @@ export function DistrictHomepage({
               >
                 {locale === "en" ? `${displayName} District News` : `${displayName} ज़िला समाचार`}
               </h1>
-              <p style={{ margin: 0, fontSize: 12.5, color: "var(--jd-muted)" }}>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--jd-muted)" }}>
                 {locale === "en"
                   ? `Verified hyperlocal reporting & latest updates from ${displayName}`
                   : `${displayName} ज़िले की सभी विश्वसनीय खबरें, स्थानीय घटनाक्रम एवं ज़मीनी रिपोर्ट`}
@@ -133,11 +153,11 @@ export function DistrictHomepage({
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
-                padding: "7px 14px",
+                padding: "8px 16px",
                 borderRadius: 4,
                 background: "var(--jd-paper-2, #f8fafc)",
                 border: "1px solid var(--jd-line)",
-                fontSize: 12,
+                fontSize: 12.5,
                 fontWeight: 700,
                 color: "var(--jd-ink)",
                 textDecoration: "none",
@@ -189,12 +209,12 @@ export function DistrictHomepage({
           {/* Main Lead District Story */}
           <div className="jd-hub-lead">
             {leadArticle ? (
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ marginBottom: 24 }}>
                 <SectionHeader
-                  title={locale === "en" ? "Lead Story" : "मुख्य खबर"}
+                  title={locale === "en" ? "Main District Story" : "मुख्य खबर"}
                   color="var(--jd-red)"
                 />
-                <div style={{ padding: "0 14px" }}>
+                <div style={{ padding: "0 4px" }}>
                   <LeadStory story={leadArticle} />
                 </div>
               </div>
@@ -223,12 +243,12 @@ export function DistrictHomepage({
 
             {/* Fresh District Stories */}
             {freshArticles.length > 0 && (
-              <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 28 }}>
                 <SectionHeader
-                  title={locale === "en" ? `Fresh ${displayName} Stories` : `ताज़ा जिला खबरें`}
+                  title={locale === "en" ? `Latest ${displayName} News` : `${displayName} की ताज़ा खबरें`}
                   color="var(--jd-navy)"
                 />
-                <div className="jd-hub-list" style={{ padding: "0 14px" }} data-testid="jd-district-fresh">
+                <div className="jd-hub-list" style={{ padding: "0 4px" }} data-testid="jd-district-fresh">
                   {freshArticles.map((s, i) => {
                     const showAdAfter = (i + 1) === 3;
                     return (
@@ -244,12 +264,12 @@ export function DistrictHomepage({
 
             {/* Older / Archival District Stories */}
             {olderArticles.length > 0 && (
-              <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 28 }}>
                 <SectionHeader
-                  title={locale === "en" ? "More District Stories" : "पुरानी लेकिन प्रासंगिक जिला खबरें"}
+                  title={locale === "en" ? `More ${displayName} Stories` : "और खबरें"}
                   color="var(--jd-ink-3)"
                 />
-                <div className="jd-hub-list" style={{ padding: "0 14px" }} data-testid="jd-district-older">
+                <div className="jd-hub-list" style={{ padding: "0 4px" }} data-testid="jd-district-older">
                   {olderArticles.map((s, i) => (
                     <SecondaryStory key={s.slug} story={s} last={i === olderArticles.length - 1} toneIndex={i + 5} />
                   ))}

@@ -194,15 +194,40 @@ export function rowMatchesDistrict(
   row: GeneratedArticleRow,
   districtSlug: string
 ): boolean {
+  if (!row || !districtSlug) return false;
+  const targetSlug = districtSlug.trim().toLowerCase();
+
+  // 1. Direct tag matching (e.g. tags: ["durg", "chhattisgarh"])
+  const rawTags = (row.tags ?? []).map((t) => String(t).trim().toLowerCase());
+  if (rawTags.includes(targetSlug)) return true;
+
+  // 2. District alias expansion (e.g. bhilai, patan, kumhari for durg)
+  const districtObj = getDistrict(targetSlug);
+  const aliases = districtObj?.aliases ?? [targetSlug];
+
+  for (const alias of aliases) {
+    const aLower = alias.toLowerCase();
+    if (rawTags.includes(aLower)) return true;
+  }
+
+  // 3. Stored geo metadata check
   const geo = geoFromRecord(row);
   if (
-    geo.primary_district === districtSlug ||
-    geo.districts.includes(districtSlug)
+    geo.primary_district === targetSlug ||
+    geo.districts.includes(targetSlug)
   ) {
     return true;
   }
 
-  // Stored statewide / weak geo — recover district from live copy.
+  // 4. Headline and summary text matching against district aliases
+  const text = `${row.headline ?? ""} ${row.summary ?? ""}`.toLowerCase();
+  for (const alias of aliases) {
+    if (alias.length >= 3 && text.includes(alias.toLowerCase())) {
+      return true;
+    }
+  }
+
+  // 5. Stored statewide / weak geo — recover district from live copy
   const needsRetag =
     !geo.primary_district ||
     geo.classification_kind === "statewide" ||
@@ -218,8 +243,8 @@ export function rowMatchesDistrict(
   });
 
   return (
-    classified.primary_district === districtSlug ||
-    classified.districts.includes(districtSlug)
+    classified.primary_district === targetSlug ||
+    classified.districts.includes(targetSlug)
   );
 }
 

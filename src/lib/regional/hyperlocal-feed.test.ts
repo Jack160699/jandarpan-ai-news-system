@@ -173,4 +173,30 @@ describe("partitionDistrictHubRows", () => {
     expect(primary).toHaveLength(1);
     expect(fallback.map((r) => r.id)).toEqual(["r1"]);
   });
+
+  it("matches Durg and Bhilai stories from fallback pool and isolates strictly", () => {
+    const durgStory1 = row({
+      id: "durg-1",
+      slug: "durg-bhilai-drainage-modernization-municipal-corporation",
+      headline: "दुर्ग और भिलाई नगर निगम का जल निकासी आधुनिकीकरण प्लान",
+      tags: ["durg", "infrastructure", "chhattisgarh"],
+    });
+    const durgStory2 = row({
+      id: "durg-2",
+      slug: "chhattisgarh-sub-junior-hockey-team-selected-durg",
+      headline: "छत्तीसगढ़ की सब-जूनियर राष्ट्रीय हॉकी टीम घोषित, दुर्ग और भिलाई के खिलाड़ी चयनित",
+      tags: ["sports", "durg", "chhattisgarh"],
+    });
+    const bastarStory = row({
+      id: "bastar-1",
+      slug: "bastar-monsoon-rain-schools-closed",
+      headline: "बस्तर में भारी बारिश के चलते स्कूल बंद",
+      tags: ["weather", "bastar", "chhattisgarh"],
+    });
+
+    expect(rowMatchesDistrict(durgStory1, "durg")).toBe(true);
+    expect(rowMatchesDistrict(durgStory2, "durg")).toBe(true);
+    expect(rowMatchesDistrict(bastarStory, "durg")).toBe(false);
+  });
 });
+

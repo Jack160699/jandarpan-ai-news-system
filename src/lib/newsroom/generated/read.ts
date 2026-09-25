@@ -233,14 +233,29 @@ export async function fetchGeneratedArticlePool(
     limit: bounded,
   });
 
-  if (publicRows.length === 0) {
-    const { getStaticFallbackArticlePool } = await import(
-      "@/lib/news/fallback/wire-articles"
-    );
-    return getStaticFallbackArticlePool();
+  const { getStaticFallbackArticlePool } = await import(
+    "@/lib/news/fallback/wire-articles"
+  );
+  const fallback = getStaticFallbackArticlePool();
+
+  const seenSlugs = new Set<string>();
+  const combined: GeneratedArticleRow[] = [];
+
+  for (const r of publicRows) {
+    if (r?.slug && !seenSlugs.has(r.slug)) {
+      seenSlugs.add(r.slug);
+      combined.push(r);
+    }
   }
 
-  return publicRows;
+  for (const r of fallback) {
+    if (r?.slug && !seenSlugs.has(r.slug)) {
+      seenSlugs.add(r.slug);
+      combined.push(r);
+    }
+  }
+
+  return combined;
 }
 
 export type GoogleNewsArticleRow = Pick<

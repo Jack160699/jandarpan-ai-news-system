@@ -1,7 +1,9 @@
 import { Metadata } from "next";
 import { createAdminServerClient } from "@/lib/supabase/admin";
 import { ComplianceDashboardClient } from "@/components/admin-compliance/ComplianceDashboardClient";
+import { ContentHealthDiagnosticPanel } from "@/components/admin-compliance/ContentHealthDiagnosticPanel";
 import { runComplianceHealthCheck } from "@/lib/compliance/health-check";
+import { runContentAvailabilityHealthCheck } from "@/lib/diagnostics/content-health";
 import { getRule18CanonicalParticulars } from "@/lib/compliance/rule18";
 import { NOINDEX_ROBOTS } from "@/lib/seo";
 
@@ -15,7 +17,7 @@ export const metadata: Metadata = {
 export default async function AdminCompliancePage() {
   const supabase = createAdminServerClient();
 
-  const [{ data: grievances }, { data: reports }, healthCheck] = await Promise.all([
+  const [{ data: grievances }, { data: reports }, healthCheck, contentHealth] = await Promise.all([
     supabase
       .from("compliance_grievances" as any)
       .select("*")
@@ -25,12 +27,14 @@ export default async function AdminCompliancePage() {
       .select("*")
       .order("month", { ascending: false }),
     runComplianceHealthCheck(),
+    runContentAvailabilityHealthCheck(),
   ]);
 
   const rule18Data = getRule18CanonicalParticulars();
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <ContentHealthDiagnosticPanel report={contentHealth} />
       <ComplianceDashboardClient
         initialGrievances={(grievances ?? []) as any[]}
         initialReports={(reports ?? []) as any[]}

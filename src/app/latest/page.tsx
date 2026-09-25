@@ -40,9 +40,24 @@ export default async function LatestPage() {
   }
 
   // Authoritative publication timestamp: newest published article first
-  const articles = [...bySlug.values()]
+  const baseArticles = [...bySlug.values()]
     .map((r) => toHomeArticle(r, undefined, displayLanguage))
-    .filter((a): a is NonNullable<typeof a> => a !== null && hasVerifiedRealMedia(a.imageUrl))
+    .filter((a): a is NonNullable<typeof a> => a !== null && hasVerifiedRealMedia(a.imageUrl));
+
+  const { getStaticFallbackArticlePool } = await import("@/lib/news/fallback/wire-articles");
+  const fallback = getStaticFallbackArticlePool()
+    .map((r) => toHomeArticle(r, undefined, displayLanguage))
+    .filter((a): a is NonNullable<typeof a> => a !== null && hasVerifiedRealMedia(a.imageUrl));
+
+  const seenSlugs = new Set(baseArticles.map((a) => a.slug));
+  for (const a of fallback) {
+    if (!seenSlugs.has(a.slug)) {
+      seenSlugs.add(a.slug);
+      baseArticles.push(a);
+    }
+  }
+
+  const articles = baseArticles
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, 100);
 

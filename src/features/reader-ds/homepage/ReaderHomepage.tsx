@@ -213,14 +213,14 @@ export function ReaderHomepage({
           flex: 1,
           background: "var(--jd-paper)",
           padding: "16px 14px 48px",
-          maxWidth: 960,
+          maxWidth: 1200,
           margin: "0 auto",
           width: "100%",
           boxSizing: "border-box",
         }}
       >
-        {/* 1. TOP EDITORIAL PACKAGE — मुख्य खबरें */}
-        <section aria-labelledby="top-stories-heading" style={{ marginBottom: 28 }}>
+        {/* 1. TOP EDITORIAL PACKAGE — मुख्य खबरें (Wide Hero Grid on Desktop) */}
+        <section aria-labelledby="top-stories-heading" style={{ marginBottom: 32 }}>
           <SectionHeader
             title={locale === "en" ? "Top Stories" : "मुख्य खबरें"}
             color="var(--jd-red)"
@@ -228,39 +228,60 @@ export function ReaderHomepage({
             moreLabel={locale === "en" ? "Taza ›" : "ताज़ा खबरें ›"}
           />
 
-          {topLead ? (
-            <div style={{ marginBottom: 16 }}>
-              <LeadStory story={topLead} priority={true} />
-            </div>
-          ) : null}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+              gap: 20,
+              alignItems: "start",
+            }}
+          >
+            {topLead ? (
+              <div style={{ gridColumn: "span 1" }}>
+                <LeadStory story={topLead} priority={true} />
+              </div>
+            ) : null}
 
-          {topSupporting.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {topSupporting.map((story, i) => (
-                <SecondaryStory
-                  key={story.slug}
-                  story={story}
-                  last={i === topSupporting.length - 1}
-                  toneIndex={i}
-                />
-              ))}
-            </div>
-          ) : null}
+            {topSupporting.length > 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  background: "#ffffff",
+                  border: "1px solid var(--jd-line, #e2e8f0)",
+                  borderRadius: 4,
+                  overflow: "hidden",
+                }}
+              >
+                {topSupporting.map((story, i) => (
+                  <SecondaryStory
+                    key={story.slug}
+                    story={story}
+                    last={i === topSupporting.length - 1}
+                    toneIndex={i}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
         </section>
 
         {/* Commercial break 1: Durg Solar Sponsor Slot */}
-        <div style={{ margin: "20px 0" }}>
+        <div style={{ margin: "24px 0" }}>
           <DurgSolarInlineAd index={0} />
         </div>
 
-        {/* 2. CANONICAL PRIORITY EDITORIAL SECTIONS */}
+        {/* 2. CANONICAL PRIORITY EDITORIAL SECTIONS (Rhythmic Newspaper Architecture) */}
         {sectionsData.map((sec, secIdx) => {
           const title = locale === "en" ? sec.def.titleEn : sec.def.titleHi;
+          const isSplitLayout = sec.def.key === "politics" || sec.def.key === "national";
+          const isGridSupporting = sec.def.key === "crime" || sec.def.key === "entertainment" || sec.def.key === "sports";
+
           return (
             <React.Fragment key={sec.def.key}>
               <section
                 aria-labelledby={`section-heading-${sec.def.key}`}
-                style={{ marginBottom: 32 }}
+                style={{ marginBottom: 36 }}
                 data-testid={`jd-home-section-${sec.def.key}`}
               >
                 <SectionHeader
@@ -270,29 +291,112 @@ export function ReaderHomepage({
                   moreLabel={seeAllText}
                 />
 
-                {/* Section Hero Lead */}
-                <div style={{ marginBottom: 14 }}>
-                  <LeadStory story={sec.lead} />
-                </div>
+                {isSplitLayout ? (
+                  /* Rhythmic Split Layout (Politics, National) */
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+                      gap: 20,
+                      alignItems: "start",
+                    }}
+                  >
+                    <div>
+                      <LeadStory story={sec.lead} />
+                    </div>
 
-                {/* Section Supporting Stories (2-4 articles) */}
-                {sec.supporting.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    {sec.supporting.map((story, i) => (
-                      <SecondaryStory
-                        key={story.slug}
-                        story={story}
-                        last={i === sec.supporting.length - 1}
-                        toneIndex={i}
-                      />
-                    ))}
+                    {sec.supporting.length > 0 ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          background: "#ffffff",
+                          border: "1px solid var(--jd-line, #e2e8f0)",
+                          borderRadius: 4,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {sec.supporting.map((story, i) => (
+                          <SecondaryStory
+                            key={story.slug}
+                            story={story}
+                            last={i === sec.supporting.length - 1}
+                            toneIndex={i}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
+                ) : isGridSupporting ? (
+                  /* Rhythmic Grid Supporting Layout (Crime, Entertainment, Sports) */
+                  <div>
+                    <div style={{ marginBottom: 16 }}>
+                      <LeadStory story={sec.lead} />
+                    </div>
+
+                    {sec.supporting.length > 0 ? (
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))",
+                          gap: 14,
+                        }}
+                      >
+                        {sec.supporting.map((story, i) => (
+                          <div
+                            key={story.slug}
+                            style={{
+                              background: "#ffffff",
+                              border: "1px solid var(--jd-line, #e2e8f0)",
+                              borderRadius: 4,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <SecondaryStory
+                              story={story}
+                              last={true}
+                              toneIndex={i + 2}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  /* Default Section Feature Layout (International) */
+                  <div>
+                    <div style={{ marginBottom: 14 }}>
+                      <LeadStory story={sec.lead} />
+                    </div>
+
+                    {sec.supporting.length > 0 ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          background: "#ffffff",
+                          border: "1px solid var(--jd-line, #e2e8f0)",
+                          borderRadius: 4,
+                          overflow: "hidden",
+                        }}
+                      >
+                        {sec.supporting.map((story, i) => (
+                          <SecondaryStory
+                            key={story.slug}
+                            story={story}
+                            last={i === sec.supporting.length - 1}
+                            toneIndex={i}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
               </section>
 
               {/* Commercial break 2: Inserted after the 2nd editorial section */}
               {secIdx === 1 ? (
-                <div style={{ margin: "24px 0" }}>
+                <div style={{ margin: "28px 0" }}>
                   <DurgSolarInlineAd index={1} />
                 </div>
               ) : null}
@@ -302,7 +406,7 @@ export function ReaderHomepage({
 
         {/* 3. MORE LATEST STORIES & CONTINUOUS DISCOVERY */}
         {remainingStories.length > 0 ? (
-          <section aria-labelledby="more-headlines-heading" style={{ marginTop: 24 }}>
+          <section aria-labelledby="more-headlines-heading" style={{ marginTop: 28 }}>
             <SectionHeader
               title={locale === "en" ? "More Headlines" : "ताज़ा खबरें और अन्य सुर्खियां"}
               color="var(--jd-navy)"
@@ -310,18 +414,35 @@ export function ReaderHomepage({
               moreLabel={locale === "en" ? "All Latest ›" : "सभी ताज़ा ›"}
             />
 
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))",
+                gap: 16,
+              }}
+            >
               {remainingStories.slice(0, 15).map((story, i) => {
-                const showAdAfter = (i + 1) % 4 === 0;
+                const showAdAfter = (i + 1) % 6 === 0;
                 return (
                   <React.Fragment key={story.slug}>
-                    <SecondaryStory
-                      story={story}
-                      last={i === Math.min(remainingStories.length, 15) - 1}
-                      toneIndex={i}
-                    />
+                    <div
+                      style={{
+                        background: "#ffffff",
+                        border: "1px solid var(--jd-line, #e2e8f0)",
+                        borderRadius: 4,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <SecondaryStory
+                        story={story}
+                        last={true}
+                        toneIndex={i}
+                      />
+                    </div>
                     {showAdAfter && (
-                      <DurgSolarInlineAd index={Math.floor((i + 1) / 4) + 2} />
+                      <div style={{ gridColumn: "1 / -1", margin: "10px 0" }}>
+                        <DurgSolarInlineAd index={Math.floor((i + 1) / 6) + 2} />
+                      </div>
                     )}
                   </React.Fragment>
                 );

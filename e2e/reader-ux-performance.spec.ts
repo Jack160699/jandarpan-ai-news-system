@@ -53,12 +53,17 @@ test.describe("Jan Darpan Final Production UX, Performance & Reader Experience",
     const changeBtn = districtHeader.locator("a[href*='/district?select=1']");
     await expect(changeBtn).toBeVisible();
 
-    // Verify district feed content area
+    // Verify district feed content area and multiple stories
     const hubLayout = page.locator(".jd-hub-layout");
     await expect(hubLayout).toBeVisible();
+
+    // Verify district stories count > 1 (real district feed, not empty or single item)
+    const districtStories = page.locator("[data-testid='jd-district-fresh'] a, [data-testid='jd-district-older'] a, .jd-hub-lead a[href*='/story/']");
+    const storyCount = await districtStories.count();
+    expect(storyCount).toBeGreaterThan(1);
   });
 
-  test("3. Taza: Chronological continuous feed with timestamps [ HH:MM ] & no category tabs", async ({ page }) => {
+  test("3. Taza: Chronological continuous feed with count > 2, timestamps [ HH:MM ], and strict ordering", async ({ page }) => {
     await page.goto("/latest", { waitUntil: "domcontentloaded" });
 
     // Verify Taza header
@@ -73,12 +78,15 @@ test.describe("Jan Darpan Final Production UX, Performance & Reader Experience",
     const feed = page.locator("[data-testid='jd-taza-feed']");
     await expect(feed).toBeVisible();
 
+    // Verify story count is greater than 2 (not the old broken 2-story limit)
+    const storyElements = page.locator("[data-testid='jd-taza-story']");
+    const storyCount = await storyElements.count();
+    expect(storyCount).toBeGreaterThan(2);
+
     // Verify story items have [ HH:MM ] timestamps
-    const firstStory = page.locator("[data-testid='jd-taza-story']").first();
-    if (await firstStory.count() > 0) {
-      const storyText = await firstStory.textContent();
-      expect(storyText).toMatch(/\[\s*\d{2}:\d{2}\s*\]/);
-    }
+    const firstStory = storyElements.first();
+    const storyText = await firstStory.textContent();
+    expect(storyText).toMatch(/\[\s*\d{2}:\d{2}\s*\]/);
   });
 
   test("4. Navigation: Smooth Next.js client-side navigation without full-page reloads", async ({ page }) => {
