@@ -355,9 +355,20 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           </picture>
         </div>
 
-        {/* Layer 1.5: Channel Watermark in upper-right — ONLY Jan Darpan branding */}
+        {/* Layer 1.5: Channel Watermark in upper-right — ONLY official Jan Darpan logo icon */}
         <div className="jdl-tv__channel-watermark" aria-hidden="true">
-          <span className="jdl-tv__channel-watermark-name">जन दर्पण</span>
+          <svg
+            viewBox="0 0 100 100"
+            className="jdl-tv__channel-watermark-icon"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <circle cx="50" cy="50" r="46" fill="none" stroke="#C9A24B" strokeWidth="1.8" opacity="0.65" />
+            <circle cx="50" cy="38" r="6.5" fill="#C9A24B" />
+            <path d="M22 54 A28 28 0 0 1 78 54 Z" fill="#C8102E" />
+            <rect x="18.5" y="52.4" width="63" height="2.8" rx="1.4" fill="#C9A24B" />
+            <path d="M25 57 A25 25 0 0 0 75 57 Z" fill="#C8102E" opacity="0.28" />
+          </svg>
         </div>
 
         {/* Layer 2: Main dynamic story screen (dominant virtual broadcast display on left) */}
