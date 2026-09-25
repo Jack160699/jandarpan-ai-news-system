@@ -37,11 +37,22 @@ async function ReaderDesignHomeFeed() {
     getServerReaderLanguage(),
   ]);
 
-  const combinedPool = pool.length >= 25 ? pool : [...pool, ...getStaticFallbackArticlePool()];
-
-  const poolArticles = combinedPool
+  const poolArticles = pool
     .map((row) => toHomeArticle(row, undefined, readerLanguage))
     .filter((a): a is NonNullable<typeof a> => a !== null);
+
+  // Guarantee comprehensive editorial representation across all 6 sections
+  // (politics, crime, national, international, entertainment, sports)
+  const fallback = getStaticFallbackArticlePool()
+    .map((row) => toHomeArticle(row, undefined, readerLanguage))
+    .filter((a): a is NonNullable<typeof a> => a !== null);
+  const seen = new Set(poolArticles.map((a) => a.slug));
+  for (const a of fallback) {
+    if (!seen.has(a.slug)) {
+      seen.add(a.slug);
+      poolArticles.push(a);
+    }
+  }
 
   const trending = buildTrendingKeywords({ limit: 12 });
   const storyCount = (feed ? feed.trending.length + feed.liveWire.length : 0) + poolArticles.length;

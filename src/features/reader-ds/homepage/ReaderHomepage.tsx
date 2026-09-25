@@ -177,11 +177,14 @@ export function ReaderHomepage({
     }> = [];
 
     for (const def of EDITORIAL_SECTIONS) {
-      const matching = eligibleStories.filter((s) => !usedSlugs.has(s.slug) && def.match(s));
+      let matching = eligibleStories.filter((s) => !usedSlugs.has(s.slug) && def.match(s));
+      if (matching.length === 0) {
+        matching = eligibleStories.filter((s) => def.match(s));
+      }
       if (matching.length > 0) {
         const secLead = matching[0];
         usedSlugs.add(secLead.slug);
-        const secSupporting = matching.slice(1, 4);
+        const secSupporting = matching.slice(1, 4).filter((s) => s.slug !== secLead.slug);
         secSupporting.forEach((s) => usedSlugs.add(s.slug));
         sectionsData.push({
           def,
