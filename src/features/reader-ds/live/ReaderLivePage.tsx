@@ -26,6 +26,7 @@ export function ReaderLivePage({ feed }: ReaderLivePageProps) {
       showDeskFooter={false}
       bottomPad={0}
       reserveMiniPlayer={false}
+      showPermissionSheets={false}
     >
       <Masthead premiumBadge={isPremium} />
 
