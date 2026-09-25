@@ -23,6 +23,7 @@ export const metadata = buildHomeMetadata();
 
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
+import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 
 /** ISR — edge-friendly cache, 60s freshness */
 export const revalidate = 60;
@@ -31,12 +32,14 @@ export const revalidate = 60;
 async function ReaderDesignHomeFeed() {
   const [feed, pool, tenant, readerLanguage] = await Promise.all([
     getCachedGeneratedHomepageFeed(),
-    fetchGeneratedArticlePool(150, { select: "homepage" }),
+    fetchGeneratedArticlePool(160, { select: "homepage" }),
     getTenantConfig(),
     getServerReaderLanguage(),
   ]);
 
-  const poolArticles = pool
+  const combinedPool = pool.length >= 25 ? pool : [...pool, ...getStaticFallbackArticlePool()];
+
+  const poolArticles = combinedPool
     .map((row) => toHomeArticle(row, undefined, readerLanguage))
     .filter((a): a is NonNullable<typeof a> => a !== null);
 

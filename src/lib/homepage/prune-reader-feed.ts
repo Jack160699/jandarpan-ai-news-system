@@ -96,10 +96,10 @@ export function pruneFeedForReader(
   feed: GeneratedHomepageFeed
 ): GeneratedHomepageFeed {
   const filterList = (list?: HomeArticle[]) =>
-    (list ?? []).filter(isStrictChhattisgarhStory).map(pruneArticle);
+    (list ?? []).filter((a): a is HomeArticle => Boolean(a?.slug && a?.headline)).map(pruneArticle);
 
   const cleanLead =
-    feed.editorsPicks?.lead && isStrictChhattisgarhStory(feed.editorsPicks.lead)
+    feed.editorsPicks?.lead && feed.editorsPicks.lead.headline
       ? pruneArticle(feed.editorsPicks.lead)
       : null;
 
