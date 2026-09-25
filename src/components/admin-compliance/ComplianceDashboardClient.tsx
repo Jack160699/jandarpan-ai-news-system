@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CANONICAL_IDENTITY } from "@/lib/compliance/canonical-identity";
-import { calculateGrievanceSla, type GrievanceStatus } from "@/lib/compliance/grievance-service";
+import { calculateGrievanceSla, type GrievanceStatus } from "@/lib/compliance/types";
 import type { ComplianceHealthReport } from "@/lib/compliance/health-check";
 import type { Rule18PublisherParticulars } from "@/lib/compliance/rule18";
 
