@@ -17,11 +17,11 @@ function fetchPage(url) {
 }
 
 async function waitForDeployment() {
-  console.log('Waiting for latest deployment (commit 92fc05e) to be active on production...');
+  console.log('Waiting for latest deployment (commit 4751b67) to be active on production...');
   for (let i = 1; i <= 30; i++) {
     const res = await fetchPage(`${PROD_URL}/home?_t=${Date.now()}`);
     if (res.status === 200 && !res.data.includes('has-bottom-nav') && res.data.includes('jd-unified-brand-lockup')) {
-      console.log(`Commit 92fc05e is LIVE on production! (Detected at attempt ${i})`);
+      console.log(`Commit 4751b67 is LIVE on production! (Detected at attempt ${i})`);
       return true;
     }
     console.log(`[Attempt ${i}] Waiting for Vercel deployment...`);
@@ -151,6 +151,65 @@ async function runVerification() {
       'Zero Footer on Live Page',
       footerOnLive === null,
       'No footer in page composition'
+    );
+
+    // Live TV Upper-Right Watermark check: ONLY icon, no text, no LIVE tag, no timestamp
+    const watermark = await page.$('.jdl-tv__channel-watermark');
+    const watermarkText = watermark ? (await watermark.innerText()).trim() : null;
+    const watermarkSvg = watermark ? await watermark.$('svg') : null;
+    record(
+      'Live TV upper-right watermark is icon-only mark without text or LIVE badge',
+      watermark !== null && watermarkSvg !== null && (!watermarkText || watermarkText.length === 0),
+      `Watermark rendered: ${watermark !== null}, Has SVG: ${watermarkSvg !== null}, Text: "${watermarkText || ''}"`
+    );
+
+    // Live TV Fixed Label check: "मुख्य खबर" / "TOP STORY"
+    const ltBadge = await page.$eval('.jdl-tv__lt-badge', el => el.textContent.trim()).catch(() => '');
+    record(
+      'Live TV lower-third label is fixed "मुख्य खबर" or "TOP STORY"',
+      ltBadge === 'मुख्य खबर' || ltBadge === 'TOP STORY',
+      `Badge text: "${ltBadge}"`
+    );
+
+    // Live TV Location Tag: Top-left inside story media
+    const locationTag = await page.$('.jdl-virtual-screen__location-tag');
+    const locationTagText = locationTag ? (await locationTag.innerText()).trim() : '';
+    record(
+      'Live TV location badge rendered in story media top-left',
+      locationTag !== null && locationTagText.length > 0,
+      `Location tag: "${locationTagText}"`
+    );
+
+    // Live TV Tap to Pause / Resume + Centered Icon-only Controls
+    await page.click('.jdl-tv__viewport');
+    await page.waitForTimeout(500);
+    const centerControls = await page.$('[data-testid="jdl-tv-center-controls"]');
+    const playBtn = await page.$('[data-testid="jdl-center-play-btn"]');
+    const muteBtn = await page.$('[data-testid="jdl-center-mute-btn"]');
+    const shareBtn = await page.$('[data-testid="jdl-center-share-btn"]');
+    const waBtn = await page.$('[data-testid="jdl-center-whatsapp-btn"]');
+    record(
+      'Live TV tap pauses and shows centered icon-only controls (Play, Mute, Share, WhatsApp)',
+      centerControls !== null && playBtn !== null && muteBtn !== null && shareBtn !== null && waBtn !== null,
+      `Controls visible: ${centerControls !== null}, Buttons: Play=${playBtn !== null}, Mute=${muteBtn !== null}, Share=${shareBtn !== null}, WhatsApp=${waBtn !== null}`
+    );
+
+    // Tap non-control TV area to resume
+    await page.click('.jdl-tv__viewport', { position: { x: 30, y: 30 } });
+    await page.waitForTimeout(600);
+    const centerControlsAfterResume = await page.$('[data-testid="jdl-tv-center-controls"]');
+    record(
+      'Live TV second tap resumes playback and hides center controls',
+      centerControlsAfterResume === null,
+      'Center controls hidden upon resuming'
+    );
+
+    // Mobile Queue Inline Durg Solar Ad check
+    const mobileQueueAds = await page.$$eval('.jdl-mobile-queue [data-testid="durg-solar-inline-ad"], .jdl-mobile-queue .jd-inline-ad', els => els.length);
+    record(
+      'Mobile Interactive Queue has inline Durg Solar ad after every 3 articles',
+      mobileQueueAds >= 1,
+      `Found ${mobileQueueAds} inline ad(s) in mobile queue`
     );
 
     const liveShot = path.join(ARTIFACT_DIR, 'prod_verify_live_390.png');

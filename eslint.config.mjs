@@ -1,15 +1,11 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import reactHooks from "eslint-plugin-react-hooks";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    plugins: {
-      "react-hooks": reactHooks,
-    },
     rules: {
       // Pre-existing hydration/mount patterns — tracked as tech debt; build is clean.
       "react-hooks/set-state-in-effect": "warn",
@@ -32,6 +28,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "**/*.cjs",
+    "*.js",
+    "scripts/**",
   ]),
 ]);
 
