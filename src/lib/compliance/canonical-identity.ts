@@ -47,11 +47,16 @@ export const CANONICAL_IDENTITY = {
     resolutionTimeDays: 15, // Resolution SLA under Rule 11
   },
   businessAndGeneral: {
+    callingNumber: "+91 77778 12777",
+    callingNumberClean: "+917777812777",
+    primaryCallingDescription: "Primary calling contact number only",
     additionalWhatsApp: "+91 77778 12777",
     additionalWhatsAppClean: "917777812777",
-    additionalDescription: "Additional Jan Darpan / Business WhatsApp contact for news bureau, subscriptions, and business inquiries",
-    editorialEmail: "contact@jandarpan.news",
-    pressContact: "contact@jandarpan.news",
+    callingAndWhatsApp: "+91 95847 35857",
+    callingAndWhatsAppClean: "+919584735857",
+    callingAndWhatsAppDescription: "Calling and WhatsApp contact",
+    editorialEmail: "shriyanshchandrakar@gmail.com",
+    pressContact: "shriyanshchandrakar@gmail.com",
   },
   srb: {
     status: "LEVEL-II SRB MEMBERSHIP: PENDING EXTERNAL ACTION" as const,

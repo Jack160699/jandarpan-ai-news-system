@@ -16,6 +16,7 @@ import type {
 } from "./types";
 import { generateAnchorSpokenScript } from "@/lib/broadcast/anchor-script-engine";
 import { speechController } from "./speechController";
+import { matchesCanonicalCategory } from "./lib/categories";
 
 function buildBroadcastQueue(
   rawQueue: BroadcastSegment[],
@@ -94,6 +95,8 @@ const initialState: BroadcastState = {
   playedBreakingIds: [],
   sessionSeed: getSafeSessionSeed(),
   segmentToken: 1,
+  selectedCategory: "all",
+  selectedArticle: null,
 };
 
 function broadcastReducer(
@@ -166,19 +169,26 @@ function broadcastReducer(
         ? Array.from(new Set([...state.playedIds, currentId]))
         : state.playedIds;
 
+      // Filtered queue pool based on selectedCategory
+      const eligiblePool = state.selectedCategory === "all"
+        ? state.queue
+        : state.queue.filter((s) => matchesCanonicalCategory(s, state.selectedCategory));
+      
+      const pool = eligiblePool.length > 0 ? eligiblePool : state.queue;
+
       // If returning from breaking story
       if (state.mode === "breaking") {
         const returnIndex = typeof state.preBreakingIndex === "number"
-          ? (state.preBreakingIndex + 1) % Math.max(1, state.queue.length)
-          : (state.currentIndex + 1) % Math.max(1, state.queue.length);
-        const returnSeg = state.queue[returnIndex] || state.queue[0];
+          ? (state.preBreakingIndex + 1) % Math.max(1, pool.length)
+          : (state.currentIndex + 1) % Math.max(1, pool.length);
+        const returnSeg = pool[returnIndex] || pool[0];
         const playedBreaking = currentId
           ? Array.from(new Set([...state.playedBreakingIds, currentId]))
           : state.playedBreakingIds;
 
         return {
           ...state,
-          currentIndex: returnIndex,
+          currentIndex: state.queue.findIndex((s) => s.id === returnSeg.id),
           currentSegment: returnSeg,
           preBreakingIndex: undefined,
           countdownRank: 0,
@@ -193,19 +203,19 @@ function broadcastReducer(
         };
       }
 
-      const nextIndex = state.currentIndex + 1;
-      if (nextIndex >= state.queue.length) {
-        // Continuous 48-Hour Loop: Prefer unplayed stories first
-        const unplayedIdx = state.queue.findIndex(
-          (s) => !updatedPlayed.includes(s.id)
-        );
-        const wrapIndex = unplayedIdx >= 0 ? unplayedIdx : 0;
-        const loopSeg = state.queue[wrapIndex];
-        const nextPlayed = unplayedIdx >= 0 ? updatedPlayed : [];
+      // Find current item's index in the filtered pool
+      const currentPoolIdx = pool.findIndex((s) => s.id === currentId);
+      const nextPoolIdx = currentPoolIdx + 1;
+
+      if (nextPoolIdx >= pool.length) {
+        // Continuous loop: Prefer unplayed in pool
+        const unplayedSeg = pool.find((s) => !updatedPlayed.includes(s.id));
+        const loopSeg = unplayedSeg || pool[0];
+        const nextPlayed = unplayedSeg ? updatedPlayed : [];
 
         return {
           ...state,
-          currentIndex: wrapIndex,
+          currentIndex: state.queue.findIndex((s) => s.id === loopSeg.id),
           currentSegment: loopSeg,
           countdownRank: 0,
           isIntro: false,
@@ -218,10 +228,10 @@ function broadcastReducer(
         };
       }
 
-      const seg = state.queue[nextIndex];
+      const seg = pool[nextPoolIdx];
       return {
         ...state,
-        currentIndex: nextIndex,
+        currentIndex: state.queue.findIndex((s) => s.id === seg.id),
         currentSegment: seg,
         countdownRank: 0,
         isIntro: false,
@@ -233,6 +243,37 @@ function broadcastReducer(
         playedIds: updatedPlayed,
       };
     }
+    case "SET_CATEGORY": {
+      const category = action.category;
+      const filtered = state.queue.filter((s) => matchesCanonicalCategory(s, category));
+
+      // If currently playing story already matches this category, keep it
+      if (state.currentSegment && matchesCanonicalCategory(state.currentSegment, category)) {
+        return {
+          ...state,
+          selectedCategory: category,
+        };
+      }
+
+      // Otherwise switch TV playback to the first matching segment
+      const nextSeg = filtered[0] || state.queue[0] || null;
+      const nextIdx = nextSeg ? state.queue.findIndex((s) => s.id === nextSeg.id) : 0;
+      return {
+        ...state,
+        selectedCategory: category,
+        currentSegment: nextSeg,
+        currentIndex: nextIdx >= 0 ? nextIdx : 0,
+        countdownRank: 0,
+        isIntro: false,
+        mode: nextSeg?.isBreaking ? "breaking" : "normal",
+        status: nextSeg ? "playing" : state.status,
+        scriptReady: !!nextSeg?.script,
+        audioReady: false,
+        segmentToken: state.segmentToken + 1,
+      };
+    }
+    case "SET_SELECTED_ARTICLE":
+      return { ...state, selectedArticle: action.article };
     case "INTERRUPT_BREAKING": {
       const savedIndex = state.mode !== "breaking"
         ? state.currentIndex
@@ -296,6 +337,8 @@ type BroadcastContextValue = {
   toggleMute: () => void;
   setPlaying: (playing: boolean) => void;
   setMuted: (muted: boolean) => void;
+  setCategory: (category: string) => void;
+  setSelectedArticle: (article: BroadcastSegment | null) => void;
 };
 
 const BroadcastContext = createContext<BroadcastContextValue | null>(null);
@@ -329,6 +372,8 @@ export function BroadcastProvider({
         mode: (first?.isBreaking ? "breaking" : "normal") as BroadcastState["mode"],
         scriptReady: !!first?.script,
         segmentToken: 1,
+        selectedCategory: "all",
+        selectedArticle: null,
       };
     }
   );
@@ -358,6 +403,16 @@ export function BroadcastProvider({
 
   const setLanguage = useCallback(
     (lang: BroadcastLanguage) => dispatch({ type: "SET_LANGUAGE", language: lang }),
+    []
+  );
+
+  const setCategory = useCallback(
+    (category: string) => dispatch({ type: "SET_CATEGORY", category }),
+    []
+  );
+
+  const setSelectedArticle = useCallback(
+    (article: BroadcastSegment | null) => dispatch({ type: "SET_SELECTED_ARTICLE", article }),
     []
   );
 
@@ -416,6 +471,8 @@ export function BroadcastProvider({
         state,
         dispatch,
         setLanguage,
+        setCategory,
+        setSelectedArticle,
         nextSegment,
         interruptBreaking,
         togglePlay,

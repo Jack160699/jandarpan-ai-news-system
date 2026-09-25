@@ -68,6 +68,8 @@ export type BroadcastState = {
   sessionSeed: string;
   segmentToken: number;
   preBreakingIndex?: number;
+  selectedCategory: string;
+  selectedArticle: BroadcastSegment | null;
 };
 
 export type BroadcastAction =
@@ -86,4 +88,6 @@ export type BroadcastAction =
   | { type: "TOGGLE_PLAY" }
   | { type: "SET_MUTED"; isMuted: boolean }
   | { type: "TOGGLE_MUTE" }
-  | { type: "SET_AUDIO_BLOCKED"; blocked: boolean };
+  | { type: "SET_AUDIO_BLOCKED"; blocked: boolean }
+  | { type: "SET_CATEGORY"; category: string }
+  | { type: "SET_SELECTED_ARTICLE"; article: BroadcastSegment | null };

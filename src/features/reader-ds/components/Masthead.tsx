@@ -81,6 +81,7 @@ export function Masthead({
             gap: 8,
             minWidth: 0,
             flex: "1 1 auto",
+            overflow: "hidden",
           }}
         >
           {closeHref ? (
@@ -133,8 +134,9 @@ export function Masthead({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 7,
+            gap: 6,
             flexShrink: 0,
+            minWidth: "fit-content",
           }}
         >
           {/* Language toggle: हिंदी | EN */}

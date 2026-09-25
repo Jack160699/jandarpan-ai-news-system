@@ -145,7 +145,8 @@ export function UnifiedBrandLockup({
           alignItems: "center",
           position: "relative",
           minWidth: 0,
-          flexShrink: 0,
+          flexShrink: 1,
+          maxWidth: "100%",
         }}
       >
         {/* Brand Lockup: [BrandMark] जन दर्पण  +  [दुर्ग ▾] */}
@@ -154,12 +155,13 @@ export function UnifiedBrandLockup({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: isRegular ? 9 : 7,
+            gap: isRegular ? 9 : 6,
             minWidth: 0,
+            maxWidth: "100%",
           }}
         >
           <Link
-            href="/home"
+            href="/"
             className="jd-unified-brand-lockup__logo-link"
             aria-label={t("masthead.homeAria")}
             data-testid="jd-masthead-brand"
@@ -170,6 +172,7 @@ export function UnifiedBrandLockup({
               textDecoration: "none",
               color: isDark ? "#FBF8F2" : "var(--jd-navy)",
               minWidth: 0,
+              flexShrink: 0,
             }}
           >
             <BrandMark size={isRegular ? 28 : 22} radius={isRegular ? 5 : 4} />
@@ -179,12 +182,13 @@ export function UnifiedBrandLockup({
                 fontFamily: "var(--jd-ff-brand)",
                 fontWeight: 700,
                 fontSize: isRegular
-                  ? "clamp(1.35rem, 2.6vw, 1.65rem)"
-                  : "clamp(1.15rem, 3.8vw, 1.35rem)",
+                  ? "clamp(1.25rem, 2.4vw, 1.6rem)"
+                  : "clamp(1.05rem, 3.2vw, 1.25rem)",
                 lineHeight: 1.2,
                 whiteSpace: "nowrap",
-                letterSpacing: locale === "en" ? "0.03em" : "-0.01em",
+                letterSpacing: locale === "en" ? "0.02em" : "-0.01em",
                 color: isDark ? "#FBF8F2" : "var(--jd-navy)",
+                flexShrink: 0,
               }}
             >
               {locale === "en" ? "JAN DARPAN" : "जन दर्पण"}
@@ -201,6 +205,7 @@ export function UnifiedBrandLockup({
             aria-label={locale === "en" ? `Select district, current: ${districtLabel}` : `जिला चुनें, वर्तमान: ${districtLabel}`}
             aria-haspopup="dialog"
             aria-expanded={pickerOpen}
+            title={districtLabel}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -212,22 +217,34 @@ export function UnifiedBrandLockup({
                 ? "1px solid rgba(255, 255, 255, 0.22)"
                 : "1px solid rgba(14, 27, 61, 0.18)",
               borderRadius: 3,
-              padding: isRegular ? "3px 9px" : "2px 7px",
+              padding: isRegular ? "3px 8px" : "2px 6px",
               color: isDark ? "#FBF8F2" : "var(--jd-navy)",
               fontFamily: "var(--jd-ff-ui)",
-              fontSize: isRegular ? 16 : 13,
+              fontSize: isRegular ? 14 : 12,
               fontWeight: 750,
               cursor: "pointer",
               lineHeight: 1.3,
               whiteSpace: "nowrap",
-              flexShrink: 0,
+              minWidth: 0,
+              maxWidth: isRegular ? "180px" : "clamp(75px, 20vw, 130px)",
+              flexShrink: 1,
               transition: "background 0.15s ease, border-color 0.15s ease",
             }}
           >
-            <span>{districtLabel}</span>
+            <span
+              style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                display: "inline-block",
+                minWidth: 0,
+              }}
+            >
+              {districtLabel}
+            </span>
             <JdIcon
               name="chevD"
-              size={isRegular ? 13 : 10}
+              size={isRegular ? 12 : 10}
               stroke={2.4}
               color={isDark ? "rgba(255, 255, 255, 0.85)" : "var(--jd-navy)"}
             />
