@@ -203,10 +203,9 @@
     display: block;
   }
 
-  /* Swap chrome: hide phone header/nav; show SoT desk chrome */
+  /* Swap chrome: hide phone bottom nav/spacers; preserve unified masthead with profile */
   .jd-ds .jd-bottom-nav,
   .jd-ds .jd-nav-spacer,
-  .jd-ds .jd-masthead,
   .jd-ds .jd-utility-row,
   .jd-ds .jd-desktop-nav,
   .jd-ds .jd-mobile-catnav {
