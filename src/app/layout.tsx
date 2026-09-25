@@ -23,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenantConfig();
   return {
     ...buildTenantSiteMetadata(tenant),
+    referrer: "no-referrer",
     verification: {
       google: GOOGLE_SITE_VERIFICATION,
     },

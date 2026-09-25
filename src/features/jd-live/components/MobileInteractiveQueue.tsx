@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useBroadcast } from "../BroadcastContext";
 import type { BroadcastSegment } from "../types";
+import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 
 function formatRelativeTime(dateStr?: string, lang: "hi" | "en" = "hi"): string {
   if (!dateStr) return lang === "hi" ? "अभी" : "Just now";
@@ -37,14 +38,8 @@ function QueueThumbnail({
     return s;
   }, [src]);
 
-  if (!normalizedSrc || error) {
-    return (
-      <div className="jdl-mobile-queue__thumb-ph">
-        <span style={{ fontSize: "9px", color: "var(--jd-muted, #94a3b8)", fontWeight: 700 }}>
-          जन दर्पण
-        </span>
-      </div>
-    );
+  if (!normalizedSrc || !hasVerifiedRealMedia(normalizedSrc) || error) {
+    return null;
   }
 
   return (
@@ -56,6 +51,7 @@ function QueueThumbnail({
       className="jdl-mobile-queue__thumb"
       style={{ objectFit: "cover" }}
       unoptimized
+      referrerPolicy="no-referrer"
       onError={() => {
         console.warn("[MobileInteractiveQueue] Thumbnail failed to load:", normalizedSrc);
         setError(true);
@@ -78,7 +74,7 @@ export function MobileInteractiveQueue() {
   const { queue, currentSegment, language } = state;
 
   const stories = useMemo(() => {
-    return queue.filter((s) => !s.isIntro);
+    return queue.filter((s) => !s.isIntro && hasVerifiedRealMedia(s.imageUrl));
   }, [queue]);
 
   const handleSelectStory = (seg: BroadcastSegment) => {

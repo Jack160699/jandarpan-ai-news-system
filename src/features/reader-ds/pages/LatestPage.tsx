@@ -150,6 +150,7 @@ export function LatestPageView({ articles }: Props) {
                         alt=""
                         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                         loading="eager"
+                        referrerPolicy="no-referrer"
                       />
                     </div>
                   </Link>
@@ -210,6 +211,7 @@ export function LatestPageView({ articles }: Props) {
                           alt=""
                           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                           loading="lazy"
+                          referrerPolicy="no-referrer"
                         />
                       </div>
                     </Link>

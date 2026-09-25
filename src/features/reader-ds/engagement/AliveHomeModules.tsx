@@ -285,8 +285,9 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
                       alt=""
                       className="jd-fresh-col__thumb"
                       loading="lazy"
+                      referrerPolicy="no-referrer"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/brand/jan-darpan/mark/jan-darpan-mark-square-light.svg";
+                        (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
                   )}

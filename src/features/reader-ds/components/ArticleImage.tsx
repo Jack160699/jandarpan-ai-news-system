@@ -206,6 +206,7 @@ export function ArticleImage({
           decoding="async"
           fetchPriority={priority ? "high" : "auto"}
           sizes={sizes}
+          referrerPolicy="no-referrer"
           onError={handleError}
           style={{
             position: "absolute",

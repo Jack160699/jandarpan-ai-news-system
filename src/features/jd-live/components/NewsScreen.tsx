@@ -100,6 +100,7 @@ export function NewsScreen() {
               style={{ objectFit: aspectFit }}
               priority
               unoptimized
+              referrerPolicy="no-referrer"
               onLoad={(e) => {
                 const img = e.currentTarget;
                 if (img.naturalWidth && img.naturalHeight) {
