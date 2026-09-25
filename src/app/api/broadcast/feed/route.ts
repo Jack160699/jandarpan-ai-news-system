@@ -233,8 +233,14 @@ type BroadcastCandidate = {
   id: string;
   slug: string;
   headline: string;
+  headlineHi?: string;
+  headlineEn?: string;
   summary: string;
+  summaryHi?: string;
+  summaryEn?: string;
   articleBody?: string;
+  articleBodyHi?: string;
+  articleBodyEn?: string;
   imageUrl: string;
   section: string;
   language: string;
@@ -295,12 +301,24 @@ function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
     a
   );
 
+  const rawMeta = (a as any).editorial_metadata;
+  const translations = (a as any).translations || rawMeta?.translations || {};
+  const enTrans = translations.en;
+  const hiTrans = translations.hi;
+  const isDevanagari = /[\u0900-\u097F]/.test(a.headline || "");
+
   return {
     id: a.id,
     slug: a.slug,
     headline: a.headline,
+    headlineHi: hiTrans?.headline || (isDevanagari ? a.headline : undefined),
+    headlineEn: enTrans?.headline || (!isDevanagari ? a.headline : undefined),
     summary: a.summary || "",
+    summaryHi: hiTrans?.summary || (isDevanagari ? a.summary : undefined),
+    summaryEn: enTrans?.summary || (!isDevanagari ? a.summary : undefined),
     articleBody: a.summary || "",
+    articleBodyHi: hiTrans?.article_body || a.summary || "",
+    articleBodyEn: enTrans?.article_body || a.summary || "",
     imageUrl: rawImg,
     section: a.section || "chhattisgarh",
     language: a.language || "hi",
@@ -336,12 +354,24 @@ function normalizeGeneratedRow(r: GeneratedArticleRow): BroadcastCandidate {
     r
   );
 
+  const rawMeta = r.editorial_metadata as any;
+  const translations = (r.translations as any) || rawMeta?.translations || {};
+  const enTrans = translations.en;
+  const hiTrans = translations.hi;
+  const isDevanagari = /[\u0900-\u097F]/.test(r.headline || "");
+
   return {
     id: r.id,
     slug: r.slug,
     headline: r.headline,
+    headlineHi: hiTrans?.headline || (isDevanagari ? r.headline : undefined),
+    headlineEn: enTrans?.headline || (!isDevanagari ? r.headline : undefined),
     summary: r.summary || "",
+    summaryHi: hiTrans?.summary || (isDevanagari ? r.summary : undefined),
+    summaryEn: enTrans?.summary || (!isDevanagari ? r.summary : undefined),
     articleBody: r.article_body || r.summary || "",
+    articleBodyHi: hiTrans?.article_body || r.article_body || r.summary || "",
+    articleBodyEn: enTrans?.article_body || r.article_body || r.summary || "",
     imageUrl: rawImg,
     section: sectionTag,
     language: r.language || "hi",
@@ -368,19 +398,25 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
   const catHi = SECTION_NAMES_HI[c.section] || "राज्य डेस्क";
   const catEn = SECTION_NAMES_EN[c.section] || "State Desk";
 
-  const headline = targetLang === "hi" ? (isDevanagari ? c.headline : c.headline) : c.headline;
-  const summary = targetLang === "hi" ? (isDevanagari ? c.summary : c.summary) : c.summary;
+  const headlineHi = c.headlineHi || (isDevanagari ? c.headline : c.headline);
+  const headlineEn = c.headlineEn || (!isDevanagari ? c.headline : c.headline);
+  const headline = targetLang === "en" ? (c.headlineEn || c.headline) : (c.headlineHi || c.headline);
+
+  const summaryHi = c.summaryHi || (isDevanagari ? c.summary : c.summary);
+  const summaryEn = c.summaryEn || (!isDevanagari ? c.summary : c.summary);
+  const summary = targetLang === "en" ? (c.summaryEn || c.summary) : (c.summaryHi || c.summary);
+  const body = targetLang === "en" ? (c.articleBodyEn || c.articleBody) : (c.articleBodyHi || c.articleBody);
 
   // Clean visible district vs statewide label — Never substitute "Chhattisgarh" for a district
   const locationHi = districtRes.nameHi || (districtRes.isStatewide ? "राज्य डेस्क" : catHi);
   const locationEn = districtRes.nameEn || (districtRes.isStatewide ? "State Desk" : catEn);
   const location = targetLang === "hi" ? locationHi : locationEn;
 
-  // Build natural broadcast anchor script immediately (no numbering, full story content)
+  // Build natural broadcast anchor script immediately (Headline once + short overview continuation)
   const scriptData = generateAnchorSpokenScript({
     headline,
     summary,
-    articleBody: c.articleBody,
+    articleBody: body,
     district: location,
     section: c.section,
     categoryLabel: targetLang === "hi" ? catHi : catEn,
@@ -407,17 +443,21 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
   return {
     id: c.id,
     slug: c.slug,
-    headline: c.headline,
-    headlineHi: isDevanagari ? c.headline : undefined,
-    summary: c.summary,
-    summaryHi: isDevanagari ? c.summary : undefined,
+    headline,
+    headlineHi,
+    headlineEn,
+    summary,
+    summaryHi,
+    summaryEn,
     script: scriptData.script,
     durationSec: scriptData.durationSec,
     imageUrl: finalImageUrl,
     categoryLabel: targetLang === "hi" ? catHi : catEn,
     categoryLabelHi: catHi,
+    categoryLabelEn: catEn,
     district: location,
     districtHi: locationHi,
+    districtEn: locationEn,
     section: c.section,
     canonicalCategories: catRes.categories,
     primaryCategory: catRes.primaryCategory,
@@ -505,7 +545,9 @@ export async function GET(req: NextRequest) {
     const now = Date.now();
     const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
 
-    // Filter strictly by Clean Real Media, Language, Rolling 48-Hour validity, and CHHATTISGARH RELEVANCE
+    // Filter strictly by Clean Real Media, 30-day validity, and CHHATTISGARH RELEVANCE.
+    // Language invariant: Under the same district, category, and date window, Hindi and English
+    // MUST contain the exact same canonical articles. Only presentation changes.
     const pool = candidates.filter((c) => {
       // Must have valid headline and slug
       if (!c.headline || !c.slug) return false;
@@ -516,11 +558,6 @@ export async function GET(req: NextRequest) {
 
       // HARD RULE: Only Chhattisgarh-relevant stories
       if (!isChhattisgarhOnlyStory(c)) return false;
-
-      // Language check
-      const hasDev = isDevanagari(c.headline);
-      const langMatches = lang === "hi" ? (hasDev || c.language === "hi") : (!hasDev || c.language === "en");
-      if (!langMatches) return false;
 
       // 30-day visible news window: articles published within the last 30 days remain fully eligible
       const pubTime = new Date(c.publishedAt).getTime();

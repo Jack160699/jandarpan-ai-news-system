@@ -26,19 +26,12 @@ function formatFullDate(dateStr?: string, lang: "hi" | "en" = "hi"): string {
  * Open Article Reader for Jan Darpan Live.
  *
  * Requirements:
- * 1. OPEN READING CANVAS: No boxed containers, heavy borders, or isolated card shells.
- * 2. PREMIUM TYPOGRAPHY: Large, prominent headline, comfortable body text (clamp(17px, 2vw, 19.5px)),
- *    comfortable line height (1.85), generous paragraph spacing.
- * 3. HIERARCHY:
- *    ARTICLE HEADER
- *    ↓ ARTICLE IMAGE / MEDIA
- *    ↓ ARTICLE CONTENT
- *    ↓ ARTICLE ACTIONS (Unified Jan Darpan icon-first controls)
- *    ↓ RELATED ARTICLES (संबंधित खबरें - identical geometry: IMAGE LEFT, CONTENT RIGHT)
- * 4. PERSISTENT LIVE TV: TV stays sticky and active at top.
- * 5. UNIFIED DESIGN SYSTEM: All controls share identical styling, dimensions, and visual weight.
- *    WhatsApp is NOT an oversized green banner; it uses the unified button language.
- * 6. DARK MODE FIRST-CLASS: High contrast, no hardcoded low-contrast colors.
+ * 1. OPEN READING CANVAS: Integrated into page layout, no boxy card shell or heavy borders.
+ * 2. PREMIUM READABLE TYPOGRAPHY: Large prominent headline, generous paragraph spacing, optimal line height.
+ * 3. NO PUBLIC SOURCE LABELS: Remove public source/provider labels from UI while preserving backend provenance.
+ * 4. UNIFIED CONTROL SYSTEM: Back, Share, WhatsApp icon buttons share identical dimensions, radius, and weights.
+ * 5. RELATED ARTICLES: Horizontal geometry (IMAGE LEFT + CONTENT RIGHT) powered by canonical metadata.
+ * 6. FIRST-CLASS LIGHT/DARK CONTRAST: High readability across themes.
  */
 export function InPlaceArticleReader({ article }: { article: BroadcastSegment }) {
   const { state, setSelectedArticle } = useBroadcast();
@@ -49,21 +42,21 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
   const [copied, setCopied] = useState<boolean>(false);
 
   const headline =
-    language === "hi"
-      ? article.headlineHi || article.headline
-      : article.headline;
+    language === "en"
+      ? article.headlineEn || article.headline
+      : article.headlineHi || article.headline;
   const summary =
-    language === "hi"
-      ? article.summaryHi || article.summary
-      : article.summary;
+    language === "en"
+      ? article.summaryEn || article.summary
+      : article.summaryHi || article.summary;
   const rawDistrict =
-    language === "hi"
-      ? article.districtHi || article.district
-      : article.district;
+    language === "en"
+      ? article.districtEn || article.district
+      : article.districtHi || article.district;
   const category =
-    language === "hi"
-      ? article.categoryLabelHi || article.categoryLabel
-      : article.categoryLabel;
+    language === "en"
+      ? article.categoryLabelEn || article.categoryLabel
+      : article.categoryLabelHi || article.categoryLabel;
 
   const validDistrict =
     rawDistrict && rawDistrict !== "छत्तीसगढ़" && rawDistrict !== "Chhattisgarh"
@@ -74,7 +67,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
     (category && category !== "छत्तीसगढ़" && category !== "Chhattisgarh" ? category : null) ||
     (language === "hi" ? "राज्य डेस्क" : "State Desk");
 
-  // Fetch full article content from API
+  // Fetch full article content from API with language parameter
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -85,7 +78,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
       return;
     }
 
-    fetch(`/api/story-detail?slug=${encodeURIComponent(article.slug)}`)
+    fetch(`/api/story-detail?slug=${encodeURIComponent(article.slug)}&lang=${language}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled && data) {
@@ -103,7 +96,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
     return () => {
       cancelled = true;
     };
-  }, [article.slug]);
+  }, [article.slug, language]);
 
   // Clean image URL
   const imageUrl = useMemo(() => {
@@ -129,13 +122,20 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
     }
   };
 
-  // Split content into clean editorial paragraphs
+  // Split content into clean editorial paragraphs, stripping any trailing public source labels
   const paragraphs = useMemo(() => {
     if (!fullContent) return [];
     return fullContent
       .split(/\n\n+/)
       .map((p) => p.trim())
-      .filter((p) => p.length > 0 && !p.startsWith("#") && !p.startsWith("!["))
+      .filter((p) => {
+        if (!p || p.length === 0 || p.startsWith("#") || p.startsWith("![")) return false;
+        if (/^(?:स्रोत|source|सौजन्य|क्रेडिट|credit|रिपोर्टर|ब्यूरो)\s*:/i.test(p)) return false;
+        if (p.includes("जन दर्पण ब्यूरो द्वारा सत्यापित स्थानीय कवरेज")) return false;
+        return true;
+      })
+      .map((p) => p.replace(/^(?:स्रोत|source)\s*:.*$/gmi, "").trim())
+      .filter((p) => p.length > 0)
       .slice(0, 15);
   }, [fullContent]);
 
@@ -202,7 +202,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
 
   return (
     <article className="jd-open-reader" aria-labelledby="jd-reader-heading">
-      {/* Sleek Top Navigation Bar */}
+      {/* Sleek Top Navigation Bar - Unified Control System */}
       <nav className="jd-reader-top-nav" aria-label="Article navigation">
         <button
           type="button"
@@ -296,14 +296,14 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
           {headline}
         </h1>
 
-        {/* Summary Deck / Quote */}
+        {/* Summary Deck / Lead Overview */}
         {summary && (
           <p className="jd-reader-summary">
             {summary}
           </p>
         )}
 
-        {/* Publication Metadata */}
+        {/* Publication Metadata Byline (No public third-party source exposure) */}
         <div className="jd-reader-byline">
           <span className="jd-reader-byline__date">
             {formatFullDate(article.publishedAt, language)}
@@ -313,7 +313,9 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
             {language === "hi" ? "2 मिनट का वाचन" : "2 min read"}
           </span>
           <span className="jd-reader-byline__dot">•</span>
-          <span className="jd-reader-byline__source">जन दर्पण लाइव डिजिटल न्यूज़रूम</span>
+          <span className="jd-reader-byline__source">
+            {language === "hi" ? "जन दर्पण लाइव न्यूज़रूम" : "Jan Darpan Live Newsroom"}
+          </span>
         </div>
       </header>
 
@@ -333,7 +335,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
             />
           </div>
           <figcaption className="jd-reader-media__caption">
-            {locationTag} • जन दर्पण सत्यापित स्रोत मीडिया
+            {locationTag} • {language === "hi" ? "जन दर्पण डिजिटल कवरेज" : "Jan Darpan Digital Coverage"}
           </figcaption>
         </figure>
       ) : null}
@@ -361,7 +363,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
         )}
       </section>
 
-      {/* ARTICLE ACTIONS - Unified Jan Darpan Action Row (Requirement #7) */}
+      {/* ARTICLE ACTIONS - Unified Jan Darpan Action Row (Requirement #22) */}
       <section className="jd-reader-actions-section" aria-label="Story actions">
         <div className="jd-reader-actions-bar">
           <button
@@ -411,7 +413,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
         </div>
       </section>
 
-      {/* RELATED ARTICLES - YouTube-like Continuation Model (Requirement #8 & #9) */}
+      {/* RELATED ARTICLES - Horizontal Geometry: IMAGE LEFT + CONTENT RIGHT (Requirements #23 & #24) */}
       {relatedArticles.length > 0 && (
         <section className="jd-reader-related-section" aria-label={language === "hi" ? "संबंधित खबरें" : "Related Articles"}>
           <div className="jd-reader-related-head">
@@ -425,31 +427,47 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
           <div className="jdl-mobile-queue__list jd-reader-related-list">
             {relatedArticles.map((rel) => {
               const relHeadline =
-                language === "hi"
-                  ? rel.headlineHi || rel.headline
-                  : rel.headline;
+                language === "en"
+                  ? rel.headlineEn || rel.headline
+                  : rel.headlineHi || rel.headline;
               const relDist =
-                language === "hi"
-                  ? rel.districtHi || rel.district
-                  : rel.district;
+                language === "en"
+                  ? rel.districtEn || rel.district
+                  : rel.districtHi || rel.district;
               const validRelDist =
                 relDist && relDist !== "छत्तीसगढ़" && relDist !== "Chhattisgarh"
                   ? relDist
                   : null;
+              const relCat =
+                language === "en"
+                  ? rel.categoryLabelEn || rel.categoryLabel
+                  : rel.categoryLabelHi || rel.categoryLabel;
               const relLocationTag =
                 validRelDist ||
-                (rel.categoryLabel && rel.categoryLabel !== "छत्तीसगढ़" ? rel.categoryLabel : null) ||
+                (relCat && relCat !== "छत्तीसगढ़" && relCat !== "Chhattisgarh" ? relCat : null) ||
                 (language === "hi" ? "राज्य डेस्क" : "State Desk");
 
               return (
-                <article key={rel.id} className="jdl-queue-card jdl-queue-card--related">
+                <article
+                  key={rel.id}
+                  className="jdl-queue-card jdl-queue-card--related"
+                  onClick={() => handleSelectRelatedArticle(rel)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      const target = e.target as HTMLElement | null;
+                      if (target && target.closest("button")) return;
+                      e.preventDefault();
+                      handleSelectRelatedArticle(rel);
+                    }
+                  }}
+                  aria-label={relHeadline}
+                >
                   {/* Left: Thumbnail */}
                   <div
                     className="jdl-queue-card__thumb-wrap"
-                    onClick={() => handleSelectRelatedArticle(rel)}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={relHeadline}
+                    aria-hidden="true"
                   >
                     {rel.imageUrl && hasVerifiedRealMedia(rel.imageUrl) ? (
                       <Image
@@ -490,7 +508,6 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
 
                     <h3
                       className="jdl-queue-card__headline"
-                      onClick={() => handleSelectRelatedArticle(rel)}
                       title={relHeadline}
                     >
                       {relHeadline}
@@ -498,9 +515,13 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
 
                     {/* Bottom-right: bold, highlighted 'पढ़ें' button */}
                     <div className="jdl-queue-card__action-row">
+                      <span />
                       <button
                         type="button"
-                        onClick={() => handleSelectRelatedArticle(rel)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectRelatedArticle(rel);
+                        }}
                         className="jdl-queue-card__read-btn"
                         aria-label={`${relHeadline} — ${language === "hi" ? "पढ़ें" : "Read"}`}
                       >

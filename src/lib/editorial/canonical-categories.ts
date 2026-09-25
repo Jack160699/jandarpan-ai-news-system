@@ -1,21 +1,24 @@
 /**
  * Jan Darpan Canonical Category Taxonomy & Classification Engine
  *
- * Implements the canonical taxonomy:
- * - all: "सभी" / "All"
+ * Implements the authoritative canonical taxonomy:
+ * - all: "सभी" / "All" (Union of all eligible articles)
  * - crime: "क्राइम" / "Crime"
  * - politics: "राजनीति" / "Politics"
  * - national: "राष्ट्रीय" / "National"
  * - chhattisgarh: "छत्तीसगढ़" / "Chhattisgarh"
- * - business: "बाज़ार" / "Market/Business"
- * - governance: "प्रशासन" / "Governance/Administration"
+ * - business: "बाज़ार" / "Market"
+ * - governance: "प्रशासन" / "Governance"
  * - sports: "खेल" / "Sports"
  * - health: "स्वास्थ्य" / "Health"
  * - education: "शिक्षा" / "Education"
  *
- * Supports multiple canonical category tags per article (e.g. राजनीति + छत्तीसगढ़ + प्रशासन).
- * Semantic & contextual classification: examines headline, summary, content, location, entities, source, tags.
- * Deterministic and auditable with confidence and reasoning.
+ * Invariants:
+ * 1. "सभी" is the union of ALL eligible articles. Every article belongs to "all".
+ * 2. Precise, semantic, contextual classification: NOT naive substring matching.
+ * 3. Never match short acronyms inside words (e.g. "आप" inside "आपसी", "दल" inside "पशु चिकित्सकों के दल").
+ * 4. Multi-tagging is permitted ONLY when legitimately justified by actual editorial content.
+ * 5. One canonical category resolution layer for cards, TV player, filters, and reader.
  */
 
 export type CanonicalCategoryId =
@@ -51,21 +54,21 @@ export const CANONICAL_TAXONOMY: CanonicalCategoryDefinition[] = [
     labelHi: "क्राइम",
     labelEn: "Crime",
     descriptionHi: "अपराध, पुलिस कार्रवाई, न्याय व सुरक्षा",
-    descriptionEn: "Crime, police operations, investigations, and law enforcement",
+    descriptionEn: "Crime, police investigations, arrests, raids, and law enforcement",
   },
   {
     id: "politics",
     labelHi: "राजनीति",
     labelEn: "Politics",
-    descriptionHi: "राजनीतिक दल, चुनाव, सरकार व विधानसभा",
-    descriptionEn: "Political parties, elections, governance, and assembly developments",
+    descriptionHi: "राजनीतिक दल, चुनाव, विपक्ष व विधानसभा",
+    descriptionEn: "Political parties, elections, voting, candidates, and party politics",
   },
   {
     id: "national",
     labelHi: "राष्ट्रीय",
     labelEn: "National",
     descriptionHi: "देशभर के प्रमुख राष्ट्रीय मुद्दे व केंद्र सरकार",
-    descriptionEn: "National news, Union government, Supreme Court, and interstate affairs",
+    descriptionEn: "National affairs, Union government, Supreme Court, and interstate issues",
   },
   {
     id: "chhattisgarh",
@@ -79,14 +82,14 @@ export const CANONICAL_TAXONOMY: CanonicalCategoryDefinition[] = [
     labelHi: "बाज़ार",
     labelEn: "Market",
     descriptionHi: "व्यापार, अर्थव्यवस्था, मंडी भाव व उद्योग",
-    descriptionEn: "Business, markets, economy, mandi rates, and trade",
+    descriptionEn: "Business, markets, economy, mandi rates, and industry",
   },
   {
     id: "governance",
     labelHi: "प्रशासन",
     labelEn: "Governance",
     descriptionHi: "प्रशासनिक आदेश, निगम, नीतियां व जनसेवा",
-    descriptionEn: "Public administration, collector orders, civic bodies, and public advisories",
+    descriptionEn: "Public administration, collector orders, municipal actions, and civic affairs",
   },
   {
     id: "health",
@@ -100,7 +103,7 @@ export const CANONICAL_TAXONOMY: CanonicalCategoryDefinition[] = [
     labelHi: "शिक्षा",
     labelEn: "Education",
     descriptionHi: "स्कूल, कॉलेज, परीक्षाएं व रोजगार",
-    descriptionEn: "Education, universities, examinations, and jobs",
+    descriptionEn: "Education, universities, examinations, and student affairs",
   },
   {
     id: "sports",
@@ -135,65 +138,102 @@ export type CategoryResolutionResult = {
   confidence: number;
 };
 
-// Semantic keywords & concepts for each category
-const CRIME_SIGNALS = [
-  "गिरफ्तार", "हिरासत", "पुलिस", "थाना", "कोतवाली", "क्राइम", "अपराध",
-  "गांजा", "तस्कर", "तस्करी", "जब्त", "सट्टा", "महादेव सट्टा", "cbi", "acb",
-  "रिश्वत", "रंगे हाथों", "अवैध हथियार", "हथियार फैक्ट्री", "मुठभेड़", "नक्सली डंप",
-  "डंप ध्वस्त", "हत्या", "चोरी", "डकैती", "धोखाधड़ी", "फर्जीवाड़ा", "वारदात",
-  "कोर्ट", "जमानत", "रिमांड", "fir", "धारा", "ड्रग्स", "स्मैक", "शराब भट्ठी",
-  "arrest", "police", "contraband", "raid", "bribe", "fraud", "court"
+/**
+ * Word-boundary safe pattern check in Hindi and English.
+ * Prevents "आप" from matching "आपसी", "सत्र" inside unrelated text, etc.
+ */
+function containsWordOrPhrase(text: string, phrase: string): boolean {
+  if (!text || !phrase) return false;
+  const p = phrase.trim().toLowerCase();
+  const t = text.toLowerCase();
+  if (p.length === 0) return false;
+
+  // For multi-word phrases, a simple substring check is safe
+  if (p.includes(" ")) {
+    return t.includes(p);
+  }
+
+  // For single words (Hindi or English), match bounded by non-word/delimiter characters
+  const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(`(?:^|[\\s,।!?:;()[\\]"'/\\-])${escaped}(?:$|[\\s,।!?:;()[\\]"'/\\-])`, "iu");
+  return regex.test(t);
+}
+
+// ─── SEMANTIC CATEGORY DEFINITIONS ──────────────────────────────────────────
+
+const CRIME_CORE_SIGNALS = [
+  "गिरफ्तार", "हिरासत", "थाना", "कोतवाली", "अपराध", "क्राइम", "तस्करी", "तस्कर",
+  "गांजा बरामद", "ड्रग्स", "स्मैक", "सट्टा", "अवैध हथियार", "हथियार फैक्ट्री",
+  "हत्या", "मर्डर", "चोरी", "डकैती", "धोखाधड़ी", "फर्जीवाड़ा", "जालसाजी",
+  "वारदात", "रिमांड", "fir दर्ज", "मुठभेड़", "नक्सली डंप", "विस्फोटक बरामद",
+  "रिश्वत", "रंगे हाथों", "एंटी करप्शन ब्यूरो", "acb", "cbi छापा", "साइबर अपराध",
+  "साइबर ठगी", "अवैध कटाई", "अवैध शराब", "नाबालिग से दुष्कर्म", "दुष्कर्म",
+  "arrest", "contraband", "smuggling", "police raid", "bribe", "fraud", "cybercrime",
+  "narcotics", "murder"
 ];
 
-const POLITICS_SIGNALS = [
-  "राजनीति", "चुनाव", "उपचुनाव", "विधानसभा", "सत्र", "विपक्ष", "पक्ष-विपक्ष",
-  "कांग्रेस", "भाजपा", "bjp", "inc", "आप", "आम आदमी पार्टी", "सांसद", "विधायक",
-  "फूलो देवी नेताम", "विष्णु देव साय", "विष्णुदेव साय", "भूपेश बघेल", "टी एस सिंहदेव",
-  "रमन सिंह", "दीपक बैज", "अरुण साव", "विजय शर्मा", "मंत्रालय", "मंत्री परिषद",
-  "प्रत्याशी", "टिकट", "वोट", "मतदान", "पार्टी", "प्रदेशाध्यक्ष", "राष्ट्रीय अध्यक्ष",
-  "politics", "election", "mla", "mp", "minister", "cabinet"
+// Contextual crime check: "पुलिस" alone is only crime if coupled with action
+const CRIME_ACTION_SIGNALS = [
+  "पुलिस ने गिरफ्तार", "पुलिस ने पकड़ा", "पुलिस ने दर्ज किया", "पुलिस की दबिश",
+  "पुलिस ने किया खुलासा", "पुलिस की कार्रवाई", "पुलिस हिरासत", "पुलिस अधीक्षक ने बताया",
+  "पुलिस जांच", "पुलिस बल ने घेराबंदी"
 ];
 
-const GOVERNANCE_SIGNALS = [
+const POLITICS_CORE_SIGNALS = [
+  "राजनीति", "चुनाव", "उपचुनाव", "विधानसभा चुनाव", "लोकसभा चुनाव", "मतदान", "वोटिंग",
+  "प्रत्याशी", "टिकट वितरण", "राजनीतिक दल", "विपक्ष", "पक्ष-विपक्ष",
+  "कांग्रेस", "भाजपा", "bjp", "आम आदमी पार्टी", "आप पार्टी", "तृणमूल",
+  "प्रदेशाध्यक्ष", "राष्ट्रीय अध्यक्ष", "राजनीतिक बयानबाजी", "पार्टी प्रवक्ता",
+  "राज्यसभा सांसद", "सांसद", "विधायक", "फूलो देवी नेताम", "भूपेश बघेल",
+  "दीपक बैज", "अविश्वास प्रस्ताव", "राजनीतिक संकट", "चुनावी दौरा", "जनसभा",
+  "politics", "election", "candidate", "voting", "political party"
+];
+
+const GOVERNANCE_CORE_SIGNALS = [
   "प्रशासन", "कलेक्टर", "जिलाधीश", "नगर निगम", "महापौर", "कमिश्नर", "आयुक्त",
-  "प्रशासनिक", "आदेश जारी", "अधिसूचना", "यातायात एडवाइजरी", "ट्रैफिक डायवर्ट",
-  "जलभराव", "राहत कार्य", "एसडीएम", "तहसीलदार", "पटवारी", "स्वास्थ्य विभाग",
-  "लोक निर्माण", "पीडब्ल्यूडी", "योजना", "स्टाइपेंड", "मानदेय", "वेतन वृद्धि",
-  "निरीक्षण", "समीक्षा बैठक", "शासकीय", "सरकारी आदेश", "शासन ने", "राजपत्र",
-  "administration", "collector", "municipal", "advisory", "official order", "governance"
+  "प्रशासनिक आदेश", "जिला प्रशासन", "तहसीलदार", "एसडीएम", "पटवारी", "राजस्व विभाग",
+  "अधिसूचना जारी", "यातायात एडवाइजरी", "ट्रैफिक डायवर्ट", "राहत शिविर", "मुआवजा",
+  "गिरदावरी", "डिजिटल सीमांकन", "शासकीय आदेश", "समीक्षा बैठक", "सरकारी योजना",
+  "पीएम जनमन योजना", "सड़क निर्माण की जांच", "गुणवत्ता की जांच", "तकनीकी टीम गठित",
+  "ड्रेनेज मास्टर प्लान", "राहत कार्य", "पानी की निकासी", "सिविक", "जलभराव",
+  "school suspension", "कार्यालय का औचक निरीक्षण", "लापरवाही पर निलंबन",
+  "governance", "administration", "collector order", "municipal corporation", "civic"
 ];
 
-const BUSINESS_SIGNALS = [
-  "बाज़ार", "कारोबार", "व्यापार", "मंडी", "भाव", "दाम", "कीमत", "सोना", "चांदी",
-  "पेट्रोल", "डीजल", "शेयर बाज़ार", "सेंसेक्स", "निफ्टी", "उद्योग", "उद्योगपति",
-  "कारखाना", "स्टील प्लांट", "भिलाई स्टील", "secl", "nmdc", "cspdcl", "बिजली बिल",
-  "जीएसटी", "राजस्व", "बजट", "सोलर", "दूर्ग सोलर", "बैंक", "ऋण", "लोन",
-  "business", "market", "economy", "trade", "industry", "finance"
+const BUSINESS_CORE_SIGNALS = [
+  "बाज़ार", "कारोबार", "व्यापार", "मंडी भाव", "सर्राफा", "सोना", "चांदी",
+  "दाम", "भाव", "कीमत", "शेयर बाजार", "सेंसेक्स", "निफ्टी", "उद्योग", "उद्योगपति",
+  "भिलाई स्टील प्लांट", "स्टील प्लांट", "secl", "nmdc", "cspdcl", "बिजली बिल",
+  "जीएसटी", "राजस्व संग्रह", "बजट", "सोलर परियोजना", "दूर्ग सोलर", "बैंक ऋण",
+  "ऋण वसूली", "लोन", "अर्थव्यवस्था", "business", "market", "trade", "economy",
+  "industry", "mandi"
 ];
 
-const NATIONAL_SIGNALS = [
-  "राष्ट्रीय", "देशभर", "भारत सरकार", "केंद्र सरकार", "प्रधानमंत्री", "मोदी",
-  "राष्ट्रपति", "सुप्रीम कोर्ट", "सर्वोच्च न्यायालय", "संसद", "लोकसभा", "राज्यसभा",
-  "केंद्रीय मंत्री", "गृह मंत्रालय", "वित्त मंत्रालय", "रक्षा मंत्रालय", "सेना",
-  "राष्ट्रीय राजमार्ग", "nhai", "रेलवे", "रेल मंत्रालय", "अंतरराज्यीय",
-  "national", "india", "supreme court", "parliament", "central government"
+const NATIONAL_GENUINE_SIGNALS = [
+  "राष्ट्रीय", "देशभर", "भारत सरकार", "केंद्र सरकार", "प्रधानमंत्री नरेंद्र मोदी",
+  "पीएम मोदी", "सुप्रीम कोर्ट", "सर्वोच्च न्यायालय", "संसद", "संसद भवन",
+  "लोकसभा", "राज्यसभा सत्र", "केंद्रीय मंत्री", "गृह मंत्रालय", "वित्त मंत्रालय",
+  "रक्षा मंत्रालय", "भारतीय सेना", "इसरो", "राष्ट्रीय राजमार्ग प्राधिकरण",
+  "nhai", "रेलवे बोर्ड", "रेल मंत्रालय", "अंतरराज्यीय",
+  "national issue", "union government", "supreme court", "parliament of india"
 ];
 
-const HEALTH_SIGNALS = [
-  "स्वास्थ्य", "अस्पताल", "डॉक्टर", "एमबीबीएस", "इंटर्न्स", "स्टाइपेंड", "चिकित्सा",
-  "दवा", "मरीज", "इलाज", "स्वास्थ्य विभाग", "एम्स", "मेडिकल कॉलेज", "संक्रमण",
-  "health", "hospital", "medical", "doctor"
+const HEALTH_CORE_SIGNALS = [
+  "स्वास्थ्य", "अस्पताल", "डॉक्टर", "एमबीबीएस", "इंटर्न डॉक्टरों", "स्टाइपेंड",
+  "चिकित्सा", "दवा", "मरीज", "इलाज", "स्वास्थ्य विभाग", "एम्स", "मेडिकल कॉलेज",
+  "संक्रमण", "सिम्स अस्पताल", "स्वास्थ्य मंत्री", "health", "hospital", "medical", "doctor"
 ];
 
-const EDUCATION_SIGNALS = [
+const EDUCATION_CORE_SIGNALS = [
   "शिक्षा", "स्कूल", "कॉलेज", "विश्वविद्यालय", "छात्र", "छात्राएं", "परीक्षा",
-  "रिजल्ट", "एडमिशन", "शिक्षक", "प्राध्यापक", "cbse", "cgboard", "बोर्ड परीक्षा",
-  "education", "school", "university", "student", "exam"
+  "प्रश्नपत्र", "तिमाही परीक्षा", "रिजल्ट", "एडमिशन", "शिक्षक", "प्राध्यापक",
+  "cbse", "cgboard", "बोर्ड परीक्षा", "प्राथमिक शाला", "शिक्षा अधिकारी",
+  "education", "school", "university", "student", "examination"
 ];
 
-const SPORTS_SIGNALS = [
-  "खेल", "खिलाड़ी", "क्रिकेट", "टूर्नामेंट", "मैच", "पदक", "गोल्ड", "सिल्वर",
-  "ओलंपिक", "स्टेडियम", "प्रतियोगिता", "sports", "cricket", "tournament"
+const SPORTS_CORE_SIGNALS = [
+  "खेल", "खिलाड़ी", "क्रिकेट", "टूर्नामेंट", "मैच", "पदक", "गोल्ड मेडल",
+  "सिल्वर मेडल", "स्टेडियम", "प्रतियोगिता", "ओलंपिक", "sports", "cricket", "tournament"
 ];
 
 const CHHATTISGARH_DISTRICT_SIGNALS = [
@@ -203,112 +243,220 @@ const CHHATTISGARH_DISTRICT_SIGNALS = [
   "दंतेवाड़ा", "dantewada", "सुकमा", "sukma", "बीजापुर", "bijapur", "धमतरी", "dhamtari",
   "महासमुंद", "mahasamund", "कबीरधाम", "kabirdham", "कवर्धा", "kawardha", "बालोद", "balod",
   "बेमेतरा", "bemetara", "गरियाबंद", "gariaband", "बलौदाबाजार", "balodabazar", "जांजगीर",
-  "चांपा", "सरगुजा", "surguja", "जशपुर", "jashpur", "कोरिया", "korea", "मनेंद्रगढ़", "मोहला",
-  "सक्ती", "सारंगढ़", "खैरागढ़", "पेंड्रा", "गौरेला", "साय कैबिनेट", "महानदी", "हसदेव"
+  "चांपा", "सरगुजा", "surguja", "जशपुर", "jashpur", "कोरिया", "korea", "मनेंद्रगढ़", "mohla",
+  "सक्ती", "सारंगढ़", "खैरागढ़", "पेंड्रा", "गौरेla", "साय कैबिनेट", "विष्णु देव साय",
+  "विष्णुदेव साय", "महानदी", "इंद्रावती", "हसदेव", "शिवनाथ"
 ];
 
 /**
  * Resolves all canonical categories for a given news story.
- * Ensures every story has at least one category, supports multiple categories,
- * and maintains an auditable reasoning trail.
+ *
+ * Rules:
+ * 1. Categorization is based on the ACTUAL SUBJECT MATTER of the story.
+ * 2. Word boundaries prevent accidental matches (e.g., "आपसी" does not trigger "आप").
+ * 3. Mentions of government entities/ministers in non-political contexts (e.g., bus fire, doctor stipend)
+ *    do not falsely trigger politics.
+ * 4. Scraped section="india" does NOT falsely label a local district story as "national".
+ * 5. Multi-tagging is supported when genuinely justified.
+ * 6. Always deterministic and auditable.
  */
 export function resolveCanonicalCategories(
   input: CategoryResolutionInput
 ): CategoryResolutionResult {
-  const headline = (input.headline || "").toLowerCase();
-  const summary = (input.summary || "").toLowerCase();
-  const body = (input.body || input.content || "").toLowerCase();
+  const headline = (input.headline || "").trim();
+  const summary = (input.summary || "").trim();
+  const body = (input.body || input.content || "").trim();
   const fullText = `${headline} ${summary} ${body}`;
 
   const explicitTags = (input.tags || []).map((t) => t.toLowerCase());
-  const explicitSection = (input.section || "").toLowerCase();
-  const explicitCategory = (input.categoryLabel || "").toLowerCase();
-
   const auditReasons: Record<string, string[]> = {};
   const matchedCategories = new Set<CanonicalCategoryId>();
 
-  const checkCategory = (
-    catId: CanonicalCategoryId,
-    signals: string[],
-    explicitKeys: string[]
-  ) => {
-    const reasons: string[] = [];
-
-    // 1. Explicit metadata match (tags, section, categoryLabel)
-    for (const key of explicitKeys) {
-      if (explicitTags.includes(key) || explicitSection === key || explicitCategory.includes(key)) {
-        reasons.push(`Explicit metadata tag/section: '${key}'`);
-        break;
+  // Helper to test if any signal matches with word boundary
+  const hasSignal = (signals: string[]): string | null => {
+    for (const sig of signals) {
+      if (containsWordOrPhrase(headline, sig) || containsWordOrPhrase(summary, sig) || containsWordOrPhrase(body, sig)) {
+        return sig;
       }
     }
-
-    // 2. Headline strong semantic match (weight: 2)
-    const hlMatches = signals.filter((sig) => headline.includes(sig));
-    if (hlMatches.length > 0) {
-      reasons.push(`Headline matches: [${hlMatches.slice(0, 3).join(", ")}]`);
-    }
-
-    // 3. Body & summary match (weight: 1)
-    const bodyMatches = signals.filter((sig) => fullText.includes(sig));
-    if (bodyMatches.length >= 2 && hlMatches.length === 0) {
-      reasons.push(`Content context matches: [${bodyMatches.slice(0, 3).join(", ")}]`);
-    }
-
-    if (reasons.length > 0) {
-      matchedCategories.add(catId);
-      auditReasons[catId] = reasons;
-    }
+    return null;
   };
 
-  // Evaluate each canonical category
-  checkCategory("crime", CRIME_SIGNALS, ["crime", "police", "अपराध", "क्राइम"]);
-  checkCategory("politics", POLITICS_SIGNALS, ["politics", "political", "राजनीति"]);
-  checkCategory("governance", GOVERNANCE_SIGNALS, ["governance", "administration", "civic", "प्रशासन"]);
-  checkCategory("business", BUSINESS_SIGNALS, ["business", "market", "economy", "व्यापार", "बाज़ार"]);
-  checkCategory("national", NATIONAL_SIGNALS, ["national", "india", "भारत", "राष्ट्रीय"]);
-  checkCategory("health", HEALTH_SIGNALS, ["health", "medical", "स्वास्थ्य"]);
-  checkCategory("education", EDUCATION_SIGNALS, ["education", "jobs", "शिक्षा"]);
-  checkCategory("sports", SPORTS_SIGNALS, ["sports", "खेल"]);
+  // Helper specifically for headline matches
+  const hasHeadlineSignal = (signals: string[]): string | null => {
+    for (const sig of signals) {
+      if (containsWordOrPhrase(headline, sig)) {
+        return sig;
+      }
+    }
+    return null;
+  };
 
-  // Chhattisgarh Check
-  const cgMatches = CHHATTISGARH_DISTRICT_SIGNALS.filter((sig) => fullText.includes(sig));
+  // 1. CRIME EVALUATION
+  let isCrime = false;
+  const crimeCoreMatch = hasSignal(CRIME_CORE_SIGNALS);
+  const crimeActionMatch = hasSignal(CRIME_ACTION_SIGNALS);
+  if (crimeCoreMatch) {
+    isCrime = true;
+    auditReasons["crime"] = [`Crime concept matched: '${crimeCoreMatch}'`];
+  } else if (crimeActionMatch) {
+    isCrime = true;
+    auditReasons["crime"] = [`Police action matched: '${crimeActionMatch}'`];
+  } else if (explicitTags.includes("crime") || explicitTags.includes("अपराध")) {
+    isCrime = true;
+    auditReasons["crime"] = ["Explicit editorial crime tag"];
+  }
+  if (isCrime) matchedCategories.add("crime");
+
+  // 2. POLITICS EVALUATION
+  // Must be about political parties, elections, voting, or political leadership affairs.
+  // Bus accident involving ministry employees, or official government circulars are NOT politics.
+  let isPolitics = false;
+  const hlPoliticsMatch = hasHeadlineSignal(POLITICS_CORE_SIGNALS);
+  const bodyPoliticsMatch = hasSignal(POLITICS_CORE_SIGNALS);
+
+  // Guard against non-political stories mentioning ministry/government
+  const isAccidentOrCivic =
+    containsWordOrPhrase(headline, "आग") ||
+    containsWordOrPhrase(headline, "हादसा") ||
+    containsWordOrPhrase(headline, "दुर्घटना") ||
+    containsWordOrPhrase(headline, "शव") ||
+    containsWordOrPhrase(headline, "हाथी");
+
+  if (hlPoliticsMatch && !isAccidentOrCivic) {
+    isPolitics = true;
+    auditReasons["politics"] = [`Political headline topic: '${hlPoliticsMatch}'`];
+  } else if (bodyPoliticsMatch && !isAccidentOrCivic && !isCrime) {
+    // In body, require election or party specific terms
+    if (
+      containsWordOrPhrase(fullText, "चुनाव") ||
+      containsWordOrPhrase(fullText, "कांग्रेस") ||
+      containsWordOrPhrase(fullText, "भाजपा") ||
+      containsWordOrPhrase(fullText, "विधानसभा") ||
+      containsWordOrPhrase(fullText, "सांसद")
+    ) {
+      isPolitics = true;
+      auditReasons["politics"] = [`Political context matched: '${bodyPoliticsMatch}'`];
+    }
+  } else if (explicitTags.includes("politics") && !isAccidentOrCivic) {
+    isPolitics = true;
+    auditReasons["politics"] = ["Explicit editorial politics tag"];
+  }
+  if (isPolitics) matchedCategories.add("politics");
+
+  // 3. GOVERNANCE (प्रशासन) EVALUATION
+  let isGovernance = false;
+  const govMatch = hasSignal(GOVERNANCE_CORE_SIGNALS);
+  if (govMatch) {
+    isGovernance = true;
+    auditReasons["governance"] = [`Administrative/civic concept: '${govMatch}'`];
+  } else if (explicitTags.includes("governance") || explicitTags.includes("administration") || explicitTags.includes("प्रशासन")) {
+    isGovernance = true;
+    auditReasons["governance"] = ["Explicit editorial governance tag"];
+  }
+  if (isGovernance) matchedCategories.add("governance");
+
+  // 4. BUSINESS (बाज़ार) EVALUATION
+  let isBusiness = false;
+  const busMatch = hasSignal(BUSINESS_CORE_SIGNALS);
+  if (busMatch) {
+    isBusiness = true;
+    auditReasons["business"] = [`Market/business topic: '${busMatch}'`];
+  } else if (explicitTags.includes("business") || explicitTags.includes("बाज़ार") || explicitTags.includes("व्यापार")) {
+    isBusiness = true;
+    auditReasons["business"] = ["Explicit editorial business tag"];
+  }
+  if (isBusiness) matchedCategories.add("business");
+
+  // 5. NATIONAL (राष्ट्रीय) EVALUATION
+  // Must be genuinely national in scope. Do NOT assign just because section='india'.
+  let isNational = false;
+  const natHlMatch = hasHeadlineSignal(NATIONAL_GENUINE_SIGNALS);
+  const natBodyMatch = hasSignal(NATIONAL_GENUINE_SIGNALS);
+  if (natHlMatch) {
+    isNational = true;
+    auditReasons["national"] = [`National headline topic: '${natHlMatch}'`];
+  } else if (natBodyMatch && (containsWordOrPhrase(fullText, "केंद्र सरकार") || containsWordOrPhrase(fullText, "सुप्रीम कोर्ट") || containsWordOrPhrase(fullText, "संसद"))) {
+    isNational = true;
+    auditReasons["national"] = [`National context: '${natBodyMatch}'`];
+  }
+  if (isNational) matchedCategories.add("national");
+
+  // 6. HEALTH EVALUATION
+  let isHealth = false;
+  const healthMatch = hasSignal(HEALTH_CORE_SIGNALS);
+  if (healthMatch) {
+    isHealth = true;
+    auditReasons["health"] = [`Healthcare context: '${healthMatch}'`];
+  } else if (explicitTags.includes("health") || explicitTags.includes("स्वास्थ्य")) {
+    isHealth = true;
+    auditReasons["health"] = ["Explicit editorial health tag"];
+  }
+  if (isHealth) matchedCategories.add("health");
+
+  // 7. EDUCATION EVALUATION
+  let isEducation = false;
+  const eduMatch = hasSignal(EDUCATION_CORE_SIGNALS);
+  if (eduMatch) {
+    isEducation = true;
+    auditReasons["education"] = [`Education context: '${eduMatch}'`];
+  } else if (explicitTags.includes("education") || explicitTags.includes("शिक्षा")) {
+    isEducation = true;
+    auditReasons["education"] = ["Explicit editorial education tag"];
+  }
+  if (isEducation) matchedCategories.add("education");
+
+  // 8. SPORTS EVALUATION
+  let isSports = false;
+  const sportsMatch = hasSignal(SPORTS_CORE_SIGNALS);
+  if (sportsMatch) {
+    isSports = true;
+    auditReasons["sports"] = [`Sports context: '${sportsMatch}'`];
+  } else if (explicitTags.includes("sports") || explicitTags.includes("खेल")) {
+    isSports = true;
+    auditReasons["sports"] = ["Explicit editorial sports tag"];
+  }
+  if (isSports) matchedCategories.add("sports");
+
+  // 9. CHHATTISGARH EVALUATION
+  // Any story located in Chhattisgarh or involving CG districts belongs to "छत्तीसगढ़"
+  const cgEntityMatch = hasSignal(CHHATTISGARH_DISTRICT_SIGNALS);
   const hasCgDistrict = !!input.district || !!input.districtSlug;
-  const isCgSection = explicitSection === "chhattisgarh" || explicitSection === "raipur";
+  const isCgSection = input.section === "chhattisgarh" || input.section === "raipur";
 
-  if (cgMatches.length > 0 || hasCgDistrict || isCgSection || explicitTags.includes("chhattisgarh")) {
+  if (cgEntityMatch || hasCgDistrict || isCgSection || explicitTags.includes("chhattisgarh")) {
     matchedCategories.add("chhattisgarh");
     auditReasons["chhattisgarh"] = [
-      hasCgDistrict ? `Explicit district: ${input.district || input.districtSlug}` : "",
-      cgMatches.length > 0 ? `CG entities: [${cgMatches.slice(0, 3).join(", ")}]` : "",
-      isCgSection ? `Section: ${explicitSection}` : "",
+      hasCgDistrict ? `District: ${input.district || input.districtSlug}` : "",
+      cgEntityMatch ? `CG Entity: '${cgEntityMatch}'` : "",
     ].filter(Boolean);
   }
 
-  // Ensure every article has at least one category
+  // Ensure every article has at least one category tag besides 'all'
   if (matchedCategories.size === 0) {
-    // Default to chhattisgarh for regional newsroom
     matchedCategories.add("chhattisgarh");
     auditReasons["chhattisgarh"] = ["Jan Darpan regional default"];
   }
 
   const categoriesList = Array.from(matchedCategories);
 
-  // Determine primary category:
-  // Order of editorial prominence: crime > politics > governance > business > national > health > education > sports > chhattisgarh
-  const PROMINENCE_ORDER: CanonicalCategoryId[] = [
+  // Determine primary dominant category
+  // Editorial prominence hierarchy:
+  // crime > politics > governance > business > health > education > sports > national > chhattisgarh
+  const PROMINENCE: CanonicalCategoryId[] = [
     "crime",
     "politics",
     "governance",
     "business",
-    "national",
     "health",
     "education",
     "sports",
+    "national",
     "chhattisgarh",
   ];
 
   let primaryCategory: CanonicalCategoryId = "chhattisgarh";
-  for (const prio of PROMINENCE_ORDER) {
+  for (const prio of PROMINENCE) {
     if (matchedCategories.has(prio)) {
       primaryCategory = prio;
       break;
@@ -325,6 +473,7 @@ export function resolveCanonicalCategories(
 
 /**
  * Checks if a story matches the target category using canonical categories.
+ * "all" is the union of all eligible stories; returns true for any valid story.
  */
 export function isStoryMatchingCategory(
   storyCategories: string[] | undefined | null,

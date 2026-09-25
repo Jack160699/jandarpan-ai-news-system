@@ -1946,8 +1946,40 @@ html.dark .jdl-mobile-queue__active-dot {
 
 .jdl-queue-card__action-row {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   margin-top: auto;
+  gap: 8px;
+}
+
+.jdl-queue-card__live-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--jdl-red, #c8102e);
+  letter-spacing: 0.02em;
+}
+
+.jdl-queue-card__pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--jdl-red, #c8102e);
+  box-shadow: 0 0 6px rgba(200, 16, 46, 0.7);
+  animation: jdl-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes jdl-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.55;
+  }
 }
 
 .jdl-queue-card__read-btn {
@@ -1965,6 +1997,7 @@ html.dark .jdl-mobile-queue__active-dot {
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(200, 16, 46, 0.3);
   transition: transform 0.1s ease, background 0.15s ease;
+  margin-left: auto;
 }
 
 .jdl-queue-card__read-btn:hover {
@@ -1976,18 +2009,19 @@ html.dark .jdl-mobile-queue__active-dot {
   transform: translateY(0);
 }
 
-/* ─── DEDICATED READING STATE LAYOUT (Requirements #8, #10, #14) ──────────── */
+/* ─── OPEN FULL-WIDTH READING STATE LAYOUT ───────────────────────────── */
 .jdl-broadcast-wrapper--reading {
   flex-direction: column !important;
   align-items: center !important;
-  max-width: 960px !important;
+  width: 100% !important;
+  max-width: 1140px !important;
   margin: 0 auto !important;
   padding: 0 !important;
 }
 
 .jdl-broadcast-tv-col--reading {
   width: 100% !important;
-  max-width: 900px !important;
+  max-width: 960px !important;
   flex: none !important;
   position: -webkit-sticky !important;
   position: sticky !important;
@@ -1998,9 +2032,9 @@ html.dark .jdl-mobile-queue__active-dot {
 
 .jdl-broadcast-reader-col {
   width: 100%;
-  max-width: 980px;
-  margin: 16px auto 60px;
-  padding: 0 clamp(16px, 3.5vw, 36px);
+  max-width: 1080px;
+  margin: 20px auto 80px;
+  padding: 0 clamp(16px, 4vw, 48px);
   box-sizing: border-box;
 }
 
@@ -2375,6 +2409,15 @@ html.dark {
 
   & .jdl-queue-card__headline {
     color: var(--jd-d-text, #e7edf6);
+  }
+
+  & .jdl-queue-card__live-indicator {
+    color: var(--jd-red-bright, #e05a63);
+  }
+
+  & .jdl-queue-card__pulse-dot {
+    background: var(--jd-red-bright, #e05a63);
+    box-shadow: 0 0 6px rgba(224, 90, 99, 0.8);
   }
 
   /* Open Article Reader */

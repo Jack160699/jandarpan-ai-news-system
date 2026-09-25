@@ -169,12 +169,12 @@ function broadcastReducer(
         ? Array.from(new Set([...state.playedIds, currentId]))
         : state.playedIds;
 
-      // Filtered queue pool based on selectedCategory
-      const eligiblePool = state.selectedCategory === "all"
+      // Exact filtered queue pool based on selectedCategory
+      const pool = state.selectedCategory === "all"
         ? state.queue
         : state.queue.filter((s) => matchesCanonicalCategory(s, state.selectedCategory));
       
-      const pool = eligiblePool.length > 0 ? eligiblePool : state.queue;
+      if (pool.length === 0) return state;
 
       // If returning from breaking story
       if (state.mode === "breaking") {
@@ -256,7 +256,7 @@ function broadcastReducer(
       }
 
       // Otherwise switch TV playback to the first matching segment
-      const nextSeg = filtered[0] || state.queue[0] || null;
+      const nextSeg = filtered[0] || (category === "all" ? (state.queue[0] || null) : null);
       const nextIdx = nextSeg ? state.queue.findIndex((s) => s.id === nextSeg.id) : 0;
       return {
         ...state,

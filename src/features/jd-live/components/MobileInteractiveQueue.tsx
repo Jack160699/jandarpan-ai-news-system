@@ -202,21 +202,21 @@ export function MobileInteractiveQueue() {
           filteredStories.map((story, idx) => {
             const isActiveOnTv = currentSegment?.id === story.id;
             const headline =
-              language === "hi"
-                ? story.headlineHi || story.headline
-                : story.headline;
+              language === "en"
+                ? story.headlineEn || story.headline
+                : story.headlineHi || story.headline;
             const rawDistrict =
-              language === "hi"
-                ? story.districtHi || story.district
-                : story.district;
+              language === "en"
+                ? story.districtEn || story.district
+                : story.districtHi || story.district;
             const validDistrict =
               rawDistrict && rawDistrict !== "छत्तीसगढ़" && rawDistrict !== "Chhattisgarh"
                 ? rawDistrict
                 : null;
             const category =
-              language === "hi"
-                ? story.categoryLabelHi || story.categoryLabel
-                : story.categoryLabel;
+              language === "en"
+                ? story.categoryLabelEn || story.categoryLabel
+                : story.categoryLabelHi || story.categoryLabel;
             const locationTag =
               validDistrict ||
               (category && category !== "छत्तीसगढ़" && category !== "Chhattisgarh" ? category : null) ||
@@ -225,23 +225,26 @@ export function MobileInteractiveQueue() {
 
             return (
               <React.Fragment key={story.id}>
-                {/* Fast-scanning compact card: Image -> District -> Headline (max 2 lines) -> Bottom-Right "पढ़ें" */}
+                {/* Fast-scanning compact card: Tapping anywhere (image, headline, body) plays story on TV */}
                 <article
                   className={`jdl-queue-card ${isActiveOnTv ? "jdl-queue-card--tv-active" : ""}`}
+                  onClick={() => handleSelectStoryOnTv(story)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      const target = e.target as HTMLElement | null;
+                      if (target && target.closest("button")) return;
+                      e.preventDefault();
+                      handleSelectStoryOnTv(story);
+                    }
+                  }}
+                  aria-label={`${headline} — ${language === "hi" ? "TV पर चलाएं" : "Play on TV"}`}
                 >
                   {/* Left: Thumbnail (tappable to play on TV) */}
                   <div
                     className="jdl-queue-card__thumb-wrap"
-                    onClick={() => handleSelectStoryOnTv(story)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        handleSelectStoryOnTv(story);
-                      }
-                    }}
-                    aria-label={`${headline}`}
+                    aria-hidden="true"
                   >
                     <QueueThumbnail src={story.imageUrl} alt="" />
                   </div>
@@ -259,17 +262,26 @@ export function MobileInteractiveQueue() {
                       <span className="jdl-queue-card__time">{timeLabel}</span>
                     </div>
 
-                    {/* Headline: maximum two lines */}
+                    {/* Headline: maximum two lines - selecting card body plays story on TV */}
                     <h3
                       className="jdl-queue-card__headline"
-                      onClick={(e) => handleOpenArticle(e, story)}
                       title={headline}
                     >
                       {headline}
                     </h3>
 
-                    {/* Bottom Action Row: Bold, highlighted "पढ़ें" button strictly in the bottom-right corner */}
+                    {/* Bottom Action Row: Playback state + Exclusive "पढ़ें" button */}
                     <div className="jdl-queue-card__action-row">
+                      {isActiveOnTv ? (
+                        <span className="jdl-queue-card__live-indicator">
+                          <span className="jdl-queue-card__pulse-dot" aria-hidden="true" />
+                          <span>{language === "hi" ? "चल रहा है" : "Playing"}</span>
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+
+                      {/* ONLY this action opens the article reader */}
                       <button
                         type="button"
                         onClick={(e) => handleOpenArticle(e, story)}

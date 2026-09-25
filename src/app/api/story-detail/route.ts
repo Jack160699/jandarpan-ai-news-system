@@ -2,9 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStoryArticleBySlug } from "@/lib/story/get-story-data";
 import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
 
+function cleanPublicReaderBody(body: string): string {
+  if (!body) return "";
+  return body
+    .replace(/^(?:स्रोत|source|सौजन्य|क्रेडिट|credit|रिपोर्टर|ब्यूरो)\s*:.*$/gim, "")
+    .replace(/जन दर्पण ब्यूरो द्वारा सत्यापित स्थानीय कवरेज।?/g, "")
+    .replace(/\n\s*\n\s*\n+/g, "\n\n")
+    .trim();
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const slug = searchParams.get("slug");
+  const lang = (searchParams.get("lang") || "hi") === "en" ? "en" : "hi";
 
   if (!slug) {
     return NextResponse.json({ error: "Missing slug parameter" }, { status: 400 });
@@ -20,13 +30,22 @@ export async function GET(req: NextRequest) {
     const enFields = resolveLocalizedFieldsStrict(article, "en");
     const geo = (article.geo_metadata as Record<string, any>) || {};
 
+    const rawContent =
+      lang === "en"
+        ? (enFields?.articleBody || article.article_body || "")
+        : (hiFields?.articleBody || article.article_body || "");
+
+    const cleanedContent = cleanPublicReaderBody(rawContent);
+
     return NextResponse.json({
       slug: article.slug,
       headline: enFields?.headline || article.headline,
       headlineHi: hiFields?.headline || article.headline,
       summary: enFields?.summary || article.summary || "",
       summaryHi: hiFields?.summary || article.summary || "",
-      content: hiFields?.articleBody || article.article_body || "",
+      content: cleanedContent,
+      contentEn: cleanPublicReaderBody(enFields?.articleBody || article.article_body || ""),
+      contentHi: cleanPublicReaderBody(hiFields?.articleBody || article.article_body || ""),
       district: geo.district || null,
       districtHi: geo.district_hi || geo.district || null,
       imageUrl: article.hero_image_url || "",

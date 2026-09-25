@@ -229,9 +229,9 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   }, [currentIndex, currentSegment, queue, mode, segmentToken, anchorState, isPlaying]);
 
   const currentHeadline =
-    language === "hi"
-      ? (currentSegment?.headlineHi || currentSegment?.headline || "")
-      : (currentSegment?.headline || "");
+    language === "en"
+      ? (currentSegment?.headlineEn || currentSegment?.headline || "")
+      : (currentSegment?.headlineHi || currentSegment?.headline || "");
 
   const isBreaking = mode === "breaking" || !!currentSegment?.isBreaking;
 

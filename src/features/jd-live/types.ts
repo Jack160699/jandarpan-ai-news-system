@@ -22,13 +22,17 @@ export type BroadcastSegment = {
   slug: string;
   headline: string;
   headlineHi?: string;
+  headlineEn?: string;
   summary: string;
   summaryHi?: string;
+  summaryEn?: string;
   imageUrl: string;
   categoryLabel: string;
   categoryLabelHi?: string;
+  categoryLabelEn?: string;
   district?: string | null;
   districtHi?: string | null;
+  districtEn?: string | null;
   section: string;
   isBreaking: boolean;
   isLive: boolean;

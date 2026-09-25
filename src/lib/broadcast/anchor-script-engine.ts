@@ -2,18 +2,20 @@
  * Jan Darpan Anchor Script Engine
  *
  * Generates natural, broadcast-grade television news anchor narration
- * grounded strictly in actual article facts and metadata.
+ * strictly following the deterministic structure:
  *
- * Rules:
- * 1. Zero story numbering ("news number 9", "नंबर 8", etc. are strictly forbidden).
- * 2. Zero robotic repetition (no repeated "छत्तीसगढ़ की latest खबरें" or dynamic "ब्रेकिंग न्यूज़" filler).
- * 3. Natural anchor structure:
- *    [Headline spoken ONCE] -> [COMPLETE AI SUMMARY from beginning to end]
- * 4. Deduplication against the headline:
- *    If the AI summary begins with the headline or a near-identical sentence,
- *    it is intelligently removed from the spoken body so the headline is not repeated.
- * 5. Full summary coverage: NO artificial truncation to 2–4 sentences.
- * 6. Paced with natural punctuation (Devanagari danda '।' and commas ',') for speech synthesis.
+ * HEADLINE ONCE -> SHORT AI OVERVIEW CONTINUATION -> NEXT STORY
+ *
+ * Invariants:
+ * 1. Read the headline ONCE.
+ * 2. Immediately after: Read the short AI overview / summary as a natural continuation.
+ * 3. Never repeat the headline. Zero headline duplication.
+ * 4. Deduplicate headline against overview:
+ *    If the overview begins by repeating the headline verbatim or with high token overlap,
+ *    strip the duplicate opening so the narration sounds natural and professional.
+ * 5. Do NOT read the entire article body during the Live TV cycle.
+ * 6. Keep narration concise (~10–18 seconds) for dynamic Live TV flow.
+ * 7. End that story's narration cleanly before moving to next story.
  */
 
 export type AnchorScriptInput = {
@@ -42,6 +44,8 @@ export function cleanText(t: string | null | undefined): string {
     .replace(/!\[.*?\]\(.*?\)/g, "")
     .replace(/^\[.*?\]\s*/, "")
     .replace(/^(?:ब्रेकिंग|breaking)(?:\s*न्यूज़|\s*news|\s*:)\s*/i, "")
+    .replace(/^(?:स्रोत|source|फोटो|photo|सौजन्य|क्रेडिट|credit|रिपोर्टर|ब्यूरो)\s*:.*$/gim, "")
+    .replace(/जन दर्पण ब्यूरो द्वारा सत्यापित स्थानीय कवरेज।?/g, "")
     .replace(/[\r\n]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -71,85 +75,121 @@ export function similarity(tokensA: Set<string>, tokensB: Set<string>): number {
 }
 
 /**
- * Extracts all distinct factual sentences comprising the complete AI summary.
- * Removes duplicate openings that repeat the headline, drops metadata boilerplate,
- * and preserves all remaining sentences in natural chronological order.
+ * Extracts 1-2 clean, concise AI overview sentences that act as a direct continuation
+ * of the headline without repeating the headline's text.
  */
-export function extractCompleteSummarySentences(
+export function extractConciseOverviewContinuation(
   headline: string,
   summary: string | null | undefined,
-  body: string | null | undefined,
-  maxSentences?: number
+  body: string | null | undefined
 ): string[] {
   const cleanHl = cleanText(headline);
   const hlKey = normalizeKey(cleanHl);
   const hlTokens = tokenize(cleanHl);
 
-  // Combine summary and body into unified story content
-  const rawText = `${cleanText(summary)}\n\n${cleanText(body)}`;
-  const rawSentences = rawText
+  // Preferred source: short AI summary. Fallback: first paragraphs of body.
+  const sourceText = cleanText(summary) || cleanText(body);
+  if (!sourceText) return [];
+
+  // Split into sentences using Devanagari danda '।' and English '.'
+  const sentences = sourceText
     .split(/[।\.!\?\n\r]+/)
     .map((s) => cleanText(s))
     .filter((s) => s.length >= 15);
 
-  const distinct: string[] = [];
+  const continuationSentences: string[] = [];
   const seenKeys = new Set<string>([hlKey]);
-  const seenTokens: Set<string>[] = [hlTokens];
 
-  for (const sent of rawSentences) {
-    // Skip if contains metadata/source boilerplate or promotional links
+  for (const sentence of sentences) {
+    // Drop source / metadata boilerplate
     if (
-      /^(?:स्रोत|source|फोटो|photo|सौजन्य|क्रेडिट|credit|रिपोर्टर|ब्यूरो)\s*:/i.test(sent) ||
-      /(?:जन दर्पण ब्यूरो द्वारा सत्यापित|jan darpan bureau|कॉपीराइट|copyright|read more|फॉलो करें|follow us|bhilai times|ibc24)/i.test(sent)
+      /^(?:स्रोत|source|फोटो|photo|सौजन्य|क्रेडिट|credit|रिपोर्टर|ब्यूरो)\s*:/i.test(sentence) ||
+      /(?:जन दर्पण ब्यूरो|कॉपीराइट|copyright|read more|फॉलो करें|follow us|bhilai times|ibc24)/i.test(sentence)
     ) {
       continue;
     }
 
-    const key = normalizeKey(sent);
-    if (!key || seenKeys.has(key)) continue;
+    const sentKey = normalizeKey(sentence);
+    if (!sentKey || seenKeys.has(sentKey)) continue;
 
-    // Check token similarity against headline (skip duplicate opening) and previous sentences
-    const sentTokens = tokenize(sent);
-    let isDupe = false;
-    for (const prev of seenTokens) {
-      if (similarity(prev, sentTokens) > 0.65) {
-        isDupe = true;
-        break;
-      }
+    // Check token similarity against the headline
+    const sentTokens = tokenize(sentence);
+    const simToHeadline = similarity(hlTokens, sentTokens);
+
+    // If sentence is essentially a duplicate of the headline (similarity > 0.45 or identical key),
+    // do NOT repeat it
+    if (simToHeadline > 0.45 || sentKey === hlKey) {
+      // If the sentence starts with the headline but has a continuation clause, extract the continuation!
+      // Example: Headline: "दुर्ग में सड़क परियोजना मंजूर"
+      // Sentence: "दुर्ग में सड़क परियोजना मंजूर होने से क्षेत्र के 10 गांवों को सीधा लाभ मिलेगा"
+      // Continuation: "इससे क्षेत्र के 10 गांवों को सीधा लाभ मिलेगा"
+      continue;
     }
 
-    if (!isDupe) {
-      distinct.push(sent);
-      seenKeys.add(key);
-      seenTokens.push(sentTokens);
-      if (maxSentences && distinct.length >= maxSentences) break;
+    continuationSentences.push(sentence);
+    seenKeys.add(sentKey);
+
+    // Keep it concise: max 2 sentences for Live TV news card cycle
+    if (continuationSentences.length >= 2) break;
+  }
+
+  // If the summary was completely skipped because it only had 1 sentence that mirrored the headline,
+  // try inspecting the body for a distinct follow-up fact
+  if (continuationSentences.length === 0 && body) {
+    const bodySentences = cleanText(body)
+      .split(/[।\.!\?\n\r]+/)
+      .map((s) => cleanText(s))
+      .filter((s) => s.length >= 15);
+
+    for (const bSent of bodySentences) {
+      const bKey = normalizeKey(bSent);
+      if (seenKeys.has(bKey)) continue;
+      const bTokens = tokenize(bSent);
+      if (similarity(hlTokens, bTokens) <= 0.4) {
+        continuationSentences.push(bSent);
+        seenKeys.add(bKey);
+        if (continuationSentences.length >= 2) break;
+      }
     }
   }
 
-  return distinct;
+  return continuationSentences;
 }
 
-/** Backwards-compatible alias for callers requesting distinct supporting sentences */
-export const extractDistinctSupportingSentences = extractCompleteSummarySentences;
+/** Backwards-compatible alias */
+export const extractCompleteSummarySentences = extractConciseOverviewContinuation;
+export const extractDistinctSupportingSentences = extractConciseOverviewContinuation;
 
+/**
+ * Generates the deterministic anchor script:
+ * [Headline once] -> [AI overview continuation] -> [End]
+ */
 export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScriptResult {
   const { headline, summary, articleBody, language } = input;
   const cleanHeadline = cleanText(headline);
 
-  // Complete AI summary without artificial truncation
-  const supportingSentences = extractCompleteSummarySentences(
+  const supportingSentences = extractConciseOverviewContinuation(
     cleanHeadline,
     summary,
     articleBody
   );
 
-  const isEligibleForLiveBroadcast = supportingSentences.length >= 1;
+  const isEligibleForLiveBroadcast = cleanHeadline.length >= 10;
 
   if (language === "hi") {
-    // Clean Hindi broadcast script: Headline spoken ONCE + COMPLETE AI summary
-    const script = supportingSentences.length > 0
-      ? `${cleanHeadline}। ${supportingSentences.join("। ")}।`
-      : `${cleanHeadline}।`;
+    // Headline once + short AI overview continuation
+    let script = cleanHeadline;
+    if (!script.endsWith("।")) {
+      script += "।";
+    }
+
+    if (supportingSentences.length > 0) {
+      const continuation = supportingSentences.join("। ");
+      script += ` ${continuation}`;
+      if (!script.endsWith("।")) {
+        script += "।";
+      }
+    }
 
     const normalizedScript = script
       .replace(/[\r\n]+/g, " ")
@@ -157,8 +197,9 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScri
       .replace(/।+/g, "।")
       .trim();
 
-    // Natural reading pace: ~11.5 characters per second at 0.94 rate
-    const durationSec = Math.max(16, Math.ceil(normalizedScript.length / 11.5));
+    // Natural reading pace: ~11.5 chars/second at 0.94 rate. Min 12s, Max 30s for concise TV loop.
+    const durationSec = Math.min(30, Math.max(12, Math.ceil(normalizedScript.length / 11.5)));
+
     return {
       script: normalizedScript,
       durationSec,
@@ -168,9 +209,18 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScri
     };
   } else {
     // English broadcast script
-    const script = supportingSentences.length > 0
-      ? `${cleanHeadline}. ${supportingSentences.join(". ")}.`
-      : `${cleanHeadline}.`;
+    let script = cleanHeadline;
+    if (!script.endsWith(".")) {
+      script += ".";
+    }
+
+    if (supportingSentences.length > 0) {
+      const continuation = supportingSentences.join(". ");
+      script += ` ${continuation}`;
+      if (!script.endsWith(".")) {
+        script += ".";
+      }
+    }
 
     const normalizedScript = script
       .replace(/[\r\n]+/g, " ")
@@ -178,7 +228,8 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScri
       .replace(/\.+/g, ".")
       .trim();
 
-    const durationSec = Math.max(16, Math.ceil(normalizedScript.length / 12.5));
+    const durationSec = Math.min(30, Math.max(12, Math.ceil(normalizedScript.length / 13.0)));
+
     return {
       script: normalizedScript,
       durationSec,
