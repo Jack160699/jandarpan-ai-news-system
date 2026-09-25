@@ -224,7 +224,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
         headlineHi: hasDev ? a.headline : undefined,
         summary: a.summary || "",
         summaryHi: hasDev ? a.summary : undefined,
-        imageUrl: a.imageUrl || a.ogImageUrl || "",
+        imageUrl: (a.imageUrl || a.ogImageUrl || (a as any).hero_image_url || "").trim(),
         categoryLabel: broadcastLang === "en" ? distEn : distHi,
         categoryLabelHi: distHi,
         district: broadcastLang === "en" ? distEn : distHi,

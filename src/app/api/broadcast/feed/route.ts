@@ -262,7 +262,7 @@ function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
     headline: a.headline,
     summary: a.summary || "",
     articleBody: a.summary || "",
-    imageUrl: a.imageUrl || a.ogImageUrl || "",
+    imageUrl: (a.imageUrl || a.ogImageUrl || (a as any).hero_image_url || "").trim(),
     section: a.section || "chhattisgarh",
     language: a.language || "hi",
     tags: a.tags || [],
@@ -291,13 +291,24 @@ function normalizeGeneratedRow(r: GeneratedArticleRow): BroadcastCandidate {
     section: sectionTag,
   });
 
+  const rawImg = (
+    r.hero_image_url ||
+    (r.editorial_metadata as any)?.image?.hero_url ||
+    (r.editorial_metadata as any)?.image?.sourceUrl ||
+    (r.editorial_metadata as any)?.image?.og_url ||
+    (r.editorial_metadata as any)?.media_source_url ||
+    (r as any).image_url ||
+    (r as any).og_image_url ||
+    ""
+  ).trim();
+
   return {
     id: r.id,
     slug: r.slug,
     headline: r.headline,
     summary: r.summary || "",
     articleBody: r.article_body || r.summary || "",
-    imageUrl: r.hero_image_url || "",
+    imageUrl: rawImg,
     section: sectionTag,
     language: r.language || "hi",
     tags: r.tags || [],
@@ -343,18 +354,22 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     language: targetLang,
   });
 
-  // Resolve relevant story image (deterministic fallback hierarchy)
-  const isGenericOrRepeated =
-    !c.imageUrl ||
-    c.imageUrl.includes("photo-1596176530529-78163a4f7af2") ||
-    c.imageUrl.includes("photo-1449824913935-59a10b8d2000") ||
-    c.imageUrl.includes("photo-1529107386315-e1a269ed48e0") ||
-    c.imageUrl.includes("googleusercontent.com") ||
-    isRejectedImageUrl(c.imageUrl).rejected;
+  // Priority 1: Real article image (always preserve legitimate news photographs)
+  let finalImageUrl = c.imageUrl?.trim() || "";
+  if (finalImageUrl.startsWith("http://")) {
+    finalImageUrl = finalImageUrl.replace(/^http:\/\//i, "https://");
+  }
 
-  let finalImageUrl = c.imageUrl;
+  // Only fall back to contextual/generated visual if no usable real article image exists
+  const isBannedOrBroken =
+    !finalImageUrl ||
+    finalImageUrl.includes("photo-1529107386315-e1a269ed48e0") ||
+    finalImageUrl.includes("photo-1449824913935-59a10b8d2000") ||
+    finalImageUrl.includes("via.placeholder.com") ||
+    finalImageUrl.includes("default.jpg") ||
+    finalImageUrl.startsWith("data:");
 
-  if (isGenericOrRepeated) {
+  if (isBannedOrBroken) {
     const text = `${c.headline || ""} ${c.summary || ""}`;
     const topic = detectSemanticTopic(c.section, text);
     if (topic) {
@@ -363,7 +378,7 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
         finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES[template.fallbackKey], 1200);
       }
     }
-    if (!finalImageUrl || isGenericOrRepeated) {
+    if (!finalImageUrl || isBannedOrBroken) {
       if (districtRes.districtSlug === "bastar") {
         finalImageUrl = optimizeCdnImageUrl(EDITORIAL_IMAGES.folkCulture, 1200);
       } else if (districtRes.districtSlug === "durg" || districtRes.districtSlug === "bhilai") {

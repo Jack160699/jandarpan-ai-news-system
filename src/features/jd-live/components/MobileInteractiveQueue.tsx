@@ -144,6 +144,7 @@ export function MobileInteractiveQueue() {
                       sizes="76px"
                       className="jdl-mobile-queue__thumb"
                       style={{ objectFit: "cover" }}
+                      unoptimized
                     />
                   ) : (
                     <div className="jdl-mobile-queue__thumb-ph" />

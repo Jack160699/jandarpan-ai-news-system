@@ -10,11 +10,21 @@ const nextConfig: NextConfig = {
   },
   transpilePackages: ["@stratxcel/platform"],
   images: {
-    remotePatterns: TRUSTED_REMOTE_PATTERNS.map((p) => ({
-      protocol: p.protocol,
-      hostname: p.hostname,
-      ...(p.pathname ? { pathname: p.pathname } : {}),
-    })),
+    remotePatterns: [
+      ...TRUSTED_REMOTE_PATTERNS.map((p) => ({
+        protocol: p.protocol,
+        hostname: p.hostname,
+        ...(p.pathname ? { pathname: p.pathname } : {}),
+      })),
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+      {
+        protocol: "http",
+        hostname: "**",
+      },
+    ],
   },
   async redirects() {
     return [

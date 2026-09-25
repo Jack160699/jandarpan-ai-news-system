@@ -93,7 +93,7 @@ export function NewsScreen() {
     return optimizeCdnImageUrl(EDITORIAL_IMAGES.civicOffice, 1200);
   }, [seg?.id, seg?.headline, seg?.summary, seg?.categoryLabel, displayLocation]);
 
-  // Determine active media URL
+  // Determine active media URL — Priority 1: Real article image
   const activeMediaUrl = useMemo(() => {
     if (seg?.imageUrl && !imageError) {
       return seg.imageUrl;
@@ -102,7 +102,7 @@ export function NewsScreen() {
       return fallbackMediaUrl;
     }
     return null;
-  }, [seg?.imageUrl, imageError, fallbackMediaUrl, fallbackError]);
+  }, [seg?.id, seg?.imageUrl, imageError, fallbackMediaUrl, fallbackError]);
 
   return (
     <div className="jdl-virtual-screen" aria-live="polite">
@@ -119,9 +119,9 @@ export function NewsScreen() {
               aria-hidden="true"
             />
 
-            {/* Sharp foreground news photograph */}
+            {/* Sharp foreground news photograph — unoptimized allows all external news sources */}
             <Image
-              key={`${seg?.id || ""}_${activeMediaUrl}`}
+              key={`${seg?.id || "seg"}_${activeMediaUrl}`}
               src={activeMediaUrl}
               alt={headline || ""}
               fill
@@ -129,6 +129,7 @@ export function NewsScreen() {
               className="jdl-virtual-screen__img"
               style={{ objectFit: aspectFit }}
               priority
+              unoptimized
               onLoad={(e) => {
                 const img = e.currentTarget;
                 if (img.naturalWidth && img.naturalHeight) {
@@ -138,6 +139,7 @@ export function NewsScreen() {
               }}
               onError={() => {
                 if (!imageError && seg?.imageUrl) {
+                  console.warn("[JanDarpan Live TV] Image load failed for story:", seg.id, activeMediaUrl);
                   setImageError(true);
                 } else {
                   setFallbackError(true);
