@@ -9,7 +9,7 @@ import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district
 import { generateAnchorSpokenScript } from "@/lib/broadcast/anchor-script-engine";
 import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import { optimizeCdnImageUrl } from "@/lib/news/images/responsive-sizes";
-import { hasVerifiedRealMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
+import { hasVerifiedRealMedia, isCleanRightsEligibleMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -393,8 +393,8 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     finalImageUrl = finalImageUrl.replace(/^http:\/\//i, "https://");
   }
 
-  // Absolute Media Rule: Verified Real News Media Only — ZERO visual fallbacks
-  if (!hasVerifiedRealMedia(finalImageUrl)) {
+  // Absolute Media Rule: Verified Real News Media Only — ZERO visual fallbacks, ZERO third-party branding
+  if (!isCleanRightsEligibleMedia(finalImageUrl)) {
     finalImageUrl = "";
   }
 
@@ -493,18 +493,18 @@ export async function GET(req: NextRequest) {
       // Static pool load fallback
     }
 
-    // 2. Strict Media & 24-Hour Filtering
+    // 2. Strict Media & Rolling 48-Hour Filtering
     const now = Date.now();
     const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
 
-    // Filter strictly by Real Media, Language, 24-Hour validity, and CHHATTISGARH RELEVANCE
-    let pool = candidates.filter((c) => {
+    // Filter strictly by Clean Real Media, Language, Rolling 48-Hour validity, and CHHATTISGARH RELEVANCE
+    const pool = candidates.filter((c) => {
       // Must have valid headline and slug
       if (!c.headline || !c.slug) return false;
 
-      // ABSOLUTE MEDIA RULE: ONLY SHOW REAL NEWS WITH REAL SOURCE MEDIA
-      // Hard gate: zero stock photos, zero placeholders, zero AI visuals
-      if (!hasVerifiedRealMedia(c.imageUrl)) return false;
+      // ABSOLUTE MEDIA RULE: ONLY SHOW REAL NEWS WITH REAL CLEAN SOURCE MEDIA
+      // Hard gate: zero stock photos, zero placeholders, zero AI visuals, zero third-party channel branding
+      if (!isCleanRightsEligibleMedia(c.imageUrl)) return false;
 
       // HARD RULE: Only Chhattisgarh-relevant stories
       if (!isChhattisgarhOnlyStory(c)) return false;
@@ -514,30 +514,13 @@ export async function GET(req: NextRequest) {
       const langMatches = lang === "hi" ? (hasDev || c.language === "hi") : (!hasDev || c.language === "en");
       if (!langMatches) return false;
 
-      // 24-hour pool: articles automatically disappear when publication_time >= 24 hours old
+      // Rolling 48-hour pool: articles automatically disappear when publication_time >= 48 hours old
       const pubTime = new Date(c.publishedAt).getTime();
       if (!isNaN(pubTime)) {
-        return pubTime >= (now - 24 * 3600 * 1000) && pubTime <= now + 2 * 3600 * 1000;
+        return pubTime >= (now - 48 * 3600 * 1000) && pubTime <= (now + 2 * 3600 * 1000);
       }
       return true;
     });
-
-    // Grace window up to 48 hours if 24h pool is small, while still strictly enforcing verified real media
-    if (pool.length < 20) {
-      pool = candidates.filter((c) => {
-        if (!c.headline || !c.slug) return false;
-        if (!hasVerifiedRealMedia(c.imageUrl)) return false;
-        if (!isChhattisgarhOnlyStory(c)) return false;
-        const hasDev = isDevanagari(c.headline);
-        const langMatches = lang === "hi" ? (hasDev || c.language === "hi") : (!hasDev || c.language === "en");
-        if (!langMatches) return false;
-        const pubTime = new Date(c.publishedAt).getTime();
-        if (!isNaN(pubTime)) {
-          return pubTime >= (now - 48 * 3600 * 1000) && pubTime <= now + 2 * 3600 * 1000;
-        }
-        return true;
-      });
-    }
 
     // 3. Separate Breaking Stories (only Chhattisgarh breaking with verified real media)
     const breakingCandidates = pool.filter((c) => c.isBreaking);
@@ -563,17 +546,26 @@ export async function GET(req: NextRequest) {
     // If unseen pool has stories, place unseen first, followed by seen for smooth continuous loop
     const finalQueue = unseen.length >= 3 ? [...unseen, ...seen] : orderedRegular;
 
+    const finalSegments = finalQueue
+      .map((c) => toSegment(c, lang))
+      .filter((s) => !!s.imageUrl && !!s.script);
+
+    const breakingSegments = orderedBreaking
+      .slice(0, 3)
+      .map((c) => toSegment(c, lang))
+      .filter((s) => !!s.imageUrl && !!s.script);
+
     return NextResponse.json({
       meta: {
         feedCount: candidates.length,
         eligibleCount: pool.length,
         rejectedCount: candidates.length - pool.length,
-        dedupeCount: finalQueue.length,
-        queueCount: finalQueue.length,
-        breakingCount: orderedBreaking.length,
+        dedupeCount: finalSegments.length,
+        queueCount: finalSegments.length,
+        breakingCount: breakingSegments.length,
       },
-      queue: finalQueue.map((c) => toSegment(c, lang)),
-      breaking: orderedBreaking.slice(0, 3).map((c) => toSegment(c, lang)),
+      queue: finalSegments,
+      breaking: breakingSegments,
     }, {
       headers: {
         "Cache-Control": "public, max-age=30, stale-while-revalidate=60",

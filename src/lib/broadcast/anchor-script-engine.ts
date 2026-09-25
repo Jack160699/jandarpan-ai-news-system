@@ -6,10 +6,12 @@
  *
  * Rules:
  * 1. Zero story numbering ("news number 9", "नंबर 8", etc. are strictly forbidden).
- * 2. Zero robotic repetition (no repeated "छत्तीसगढ़ की latest खबरें" before every story).
- * 3. Natural anchor cadence:
- *    [Context-aware lead-in] -> [Headline / Core development] -> [Context / Key facts from summary]
- * 4. Paced with natural punctuation (Devanagari danda '।' and commas ',') for speech synthesis.
+ * 2. Zero robotic repetition (no repeated "छत्तीसगढ़ की latest खबरें" or dynamic "ब्रेकिंग न्यूज़" filler).
+ * 3. Natural anchor structure:
+ *    [Headline spoken ONCE] -> [2 to 4 distinct supporting factual sentences]
+ * 4. Deduplication against the headline (token similarity check).
+ * 5. Minimum 2 supporting factual sentences required for Live TV broadcast eligibility.
+ * 6. Paced with natural punctuation (Devanagari danda '।' and commas ',') for speech synthesis.
  */
 
 export type AnchorScriptInput = {
@@ -23,102 +25,144 @@ export type AnchorScriptInput = {
   language: "hi" | "en";
 };
 
-export function generateAnchorSpokenScript(input: AnchorScriptInput): {
+export type AnchorScriptResult = {
   script: string;
   durationSec: number;
-} {
-  const { headline, summary, articleBody, district, section, categoryLabel, isBreaking, language } = input;
+  supportingSentences: string[];
+  supportingCount: number;
+  isEligibleForLiveBroadcast: boolean;
+};
 
-  const cleanHeadline = (headline || "")
-    .replace(/^\[.*?\]\s*/, "")
-    .replace(/^ब्रेकिंग(?:\s*न्यूज़|\s*:)\s*/i, "")
-    .replace(/^breaking(?:\s*news|\s*:)\s*/i, "")
-    .replace(/[\r\n]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const cleanSummary = (summary || "")
-    .replace(/[\r\n]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const cleanBody = (articleBody || "")
+function cleanText(t: string | null | undefined): string {
+  if (!t) return "";
+  return t
     .replace(/<[^>]*>/g, " ")
     .replace(/!\[.*?\]\(.*?\)/g, "")
+    .replace(/^\[.*?\]\s*/, "")
+    .replace(/^(?:ब्रेकिंग|breaking)(?:\s*न्यूज़|\s*news|\s*:)\s*/i, "")
     .replace(/[\r\n]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
 
-  // Full article content takes priority over short summary teaser
-  const fullContent = cleanBody.length > cleanSummary.length + 30 ? cleanBody : cleanSummary;
+function tokenize(str: string): Set<string> {
+  return new Set(
+    str
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 2)
+  );
+}
 
-  if (language === "hi") {
-    // Detect context from headline, summary, section, and category
-    const corpus = `${cleanHeadline} ${fullContent} ${section || ""} ${categoryLabel || ""}`.toLowerCase();
+function similarity(tokensA: Set<string>, tokensB: Set<string>): number {
+  if (!tokensA.size || !tokensB.size) return 0;
+  let matches = 0;
+  for (const t of tokensA) {
+    if (tokensB.has(t)) matches++;
+  }
+  return matches / Math.min(tokensA.size, tokensB.size);
+}
 
-    // Clean valid district name
-    const validDistrict =
-      district && district !== "छत्तीसगढ़" && district !== "राज्य डेस्क" && district !== "State Desk"
-        ? district
-        : null;
+export function extractDistinctSupportingSentences(
+  headline: string,
+  summary: string | null | undefined,
+  body: string | null | undefined,
+  maxSentences = 4
+): string[] {
+  const cleanHl = cleanText(headline);
+  const hlTokens = tokenize(cleanHl);
 
-    let leadIn = "";
+  const rawText = `${cleanText(summary)} ${cleanText(body)}`;
+  const rawSentences = rawText
+    .split(/[।\.!\?\n\r]+/)
+    .map((s) => cleanText(s))
+    .filter((s) => s.length >= 18);
 
-    if (isBreaking) {
-      leadIn = validDistrict
-        ? `ब्रेकिंग न्यूज़। ${validDistrict} से इस वक्त की बड़ी खबर। `
-        : `इस वक्त की बड़ी खबर। `;
-    } else if (
-      corpus.includes("मौसम") ||
-      corpus.includes("बारिश") ||
-      corpus.includes("तापमान") ||
-      corpus.includes("अलर्ट")
+  const distinct: string[] = [];
+  const seenTokens: Set<string>[] = [hlTokens];
+
+  for (const sent of rawSentences) {
+    // Skip if contains metadata/source boilerplate or promotional links
+    if (
+      /स्रोत\s*:|source\s*:|फोटो\s*:|photo\s*:|ब्यूरो द्वारा|कॉपीराइट|copyright|read more|फॉलो करें|follow us|bhilai times|ibc24/i.test(
+        sent
+      )
     ) {
-      leadIn = validDistrict
-        ? `${validDistrict} में मौसम को लेकर महत्वपूर्ण जानकारी। `
-        : `मौसम विभाग से जुड़ी जानकारी। `;
-    } else if (
-      corpus.includes("हादसा") ||
-      corpus.includes("दुर्घटना") ||
-      corpus.includes("मुठभेड़")
-    ) {
-      leadIn = validDistrict
-        ? `${validDistrict} से सामने आ रहे इस घटनाक्रम में। `
-        : `सामने आ रहे इस ताजा घटनाक्रम में। `;
+      continue;
     }
 
-    // Build complete script: [leadIn] + [cleanHeadline] + [fullContent]
-    // Seamless, natural professional delivery without robotic filler
-    const script = `${leadIn}${cleanHeadline}। ${fullContent}`
+    const sentTokens = tokenize(sent);
+    let isDupe = false;
+    for (const prev of seenTokens) {
+      if (similarity(prev, sentTokens) > 0.50) {
+        isDupe = true;
+        break;
+      }
+    }
+
+    if (!isDupe) {
+      distinct.push(sent);
+      seenTokens.push(sentTokens);
+      if (distinct.length >= maxSentences) break;
+    }
+  }
+
+  return distinct;
+}
+
+export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScriptResult {
+  const { headline, summary, articleBody, language } = input;
+  const cleanHeadline = cleanText(headline);
+
+  const supportingSentences = extractDistinctSupportingSentences(
+    cleanHeadline,
+    summary,
+    articleBody,
+    4
+  );
+
+  const isEligibleForLiveBroadcast = supportingSentences.length >= 2;
+
+  if (language === "hi") {
+    // Clean Hindi broadcast script: Headline spoken ONCE + 2 to 4 distinct factual sentences
+    const script = supportingSentences.length > 0
+      ? `${cleanHeadline}। ${supportingSentences.join("। ")}।`
+      : `${cleanHeadline}।`;
+
+    const normalizedScript = script
       .replace(/[\r\n]+/g, " ")
       .replace(/\s+/g, " ")
       .replace(/।+/g, "।")
       .trim();
 
-    // Natural duration: ~13 characters per second of Hindi speech
-    const durationSec = Math.max(14, Math.ceil(script.length / 13));
-    return { script, durationSec };
+    const durationSec = Math.max(14, Math.ceil(normalizedScript.length / 13));
+    return {
+      script: normalizedScript,
+      durationSec,
+      supportingSentences,
+      supportingCount: supportingSentences.length,
+      isEligibleForLiveBroadcast,
+    };
   } else {
-    // Indian English broadcast delivery
-    const validDistrict =
-      district && district !== "Chhattisgarh" && district !== "State Desk"
-        ? district
-        : null;
+    // English broadcast script
+    const script = supportingSentences.length > 0
+      ? `${cleanHeadline}. ${supportingSentences.join(". ")}.`
+      : `${cleanHeadline}.`;
 
-    let leadIn = "";
-    if (isBreaking) {
-      leadIn = validDistrict
-        ? `Breaking news from ${validDistrict}. `
-        : `Breaking news at this hour. `;
-    }
-
-    const script = `${leadIn}${cleanHeadline}. ${fullContent}`
+    const normalizedScript = script
       .replace(/[\r\n]+/g, " ")
       .replace(/\s+/g, " ")
       .replace(/\.+/g, ".")
       .trim();
 
-    const durationSec = Math.max(14, Math.ceil(script.length / 14));
-    return { script, durationSec };
+    const durationSec = Math.max(14, Math.ceil(normalizedScript.length / 14));
+    return {
+      script: normalizedScript,
+      durationSec,
+      supportingSentences,
+      supportingCount: supportingSentences.length,
+      isEligibleForLiveBroadcast,
+    };
   }
 }

@@ -28,7 +28,7 @@ export function LowerThird() {
   const broadcastLabel =
     language === "hi"
       ? "मुख्य खबर"
-      : "MAIN STORY";
+      : "TOP STORY";
 
   return (
     <div className="jdl-lower3" aria-live="polite" aria-atomic="true">

@@ -46,6 +46,14 @@ const LOGO_ICON_RE =
 const GENERIC_PROVIDER_LOGO_RE =
   /googleusercontent\.com\/J6_coFbogxh|gstatic\.com\/images/i;
 
+/**
+ * Third-party TV channel branding, logos, watermarks, debate templates, channel bugs, lower-thirds or outside news anchors.
+ * Completely prohibits third-party graphics/anchors to maintain clean unbranded editorial integrity.
+ */
+export const THIRD_PARTY_BRANDED_OR_TEMPLATE_RE =
+  /ibc24.*(?:logo|banner|watermark|anchor|debate|shah-?mat|bulletin|graphic)|bhilaitimes.*(?:logo|watermark)|amarujala.*(?:watermark)|dainik-?bhaskar.*(?:watermark)|kpnews.*(?:logo|watermark)|ytimg\.com.*(?:hqdefault|maxresdefault)|youtube\.com.*thumbnail|debate-template|tv-anchor|anchor-desk|studio-screen|pti_cg[0-9]|shah-mat|01101010|Shah-Mat|(?:watermark|channel-bug|lower-third|masthead|debate-template|tv-anchor|news-anchor|anchor-desk|studio-anchor|bulletin-graphic|overlay-graphic)/i;
+
+
 /** Jan Darpan brand / OG / social lockups must never be editorial story media. */
 const BRAND_ASSET_RE =
   /\/brand\/|jan-darpan[-_](chhattisgarh[-_])?(logo|mark|og|icon)|jandarpan[-_](logo|mark|og)|social[-_]?lockup|transparency[-_]?preview|checkerboard|checkered[-_]?bg|alpha[-_]?preview/i;
@@ -131,6 +139,10 @@ export function isRejectedImageUrl(url: string): { rejected: boolean; reason?: s
     return { rejected: true, reason: "generic_provider_logo" };
   }
 
+  if (THIRD_PARTY_BRANDED_OR_TEMPLATE_RE.test(lower)) {
+    return { rejected: true, reason: "third_party_branded_or_template" };
+  }
+
   if (BRAND_ASSET_RE.test(lower)) {
     return { rejected: true, reason: "brand_asset" };
   }
@@ -179,8 +191,18 @@ export function hasVerifiedRealMedia(url: string | null | undefined): boolean {
   const lower = trimmed.toLowerCase();
   if (STOCK_MEDIA_RE.test(lower)) return false;
   if (AI_PLACEHOLDER_RE.test(lower)) return false;
+  if (THIRD_PARTY_BRANDED_OR_TEMPLATE_RE.test(lower)) return false;
   const { rejected } = isRejectedImageUrl(trimmed);
   return !rejected;
+}
+
+/**
+ * Validates that media is clean real editorial media without third-party channel bugs,
+ * logos, watermarks, debate templates or external TV anchors.
+ */
+export function isCleanRightsEligibleMedia(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  return hasVerifiedRealMedia(url);
 }
 
 /**
