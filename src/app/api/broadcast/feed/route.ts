@@ -206,30 +206,27 @@ function isChhattisgarhOnlyStory(c: BroadcastCandidate): boolean {
   const text = `${c.headline} ${c.summary}`.toLowerCase();
   const hlLower = c.headline.toLowerCase();
 
-  // Must mention Chhattisgarh or a specific Chhattisgarh district/entity in headline, summary, or district tag
-  const hasCgMention =
-    CG_TEXT_SIGNALS.some((sig) => text.includes(sig.toLowerCase())) ||
-    (c.districtSlug && CG_DISTRICT_KEYS.has(c.districtSlug));
-
-  if (!hasCgMention) {
-    return false;
-  }
-
-  // If it mentions an outside state or generic national topic, only accept if headline is explicitly about Chhattisgarh
-  const hasExcludeSignal = EXCLUDE_SIGNALS.some((sig) => text.includes(sig.toLowerCase()));
-  if (hasExcludeSignal) {
-    const hlHasCg = CG_TEXT_SIGNALS.some((sig) => hlLower.includes(sig.toLowerCase()));
-    if (!hlHasCg) {
-      return false;
-    }
-  }
-
   // Disallow generic national roundups or astrology
   if (hlLower.includes("देश-दुनिया") || hlLower.includes("राशिफल") || hlLower.includes("अंक ज्योतिष")) {
     return false;
   }
 
-  return true;
+  // Purely outside states with no CG relevance
+  if (
+    (text.includes("पश्चिम बंगाल") || text.includes("जम्मू-कश्मीर") || text.includes("पंजाब") || text.includes("केरल") || text.includes("तमिलनाडु")) &&
+    !text.includes("छत्तीसगढ़") && !text.includes("chhattisgarh") && !c.districtSlug
+  ) {
+    return false;
+  }
+
+  // Jan Darpan articles are Chhattisgarh regional coverage by default if section or tags indicate it
+  const isCgSection = c.section === "chhattisgarh" || c.section === "raipur" || c.tags?.includes("chhattisgarh");
+  const hasCgMention =
+    CG_TEXT_SIGNALS.some((sig) => text.includes(sig.toLowerCase())) ||
+    (c.districtSlug && CG_DISTRICT_KEYS.has(c.districtSlug)) ||
+    isCgSection;
+
+  return Boolean(hasCgMention);
 }
 
 /** Standard story item for broadcast ranking */
@@ -480,16 +477,16 @@ export async function GET(req: NextRequest) {
       const langMatches = lang === "hi" ? (hasDev || c.language === "hi") : (!hasDev || c.language === "en");
       if (!langMatches) return false;
 
-      // 48-hour timestamp check
+      // 48-hour timestamp check (grace up to 72 hours for continuous weekend coverage)
       const pubTime = new Date(c.publishedAt).getTime();
       if (!isNaN(pubTime)) {
-        return pubTime >= cutoff && pubTime <= now + 2 * 3600 * 1000;
+        return pubTime >= (now - 72 * 3600 * 1000) && pubTime <= now + 2 * 3600 * 1000;
       }
-      return false;
+      return true;
     });
 
-    // Fallback: If 48-hour strictly filtered pool is small, take all valid Chhattisgarh candidates
-    if (pool.length < 5) {
+    // Fallback: If filtered pool is small, take all valid Chhattisgarh candidates so news stream is continuous
+    if (pool.length < 25) {
       pool = candidates.filter((c) => {
         if (!c.headline || !c.slug) return false;
         if (!isChhattisgarhOnlyStory(c)) return false;
