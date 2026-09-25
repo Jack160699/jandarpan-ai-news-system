@@ -159,7 +159,7 @@ export function UnifiedBrandLockup({
           }}
         >
           <Link
-            href="/"
+            href="/home"
             className="jd-unified-brand-lockup__logo-link"
             aria-label={t("masthead.homeAria")}
             data-testid="jd-masthead-brand"

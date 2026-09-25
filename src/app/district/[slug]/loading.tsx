@@ -7,7 +7,7 @@ import { PageContainer } from "@/layouts/PageContainer";
 
 export default function DistrictLoading() {
   if (isReaderDesignSystemEnabled()) {
-    return <LoadingSkeleton />;
+    return <LoadingSkeleton activeNav="district" />;
   }
 
   if (!isDistrictV3Enabled()) {

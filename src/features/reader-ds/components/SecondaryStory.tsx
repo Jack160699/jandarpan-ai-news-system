@@ -21,7 +21,6 @@ export function SecondaryStory({
   return (
     <Link
       href={storyHref(story.slug)}
-      prefetch={false}
       style={{
         display: "flex",
         gap: 12,

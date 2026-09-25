@@ -8,7 +8,7 @@ import { PageContainer } from "@/layouts";
 /** Avoid blank route flash — prefer DS skeleton when reader DS is on. */
 export default function StoryLoading() {
   if (isReaderDesignSystemEnabled()) {
-    return <LoadingSkeleton />;
+    return <LoadingSkeleton activeNav="home" />;
   }
   if (isArticleV3Enabled()) {
     return (

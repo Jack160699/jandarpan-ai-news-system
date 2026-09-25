@@ -48,10 +48,11 @@ const GENERIC_PROVIDER_LOGO_RE =
 
 /**
  * Third-party TV channel branding, logos, watermarks, debate templates, channel bugs, lower-thirds or outside news anchors.
- * Completely prohibits third-party graphics/anchors to maintain clean unbranded editorial integrity.
+ * Hard publication ban: completely prohibits third-party branded graphics, competing publisher assets (Amar Ujala, IBC24, etc.),
+ * and studio/anchor broadcast stills to maintain clean unbranded editorial integrity.
  */
 export const THIRD_PARTY_BRANDED_OR_TEMPLATE_RE =
-  /ibc24.*(?:logo|banner|watermark|anchor|debate|shah-?mat|bulletin|graphic)|bhilaitimes.*(?:logo|banner|watermark|graphic)|amarujala.*(?:watermark|logo|banner|breaking|bulletin|graphic|live)|dainik-?bhaskar.*(?:watermark|logo|banner)|kpnews.*(?:logo|watermark)|ytimg\.com.*(?:hqdefault|maxresdefault)|youtube\.com.*thumbnail|debate-template|tv-anchor|anchor-desk|studio-screen|pti_cg[0-9]|shah-mat|01101010|Shah-Mat|Balod-Road-Accident|CG-Teacher-Suspended|Rajnandgaon-Ganesh-Jhanki-Cancel|images-1-4|(?:watermark|channel-bug|lower-third|masthead|debate-template|tv-anchor|news-anchor|anchor-desk|studio-anchor|bulletin-graphic|overlay-graphic)/i;
+  /amarujala|ibc24|dainik-?bhaskar|bhaskar\.com|aajtak|zeenews|abplive|ndtv\.com|news18|republicworld|tv9hindi|tv9|etvbharat|haribhoomi|patrika\.com|kpnews|ytimg\.com|youtube\.com.*thumbnail|debate-template|tv-?anchor|news-?anchor|anchor-?desk|studio-?screen|studio-?anchor|presenter-frame|pti_cg[0-9]|shah-mat|01101010|Shah-Mat|Balod-Road-Accident|CG-Teacher-Suspended|Rajnandgaon-Ganesh-Jhanki-Cancel|images-1-4|(?:watermark|channel-?bug|lower-?third|masthead|bulletin-?graphic|breaking-?news-?(?:template|live|banner|graphic)|overlay-?graphic|broadcast-?bug|station-?logo)/i;
 
 
 /** Jan Darpan brand / OG / social lockups must never be editorial story media. */
@@ -210,15 +211,36 @@ export function isCleanRightsEligibleMedia(url: string | null | undefined): bool
  * Checks all possible media fields in prioritized sequence.
  * Returns null if no genuine real source media exists.
  */
-export function extractVerifiedRealMediaUrl(item: any): string | null {
+type StoryMediaLike = {
+  hero_image_url?: string | null;
+  heroUrl?: string | null;
+  imageUrl?: string | null;
+  image_url?: string | null;
+  source_image?: string | null;
+  thumbnail_url?: string | null;
+  ogImageUrl?: string | null;
+  og_image_url?: string | null;
+  media_records?: Array<{ media_url?: string | null; source_url?: string | null; thumbnail_url?: string | null }> | null;
+  editorial_metadata?: {
+    media_source_url?: string | null;
+    hero_media?: { media_url?: string | null; source_url?: string | null; thumbnail_url?: string | null } | null;
+    source_attribution?: Array<{ image_url?: string | null; source_image?: string | null }> | null;
+    embedded_video?: Array<{ thumbnailUrl?: string | null; thumbnail_url?: string | null }> | null;
+    image?: { hero_url?: string | null; sourceUrl?: string | null; og_url?: string | null } | null;
+  } | null;
+  [key: string]: unknown;
+};
+
+export function extractVerifiedRealMediaUrl(item: StoryMediaLike | Record<string, unknown> | null | undefined): string | null {
   if (!item || typeof item !== "object") return null;
 
-  const meta = item.editorial_metadata as any;
+  const rec = item as StoryMediaLike;
+  const meta = rec.editorial_metadata;
   const metaImage = meta?.image;
 
   const candidates: Array<string | null | undefined> = [
-    item.hero_image_url,
-    item.heroUrl,
+    rec.hero_image_url,
+    rec.heroUrl,
     meta?.media_source_url,
     meta?.hero_media?.media_url,
     meta?.hero_media?.source_url,
@@ -227,18 +249,18 @@ export function extractVerifiedRealMediaUrl(item: any): string | null {
     meta?.source_attribution?.[0]?.source_image,
     meta?.embedded_video?.[0]?.thumbnailUrl,
     meta?.embedded_video?.[0]?.thumbnail_url,
-    item.media_records?.[0]?.media_url,
-    item.media_records?.[0]?.source_url,
-    item.media_records?.[0]?.thumbnail_url,
-    item.source_image,
-    item.thumbnail_url,
+    rec.media_records?.[0]?.media_url,
+    rec.media_records?.[0]?.source_url,
+    rec.media_records?.[0]?.thumbnail_url,
+    rec.source_image,
+    rec.thumbnail_url,
     metaImage?.hero_url,
     metaImage?.sourceUrl,
     metaImage?.og_url,
-    item.imageUrl,
-    item.image_url,
-    item.ogImageUrl,
-    item.og_image_url,
+    rec.imageUrl,
+    rec.image_url,
+    rec.ogImageUrl,
+    rec.og_image_url,
   ];
 
   for (const c of candidates) {

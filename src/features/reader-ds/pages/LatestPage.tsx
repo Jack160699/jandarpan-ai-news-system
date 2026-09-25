@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import type { HomeArticle } from "@/lib/homepage/types";
 import { Masthead } from "../components/Masthead";
@@ -12,270 +12,276 @@ type Props = {
   articles: HomeArticle[];
 };
 
-const CATEGORY_TABS: Array<{ key: string; labelHi: string; labelEn: string; sections: string[] }> = [
-  { key: "all", labelHi: "सभी खबरें", labelEn: "All Stories", sections: [] },
-  { key: "cg", labelHi: "छत्तीसगढ़", labelEn: "Chhattisgarh", sections: ["chhattisgarh", "raipur", "durg", "bilaspur", "bastar"] },
-  { key: "national", labelHi: "भारत", labelEn: "National", sections: ["india"] },
-  { key: "world", labelHi: "विश्व", labelEn: "World", sections: ["world"] },
-  { key: "business", labelHi: "व्यापार", labelEn: "Business", sections: ["business"] },
-  { key: "sports", labelHi: "खेल", labelEn: "Sports", sections: ["sports"] },
-  { key: "entertainment", labelHi: "मनोरंजन", labelEn: "Entertainment", sections: ["entertainment"] },
-  { key: "tech", labelHi: "टेक्नोलॉजी", labelEn: "Tech", sections: ["technology"] },
-];
+const SECTION_STYLES: Record<string, { bg: string; text: string }> = {
+  politics: { bg: "#fef2f2", text: "#b91c1c" },
+  crime: { bg: "#fff7ed", text: "#c2410c" },
+  national: { bg: "#eff6ff", text: "#1d4ed8" },
+  international: { bg: "#ecfdf5", text: "#047857" },
+  entertainment: { bg: "#faf5ff", text: "#7e22ce" },
+  sports: { bg: "#f0fdf4", text: "#15803d" },
+  chhattisgarh: { bg: "#fefce8", text: "#a16207" },
+  durg: { bg: "#fefce8", text: "#a16207" },
+  raipur: { bg: "#fefce8", text: "#a16207" },
+};
 
-function formatTimeAgo(dateStr?: string, locale: string = "hi"): string {
-  if (!dateStr) return locale === "en" ? "Just now" : "अभी";
+function formatStoryTime(dateStr?: string, locale: string = "hi"): { exact: string; relative: string } {
+  if (!dateStr) return { exact: "--:--", relative: locale === "en" ? "Live" : "लाइव" };
   try {
-    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const d = new Date(dateStr);
+    const exact = isNaN(d.getTime())
+      ? "--:--"
+      : d.toLocaleTimeString(locale === "en" ? "en-IN" : "hi-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+          timeZone: "Asia/Kolkata",
+        });
+
+    const diffMs = Date.now() - d.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 5) return locale === "en" ? "Just now" : "अभी";
-    if (diffMins < 60) return locale === "en" ? `${diffMins}m ago` : `${diffMins} मि. पहले`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return locale === "en" ? `${diffHours}h ago` : `${diffHours} घंटे पहले`;
-    const diffDays = Math.floor(diffHours / 24);
-    return locale === "en" ? `${diffDays}d ago` : `${diffDays} दिन पहले`;
+    let relative = locale === "en" ? "Just now" : "अभी";
+    if (diffMins >= 5 && diffMins < 60) {
+      relative = locale === "en" ? `${diffMins}m ago` : `${diffMins} मि. पहले`;
+    } else if (diffMins >= 60 && diffMins < 1440) {
+      const h = Math.floor(diffMins / 60);
+      relative = locale === "en" ? `${h}h ago` : `${h} घंटे पहले`;
+    } else if (diffMins >= 1440) {
+      const days = Math.floor(diffMins / 1440);
+      relative = locale === "en" ? `${days}d ago` : `${days} दिन पहले`;
+    }
+    return { exact, relative };
   } catch {
-    return locale === "en" ? "Today" : "आज";
+    return { exact: "--:--", relative: locale === "en" ? "Today" : "आज" };
   }
 }
 
 /**
- * Dedicated Latest News Page — Rich editorial article destination.
- * Houses the rich multi-section article presentation relocated from the mobile homepage.
+ * Taza — Authoritative Chronological Latest-News Feed.
+ * Newest published article first.
+ * Clean continuous vertical news stream: [ HH:MM ] + Section + Headline + verified thumbnail.
+ * Immediacy-driven, zero full-page reloads, fast Next.js client navigation.
  */
 export function LatestPageView({ articles }: Props) {
   const { t, locale } = useJdDsT();
-  const [selectedTab, setSelectedTab] = useState<string>("all");
 
+  // Primary rule: NEWEST PUBLISHED ARTICLE FIRST by authoritative publication timestamp
   const sortedArticles = useMemo(() => {
     return [...articles].sort(
       (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     );
   }, [articles]);
 
-  const filteredArticles = useMemo(() => {
-    if (selectedTab === "all") return sortedArticles;
-    const tabObj = CATEGORY_TABS.find((t) => t.key === selectedTab);
-    if (!tabObj || tabObj.sections.length === 0) return sortedArticles;
-    return sortedArticles.filter((a) => {
-      const sec = (a.section || "").toLowerCase();
-      const tags = (a.tags || []).map((t) => t.toLowerCase());
-      return (
-        tabObj.sections.includes(sec) ||
-        tabObj.sections.some((s) => tags.includes(s) || tags.includes(`district:${s}`))
-      );
-    });
-  }, [sortedArticles, selectedTab]);
-
-  const leadArticle = filteredArticles[0];
-  const supportingArticles = filteredArticles.slice(1);
-
-  const pageTitle = locale === "en" ? "Taza" : "ताज़ा";
-  const subtitle =
-    locale === "en"
-      ? "Most recently updated verified news — chronological"
-      : "सबसे हालिया सत्यापित खबरें — समय अनुसार";
+  const pageTitle = locale === "en" ? "Latest News" : "ताज़ा खबरें";
+  const subtitle = locale === "en" ? "Newest stories first" : "सबसे नई खबरें पहले";
 
   return (
     <ReaderShell activeNav="latest">
       <Masthead />
 
       <main id="main-content" role="main" className="jd-shell" style={{ flex: 1, background: "var(--jd-paper)" }}>
-        {/* Editorial Page Header */}
-        <header className="jd-latest-header" style={{ padding: "16px 0 12px", borderBottom: "1px solid var(--jd-line)" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-            <h1 style={{ margin: 0, fontSize: "clamp(22px, 3vw, 28px)", fontWeight: 900, color: "var(--jd-ink)", letterSpacing: "-0.02em" }}>
-              {pageTitle}
-            </h1>
-            <span style={{ fontSize: 13, color: "var(--jd-muted)", fontWeight: 600 }}>
-              {filteredArticles.length} {locale === "en" ? "stories" : "खबरें"}
-            </span>
-          </div>
-          <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--jd-muted)" }}>
-            {subtitle}
-          </p>
-
-          {/* Category Filter Chips */}
-          <nav aria-label="News Categories" style={{ display: "flex", gap: 8, overflowX: "auto", padding: "12px 0 4px", scrollbarWidth: "none" }}>
-            {CATEGORY_TABS.map((tab) => {
-              const active = selectedTab === tab.key;
-              const label = locale === "en" ? tab.labelEn : tab.labelHi;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setSelectedTab(tab.key)}
+        {/* Authoritative Taza Feed Header */}
+        <header
+          style={{
+            padding: "16px 14px 14px",
+            background: "#ffffff",
+            borderBottom: "2px solid var(--jd-red)",
+          }}
+          data-testid="jd-taza-header"
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span
                   style={{
-                    padding: "5px 12px",
-                    borderRadius: 20,
-                    fontSize: 12.5,
-                    fontWeight: active ? 700 : 500,
-                    border: active ? "1.5px solid var(--jd-red)" : "1px solid var(--jd-line)",
-                    background: active ? "var(--jd-red)" : "var(--jd-paper)",
-                    color: active ? "#ffffff" : "var(--jd-ink)",
-                    whiteSpace: "nowrap",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: "var(--jd-red)",
+                    textTransform: "uppercase",
+                    letterSpacing: ".06em",
                   }}
                 >
-                  {label}
-                </button>
-              );
-            })}
-          </nav>
-        </header>
-
-        {filteredArticles.length === 0 ? (
-          <div style={{ padding: "48px 0", textAlign: "center", color: "var(--jd-muted)" }}>
-            <p style={{ fontSize: 16 }}>{t("home.latestEmpty")}</p>
-          </div>
-        ) : (
-          <div className="jd-latest-content" style={{ padding: "18px 0 40px" }}>
-            {/* Featured Lead Story */}
-            {leadArticle && (
-              <article
+                  <span
+                    style={{
+                      width: 7,
+                      height: 7,
+                      borderRadius: "50%",
+                      background: "var(--jd-red)",
+                      display: "inline-block",
+                      boxShadow: "0 0 0 3px rgba(220, 38, 38, 0.2)",
+                    }}
+                  />
+                  {locale === "en" ? "LIVE STREAM" : "लाइव स्ट्रीम"}
+                </span>
+                <span style={{ color: "var(--jd-line-2)" }}>•</span>
+                <span style={{ fontSize: 12, color: "var(--jd-muted)", fontWeight: 600 }}>
+                  {sortedArticles.length} {locale === "en" ? "stories" : "खबरें"}
+                </span>
+              </div>
+              <h1
+                className="jd-serif"
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                  gap: 16,
-                  paddingBottom: 20,
-                  marginBottom: 24,
-                  borderBottom: "2px solid var(--jd-line)",
+                  margin: "0 0 2px",
+                  fontSize: "clamp(22px, 3.5vw, 28px)",
+                  fontWeight: 800,
+                  color: "var(--jd-ink)",
+                  letterSpacing: "-0.02em",
                 }}
               >
-                {leadArticle.imageUrl && (
-                  <Link href={`/story/${leadArticle.slug}`} prefetch={false} style={{ textDecoration: "none", display: "block" }}>
-                    <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10", borderRadius: 8, overflow: "hidden", background: "#0a1628" }}>
-                      <img
-                        src={leadArticle.imageUrl}
-                        alt=""
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                        loading="eager"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  </Link>
-                )}
-                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--jd-red)", textTransform: "uppercase" }}>
-                      {leadArticle.categoryLabel || leadArticle.section}
-                    </span>
-                    <span style={{ fontSize: 11.5, color: "var(--jd-muted)" }}>•</span>
-                    <span style={{ fontSize: 11.5, color: "var(--jd-muted)" }}>
-                      {formatTimeAgo(leadArticle.publishedAt, locale)}
-                    </span>
-                  </div>
-                  <Link href={`/story/${leadArticle.slug}`} prefetch={false} style={{ textDecoration: "none", color: "inherit" }}>
-                    <h2 style={{ margin: "0 0 10px", fontSize: "clamp(18px, 2.4vw, 24px)", fontWeight: 800, lineHeight: 1.3, color: "var(--jd-ink)" }}>
-                      {leadArticle.headline}
-                    </h2>
-                  </Link>
-                  {leadArticle.summary && (
-                    <p style={{ margin: "0 0 12px", fontSize: 14, lineHeight: 1.5, color: "var(--jd-ink-subtle, #334155)" }}>
-                      {leadArticle.summary}
-                    </p>
-                  )}
-                  <Link href={`/story/${leadArticle.slug}`} prefetch={false} style={{ fontSize: 12.5, fontWeight: 700, color: "var(--jd-red)", textDecoration: "none" }}>
-                    {locale === "en" ? "Read full story →" : "पूरी खबर पढ़ें →"}
-                  </Link>
-                </div>
-              </article>
-            )}
-
-            {/* Rich Grid of Supporting Articles */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: 16,
-              }}
-            >
-              {supportingArticles.map((story, i) => {
-                const storyIndex = leadArticle ? i + 2 : i + 1;
-                const showAdAfter = storyIndex % 3 === 0;
-                return (
-                  <React.Fragment key={story.slug}>
-                    <article
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        background: "var(--jd-paper)",
-                        border: "1px solid var(--jd-line)",
-                        borderRadius: 8,
-                        overflow: "hidden",
-                        transition: "box-shadow 0.15s ease",
-                      }}
-                    >
-                      {story.imageUrl && (
-                        <Link href={`/story/${story.slug}`} prefetch={false} style={{ textDecoration: "none", display: "block" }}>
-                          <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden", background: "#0a1628" }}>
-                            <img
-                              src={story.imageUrl}
-                              alt=""
-                              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                              loading="lazy"
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
-                        </Link>
-                      )}
-                      <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                        <div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--jd-red)", textTransform: "uppercase" }}>
-                              {story.categoryLabel || story.section}
-                            </span>
-                            <span style={{ fontSize: 11, color: "var(--jd-muted)" }}>•</span>
-                            <span style={{ fontSize: 11, color: "var(--jd-muted)" }}>
-                              {formatTimeAgo(story.publishedAt, locale)}
-                            </span>
-                          </div>
-                          <Link href={`/story/${story.slug}`} prefetch={false} style={{ textDecoration: "none", color: "inherit" }}>
-                            <h3
-                              style={{
-                                margin: 0,
-                                fontSize: 14.5,
-                                fontWeight: 700,
-                                lineHeight: 1.35,
-                                color: "var(--jd-ink)",
-                                display: "-webkit-box",
-                                WebkitLineClamp: 3,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                              }}
-                            >
-                              {story.headline}
-                            </h3>
-                          </Link>
-                          {story.summary && (
-                            <p
-                              style={{
-                                margin: "6px 0 0",
-                                fontSize: 12.5,
-                                lineHeight: 1.45,
-                                color: "var(--jd-ink-subtle, #475569)",
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                              }}
-                            >
-                              {story.summary}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                    {showAdAfter && (
-                      <div style={{ gridColumn: "1 / -1", width: "100%" }}>
-                        <DurgSolarInlineAd index={Math.floor(storyIndex / 3)} />
-                      </div>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+                {pageTitle}
+              </h1>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--jd-muted)", fontWeight: 500 }}>
+                {subtitle}
+              </p>
             </div>
+          </div>
+        </header>
+
+        {sortedArticles.length === 0 ? (
+          <div style={{ padding: "48px 16px", textAlign: "center", color: "var(--jd-muted)" }}>
+            <p style={{ fontSize: 15 }}>{t("home.latestEmpty")}</p>
+          </div>
+        ) : (
+          <div className="jd-taza-feed" style={{ paddingBottom: 40 }} data-testid="jd-taza-feed">
+            {sortedArticles.map((story, i) => {
+              const time = formatStoryTime(story.publishedAt, locale);
+              const secKey = (story.section || "").toLowerCase();
+              const secStyle = SECTION_STYLES[secKey] ?? { bg: "var(--jd-paper-2, #f1f5f9)", text: "var(--jd-ink)" };
+              const showAdAfter = (i + 1) % 6 === 0;
+
+              return (
+                <React.Fragment key={story.slug}>
+                  <article
+                    style={{
+                      display: "flex",
+                      gap: 12,
+                      padding: "14px 14px",
+                      background: "#ffffff",
+                      borderBottom: "1px solid var(--jd-line-2, #e2e8f0)",
+                      alignItems: "flex-start",
+                      transition: "background 0.15s ease",
+                    }}
+                    data-testid="jd-taza-story"
+                  >
+                    {/* Time Badge column */}
+                    <div style={{ flexShrink: 0, width: 68, textAlign: "left" }}>
+                      <div
+                        style={{
+                          display: "inline-block",
+                          background: "var(--jd-paper-2, #f8fafc)",
+                          border: "1px solid var(--jd-line, #e2e8f0)",
+                          borderRadius: 3,
+                          padding: "2px 5px",
+                          fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                          fontSize: 11.5,
+                          fontWeight: 800,
+                          color: "var(--jd-navy)",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        [ {time.exact} ]
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--jd-muted)", marginTop: 4, whiteSpace: "nowrap" }}>
+                        {time.relative}
+                      </div>
+                    </div>
+
+                    {/* Headline and Metadata */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5, flexWrap: "wrap" }}>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 800,
+                            letterSpacing: ".04em",
+                            textTransform: "uppercase",
+                            padding: "1px 6px",
+                            borderRadius: 2,
+                            background: secStyle.bg,
+                            color: secStyle.text,
+                          }}
+                        >
+                          {story.categoryLabel || story.section}
+                        </span>
+                        {story.district && (
+                          <span style={{ fontSize: 10.5, color: "var(--jd-muted)", fontWeight: 600 }}>
+                            • {story.district}
+                          </span>
+                        )}
+                      </div>
+
+                      <Link
+                        href={`/story/${story.slug}`}
+                        style={{ textDecoration: "none", color: "inherit", display: "block" }}
+                      >
+                        <h2
+                          className="jd-serif"
+                          style={{
+                            margin: 0,
+                            fontSize: "clamp(14.5px, 2.2vw, 16.5px)",
+                            fontWeight: 700,
+                            lineHeight: 1.35,
+                            color: "var(--jd-ink)",
+                          }}
+                        >
+                          {story.headline}
+                        </h2>
+                      </Link>
+
+                      {story.summary && (
+                        <p
+                          style={{
+                            margin: "5px 0 0",
+                            fontSize: 12,
+                            lineHeight: 1.45,
+                            color: "var(--jd-muted)",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {story.summary}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Thumbnail Image where available */}
+                    {story.imageUrl && (
+                      <Link
+                        href={`/story/${story.slug}`}
+                        style={{
+                          flexShrink: 0,
+                          width: 88,
+                          aspectRatio: "16 / 10",
+                          borderRadius: 4,
+                          overflow: "hidden",
+                          background: "#0a1628",
+                          display: "block",
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={story.imageUrl}
+                          alt=""
+                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      </Link>
+                    )}
+                  </article>
+
+                  {showAdAfter && (
+                    <div style={{ width: "100%", borderBottom: "1px solid var(--jd-line)" }}>
+                      <DurgSolarInlineAd index={Math.floor((i + 1) / 6)} />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
         )}
       </main>

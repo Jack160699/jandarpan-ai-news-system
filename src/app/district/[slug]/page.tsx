@@ -18,7 +18,6 @@ import {
   filterRowsForDistrict,
   getAllDistrictSlugs,
   getDistrict,
-  partitionDistrictHubRows,
   prioritizePrimaryDistrict,
 } from "@/lib/regional";
 import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
@@ -80,7 +79,7 @@ export default async function DistrictPage({ params }: PageProps) {
   const readerDs = isReaderDesignSystemEnabled();
   const [displayLanguage, pool, tenant] = await Promise.all([
     getServerReaderLanguage(),
-    fetchGeneratedArticlePool(120, { select: "homepage" }),
+    fetchGeneratedArticlePool(160, { select: "homepage" }),
     readerDs ? getTenantConfig() : Promise.resolve(null),
   ]);
   const langPool = filterPoolByLanguage(pool, displayLanguage);

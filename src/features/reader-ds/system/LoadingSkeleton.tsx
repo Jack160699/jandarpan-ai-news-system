@@ -2,9 +2,7 @@ import type { CSSProperties } from "react";
 import "../styles";
 import { readerDsFontClassName } from "../fonts";
 import { Masthead } from "../components/Masthead";
-import { UtilityRow } from "../components/UtilityRow";
-import { BottomNav } from "../components/BottomNav";
-import { DesktopPrimaryNav } from "../components/DesktopPrimaryNav";
+import { BottomNav, type BottomNavKey } from "../components/BottomNav";
 
 function Skel({
   w,
@@ -30,8 +28,46 @@ function Skel({
   );
 }
 
-/** F46 — content-shaped shimmer skeleton (no spinner). */
-export function LoadingSkeleton() {
+/** Content-only shaped shimmer skeleton — preserves layout dimensions without remounting header/nav. */
+export function ContentLoadingSkeleton() {
+  return (
+    <main
+      id="main-content"
+      role="main"
+      className="jd-shell"
+      style={{
+        flex: 1,
+        padding: "16px 14px",
+        maxWidth: 960,
+        margin: "0 auto",
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+      aria-busy="true"
+      aria-label="लोड हो रहा है"
+    >
+      <Skel w="100%" h={220} style={{ marginBottom: 14, borderRadius: 3 }} />
+      <Skel w="35%" h={12} style={{ marginBottom: 8 }} />
+      <Skel w="94%" h={22} style={{ marginBottom: 8 }} />
+      <Skel w="78%" h={22} style={{ marginBottom: 16 }} />
+      <div aria-hidden style={{ height: 1.5, background: "var(--jd-line)", margin: "18px 0" }} />
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} style={{ display: "flex", gap: 14, marginBottom: 18, alignItems: "flex-start" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Skel w="25%" h={10} style={{ marginBottom: 6 }} />
+            <Skel w="100%" h={15} style={{ marginBottom: 6 }} />
+            <Skel w="75%" h={15} style={{ marginBottom: 6 }} />
+            <Skel w="40%" h={10} style={{ marginBottom: 0 }} />
+          </div>
+          <Skel w={104} h={76} style={{ flexShrink: 0, borderRadius: 3, marginBottom: 0 }} />
+        </div>
+      ))}
+    </main>
+  );
+}
+
+/** Full-page shimmer skeleton for initial hard SSR document loads. */
+export function LoadingSkeleton({ activeNav }: { activeNav?: BottomNavKey | null }) {
   return (
     <div
       className={`jd-ds jd-ds--stage ${readerDsFontClassName}`}
@@ -39,27 +75,10 @@ export function LoadingSkeleton() {
       aria-busy="true"
       aria-label="लोड हो रहा है"
     >
-      <Masthead hideActions />
-      <DesktopPrimaryNav active="home" />
-      <UtilityRow disableLiveWeather />
-      <main id="main-content" role="main" className="jd-shell" style={{ flex: 1, padding: 14 }}>
-        <Skel w="100%" h={180} style={{ marginBottom: 12, borderRadius: 2 }} />
-        <Skel w="40%" h={10} />
-        <Skel w="92%" h={18} />
-        <Skel w="80%" h={18} />
-        <div aria-hidden style={{ height: 1, background: "var(--jd-line-2)", margin: "14px 0" }} />
-        {[0, 1, 2].map((i) => (
-          <div key={i} style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-            <div style={{ flex: 1 }}>
-              <Skel w="30%" h={9} />
-              <Skel w="100%" h={13} />
-              <Skel w="70%" h={13} />
-            </div>
-            <Skel w={96} h={66} style={{ flexShrink: 0, borderRadius: 2, marginBottom: 0 }} />
-          </div>
-        ))}
-      </main>
-      <BottomNav active="home" />
+      <Masthead />
+      <ContentLoadingSkeleton />
+      <BottomNav active={activeNav} />
     </div>
   );
 }
+

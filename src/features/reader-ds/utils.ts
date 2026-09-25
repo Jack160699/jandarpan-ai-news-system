@@ -13,6 +13,9 @@ export type ReaderStory = {
   isLive?: boolean;
   viewCountLabel?: string;
   growthLabel?: string;
+  category?: string | null;
+  section?: string | null;
+  tags?: string[];
 };
 
 export function toReaderStory(a: HomeArticle, kicker?: string): ReaderStory {
@@ -43,6 +46,9 @@ export function toReaderStory(a: HomeArticle, kicker?: string): ReaderStory {
     imageUrl: safeImageUrl,
     publishedAt: a.publishedAt,
     isLive: a.isLive,
+    category: (a as { category?: string }).category || a.categoryLabel || null,
+    section: a.section || null,
+    tags: a.tags || [],
   };
 }
 

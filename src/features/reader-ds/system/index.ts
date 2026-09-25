@@ -1,6 +1,6 @@
 export { StateBody } from "./StateBody";
 export { EmptyState } from "./EmptyState";
-export { LoadingSkeleton } from "./LoadingSkeleton";
+export { LoadingSkeleton, ContentLoadingSkeleton } from "./LoadingSkeleton";
 export { ErrorStatePage } from "./ErrorStatePage";
 export { NotFoundStatePage } from "./NotFoundStatePage";
 export { MaintenancePage } from "./MaintenancePage";

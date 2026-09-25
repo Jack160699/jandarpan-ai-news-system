@@ -3,12 +3,10 @@ import { PageShell } from "@/components/layout/PageShell";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { LatestPageView } from "@/features/reader-ds/pages";
-import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
 import { filterPoolByLanguage } from "@/lib/i18n/article-language";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
-import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
 import {
   breadcrumbListJsonLd,
   buildHubPageMetadata,
@@ -16,7 +14,6 @@ import {
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
-import { Footer } from "@/sections/Footer";
 
 export const revalidate = 60;
 
@@ -32,44 +29,20 @@ export const metadata: Metadata = buildHubPageMetadata({
 
 export default async function LatestPage() {
   const displayLanguage = await getServerReaderLanguage();
-  const pool = await fetchGeneratedArticlePool(120);
+  const pool = await fetchGeneratedArticlePool(160, { select: "homepage" });
   const langPool = filterPoolByLanguage(pool, displayLanguage);
-  const ranked = rankArticlesForHomepage(langPool);
-  const fromPool = ranked
-    .map((r) =>
-      toHomeArticle(
-        r.row,
-        {
-          priorityScore: r.ranking.priorityScore,
-          reasons: r.ranking.reasons,
-          isTrending: r.ranking.isTrending,
-          isBreaking: r.ranking.isBreaking,
-          duplicateClusterId: r.ranking.duplicateClusterId,
-          section: r.section,
-        },
-        displayLanguage
-      )
-    )
-    .filter((a): a is NonNullable<typeof a> => a !== null);
 
-  const feed = await getCachedGeneratedHomepageFeed();
-  const feedWire = feed
-    ? [
-        ...(feed.liveWire ?? []),
-        ...(feed.trending ?? []),
-        ...(feed.regionalHighlights ?? []),
-        ...(feed.editorsPicks?.supporting ?? []),
-        ...(feed.editorsPicks?.lead ? [feed.editorsPicks.lead] : []),
-        ...(feed.breakingTicker ?? []),
-      ]
-    : [];
-  const bySlug = new Map<string, (typeof fromPool)[number]>();
-  // Prefer live feed slices first (pool can be empty in some local/dev caches).
-  for (const a of [...feedWire, ...fromPool]) {
-    if (a?.slug && !bySlug.has(a.slug)) bySlug.set(a.slug, a);
+  const bySlug = new Map<string, (typeof langPool)[number]>();
+  for (const r of langPool) {
+    if (r?.slug && !bySlug.has(r.slug)) {
+      bySlug.set(r.slug, r);
+    }
   }
+
+  // Authoritative publication timestamp: newest published article first
   const articles = [...bySlug.values()]
-    .filter((a) => hasVerifiedRealMedia(a.imageUrl))
+    .map((r) => toHomeArticle(r, undefined, displayLanguage))
+    .filter((a): a is NonNullable<typeof a> => a !== null && hasVerifiedRealMedia(a.imageUrl))
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
     .slice(0, 100);
 

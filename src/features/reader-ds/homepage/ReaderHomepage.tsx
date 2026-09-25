@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import Link from "next/link";
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
-import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import { LeadStory, Masthead, ReaderShell, SecondaryStory, SectionHeader } from "../components";
 import { useJdDsT } from "../i18n";
 import { toReaderStory, type ReaderStory } from "../utils";
@@ -13,27 +11,109 @@ import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
 type ReaderHomepageProps = {
   feed: GeneratedHomepageFeed;
   allArticles?: HomeArticle[];
-  nativeAd?: any;
+  nativeAd?: Record<string, unknown> | null;
   adsEnabled?: boolean;
   verifiedRatesNavEnabled?: boolean;
 };
 
+type EditorialSectionDef = {
+  key: "politics" | "crime" | "national" | "international" | "entertainment" | "sports";
+  titleHi: string;
+  titleEn: string;
+  color: string;
+  moreHref: string;
+  match: (story: ReaderStory) => boolean;
+};
+
+const EDITORIAL_SECTIONS: EditorialSectionDef[] = [
+  {
+    key: "politics",
+    titleHi: "राजनीति",
+    titleEn: "Politics",
+    color: "#b91c1c", // Crimson red
+    moreHref: "/category/politics",
+    match: (s) => {
+      const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
+      return /politic|राजनीति|election|चुनाव|bjp|congress|विधानसभा|assembly|minister|mantri|governance|सरकार|cm|mla|party|सदन/i.test(text);
+    },
+  },
+  {
+    key: "crime",
+    titleHi: "अपराध",
+    titleEn: "Crime & Law",
+    color: "#c2410c", // Deep orange
+    moreHref: "/category/crime",
+    match: (s) => {
+      const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
+      return /crime|अपराध|police|पुलिस|arrest|गिरफ्तार|murder|हत्या|हादसा|accident|court|कोर्ट|scam|ghotala|घोटाला|smuggling|तस्करी|fraud|कांड/i.test(text);
+    },
+  },
+  {
+    key: "national",
+    titleHi: "राष्ट्रीय",
+    titleEn: "National",
+    color: "#0369a1", // Navy blue
+    moreHref: "/category/national",
+    match: (s) => {
+      const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
+      if (/entertainment|मनोरंजन|bollywood|cinema|सिनेमा|फिल्म|नाट्य|रंगमंच|ott|sport|खेल|cricket|क्रिकेट|हॉकी|hockey|रणजी/i.test(text)) {
+        return false;
+      }
+      return /india|national|देश|राष्ट्रीय|delhi|दिल्ली|parliament|संसद|pm|modi|centre|केंद्|supreme court|सुप्रीम कोर्ट|bharat/i.test(text);
+    },
+  },
+  {
+    key: "international",
+    titleHi: "अंतरराष्ट्रीय",
+    titleEn: "World News",
+    color: "#0d9488", // Teal
+    moreHref: "/category/international",
+    match: (s) => {
+      const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
+      return /world|international|विदेश|अंतरराष्ट्रीय|global|un|us|usa|china|russia|ukraine|israel|iran|war|युद्ध/i.test(text);
+    },
+  },
+  {
+    key: "entertainment",
+    titleHi: "मनोरंजन",
+    titleEn: "Entertainment",
+    color: "#7c3aed", // Violet
+    moreHref: "/category/entertainment",
+    match: (s) => {
+      const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
+      return /entertainment|मनोरंजन|bollywood|cinema|सिनेमा|फिल्म|movie|ott|celebrity|actress|actor|trailer|गाना|संगीत|नाट्य|रंगमंच/i.test(text);
+    },
+  },
+  {
+    key: "sports",
+    titleHi: "खेल",
+    titleEn: "Sports",
+    color: "#15803d", // Emerald green
+    moreHref: "/category/sports",
+    match: (s) => {
+      const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
+      return /sport|खेल|cricket|क्रिकेट|football|फुटबॉल|hockey|हॉकी|olympic|match|मैच|ipl|tournament|medal|खिलाड़ी/i.test(text);
+    },
+  },
+];
+
 /**
- * Rebuilt Jan Darpan App Home — Broad Platform Content Discovery.
+ * Jan Darpan Master Digital Newspaper Front Page.
  *
- * Requirements:
- * - Presents all eligible articles available in the platform using approved visual system.
- * - Clean app-style hierarchy: Hero lead + continuous discovery stream of news cards.
- * - Approved news cards retain: real clean image, headline, district/category, time, source.
- * - Strict media quality: NEVER display mockups, AI images, stock, placeholders, or broken images.
- * - Inline Durg Solar Ad inserted after every 3 news articles.
- * - ZERO website footers. Canonical Live header.
+ * Implements strict editorial information architecture:
+ * 1. मुख्य खबरें (Hero / Main News Lead + 2-3 Supporting Articles)
+ * 2. Dedicated Reader Priority Sections (राजनीति, अपराध, राष्ट्रीय, अंतरराष्ट्रीय, मनोरंजन, खेल)
+ *    Each section has: Section Header with visual divider -> Section Main Story -> 2-4 Supporting Articles
+ * 3. તાज़ा खबरें / More Latest Stream
+ * 4. Durg Solar inline ad placement
+ * 5. Strictly ZERO Finance as primary section
+ * 6. Strictly ZERO mockups, AI images, stock, or broken placeholders.
  */
 export function ReaderHomepage({
   feed,
   allArticles = [],
 }: ReaderHomepageProps) {
-  const { locale, t } = useJdDsT();
+  const { locale } = useJdDsT();
 
   // Combine and deduplicate all eligible articles from feed and platform inventory
   const eligibleStories: ReaderStory[] = useMemo(() => {
@@ -74,11 +154,49 @@ export function ReaderHomepage({
     return out;
   }, [feed, allArticles]);
 
-  const lead = eligibleStories[0] ?? null;
-  const rest = eligibleStories.slice(1);
+  // Editorial Section Partitioning (Guarantees zero story duplication across sections)
+  const { topLead, topSupporting, sectionsData, remainingStories } = useMemo(() => {
+    const usedSlugs = new Set<string>();
 
-  const pageTitle = locale === "en" ? "Home" : "होम";
-  const sectionTitle = locale === "en" ? "Platform News Discovery" : "ताज़ा सत्यापित समाचार";
+    const topLead = eligibleStories[0] ?? null;
+    if (topLead) usedSlugs.add(topLead.slug);
+
+    const topSupporting: ReaderStory[] = [];
+    for (let i = 1; i < eligibleStories.length && topSupporting.length < 3; i++) {
+      const s = eligibleStories[i];
+      if (!usedSlugs.has(s.slug)) {
+        usedSlugs.add(s.slug);
+        topSupporting.push(s);
+      }
+    }
+
+    const sectionsData: Array<{
+      def: EditorialSectionDef;
+      lead: ReaderStory;
+      supporting: ReaderStory[];
+    }> = [];
+
+    for (const def of EDITORIAL_SECTIONS) {
+      const matching = eligibleStories.filter((s) => !usedSlugs.has(s.slug) && def.match(s));
+      if (matching.length > 0) {
+        const secLead = matching[0];
+        usedSlugs.add(secLead.slug);
+        const secSupporting = matching.slice(1, 4);
+        secSupporting.forEach((s) => usedSlugs.add(s.slug));
+        sectionsData.push({
+          def,
+          lead: secLead,
+          supporting: secSupporting,
+        });
+      }
+    }
+
+    const remainingStories = eligibleStories.filter((s) => !usedSlugs.has(s.slug));
+
+    return { topLead, topSupporting, sectionsData, remainingStories };
+  }, [eligibleStories]);
+
+  const seeAllText = locale === "en" ? "See all ›" : "सभी देखें ›";
 
   return (
     <ReaderShell activeNav="home">
@@ -91,104 +209,123 @@ export function ReaderHomepage({
         style={{
           flex: 1,
           background: "var(--jd-paper)",
-          padding: "16px 14px 40px",
+          padding: "16px 14px 48px",
           maxWidth: 960,
           margin: "0 auto",
           width: "100%",
           boxSizing: "border-box",
         }}
       >
-        {/* App-style Page Identification Header */}
-        <header
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            justifyContent: "space-between",
-            paddingBottom: 12,
-            marginBottom: 16,
-            borderBottom: "1.5px solid var(--jd-line)",
-          }}
-        >
-          <div>
-            <h1
-              className="jd-serif"
-              style={{
-                margin: 0,
-                fontSize: "clamp(22px, 3.2vw, 28px)",
-                fontWeight: 800,
-                color: "var(--jd-ink)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              {pageTitle}
-            </h1>
-            <p
-              className="jd-ui"
-              style={{
-                margin: "4px 0 0",
-                fontSize: 13,
-                color: "var(--jd-muted)",
-              }}
-            >
-              {sectionTitle}
-            </p>
-          </div>
-          <span
-            className="jd-ui"
-            style={{
-              fontSize: 12,
-              fontWeight: 700,
-              color: "var(--jd-red)",
-            }}
-          >
-            {eligibleStories.length} {locale === "en" ? "Stories" : "सत्यापित खबरें"}
-          </span>
-        </header>
-
-        {/* Lead Story Card (Story #1) */}
-        {lead ? (
-          <div style={{ marginBottom: 20 }}>
-            <LeadStory story={lead} priority={true} />
-          </div>
-        ) : null}
-
-        {/* Continuous Discovery Stream with Inline Commercial Insertion after every 3 articles */}
-        <div className="jd-home-feed" data-testid="jd-home-feed">
+        {/* 1. TOP EDITORIAL PACKAGE — मुख्य खबरें */}
+        <section aria-labelledby="top-stories-heading" style={{ marginBottom: 28 }}>
           <SectionHeader
-            title={locale === "en" ? "All Stories" : "सभी समाचार"}
+            title={locale === "en" ? "Top Stories" : "मुख्य खबरें"}
+            color="var(--jd-red)"
             moreHref="/latest"
-            moreLabel={locale === "en" ? "Taza ›" : "ताज़ा ›"}
+            moreLabel={locale === "en" ? "Taza ›" : "ताज़ा खबरें ›"}
           />
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 0,
-            }}
-          >
-            {rest.map((story, i) => {
-              // 1-indexed count in feed (lead is Story #1, so rest starts at #2)
-              const storyIndex = lead ? i + 2 : i + 1;
-              const showAdAfter = storyIndex % 3 === 0;
+          {topLead ? (
+            <div style={{ marginBottom: 16 }}>
+              <LeadStory story={topLead} priority={true} />
+            </div>
+          ) : null}
 
-              return (
-                <React.Fragment key={story.slug}>
-                  <SecondaryStory
-                    story={story}
-                    last={i === rest.length - 1}
-                    toneIndex={i}
-                  />
+          {topSupporting.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {topSupporting.map((story, i) => (
+                <SecondaryStory
+                  key={story.slug}
+                  story={story}
+                  last={i === topSupporting.length - 1}
+                  toneIndex={i}
+                />
+              ))}
+            </div>
+          ) : null}
+        </section>
 
-                  {/* Inline Durg Solar Ad Insertion after every 3 news articles */}
-                  {showAdAfter && (
-                    <DurgSolarInlineAd index={Math.floor(storyIndex / 3)} />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
+        {/* Commercial break 1: Durg Solar Sponsor Slot */}
+        <div style={{ margin: "20px 0" }}>
+          <DurgSolarInlineAd index={0} />
         </div>
+
+        {/* 2. CANONICAL PRIORITY EDITORIAL SECTIONS */}
+        {sectionsData.map((sec, secIdx) => {
+          const title = locale === "en" ? sec.def.titleEn : sec.def.titleHi;
+          return (
+            <React.Fragment key={sec.def.key}>
+              <section
+                aria-labelledby={`section-heading-${sec.def.key}`}
+                style={{ marginBottom: 32 }}
+                data-testid={`jd-home-section-${sec.def.key}`}
+              >
+                <SectionHeader
+                  title={title}
+                  color={sec.def.color}
+                  moreHref={sec.def.moreHref}
+                  moreLabel={seeAllText}
+                />
+
+                {/* Section Hero Lead */}
+                <div style={{ marginBottom: 14 }}>
+                  <LeadStory story={sec.lead} />
+                </div>
+
+                {/* Section Supporting Stories (2-4 articles) */}
+                {sec.supporting.length > 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    {sec.supporting.map((story, i) => (
+                      <SecondaryStory
+                        key={story.slug}
+                        story={story}
+                        last={i === sec.supporting.length - 1}
+                        toneIndex={i}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+
+              {/* Commercial break 2: Inserted after the 2nd editorial section */}
+              {secIdx === 1 ? (
+                <div style={{ margin: "24px 0" }}>
+                  <DurgSolarInlineAd index={1} />
+                </div>
+              ) : null}
+            </React.Fragment>
+          );
+        })}
+
+        {/* 3. MORE LATEST STORIES & CONTINUOUS DISCOVERY */}
+        {remainingStories.length > 0 ? (
+          <section aria-labelledby="more-headlines-heading" style={{ marginTop: 24 }}>
+            <SectionHeader
+              title={locale === "en" ? "More Headlines" : "ताज़ा खबरें और अन्य सुर्खियां"}
+              color="var(--jd-navy)"
+              moreHref="/latest"
+              moreLabel={locale === "en" ? "All Latest ›" : "सभी ताज़ा ›"}
+            />
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {remainingStories.slice(0, 15).map((story, i) => {
+                const showAdAfter = (i + 1) % 4 === 0;
+                return (
+                  <React.Fragment key={story.slug}>
+                    <SecondaryStory
+                      story={story}
+                      last={i === Math.min(remainingStories.length, 15) - 1}
+                      toneIndex={i}
+                    />
+                    {showAdAfter && (
+                      <DurgSolarInlineAd index={Math.floor((i + 1) / 4) + 2} />
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
       </main>
     </ReaderShell>
   );

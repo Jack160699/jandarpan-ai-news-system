@@ -54,3 +54,29 @@ describe("image-url-validation", () => {
     expect(bad.ok).toBe(false);
   });
 });
+
+describe("third-party-branding-hard-ban", () => {
+  it("strictly rejects Amar Ujala URLs and assets", async () => {
+    const { hasVerifiedRealMedia } = await import("@/lib/news/images/validate");
+    expect(hasVerifiedRealMedia("https://img.amarujala.com/upload/2026/09/photo.jpg")).toBe(false);
+    expect(hasVerifiedRealMedia("https://www.amarujala.com/assets/breaking.jpg")).toBe(false);
+    expect(hasVerifiedRealMedia("https://cdn.example.com/amarujala-photo.webp")).toBe(false);
+  });
+
+  it("strictly rejects competing TV channel bugs, lower thirds, anchors and watermarks", async () => {
+    const { hasVerifiedRealMedia } = await import("@/lib/news/images/validate");
+    expect(hasVerifiedRealMedia("https://ibc24.in/images/breaking-news.jpg")).toBe(false);
+    expect(hasVerifiedRealMedia("https://cdn.example.com/cg-news/channel-bug.jpg")).toBe(false);
+    expect(hasVerifiedRealMedia("https://cdn.example.com/cg-news/lower-third.png")).toBe(false);
+    expect(hasVerifiedRealMedia("https://cdn.example.com/tv-anchor-speaking.jpg")).toBe(false);
+    expect(hasVerifiedRealMedia("https://cdn.example.com/watermark-preview.jpg")).toBe(false);
+    expect(hasVerifiedRealMedia("https://cdn.example.com/studio-screen-broadcast.jpg")).toBe(false);
+  });
+
+  it("permits authentic unbranded news photographs", async () => {
+    const { hasVerifiedRealMedia } = await import("@/lib/news/images/validate");
+    expect(hasVerifiedRealMedia("https://images.livemint.com/img/2026/09/raipur-ground-report.jpg?w=800&h=600")).toBe(true);
+    expect(hasVerifiedRealMedia("https://images.thehindu.com/news/national/chhattisgarh-assembly-building.jpg?w=800&h=600")).toBe(true);
+  });
+});
+

@@ -23,7 +23,6 @@ import { ArticleShareBar } from "./components/ArticleShareBar";
 import { ArticleActionBar } from "./components/ArticleActionBar";
 import { ArticleShareRail } from "../components/ArticleShareRail";
 
-import { AudioInline } from "./components/AudioInline";
 import { Byline } from "./components/Byline";
 import { ExplainerBody } from "./components/ExplainerBody";
 import { KeyPoints } from "./components/KeyPoints";
@@ -40,6 +39,7 @@ import { OfflineDownloadControl } from "../offline/OfflineDownloadControl";
 import { ContinuingCoverageTimeline } from "./components/ContinuingCoverageTimeline";
 import { FollowStoryButton } from "../engagement/FollowStoryButton";
 import { WhatChangedPanel } from "../engagement/WhatChangedPanel";
+import type { EditorialMediaRightsStatus } from "@/lib/media/media-record";
 import type { ReaderArticleModel } from "./types";
 
 function storyAsLiveEntries(model: ReaderArticleModel): LiveBlogEntry[] {
@@ -288,7 +288,7 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
         hideBottomNav={hideBottomNav}
         bottomPad={showShareBar ? 64 : 72}
       >
-        <Masthead back backHref="/" pageTitle={pageTitle} />
+        <Masthead back backHref="/home" pageTitle={pageTitle} />
         <DesktopPrimaryNav
           active={
             variant === "breaking" || variant === "no-image" ? "latest" : "home"
@@ -307,13 +307,6 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
           <div className="jd-article-main">
             {variant === "standard" || isOpinionLike ? <ArticleShareRail /> : null}
             <div className="jd-article-body-wrapper">
-          {variant === "video" ? (
-            <VideoPlayer
-              imageUrl={imageUrl}
-              alt={headline}
-              durationLabel={readTime}
-            />
-          ) : null}
 
           <article style={padStyle}>
             {variant === "explainer" ? (
@@ -359,7 +352,6 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
             {variant !== "breaking" &&
             variant !== "explainer" &&
             variant !== "sponsored" &&
-            variant !== "video" &&
             variant !== "no-image" ? (
               <Byline
                 author={author}
@@ -369,8 +361,22 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
               />
             ) : null}
 
-            {/* Hero Image */}
-            {variant !== "no-image" && imageUrl ? (
+            {/* Exactly ONE Hero Image / Media: Never render twice */}
+            {variant === "video" && imageUrl ? (
+              <div style={{ margin: "14px 0 16px" }}>
+                <VideoPlayer
+                  imageUrl={imageUrl}
+                  alt={headline}
+                  durationLabel={readTime}
+                />
+                <StoryMediaAttribution
+                  credit={article.source ?? undefined}
+                  sourceUrl={article.article_url ?? undefined}
+                  caption={imageCaption ?? undefined}
+                  rightsStatus={article.media_rights_status ?? ((editorialMeta as Record<string, unknown> | undefined)?.media_rights_status as EditorialMediaRightsStatus | null | undefined)}
+                />
+              </div>
+            ) : variant !== "no-image" && imageUrl ? (
               <div style={{ margin: "14px 0 16px" }}>
                 <ArticleImage
                   src={imageUrl}
@@ -383,7 +389,7 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
                   credit={article.source ?? undefined}
                   sourceUrl={article.article_url ?? undefined}
                   caption={imageCaption ?? undefined}
-                  rightsStatus={article.media_rights_status ?? (editorialMeta as any)?.media_rights_status}
+                  rightsStatus={article.media_rights_status ?? ((editorialMeta as Record<string, unknown> | undefined)?.media_rights_status as EditorialMediaRightsStatus | null | undefined)}
                 />
               </div>
             ) : variant === "no-image" ? (
@@ -427,11 +433,11 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
 
             {/* Official Video Embed if present */}
             {(() => {
-              const videos = article.embedded_video || (editorialMeta as any)?.embedded_video || [];
+              const videos = article.embedded_video || ((editorialMeta as Record<string, unknown> | undefined)?.embedded_video as unknown[]) || [];
               if (Array.isArray(videos) && videos.length > 0 && videos[0]) {
                 return (
                   <div style={{ marginBottom: 16 }}>
-                    <VideoEmbed video={videos[0]} />
+                    <VideoEmbed video={videos[0] as Parameters<typeof VideoEmbed>[0]["video"]} />
                   </div>
                 );
               }

@@ -52,6 +52,17 @@ export function BottomNav({
     return it;
   });
 
+  // Resolve effective active tab from prop or current pathname
+  const effectiveActive = active ?? (() => {
+    if (!pathname) return "home";
+    if (pathname === "/" || pathname === "/live" || pathname.startsWith("/live/")) return "live";
+    if (pathname === "/district" || pathname.startsWith("/district/")) return "district";
+    if (pathname === "/latest" || pathname.startsWith("/latest/")) return "latest";
+    if (pathname === "/profile" || pathname.startsWith("/profile/")) return "profile";
+    if (pathname === "/home" || pathname.startsWith("/home/")) return "home";
+    return null;
+  })();
+
   return (
     <nav
       className={`jd-bottom-nav ${dark ? "jd-bottom-nav--dark" : ""}`}
@@ -61,12 +72,11 @@ export function BottomNav({
       data-jd-nav-count={String(items.length)}
     >
       {items.map((it) => {
-        const on = active != null && it.key === active;
+        const on = effectiveActive != null && it.key === effectiveActive;
         return (
           <Link
             key={it.key}
             href={it.href}
-            prefetch={false}
             aria-current={on ? "page" : undefined}
             data-jd-nav-key={it.key}
             title={it.label}

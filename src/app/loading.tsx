@@ -10,7 +10,7 @@ import { LoadingSkeleton } from "@/features/reader-ds/system";
 
 export default function RootLoading() {
   if (isReaderDesignSystemEnabled()) {
-    return <LoadingSkeleton />;
+    return <LoadingSkeleton activeNav="home" />;
   }
 
   const name = JAN_DARPAN_CHHATTISGARH_TENANT.branding.nameHi;

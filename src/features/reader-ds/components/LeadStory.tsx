@@ -7,7 +7,7 @@ import { hindiRelativeTime, storyHref, type ReaderStory } from "../utils";
 export function LeadStory({ story, priority = true }: { story: ReaderStory; priority?: boolean }) {
   const time = story.timeLabel ?? hindiRelativeTime(story.publishedAt);
   return (
-    <article style={{ padding: "10px 14px 4px" }}>
+    <article style={{ padding: "10px 14px 4px" }} data-testid="jd-lead-story">
       <Link href={storyHref(story.slug)} prefetch={priority} style={{ display: "block", color: "inherit", textDecoration: "none" }}>
         <ArticleImage
           src={story.imageUrl}
