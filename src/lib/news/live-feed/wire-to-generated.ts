@@ -5,6 +5,7 @@
 import { buildArticleSlug } from "@/lib/news/slug";
 import type { NormalizedArticle } from "@/lib/news/types";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+import type { MediaRecord } from "@/lib/media/media-record";
 import { createHash } from "crypto";
 
 function stableId(article: NormalizedArticle): string {
@@ -27,6 +28,30 @@ export function wireArticleToGeneratedRow(
       `${article.title} ${article.description ?? ""}`
     );
 
+  let mediaUrl =
+    article.image_url ||
+    article.media_records?.[0]?.media_url ||
+    article.media_records?.[0]?.source_url ||
+    article.media_records?.[0]?.thumbnail_url ||
+    article.embedded_video?.[0]?.thumbnailUrl ||
+    null;
+
+  if (mediaUrl && mediaUrl.startsWith("http://")) {
+    mediaUrl = mediaUrl.replace(/^http:\/\//i, "https://");
+  }
+
+  const heroMedia: MediaRecord | null = mediaUrl
+    ? {
+        source_url: mediaUrl,
+        media_url: mediaUrl,
+        media_type: "image",
+        thumbnail_url: mediaUrl,
+        discovered_at: published,
+        rights_status: "publisher_authorized",
+        usage_method: "direct_display",
+      }
+    : null;
+
   return {
     id,
     event_id: null,
@@ -34,7 +59,7 @@ export function wireArticleToGeneratedRow(
     headline: article.title,
     summary: article.description?.trim() || article.title,
     article_body: article.content?.trim() || article.description?.trim() || null,
-    hero_image_url: article.image_url,
+    hero_image_url: mediaUrl,
     seo_title: article.title,
     seo_description: article.description?.trim() || null,
     reading_time: "3",
@@ -48,6 +73,9 @@ export function wireArticleToGeneratedRow(
       ai_confidence: 0.38,
       used_fallback: false,
       source_count: 1,
+      hero_media: heroMedia,
+      media_source_url: mediaUrl,
+      embedded_video: article.embedded_video,
       source_attribution: [
         {
           signal_id: id,

@@ -32,7 +32,11 @@ const KNOWN_BROKEN_IMAGE_RE =
   /photo-1529107386315-e1a269ed48e0|photo-1449824913935-59a10b8d2000/i;
 
 const LOGO_ICON_RE =
-  /\/(logo|icon|favicon|avatar|badge|sprite|emoji|button|banner-ad|ads?|advert|promo-thumb|brand-mark|app-icon|apple-touch)[\/._-]|logo\.|icon\.|favicon\.|\.svg(\?|$)|sprite|avatar-|profile-pic|apple-touch-icon/i;
+  /\/(logo|icon|favicon|avatar|sprite|emoji|banner-ad|ads?|advert|promo-thumb|brand-mark|app-icon|apple-touch)[\/._-]|logo\.|icon\.|favicon\.|\.svg(\?|$)|sprite|avatar-|profile-pic|apple-touch-icon/i;
+
+/** Generic provider logos that lack editorial news photograph content */
+const GENERIC_PROVIDER_LOGO_RE =
+  /googleusercontent\.com\/J6_coFbogxh|gstatic\.com\/images/i;
 
 /** Jan Darpan brand / OG / social lockups must never be editorial story media. */
 const BRAND_ASSET_RE =
@@ -44,10 +48,22 @@ const TRACKING_PIXEL_RE =
 const AD_RE =
   /\/ad[sx]?[\/._-]|doubleclick|googlesyndication|adserver|taboola|outbrain|sponsored/i;
 
-const MIN_WIDTH = 320;
-const MIN_HEIGHT = 180;
-const MIN_ASPECT = 0.45;
-const MAX_ASPECT = 2.4;
+const MIN_WIDTH = 120;
+const MIN_HEIGHT = 90;
+const MIN_ASPECT = 0.3;
+const MAX_ASPECT = 3.2;
+
+export function ensureHttpsImageUrl(url: string): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (trimmed.startsWith("http://")) {
+    return trimmed.replace(/^http:\/\//i, "https://");
+  }
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`;
+  }
+  return trimmed;
+}
 
 export function parseDimensionsFromUrl(url: string): { width?: number; height?: number } {
   try {
@@ -88,8 +104,8 @@ export function isRejectedImageUrl(url: string): { rejected: boolean; reason?: s
 
   try {
     const parsed = new URL(trimmed);
-    if (parsed.protocol === "http:") {
-      return { rejected: true, reason: "http_not_https" };
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return { rejected: true, reason: "invalid_protocol" };
     }
   } catch {
     return { rejected: true, reason: "malformed_url" };
@@ -101,6 +117,10 @@ export function isRejectedImageUrl(url: string): { rejected: boolean; reason?: s
 
   if (KNOWN_BROKEN_IMAGE_RE.test(lower)) {
     return { rejected: true, reason: "known_broken" };
+  }
+
+  if (GENERIC_PROVIDER_LOGO_RE.test(lower)) {
+    return { rejected: true, reason: "generic_provider_logo" };
   }
 
   if (BRAND_ASSET_RE.test(lower)) {

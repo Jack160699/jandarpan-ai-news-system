@@ -355,11 +355,9 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           </picture>
         </div>
 
-        {/* Layer 1.5: Channel Bug / Logo in upper-right */}
-        <div className="jdl-tv__channel-bug" aria-hidden="true">
-          <span className="jdl-tv__channel-bug-dot" />
-          <span className="jdl-tv__channel-bug-name">जन दर्पण</span>
-          <span className="jdl-tv__channel-bug-tag">LIVE</span>
+        {/* Layer 1.5: Channel Watermark in upper-right — ONLY Jan Darpan branding */}
+        <div className="jdl-tv__channel-watermark" aria-hidden="true">
+          <span className="jdl-tv__channel-watermark-name">जन दर्पण</span>
         </div>
 
         {/* Layer 2: Main dynamic story screen (dominant virtual broadcast display on left) */}
@@ -367,21 +365,40 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           <NewsScreen />
         </div>
 
-        {/* Sound Unlock Prompt (Minimal, non-intrusive when muted by autoplay policy) */}
-        {isMuted && isPlaying && (
-          <button
-            type="button"
-            className="jdl-tv__sound-unlock"
-            onClick={(e) => {
-              e.stopPropagation();
-              setMuted(false);
-            }}
-            aria-label={language === "hi" ? "आवाज़ चालू करें" : "Turn on audio"}
-          >
-            <span className="jdl-tv__sound-unlock-icon" aria-hidden="true">🔊</span>
-            <span>{language === "hi" ? "आवाज़ चालू करें" : "Tap for Sound"}</span>
-          </button>
-        )}
+        {/* Dedicated Audio Control in LOWER-LEFT OF THE TV (Immediately above मुख्य खबर strip) */}
+        <button
+          type="button"
+          className={`jdl-tv__audio-btn ${isMuted ? "jdl-tv__audio-btn--muted" : "jdl-tv__audio-btn--active"}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setMuted(!isMuted);
+          }}
+          aria-label={
+            isMuted
+              ? (language === "hi" ? "आवाज़ चालू करें" : "Unmute broadcast")
+              : (language === "hi" ? "म्यूट करें" : "Mute broadcast")
+          }
+          title={isMuted ? "Unmute" : "Mute"}
+          data-testid="jdl-lower-left-audio-btn"
+        >
+          {isMuted ? (
+            <>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M11 5L6 9H2v6h4l5 4V5z" fill="currentColor" stroke="none" />
+                <line x1="23" y1="9" x2="17" y2="15" />
+                <line x1="17" y1="9" x2="23" y2="15" />
+              </svg>
+              <span className="jdl-tv__audio-btn-text">
+                {language === "hi" ? "आवाज़ चालू करें" : "Tap to unmute"}
+              </span>
+            </>
+          ) : (
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+            </svg>
+          )}
+        </button>
 
         {/* Layer 2.5: CENTERED ICON-ONLY CONTROLS INSIDE TV WHEN PAUSED */}
         {!isPlaying && (

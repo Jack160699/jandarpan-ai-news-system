@@ -3,3 +3,4 @@ import "./styles/tokens.css";
 import "./styles/typography.css";
 import "./styles/responsive.css";
 import "./styles/engagement.css";
+import "./styles/bottom-nav.css";

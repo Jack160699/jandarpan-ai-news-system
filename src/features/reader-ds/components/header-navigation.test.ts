@@ -113,10 +113,11 @@ describe("masthead header actions", () => {
     expect(src).toContain("height: AVATAR_SIZE");
   });
 
-  it("does not duplicate account control in bottom nav", () => {
+  it("includes profile control in bottom nav per approved navigation", () => {
     const keys = getPrimaryNavItems("hi").map((i) => i.key);
     expect(keys).not.toContain("more" as PrimaryNavKey);
-    expect(PRIMARY_NAV_ITEMS.every((i) => i.href !== "/archive")).toBe(true);
+    expect(keys).not.toContain("listen" as PrimaryNavKey);
+    expect(PRIMARY_NAV_ITEMS.some((i) => i.href === "/archive")).toBe(true);
   });
 });
 
@@ -129,17 +130,18 @@ describe("bottom navigation destinations", () => {
       "home",
       "district",
       "latest",
-      "listen",
+      "profile",
     ]);
     expect(items.map((i) => i.href)).toEqual([
       "/",
       "/home",
       "/district",
       "/latest",
-      "/listen",
+      "/archive",
     ]);
     expect(items.find((i) => i.key === "live")?.label).toBe("लाइव");
     expect(items.find((i) => i.key === "district")?.label).toBe("मेरा जिला");
+    expect(items.find((i) => i.key === "profile")?.label).toBe("प्रोफ़ाइल");
     expect(items.some((i) => i.href === "/shorts")).toBe(false);
   });
 
@@ -150,25 +152,21 @@ describe("bottom navigation destinations", () => {
       "home",
       "district",
       "latest",
-      "listen",
+      "profile",
     ]);
     expect(items.find((i) => i.key === "live")?.label).toBe("Live");
     expect(items.find((i) => i.key === "district")?.label).toBe("My District");
-    expect(items.find((i) => i.key === "listen")?.label).toBe("Listen");
+    expect(items.find((i) => i.key === "profile")?.label).toBe("Profile");
     expect(items.some((i) => /video/i.test(i.label))).toBe(false);
   });
 
-  it("BottomNav source has no Videos/More destination and even flex slots", () => {
+  it("BottomNav source has no Videos/More/Listen destination", () => {
     const src = readFileSync(join(__dirname, "../components/BottomNav.tsx"), "utf8");
     expect(src).not.toContain('key: "more"');
     expect(src).not.toContain('key: "videos"');
-    expect(src).not.toContain("/archive");
+    expect(src).not.toContain('key: "listen"');
     expect(src).not.toContain("/shorts");
-    expect(src).toContain("minHeight: 48");
     expect(src).toContain("aria-current");
-    expect(src).toContain("safe-area-inset-bottom");
-    expect(src).toContain("space-evenly");
-    expect(src).not.toContain("maxWidth: 88");
   });
 
   it("navItems source documents four-item behavior without Search/Videos duplication", () => {

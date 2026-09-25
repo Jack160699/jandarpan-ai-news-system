@@ -95,8 +95,12 @@ export function NewsScreen() {
 
   // Determine active media URL — Priority 1: Real article image
   const activeMediaUrl = useMemo(() => {
-    if (seg?.imageUrl && !imageError) {
-      return seg.imageUrl;
+    let img = seg?.imageUrl?.trim() || "";
+    if (img.startsWith("http://")) {
+      img = img.replace(/^http:\/\//i, "https://");
+    }
+    if (img && !imageError) {
+      return img;
     }
     if (fallbackMediaUrl && !fallbackError) {
       return fallbackMediaUrl;
@@ -137,11 +141,19 @@ export function NewsScreen() {
                   setAspectFit(ratio >= 1.45 && ratio <= 1.88 ? "cover" : "contain");
                 }
               }}
-              onError={() => {
+              onError={(e) => {
                 if (!imageError && seg?.imageUrl) {
-                  console.warn("[JanDarpan Live TV] Image load failed for story:", seg.id, activeMediaUrl);
+                  console.warn(
+                    "[JanDarpan Live TV] Source media load failed for story:",
+                    seg.id,
+                    "URL:",
+                    activeMediaUrl,
+                    "Error event:",
+                    e.type
+                  );
                   setImageError(true);
                 } else {
+                  console.warn("[JanDarpan Live TV] Fallback media load failed for story:", seg?.id, fallbackMediaUrl);
                   setFallbackError(true);
                 }
               }}

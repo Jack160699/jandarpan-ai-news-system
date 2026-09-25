@@ -22,6 +22,48 @@ function formatRelativeTime(dateStr?: string, lang: "hi" | "en" = "hi"): string 
   }
 }
 
+function QueueThumbnail({
+  src,
+  alt,
+}: {
+  src?: string;
+  alt: string;
+}) {
+  const [error, setError] = React.useState(false);
+  const normalizedSrc = React.useMemo(() => {
+    if (!src) return "";
+    let s = src.trim();
+    if (s.startsWith("http://")) s = s.replace(/^http:\/\//i, "https://");
+    return s;
+  }, [src]);
+
+  if (!normalizedSrc || error) {
+    return (
+      <div className="jdl-mobile-queue__thumb-ph">
+        <span style={{ fontSize: "9px", color: "var(--jd-muted, #94a3b8)", fontWeight: 700 }}>
+          जन दर्पण
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={normalizedSrc}
+      alt={alt}
+      fill
+      sizes="76px"
+      className="jdl-mobile-queue__thumb"
+      style={{ objectFit: "cover" }}
+      unoptimized
+      onError={() => {
+        console.warn("[MobileInteractiveQueue] Thumbnail failed to load:", normalizedSrc);
+        setError(true);
+      }}
+    />
+  );
+}
+
 /**
  * Mobile interactive story queue for Jan Darpan Live TV.
  *
@@ -136,19 +178,7 @@ export function MobileInteractiveQueue() {
               >
                 {/* Thumbnail */}
                 <div className="jdl-mobile-queue__thumb-wrap">
-                  {story.imageUrl ? (
-                    <Image
-                      src={story.imageUrl}
-                      alt=""
-                      fill
-                      sizes="76px"
-                      className="jdl-mobile-queue__thumb"
-                      style={{ objectFit: "cover" }}
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="jdl-mobile-queue__thumb-ph" />
-                  )}
+                  <QueueThumbnail src={story.imageUrl} alt="" />
                   {/* Overlay small play badge on thumbnail */}
                   <span className="jdl-mobile-queue__thumb-play" aria-hidden="true">
                     {isActive ? (

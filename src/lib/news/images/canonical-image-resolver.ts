@@ -49,17 +49,29 @@ export type CanonicalImageInput = {
   alt?: string | null;
 };
 
+function isStockOrFallbackUrl(url: string | null | undefined): boolean {
+  if (!url) return true;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("images.unsplash.com") ||
+    lower.includes("plus.unsplash.com") ||
+    lower.includes("source.unsplash.com") ||
+    lower.includes("pexels.com") ||
+    lower.includes("pixabay.com")
+  );
+}
+
 function isAcceptableUrl(url: string | null | undefined, topic?: string | null): boolean {
   if (!url?.trim()) return false;
-  if (!validateImageUrlShape(url).ok) return false;
-  if (isExpiredSignedUrl(url)) return false;
-  if (isRejectedImageUrl(url).rejected) return false;
+  const trimmed = url.trim();
+  if (!validateImageUrlShape(trimmed).ok) return false;
+  if (isExpiredSignedUrl(trimmed)) return false;
+  if (isRejectedImageUrl(trimmed).rejected) return false;
   // Unconditionally reject the legacy generic NYC city street skyscraper image
-  if (url.includes("photo-1449824913935-59a10b8d2000")) {
+  if (trimmed.includes("photo-1449824913935-59a10b8d2000")) {
     return false;
   }
   return true;
-
 }
 
 function pickPrimary(input: CanonicalImageInput): {
@@ -72,11 +84,23 @@ function pickPrimary(input: CanonicalImageInput): {
     { url: input.ogUrl, sourceType: "og" },
     { url: input.bodyImageUrl, sourceType: "body" },
   ];
+
+  // Pass 1: Prioritize genuine real news photos (non-stock, non-placeholder)
   for (const c of candidates) {
-    if (c.url && isAcceptableUrl(c.url, topic)) {
-      return { url: c.url, sourceType: c.sourceType };
+    if (c.url && !isStockOrFallbackUrl(c.url) && isAcceptableUrl(c.url, topic)) {
+      const fixedUrl = c.url.startsWith("http://") ? c.url.replace(/^http:\/\//i, "https://") : c.url;
+      return { url: fixedUrl, sourceType: c.sourceType };
     }
   }
+
+  // Pass 2: Fall back to verified contextual / stock imagery only if no real source photo exists
+  for (const c of candidates) {
+    if (c.url && isAcceptableUrl(c.url, topic)) {
+      const fixedUrl = c.url.startsWith("http://") ? c.url.replace(/^http:\/\//i, "https://") : c.url;
+      return { url: fixedUrl, sourceType: c.sourceType };
+    }
+  }
+
   return { url: null, sourceType: "contextual_fallback" };
 }
 

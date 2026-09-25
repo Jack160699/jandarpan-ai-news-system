@@ -217,6 +217,33 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       const distHi = districtRes.nameHi || (districtRes.isStatewide ? "राज्य डेस्क" : (a.categoryLabel || "राज्य डेस्क"));
       const distEn = districtRes.nameEn || (districtRes.isStatewide ? "State Desk" : (a.categoryLabel || "State Desk"));
 
+      const imgCandidates = [
+        (a as any).editorial_metadata?.media_source_url,
+        (a as any).editorial_metadata?.hero_media?.media_url,
+        (a as any).editorial_metadata?.hero_media?.source_url,
+        (a as any).editorial_metadata?.source_attribution?.[0]?.image_url,
+        (a as any).editorial_metadata?.embedded_video?.[0]?.thumbnailUrl,
+        a.imageUrl,
+        a.ogImageUrl,
+        (a as any).hero_image_url,
+      ];
+      let bestImg = "";
+      for (const c of imgCandidates) {
+        if (c && typeof c === "string" && c.trim()) {
+          const u = c.trim();
+          if (!u.includes("unsplash.com") && !u.includes("J6_coFbogxh") && !u.includes("placeholder")) {
+            bestImg = u;
+            break;
+          }
+        }
+      }
+      if (!bestImg) {
+        bestImg = (a.imageUrl || a.ogImageUrl || (a as any).hero_image_url || "").trim();
+      }
+      if (bestImg.startsWith("http://")) {
+        bestImg = bestImg.replace(/^http:\/\//i, "https://");
+      }
+
       queue.push({
         id: a.id,
         slug: a.slug,
@@ -224,7 +251,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
         headlineHi: hasDev ? a.headline : undefined,
         summary: a.summary || "",
         summaryHi: hasDev ? a.summary : undefined,
-        imageUrl: (a.imageUrl || a.ogImageUrl || (a as any).hero_image_url || "").trim(),
+        imageUrl: bestImg,
         categoryLabel: broadcastLang === "en" ? distEn : distHi,
         categoryLabelHi: distHi,
         district: broadcastLang === "en" ? distEn : distHi,

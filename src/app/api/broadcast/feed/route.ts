@@ -246,6 +246,77 @@ type BroadcastCandidate = {
   districtSlug: string | null;
 };
 
+function isStockOrGenericMediaUrl(url?: string | null): boolean {
+  if (!url) return true;
+  const l = url.toLowerCase();
+  return (
+    l.includes("images.unsplash.com") ||
+    l.includes("plus.unsplash.com") ||
+    l.includes("source.unsplash.com") ||
+    l.includes("pexels.com") ||
+    l.includes("pixabay.com") ||
+    l.includes("googleusercontent.com/j6_cofbogxh") ||
+    l.includes("photo-1529107386315") ||
+    l.includes("photo-1449824913935") ||
+    l.includes("via.placeholder.com") ||
+    l.includes("default.jpg") ||
+    l.startsWith("data:")
+  );
+}
+
+function resolveCandidateMediaUrl(
+  primary?: string | null,
+  meta?: any,
+  row?: any
+): string {
+  const candidates: Array<string | null | undefined> = [
+    primary,
+    meta?.media_source_url,
+    meta?.hero_media?.media_url,
+    meta?.hero_media?.source_url,
+    meta?.hero_media?.thumbnail_url,
+    meta?.source_attribution?.[0]?.image_url,
+    meta?.source_attribution?.[0]?.source_image,
+    meta?.embedded_video?.[0]?.thumbnailUrl,
+    meta?.embedded_video?.[0]?.thumbnail_url,
+    row?.media_records?.[0]?.media_url,
+    row?.media_records?.[0]?.source_url,
+    row?.media_records?.[0]?.thumbnail_url,
+    row?.source_image,
+    row?.thumbnail_url,
+    row?.hero_image_url,
+    meta?.image?.hero_url,
+    meta?.image?.sourceUrl,
+    meta?.image?.og_url,
+    row?.image_url,
+    row?.og_image_url,
+  ];
+
+  // 1. First pass: genuine non-stock real news photo
+  for (const c of candidates) {
+    if (c && typeof c === "string" && c.trim()) {
+      let u = c.trim();
+      if (u.startsWith("http://")) u = u.replace(/^http:\/\//i, "https://");
+      if (!isStockOrGenericMediaUrl(u)) {
+        return u;
+      }
+    }
+  }
+
+  // 2. Second pass: fallback if no genuine news photo found
+  for (const c of candidates) {
+    if (c && typeof c === "string" && c.trim()) {
+      let u = c.trim();
+      if (u.startsWith("http://")) u = u.replace(/^http:\/\//i, "https://");
+      if (!u.includes("placeholder") && !u.startsWith("data:") && !u.includes("J6_coFbogxh")) {
+        return u;
+      }
+    }
+  }
+
+  return "";
+}
+
 function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
   const districtRes = resolveCanonicalStoryDistrict({
     explicitDistrict: a.districtSlug || a.district,
@@ -256,13 +327,19 @@ function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
     categoryLabel: a.categoryLabel,
   });
 
+  const rawImg = resolveCandidateMediaUrl(
+    a.imageUrl || a.ogImageUrl,
+    (a as any).editorial_metadata,
+    a
+  );
+
   return {
     id: a.id,
     slug: a.slug,
     headline: a.headline,
     summary: a.summary || "",
     articleBody: a.summary || "",
-    imageUrl: (a.imageUrl || a.ogImageUrl || (a as any).hero_image_url || "").trim(),
+    imageUrl: rawImg,
     section: a.section || "chhattisgarh",
     language: a.language || "hi",
     tags: a.tags || [],
@@ -291,16 +368,11 @@ function normalizeGeneratedRow(r: GeneratedArticleRow): BroadcastCandidate {
     section: sectionTag,
   });
 
-  const rawImg = (
-    r.hero_image_url ||
-    (r.editorial_metadata as any)?.image?.hero_url ||
-    (r.editorial_metadata as any)?.image?.sourceUrl ||
-    (r.editorial_metadata as any)?.image?.og_url ||
-    (r.editorial_metadata as any)?.media_source_url ||
-    (r as any).image_url ||
-    (r as any).og_image_url ||
-    ""
-  ).trim();
+  const rawImg = resolveCandidateMediaUrl(
+    r.hero_image_url,
+    r.editorial_metadata,
+    r
+  );
 
   return {
     id: r.id,
@@ -367,6 +439,7 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     finalImageUrl.includes("photo-1449824913935-59a10b8d2000") ||
     finalImageUrl.includes("via.placeholder.com") ||
     finalImageUrl.includes("default.jpg") ||
+    finalImageUrl.includes("J6_coFbogxh") ||
     finalImageUrl.startsWith("data:");
 
   if (isBannedOrBroken) {

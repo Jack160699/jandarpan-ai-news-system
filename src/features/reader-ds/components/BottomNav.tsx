@@ -8,9 +8,10 @@ import { getPrimaryNavItems, type PrimaryNavKey } from "./navItems";
 export type BottomNavKey = PrimaryNavKey;
 
 /**
- * Phone bottom navigation — four primary reading destinations.
- * Profile/More lives in the masthead; Search is header-only; Videos is not a tab.
- * Hidden at tablet+ via CSS (DeskChrome replaces phone chrome).
+ * Compact, theme-aware Jan Darpan bottom navigation dock.
+ * Approved 5 tabs: Live | Home | My District | Latest | Profile.
+ * Zero standing rectangular blocks, zero oversized boxes, strictly theme-aware.
+ * Hidden on tablet/desktop via CSS media queries.
  */
 export function BottomNav({
   active,
@@ -25,33 +26,14 @@ export function BottomNav({
 
   return (
     <nav
-      className="jd-bottom-nav"
+      className={`jd-bottom-nav ${dark ? "jd-bottom-nav--dark" : ""}`}
       aria-label={t("nav.aria")}
       data-testid="jd-bottom-nav"
       data-jd-locale={locale}
       data-jd-nav-count={String(items.length)}
-      style={{
-        position: "fixed",
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 50,
-        background: dark ? "#0a1220" : "#fff",
-        borderTop: dark ? "1px solid rgba(150,175,215,0.16)" : "1px solid var(--jd-line)",
-        display: "flex",
-        justifyContent: "space-evenly",
-        alignItems: "stretch",
-        width: "100%",
-        padding: "6px 2px max(8px, env(safe-area-inset-bottom))",
-      }}
     >
       {items.map((it) => {
         const on = active != null && it.key === active;
-        const color = on
-          ? "var(--jd-red)"
-          : dark
-            ? "#c7d0e2"
-            : "var(--jd-ink-2)";
         return (
           <Link
             key={it.key}
@@ -60,39 +42,18 @@ export function BottomNav({
             aria-current={on ? "page" : undefined}
             data-jd-nav-key={it.key}
             title={it.label}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 3,
-              flex: "1 1 0",
-              minWidth: 0,
-              minHeight: 48,
-              justifyContent: "center",
-              color,
-              padding: "4px 2px",
-              textDecoration: "none",
-            }}
+            className={`jd-bottom-nav__item ${on ? "is-active" : ""}`}
           >
-            <JdIcon
-              name={it.icon}
-              size={22}
-              stroke={jdIconStroke(22, on ? "active" : "regular")}
-              color={color}
-            />
-            <span
-              className="jd-ui jd-type-nav"
-              style={{
-                fontWeight: on ? 800 : 650,
-                textAlign: "center",
-                whiteSpace: "nowrap",
-                overflowX: "hidden",
-                overflowY: "visible",
-                textOverflow: "ellipsis",
-                maxWidth: "100%",
-                color,
-              }}
-            >
+            <span className="jd-bottom-nav__icon-wrap">
+              <JdIcon
+                name={it.icon}
+                size={20}
+                stroke={jdIconStroke(20, on ? "active" : "regular")}
+                color="currentColor"
+              />
+              {on && <span className="jd-bottom-nav__indicator" aria-hidden="true" />}
+            </span>
+            <span className="jd-bottom-nav__label jd-ui jd-type-nav">
               {it.label}
             </span>
           </Link>

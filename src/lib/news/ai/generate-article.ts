@@ -873,7 +873,25 @@ async function persistGeneratedArticle(input: {
     input.event.category ??
     input.signals.find((s) => s.category)?.category ??
     "world";
-  const hero_image_url = initialHeroPlaceholder(category, input.event.region);
+
+  let realSourceImageUrl: string | null = null;
+  for (const s of input.signals) {
+    const sAny = s as Record<string, any>;
+    const candidate =
+      s.image_url ||
+      sAny?.media_records?.[0]?.media_url ||
+      sAny?.media_records?.[0]?.source_url ||
+      sAny?.media_records?.[0]?.thumbnail_url;
+    if (candidate && isEditoriallyEligibleSourceImageUrl(candidate)) {
+      const trimmed = String(candidate).trim();
+      realSourceImageUrl = trimmed.startsWith("http://")
+        ? trimmed.replace(/^http:\/\//i, "https://")
+        : trimmed;
+      break;
+    }
+  }
+
+  const hero_image_url = realSourceImageUrl || initialHeroPlaceholder(category, input.event.region);
 
   const signalGeos = input.signals.map((s) =>
     tagGeoFromContent({

@@ -1,0 +1,148 @@
+/*
+ * Jan Darpan Bottom Navigation — Compact, Theme-Aware Mobile Dock
+ * Zero rectangular artifacts, zero oversized boxes, strictly theme-aware.
+ */
+
+.jd-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+  height: clamp(48px, 6.2vh, 52px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--jd-paper, #f7f4ec);
+  border-top: 1px solid var(--jd-line, #dcd5c5);
+  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Dark mode theme adaptation */
+.jd-ds[data-theme="dark"] .jd-bottom-nav,
+html[data-theme="dark"] .jd-bottom-nav,
+html.dark .jd-bottom-nav,
+.jd-bottom-nav--dark {
+  background: var(--jd-d-bg, #0e1626) !important;
+  border-top: 1px solid var(--jd-d-line, rgba(150, 175, 215, 0.16)) !important;
+  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.45);
+}
+
+/* Clean Nav Item — zero standing rectangular shapes, zero background wrappers */
+.jd-bottom-nav__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  padding: 3px 2px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  text-decoration: none;
+  color: var(--jd-ink-3, #6a6250);
+  transition: color 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.jd-bottom-nav__item:hover {
+  text-decoration: none;
+}
+
+.jd-bottom-nav__item:active {
+  transform: scale(0.94);
+}
+
+.jd-bottom-nav__item:focus-visible {
+  outline: 2px solid var(--jd-gold, #c19a3e);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+
+/* Dark mode item color */
+.jd-ds[data-theme="dark"] .jd-bottom-nav__item,
+html[data-theme="dark"] .jd-bottom-nav__item,
+html.dark .jd-bottom-nav__item,
+.jd-bottom-nav--dark .jd-bottom-nav__item {
+  color: var(--jd-d-muted, #93a4c2);
+}
+
+/* Active Item State — Clear accent color & weight */
+.jd-bottom-nav__item.is-active {
+  color: var(--jd-red, #9e1b22) !important;
+}
+
+.jd-ds[data-theme="dark"] .jd-bottom-nav__item.is-active,
+html[data-theme="dark"] .jd-bottom-nav__item.is-active,
+html.dark .jd-bottom-nav__item.is-active,
+.jd-bottom-nav--dark .jd-bottom-nav__item.is-active {
+  color: var(--jd-red-bright, #e8152f) !important;
+}
+
+/* Icon container - clean, no rectangular boxes or card frames */
+.jd-bottom-nav__icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* Active indicator dot */
+.jd-bottom-nav__indicator {
+  position: absolute;
+  top: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--jd-red, #9e1b22);
+  transition: opacity 0.15s ease;
+}
+
+.jd-ds[data-theme="dark"] .jd-bottom-nav__indicator,
+html[data-theme="dark"] .jd-bottom-nav__indicator,
+html.dark .jd-bottom-nav__indicator,
+.jd-bottom-nav--dark .jd-bottom-nav__indicator {
+  background: var(--jd-red-bright, #e8152f);
+}
+
+/* Label text */
+.jd-bottom-nav__label {
+  font-family: var(--jd-ff-ui, system-ui, sans-serif);
+  font-size: clamp(9.5px, 2.7vw, 11px);
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  letter-spacing: -0.01em;
+  margin-top: 1px;
+}
+
+.jd-bottom-nav__item.is-active .jd-bottom-nav__label {
+  font-weight: 800;
+}
+
+/* Hide on desktop/tablet where DeskChrome is active */
+@media (min-width: 768px) {
+  .jd-bottom-nav {
+    display: none !important;
+  }
+}

@@ -33,13 +33,27 @@ export function toReaderStory(a: HomeArticle, kicker?: string): ReaderStory {
         ? "राज्य डेस्क"
         : (a.categoryLabel || "राज्य डेस्क")));
 
-  let safeImageUrl = a.imageUrl;
-  if (
+  let safeImageUrl = (
+    a.imageUrl ||
+    a.ogImageUrl ||
+    (a as any).hero_image_url ||
+    (a as any).editorial_metadata?.media_source_url ||
+    (a as any).editorial_metadata?.hero_media?.media_url ||
+    ""
+  ).trim();
+
+  if (safeImageUrl.startsWith("http://")) {
+    safeImageUrl = safeImageUrl.replace(/^http:\/\//i, "https://");
+  }
+
+  const isBannedOrBroken =
     !safeImageUrl ||
-    safeImageUrl.includes("googleusercontent.com") ||
-    safeImageUrl.includes("google.com/news") ||
-    safeImageUrl.includes("placeholder")
-  ) {
+    safeImageUrl.includes("J6_coFbogxh") ||
+    safeImageUrl.includes("placeholder") ||
+    safeImageUrl.includes("default.jpg") ||
+    safeImageUrl.startsWith("data:");
+
+  if (isBannedOrBroken) {
     const semantic = detectSemanticTopic(a.headline + " " + (a.summary || ""));
     safeImageUrl = (semantic ? EDITORIAL_IMAGES[semantic as keyof typeof EDITORIAL_IMAGES] : null) || EDITORIAL_IMAGES.raipurCity;
   }
