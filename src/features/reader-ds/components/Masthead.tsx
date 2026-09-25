@@ -253,13 +253,13 @@ export function Masthead({
           </div>
         ) : null}
 
-        {!hideActions ? (
+        {!hideActions && !isHomeBrand ? (
           <nav
             className="jd-masthead__actions"
             aria-label={t("masthead.actionsAria")}
             data-testid="jd-masthead-actions"
             style={{
-              display: isHomeBrand ? "none" : "flex",
+              display: "flex",
               alignItems: "center",
               justifyContent: "flex-end",
               gap: 0,

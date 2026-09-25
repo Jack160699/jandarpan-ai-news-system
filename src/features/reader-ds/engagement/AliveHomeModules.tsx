@@ -110,17 +110,32 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
     const seen = new Set(excludeSlugs);
     const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
 
+    const CG_DISTRICT_LIST = new Set([
+      "durg", "bhilai", "raipur", "rajnandgaon", "bilaspur", "korba", "raigarh",
+      "bastar", "surguja", "jagdalpur", "ambikapur", "dhamtari", "mahasamund",
+      "kanker", "sukma", "dantewada", "bijapur", "narayanpur", "kondagaon",
+      "kabirdham", "balod", "bemetara", "gariaband", "balodabazar", "janjgir",
+      "champa", "jashpur", "korea", "manendragarh", "mohla", "sakti", "sarangarh", "khairagarh"
+    ]);
+
     const isCgStory = (a: any) => {
       const text = `${a.headline || ""} ${a.summary || ""}`.toLowerCase();
       const hlLower = (a.headline || "").toLowerCase();
-      const mentionsCg = [
-        "छत्तीसगढ़", "chhattisgarh", "chattisgarh",
-        "रायपुर", "raipur", "दुर्ग", "durg", "भिलाई", "bhilai",
-        "बिलासपुर", "bilaspur", "बस्तर", "bastar", "कोरबा", "korba",
-        "राजनंदगांव", "rajnandgaon", "रायगढ़", "raigarh", "अंबिकापुर", "जगदलपुर",
-        "कांकेर", "दंतेवाड़ा", "सुकमा", "धमतरी", "महासमुंद", "कबीरधाम", "बालोद",
-        "बेमेतरा", "विष्णु देव साय", "साय कैबिनेट", "महानदी"
-      ].some((sig) => text.includes(sig));
+      const dSlug = (a.districtSlug || a.district || "").toLowerCase();
+
+      const mentionsCg =
+        CG_DISTRICT_LIST.has(dSlug) ||
+        a.section === "chhattisgarh" ||
+        a.section === "raipur" ||
+        [
+          "छत्तीसगढ़", "chhattisgarh", "chattisgarh",
+          "रायपुर", "raipur", "दुर्ग", "durg", "भिलाई", "bhilai",
+          "बिलासपुर", "bilaspur", "बस्तर", "bastar", "कोरबा", "korba",
+          "राजनंदगांव", "rajnandgaon", "रायगढ़", "raigarh", "अंबिकापुर", "जगदलपुर",
+          "कांकेर", "दंतेवाड़ा", "सुकमा", "धमतरी", "महासमुंद", "कबीरधाम", "बालोद",
+          "बेमेतरा", "विष्णु देव साय", "साय कैबिनेट", "महानदी", "बीजापुर", "जांजगीर",
+          "बलौदाबाज़ार", "गरियाबंद", "कोरिया", "जशपुर"
+        ].some((sig) => text.includes(sig));
 
       if (!mentionsCg) return false;
 
