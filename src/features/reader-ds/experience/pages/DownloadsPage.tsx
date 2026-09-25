@@ -190,7 +190,7 @@ function DownloadsBody({ tracks }: { tracks: BriefingTrack[] }) {
 /** C25 — offline / downloaded audio. */
 export function DownloadsPage({ tracks }: { tracks: BriefingTrack[] }) {
   return (
-    <ReaderShell activeNav="listen" audioTracks={tracks}>
+    <ReaderShell activeNav={null} audioTracks={tracks}>
       <DownloadsBody tracks={tracks} />
     </ReaderShell>
   );

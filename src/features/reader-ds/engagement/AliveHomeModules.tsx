@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { useMemo, Fragment } from "react";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { buildDailyDarpan } from "@/lib/engagement/daily-darpan";
 import { buildLocalPulse } from "@/lib/engagement/local-pulse";
@@ -17,6 +17,7 @@ import { hasVerifiedRealMedia, extractVerifiedRealMediaUrl } from "@/lib/news/im
 import { SectionHeader } from "../components";
 import { DevelopingStoryTeaserCard } from "./DevelopingStoryTeaserCard";
 import { FormatStoryCard } from "./FormatStoryCard";
+import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
 
 const LocalPulseLazy = dynamic(
   () =>
@@ -271,45 +272,49 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
           </div>
 
           <div className="jd-fresh-col__list">
-            {freshStories.map((story) => (
-              <Link
-                key={story.slug}
-                href={`/story/${story.slug}`}
-                className="jd-fresh-col__item"
-                prefetch={false}
-              >
-                <div className="jd-fresh-col__thumb-wrap">
-                  {story.imageUrl && (
-                    <img
-                      src={story.imageUrl}
-                      alt=""
-                      className="jd-fresh-col__thumb"
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  )}
-                </div>
-                <div className="jd-fresh-col__body">
-                  <div className="jd-fresh-col__meta">
-                    <span className="jd-fresh-col__tag">
-                      {story.kicker && story.kicker !== "छत्तीसगढ़" && story.kicker !== "Chhattisgarh"
-                        ? story.kicker
-                        : locale === "en"
-                        ? "State Desk"
-                        : "राज्य डेस्क"}
-                    </span>
-                    {story.publishedAt && (
-                      <span className="jd-fresh-col__time">
-                        {formatStoryTime(story.publishedAt, locale)}
-                      </span>
+            {freshStories.map((story, idx) => (
+              <Fragment key={story.slug}>
+                <Link
+                  href={`/story/${story.slug}`}
+                  className="jd-fresh-col__item"
+                  prefetch={false}
+                >
+                  <div className="jd-fresh-col__thumb-wrap">
+                    {story.imageUrl && (
+                      <img
+                        src={story.imageUrl}
+                        alt=""
+                        className="jd-fresh-col__thumb"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
                     )}
                   </div>
-                  <h3 className="jd-fresh-col__headline">{story.headline}</h3>
-                </div>
-              </Link>
+                  <div className="jd-fresh-col__body">
+                    <div className="jd-fresh-col__meta">
+                      <span className="jd-fresh-col__tag">
+                        {story.kicker && story.kicker !== "छत्तीसगढ़" && story.kicker !== "Chhattisgarh"
+                          ? story.kicker
+                          : locale === "en"
+                          ? "State Desk"
+                          : "राज्य डेस्क"}
+                      </span>
+                      {story.publishedAt && (
+                        <span className="jd-fresh-col__time">
+                          {formatStoryTime(story.publishedAt, locale)}
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="jd-fresh-col__headline">{story.headline}</h3>
+                  </div>
+                </Link>
+                {(idx + 1) % 3 === 0 && (
+                  <DurgSolarInlineAd index={Math.floor((idx + 1) / 3)} />
+                )}
+              </Fragment>
             ))}
           </div>
         </div>

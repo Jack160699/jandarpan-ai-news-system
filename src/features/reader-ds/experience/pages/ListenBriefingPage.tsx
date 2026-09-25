@@ -288,7 +288,7 @@ export function ListenBriefingPage({
   autoPlay?: boolean;
 }) {
   return (
-    <ReaderShell activeNav="listen" audioTracks={tracks}>
+    <ReaderShell activeNav={null} audioTracks={tracks}>
       <ListenBody tracks={tracks} autoPlay={autoPlay} />
     </ReaderShell>
   );

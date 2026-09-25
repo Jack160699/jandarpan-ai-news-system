@@ -117,45 +117,46 @@ describe("masthead header actions", () => {
     const keys = getPrimaryNavItems("hi").map((i) => i.key);
     expect(keys).not.toContain("more" as PrimaryNavKey);
     expect(keys).not.toContain("listen" as PrimaryNavKey);
-    expect(PRIMARY_NAV_ITEMS.some((i) => i.href === "/archive")).toBe(true);
+    expect(PRIMARY_NAV_ITEMS.some((i) => i.href === "/profile")).toBe(true);
   });
 });
 
 describe("bottom navigation destinations", () => {
-  it("keeps primary reading destinations starting with Live then Home", () => {
+  it("keeps primary reading destinations in exact order Live -> District -> Home -> Taza -> Profile", () => {
     const items = getPrimaryNavItems("hi");
     expect(items).toHaveLength(5);
     expect(items.map((i) => i.key)).toEqual([
       "live",
-      "home",
       "district",
+      "home",
       "latest",
       "profile",
     ]);
     expect(items.map((i) => i.href)).toEqual([
       "/",
-      "/home",
       "/district",
+      "/home",
       "/latest",
-      "/archive",
+      "/profile",
     ]);
     expect(items.find((i) => i.key === "live")?.label).toBe("लाइव");
-    expect(items.find((i) => i.key === "district")?.label).toBe("मेरा जिला");
+    expect(items.find((i) => i.key === "latest")?.label).toBe("ताज़ा");
     expect(items.find((i) => i.key === "profile")?.label).toBe("प्रोफ़ाइल");
     expect(items.some((i) => i.href === "/shorts")).toBe(false);
   });
 
-  it("exposes English labels for the same routes", () => {
+  it("exposes English labels for the same routes including Taza", () => {
     const items = getPrimaryNavItems("en");
     expect(items.map((i) => i.key)).toEqual([
       "live",
-      "home",
       "district",
+      "home",
       "latest",
       "profile",
     ]);
     expect(items.find((i) => i.key === "live")?.label).toBe("Live");
     expect(items.find((i) => i.key === "district")?.label).toBe("My District");
+    expect(items.find((i) => i.key === "latest")?.label).toBe("Taza");
     expect(items.find((i) => i.key === "profile")?.label).toBe("Profile");
     expect(items.some((i) => /video/i.test(i.label))).toBe(false);
   });

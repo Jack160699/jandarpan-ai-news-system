@@ -21,32 +21,35 @@ const LegacyHomeView = dynamic(
 
 export const metadata = buildHomeMetadata();
 
+import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { toHomeArticle } from "@/lib/homepage/generated-feed";
+
 /** ISR — edge-friendly cache, 60s freshness */
 export const revalidate = 60;
 
-/** Approved navy/red/gold editorial homepage discovery section */
+/** Approved Jan Darpan app Home — Broad platform content discovery */
 async function ReaderDesignHomeFeed() {
-  const [feed, tenant, verifiedRatesNavEnabled, readerLanguage] = await Promise.all([
+  const [feed, pool, tenant, readerLanguage] = await Promise.all([
     getCachedGeneratedHomepageFeed(),
+    fetchGeneratedArticlePool(150, { select: "homepage" }),
     getTenantConfig(),
-    isVerifiedRatesPublicNavEnabled(),
     getServerReaderLanguage(),
   ]);
-  const monetization = await fetchMonetizationPayload(tenant);
-  const adsEnabled = monetization.settings.enabled && monetization.settings.adsEnabled;
-  const nativeAd = null;
+
+  const poolArticles = pool
+    .map((row) => toHomeArticle(row, undefined, readerLanguage))
+    .filter((a): a is NonNullable<typeof a> => a !== null);
+
   const trending = buildTrendingKeywords({ limit: 12 });
-  const storyCount = feed ? feed.trending.length + feed.liveWire.length + 1 : 0;
+  const storyCount = (feed ? feed.trending.length + feed.liveWire.length : 0) + poolArticles.length;
 
   return (
     <>
       <JsonLdScript data={homepageJsonLd({ storyCount, trendingKeywords: trending })} />
-      {feed ? (
+      {feed || poolArticles.length > 0 ? (
         <ReaderHomepage
-          feed={pruneFeedForReader(feed)}
-          nativeAd={nativeAd}
-          adsEnabled={adsEnabled}
-          verifiedRatesNavEnabled={verifiedRatesNavEnabled}
+          feed={feed ? pruneFeedForReader(feed) : ({} as any)}
+          allArticles={poolArticles}
         />
       ) : (
         <ReaderShell activeNav="home">

@@ -7,8 +7,6 @@ import { OfflineServiceWorkerRegister } from "../offline/OfflineServiceWorkerReg
 import { NetworkGuards } from "../system/NetworkGuards";
 import { PermissionSheet } from "../system/PermissionSheet";
 import { BottomNav, type BottomNavKey } from "./BottomNav";
-import { DeskChrome } from "./DeskChrome";
-import { DeskFooter } from "./DeskFooter";
 import { SearchOverlay } from "./SearchOverlay";
 
 type ReaderShellProps = {
@@ -65,13 +63,7 @@ export function ReaderShell({
       >
         <OfflineServiceWorkerRegister />
         <NetworkGuards />
-        {!dark ? (
-          <div className="jd-desk-chrome-root">
-            <DeskChrome />
-          </div>
-        ) : null}
         {children}
-        {showDeskFooter && !dark ? <DeskFooter /> : null}
         {showNav ? (
           <>
             <div className="jd-nav-spacer" aria-hidden style={{ height: pad, flexShrink: 0 }} />

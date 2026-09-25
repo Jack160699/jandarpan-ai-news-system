@@ -110,7 +110,6 @@ export default async function LatestPage() {
           ))}
         </ul>
       </main>
-      <Footer />
     </PageShell>
   );
 }

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { NewsScreen } from "./NewsScreen";
-import { BroadcastControlBar } from "./BroadcastControlBar";
 import { useBroadcast } from "../BroadcastContext";
 import { useBroadcastQueue } from "../useBroadcastQueue";
 import { useBroadcastScript } from "../useBroadcastScript";
@@ -524,11 +523,6 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
             durationSec={currentSegment?.durationSec || 16}
           />
         </div>
-      </div>
-
-      {/* Control / Advertisement Row directly below the main headline */}
-      <div className="jdl-tv__bar-wrap">
-        <BroadcastControlBar />
       </div>
     </div>
   );

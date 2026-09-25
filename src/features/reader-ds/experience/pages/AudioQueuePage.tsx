@@ -200,7 +200,7 @@ function Row({
 /** C24 — queue + playback speed / autoplay / wifi download. */
 export function AudioQueuePage({ tracks }: { tracks: BriefingTrack[] }) {
   return (
-    <ReaderShell activeNav="listen" audioTracks={tracks}>
+    <ReaderShell activeNav={null} audioTracks={tracks}>
       <QueueBody seed={tracks} />
     </ReaderShell>
   );

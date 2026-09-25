@@ -15,9 +15,11 @@ import { fetchMonetizationPayload } from "@/lib/monetization/fetch-payload";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import {
   buildRegionalRankingPersonalization,
+  filterRowsForDistrict,
   getAllDistrictSlugs,
   getDistrict,
   partitionDistrictHubRows,
+  prioritizePrimaryDistrict,
 } from "@/lib/regional";
 import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
 import {
@@ -82,17 +84,17 @@ export default async function DistrictPage({ params }: PageProps) {
     readerDs ? getTenantConfig() : Promise.resolve(null),
   ]);
   const langPool = filterPoolByLanguage(pool, displayLanguage);
-  const { primary: districtRows, fallback: fallbackRows } =
-    partitionDistrictHubRows(langPool, slug, { minPrimary: 4, maxFallback: 12 });
+  // STRICT DISTRICT SCOPING: Query layer returns ONLY selected district stories
+  const districtRows = prioritizePrimaryDistrict(
+    filterRowsForDistrict(langPool, slug),
+    slug
+  );
   const personalization = buildRegionalRankingPersonalization({
     homeDistrict: slug,
     regionBoostMultiplier: 1.3,
   });
   const rankedPrimary = rankArticlesForHomepage(districtRows, { personalization });
-  const rankedFallback =
-    fallbackRows.length > 0
-      ? rankArticlesForHomepage(fallbackRows, { personalization })
-      : [];
+  const rankedFallback: typeof rankedPrimary = [];
 
   const toArticles = (
     ranked: typeof rankedPrimary

@@ -4,14 +4,16 @@ import Link from "next/link";
 import { useJdDsT } from "../i18n";
 import { JdIcon, jdIconStroke } from "./icons";
 import { getPrimaryNavItems, type PrimaryNavKey } from "./navItems";
+import { useReaderPreferencesOptional } from "@/providers/ReaderPreferencesProvider";
+import { getDistrict } from "@/lib/regional/districts";
 
 export type BottomNavKey = PrimaryNavKey;
 
 /**
- * Compact, theme-aware Jan Darpan bottom navigation dock.
- * Approved 5 tabs: Live | Home | My District | Latest | Profile.
+ * Compact, theme-aware Jan Darpan app navigation dock.
+ * Approved EXACTLY 5 tabs: Live | [District Name] | Home | Taza | Profile.
+ * Dynamic selected district name (never static "My District" once district chosen).
  * Zero standing rectangular blocks, zero oversized boxes, strictly theme-aware.
- * Hidden on tablet/desktop via CSS media queries.
  */
 export function BottomNav({
   active,
@@ -22,7 +24,28 @@ export function BottomNav({
   dark?: boolean;
 }) {
   const { t, locale } = useJdDsT();
-  const items = getPrimaryNavItems(locale);
+  const prefsCtx = useReaderPreferencesOptional();
+  const currentSlug = prefsCtx?.prefs.homeDistrict?.trim() || "raipur";
+  const currentDistrict = getDistrict(currentSlug);
+  const districtLabel = currentDistrict
+    ? locale === "en"
+      ? currentDistrict.name
+      : currentDistrict.nameHi
+    : locale === "en"
+      ? "Raipur"
+      : "रायपुर";
+
+  const rawItems = getPrimaryNavItems(locale);
+  const items = rawItems.map((it) => {
+    if (it.key === "district") {
+      return {
+        ...it,
+        label: districtLabel,
+        href: `/district/${currentSlug}`,
+      };
+    }
+    return it;
+  });
 
   return (
     <nav

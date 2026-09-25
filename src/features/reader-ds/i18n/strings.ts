@@ -614,7 +614,7 @@ const en: Record<JdDsStringKey, string> = {
   "nav.live": "Live",
   "nav.home": "Home",
   "nav.district": "My District",
-  "nav.latest": "Latest",
+  "nav.latest": "Taza",
   "nav.listen": "Listen",
   "nav.profile": "Profile",
   "nav.more": "More",

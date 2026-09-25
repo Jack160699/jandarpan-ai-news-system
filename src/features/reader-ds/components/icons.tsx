@@ -71,8 +71,10 @@ const FILLED_ICONS = new Set<JdIconName>(["play", "prev", "next", "pause"]);
 const PATHS: Record<JdIconName, React.ReactNode> = {
   live: (
     <>
-      <rect x="2" y="7" width="20" height="14" rx="2" />
-      <path d="M17 2l-5 5-5-5" />
+      <rect x="2" y="4" width="20" height="13" rx="2.5" />
+      <path d="M9 20h6M12 17v3" />
+      <circle cx="12" cy="10.5" r="2" fill="currentColor" stroke="none" />
+      <path d="M8.5 8a4.5 4.5 0 0 0 0 5M15.5 8a4.5 4.5 0 0 1 0 5" strokeLinecap="round" />
     </>
   ),
   home: <path d="M3 10.5 12 3l9 7.5M5 9.5V21h5v-6h4v6h5V9.5" />,

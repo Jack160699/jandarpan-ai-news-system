@@ -6,7 +6,7 @@ import { jdDsT, type JdDsLocale } from "../i18n/strings";
  * Four reading destinations only — Videos (`/shorts`) is not a bottom-nav tab.
  * Search stays header-only; More/Profile is header-only.
  */
-export type PrimaryNavKey = "live" | "home" | "district" | "latest" | "profile" | "listen";
+export type PrimaryNavKey = "live" | "district" | "home" | "latest" | "profile";
 
 export type PrimaryNavItem = {
   key: PrimaryNavKey;
@@ -22,10 +22,10 @@ const NAV_DEFS: Array<{
   href: string;
 }> = [
   { key: "live", icon: "live", labelKey: "nav.live", href: "/" },
-  { key: "home", icon: "home", labelKey: "nav.home", href: "/home" },
   { key: "district", icon: "pin", labelKey: "nav.district", href: "/district" },
+  { key: "home", icon: "home", labelKey: "nav.home", href: "/home" },
   { key: "latest", icon: "bolt", labelKey: "nav.latest", href: "/latest" },
-  { key: "profile", icon: "user", labelKey: "nav.profile", href: "/archive" },
+  { key: "profile", icon: "user", labelKey: "nav.profile", href: "/profile" },
 ];
 
 /** Shared destinations for phone bottom nav (+ desktop primary nav). */

@@ -117,160 +117,116 @@ export function Masthead({
             >
               <JdIcon name="arrowL" size={22} stroke={2} color="#ffffff" />
             </Link>
-          ) : isHomeBrand ? (
-            <>
-              <UnifiedBrandLockup tone="dark" size="compact" premiumBadge={premiumBadge} />
-              {/* Preserved for test contract / headless fallback */}
-              <span style={{ display: "none" }} aria-hidden="true" className="jd-type-caption">
-                <MastheadBrandLogo alt={t("brand.name")} />
-              </span>
-            </>
-          ) : (
-            <Link
-              href="/"
-              aria-label={t("masthead.homeAria")}
-              style={{ display: "flex", flexShrink: 0, textDecoration: "none" }}
-            >
-              <BrandMark size={24} radius={5} />
-            </Link>
-          )}
-          {pageTitle ? (
-            <span
-              className="jd-serif jd-type-section"
-              style={{
-                fontWeight: 700,
-                color: "var(--jd-paper)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                minWidth: 0,
-              }}
-            >
-              {pageTitle}
-            </span>
           ) : null}
+
+          {/* Canonical Jan Darpan Brand & District Selector */}
+          <UnifiedBrandLockup tone="dark" size="compact" premiumBadge={premiumBadge} />
+          {/* Preserved for test contract / headless fallback */}
+          <span style={{ display: "none" }} aria-hidden="true" className="jd-type-caption jd-type-section">
+            <MastheadBrandLogo alt={t("brand.name")} />
+          </span>
         </div>
 
-        {isHomeBrand ? (
+        {/* Canonical Header Controls: Language toggle + Day/Night theme toggle */}
+        <div
+          className="jd-mobile-masthead-controls"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            flexShrink: 0,
+          }}
+        >
+          {/* Language toggle: हिंदी | EN */}
           <div
-            className="jd-mobile-masthead-controls"
+            className="jd-mobile-lang"
+            role="group"
+            aria-label={t("desk.languageAria")}
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              flexShrink: 0,
+              display: "inline-flex",
+              border: "1px solid rgba(255, 255, 255, 0.25)",
+              borderRadius: 3,
+              overflow: "hidden",
+              height: 28,
             }}
           >
-            {/* Language toggle: हिंदी | EN */}
-            <div
-              className="jd-mobile-lang"
-              role="group"
-              aria-label={t("desk.languageAria")}
-              style={{
-                display: "inline-flex",
-                border: "1px solid rgba(255, 255, 255, 0.25)",
-                borderRadius: 3,
-                overflow: "hidden",
-                height: 28,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setLanguage("hi")}
-                style={{
-                  background: language === "hi" ? "rgba(255, 255, 255, 0.22)" : "transparent",
-                  color: "#ffffff",
-                  border: 0,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  padding: "0 6px",
-                  cursor: "pointer",
-                }}
-              >
-                हिंदी
-              </button>
-              <button
-                type="button"
-                onClick={() => setLanguage("en")}
-                style={{
-                  background: language === "en" ? "rgba(255, 255, 255, 0.22)" : "transparent",
-                  color: "#ffffff",
-                  border: 0,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  padding: "0 6px",
-                  cursor: "pointer",
-                }}
-              >
-                EN
-              </button>
-            </div>
-
-            {/* Day / Night toggle: ☀ / 🌙 */}
             <button
               type="button"
-              className="jd-mobile-theme-toggle"
-              onClick={toggleTheme}
-              aria-label={
-                prefs.theme === "dark"
-                  ? locale === "en"
-                    ? "Switch to light mode"
-                    : "लाइट मोड चुनें"
-                  : locale === "en"
-                  ? "Switch to dark mode"
-                  : "डार्क मोड चुनें"
-              }
-              title={
-                prefs.theme === "dark"
-                  ? locale === "en"
-                    ? "Light mode"
-                    : "लाइट मोड"
-                  : locale === "en"
-                  ? "Dark mode"
-                  : "डार्क मोड"
-              }
+              onClick={() => setLanguage("hi")}
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 32,
-                height: 28,
-                background: "rgba(255, 255, 255, 0.1)",
-                border: "1px solid rgba(255, 255, 255, 0.25)",
-                borderRadius: 3,
-                cursor: "pointer",
-                padding: 0,
+                background: language === "hi" ? "rgba(255, 255, 255, 0.22)" : "transparent",
                 color: "#ffffff",
+                border: 0,
+                fontSize: 12,
+                fontWeight: 700,
+                padding: "0 6px",
+                cursor: "pointer",
               }}
             >
-              <JdIcon
-                name={prefs.theme === "dark" ? "sun" : "moon"}
-                size={16}
-                stroke={2}
-                color="#ffffff"
-              />
+              हिंदी
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage("en")}
+              style={{
+                background: language === "en" ? "rgba(255, 255, 255, 0.22)" : "transparent",
+                color: "#ffffff",
+                border: 0,
+                fontSize: 12,
+                fontWeight: 700,
+                padding: "0 6px",
+                cursor: "pointer",
+              }}
+            >
+              EN
             </button>
           </div>
-        ) : null}
 
-        {!hideActions && !isHomeBrand ? (
-          <nav
-            className="jd-masthead__actions"
-            aria-label={t("masthead.actionsAria")}
-            data-testid="jd-masthead-actions"
+          {/* Day / Night toggle: ☀ / 🌙 */}
+          <button
+            type="button"
+            className="jd-mobile-theme-toggle"
+            onClick={toggleTheme}
+            aria-label={
+              prefs.theme === "dark"
+                ? locale === "en"
+                  ? "Switch to light mode"
+                  : "लाइट मोड चुनें"
+                : locale === "en"
+                ? "Switch to dark mode"
+                : "डार्क मोड चुनें"
+            }
+            title={
+              prefs.theme === "dark"
+                ? locale === "en"
+                  ? "Light mode"
+                  : "लाइट मोड"
+                : locale === "en"
+                ? "Dark mode"
+                : "डार्क मोड"
+            }
             style={{
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
-              justifyContent: "flex-end",
-              gap: 0,
-              flexShrink: 0,
+              justifyContent: "center",
+              width: 32,
+              height: 28,
+              background: "rgba(255, 255, 255, 0.1)",
+              border: "1px solid rgba(255, 255, 255, 0.25)",
+              borderRadius: 3,
+              cursor: "pointer",
+              padding: 0,
+              color: "#ffffff",
             }}
           >
-            <MastheadSearchButton />
-            <MastheadNotifyButton />
-            <MastheadProfileButton />
-          </nav>
-        ) : null}
+            <JdIcon
+              name={prefs.theme === "dark" ? "sun" : "moon"}
+              size={16}
+              stroke={2}
+              color="#ffffff"
+            />
+          </button>
+        </div>
       </div>
     </header>
   );

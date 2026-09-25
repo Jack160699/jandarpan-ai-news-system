@@ -6,6 +6,7 @@ import type { HomeArticle } from "@/lib/homepage/types";
 import { Masthead } from "../components/Masthead";
 import { ReaderShell } from "../components/ReaderShell";
 import { useJdDsT } from "../i18n";
+import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
 
 type Props = {
   articles: HomeArticle[];
@@ -69,15 +70,15 @@ export function LatestPageView({ articles }: Props) {
   const leadArticle = filteredArticles[0];
   const supportingArticles = filteredArticles.slice(1);
 
-  const pageTitle = locale === "en" ? "Latest News" : "ताज़ा ख़बरें";
+  const pageTitle = locale === "en" ? "Taza" : "ताज़ा";
   const subtitle =
     locale === "en"
-      ? "Comprehensive editorial coverage across Chhattisgarh, India & World"
-      : "छत्तीसगढ़, भारत और दुनिया भर की प्रमुख विस्तृत खबरें";
+      ? "Most recently updated verified news — chronological"
+      : "सबसे हालिया सत्यापित खबरें — समय अनुसार";
 
   return (
     <ReaderShell activeNav="latest">
-      <Masthead pageTitle={pageTitle} />
+      <Masthead />
 
       <main id="main-content" role="main" className="jd-shell" style={{ flex: 1, background: "var(--jd-paper)" }}>
         {/* Editorial Page Header */}
@@ -190,80 +191,90 @@ export function LatestPageView({ articles }: Props) {
                 gap: 16,
               }}
             >
-              {supportingArticles.map((story) => (
-                <article
-                  key={story.slug}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    background: "var(--jd-paper)",
-                    border: "1px solid var(--jd-line)",
-                    borderRadius: 8,
-                    overflow: "hidden",
-                    transition: "box-shadow 0.15s ease",
-                  }}
-                >
-                  {story.imageUrl && (
-                    <Link href={`/story/${story.slug}`} prefetch={false} style={{ textDecoration: "none", display: "block" }}>
-                      <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden", background: "#0a1628" }}>
-                        <img
-                          src={story.imageUrl}
-                          alt=""
-                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    </Link>
-                  )}
-                  <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--jd-red)", textTransform: "uppercase" }}>
-                          {story.categoryLabel || story.section}
-                        </span>
-                        <span style={{ fontSize: 11, color: "var(--jd-muted)" }}>•</span>
-                        <span style={{ fontSize: 11, color: "var(--jd-muted)" }}>
-                          {formatTimeAgo(story.publishedAt, locale)}
-                        </span>
-                      </div>
-                      <Link href={`/story/${story.slug}`} prefetch={false} style={{ textDecoration: "none", color: "inherit" }}>
-                        <h3
-                          style={{
-                            margin: 0,
-                            fontSize: 14.5,
-                            fontWeight: 700,
-                            lineHeight: 1.35,
-                            color: "var(--jd-ink)",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {story.headline}
-                        </h3>
-                      </Link>
-                      {story.summary && (
-                        <p
-                          style={{
-                            margin: "6px 0 0",
-                            fontSize: 12.5,
-                            lineHeight: 1.45,
-                            color: "var(--jd-ink-subtle, #475569)",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {story.summary}
-                        </p>
+              {supportingArticles.map((story, i) => {
+                const storyIndex = leadArticle ? i + 2 : i + 1;
+                const showAdAfter = storyIndex % 3 === 0;
+                return (
+                  <React.Fragment key={story.slug}>
+                    <article
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        background: "var(--jd-paper)",
+                        border: "1px solid var(--jd-line)",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        transition: "box-shadow 0.15s ease",
+                      }}
+                    >
+                      {story.imageUrl && (
+                        <Link href={`/story/${story.slug}`} prefetch={false} style={{ textDecoration: "none", display: "block" }}>
+                          <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden", background: "#0a1628" }}>
+                            <img
+                              src={story.imageUrl}
+                              alt=""
+                              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        </Link>
                       )}
-                    </div>
-                  </div>
-                </article>
-              ))}
+                      <div style={{ padding: "12px 14px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--jd-red)", textTransform: "uppercase" }}>
+                              {story.categoryLabel || story.section}
+                            </span>
+                            <span style={{ fontSize: 11, color: "var(--jd-muted)" }}>•</span>
+                            <span style={{ fontSize: 11, color: "var(--jd-muted)" }}>
+                              {formatTimeAgo(story.publishedAt, locale)}
+                            </span>
+                          </div>
+                          <Link href={`/story/${story.slug}`} prefetch={false} style={{ textDecoration: "none", color: "inherit" }}>
+                            <h3
+                              style={{
+                                margin: 0,
+                                fontSize: 14.5,
+                                fontWeight: 700,
+                                lineHeight: 1.35,
+                                color: "var(--jd-ink)",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {story.headline}
+                            </h3>
+                          </Link>
+                          {story.summary && (
+                            <p
+                              style={{
+                                margin: "6px 0 0",
+                                fontSize: 12.5,
+                                lineHeight: 1.45,
+                                color: "var(--jd-ink-subtle, #475569)",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                              }}
+                            >
+                              {story.summary}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                    {showAdAfter && (
+                      <div style={{ gridColumn: "1 / -1", width: "100%" }}>
+                        <DurgSolarInlineAd index={Math.floor(storyIndex / 3)} />
+                      </div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         )}

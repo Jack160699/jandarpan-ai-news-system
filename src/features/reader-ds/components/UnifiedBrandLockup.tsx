@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { CG_DISTRICTS, getDistrict } from "@/lib/regional/districts";
@@ -88,13 +89,19 @@ export function UnifiedBrandLockup({
     }
   }, [prefs.homeDistrict, setHomeDistrict]);
 
+  const router = useRouter();
+  const pathname = usePathname();
+
   const handleSelectDistrict = useCallback(
     (slug: string) => {
       setHomeDistrict(slug);
       writeDistrictSource("explicit");
       setPickerOpen(false);
+      if (pathname && (pathname === "/district" || pathname.startsWith("/district/"))) {
+        router.push(`/district/${slug}`);
+      }
     },
-    [setHomeDistrict]
+    [setHomeDistrict, pathname, router]
   );
 
   const handleUseLocation = useCallback(() => {

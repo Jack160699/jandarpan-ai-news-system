@@ -140,9 +140,26 @@ html.dark .jd-bottom-nav__indicator,
   font-weight: 800;
 }
 
-/* Hide on desktop/tablet where DeskChrome is active */
+/* On desktop/tablet, bottom nav acts as a centered, compact app dock */
 @media (min-width: 768px) {
   .jd-bottom-nav {
-    display: none !important;
+    max-width: 580px;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%);
+    border-radius: 12px 12px 0 0;
+    border-left: 1px solid var(--jd-line, #dcd5c5);
+    border-right: 1px solid var(--jd-line, #dcd5c5);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    height: 54px;
+  }
+
+  .jd-ds[data-theme="dark"] .jd-bottom-nav,
+  html[data-theme="dark"] .jd-bottom-nav,
+  html.dark .jd-bottom-nav,
+  .jd-bottom-nav--dark {
+    border-left: 1px solid var(--jd-d-line, rgba(150, 175, 215, 0.16)) !important;
+    border-right: 1px solid var(--jd-d-line, rgba(150, 175, 215, 0.16)) !important;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
   }
 }

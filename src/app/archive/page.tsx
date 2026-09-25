@@ -13,13 +13,8 @@ export const metadata: Metadata = buildUtilityPageMetadata({
   path: "/archive",
 });
 
+import { redirect } from "next/navigation";
+
 export default function ArchivePage() {
-  if (isReaderDesignSystemEnabled()) {
-    return <ProfileHubPage />;
-  }
-  return (
-    <PageShell variant="news">
-      <ArchivePageContent />
-    </PageShell>
-  );
+  redirect("/profile");
 }

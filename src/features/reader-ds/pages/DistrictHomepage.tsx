@@ -1,8 +1,6 @@
 "use client";
 
 import type { HomeArticle } from "@/lib/homepage/types";
-import { Ad } from "../components/Ad";
-import { DesktopPrimaryNav } from "../components/DesktopPrimaryNav";
 import { DistrictContextBar } from "../components/DistrictContextBar";
 import { LeadStory } from "../components/LeadStory";
 import { Masthead } from "../components/Masthead";
@@ -12,6 +10,8 @@ import { SecondaryStory } from "../components/SecondaryStory";
 import { JdIcon, jdIconStroke, type JdIconName } from "../components/icons";
 import { useJdDsT } from "../i18n";
 import { toReaderStory } from "../utils";
+import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
+import React from "react";
 
 type UtilityTile = {
   icon: JdIconName;
@@ -58,16 +58,13 @@ export function DistrictHomepage({
   const lead = articles[0]
     ? toReaderStory(articles[0], `${displayName}`)
     : null;
-  const rest = articles.slice(1, 8).map((a) => toReaderStory(a));
-  const fallbackStories = fallbackArticles.slice(0, 6).map((a) => toReaderStory(a));
-  const showHonestGap = articles.length > 0 && articles.length < 4;
+  const rest = articles.slice(1).map((a) => toReaderStory(a));
   const countLabel =
     articles.length > 0 ? t("district.newsCount", { n: articles.length }) : undefined;
 
   return (
     <ReaderShell activeNav="district">
-      <Masthead pageTitle={displayName} />
-      <DesktopPrimaryNav active="district" />
+      <Masthead />
       <DistrictContextBar
         nameHi={districtNameHi || districtName}
         nameEn={districtName || districtNameHi}
@@ -188,39 +185,22 @@ export function DistrictHomepage({
                   {t("district.moreSoon")}
                 </p>
               ) : (
-                rest.map((s, i) => (
-                  <SecondaryStory key={s.slug} story={s} last={i === rest.length - 1} toneIndex={i} />
-                ))
+                rest.map((s, i) => {
+                  const storyIndex = lead ? i + 2 : i + 1; // 1-indexed count in feed
+                  const showAdAfter = storyIndex % 3 === 0;
+                  return (
+                    <React.Fragment key={s.slug}>
+                      <SecondaryStory story={s} last={i === rest.length - 1} toneIndex={i} />
+                      {showAdAfter && (
+                        <DurgSolarInlineAd index={Math.floor(storyIndex / 3)} />
+                      )}
+                    </React.Fragment>
+                  );
+                })
               )}
-              {showHonestGap ? (
-                <p
-                  className="jd-ui"
-                  data-testid="jd-district-more-soon"
-                  style={{ color: "var(--jd-muted)", fontSize: 13, padding: "10px 0 4px" }}
-                >
-                  {t("district.moreSoon")}
-                </p>
-              ) : null}
             </div>
-
-            {fallbackStories.length > 0 ? (
-              <div data-testid="jd-district-fallback">
-                <SectionHeader title={t("district.stateFallback")} color="var(--jd-ink-2)" />
-                <div className="jd-hub-list" style={{ padding: "0 14px" }}>
-                  {fallbackStories.map((s, i) => (
-                    <SecondaryStory
-                      key={`fb-${s.slug}`}
-                      story={s}
-                      last={i === fallbackStories.length - 1}
-                      toneIndex={i + 3}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
-        <Ad label="विज्ञापन · ज़िला" />
       </main>
     </ReaderShell>
   );
