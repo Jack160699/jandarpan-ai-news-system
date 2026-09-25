@@ -51,7 +51,7 @@ const GENERIC_PROVIDER_LOGO_RE =
  * Completely prohibits third-party graphics/anchors to maintain clean unbranded editorial integrity.
  */
 export const THIRD_PARTY_BRANDED_OR_TEMPLATE_RE =
-  /ibc24.*(?:logo|banner|watermark|anchor|debate|shah-?mat|bulletin|graphic)|bhilaitimes.*(?:logo|watermark)|amarujala.*(?:watermark)|dainik-?bhaskar.*(?:watermark)|kpnews.*(?:logo|watermark)|ytimg\.com.*(?:hqdefault|maxresdefault)|youtube\.com.*thumbnail|debate-template|tv-anchor|anchor-desk|studio-screen|pti_cg[0-9]|shah-mat|01101010|Shah-Mat|Balod-Road-Accident|CG-Teacher-Suspended|Rajnandgaon-Ganesh-Jhanki-Cancel|images-1-4|(?:watermark|channel-bug|lower-third|masthead|debate-template|tv-anchor|news-anchor|anchor-desk|studio-anchor|bulletin-graphic|overlay-graphic)/i;
+  /ibc24.*(?:logo|banner|watermark|anchor|debate|shah-?mat|bulletin|graphic)|bhilaitimes.*(?:logo|banner|watermark|graphic)|amarujala.*(?:watermark|logo|banner|breaking|bulletin|graphic|live)|dainik-?bhaskar.*(?:watermark|logo|banner)|kpnews.*(?:logo|watermark)|ytimg\.com.*(?:hqdefault|maxresdefault)|youtube\.com.*thumbnail|debate-template|tv-anchor|anchor-desk|studio-screen|pti_cg[0-9]|shah-mat|01101010|Shah-Mat|Balod-Road-Accident|CG-Teacher-Suspended|Rajnandgaon-Ganesh-Jhanki-Cancel|images-1-4|(?:watermark|channel-bug|lower-third|masthead|debate-template|tv-anchor|news-anchor|anchor-desk|studio-anchor|bulletin-graphic|overlay-graphic)/i;
 
 
 /** Jan Darpan brand / OG / social lockups must never be editorial story media. */
