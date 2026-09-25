@@ -8,6 +8,8 @@ const OUTPUT_DIR = path.resolve("C:/Users/shriyansh chandrakar/.gemini/antigravi
 async function initContext(context) {
   await context.addInitScript(() => {
     try {
+      localStorage.setItem("jd-ds-perm-notify-v1", "1");
+      localStorage.setItem("jd-ds-perm-loc-v1", "1");
       localStorage.setItem("cgb_perm_notify", "1");
       localStorage.setItem("cgb_perm_location", "1");
       localStorage.setItem("cgb_install_dismissed", "1");
@@ -18,8 +20,8 @@ async function initContext(context) {
 async function dismissPopups(page) {
   try {
     const dismissBtn = page.locator("button:has-text('अभी नहीं'), button:has-text('Not now')");
-    if (await dismissBtn.first().isVisible({ timeout: 1000 })) {
-      await dismissBtn.first().click();
+    if (await dismissBtn.first().isVisible({ timeout: 800 }).catch(() => false)) {
+      await dismissBtn.first().click().catch(() => {});
       await page.waitForTimeout(300);
     }
   } catch (e) {
@@ -44,55 +46,61 @@ async function run() {
     await page.waitForTimeout(2500);
     await dismissPopups(page);
 
-    // Initial desktop screenshot
+    // TEST A: Fresh Load — TV is playing, category = सभी, news cards visible automatically
     const shot1 = path.join(OUTPUT_DIR, "production_desktop_live_top.png");
     await page.screenshot({ path: shot1 });
     console.log(`Saved: ${shot1}`);
 
-    // Verify Category Dropdown
-    const categoryBtn = page.locator(".jdl-category-selector__btn");
-    if (await categoryBtn.isVisible()) {
-      await categoryBtn.click();
-      await page.waitForTimeout(500);
-      const shotCatMenu = path.join(OUTPUT_DIR, "production_desktop_category_dropdown.png");
-      await page.screenshot({ path: shotCatMenu });
-      console.log(`Saved: ${shotCatMenu}`);
+    // Verify news cards are already visible without clicking any empty state button
+    const cardCount = await page.locator(".jdl-queue-card").count();
+    console.log(`Initial visible news cards count: ${cardCount}`);
 
-      // Select 'क्राइम' category
-      const crimeOption = page.locator(".jdl-category-selector__item:has-text('क्राइम')");
-      if (await crimeOption.isVisible()) {
-        await crimeOption.click();
-        await page.waitForTimeout(1000);
-        const shotCatFiltered = path.join(OUTPUT_DIR, "production_desktop_category_filtered.png");
-        await page.screenshot({ path: shotCatFiltered });
-        console.log(`Saved: ${shotCatFiltered}`);
-      }
+    // TEST C: Category Filter Tabs — Select 'क्राइम' tab
+    const crimeTab = page.locator(".jdl-category-tab:has-text('क्राइम')");
+    if (await crimeTab.isVisible()) {
+      await crimeTab.click();
+      await page.waitForTimeout(1000);
+      const shotCatFiltered = path.join(OUTPUT_DIR, "production_desktop_category_filtered.png");
+      await page.screenshot({ path: shotCatFiltered });
+      console.log(`Saved: ${shotCatFiltered}`);
     }
 
-    // Reset back to 'सभी'
-    if (await categoryBtn.isVisible()) {
-      await categoryBtn.click();
-      await page.waitForTimeout(300);
-      const allOption = page.locator(".jdl-category-selector__item:has-text('सभी')");
-      if (await allOption.isVisible()) {
-        await allOption.click();
-        await page.waitForTimeout(1000);
-      }
+    // Reset back to 'सभी' tab
+    const allTab = page.locator(".jdl-category-tab:has-text('सभी')");
+    if (await allTab.isVisible()) {
+      await allTab.click();
+      await page.waitForTimeout(1000);
     }
 
-    // Verify "पढ़ें" button opens article in-place below sticky TV
-    const readBtn = page.locator(".jdl-mobile-queue__read-btn").first();
+    // TEST E: Dedicated Article Reader — Tap "पढ़ें" on first card
+    const readBtn = page.locator(".jdl-queue-card__read-btn").first();
     if (await readBtn.isVisible()) {
-      console.log("Clicking 'पढ़ें' button on first story card...");
+      console.log("Clicking bold 'पढ़ें' button on first story card...");
       await readBtn.click();
       await page.waitForTimeout(1500);
 
       const shotReader = path.join(OUTPUT_DIR, "production_desktop_inplace_article_opened.png");
       await page.screenshot({ path: shotReader });
       console.log(`Saved: ${shotReader}`);
+
+      // TEST F: Related Article continuation
+      const relatedCardBtn = page.locator(".jd-reader-related .jdl-queue-card__read-btn").first();
+      if (await relatedCardBtn.isVisible()) {
+        console.log("Clicking related article 'पढ़ें' button...");
+        await relatedCardBtn.click();
+        await page.waitForTimeout(1500);
+      }
+
+      // TEST G: Back button returns to news queue
+      const backBtn = page.locator(".jd-reader-back-btn");
+      if (await backBtn.isVisible()) {
+        console.log("Clicking Back button...");
+        await backBtn.click();
+        await page.waitForTimeout(1000);
+      }
     }
 
-    // Test English + Long District Name in Header for Collision/Overlap
+    // TEST H: English Header + Full District Name (Rajnandgaon, Bilaspur, Raipur, Durg)
     const enLangBtn = page.locator(".jd-mobile-lang button:has-text('EN')");
     if (await enLangBtn.isVisible()) {
       await enLangBtn.click();
@@ -102,8 +110,8 @@ async function run() {
       if (await districtTrigger.isVisible()) {
         await districtTrigger.click();
         await page.waitForTimeout(600);
-        // Select a long district name like "Rajnandgaon" or "Balodabazar"
-        const longDist = page.locator("button:has-text('Rajnandgaon'), button:has-text('Balodabazar'), button:has-text('Gaurela')").first();
+        // Select Rajnandgaon to test long name
+        const longDist = page.locator("button:has-text('Rajnandgaon')").first();
         if (await longDist.isVisible()) {
           await longDist.click();
           await page.waitForTimeout(800);
@@ -156,7 +164,7 @@ async function run() {
     await page.screenshot({ path: shotMobTop });
     console.log(`Saved: ${shotMobTop}`);
 
-    // Scroll down to check sticky TV + category bar behavior
+    // Scroll down to check sticky TV + category tabs row
     await page.mouse.wheel(0, 350);
     await page.waitForTimeout(1000);
     const shotMobScrolled = path.join(OUTPUT_DIR, "production_mobile_live_scrolled_sticky_tv.png");
@@ -164,20 +172,37 @@ async function run() {
     console.log(`Saved: ${shotMobScrolled}`);
 
     // Click 'पढ़ें' on mobile
-    const mobReadBtn = page.locator(".jdl-mobile-queue__read-btn").first();
+    const mobReadBtn = page.locator(".jdl-queue-card__read-btn").first();
     if (await mobReadBtn.isVisible()) {
       await mobReadBtn.click();
-      await page.waitForTimeout(1200);
+      await page.waitForTimeout(1500);
       const shotMobReader = path.join(OUTPUT_DIR, "production_mobile_inplace_article_opened.png");
       await page.screenshot({ path: shotMobReader });
       console.log(`Saved: ${shotMobReader}`);
+
+      // Tap Back on mobile
+      const mobBack = page.locator(".jd-reader-back-btn");
+      if (await mobBack.isVisible()) {
+        await mobBack.click();
+        await page.waitForTimeout(800);
+      }
     }
 
-    // Check Mobile Header in English + District
+    // Check Mobile Header in English + District (Rajnandgaon)
     const enLangMob = page.locator(".jd-mobile-lang button:has-text('EN')");
     if (await enLangMob.isVisible()) {
       await enLangMob.click();
       await page.waitForTimeout(600);
+      const districtTrigger = page.locator("[data-brand-district-trigger='true']");
+      if (await districtTrigger.isVisible()) {
+        await districtTrigger.click();
+        await page.waitForTimeout(500);
+        const rajnandBtn = page.locator("button:has-text('Rajnandgaon')").first();
+        if (await rajnandBtn.isVisible()) {
+          await rajnandBtn.click();
+          await page.waitForTimeout(600);
+        }
+      }
       const shotMobHeader = path.join(OUTPUT_DIR, "production_mobile_header_en_no_overlap.png");
       await page.screenshot({ path: shotMobHeader, clip: { x: 0, y: 0, width: 390, height: 160 } });
       console.log(`Saved: ${shotMobHeader}`);
@@ -209,8 +234,10 @@ async function run() {
     // Expand Help & Information section to verify Contact Channels
     const helpToggle = page.locator("button:has-text('सहायता एवं कानूनी जानकारी'), button:has-text('Help & Information')");
     if (await helpToggle.isVisible()) {
+      await helpToggle.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(400);
       await helpToggle.click();
-      await page.waitForTimeout(600);
+      await page.waitForTimeout(800);
       const shotProfileContacts = path.join(OUTPUT_DIR, "production_profile_contacts_expanded.png");
       await page.screenshot({ path: shotProfileContacts });
       console.log(`Saved: ${shotProfileContacts}`);

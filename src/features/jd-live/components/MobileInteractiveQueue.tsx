@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useMemo, useState, useRef, useEffect, Fragment } from "react";
+import React, { useMemo } from "react";
 import Image from "next/image";
 import { useBroadcast } from "../BroadcastContext";
 import type { BroadcastSegment } from "../types";
-import { CANONICAL_CATEGORIES, matchesCanonicalCategory, matchesDistrictScope } from "../lib/categories";
+import { CANONICAL_CATEGORIES, getPrioritizedStories } from "../lib/categories";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
-import { isManualDistrictLocked } from "@/lib/district-intelligence";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
 
@@ -85,62 +84,30 @@ function QueueThumbnail({
 }
 
 /**
- * Interactive story queue for Jan Darpan Live TV.
+ * Interactive news feed for Jan Darpan Live.
  *
- * Pinned TV-linked control area:
- *   - "ताज़ा खबरें चुनिए और TV पर देखें [ सभी ▼ ]"
- *   - Category dropdown filtering both news feed and TV broadcast.
- *   - Distinct "पढ़ें" action opening article in-place below sticky TV.
+ * Requirements:
+ * 1. Populates automatically on initial render (category: "सभी" by default).
+ * 2. District-first ordering: active district stories first, then broader statewide stories.
+ * 3. Category Filter Tabs: clean horizontal tab strip on desktop & mobile.
+ * 4. Compact Card: Image -> District -> Headline (max 2 lines) -> Bottom-Right "पढ़ें" button.
+ * 5. NO "TV पर देखें" or "TV पर चल रहा है" text on cards.
+ * 6. NO "राज्य भर की लाइव खबरें देखें" empty state button.
  */
 export function MobileInteractiveQueue() {
   const { state, dispatch, setCategory, setSelectedArticle } = useBroadcast();
-  const { queue, currentSegment, language, selectedCategory, selectedArticle } = state;
+  const { queue, currentSegment, language, selectedCategory } = state;
   const { prefs } = useReaderPreferences();
-
-  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setCategoryMenuOpen(false);
-      }
-    };
-    if (categoryMenuOpen) {
-      document.addEventListener("mousedown", handleOutsideClick);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-    };
-  }, [categoryMenuOpen]);
 
   // Clean stories pool
   const allStories = useMemo(() => {
     return queue.filter((s) => !s.isIntro);
   }, [queue]);
 
-  // Check if user has explicitly chosen/locked a district
-  const [isExplicitDistrict, setIsExplicitDistrict] = useState(false);
-  useEffect(() => {
-    setIsExplicitDistrict(isManualDistrictLocked());
-  }, [prefs.homeDistrict]);
-
-  // Filtered stories strictly respecting both CATEGORY + DISTRICT SCOPE
+  // District-first ordering with statewide fallback + canonical category filter
   const filteredStories = useMemo(() => {
-    return allStories.filter((s) => {
-      const matchCat = matchesCanonicalCategory(s, selectedCategory);
-      const matchDist = matchesDistrictScope(s, prefs.homeDistrict, isExplicitDistrict);
-      return matchCat && matchDist;
-    });
-  }, [allStories, selectedCategory, prefs.homeDistrict, isExplicitDistrict]);
-
-  const activeCategoryObj = useMemo(() => {
-    return (
-      CANONICAL_CATEGORIES.find((c) => c.id === selectedCategory) ||
-      CANONICAL_CATEGORIES[0]
-    );
-  }, [selectedCategory]);
+    return getPrioritizedStories(allStories, selectedCategory, prefs.homeDistrict);
+  }, [allStories, selectedCategory, prefs.homeDistrict]);
 
   const handleSelectStoryOnTv = (seg: BroadcastSegment) => {
     try {
@@ -156,7 +123,6 @@ export function MobileInteractiveQueue() {
     dispatch({ type: "SET_PLAYING", isPlaying: true });
     dispatch({ type: "SET_MUTED", isMuted: false });
 
-    // Smoothly scroll to TV so user watches anchor delivery
     if (typeof window !== "undefined") {
       const tvEl = document.querySelector(".jdl-tv");
       if (tvEl) {
@@ -169,112 +135,59 @@ export function MobileInteractiveQueue() {
     e.stopPropagation();
     setSelectedArticle(story);
 
-    // Smooth scroll down to in-place article reader
-    setTimeout(() => {
-      const readerEl = document.getElementById("jd-inplace-article-reader");
-      if (readerEl) {
-        readerEl.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }, 60);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const title = language === "hi" ? "ताज़ा खबरें" : "Latest News";
-  const sublabel = language === "hi" ? "चुनिए और TV पर देखें" : "Select to watch on TV";
-  const fullLabel = language === "hi" ? "ताज़ा खबरें चुनिए और TV पर देखें" : "Latest News — Select to watch on TV";
 
   return (
-    <section className="jdl-mobile-queue" aria-label={fullLabel}>
-      {/* Pinned / Sticky Header bar with Category Selector */}
-      <div className="jdl-mobile-queue__header">
-        <div className="jdl-mobile-queue__title-wrap">
-          <span className="jdl-mobile-queue__live-dot" aria-hidden="true" />
-          <h2 className="jdl-mobile-queue__title">{title}</h2>
-          <span className="jdl-mobile-queue__sublabel">{sublabel}</span>
-        </div>
-
-        {/* Compact Integrated Category Dropdown */}
-        <div className="jdl-category-selector" ref={dropdownRef}>
-          <button
-            type="button"
-            onClick={() => setCategoryMenuOpen((prev) => !prev)}
-            className="jdl-category-selector__btn"
-            aria-expanded={categoryMenuOpen}
-            aria-haspopup="listbox"
-            aria-label={language === "hi" ? "श्रेणी चुनें" : "Select Category"}
-          >
-            <span className="jdl-category-selector__label">
-              {language === "hi" ? activeCategoryObj.labelHi : activeCategoryObj.labelEn}
-            </span>
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={`jdl-category-selector__arrow ${categoryMenuOpen ? "jdl-category-selector__arrow--open" : ""}`}
-              aria-hidden="true"
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-          </button>
-
-          {categoryMenuOpen && (
-            <ul className="jdl-category-selector__menu" role="listbox">
-              {CANONICAL_CATEGORIES.map((cat) => {
-                const isSelected = selectedCategory === cat.id;
-                const label = language === "hi" ? cat.labelHi : cat.labelEn;
-                return (
-                  <li key={cat.id} role="option" aria-selected={isSelected}>
-                    <button
-                      type="button"
-                      className={`jdl-category-selector__item ${
-                        isSelected ? "jdl-category-selector__item--active" : ""
-                      }`}
-                      onClick={() => {
-                        setCategory(cat.id);
-                        setCategoryMenuOpen(false);
-                      }}
-                    >
-                      <span>{label}</span>
-                      {isSelected && (
-                        <span className="jdl-category-selector__check" aria-hidden="true">
-                          ✓
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+    <section className="jdl-mobile-queue" aria-label={title}>
+      {/* Category Filter Tabs Bar (Requirement #4: Category controls behave like filter tabs) */}
+      <div className="jdl-category-tabs-bar" role="navigation" aria-label={language === "hi" ? "समाचार श्रेणियां" : "News Categories"}>
+        <div className="jdl-category-tabs-scroll" role="tablist">
+          {CANONICAL_CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat.id;
+            const label = language === "hi" ? cat.labelHi : cat.labelEn;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                role="tab"
+                aria-selected={isSelected}
+                onClick={() => setCategory(cat.id)}
+                className={`jdl-category-tab ${isSelected ? "jdl-category-tab--active" : ""}`}
+              >
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Story list */}
+      {/* Story List */}
       <div className="jdl-mobile-queue__list" role="list">
         {filteredStories.length === 0 ? (
           allStories.length === 0 ? (
-            /* Sleek skeleton placeholder while loading first feed */
+            /* Sleek skeleton placeholder while loading initial broadcast */
             <div className="jdl-mobile-queue__skeleton-wrap">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="jdl-mobile-queue__skeleton-card" />
               ))}
             </div>
           ) : (
-            /* Honest Empty State — No unrelated fallback injection */
+            /* Category empty state (only shown if entire state newsroom has 0 stories for this category) */
             <div className="jdl-category-empty-state">
               <div className="jdl-category-empty-state__icon" aria-hidden="true">
                 📰
               </div>
               <p className="jdl-category-empty-state__msg">
                 {language === "hi"
-                  ? "इस श्रेणी में इस जिले की कोई खबर अभी उपलब्ध नहीं है।"
-                  : "No stories available in this category for the selected district."}
+                  ? "इस श्रेणी में अभी कोई खबर उपलब्ध नहीं है।"
+                  : "No stories available in this category right now."}
               </p>
-              {selectedCategory !== "all" ? (
+              {selectedCategory !== "all" && (
                 <button
                   type="button"
                   onClick={() => setCategory("all")}
@@ -282,35 +195,16 @@ export function MobileInteractiveQueue() {
                 >
                   {language === "hi" ? "सभी खबरें देखें" : "View all news"}
                 </button>
-              ) : isExplicitDistrict ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsExplicitDistrict(false);
-                  }}
-                  className="jdl-category-empty-state__btn"
-                >
-                  {language === "hi" ? "राज्यभर की लाइव खबरें देखें" : "View statewide live news"}
-                </button>
-              ) : null}
+              )}
             </div>
           )
         ) : (
           filteredStories.map((story, idx) => {
-            const isActive = currentSegment?.id === story.id;
-            const isReading = selectedArticle?.id === story.id;
+            const isActiveOnTv = currentSegment?.id === story.id;
             const headline =
               language === "hi"
                 ? story.headlineHi || story.headline
                 : story.headline;
-            const summary =
-              language === "hi"
-                ? story.summaryHi || story.summary
-                : story.summary;
-            const category =
-              language === "hi"
-                ? story.categoryLabelHi || story.categoryLabel
-                : story.categoryLabel;
             const rawDistrict =
               language === "hi"
                 ? story.districtHi || story.district
@@ -319,6 +213,10 @@ export function MobileInteractiveQueue() {
               rawDistrict && rawDistrict !== "छत्तीसगढ़" && rawDistrict !== "Chhattisgarh"
                 ? rawDistrict
                 : null;
+            const category =
+              language === "hi"
+                ? story.categoryLabelHi || story.categoryLabel
+                : story.categoryLabel;
             const locationTag =
               validDistrict ||
               (category && category !== "छत्तीसगढ़" && category !== "Chhattisgarh" ? category : null) ||
@@ -326,15 +224,14 @@ export function MobileInteractiveQueue() {
             const timeLabel = formatRelativeTime(story.publishedAt, language);
 
             return (
-              <Fragment key={story.id}>
-                <div
-                  className={`jdl-mobile-queue__item ${
-                    isActive ? "jdl-mobile-queue__item--active" : ""
-                  } ${isReading ? "jdl-mobile-queue__item--reading" : ""}`}
+              <React.Fragment key={story.id}>
+                {/* Fast-scanning compact card: Image -> District -> Headline (max 2 lines) -> Bottom-Right "पढ़ें" */}
+                <article
+                  className={`jdl-queue-card ${isActiveOnTv ? "jdl-queue-card--tv-active" : ""}`}
                 >
-                  {/* Thumbnail / Image with TV Play button overlay */}
+                  {/* Left: Thumbnail (tappable to play on TV) */}
                   <div
-                    className="jdl-mobile-queue__thumb-wrap"
+                    className="jdl-queue-card__thumb-wrap"
                     onClick={() => handleSelectStoryOnTv(story)}
                     role="button"
                     tabIndex={0}
@@ -344,133 +241,51 @@ export function MobileInteractiveQueue() {
                         handleSelectStoryOnTv(story);
                       }
                     }}
-                    aria-label={`${language === "hi" ? "TV पर चलाएं" : "Play on TV"}: ${headline}`}
+                    aria-label={`${headline}`}
                   >
                     <QueueThumbnail src={story.imageUrl} alt="" />
-
-                    {/* Small play overlay badge */}
-                    <span className="jdl-mobile-queue__thumb-play" aria-hidden="true">
-                      {isActive ? (
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                          <path
-                            d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                      ) : (
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M6 4.5l14 7.5-14 7.5v-15z" />
-                        </svg>
-                      )}
-                    </span>
                   </div>
 
-                  {/* Body Content with clear Editorial Hierarchy:
-                      1. DISTRICT / AREA NAME
-                      2. SPECIFIC NEWS HEADLINE
-                      3. SHORT SUBHEADING (1-2 lines)
-                      4. पढ़ें (Bold, visually highlighted button)
-                  */}
-                  <div className="jdl-mobile-queue__body">
-                    {/* District / Area Name */}
-                    <div className="jdl-mobile-queue__meta-row">
-                      <span className="jdl-mobile-queue__tag">📍 {locationTag}</span>
+                  {/* Right: Content Column */}
+                  <div className="jdl-queue-card__body">
+                    {/* District / Area Name + Time */}
+                    <div className="jdl-queue-card__meta">
+                      <span className="jdl-queue-card__tag">📍 {locationTag}</span>
                       {story.isBreaking && (
-                        <span className="jdl-mobile-queue__breaking-badge">
+                        <span className="jdl-queue-card__breaking">
                           {language === "hi" ? "ब्रेकिंग" : "BREAKING"}
                         </span>
                       )}
-                      <span className="jdl-mobile-queue__time">{timeLabel}</span>
+                      <span className="jdl-queue-card__time">{timeLabel}</span>
                     </div>
 
-                    {/* Specific News Headline */}
+                    {/* Headline: maximum two lines */}
                     <h3
-                      className="jdl-mobile-queue__headline"
-                      onClick={() => handleSelectStoryOnTv(story)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          handleSelectStoryOnTv(story);
-                        }
-                      }}
+                      className="jdl-queue-card__headline"
+                      onClick={(e) => handleOpenArticle(e, story)}
+                      title={headline}
                     >
                       {headline}
                     </h3>
 
-                    {/* Short Subheading (max 1-2 lines for fast scanning) */}
-                    {summary && (
-                      <p className="jdl-mobile-queue__subheading">
-                        {summary}
-                      </p>
-                    )}
-
-                    {/* Action Row: Bold "पढ़ें" Button + TV indicator */}
-                    <div className="jdl-mobile-queue__foot-row">
-                      {/* BOLD, VISUALLY HIGHLIGHTED, CLEARLY TAPPABLE "पढ़ें" BUTTON */}
+                    {/* Bottom Action Row: Bold, highlighted "पढ़ें" button strictly in the bottom-right corner */}
+                    <div className="jdl-queue-card__action-row">
                       <button
                         type="button"
                         onClick={(e) => handleOpenArticle(e, story)}
-                        className={`jdl-mobile-queue__read-btn ${
-                          isReading ? "jdl-mobile-queue__read-btn--active" : ""
-                        }`}
-                        aria-label={`${headline} — ${language === "hi" ? "खबर विस्तार से पढ़ें" : "Read article"}`}
+                        className="jdl-queue-card__read-btn"
+                        aria-label={`${headline} — ${language === "hi" ? "पढ़ें" : "Read"}`}
                       >
-                        <svg
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          aria-hidden="true"
-                        >
-                          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-                        </svg>
                         <span>{language === "hi" ? "पढ़ें" : "Read"}</span>
                       </button>
-
-                      {/* TV Broadcast Status / Quick Watch trigger */}
-                      {isActive ? (
-                        <span className="jdl-mobile-queue__indicator jdl-mobile-queue__indicator--active">
-                          <span className="jdl-mobile-queue__active-dot" aria-hidden="true" />
-                          {language === "hi" ? "TV पर चल रहा है" : "On TV"}
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleSelectStoryOnTv(story)}
-                          className="jdl-mobile-queue__tv-watch-btn"
-                          aria-label={language === "hi" ? "TV पर चलाएं" : "Play on TV"}
-                        >
-                          <svg
-                            width="9"
-                            height="9"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            aria-hidden="true"
-                          >
-                            <path d="M6 4.5l14 7.5-14 7.5v-15z" />
-                          </svg>
-                          <span>{language === "hi" ? "TV पर देखें" : "Watch on TV"}</span>
-                        </button>
-                      )}
                     </div>
                   </div>
-                </div>
+                </article>
 
-                {(idx + 1) % 4 === 0 && (
-                  <DurgSolarInlineAd index={Math.floor((idx + 1) / 4)} />
+                {(idx + 1) % 5 === 0 && (
+                  <DurgSolarInlineAd index={Math.floor((idx + 1) / 5)} />
                 )}
-              </Fragment>
+              </React.Fragment>
             );
           })
         )}

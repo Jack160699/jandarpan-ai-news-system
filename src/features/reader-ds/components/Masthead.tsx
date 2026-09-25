@@ -56,7 +56,7 @@ export function Masthead({
         flexShrink: 0,
         background: "var(--jd-navy)",
         color: "var(--jd-paper)",
-        padding: "6px 10px 6px 12px",
+        padding: "6px 8px 6px 10px",
         height: "56px",
         boxSizing: "border-box",
       }}
@@ -67,7 +67,7 @@ export function Masthead({
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 12,
+          gap: 6,
           maxWidth: 1280,
           margin: "0 auto",
           width: "100%",

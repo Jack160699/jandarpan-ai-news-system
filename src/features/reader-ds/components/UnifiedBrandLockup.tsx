@@ -175,15 +175,15 @@ export function UnifiedBrandLockup({
               flexShrink: 0,
             }}
           >
-            <BrandMark size={isRegular ? 28 : 22} radius={isRegular ? 5 : 4} />
+            <BrandMark size={isRegular ? 26 : 20} radius={isRegular ? 5 : 4} />
             <span
               className="jd-brand jd-unified-brand-lockup__title"
               style={{
                 fontFamily: "var(--jd-ff-brand)",
                 fontWeight: 700,
                 fontSize: isRegular
-                  ? "clamp(1.25rem, 2.4vw, 1.6rem)"
-                  : "clamp(1.05rem, 3.2vw, 1.25rem)",
+                  ? "clamp(1.15rem, 2vw, 1.45rem)"
+                  : "clamp(0.92rem, 2.6vw, 1.12rem)",
                 lineHeight: 1.2,
                 whiteSpace: "nowrap",
                 letterSpacing: locale === "en" ? "0.02em" : "-0.01em",
@@ -195,7 +195,7 @@ export function UnifiedBrandLockup({
             </span>
           </Link>
 
-          {/* District selector directly beside brand logo */}
+          {/* District selector directly beside brand logo — FULL NAME ALWAYS VISIBLE */}
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
@@ -209,7 +209,7 @@ export function UnifiedBrandLockup({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 4,
+              gap: 3,
               background: isDark
                 ? "rgba(255, 255, 255, 0.08)"
                 : "rgba(14, 27, 61, 0.05)",
@@ -217,34 +217,29 @@ export function UnifiedBrandLockup({
                 ? "1px solid rgba(255, 255, 255, 0.22)"
                 : "1px solid rgba(14, 27, 61, 0.18)",
               borderRadius: 3,
-              padding: isRegular ? "3px 8px" : "2px 6px",
+              padding: isRegular ? "3px 8px" : "2px 5px",
               color: isDark ? "#FBF8F2" : "var(--jd-navy)",
               fontFamily: "var(--jd-ff-ui)",
-              fontSize: isRegular ? 14 : 12,
+              fontSize: isRegular ? 13 : 11.5,
               fontWeight: 750,
               cursor: "pointer",
               lineHeight: 1.3,
               whiteSpace: "nowrap",
-              minWidth: 0,
-              maxWidth: isRegular ? "180px" : "clamp(75px, 20vw, 130px)",
-              flexShrink: 1,
+              flexShrink: 0,
               transition: "background 0.15s ease, border-color 0.15s ease",
             }}
           >
             <span
               style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
                 display: "inline-block",
-                minWidth: 0,
               }}
             >
               {districtLabel}
             </span>
             <JdIcon
               name="chevD"
-              size={isRegular ? 12 : 10}
+              size={isRegular ? 11 : 9}
               stroke={2.4}
               color={isDark ? "rgba(255, 255, 255, 0.85)" : "var(--jd-navy)"}
             />

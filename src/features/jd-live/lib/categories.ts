@@ -99,3 +99,61 @@ export function matchesDistrictScope(
   // If story has a specific district, it must match the active district context
   return rawDist.includes(target);
 }
+
+/**
+ * Prioritizes and filters stories by:
+ * 1. Category match (or all if category === 'all')
+ * 2. District priority:
+ *    - Selected district matching stories FIRST
+ *    - Broader Chhattisgarh statewide / desk stories SECOND
+ *    - Other eligible broadcast stories THIRD (so queue never starves)
+ */
+export function getPrioritizedStories(
+  stories: BroadcastSegment[],
+  categoryId: string,
+  districtSlug?: string | null
+): BroadcastSegment[] {
+  // 1. Filter by category
+  const categoryMatched = stories.filter((s) => matchesCanonicalCategory(s, categoryId));
+  if (categoryMatched.length === 0) return [];
+
+  const target = (districtSlug || "").trim().toLowerCase();
+  if (!target || target === "all" || target === "statewide") {
+    return categoryMatched;
+  }
+
+  const isDistrictMatch = (s: BroadcastSegment) => {
+    const raw = `${s.district || ""} ${s.districtHi || ""} ${(s as any).districtSlug || ""}`.toLowerCase();
+    return raw.includes(target);
+  };
+
+  const isStatewide = (s: BroadcastSegment) => {
+    const raw = `${s.district || ""} ${s.districtHi || ""}`.toLowerCase();
+    return (
+      !raw ||
+      raw.includes("राज्य") ||
+      raw.includes("state") ||
+      raw.includes("छत्तीसगढ़") ||
+      raw.includes("chhattisgarh") ||
+      raw.includes("desk") ||
+      raw.includes("डेस्क")
+    );
+  };
+
+  const districtStories: BroadcastSegment[] = [];
+  const statewideStories: BroadcastSegment[] = [];
+  const otherStories: BroadcastSegment[] = [];
+
+  for (const story of categoryMatched) {
+    if (isDistrictMatch(story)) {
+      districtStories.push(story);
+    } else if (isStatewide(story)) {
+      statewideStories.push(story);
+    } else {
+      otherStories.push(story);
+    }
+  }
+
+  // Selected District -> matching stories first -> then broader statewide stories -> then other stories
+  return [...districtStories, ...statewideStories, ...otherStories];
+}
