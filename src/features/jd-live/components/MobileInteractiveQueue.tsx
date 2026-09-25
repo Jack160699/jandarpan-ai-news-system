@@ -6,6 +6,7 @@ import { useBroadcast } from "../BroadcastContext";
 import type { BroadcastSegment } from "../types";
 import { CANONICAL_CATEGORIES, matchesCanonicalCategory, matchesDistrictScope } from "../lib/categories";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
+import { isManualDistrictLocked } from "@/lib/district-intelligence";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
 
@@ -119,14 +120,20 @@ export function MobileInteractiveQueue() {
     return queue.filter((s) => !s.isIntro);
   }, [queue]);
 
+  // Check if user has explicitly chosen/locked a district
+  const [isExplicitDistrict, setIsExplicitDistrict] = useState(false);
+  useEffect(() => {
+    setIsExplicitDistrict(isManualDistrictLocked());
+  }, [prefs.homeDistrict]);
+
   // Filtered stories strictly respecting both CATEGORY + DISTRICT SCOPE
   const filteredStories = useMemo(() => {
     return allStories.filter((s) => {
       const matchCat = matchesCanonicalCategory(s, selectedCategory);
-      const matchDist = matchesDistrictScope(s, prefs.homeDistrict);
+      const matchDist = matchesDistrictScope(s, prefs.homeDistrict, isExplicitDistrict);
       return matchCat && matchDist;
     });
-  }, [allStories, selectedCategory, prefs.homeDistrict]);
+  }, [allStories, selectedCategory, prefs.homeDistrict, isExplicitDistrict]);
 
   const activeCategoryObj = useMemo(() => {
     return (
@@ -267,7 +274,7 @@ export function MobileInteractiveQueue() {
                   ? "इस श्रेणी में इस जिले की कोई खबर अभी उपलब्ध नहीं है।"
                   : "No stories available in this category for the selected district."}
               </p>
-              {selectedCategory !== "all" && (
+              {selectedCategory !== "all" ? (
                 <button
                   type="button"
                   onClick={() => setCategory("all")}
@@ -275,7 +282,17 @@ export function MobileInteractiveQueue() {
                 >
                   {language === "hi" ? "सभी खबरें देखें" : "View all news"}
                 </button>
-              )}
+              ) : isExplicitDistrict ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExplicitDistrict(false);
+                  }}
+                  className="jdl-category-empty-state__btn"
+                >
+                  {language === "hi" ? "राज्यभर की लाइव खबरें देखें" : "View statewide live news"}
+                </button>
+              ) : null}
             </div>
           )
         ) : (

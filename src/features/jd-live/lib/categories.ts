@@ -62,14 +62,23 @@ export function matchesCanonicalCategory(
 }
 
 /**
- * Preserves district scoping when viewing a specific district context.
- * Does not inject unrelated district stories.
+ * Preserves district scoping when viewing an explicit district context.
+ * Does not inject unrelated district stories when a user has specifically locked a district.
+ * If district choice is not explicitly locked (or statewide), all stories in the live broadcast
+ * pool are eligible to display so the news list stays in sync with live TV playback.
  */
 export function matchesDistrictScope(
   seg: BroadcastSegment,
-  districtSlug?: string | null
+  districtSlug?: string | null,
+  isExplicitDistrict = false
 ): boolean {
   if (!districtSlug || districtSlug === "all" || districtSlug === "statewide") {
+    return true;
+  }
+
+  // If the user has not explicitly locked a district, do not artificially exclude
+  // verified live stories from other CG districts in the general live broadcast pool.
+  if (!isExplicitDistrict) {
     return true;
   }
 
@@ -77,7 +86,13 @@ export function matchesDistrictScope(
   const target = districtSlug.toLowerCase();
 
   // If story has no specific district or is statewide, allow it
-  if (!rawDist || rawDist.includes("राज्य") || rawDist.includes("state")) {
+  if (
+    !rawDist ||
+    rawDist.includes("राज्य") ||
+    rawDist.includes("state") ||
+    rawDist.includes("छत्तीसगढ़") ||
+    rawDist.includes("chhattisgarh")
+  ) {
     return true;
   }
 
