@@ -24,7 +24,8 @@ export function DurgSolarInlineAd({ index, className = "" }: DurgSolarInlineAdPr
       className={`jd-inline-ad ${className}`}
       role="region"
       aria-label="Durg Solar Advertisement"
-      data-testid={index != null ? `durg-solar-ad-${index}` : "durg-solar-ad"}
+      data-testid="durg-solar-inline-ad"
+      data-ad-index={index != null ? String(index) : undefined}
       data-ad-type="inline-commercial"
       style={{
         width: "100%",

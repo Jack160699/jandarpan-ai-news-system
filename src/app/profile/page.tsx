@@ -143,7 +143,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Section 1: Library & Preferences */}
-        <section style={{ marginBottom: 20 }}>
+        <section id="profile-library" style={{ marginBottom: 20 }}>
           <h2
             className="jd-ui"
             style={{
@@ -195,7 +195,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Section 2: About Jan Darpan */}
-        <section style={{ marginBottom: 20 }}>
+        <section id="profile-about" style={{ marginBottom: 20 }}>
           <h2
             className="jd-ui"
             style={{
@@ -247,7 +247,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Section 3: Content & Source Policy */}
-        <section style={{ marginBottom: 20 }}>
+        <section id="profile-editorial" style={{ marginBottom: 20 }}>
           <h2
             className="jd-ui"
             style={{
@@ -288,7 +288,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Section 4: Legal & Privacy */}
-        <section style={{ marginBottom: 20 }}>
+        <section id="profile-legal" style={{ marginBottom: 20 }}>
           <h2
             className="jd-ui"
             style={{
@@ -328,7 +328,7 @@ export default function ProfilePage() {
         </section>
 
         {/* Section 5: Contact & Support */}
-        <section style={{ marginBottom: 20 }}>
+        <section id="profile-contact" style={{ marginBottom: 20 }}>
           <h2
             className="jd-ui"
             style={{
@@ -377,6 +377,7 @@ export default function ProfilePage() {
 
         {/* Section 6: App Information */}
         <section
+          id="profile-app-info"
           style={{
             textAlign: "center",
             padding: "20px 10px 10px",

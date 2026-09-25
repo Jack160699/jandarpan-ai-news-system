@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useJdDsT } from "../i18n";
 import { JdIcon, jdIconStroke } from "./icons";
 import { getPrimaryNavItems, type PrimaryNavKey } from "./navItems";
@@ -25,7 +26,11 @@ export function BottomNav({
 }) {
   const { t, locale } = useJdDsT();
   const prefsCtx = useReaderPreferencesOptional();
-  const currentSlug = prefsCtx?.prefs.homeDistrict?.trim() || "raipur";
+  const pathname = usePathname();
+  const routeDistrictSlug = pathname?.startsWith("/district/")
+    ? pathname.replace("/district/", "").split("/")[0]
+    : null;
+  const currentSlug = routeDistrictSlug || prefsCtx?.prefs.homeDistrict?.trim() || "raipur";
   const currentDistrict = getDistrict(currentSlug);
   const districtLabel = currentDistrict
     ? locale === "en"
