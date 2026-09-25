@@ -4,8 +4,8 @@
  */
 
 export const GENERATED_POOL_HARD_CAPS = {
-  full: 120,
-  homepage: 160,
+  full: 300,
+  homepage: 500,
   sitemap: 5000,
   slug: 5000,
   summary: 1,

@@ -16,8 +16,14 @@ export const CANONICAL_CATEGORIES: CanonicalCategory[] = [
   { id: "governance", labelHi: "प्रशासन", labelEn: "Governance" },
 ];
 
+import {
+  resolveCanonicalCategories,
+  type CanonicalCategoryId,
+} from "@/lib/editorial/canonical-categories";
+
 /**
  * Filter stories strictly by canonical category metadata.
+ * Uses resolved canonical multi-tags (deterministic & auditable).
  */
 export function matchesCanonicalCategory(
   seg: BroadcastSegment,
@@ -25,40 +31,22 @@ export function matchesCanonicalCategory(
 ): boolean {
   if (!categoryId || categoryId === "all") return true;
 
-  const metadata = `${seg.section || ""} ${seg.categoryLabel || ""} ${seg.categoryLabelHi || ""} ${(seg as any).category || ""}`.toLowerCase();
-  const headline = (seg.headline || "").toLowerCase();
-
-  switch (categoryId) {
-    case "crime":
-      return (
-        /crime|अपराध|पुलिस|police|arrest|cbi|acb|court|तस्करी|जब्त|कार्रवाई|धोखाधड़ी/.test(metadata) ||
-        /क्राइम|अपराध|पुलिस|गांजा|सट्टा|रिश्वत|जब्त|गिरफ्तार/.test(headline)
-      );
-    case "politics":
-      return (
-        /politic|राजनीति|election|विधानसभा|मंत्रालय|मंत्री|congress|bjp|भाजपा|कांग्रेस|assembly/.test(metadata) ||
-        /विधानसभा|राजनीति|विपक्ष|पक्ष-विपक्ष|प्रस्ताव|सत्र|मंत्री/.test(headline)
-      );
-    case "national":
-      return (
-        /national|राष्ट्रीय|india|देश|केंद्र|supreme|delhi/.test(metadata) ||
-        /राष्ट्रीय|देशभर|भारत|केंद्र|सुप्रीम/.test(headline)
-      );
-    case "chhattisgarh":
-      return true; // Real Chhattisgarh pool
-    case "business":
-      return (
-        /business|व्यापार|बाज़ार|market|economy|मंडी|सोना|चांदी|पेट्रोल|डीजल|कारोबार/.test(metadata) ||
-        /बाज़ार|मंडी|व्यापार|दाम|भाव|कारोबार|शेयर|सोलर/.test(headline)
-      );
-    case "governance":
-      return (
-        /governance|administration|प्रशासन|शासन|कलेक्टर|निगम|योजना|आदेश|विभाग|एडवाइजरी/.test(metadata) ||
-        /प्रशासन|स्वास्थ्य विभाग|आदेश|कलेक्टर|यातायात|एडवाइजरी|स्टाइपेंड|विकास/.test(headline)
-      );
-    default:
-      return true;
+  // 1. Direct canonical tag match if available
+  if (seg.canonicalCategories && seg.canonicalCategories.length > 0) {
+    return seg.canonicalCategories.includes(categoryId);
   }
+
+  // 2. Resolve on-demand using canonical taxonomy engine
+  const resolved = resolveCanonicalCategories({
+    headline: seg.headline,
+    summary: seg.summary,
+    body: seg.script,
+    section: seg.section,
+    district: seg.district,
+    categoryLabel: seg.categoryLabel,
+  });
+
+  return resolved.categories.includes(categoryId as CanonicalCategoryId);
 }
 
 /**
@@ -154,6 +142,19 @@ export function getPrioritizedStories(
     }
   }
 
+  const sortByFreshnessDesc = (arr: BroadcastSegment[]) => {
+    return [...arr].sort((a, b) => {
+      const tA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const tB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+      return tB - tA;
+    });
+  };
+
   // Selected District -> matching stories first -> then broader statewide stories -> then other stories
-  return [...districtStories, ...statewideStories, ...otherStories];
+  // Freshness preserved within each tier
+  return [
+    ...sortByFreshnessDesc(districtStories),
+    ...sortByFreshnessDesc(statewideStories),
+    ...sortByFreshnessDesc(otherStories),
+  ];
 }

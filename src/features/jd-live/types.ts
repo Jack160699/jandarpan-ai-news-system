@@ -44,6 +44,10 @@ export type BroadcastSegment = {
   countdownRank?: number;
   /** True if this is the opening broadcast intro segment */
   isIntro?: boolean;
+  /** Resolved canonical category tags (e.g. ['crime', 'chhattisgarh']) */
+  canonicalCategories?: string[];
+  /** Primary dominant category tag */
+  primaryCategory?: string;
 };
 
 export type BroadcastState = {

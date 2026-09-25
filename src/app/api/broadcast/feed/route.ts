@@ -10,6 +10,7 @@ import { generateAnchorSpokenScript } from "@/lib/broadcast/anchor-script-engine
 import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import { optimizeCdnImageUrl } from "@/lib/news/images/responsive-sizes";
 import { hasVerifiedRealMedia, isCleanRightsEligibleMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
+import { resolveCanonicalCategories } from "@/lib/editorial/canonical-categories";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -393,10 +394,15 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     finalImageUrl = finalImageUrl.replace(/^http:\/\//i, "https://");
   }
 
-  // Absolute Media Rule: Verified Real News Media Only — ZERO visual fallbacks, ZERO third-party branding
-  if (!isCleanRightsEligibleMedia(finalImageUrl)) {
-    finalImageUrl = "";
-  }
+  const catRes = resolveCanonicalCategories({
+    headline: c.headline,
+    summary: c.summary,
+    body: c.articleBody,
+    section: c.section,
+    tags: c.tags,
+    district: location,
+    districtSlug: c.districtSlug,
+  });
 
   return {
     id: c.id,
@@ -413,6 +419,8 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     district: location,
     districtHi: locationHi,
     section: c.section,
+    canonicalCategories: catRes.categories,
+    primaryCategory: catRes.primaryCategory,
     isBreaking: c.isBreaking,
     isLive: true,
     priorityScore: c.priorityScore,
@@ -451,9 +459,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Also pull from resolveLiveArticlePool (up to 120 live articles)
+    // Also pull from resolveLiveArticlePool (up to 300 live articles from last 30 days)
     try {
-      const { rows } = await resolveLiveArticlePool(120, { select: "homepage" });
+      const { rows } = await resolveLiveArticlePool(300, { select: "homepage" });
       for (const r of rows) {
         if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
         if (seenIds.has(r.id) || seenSlugs.has(r.slug)) continue;
@@ -465,9 +473,9 @@ export async function GET(req: NextRequest) {
       // Live pool query error fallback
     }
 
-    // Pull directly from database table generated_articles
+    // Pull directly from database table generated_articles (up to 300 articles)
     try {
-      const dbArticles = await fetchGeneratedArticlePool(120, { select: "homepage" });
+      const dbArticles = await fetchGeneratedArticlePool(300, { select: "homepage" });
       for (const r of (dbArticles || [])) {
         if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
         if (seenIds.has(r.id) || seenSlugs.has(r.slug)) continue;
@@ -514,10 +522,10 @@ export async function GET(req: NextRequest) {
       const langMatches = lang === "hi" ? (hasDev || c.language === "hi") : (!hasDev || c.language === "en");
       if (!langMatches) return false;
 
-      // Rolling 48-hour pool: articles automatically disappear when publication_time >= 48 hours old
+      // 30-day visible news window: articles published within the last 30 days remain fully eligible
       const pubTime = new Date(c.publishedAt).getTime();
       if (!isNaN(pubTime)) {
-        return pubTime >= (now - 48 * 3600 * 1000) && pubTime <= (now + 2 * 3600 * 1000);
+        return pubTime >= (now - 30 * 24 * 3600 * 1000) && pubTime <= (now + 2 * 3600 * 1000);
       }
       return true;
     });

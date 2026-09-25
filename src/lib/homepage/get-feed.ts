@@ -34,7 +34,7 @@ import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { homeDebug } from "@/lib/homepage/feed-safety";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 
-const HOMEPAGE_POOL_LIMIT = 120;
+const HOMEPAGE_POOL_LIMIT = 300;
 
 type HomepageFeedBuild = {
   feed: GeneratedHomepageFeed | null;

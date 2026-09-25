@@ -23,16 +23,22 @@ function formatFullDate(dateStr?: string, lang: "hi" | "en" = "hi"): string {
 }
 
 /**
- * Dedicated Article Reader below Sticky Live TV.
+ * Open Article Reader for Jan Darpan Live.
  *
  * Requirements:
- * 1. Shows ONLY the selected article (news queue is hidden).
- * 2. Live TV remains persistent & sticky at top.
- * 3. Compact icon-based controls: Back (←), Share (link), WhatsApp (wa), Close (✕).
- * 4. Proper readable newspaper typography, verified image, full content paragraphs.
- * 5. YouTube-like continuation model: "संबंधित खबरें" (Related Articles) at bottom.
- * 6. Selecting related article updates active reader in place without mixed queue appearing.
- * 7. Back button restores news queue with category & district preserved.
+ * 1. OPEN READING CANVAS: No boxed containers, heavy borders, or isolated card shells.
+ * 2. PREMIUM TYPOGRAPHY: Large, prominent headline, comfortable body text (clamp(17px, 2vw, 19.5px)),
+ *    comfortable line height (1.85), generous paragraph spacing.
+ * 3. HIERARCHY:
+ *    ARTICLE HEADER
+ *    ↓ ARTICLE IMAGE / MEDIA
+ *    ↓ ARTICLE CONTENT
+ *    ↓ ARTICLE ACTIONS (Unified Jan Darpan icon-first controls)
+ *    ↓ RELATED ARTICLES (संबंधित खबरें - identical geometry: IMAGE LEFT, CONTENT RIGHT)
+ * 4. PERSISTENT LIVE TV: TV stays sticky and active at top.
+ * 5. UNIFIED DESIGN SYSTEM: All controls share identical styling, dimensions, and visual weight.
+ *    WhatsApp is NOT an oversized green banner; it uses the unified button language.
+ * 6. DARK MODE FIRST-CLASS: High contrast, no hardcoded low-contrast colors.
  */
 export function InPlaceArticleReader({ article }: { article: BroadcastSegment }) {
   const { state, setSelectedArticle } = useBroadcast();
@@ -133,20 +139,58 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
       .slice(0, 15);
   }, [fullContent]);
 
-  // Related articles (YouTube-like continuation model)
+  // Genuinely related articles (scored by category tags, district, and subject matter)
   const relatedArticles = useMemo(() => {
     const currentId = article.id;
-    const cat = (article.section || article.categoryLabel || "").toLowerCase();
-    const dist = (article.district || article.districtHi || "").toLowerCase();
+    const currentCategories = article.canonicalCategories || [];
+    const currentDistrict = (article.district || article.districtHi || "").toLowerCase();
+    const currentWords = (article.headline || "")
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 3);
 
-    return queue
-      .filter((s) => !s.isIntro && s.id !== currentId)
-      .filter((s) => {
-        const sCat = `${s.section || ""} ${s.categoryLabel || ""}`.toLowerCase();
-        const sDist = `${s.district || ""} ${s.districtHi || ""}`.toLowerCase();
-        return (cat && sCat.includes(cat)) || (dist && sDist.includes(dist)) || true;
-      })
-      .slice(0, 4);
+    const candidates = queue.filter((s) => !s.isIntro && s.id !== currentId);
+
+    const scored = candidates.map((s) => {
+      let score = 0;
+      const sCategories = s.canonicalCategories || [];
+      const sDistrict = (s.district || s.districtHi || "").toLowerCase();
+      const sHeadline = (s.headline || "").toLowerCase();
+
+      // Shared canonical categories
+      for (const cat of currentCategories) {
+        if (cat !== "all" && sCategories.includes(cat)) {
+          score += cat === "chhattisgarh" ? 2 : 5;
+        }
+      }
+
+      // Shared district
+      if (
+        currentDistrict &&
+        sDistrict &&
+        currentDistrict.includes(sDistrict) &&
+        !currentDistrict.includes("राज्य")
+      ) {
+        score += 4;
+      }
+
+      // Keyword overlap
+      for (const word of currentWords) {
+        if (sHeadline.includes(word)) {
+          score += 3;
+        }
+      }
+
+      // Freshness within 30-day window
+      const pubTime = s.publishedAt ? new Date(s.publishedAt).getTime() : 0;
+      const ageHours = (Date.now() - pubTime) / 3600000;
+      if (ageHours < 48) score += 1;
+
+      return { story: s, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 4).map((x) => x.story);
   }, [queue, article]);
 
   const handleSelectRelatedArticle = (rel: BroadcastSegment) => {
@@ -157,15 +201,14 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
   };
 
   return (
-    <article className="jd-dedicated-reader" aria-labelledby="jd-reader-heading">
-      {/* Compact Top Action Bar (Requirement #11: Compact icon-based controls) */}
-      <div className="jd-reader-topbar">
-        {/* Back Button: Returns to Live news queue */}
+    <article className="jd-open-reader" aria-labelledby="jd-reader-heading">
+      {/* Sleek Top Navigation Bar */}
+      <nav className="jd-reader-top-nav" aria-label="Article navigation">
         <button
           type="button"
           onClick={() => setSelectedArticle(null)}
-          className="jd-reader-back-btn"
-          aria-label={language === "hi" ? "वापस जाएं" : "Back to news queue"}
+          className="jd-control-btn jd-control-btn--back"
+          aria-label={language === "hi" ? "लाइव खबरों पर वापस जाएं" : "Back to live queue"}
           title={language === "hi" ? "वापस जाएं" : "Back"}
         >
           <svg
@@ -182,25 +225,24 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
-          <span>{language === "hi" ? "वापस" : "Back"}</span>
+          <span>{language === "hi" ? "वापस जाएं" : "Back"}</span>
         </button>
 
-        {/* Compact Action Icons: Share, WhatsApp, Close */}
-        <div className="jd-reader-icon-group">
-          {/* Share / Copy Link Icon */}
+        <div className="jd-reader-top-nav__actions">
+          {/* Share Link Icon */}
           <button
             type="button"
             onClick={handleCopyLink}
-            className="jd-reader-icon-btn"
+            className="jd-control-btn jd-control-btn--icon"
             title={copied ? (language === "hi" ? "लिंक कॉपी हो गया!" : "Copied!") : (language === "hi" ? "लिंक कॉपी करें" : "Copy link")}
             aria-label={language === "hi" ? "लिंक साझा करें" : "Share link"}
           >
             {copied ? (
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             ) : (
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
                 <polyline points="16 6 12 2 8 6" />
                 <line x1="12" y1="2" x2="12" y2="15" />
@@ -208,129 +250,179 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
             )}
           </button>
 
-          {/* WhatsApp Share Icon */}
+          {/* WhatsApp Share Icon - Unified Design Language */}
           <button
             type="button"
             onClick={handleShareWhatsApp}
-            className="jd-reader-icon-btn jd-reader-icon-btn--wa"
+            className="jd-control-btn jd-control-btn--icon jd-control-btn--wa"
             title={language === "hi" ? "व्हाट्सएप पर साझा करें" : "Share on WhatsApp"}
             aria-label="WhatsApp"
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
             </svg>
           </button>
 
-          {/* Close Icon: Returns to news queue */}
+          {/* Close Icon */}
           <button
             type="button"
             onClick={() => setSelectedArticle(null)}
-            className="jd-reader-icon-btn"
+            className="jd-control-btn jd-control-btn--icon"
             title={language === "hi" ? "बंद करें" : "Close"}
             aria-label="Close"
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
-      </div>
+      </nav>
 
-      {/* Main Article Body */}
-      <div className="jd-reader-body">
-        {/* District & Category Meta */}
-        <div className="jd-reader-meta">
-          <span className="jd-reader-tag">📍 {locationTag}</span>
-          {category && <span className="jd-reader-cat">{category}</span>}
+      {/* ARTICLE HEADER */}
+      <header className="jd-reader-header">
+        <div className="jd-reader-meta-row">
+          <span className="jd-reader-district-pill">📍 {locationTag}</span>
+          {category && <span className="jd-reader-cat-pill">{category}</span>}
           {article.isBreaking && (
-            <span className="jd-reader-breaking">
+            <span className="jd-reader-breaking-pill">
               {language === "hi" ? "ब्रेकिंग" : "BREAKING"}
             </span>
           )}
         </div>
 
-        {/* Headline */}
+        {/* Large, Prominent Editorial Headline */}
         <h1 id="jd-reader-heading" className="jd-reader-headline">
           {headline}
         </h1>
 
-        {/* Summary Quote */}
+        {/* Summary Deck / Quote */}
         {summary && (
           <p className="jd-reader-summary">
             {summary}
           </p>
         )}
 
-        {/* Date, Reading time & Bureau metadata */}
-        <div className="jd-reader-pub-row">
-          <span className="jd-reader-date">
+        {/* Publication Metadata */}
+        <div className="jd-reader-byline">
+          <span className="jd-reader-byline__date">
             {formatFullDate(article.publishedAt, language)}
           </span>
-          <span className="jd-reader-bullet">•</span>
-          <span className="jd-reader-readtime">
+          <span className="jd-reader-byline__dot">•</span>
+          <span className="jd-reader-byline__readtime">
             {language === "hi" ? "2 मिनट का वाचन" : "2 min read"}
           </span>
-          <span className="jd-reader-bullet">•</span>
-          <span className="jd-reader-source">जन दर्पण लाइव ब्यूरो</span>
+          <span className="jd-reader-byline__dot">•</span>
+          <span className="jd-reader-byline__source">जन दर्पण लाइव डिजिटल न्यूज़रूम</span>
         </div>
+      </header>
 
-        {/* Verified Editorial Photograph with Caption */}
-        {imageUrl ? (
-          <figure className="jd-reader-figure">
-            <div className="jd-reader-img-wrap">
-              <Image
-                src={imageUrl}
-                alt={headline}
-                fill
-                sizes="(max-width: 768px) 100vw, 780px"
-                className="jd-reader-img"
-                priority
-                unoptimized
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            <figcaption className="jd-reader-caption">
-              {locationTag} • जन दर्पण डिजिटल रिपोर्ट
-            </figcaption>
-          </figure>
-        ) : null}
+      {/* ARTICLE IMAGE / MEDIA */}
+      {imageUrl ? (
+        <figure className="jd-reader-media">
+          <div className="jd-reader-media__img-wrap">
+            <Image
+              src={imageUrl}
+              alt={headline}
+              fill
+              sizes="(max-width: 768px) 100vw, 920px"
+              className="jd-reader-media__img"
+              priority
+              unoptimized
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <figcaption className="jd-reader-media__caption">
+            {locationTag} • जन दर्पण सत्यापित स्रोत मीडिया
+          </figcaption>
+        </figure>
+      ) : null}
 
-        {/* Full Article Content */}
-        <div className="jd-reader-prose">
-          {loading ? (
-            <div className="jd-reader-loading">
-              <div className="jd-reader-spinner" />
-              <span>{language === "hi" ? "खबर लोड हो रही है…" : "Loading article…"}</span>
-            </div>
-          ) : paragraphs.length > 0 ? (
-            paragraphs.map((para, i) => (
-              <p key={i} className="jd-reader-para">
-                {para}
-              </p>
-            ))
-          ) : (
-            <>
-              {summary && <p className="jd-reader-para">{summary}</p>}
-              {article.script && (
-                <p className="jd-reader-para">{article.script}</p>
-              )}
-            </>
-          )}
+      {/* ARTICLE CONTENT */}
+      <section className="jd-reader-content" aria-label="Article text">
+        {loading ? (
+          <div className="jd-reader-loading">
+            <div className="jd-reader-spinner" />
+            <span>{language === "hi" ? "विस्तृत खबर लोड हो रही है…" : "Loading story content…"}</span>
+          </div>
+        ) : paragraphs.length > 0 ? (
+          paragraphs.map((para, i) => (
+            <p key={i} className="jd-reader-para">
+              {para}
+            </p>
+          ))
+        ) : (
+          <>
+            {summary && <p className="jd-reader-para">{summary}</p>}
+            {article.script && (
+              <p className="jd-reader-para">{article.script}</p>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* ARTICLE ACTIONS - Unified Jan Darpan Action Row (Requirement #7) */}
+      <section className="jd-reader-actions-section" aria-label="Story actions">
+        <div className="jd-reader-actions-bar">
+          <button
+            type="button"
+            onClick={() => setSelectedArticle(null)}
+            className="jd-control-btn jd-control-btn--action"
+            title={language === "hi" ? "लाइव खबरों पर वापस जाएं" : "Return to live feed"}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" />
+              <polyline points="12 19 5 12 12 5" />
+            </svg>
+            <span>{language === "hi" ? "वापस लाइव" : "Back to Live"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="jd-control-btn jd-control-btn--action"
+            title={copied ? (language === "hi" ? "लिंक कॉपी हो गया!" : "Copied!") : (language === "hi" ? "लिंक कॉपी करें" : "Copy link")}
+          >
+            {copied ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+            )}
+            <span>{copied ? (language === "hi" ? "कॉपी हुआ!" : "Copied!") : (language === "hi" ? "शेयर लिंक" : "Share Link")}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShareWhatsApp}
+            className="jd-control-btn jd-control-btn--action jd-control-btn--wa-action"
+            title={language === "hi" ? "व्हाट्सएप पर साझा करें" : "Share on WhatsApp"}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+            </svg>
+            <span>WhatsApp</span>
+          </button>
         </div>
-      </div>
+      </section>
 
-      {/* YouTube-like Continuation Model: संबंधित खबरें (Related Articles) */}
+      {/* RELATED ARTICLES - YouTube-like Continuation Model (Requirement #8 & #9) */}
       {relatedArticles.length > 0 && (
-        <section className="jd-reader-related" aria-label={language === "hi" ? "संबंधित खबरें" : "Related Articles"}>
-          <div className="jd-reader-related__head">
-            <span className="jd-reader-related__dot" aria-hidden="true" />
-            <h2 className="jd-reader-related__title">
+        <section className="jd-reader-related-section" aria-label={language === "hi" ? "संबंधित खबरें" : "Related Articles"}>
+          <div className="jd-reader-related-head">
+            <span className="jd-reader-related-head__dot" aria-hidden="true" />
+            <h2 className="jd-reader-related-head__title">
               {language === "hi" ? "संबंधित खबरें" : "Related Stories"}
             </h2>
           </div>
 
-          <div className="jd-reader-related__list">
+          {/* Exact same geometry as main queue: IMAGE LEFT, CONTENT RIGHT */}
+          <div className="jdl-mobile-queue__list jd-reader-related-list">
             {relatedArticles.map((rel) => {
               const relHeadline =
                 language === "hi"
@@ -350,7 +442,8 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
                 (language === "hi" ? "राज्य डेस्क" : "State Desk");
 
               return (
-                <article key={rel.id} className="jd-queue-card jd-queue-card--related">
+                <article key={rel.id} className="jdl-queue-card jdl-queue-card--related">
+                  {/* Left: Thumbnail */}
                   <div
                     className="jdl-queue-card__thumb-wrap"
                     onClick={() => handleSelectRelatedArticle(rel)}
@@ -379,7 +472,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
                           alignItems: "center",
                           justifyContent: "center",
                           background: "#102038",
-                          color: "rgba(255,255,255,0.7)",
+                          color: "rgba(255,255,255,0.72)",
                           fontSize: 10,
                           fontWeight: 800,
                         }}
@@ -389,6 +482,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
                     )}
                   </div>
 
+                  {/* Right: Content Column */}
                   <div className="jdl-queue-card__body">
                     <div className="jdl-queue-card__meta">
                       <span className="jdl-queue-card__tag">📍 {relLocationTag}</span>
@@ -402,6 +496,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
                       {relHeadline}
                     </h3>
 
+                    {/* Bottom-right: bold, highlighted 'पढ़ें' button */}
                     <div className="jdl-queue-card__action-row">
                       <button
                         type="button"

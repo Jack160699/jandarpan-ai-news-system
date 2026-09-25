@@ -18,6 +18,7 @@ import { SectionHeader } from "../components";
 import { DevelopingStoryTeaserCard } from "./DevelopingStoryTeaserCard";
 import { FormatStoryCard } from "./FormatStoryCard";
 import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
+import { resolveCanonicalCategories } from "@/lib/editorial/canonical-categories";
 
 const LocalPulseLazy = dynamic(
   () =>
@@ -218,6 +219,15 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
 
       const distHi = districtRes.nameHi || (districtRes.isStatewide ? "राज्य डेस्क" : (a.categoryLabel || "राज्य डेस्क"));
       const distEn = districtRes.nameEn || (districtRes.isStatewide ? "State Desk" : (a.categoryLabel || "State Desk"));
+      const catRes = resolveCanonicalCategories({
+        headline: a.headline,
+        summary: a.summary,
+        section: a.section,
+        tags: a.tags,
+        district: districtRes.nameEn || a.district,
+        districtSlug: districtRes.districtSlug,
+        categoryLabel: a.categoryLabel,
+      });
 
       queue.push({
         id: a.id,
@@ -232,12 +242,13 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
         district: broadcastLang === "en" ? distEn : distHi,
         districtHi: distHi,
         section: a.section || "chhattisgarh",
+        canonicalCategories: catRes.categories,
+        primaryCategory: catRes.primaryCategory,
         isBreaking: a.tags?.includes("breaking") || (a as { isBreaking?: boolean }).isBreaking === true,
         isLive: true,
         priorityScore: a.priorityScore || 50,
         publishedAt: a.publishedAt || new Date().toISOString(),
       });
-      if (queue.length >= 45) break;
     }
     return queue;
   }, [feed, broadcastLang]);
