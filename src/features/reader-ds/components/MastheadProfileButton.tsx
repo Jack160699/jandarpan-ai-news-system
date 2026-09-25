@@ -21,7 +21,7 @@ export function MastheadProfileButton() {
 
   return (
     <Link
-      href="/profile"
+      href="/archive"
       prefetch={false}
       aria-label={t("masthead.profileAria")}
       title={t("masthead.profileAria")}

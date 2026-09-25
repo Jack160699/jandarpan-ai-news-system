@@ -18,12 +18,22 @@ async function main() {
       localStorage.setItem("cgb_perm_location", "1");
       localStorage.setItem("cgb_install_dismissed", "1");
       localStorage.setItem("jdl_audio_unlocked", "1");
+      localStorage.setItem("cgb-language", "en");
+      localStorage.setItem("cgb-language-chosen", "1");
+      localStorage.setItem("jd-language", "en");
     } catch {}
   });
 
   const page = await context.newPage();
-  await page.goto("https://www.jandarpan.news?lang=en", { waitUntil: "networkidle", timeout: 45000 });
+  await page.goto("https://www.jandarpan.news", { waitUntil: "networkidle", timeout: 45000 });
   await page.waitForTimeout(2500);
+
+  // Click the EN toggle button in the masthead to be 100% sure
+  const enBtn = page.locator("button:has-text('EN')").first();
+  if (await enBtn.isVisible()) {
+    await enBtn.click();
+    await page.waitForTimeout(2000);
+  }
 
   const shot9 = path.join(OUTPUT_DIR, "prod_corr_09_desktop_live_english.png");
   await page.screenshot({ path: shot9, fullPage: false });

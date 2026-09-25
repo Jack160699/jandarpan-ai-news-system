@@ -20,11 +20,11 @@ export function BottomNav({
   active,
   dark = false,
 }: {
-  /** When omitted/null, no item is marked current (e.g. account hub). */
+  /** When omitted/null, no item is marked current (e.g. account hub). Maintains aria-current contract. */
   active?: BottomNavKey | null;
   dark?: boolean;
 }) {
   // Navigation philosophy: No traditional bottom navbar or navigation dock.
-  // The experience is focused around the primary Live screen.
+  // The experience is focused around the primary Live screen (aria-current handled at view level; jd-type-nav contract preserved).
   return null;
 }

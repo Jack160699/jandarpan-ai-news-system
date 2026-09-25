@@ -6,7 +6,7 @@ import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { HomeArticle } from "@/lib/homepage/types";
 import type { BroadcastSegment } from "@/features/jd-live/types";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
-import { generateAnchorSpokenScript } from "@/lib/broadcast/anchor-script-engine";
+import { generateAnchorSpokenScript, normalizeHeadlineForSpokenScript } from "@/lib/broadcast/anchor-script-engine";
 import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import { optimizeCdnImageUrl } from "@/lib/news/images/responsive-sizes";
 import { hasVerifiedRealMedia, isCleanRightsEligibleMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
@@ -398,9 +398,11 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
   const catHi = SECTION_NAMES_HI[c.section] || "राज्य डेस्क";
   const catEn = SECTION_NAMES_EN[c.section] || "State Desk";
 
-  const headlineHi = c.headlineHi || (isDevanagari ? c.headline : c.headline);
-  const headlineEn = c.headlineEn || (!isDevanagari ? c.headline : c.headline);
-  const headline = targetLang === "en" ? (c.headlineEn || c.headline) : (c.headlineHi || c.headline);
+  const rawHeadlineHi = c.headlineHi || (isDevanagari ? c.headline : c.headline);
+  const rawHeadlineEn = c.headlineEn || (!isDevanagari ? c.headline : c.headline);
+  const headlineHi = normalizeHeadlineForSpokenScript(rawHeadlineHi, c.summaryHi || c.summary, c.articleBodyHi || c.articleBody);
+  const headlineEn = normalizeHeadlineForSpokenScript(rawHeadlineEn, c.summaryEn || c.summary, c.articleBodyEn || c.articleBody);
+  const headline = targetLang === "en" ? (headlineEn || headlineHi) : (headlineHi || headlineEn);
 
   const summaryHi = c.summaryHi || (isDevanagari ? c.summary : c.summary);
   const summaryEn = c.summaryEn || (!isDevanagari ? c.summary : c.summary);
@@ -458,6 +460,7 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     district: location,
     districtHi: locationHi,
     districtEn: locationEn,
+    districtSlug: districtRes.districtSlug || c.districtSlug || null,
     section: c.section,
     canonicalCategories: catRes.categories,
     primaryCategory: catRes.primaryCategory,

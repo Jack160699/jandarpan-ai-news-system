@@ -18,6 +18,7 @@ import { detectLocalTrends } from "@/lib/regional/trends";
 import { buildLocalBreakingAlerts } from "@/lib/regional/breaking-alerts";
 import { logRegionalAnalytics } from "@/lib/regional/analytics";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+import { extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
 
 export type HyperlocalArticleRef = {
   id: string;
@@ -27,6 +28,10 @@ export type HyperlocalArticleRef = {
   district: string | null;
   regionalScore: number;
   publishedAt: string;
+  imageUrl?: string;
+  tags?: string[];
+  canonicalCategories?: string[];
+  primaryCategory?: string;
 };
 
 export type HyperlocalFeedBlock = {
@@ -56,14 +61,28 @@ function toRef(
 
   const geo = geoFromRecord(row);
   const topic = scoreRegionalTopicFromArticle(row, homeDistrict);
+
+  // Extract canonical image URL preserving verified news photography
+  const verifiedUrl = extractVerifiedRealMediaUrl(row);
+  const rawMeta = row.editorial_metadata as any;
+  const rawImg =
+    verifiedUrl ||
+    row.hero_image_url ||
+    rawMeta?.hero_image_url ||
+    rawMeta?.image_url ||
+    rawMeta?.imageUrl ||
+    undefined;
+
   return {
     id: row.id,
     slug: row.slug,
     headline: localized.headline,
     summary: localized.summary?.trim() ?? "",
-    district: geo.primary_district,
+    district: geo.primary_district ?? null,
     regionalScore: topic.score,
-    publishedAt: row.published_at ?? row.created_at,
+    publishedAt: row.published_at ?? row.created_at ?? new Date().toISOString(),
+    imageUrl: rawImg,
+    tags: row.tags ?? [],
   };
 }
 

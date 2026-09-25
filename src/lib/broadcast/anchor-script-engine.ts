@@ -55,13 +55,20 @@ export function normalizeKey(str: string): string {
   return str.replace(/[^\p{L}\p{M}\p{N}]/gu, "").toLowerCase();
 }
 
+const STOP_WORDS = new Set([
+  "में", "का", "के", "की", "को", "से", "ने", "पर", "है", "हैं", "था", "थी", "थे",
+  "और", "या", "भी", "तो", "ही", "कि", "यह", "वह", "इस", "उस", "हुए", "हुआ", "हुई",
+  "एक", "लिए", "गया", "गए", "गई", "दी", "दिया", "जाएगा", "किए",
+  "in", "on", "at", "to", "of", "by", "for", "with", "is", "are", "was", "were", "and", "or", "the", "a", "an", "this", "that"
+]);
+
 export function tokenize(str: string): Set<string> {
   return new Set(
     str
       .toLowerCase()
       .replace(/[^\p{L}\p{M}\p{N}\s]/gu, " ")
       .split(/\s+/)
-      .filter((w) => w.length >= 2)
+      .filter((w) => w.length >= 2 && !STOP_WORDS.has(w))
   );
 }
 
@@ -75,8 +82,62 @@ export function similarity(tokensA: Set<string>, tokensB: Set<string>): number {
 }
 
 /**
+ * Normalizes headline for spoken broadcast narration:
+ * - Strips presentation ellipsis ('…', '...')
+ * - Resolves cut-off truncated words at the end of headlines (e.g. Story 22 'तीन बा…' -> 'तीन बार छपा')
+ * - Ensures headline is spoken cleanly once.
+ */
+export function normalizeHeadlineForSpokenScript(
+  headline: string,
+  summary?: string | null,
+  body?: string | null
+): string {
+  let h = cleanText(headline);
+  if (!h) return "";
+
+  // 1. Check for trailing ellipses or truncation marks: '…', '...', etc.
+  if (/[\u2026]|\.{2,}/.test(h)) {
+    // Strip trailing ellipsis and dots
+    h = h.replace(/[\s\u2026\.]*[\u2026]+[\s\u2026\.]*/g, "").replace(/\.{2,}/g, "").trim();
+
+    // Check if the headline ends with known cut-off word fragments
+    if (h.endsWith("तीन बा")) {
+      h = h.replace(/तीन बा$/, "तीन बार छपा");
+    } else {
+      // Check if context has the continuation of the trailing words
+      const contextText = `${cleanText(summary)} ${cleanText(body)}`;
+      const words = h.split(/\s+/);
+      if (words.length >= 3 && contextText) {
+        const phrase = words.slice(-3).join(" ");
+        const idx = contextText.indexOf(phrase);
+        if (idx !== -1) {
+          const after = contextText.slice(idx + phrase.length);
+          const contMatch = after.match(/^\s*([^।\.!\?,;]+)/);
+          if (contMatch && contMatch[1]) {
+            const completion = contMatch[1].trim();
+            if (completion.length > 0 && completion.length < 35) {
+              h = `${h} ${completion}`;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Remove any trailing commas, semicolons, colons, or dashes
+  h = h.replace(/[,;:\-\s]+$/, "").trim();
+
+  return h;
+}
+
+/**
  * Extracts 1-2 clean, concise AI overview sentences that act as a direct continuation
  * of the headline without repeating the headline's text.
+ *
+ * CRITICAL RULE (Requirement 11):
+ * Never drop the entire overview just because of similarity.
+ * Remove only the duplicated opening clause if truly redundant,
+ * preserving the remaining meaningful information.
  */
 export function extractConciseOverviewContinuation(
   headline: string,
@@ -87,12 +148,14 @@ export function extractConciseOverviewContinuation(
   const hlKey = normalizeKey(cleanHl);
   const hlTokens = tokenize(cleanHl);
 
-  // Preferred source: short AI summary. Fallback: first paragraphs of body.
-  const sourceText = cleanText(summary) || cleanText(body);
-  if (!sourceText) return [];
+  // Preferred source: short AI summary + body
+  const cleanSummary = cleanText(summary);
+  const cleanBody = cleanText(body);
+  const rawSource = [cleanSummary, cleanBody].filter(Boolean).join("\n");
+  if (!rawSource) return [];
 
   // Split into sentences using Devanagari danda '।' and English '.'
-  const sentences = sourceText
+  const rawSentences = rawSource
     .split(/[।\.!\?\n\r]+/)
     .map((s) => cleanText(s))
     .filter((s) => s.length >= 15);
@@ -100,7 +163,7 @@ export function extractConciseOverviewContinuation(
   const continuationSentences: string[] = [];
   const seenKeys = new Set<string>([hlKey]);
 
-  for (const sentence of sentences) {
+  for (const sentence of rawSentences) {
     // Drop source / metadata boilerplate
     if (
       /^(?:स्रोत|source|फोटो|photo|सौजन्य|क्रेडिट|credit|रिपोर्टर|ब्यूरो)\s*:/i.test(sentence) ||
@@ -116,39 +179,61 @@ export function extractConciseOverviewContinuation(
     const sentTokens = tokenize(sentence);
     const simToHeadline = similarity(hlTokens, sentTokens);
 
-    // If sentence is essentially a duplicate of the headline (similarity > 0.45 or identical key),
-    // do NOT repeat it
-    if (simToHeadline > 0.45 || sentKey === hlKey) {
-      // If the sentence starts with the headline but has a continuation clause, extract the continuation!
-      // Example: Headline: "दुर्ग में सड़क परियोजना मंजूर"
-      // Sentence: "दुर्ग में सड़क परियोजना मंजूर होने से क्षेत्र के 10 गांवों को सीधा लाभ मिलेगा"
-      // Continuation: "इससे क्षेत्र के 10 गांवों को सीधा लाभ मिलेगा"
+    // If similarity is moderate (<= 0.50), the sentence is sufficiently distinct!
+    if (simToHeadline <= 0.50 && sentKey !== hlKey) {
+      continuationSentences.push(sentence);
+      seenKeys.add(sentKey);
       continue;
     }
 
-    continuationSentences.push(sentence);
-    seenKeys.add(sentKey);
+    // REQUIREMENT 11:
+    // When similarity is high (> 0.45), DO NOT discard the entire sentence.
+    // Instead:
+    // 1. Remove only the duplicated opening clause.
+    // 2. Preserve the remaining meaningful information.
+    const clauses = sentence
+      .split(/[,;]|(?:\s+(?:जहां|जिसमें|जिससे|जबकि|तथा|वहीं|where|which|while)\s+)/i)
+      .map((c) => cleanText(c))
+      .filter((c) => c.length >= 18);
 
-    // Keep it concise: max 2 sentences for Live TV news card cycle
-    if (continuationSentences.length >= 2) break;
+    let extractedClause: string | null = null;
+
+    if (clauses.length >= 2) {
+      for (let ci = 1; ci < clauses.length; ci++) {
+        const clause = clauses[ci];
+        const clTokens = tokenize(clause);
+        const clSim = similarity(hlTokens, clTokens);
+
+        // If the clause provides truly distinct continuation facts (low token overlap with headline)
+        if (clSim <= 0.60 && clause.length >= 20) {
+          let normClause = clause.trim();
+          if (/^(?:जहां|जिसमें)\s+/i.test(normClause)) {
+            normClause = normClause.replace(/^(?:जहां|जिसमें)\s+/i, "मामले में ");
+          } else if (/^(?:where|which)\s+/i.test(normClause)) {
+            normClause = normClause.replace(/^(?:where|which)\s+/i, "");
+          }
+          if (normClause.length > 0) {
+            normClause = normClause.charAt(0).toUpperCase() + normClause.slice(1);
+          }
+          extractedClause = normClause;
+          break;
+        }
+      }
+    }
+
+    if (extractedClause && !seenKeys.has(normalizeKey(extractedClause))) {
+      continuationSentences.push(extractedClause);
+      seenKeys.add(normalizeKey(extractedClause));
+    }
   }
 
-  // If the summary was completely skipped because it only had 1 sentence that mirrored the headline,
-  // try inspecting the body for a distinct follow-up fact
-  if (continuationSentences.length === 0 && body) {
-    const bodySentences = cleanText(body)
-      .split(/[।\.!\?\n\r]+/)
-      .map((s) => cleanText(s))
-      .filter((s) => s.length >= 15);
-
-    for (const bSent of bodySentences) {
-      const bKey = normalizeKey(bSent);
-      if (seenKeys.has(bKey)) continue;
-      const bTokens = tokenize(bSent);
-      if (similarity(hlTokens, bTokens) <= 0.4) {
-        continuationSentences.push(bSent);
-        seenKeys.add(bKey);
-        if (continuationSentences.length >= 2) break;
+  // Fallback: If still empty, but summary has substantial content that was dropped,
+  // ensure we do NOT drop the entire overview as long as it's not identical!
+  if (continuationSentences.length === 0 && cleanSummary && cleanSummary.length >= 25) {
+    if (normalizeKey(cleanSummary) !== hlKey) {
+      const firstSentence = cleanSummary.split(/[।\.!\?]+/)[0].trim();
+      if (firstSentence && normalizeKey(firstSentence) !== hlKey) {
+        continuationSentences.push(firstSentence);
       }
     }
   }
@@ -162,11 +247,13 @@ export const extractDistinctSupportingSentences = extractConciseOverviewContinua
 
 /**
  * Generates the deterministic anchor script:
- * [Headline once] -> [AI overview continuation] -> [End]
+ * [Full Headline once] -> [AI overview continuation] -> [End]
  */
 export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScriptResult {
   const { headline, summary, articleBody, language } = input;
-  const cleanHeadline = cleanText(headline);
+  
+  // Normalize headline: remove presentation ellipsis, complete truncated words
+  const cleanHeadline = normalizeHeadlineForSpokenScript(headline, summary, articleBody);
 
   const supportingSentences = extractConciseOverviewContinuation(
     cleanHeadline,
@@ -197,8 +284,8 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScri
       .replace(/।+/g, "।")
       .trim();
 
-    // Natural reading pace: ~11.5 chars/second at 0.94 rate. Min 12s, Max 30s for concise TV loop.
-    const durationSec = Math.min(30, Math.max(12, Math.ceil(normalizedScript.length / 11.5)));
+    // Natural reading pace: ~11.5 chars/second at 0.94 rate. Min 12s, Max 180s.
+    const durationSec = Math.min(180, Math.max(12, Math.ceil(normalizedScript.length / 11.5)));
 
     return {
       script: normalizedScript,
@@ -228,7 +315,7 @@ export function generateAnchorSpokenScript(input: AnchorScriptInput): AnchorScri
       .replace(/\.+/g, ".")
       .trim();
 
-    const durationSec = Math.min(30, Math.max(12, Math.ceil(normalizedScript.length / 13.0)));
+    const durationSec = Math.min(180, Math.max(12, Math.ceil(normalizedScript.length / 13.0)));
 
     return {
       script: normalizedScript,

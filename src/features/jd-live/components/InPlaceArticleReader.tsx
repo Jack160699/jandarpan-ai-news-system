@@ -164,12 +164,14 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
         }
       }
 
-      // Shared district
+      // Shared district (canonical slug or localized name match)
+      const slugMatch = article.districtSlug && s.districtSlug && article.districtSlug === s.districtSlug;
       if (
-        currentDistrict &&
+        slugMatch ||
+        (currentDistrict &&
         sDistrict &&
         currentDistrict.includes(sDistrict) &&
-        !currentDistrict.includes("राज्य")
+        !currentDistrict.includes("राज्य"))
       ) {
         score += 4;
       }

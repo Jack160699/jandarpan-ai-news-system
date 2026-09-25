@@ -233,29 +233,15 @@ export async function fetchGeneratedArticlePool(
     limit: bounded,
   });
 
+  if (publicRows.length > 0) {
+    return publicRows;
+  }
+
+  // Only fall back to static articles if database returned zero public articles
   const { getStaticFallbackArticlePool } = await import(
     "@/lib/news/fallback/wire-articles"
   );
-  const fallback = getStaticFallbackArticlePool();
-
-  const seenSlugs = new Set<string>();
-  const combined: GeneratedArticleRow[] = [];
-
-  for (const r of publicRows) {
-    if (r?.slug && !seenSlugs.has(r.slug)) {
-      seenSlugs.add(r.slug);
-      combined.push(r);
-    }
-  }
-
-  for (const r of fallback) {
-    if (r?.slug && !seenSlugs.has(r.slug)) {
-      seenSlugs.add(r.slug);
-      combined.push(r);
-    }
-  }
-
-  return combined;
+  return getStaticFallbackArticlePool();
 }
 
 export type GoogleNewsArticleRow = Pick<

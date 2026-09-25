@@ -20,6 +20,7 @@ import {
   resolveCanonicalCategories,
   type CanonicalCategoryId,
 } from "@/lib/editorial/canonical-categories";
+import { getDistrict } from "@/lib/regional/districts";
 
 /**
  * Filter stories strictly by canonical category metadata.
@@ -64,14 +65,35 @@ export function matchesDistrictScope(
     return true;
   }
 
-  // If the user has not explicitly locked a district, do not artificially exclude
-  // verified live stories from other CG districts in the general live broadcast pool.
   if (!isExplicitDistrict) {
     return true;
   }
 
+  const target = districtSlug.trim().toLowerCase();
+  const districtObj = getDistrict(target);
+  const targetSlug = districtObj?.slug ?? target;
+  const targetHi = districtObj?.nameHi ?? "";
+  const targetEn = (districtObj?.name ?? target).toLowerCase();
+  const aliases = (districtObj?.aliases ?? []).map((a) => a.toLowerCase());
+
+  // 1. Direct canonical slug match
+  const segSlug = (seg.districtSlug || "").trim().toLowerCase();
+  if (segSlug && (segSlug === targetSlug || aliases.includes(segSlug))) {
+    return true;
+  }
+
+  // 2. Hindi & English district label matching
+  const rawHi = (seg.districtHi || "").trim();
+  if (targetHi && rawHi && (rawHi === targetHi || rawHi.includes(targetHi) || targetHi.includes(rawHi))) {
+    return true;
+  }
+
+  const rawEn = (seg.districtEn || "").trim().toLowerCase();
+  if (targetEn && rawEn && (rawEn === targetEn || rawEn.includes(targetEn) || targetEn.includes(rawEn))) {
+    return true;
+  }
+
   const rawDist = (seg.district || seg.districtHi || "").toLowerCase();
-  const target = districtSlug.toLowerCase();
 
   // If story has no specific district or is statewide, allow it
   if (
@@ -84,15 +106,15 @@ export function matchesDistrictScope(
     return true;
   }
 
-  // If story has a specific district, it must match the active district context
-  return rawDist.includes(target);
+  // Fallback to raw display string
+  return rawDist.includes(targetSlug) || (targetHi ? rawDist.includes(targetHi) : false);
 }
 
 /**
  * Prioritizes and filters stories by:
  * 1. Category match (or all if category === 'all')
  * 2. District priority:
- *    - Selected district matching stories FIRST
+ *    - Selected district matching stories FIRST (using canonical district identity)
  *    - Broader Chhattisgarh statewide / desk stories SECOND
  *    - Other eligible broadcast stories THIRD (so queue never starves)
  */
@@ -110,9 +132,37 @@ export function getPrioritizedStories(
     return categoryMatched;
   }
 
+  const districtObj = getDistrict(target);
+  const targetSlug = districtObj?.slug ?? target;
+  const targetHi = districtObj?.nameHi ?? "";
+  const targetEn = (districtObj?.name ?? target).toLowerCase();
+  const aliases = (districtObj?.aliases ?? []).map((a) => a.toLowerCase());
+
   const isDistrictMatch = (s: BroadcastSegment) => {
-    const raw = `${s.district || ""} ${s.districtHi || ""} ${(s as any).districtSlug || ""}`.toLowerCase();
-    return raw.includes(target);
+    // 1. Direct canonical slug match
+    const segSlug = (s.districtSlug || "").trim().toLowerCase();
+    if (segSlug && (segSlug === targetSlug || aliases.includes(segSlug))) {
+      return true;
+    }
+
+    // 2. Hindi & English district label matching
+    const rawHi = (s.districtHi || "").trim();
+    if (targetHi && rawHi && (rawHi === targetHi || rawHi.includes(targetHi) || targetHi.includes(rawHi))) {
+      return true;
+    }
+
+    const rawEn = (s.districtEn || "").trim().toLowerCase();
+    if (targetEn && rawEn && (rawEn === targetEn || rawEn.includes(targetEn) || targetEn.includes(rawEn))) {
+      return true;
+    }
+
+    // 3. Fallback to raw display string
+    const raw = `${s.district || ""}`.toLowerCase();
+    if (raw && (raw.includes(targetSlug) || (targetHi && raw.includes(targetHi)) || aliases.some((a) => raw.includes(a)))) {
+      return true;
+    }
+
+    return false;
   };
 
   const isStatewide = (s: BroadcastSegment) => {
