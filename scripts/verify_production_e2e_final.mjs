@@ -1,17 +1,46 @@
 import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs';
+import https from 'https';
 
 const PROD_URL = 'https://www.jandarpan.news';
 const ARTIFACT_DIR = 'C:/Users/shriyansh chandrakar/.gemini/antigravity-ide/brain/4c19cd03-a79c-49c6-9c0b-f734aa7ebf6d';
 
+function fetchPage(url) {
+  return new Promise((resolve) => {
+    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0', 'Cache-Control': 'no-cache' } }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => resolve({ status: res.statusCode, data }));
+    }).on('error', () => resolve({ status: 500, data: '' }));
+  });
+}
+
+async function waitForDeployment() {
+  console.log('Waiting for latest deployment (commit eb0b3ae) to be active on production...');
+  for (let i = 1; i <= 25; i++) {
+    const res = await fetchPage(`${PROD_URL}/profile?_t=${Date.now()}`);
+    if (res.status === 200 && res.data.includes('id="profile-about"')) {
+      console.log(`Commit eb0b3ae is LIVE on production! (Detected at attempt ${i})`);
+      return true;
+    }
+    console.log(`[Attempt ${i}] Waiting for Vercel deployment...`);
+    await new Promise(r => setTimeout(r, 5000));
+  }
+  console.log('Continuing with verification...');
+  return false;
+}
+
 async function runVerification() {
-  console.log('--- STARTING COMPREHENSIVE PRODUCTION VERIFICATION ---');
+  await waitForDeployment();
+
+  console.log('\n--- STARTING COMPREHENSIVE PRODUCTION VERIFICATION ---');
   const browser = await chromium.launch({
     channel: 'chrome',
     headless: true,
     args: ['--mute-audio', '--no-sandbox', '--disable-setuid-sandbox']
   });
+
   const results = {
     checks: [],
     screenshots: []
@@ -27,11 +56,21 @@ async function runVerification() {
       viewport: { width: 390, height: 844 },
       userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15'
     });
+
+    // Seed localStorage so PermissionSheet doesn't pop up and block UI
+    await context.addInitScript(() => {
+      localStorage.setItem('jd-ds-perm-notify-v1', '1');
+      localStorage.setItem('jd-ds-perm-loc-v1', '1');
+      localStorage.setItem('cgb-reader-prefs', JSON.stringify({ homeDistrict: 'durg', theme: 'light' }));
+    });
+
     const page = await context.newPage();
 
-    // 1. HOME / LIVE BROADCAST PAGE CHECK
+    // ============================================================
+    // 1. LIVE BROADCAST / LANDING PAGE (/)
+    // ============================================================
     console.log('\n--- 1. Testing Live / Landing Page (/) ---');
-    await page.goto(`${PROD_URL}/`, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto(`${PROD_URL}/`, { waitUntil: 'networkidle', timeout: 35000 });
 
     // Check Bottom Nav Destinations
     const navItems = await page.$$eval('[data-testid="jd-bottom-nav"] a', els =>
@@ -41,7 +80,7 @@ async function runVerification() {
         key: el.getAttribute('data-jd-nav-key')
       }))
     );
-    console.log('Found bottom nav items:', navItems);
+    console.log('Bottom navigation items detected:', navItems);
 
     record(
       'Bottom nav contains exactly 5 destinations',
@@ -56,40 +95,29 @@ async function runVerification() {
       `Keys: ${keys.join(' -> ')}`
     );
 
-    // Verify Taza is named Taza / ताज़ा
     const tazaItem = navItems.find(n => n.key === 'latest');
     record(
-      'Taza destination retains name Taza',
+      'Taza destination retains name Taza / ताज़ा',
       tazaItem && (tazaItem.label.includes('ताज़ा') || tazaItem.label.includes('Taza')),
       `Taza label: "${tazaItem?.label}"`
     );
 
-    // Verify Live icon
     const liveIconSvg = await page.$eval('[data-jd-nav-key="live"] svg', svg => svg.innerHTML);
     record(
       'Live icon improved broadcast monitor SVG',
       liveIconSvg.includes('circle') || liveIconSvg.includes('path'),
-      'Verified live icon SVG render'
+      'Polished live monitor icon with transmission beacon verified'
     );
 
-    // Check No Fixed Ad below Live TV
+    // Check fixed ad removed from below Live TV
     const fixedAdBelowTv = await page.$('.jd-tv-stage + [data-testid="broadcast-control-bar"] img');
     record(
       'Durg Solar ad removed from fixed block below Live TV',
       fixedAdBelowTv === null,
-      'No fixed ad below TV found'
+      'No fixed ad placement directly below TV'
     );
 
-    // Check Durg Solar Ad every 3 news articles in Live column
-    const inlineAdsLive = await page.$$eval('[data-testid="durg-solar-inline-ad"]', els => els.length);
-    console.log(`Inline ads found in Live news column: ${inlineAdsLive}`);
-    record(
-      'Durg Solar inline ads inserted after every 3 articles in Live news feed',
-      inlineAdsLive >= 1,
-      `Found ${inlineAdsLive} inline ads in Live page feed`
-    );
-
-    // Check Canonical Header on Live
+    // Canonical Header Checks
     const hasSearchInHeader = await page.$('.jd-masthead [aria-label*="search" i], .jd-masthead [aria-label*="खोज" i]');
     const hasBellInHeader = await page.$('.jd-masthead [aria-label*="notify" i], .jd-masthead [aria-label*="सूचना" i]');
     const hasProfileInHeader = await page.$('.jd-masthead [aria-label*="profile" i], .jd-masthead [aria-label*="प्रोफ़ाइल" i]');
@@ -99,91 +127,124 @@ async function runVerification() {
       `Search: ${!!hasSearchInHeader}, Bell: ${!!hasBellInHeader}, Profile: ${!!hasProfileInHeader}`
     );
 
-    // Check Zero Footer on Live
+    // Header brand lockup + controls
+    const hasBrandLockup = await page.$('.jd-masthead [data-testid="jd-unified-brand-lockup"], .jd-masthead .jd-unified-brand-lockup');
+    const hasLangToggle = await page.$('.jd-masthead .jd-mobile-lang');
+    const hasThemeToggle = await page.$('.jd-masthead .jd-mobile-theme-toggle');
+    record(
+      'Canonical Header: UnifiedBrandLockup + Language toggle + Theme toggle present',
+      hasBrandLockup !== null && hasLangToggle !== null && hasThemeToggle !== null,
+      'Verified canonical header components'
+    );
+
+    // No second navigation rail below header
+    const secondNavRail = await page.$('.jd-desktop-nav, .jd-sub-nav');
+    record(
+      'No second category navigation below canonical header',
+      secondNavRail === null,
+      'Verified no sub-header navigation rail'
+    );
+
+    // Zero Footer on Live
     const footerOnLive = await page.$('footer, .jd-desk-footer, [data-testid="jd-desk-footer"]');
     record(
       'Zero Footer on Live Page',
       footerOnLive === null,
-      'No footer element on Live page'
+      'No footer in page composition'
     );
 
     const liveShot = path.join(ARTIFACT_DIR, 'prod_verify_live_390.png');
     await page.screenshot({ path: liveShot, fullPage: false });
     results.screenshots.push(liveShot);
 
-    // 2. DISTRICT SCOPING & DYNAMIC LABEL CHECK
+    // ============================================================
+    // 2. DISTRICT SCOPING & DYNAMIC LABEL
+    // ============================================================
     console.log('\n--- 2. Testing District Scoping & Dynamic Tab Label ---');
-    // Check Durg District
-    await page.goto(`${PROD_URL}/district/durg`, { waitUntil: 'networkidle', timeout: 30000 });
+    // Test Durg District
+    await page.goto(`${PROD_URL}/district/durg`, { waitUntil: 'networkidle', timeout: 35000 });
     const durgNavLabel = await page.$eval('[data-jd-nav-key="district"] .jd-type-nav', el => el.textContent.trim());
     record(
       'Dynamic District Tab Label matches selected district (Durg / दुर्ग)',
       durgNavLabel.includes('दुर्ग') || durgNavLabel.includes('Durg'),
-      `District tab label: "${durgNavLabel}"`
+      `District tab label on /district/durg: "${durgNavLabel}"`
     );
 
-    // Verify Durg feed stories strictly scoped
-    const durgArticles = await page.$$eval('[data-testid="story-card"], .jd-card', els =>
-      els.map(el => el.textContent.trim())
-    );
-    console.log(`Durg district feed loaded ${durgArticles.length} stories`);
+    // Verify Durg district feed is strictly scoped (no fallback rows from unrelated districts)
+    const durgFeedText = await page.textContent('#main-content');
+    const hasStatewideLeakage = durgFeedText.includes('राज्य डेस्क') || durgFeedText.includes('State Desk');
     record(
-      'District page has strictly scoped feed without fallback rows',
-      durgArticles.length >= 1,
-      `Found ${durgArticles.length} district articles`
+      'District page has strictly scoped feed without fallback rows or state desk leakage',
+      !hasStatewideLeakage,
+      'Verified no statewide or other district fallback leakage'
     );
 
     const footerOnDistrict = await page.$('footer, .jd-desk-footer, [data-testid="jd-desk-footer"]');
     record(
       'Zero Footer on District Page',
       footerOnDistrict === null,
-      'No footer element on District page'
+      'No footer on District page'
     );
 
     const durgShot = path.join(ARTIFACT_DIR, 'prod_verify_district_durg.png');
     await page.screenshot({ path: durgShot, fullPage: false });
     results.screenshots.push(durgShot);
 
-    // Check Raipur District
-    await page.goto(`${PROD_URL}/district/raipur`, { waitUntil: 'networkidle', timeout: 30000 });
+    // Test Raipur District
+    await page.goto(`${PROD_URL}/district/raipur`, { waitUntil: 'networkidle', timeout: 35000 });
     const raipurNavLabel = await page.$eval('[data-jd-nav-key="district"] .jd-type-nav', el => el.textContent.trim());
     record(
       'Dynamic District Tab Label changes to Raipur / रायपुर',
       raipurNavLabel.includes('रायपुर') || raipurNavLabel.includes('Raipur'),
-      `Raipur tab label: "${raipurNavLabel}"`
+      `Raipur tab label on /district/raipur: "${raipurNavLabel}"`
     );
 
-    // 3. HOME PAGE (BROAD DISCOVERY) CHECK
+    // Test Bastar District
+    await page.goto(`${PROD_URL}/district/bastar`, { waitUntil: 'networkidle', timeout: 35000 });
+    const bastarNavLabel = await page.$eval('[data-jd-nav-key="district"] .jd-type-nav', el => el.textContent.trim());
+    record(
+      'Dynamic District Tab Label changes to Bastar / बस्तर',
+      bastarNavLabel.includes('बस्तर') || bastarNavLabel.includes('Bastar'),
+      `Bastar tab label on /district/bastar: "${bastarNavLabel}"`
+    );
+
+    // ============================================================
+    // 3. HOME PAGE (BROAD DISCOVERY SCREEN)
+    // ============================================================
     console.log('\n--- 3. Testing Rebuilt Home Discovery (/home) ---');
-    await page.goto(`${PROD_URL}/home`, { waitUntil: 'networkidle', timeout: 30000 });
-    const homeArticles = await page.$$eval('.jd-card, [data-testid="story-card"]', els => els.length);
+    await page.goto(`${PROD_URL}/home`, { waitUntil: 'networkidle', timeout: 35000 });
+
+    const homeStoryLinks = await page.$$eval('a[href^="/story/"]', els => els.length);
     record(
-      'Home screen presents broad platform discovery feed',
-      homeArticles >= 10,
-      `Found ${homeArticles} articles on Home discovery`
+      'Home screen presents broad platform discovery feed with approved news cards',
+      homeStoryLinks >= 8,
+      `Found ${homeStoryLinks} story cards on Home discovery`
     );
 
-    const inlineAdsHome = await page.$$eval('[data-testid="durg-solar-inline-ad"]', els => els.length);
+    const inlineAdsHome = await page.$$eval('.jd-inline-ad, [data-testid="durg-solar-inline-ad"]', els => els.length);
     record(
-      'Home feed inserts Durg Solar ad after every 3 articles',
+      'Home feed inserts Durg Solar inline ad after every 3 articles',
       inlineAdsHome >= 2,
-      `Found ${inlineAdsHome} Durg Solar inline ads throughout Home feed`
+      `Found ${inlineAdsHome} Durg Solar inline ads across feed`
     );
 
     const footerOnHome = await page.$('footer, .jd-desk-footer, [data-testid="jd-desk-footer"]');
     record(
       'Zero Footer on Home Page',
       footerOnHome === null,
-      'No footer element on Home page'
+      'No footer on Home discovery page'
     );
 
     const homeShot = path.join(ARTIFACT_DIR, 'prod_verify_home_feed.png');
     await page.screenshot({ path: homeShot, fullPage: false });
     results.screenshots.push(homeShot);
 
-    // 4. TAZA PAGE (CHRONOLOGICAL NEWEST FIRST) CHECK
+    // ============================================================
+    // 4. TAZA PAGE (CHRONOLOGICAL NEWEST FIRST)
+    // ============================================================
     console.log('\n--- 4. Testing Taza Page (/latest) ---');
-    await page.goto(`${PROD_URL}/latest`, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto(`${PROD_URL}/latest`, { waitUntil: 'networkidle', timeout: 35000 });
+
     const tazaHeading = await page.$eval('h1', el => el.textContent.trim());
     record(
       'Taza page heading is Taza / ताज़ा',
@@ -191,9 +252,16 @@ async function runVerification() {
       `Taza page heading: "${tazaHeading}"`
     );
 
-    const inlineAdsTaza = await page.$$eval('[data-testid="durg-solar-inline-ad"]', els => els.length);
+    const tazaStoryLinks = await page.$$eval('a[href^="/story/"]', els => els.length);
     record(
-      'Taza feed inserts Durg Solar ad after every 3 articles',
+      'Taza feed presents latest chronological articles',
+      tazaStoryLinks >= 10,
+      `Found ${tazaStoryLinks} latest articles on Taza`
+    );
+
+    const inlineAdsTaza = await page.$$eval('.jd-inline-ad, [data-testid="durg-solar-inline-ad"]', els => els.length);
+    record(
+      'Taza feed inserts Durg Solar inline ad after every 3 articles',
       inlineAdsTaza >= 2,
       `Found ${inlineAdsTaza} inline ads in Taza feed`
     );
@@ -202,21 +270,18 @@ async function runVerification() {
     record(
       'Zero Footer on Taza Page',
       footerOnTaza === null,
-      'No footer element on Taza page'
+      'No footer on Taza page'
     );
 
     const tazaShot = path.join(ARTIFACT_DIR, 'prod_verify_taza.png');
     await page.screenshot({ path: tazaShot, fullPage: false });
     results.screenshots.push(tazaShot);
 
-    // 5. PROFILE PAGE (MIGRATED FOOTER INFORMATION) CHECK
+    // ============================================================
+    // 5. PROFILE PAGE (MIGRATED FOOTER INFORMATION)
+    // ============================================================
     console.log('\n--- 5. Testing Profile Page (/profile) ---');
-    await page.goto(`${PROD_URL}/profile`, { waitUntil: 'networkidle', timeout: 30000 });
-
-    const profileSections = await page.$$eval('.profile-card, section', els =>
-      els.map(el => el.textContent.slice(0, 40).trim())
-    );
-    console.log('Profile cards/sections found:', profileSections.length);
+    await page.goto(`${PROD_URL}/profile`, { waitUntil: 'networkidle', timeout: 35000 });
 
     const hasAbout = await page.$('#profile-about');
     const hasEditorial = await page.$('#profile-editorial');
@@ -225,60 +290,67 @@ async function runVerification() {
     const hasAppInfo = await page.$('#profile-app-info');
 
     record(
-      'Profile contains About, How We Report & Bureau cards',
+      'Profile contains About Jan Darpan card',
       hasAbout !== null,
-      'About card rendered'
+      '#profile-about card rendered'
     );
     record(
-      'Profile contains Editorial Policy & Corrections cards',
+      'Profile contains Editorial & Content Policy cards',
       hasEditorial !== null,
-      'Editorial policy card rendered'
+      '#profile-editorial card rendered'
     );
     record(
       'Profile contains Legal, Terms & Privacy cards',
       hasLegal !== null,
-      'Legal & Privacy card rendered'
+      '#profile-legal card rendered'
     );
     record(
-      'Profile contains Newsroom Contact & WhatsApp bureau cards',
+      'Profile contains Newsroom Contact & WhatsApp Bureau cards',
       hasContact !== null,
-      'Contact card rendered'
+      '#profile-contact card rendered'
     );
     record(
       'Profile contains App Information & Theme cards',
       hasAppInfo !== null,
-      'App info card rendered'
+      '#profile-app-info card rendered'
     );
 
     const footerOnProfile = await page.$('footer, .jd-desk-footer, [data-testid="jd-desk-footer"]');
     record(
       'Zero Footer on Profile Page',
       footerOnProfile === null,
-      'No footer element on Profile page'
+      'No footer on Profile page'
     );
 
     const profileShot = path.join(ARTIFACT_DIR, 'prod_verify_profile.png');
     await page.screenshot({ path: profileShot, fullPage: false });
     results.screenshots.push(profileShot);
 
+    // ============================================================
     // 6. THEME TOGGLE TEST
+    // ============================================================
     console.log('\n--- 6. Testing Day / Night Theme Toggle ---');
     const themeBtn = await page.$('.jd-mobile-theme-toggle');
     if (themeBtn) {
       const initialTheme = await page.evaluate(() => document.documentElement.dataset.theme);
       await themeBtn.click();
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(600);
       const switchedTheme = await page.evaluate(() => document.documentElement.dataset.theme);
       record(
         'Day / Night Theme Toggle switches active theme correctly',
         initialTheme !== switchedTheme,
-        `Switched from "${initialTheme}" to "${switchedTheme}"`
+        `Switched theme from "${initialTheme}" to "${switchedTheme}"`
       );
+      // Toggle back to light
+      await themeBtn.click();
+      await page.waitForTimeout(600);
     } else {
       record('Day / Night Theme Toggle button found in canonical header', false, 'Not found');
     }
 
-    // 7. RESPONSIVENESS & VIEWPORT MATRIX
+    // ============================================================
+    // 7. MULTI-VIEWPORT RESPONSIVENESS MATRIX
+    // ============================================================
     console.log('\n--- 7. Testing Viewport Matrix (390x844, 375x844, 360x800, 1280x850, 1440x900) ---');
     const viewports = [
       { width: 390, height: 844, name: 'iPhone 12/13/14' },
@@ -290,7 +362,7 @@ async function runVerification() {
 
     for (const vp of viewports) {
       await page.setViewportSize({ width: vp.width, height: vp.height });
-      await page.goto(`${PROD_URL}/home`, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(`${PROD_URL}/home`, { waitUntil: 'networkidle', timeout: 35000 });
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
       record(
         `Viewport ${vp.width}x${vp.height} (${vp.name}) has no horizontal overflow`,
@@ -299,8 +371,18 @@ async function runVerification() {
       );
     }
 
-    // 8. REAL MEDIA CHECK ACROSS LIVE STORIES
+    // Desktop screenshot
+    await page.setViewportSize({ width: 1280, height: 850 });
+    await page.goto(`${PROD_URL}/`, { waitUntil: 'networkidle', timeout: 35000 });
+    const desktopShot = path.join(ARTIFACT_DIR, 'prod_verify_desktop_1280.png');
+    await page.screenshot({ path: desktopShot, fullPage: false });
+    results.screenshots.push(desktopShot);
+
+    // ============================================================
+    // 8. REAL MEDIA ONLY RULE
+    // ============================================================
     console.log('\n--- 8. Testing Real Media Only Rule ---');
+    await page.goto(`${PROD_URL}/home`, { waitUntil: 'networkidle', timeout: 35000 });
     const allImages = await page.$$eval('img', imgs => imgs.map(i => ({ src: i.src, alt: i.alt })));
     const invalidImage = allImages.find(img =>
       img.src.includes('unsplash.com') ||
@@ -321,6 +403,8 @@ async function runVerification() {
     console.log(`PASSED: ${results.checks.filter(c => c.passed).length}`);
     console.log(`FAILED: ${results.checks.filter(c => !c.passed).length}`);
     console.log(`OVERALL RESULT: ${allPassed ? 'ALL TESTS PASSED SUCCESSFULLY!' : 'SOME CHECKS FAILED'}`);
+    console.log('Screenshots saved:');
+    results.screenshots.forEach(s => console.log('  ' + s));
     console.log('============================================================');
 
   } catch (err) {

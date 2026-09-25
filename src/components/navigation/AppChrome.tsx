@@ -57,6 +57,7 @@ const MINIMAL_CHROME_PREFIXES = ["/admin", "/design-system", "/component-library
  */
 const READER_DS_EXACT = new Set([
   "/",
+  "/home",
   "/district",
   "/districts",
   "/latest",
