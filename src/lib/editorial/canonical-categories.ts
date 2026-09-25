@@ -162,10 +162,10 @@ function containsWordOrPhrase(text: string, phrase: string): boolean {
 // ─── SEMANTIC CATEGORY DEFINITIONS ──────────────────────────────────────────
 
 const CRIME_CORE_SIGNALS = [
-  "गिरफ्तार", "हिरासत", "थाना", "कोतवाली", "अपराध", "क्राइम", "तस्करी", "तस्कर",
-  "गांजा बरामद", "ड्रग्स", "स्मैक", "सट्टा", "अवैध हथियार", "हथियार फैक्ट्री",
+  "गिरफ्तार", "हिरासत", "थाना", "कोतवाली", "अपराध", "क्राइम", "तस्करी", "तस्कर", "तस्करों",
+  "गांजा बरामद", "गांजा जब्त", "ड्रग्स", "स्मैक", "सट्टा", "अवैध हथियार", "हथियार फैक्ट्री",
   "हत्या", "मर्डर", "चोरी", "डकैती", "धोखाधड़ी", "फर्जीवाड़ा", "जालसाजी",
-  "वारदात", "रिमांड", "fir दर्ज", "मुठभेड़", "नक्सली डंप", "विस्फोटक बरामद",
+  "वारदात", "रिमांड", "fir दर्ज", "मुठभेड़", "नक्सली डंप", "विस्फोटक बरामद", "नक्सली हमला", "हत्याकांड",
   "रिश्वत", "रंगे हाथों", "एंटी करप्शन ब्यूरो", "acb", "cbi छापा", "साइबर अपराध",
   "साइबर ठगी", "अवैध कटाई", "अवैध शराब", "नाबालिग से दुष्कर्म", "दुष्कर्म",
   "arrest", "contraband", "smuggling", "police raid", "bribe", "fraud", "cybercrime",
@@ -197,6 +197,8 @@ const GOVERNANCE_CORE_SIGNALS = [
   "पीएम जनमन योजना", "सड़क निर्माण की जांच", "गुणवत्ता की जांच", "तकनीकी टीम गठित",
   "ड्रेनेज मास्टर प्लान", "राहत कार्य", "पानी की निकासी", "सिविक", "जलभराव",
   "school suspension", "कार्यालय का औचक निरीक्षण", "लापरवाही पर निलंबन",
+  "सड़क निर्माण", "सड़क प्रोजेक्ट", "रिवरफ्रंट प्रोजेक्ट", "धार्मिक कॉरिडोर",
+  "लापरवाही", "स्वास्थ्य विभाग ने जारी किया आदेश",
   "governance", "administration", "collector order", "municipal corporation", "civic"
 ];
 
@@ -214,7 +216,7 @@ const NATIONAL_GENUINE_SIGNALS = [
   "पीएम मोदी", "सुप्रीम कोर्ट", "सर्वोच्च न्यायालय", "संसद", "संसद भवन",
   "लोकसभा", "राज्यसभा सत्र", "केंद्रीय मंत्री", "गृह मंत्रालय", "वित्त मंत्रालय",
   "रक्षा मंत्रालय", "भारतीय सेना", "इसरो", "राष्ट्रीय राजमार्ग प्राधिकरण",
-  "nhai", "रेलवे बोर्ड", "रेल मंत्रालय", "अंतरराज्यीय",
+  "nhai", "रेलवे बोर्ड", "रेल मंत्रालय",
   "national issue", "union government", "supreme court", "parliament of india"
 ];
 
@@ -296,13 +298,20 @@ export function resolveCanonicalCategories(
   let isCrime = false;
   const crimeCoreMatch = hasSignal(CRIME_CORE_SIGNALS);
   const crimeActionMatch = hasSignal(CRIME_ACTION_SIGNALS);
-  if (crimeCoreMatch) {
+  const isRescueOrDrowning =
+    containsWordOrPhrase(headline, "रेस्क्यू") ||
+    containsWordOrPhrase(headline, "सुरक्षित बाहर निकाला") ||
+    containsWordOrPhrase(headline, "बचाव") ||
+    containsWordOrPhrase(headline, "तेज बहाव") ||
+    containsWordOrPhrase(headline, "नदी में गिरे");
+
+  if (crimeCoreMatch && !isRescueOrDrowning) {
     isCrime = true;
     auditReasons["crime"] = [`Crime concept matched: '${crimeCoreMatch}'`];
-  } else if (crimeActionMatch) {
+  } else if (crimeActionMatch && !isRescueOrDrowning) {
     isCrime = true;
     auditReasons["crime"] = [`Police action matched: '${crimeActionMatch}'`];
-  } else if (explicitTags.includes("crime") || explicitTags.includes("अपराध")) {
+  } else if ((explicitTags.includes("crime") || explicitTags.includes("अपराध")) && !isRescueOrDrowning) {
     isCrime = true;
     auditReasons["crime"] = ["Explicit editorial crime tag"];
   }
@@ -357,12 +366,13 @@ export function resolveCanonicalCategories(
   if (isGovernance) matchedCategories.add("governance");
 
   // 4. BUSINESS (बाज़ार) EVALUATION
+  // Must have actual market/economic signals; never tag an education/police story as business merely because of a generic tag.
   let isBusiness = false;
   const busMatch = hasSignal(BUSINESS_CORE_SIGNALS);
   if (busMatch) {
     isBusiness = true;
     auditReasons["business"] = [`Market/business topic: '${busMatch}'`];
-  } else if (explicitTags.includes("business") || explicitTags.includes("बाज़ार") || explicitTags.includes("व्यापार")) {
+  } else if ((explicitTags.includes("business") || explicitTags.includes("बाज़ार") || explicitTags.includes("व्यापार")) && busMatch) {
     isBusiness = true;
     auditReasons["business"] = ["Explicit editorial business tag"];
   }
