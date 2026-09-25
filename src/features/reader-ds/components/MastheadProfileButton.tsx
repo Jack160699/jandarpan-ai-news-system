@@ -21,21 +21,26 @@ export function MastheadProfileButton() {
 
   return (
     <Link
-      href="/archive"
+      href="/profile"
       prefetch={false}
       aria-label={t("masthead.profileAria")}
+      title={t("masthead.profileAria")}
       data-testid="jd-masthead-profile"
-      className="jd-masthead__action"
+      className="jd-masthead__action jd-masthead__profile-btn"
       style={{
-        display: "flex",
-        minWidth: 44,
-        minHeight: 44,
-        width: 44,
-        height: 44,
+        display: "inline-flex",
+        minWidth: 32,
+        minHeight: 28,
+        width: 32,
+        height: 28,
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
         textDecoration: "none",
+        background: "rgba(255, 255, 255, 0.1)",
+        border: "1px solid rgba(255, 255, 255, 0.25)",
+        borderRadius: 3,
+        color: "#ffffff",
       }}
     >
       <span

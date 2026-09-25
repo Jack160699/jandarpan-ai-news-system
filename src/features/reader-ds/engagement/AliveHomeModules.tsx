@@ -247,78 +247,15 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       className="jd-home-broadcast-layout"
       data-testid="jd-live-newsroom"
       aria-label={broadcastLang === "en" ? "Jan Darpan Live Television Newsroom" : "जन दर्पण लाइव टेलीविज़न न्यूज़रूम"}
+      style={{
+        width: "100%",
+        maxWidth: 1200,
+        margin: "0 auto",
+        padding: 0,
+        boxSizing: "border-box",
+      }}
     >
-      {/* 72% Left column: Compact Jan Darpan Live TV Newsroom anchored upper-left */}
-      <div className="jd-home-broadcast-tv">
-        <JanDarpanLiveLazy initialLanguage={broadcastLang} initialQueue={initialBroadcastQueue} embedded />
-      </div>
-
-      {/* 32% Right column: Live Editorial / Fresh Stories Column (Desktop only, hidden on mobile) */}
-      <aside
-        className="jd-home-broadcast-aside"
-        aria-label={locale === "en" ? "Latest News" : "ताज़ा खबरें"}
-      >
-        <div className="jd-fresh-col">
-          <div className="jd-fresh-col__head">
-            <div className="jd-fresh-col__title-row">
-              <span className="jd-fresh-col__dot" aria-hidden="true" />
-              <h2 className="jd-fresh-col__title">
-                {locale === "en" ? "Latest News" : "ताज़ा खबरें"}
-              </h2>
-            </div>
-            <Link href="/latest" className="jd-fresh-col__more">
-              {locale === "en" ? "See all ›" : "सभी देखें ›"}
-            </Link>
-          </div>
-
-          <div className="jd-fresh-col__list">
-            {freshStories.map((story, idx) => (
-              <Fragment key={story.slug}>
-                <Link
-                  href={`/story/${story.slug}`}
-                  className="jd-fresh-col__item"
-                  prefetch={false}
-                >
-                  <div className="jd-fresh-col__thumb-wrap">
-                    {story.imageUrl && (
-                      <img
-                        src={story.imageUrl}
-                        alt=""
-                        className="jd-fresh-col__thumb"
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                    )}
-                  </div>
-                  <div className="jd-fresh-col__body">
-                    <div className="jd-fresh-col__meta">
-                      <span className="jd-fresh-col__tag">
-                        {story.kicker && story.kicker !== "छत्तीसगढ़" && story.kicker !== "Chhattisgarh"
-                          ? story.kicker
-                          : locale === "en"
-                          ? "State Desk"
-                          : "राज्य डेस्क"}
-                      </span>
-                      {story.publishedAt && (
-                        <span className="jd-fresh-col__time">
-                          {formatStoryTime(story.publishedAt, locale)}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="jd-fresh-col__headline">{story.headline}</h3>
-                  </div>
-                </Link>
-                {(idx + 1) % 3 === 0 && (
-                  <DurgSolarInlineAd index={Math.floor((idx + 1) / 3)} />
-                )}
-              </Fragment>
-            ))}
-          </div>
-        </div>
-      </aside>
+      <JanDarpanLiveLazy initialLanguage={broadcastLang} initialQueue={initialBroadcastQueue} embedded />
     </section>
   );
 }

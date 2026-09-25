@@ -948,7 +948,101 @@
   to { transform: rotate(360deg); }
 }
 
-/* ─── MOBILE INTERACTIVE QUEUE (TV-First Mobile Homepage) ─────────────── */
+/* ─── UNIFIED BROADCAST LAYOUT (DESKTOP & MOBILE) ─────────────────────── */
+.jdl-broadcast-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.jdl-broadcast-tv-col {
+  width: 100%;
+}
+
+.jdl-broadcast-queue-col {
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .jdl-broadcast-tv-col {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 56px;
+    z-index: 30;
+    box-shadow: 0 4px 16px rgba(10, 22, 40, 0.4);
+  }
+
+  .jdl-mobile-queue__header {
+    position: -webkit-sticky;
+    position: sticky;
+    top: calc(56px + 56.25vw);
+    z-index: 29;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+@media (min-width: 768px) {
+  .jdl-broadcast-wrapper {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+    max-width: 1200px;
+    margin: 8px auto 16px;
+    padding: 0 16px;
+  }
+
+  .jdl-broadcast-tv-col {
+    flex: 0 0 70%;
+    max-width: 70%;
+    min-width: 0;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 66px;
+    z-index: 20;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 6px 24px rgba(10, 22, 40, 0.14);
+  }
+
+  .jdl-broadcast-queue-col {
+    flex: 0 0 calc(30% - 16px);
+    max-width: calc(30% - 16px);
+    min-width: 0;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 66px;
+    z-index: 20;
+    height: calc(100vh - 82px);
+    max-height: 640px;
+  }
+
+  .jdl-broadcast-queue-col .jdl-mobile-queue {
+    display: flex !important;
+    flex-direction: column;
+    height: 100%;
+    border-radius: 6px;
+    border: 1px solid var(--jd-line, #dcd5c5);
+    background: var(--jd-paper, #ffffff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+  }
+
+  .jdl-broadcast-queue-col .jdl-mobile-queue__header {
+    position: static;
+    flex-shrink: 0;
+  }
+
+  .jdl-broadcast-queue-col .jdl-mobile-queue__list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 12px 16px;
+  }
+}
+
+/* ─── INTERACTIVE QUEUE COMPONENT ────────────────────────────────────────── */
 .jdl-mobile-queue {
   display: block;
   width: 100%;
@@ -957,17 +1051,11 @@
   box-sizing: border-box;
 }
 
-@media (min-width: 768px) {
-  .jdl-mobile-queue {
-    display: none !important;
-  }
-}
-
 .jdl-mobile-queue__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px 8px;
+  padding: 10px 14px 8px;
   background: var(--jd-paper, #f7f4ec);
   border-bottom: 2px solid var(--jd-red, #9e1b22);
 }

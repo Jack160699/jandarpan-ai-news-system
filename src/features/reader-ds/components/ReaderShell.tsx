@@ -6,14 +6,13 @@ import type { BriefingTrack } from "../experience/audio/types";
 import { OfflineServiceWorkerRegister } from "../offline/OfflineServiceWorkerRegister";
 import { NetworkGuards } from "../system/NetworkGuards";
 import { PermissionSheet } from "../system/PermissionSheet";
-import { BottomNav, type BottomNavKey } from "./BottomNav";
 import { SearchOverlay } from "./SearchOverlay";
 
 type ReaderShellProps = {
   children: ReactNode;
-  activeNav?: BottomNavKey | null;
+  activeNav?: string | null;
   dark?: boolean;
-  /** Extra bottom padding when bottom nav is shown (default 72). */
+  /** Extra bottom padding (default 0). */
   bottomPad?: number;
   hideBottomNav?: boolean;
   /** Mount shared search overlay (disable when page embeds its own). */
@@ -29,18 +28,18 @@ type ReaderShellProps = {
 };
 
 /**
- * Shared page chrome — fonts, tokens, search, audio, phone bottom nav +
- * desktop/tablet SoT editorial chrome (DeskChrome).
+ * Shared page chrome — fonts, tokens, search, audio.
+ * Full screen space reclaimed: no traditional navbar dock or persistent menu.
  */
 export function ReaderShell({
   children,
-  activeNav = "home",
+  activeNav = "live",
   dark = false,
-  bottomPad = 72,
-  hideBottomNav = false,
+  bottomPad = 0,
+  hideBottomNav = true,
   includeSearchOverlay = true,
   audioTracks,
-  reserveMiniPlayer = true,
+  reserveMiniPlayer = false,
   showPermissionSheets = true,
   showDeskFooter = true,
 }: ReaderShellProps) {
@@ -64,12 +63,6 @@ export function ReaderShell({
         <OfflineServiceWorkerRegister />
         <NetworkGuards />
         {children}
-        {showNav ? (
-          <>
-            <div className="jd-nav-spacer" aria-hidden style={{ height: pad, flexShrink: 0 }} />
-            <BottomNav active={activeNav} dark={dark} />
-          </>
-        ) : null}
         {includeSearchOverlay ? <SearchOverlay /> : null}
         {showPermissionSheets ? <PermissionSheet /> : null}
       </div>

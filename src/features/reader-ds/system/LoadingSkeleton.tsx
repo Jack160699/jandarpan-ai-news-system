@@ -2,7 +2,6 @@ import type { CSSProperties } from "react";
 import "../styles";
 import { readerDsFontClassName } from "../fonts";
 import { Masthead } from "../components/Masthead";
-import { BottomNav, type BottomNavKey } from "../components/BottomNav";
 
 function Skel({
   w,
@@ -67,7 +66,7 @@ export function ContentLoadingSkeleton() {
 }
 
 /** Full-page shimmer skeleton for initial hard SSR document loads. */
-export function LoadingSkeleton({ activeNav }: { activeNav?: BottomNavKey | null }) {
+export function LoadingSkeleton({ activeNav }: { activeNav?: string | null } = {}) {
   return (
     <div
       className={`jd-ds jd-ds--stage ${readerDsFontClassName}`}
@@ -77,7 +76,6 @@ export function LoadingSkeleton({ activeNav }: { activeNav?: BottomNavKey | null
     >
       <Masthead />
       <ContentLoadingSkeleton />
-      <BottomNav active={activeNav} />
     </div>
   );
 }

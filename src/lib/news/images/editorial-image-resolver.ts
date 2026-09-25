@@ -177,23 +177,17 @@ export function resolveEditorialImage(
     }
   }
 
-  const contextual = resolveContextualFallback({
-    category,
-    region: input.region,
-    source: input.source,
-  });
-  const ctxOk = candidateOk(contextual.url);
-  if (ctxOk.ok && ctxOk.url) {
-    return {
-      url: ctxOk.url,
-      optimizedUrl: optimize(ctxOk.url, aspect, width),
-      fallbackUrl: null,
-      tier: "category_fallback",
-      isSynthetic: true,
-      textOnly: false,
-      alt: buildAlt(input, "category_fallback"),
-    };
-  }
+  // If a story does not have a valid verified image, use the platform's legitimate
+  // image-empty state (text-only) rather than inserting an unrelated fallback image.
+  return {
+    url: null,
+    optimizedUrl: null,
+    fallbackUrl: null,
+    tier: "text_only",
+    isSynthetic: false,
+    textOnly: true,
+    alt: buildAlt(input, "text_only"),
+  };
 
   return {
     url: null,

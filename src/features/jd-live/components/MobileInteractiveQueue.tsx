@@ -40,7 +40,28 @@ function QueueThumbnail({
   }, [src]);
 
   if (!normalizedSrc || !hasVerifiedRealMedia(normalizedSrc) || error) {
-    return null;
+    return (
+      <div
+        className="jdl-mobile-queue__thumb-fallback"
+        aria-hidden="true"
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(135deg, #102038 0%, #1c355e 100%)",
+          color: "rgba(255, 255, 255, 0.72)",
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: "0.04em",
+          textAlign: "center",
+          padding: 2,
+        }}
+      >
+        <span>जन दर्पण</span>
+      </div>
+    );
   }
 
   return (
@@ -62,20 +83,19 @@ function QueueThumbnail({
 }
 
 /**
- * Mobile interactive story queue for Jan Darpan Live TV.
+ * Interactive story queue for Jan Darpan Live TV.
  *
- * Appears immediately below the 16:9 TV viewport on mobile.
- * Connects directly to the central broadcast engine:
+ * Pinned TV-linked control area:
+ *   - "ताज़ा खबरें चुनिए और TV पर देखें"
  *   - Tapping any story instantly selects and plays it in Jan Darpan TV.
  *   - Highlights the currently playing story in sync with the TV.
- *   - Completely hidden on desktop/tablet (>= 768px).
  */
 export function MobileInteractiveQueue() {
   const { state, dispatch } = useBroadcast();
   const { queue, currentSegment, language } = state;
 
   const stories = useMemo(() => {
-    return queue.filter((s) => !s.isIntro && hasVerifiedRealMedia(s.imageUrl));
+    return queue.filter((s) => !s.isIntro);
   }, [queue]);
 
   const handleSelectStory = (seg: BroadcastSegment) => {
@@ -102,17 +122,19 @@ export function MobileInteractiveQueue() {
   };
 
   const title = language === "hi" ? "ताज़ा खबरें" : "Latest News";
+  const sublabel = language === "hi" ? "चुनिए और TV पर देखें" : "Select to watch on TV";
+  const fullLabel = language === "hi" ? "ताज़ा खबरें चुनिए और TV पर देखें" : "Latest News — Select to watch on TV";
   const seeAllLabel = language === "hi" ? "सभी देखें ›" : "See all ›";
 
   return (
-    <section className="jdl-mobile-queue" aria-label={title}>
-      {/* Header bar */}
+    <section className="jdl-mobile-queue" aria-label={fullLabel}>
+      {/* Pinned / Sticky Header bar */}
       <div className="jdl-mobile-queue__header">
         <div className="jdl-mobile-queue__title-wrap">
           <span className="jdl-mobile-queue__live-dot" aria-hidden="true" />
           <h2 className="jdl-mobile-queue__title">{title}</h2>
           <span className="jdl-mobile-queue__sublabel">
-            {language === "hi" ? "चुनें और टीवी पर देखें" : "Tap to watch"}
+            {sublabel}
           </span>
         </div>
         <Link href="/latest" className="jdl-mobile-queue__see-all">

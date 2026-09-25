@@ -226,6 +226,9 @@ export function Masthead({
               color="#ffffff"
             />
           </button>
+
+          {/* Profile control in upper-right corner of main header */}
+          {!hideActions ? <MastheadProfileButton /> : null}
         </div>
       </div>
     </header>

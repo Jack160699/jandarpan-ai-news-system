@@ -27,8 +27,14 @@ type Props = {
 export function JanDarpanLive({ initialLanguage = "hi", initialQueue, embedded = false }: Props) {
   return (
     <BroadcastProvider initialLanguage={initialLanguage} initialQueue={initialQueue}>
-      <JanDarpanStudio embedded={embedded} />
-      <MobileInteractiveQueue />
+      <div className="jdl-broadcast-wrapper">
+        <div className="jdl-broadcast-tv-col">
+          <JanDarpanStudio embedded={embedded} />
+        </div>
+        <div className="jdl-broadcast-queue-col">
+          <MobileInteractiveQueue />
+        </div>
+      </div>
     </BroadcastProvider>
   );
 }

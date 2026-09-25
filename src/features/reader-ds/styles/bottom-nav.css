@@ -1,26 +1,18 @@
 /*
- * Jan Darpan Bottom Navigation — Compact, Theme-Aware Mobile Dock
- * Zero rectangular artifacts, zero oversized boxes, strictly theme-aware.
+ * Jan Darpan Bottom Navigation — Completely removed per single-screen Live experience.
+ * Reclaims screen space and ensures zero phantom margins or spacers.
  */
 
-.jd-bottom-nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 50;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  width: 100%;
-  height: clamp(48px, 6.2vh, 52px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: var(--jd-paper, #f7f4ec);
-  border-top: 1px solid var(--jd-line, #dcd5c5);
-  box-shadow: 0 -1px 6px rgba(0, 0, 0, 0.05);
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-  user-select: none;
-  -webkit-user-select: none;
+.jd-bottom-nav,
+.mobile-dock {
+  display: none !important;
+}
+
+.jd-nav-spacer {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Dark mode theme adaptation */

@@ -34,53 +34,9 @@ export const metadata = buildHubPageMetadata({
 
 import { LiveClientView } from "./LiveClientView";
 
-export default async function LivePage() {
-  const feed = await getCachedGeneratedHomepageFeed();
+import { redirect } from "next/navigation";
 
-  if (!feed) {
-    return (
-      <main
-        id="main-content"
-        role="main"
-        style={{ minHeight: "100svh", background: "#0a1628" }}
-      >
-        <HomepageEmpty />
-      </main>
-    );
-  }
-
-  const liveArticles = [...feed.breakingTicker, ...feed.liveWire].slice(0, 20);
-  const jsonLd = [
-    collectionPageJsonLd({
-      name: "Jan Darpan Live",
-      description: BASE_DESCRIPTION,
-      path: BASE_PATH,
-      items: liveArticles.map((article) => ({
-        url: `/story/${article.slug}`,
-        name: article.headline,
-      })),
-    }),
-    breadcrumbListJsonLd([
-      buildHomeBreadcrumb(),
-      { name: "Jan Darpan Live", href: BASE_PATH },
-    ]),
-  ];
-
-  return (
-    <>
-      <JsonLdScript data={jsonLd} />
-      {/*
-        The studio page is fullscreen — no site nav/footer.
-        The studio provides its own brand header and lang switcher.
-      */}
-      <main
-        id="main-content"
-        role="main"
-        style={{ minHeight: "100svh", overflow: "hidden" }}
-      >
-        <LiveClientView />
-      </main>
-    </>
-  );
+export default function LivePage() {
+  redirect("/");
 }
 
