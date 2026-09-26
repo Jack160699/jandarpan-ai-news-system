@@ -267,11 +267,7 @@ async function selectBatchCandidates(supabase: any, size: number) {
       section: ev.category,
     });
 
-    // Enforce district resolution or state-level Chhattisgarh identity
-    const isCgState = /छत्तीसगढ़|रायपुर|बिलासपुर|दुर्ग|भिलाई|बस्तर|सरगुजा|कोरबा|धमतरी|राजनांदगांव|chhattisgarh/i.test(eventTitle + " " + (ev.event_summary || ""));
-    if (!districtRes.districtSlug && !isCgState && ev.region !== "chhattisgarh") {
-      continue;
-    }
+    // Regional or national identity resolved cleanly
 
     const catRes = resolveCanonicalCategories({
       headline: eventTitle,
@@ -395,7 +391,7 @@ async function runEditorialBatch(supabase: any, size: number, offset: number = 0
     stageCounts.passed_real_media_validation++;
 
     // 3. Editorial eligibility
-    if (!item.districtSlug || !item.canonicalCategories?.length) {
+    if (!item.canonicalCategories?.length) {
       stageCounts.failed++;
       failures.push({ eventId: ev.id, stage: "editorial_eligibility", reason: "missing_taxonomy" });
       continue;
@@ -449,11 +445,10 @@ async function runEditorialBatch(supabase: any, size: number, offset: number = 0
         // Translation error non-fatal to Hindi publication
       }
 
-      // 8. Live eligibility verification: article has clean real image, published_at, district, category
+      // 8. Live eligibility verification: article has clean real image, published_at, and category
       const isLiveEligible = Boolean(
         genResult.article.published_at &&
         mediaSurvived &&
-        item.districtSlug &&
         item.canonicalCategories?.length
       );
       if (isLiveEligible) {
