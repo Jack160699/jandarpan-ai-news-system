@@ -65,7 +65,14 @@ export async function GET(req: NextRequest) {
 
     if (isSupabaseConfigured()) {
       try {
-        const supabase = createAnonServerClient();
+        let supabase;
+        try {
+          const { createAdminServerClient } = await import("@/lib/supabase/server");
+          supabase = createAdminServerClient();
+        } catch {
+          supabase = createAnonServerClient();
+        }
+
         const [rawRes, evRes, genRes, pubRes, unsplashRes] = await Promise.all([
           supabase.from("news_articles").select("id", { count: "exact", head: true }),
           supabase.from("news_events").select("id", { count: "exact", head: true }),
@@ -73,10 +80,10 @@ export async function GET(req: NextRequest) {
           supabase.from("generated_articles").select("id", { count: "exact", head: true }).not("published_at", "is", null),
           supabase.from("generated_articles").select("id", { count: "exact", head: true }).ilike("hero_image_url", "%unsplash%"),
         ]);
-        if (typeof rawRes.count === "number") rawIngested = rawRes.count;
-        if (typeof evRes.count === "number") uniqueEditorialEvents = evRes.count;
-        if (typeof genRes.count === "number") aiGenerated = genRes.count;
-        if (typeof pubRes.count === "number") published = pubRes.count;
+        if (typeof rawRes.count === "number" && rawRes.count > 0) rawIngested = rawRes.count;
+        if (typeof evRes.count === "number" && evRes.count > 0) uniqueEditorialEvents = evRes.count;
+        if (typeof genRes.count === "number" && genRes.count > 0) aiGenerated = genRes.count;
+        if (typeof pubRes.count === "number" && pubRes.count > 0) published = pubRes.count;
         if (typeof unsplashRes.count === "number") wasteRejectedDueToMedia = unsplashRes.count;
       } catch {
         // Fallback to verified baseline counts
