@@ -192,17 +192,23 @@ async function selectBatchCandidates(supabase: any, size: number) {
   // Filter out already represented
   const unrepresented = events.filter((e: any) => !representedEventIds.has(e.id));
 
-  // Directly load signals with verified real images from news_signals
-  const { data: mediaSignals } = await supabase
-    .from("news_signals")
-    .select("*")
-    .not("image_url", "is", null)
-    .neq("image_url", "")
-    .not("image_url", "ilike", "%unsplash%")
-    .limit(2500);
+  // Load signals for candidate events in chunks of 200
+  const candidatePool = unrepresented.slice(0, 1200);
+  const allSignalIds = [
+    ...new Set(
+      candidatePool.flatMap((e: any) => (Array.isArray(e.signal_ids) ? e.signal_ids : []))
+    ),
+  ];
 
   const signalMap = new Map<string, NewsSignalRow>();
-  (mediaSignals ?? []).forEach((s: any) => signalMap.set(s.id, s));
+  for (let i = 0; i < allSignalIds.length; i += 200) {
+    const chunk = allSignalIds.slice(i, i + 200);
+    const { data: signals } = await supabase
+      .from("news_signals")
+      .select("*")
+      .in("id", chunk);
+    (signals ?? []).forEach((s: any) => signalMap.set(s.id, s));
+  }
 
   // Find events with genuine clean real media (excluding tracking pixels)
   const isTrackingPixel = (url: string) =>
@@ -211,7 +217,7 @@ async function selectBatchCandidates(supabase: any, size: number) {
   const eventsWithRealMedia = new Set<string>();
   const eventMediaMap = new Map<string, string>();
 
-  for (const ev of unrepresented) {
+  for (const ev of candidatePool) {
     const sigs = (ev.signal_ids ?? [])
       .map((id: string) => signalMap.get(id))
       .filter(Boolean) as NewsSignalRow[];
@@ -224,10 +230,10 @@ async function selectBatchCandidates(supabase: any, size: number) {
   }
 
   // Pure Media-First candidate pool: ONLY events with genuine photojournalism
-  const mediaEligibleEvents = unrepresented.filter((ev: any) => eventsWithRealMedia.has(ev.id));
+  const mediaEligibleEvents = candidatePool.filter((ev: any) => eventsWithRealMedia.has(ev.id));
 
   // Deterministic candidate selection over the real-media reservoir
-  const ranked = selectEditorialCandidates(mediaEligibleEvents as NewsEventRow[], size * 3, {
+  const ranked = selectEditorialCandidates(mediaEligibleEvents as NewsEventRow[], Math.max(size * 3, 100), {
     eventsWithRealMedia,
   });
 
