@@ -433,12 +433,6 @@ export function BroadcastProvider({
     } catch {}
   }, []);
 
-  useEffect(() => {
-    if (initialLanguage && initialLanguage !== state.language) {
-      dispatch({ type: "SET_LANGUAGE", language: initialLanguage });
-    }
-  }, [initialLanguage, state.language]);
-
   const setLanguage = useCallback((lang: BroadcastLanguage) => {
     dispatch({ type: "SET_LANGUAGE", language: lang });
     if (typeof window !== "undefined") {
@@ -456,6 +450,12 @@ export function BroadcastProvider({
         .catch(() => {});
     }
   }, []);
+
+  useEffect(() => {
+    if (initialLanguage && initialLanguage !== state.language) {
+      setLanguage(initialLanguage);
+    }
+  }, [initialLanguage, state.language, setLanguage]);
 
   const setCategory = useCallback(
     (category: string) => dispatch({ type: "SET_CATEGORY", category }),
