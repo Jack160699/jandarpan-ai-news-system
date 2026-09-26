@@ -1559,11 +1559,15 @@ export async function queueEditorialImageForArticle(
   return { enqueued: result.enqueued, reason: result.reason };
 }
 
+/**
+ * Clean editorial policy: Never assign generic Unsplash/stock placeholders to news articles.
+ * Returns empty string — live candidates must have genuine source photojournalism.
+ */
 export function initialHeroPlaceholder(
   category: string,
   region?: string | null
 ): string {
-  return resolveContextualFallback({ category, region }).url;
+  return "";
 }
 
 export {

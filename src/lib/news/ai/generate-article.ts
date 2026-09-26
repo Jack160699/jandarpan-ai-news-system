@@ -97,6 +97,13 @@ import {
   queueEditorialImageForArticle,
 } from "@/lib/news/ai/generate-editorial-image";
 import {
+  hasVerifiedRealMedia,
+  isCleanRightsEligibleMedia,
+  ensureHttpsImageUrl,
+} from "@/lib/news/images/validate";
+import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
+import { resolveCanonicalCategories } from "@/lib/editorial/canonical-categories";
+import {
   assessEditorialFreshness,
   dedupeEditorialSignals,
   findUnsafeSourceReason,
@@ -233,6 +240,9 @@ type PendingCandidate = {
   repairModel?: string | null;
   finalProvider?: AiProviderId;
   finalModel?: string;
+  preValidatedRealImageUrl?: string | null;
+  resolvedDistrict?: string;
+  resolvedCategories?: string[];
 };
 
 function logEditorial(message: string, context?: Record<string, unknown>): void {
@@ -547,22 +557,27 @@ async function loadExistingStoryIndex(): Promise<{
   headlines: string[];
   bodyFingerprints: string[];
   eventIds: string[];
-  /** Published event_id â†’ article id */
+  /** Published event_id → article id */
   eventToArticleId: Map<string, string>;
+  usedImageUrls: Set<string>;
 }> {
   const supabase = createAdminServerClient();
   const { data } = await supabase
     .from("generated_articles")
-    .select("id, headline, article_body, event_id, workflow_status, published_at")
+    .select("id, headline, article_body, event_id, hero_image_url, workflow_status, published_at")
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(500);
   const headlines: string[] = [];
   const bodyFingerprints: string[] = [];
   const eventIds: string[] = [];
   const eventToArticleId = new Map<string, string>();
+  const usedImageUrls = new Set<string>();
   for (const row of data ?? []) {
     if (row.headline) headlines.push(row.headline);
     if (row.article_body) bodyFingerprints.push(fingerprintBody(row.article_body));
+    if (row.hero_image_url && typeof row.hero_image_url === "string") {
+      usedImageUrls.add(row.hero_image_url.trim().toLowerCase());
+    }
     if (row.event_id) {
       eventIds.push(row.event_id);
       const isPublished =
@@ -572,7 +587,50 @@ async function loadExistingStoryIndex(): Promise<{
       }
     }
   }
-  return { headlines, bodyFingerprints, eventIds, eventToArticleId };
+  return { headlines, bodyFingerprints, eventIds, eventToArticleId, usedImageUrls };
+}
+
+/**
+ * Media-First Candidate Selection:
+ * Deterministically checks whether any signal attached to this event has a genuine,
+ * clean, verified photojournalism image that passes all clean-media gates and is not
+ * a duplicate of an existing story image.
+ *
+ * If no valid clean real photo exists, this returns valid: false,
+ * preventing expensive AI generation tokens from ever being spent.
+ */
+export function discoverAndValidateCandidateMedia(
+  signals: NewsSignalRow[],
+  usedImageUrls?: Set<string>
+): { valid: boolean; imageUrl: string | null; reason?: string } {
+  for (const s of signals) {
+    const sAny = s as Record<string, any>;
+    const candidates = [
+      s.image_url,
+      sAny?.media_records?.[0]?.media_url,
+      sAny?.media_records?.[0]?.source_url,
+      sAny?.media_records?.[0]?.thumbnail_url,
+      sAny?.ingestion_metadata?.image_url,
+      sAny?.source_image,
+    ];
+    for (const raw of candidates) {
+      if (!raw || typeof raw !== "string") continue;
+      const url = ensureHttpsImageUrl(raw.trim());
+      if (!url) continue;
+      if (!isEditoriallyEligibleSourceImageUrl(url)) continue;
+      if (!hasVerifiedRealMedia(url)) continue;
+      if (!isCleanRightsEligibleMedia(url)) continue;
+      if (usedImageUrls && usedImageUrls.has(url.toLowerCase())) {
+        continue; // Avoid duplicate images across stories
+      }
+      return { valid: true, imageUrl: url };
+    }
+  }
+  return {
+    valid: false,
+    imageUrl: null,
+    reason: "no_clean_eligible_real_media",
+  };
 }
 
 function evaluateDraft(input: {
@@ -855,6 +913,7 @@ async function persistGeneratedArticle(input: {
   articleType?: ArticleType;
   articleTypeClassification?: ArticleTypeClassification;
   depthRetries?: number;
+  preValidatedRealImageUrl?: string | null;
   humanQualityMeta?: {
     score: number;
     decision: string;
@@ -874,24 +933,24 @@ async function persistGeneratedArticle(input: {
     input.signals.find((s) => s.category)?.category ??
     "world";
 
-  let realSourceImageUrl: string | null = null;
-  for (const s of input.signals) {
-    const sAny = s as Record<string, any>;
-    const candidate =
-      s.image_url ||
-      sAny?.media_records?.[0]?.media_url ||
-      sAny?.media_records?.[0]?.source_url ||
-      sAny?.media_records?.[0]?.thumbnail_url;
-    if (candidate && isEditoriallyEligibleSourceImageUrl(candidate)) {
-      const trimmed = String(candidate).trim();
-      realSourceImageUrl = trimmed.startsWith("http://")
-        ? trimmed.replace(/^http:\/\//i, "https://")
-        : trimmed;
-      break;
+  let realSourceImageUrl: string | null = input.preValidatedRealImageUrl ?? null;
+  if (!realSourceImageUrl) {
+    for (const s of input.signals) {
+      const sAny = s as Record<string, any>;
+      const candidate =
+        s.image_url ||
+        sAny?.media_records?.[0]?.media_url ||
+        sAny?.media_records?.[0]?.source_url ||
+        sAny?.media_records?.[0]?.thumbnail_url;
+      if (candidate && isEditoriallyEligibleSourceImageUrl(candidate) && hasVerifiedRealMedia(candidate)) {
+        realSourceImageUrl = ensureHttpsImageUrl(String(candidate).trim());
+        break;
+      }
     }
   }
 
-  const hero_image_url = realSourceImageUrl || initialHeroPlaceholder(category, input.event.region);
+  // Pure photojournalism policy: Never assign generic Unsplash or stock fallback!
+  const hero_image_url = realSourceImageUrl || null;
 
   const signalGeos = input.signals.map((s) =>
     tagGeoFromContent({
@@ -1479,6 +1538,7 @@ async function prepareCandidate(
   storyIndex?: {
     bodyFingerprints?: string[];
     eventIds?: string[];
+    usedImageUrls?: Set<string>;
   }
 ): Promise<{
   candidate: PendingCandidate | null;
@@ -1524,6 +1584,38 @@ async function prepareCandidate(
       reason: `stale_candidate:${freshness.reason}`,
     };
   }
+
+  // 1. DETERMINISTIC PRE-AI MEDIA GATE: Candidate must possess genuine, clean photojournalism.
+  // If no valid clean media exists, never spend expensive AI generation tokens on this event!
+  const mediaCheck = discoverAndValidateCandidateMedia(
+    signals,
+    storyIndex?.usedImageUrls
+  );
+  if (!mediaCheck.valid || !mediaCheck.imageUrl) {
+    logEditorial("candidate_rejected_pre_ai_no_media", {
+      eventId: event.id,
+      reason: mediaCheck.reason,
+    });
+    return {
+      candidate: null,
+      skipped: true,
+      reason: mediaCheck.reason ?? "no_clean_eligible_real_media",
+    };
+  }
+  const preValidatedRealImageUrl = mediaCheck.imageUrl;
+
+  // 2. EARLY DETERMINISTIC DISTRICT & CATEGORY RESOLUTION (Zero AI cost)
+  const earlyDistrict = resolveCanonicalStoryDistrict({
+    headline: event.canonical_title,
+    explicitDistrict: event.region,
+    body: signals.map((s) => `${s.title} ${s.raw_content || ""}`).join(" "),
+  });
+  const earlyCategories = resolveCanonicalCategories({
+    headline: event.canonical_title,
+    summary: event.event_summary,
+    content: signals.map((s) => `${s.title} ${s.raw_content || ""}`).join(" "),
+    categoryLabel: event.category,
+  });
 
   const evidenceGeo = mergeGeoMetadata(
     ...signals.map((signal) =>
@@ -1772,6 +1864,9 @@ async function prepareCandidate(
       finalProvider,
       finalModel,
       premiumEditorial: { used: premiumEditorialUsed, reason: premiumEditorialReason },
+      preValidatedRealImageUrl,
+      resolvedDistrict: earlyDistrict.districtSlug ?? undefined,
+      resolvedCategories: earlyCategories.categories,
       humanQualityMeta: {
         score: val.hqGate.humanScore.score,
         decision: val.quality.publishDecision,
@@ -1861,6 +1956,7 @@ export async function generateEditorialFromEvent(
   const prepared = await prepareCandidate(event, existingHeadlines, {
     bodyFingerprints: storyIndex.bodyFingerprints,
     eventIds: storyIndex.eventIds,
+    usedImageUrls: storyIndex.usedImageUrls,
   });
   if (!prepared.candidate) {
     logArticleGenerationPhase("article_generation_failed", {
@@ -1951,6 +2047,7 @@ export async function generateEditorialFromEvent(
     freshness: candidate.freshness,
     independentReview: candidate.independentReview,
     premiumEditorial: candidate.premiumEditorial,
+    preValidatedRealImageUrl: candidate.preValidatedRealImageUrl,
   });
   if (persisted.ok && persisted.article) {
     logArticleGenerationPhase("article_generation_completed", {
@@ -2076,7 +2173,36 @@ export async function generateEditorialsFromEvents(options?: {
   }
 
   const eligible = resolvable;
-  const rankedPending = selectEditorialCandidates(eligible, eligible.length);
+
+  // Pre-generation media discovery: Identify candidates with clean real photojournalism
+  const allEligibleSignalIds = uniqueSignalIds(eligible);
+  const eventsWithRealMedia = new Set<string>();
+  if (allEligibleSignalIds.length > 0) {
+    const { data: mediaSignalRows } = await supabase
+      .from("news_signals")
+      .select("id, image_url")
+      .in("id", allEligibleSignalIds.slice(0, 1000));
+    const cleanMediaSignalIds = new Set(
+      (mediaSignalRows ?? [])
+        .filter(
+          (s) =>
+            s.image_url &&
+            isEditoriallyEligibleSourceImageUrl(s.image_url) &&
+            hasVerifiedRealMedia(s.image_url) &&
+            isCleanRightsEligibleMedia(s.image_url)
+        )
+        .map((s) => s.id)
+    );
+    for (const ev of eligible) {
+      if (ev.signal_ids?.some((id) => cleanMediaSignalIds.has(id))) {
+        eventsWithRealMedia.add(ev.id);
+      }
+    }
+  }
+
+  const rankedPending = selectEditorialCandidates(eligible, eligible.length, {
+    eventsWithRealMedia,
+  });
 
   let generated = 0;
   let published = 0;
@@ -2127,6 +2253,7 @@ export async function generateEditorialsFromEvents(options?: {
         {
           bodyFingerprints: existingBodyFingerprints,
           eventIds: [...usedEventIds],
+          usedImageUrls: storyIndex.usedImageUrls,
         }
       ),
     isCandidate: (prepared) => Boolean(prepared.candidate),
@@ -2197,6 +2324,7 @@ export async function generateEditorialsFromEvents(options?: {
         freshness: candidate.freshness,
         independentReview: candidate.independentReview,
         premiumEditorial: candidate.premiumEditorial,
+        preValidatedRealImageUrl: candidate.preValidatedRealImageUrl,
       });
 
       results.push({

@@ -13,11 +13,17 @@ export type EditorialCandidateContext = {
   recentCategoryCounts?: Record<string, number>;
   nowMs?: number;
   searchOpportunities?: SearchOpportunity[];
+  /** Set of event IDs that have verified clean photojournalism media */
+  eventsWithRealMedia?: Set<string>;
 };
 
 const LIVE_BOOST = 1_000;
 const BREAKING_URGENCY_THRESHOLD = 8;
 const BREAKING_BOOST = 200;
+const REAL_MEDIA_BOOST = 500;
+const NO_MEDIA_PENALTY = 500;
+const CHHATTISGARH_BOOST = 150;
+const MULTI_SOURCE_BOOST = 100;
 
 export function scoreEditorialCandidate(
   event: NewsEventRow,
@@ -35,6 +41,28 @@ export function scoreEditorialCandidate(
   }
 
   score += event.urgency_score * 25;
+
+  // Media-first candidate selection: genuine photojournalism receives a dominant boost
+  const hasRealMedia =
+    context?.eventsWithRealMedia?.has(event.id) ??
+    (Boolean((event.clustering_metadata as any)?.has_real_image) ||
+      Boolean((event.clustering_metadata as any)?.sample_image_url));
+
+  if (hasRealMedia) {
+    score += REAL_MEDIA_BOOST;
+  } else if (context?.eventsWithRealMedia) {
+    score -= NO_MEDIA_PENALTY;
+  }
+
+  // Multi-source verification boost
+  if ((event.source_count ?? 1) >= 2) {
+    score += MULTI_SOURCE_BOOST;
+  }
+
+  // High clustering confidence boost
+  if ((event.cluster_confidence ?? 0) >= 0.8) {
+    score += 50;
+  }
 
   // Use Search Demand Engine to score the topic, replacing legacy regional scoring
   const searchDemand = scoreSearchOpportunity(
@@ -57,13 +85,13 @@ export function scoreEditorialCandidate(
     120 - Math.floor(ageMs / (48 * 3_600_000)) * 120
   );
   score += freshness;
-  // Steep age penalty so high-urgency orphans (missing signals) cannot starve
-  // fresh eligible events. ~200 pts per day beyond 48h.
+  // Steep age penalty so high-urgency orphans cannot starve fresh eligible events.
+  // ~200 pts per day beyond 48h.
   if (ageHours > 48) {
     score -= Math.floor((ageHours - 48) / 24) * 200;
   }
-  // Hard exclusion band for auto-generation outside the live window.
-  if (!event.is_live && ageHours > 7 * 24) {
+  // Hard exclusion band for auto-generation outside the 14-day window.
+  if (!event.is_live && ageHours > 14 * 24) {
     score -= 10_000;
   }
 
@@ -73,10 +101,13 @@ export function scoreEditorialCandidate(
   const districtCount = context?.recentDistrictCounts?.[district] ?? 0;
   const categoryCount = context?.recentCategoryCounts?.[category] ?? 0;
 
-  // National relevance boost: prioritize stories with broad India-wide relevance
-  const isNational = event.region === "india" || event.region === "national" || !event.region || event.region === "unknown";
-  if (isNational) {
-    score += 50;
+  // Regional Chhattisgarh boost: Jan Darpan is rooted in Chhattisgarh photojournalism
+  const isChhattisgarh =
+    event.region === "chhattisgarh" ||
+    geo.is_chhattisgarh ||
+    (district !== "unknown" && district !== "india" && district !== "global");
+  if (isChhattisgarh) {
+    score += CHHATTISGARH_BOOST;
   }
 
   const districtBoost = districtCount === 0 ? 30 : Math.max(0, 25 - districtCount * 10);

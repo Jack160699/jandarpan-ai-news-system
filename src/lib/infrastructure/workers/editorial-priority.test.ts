@@ -91,4 +91,31 @@ describe("editorial-priority", () => {
     );
     expect(selectEditorialCandidates([orphan, fresh], 1)[0].id).toBe("fresh");
   });
+
+  it("prioritizes candidates with verified real media over candidates without media", () => {
+    const withMedia = makeEvent({
+      id: "event-with-media",
+      urgency_score: 5,
+      clustering_metadata: { has_real_image: true },
+    });
+    const withoutMedia = makeEvent({
+      id: "event-no-media",
+      urgency_score: 5,
+      clustering_metadata: { has_real_image: false },
+    });
+
+    const scoreWith = scoreEditorialCandidate(withMedia, {
+      eventsWithRealMedia: new Set(["event-with-media"]),
+    });
+    const scoreWithout = scoreEditorialCandidate(withoutMedia, {
+      eventsWithRealMedia: new Set(["event-with-media"]),
+    });
+
+    expect(scoreWith).toBeGreaterThan(scoreWithout);
+    expect(
+      selectEditorialCandidates([withoutMedia, withMedia], 1, {
+        eventsWithRealMedia: new Set(["event-with-media"]),
+      })[0].id
+    ).toBe("event-with-media");
+  });
 });

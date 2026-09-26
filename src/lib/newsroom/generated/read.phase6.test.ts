@@ -25,8 +25,8 @@ vi.mock("@/lib/supabase", () => ({
             data: [
               {
                 slug: "story-a",
-                published_at: "2026-07-19T12:00:00.000Z",
-                created_at: "2026-07-19T11:00:00.000Z",
+                published_at: new Date(Date.now() - 3600000).toISOString(),
+                created_at: new Date(Date.now() - 7200000).toISOString(),
                 editorial_status: "approved",
                 workflow_status: "published",
                 headline: "A",
@@ -34,8 +34,8 @@ vi.mock("@/lib/supabase", () => ({
               },
               {
                 slug: "story-b",
-                published_at: "2026-07-19T11:00:00.000Z",
-                created_at: "2026-07-19T10:00:00.000Z",
+                published_at: new Date(Date.now() - 7200000).toISOString(),
+                created_at: new Date(Date.now() - 10800000).toISOString(),
                 editorial_status: "approved",
                 workflow_status: "published",
                 headline: "B",
