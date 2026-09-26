@@ -181,9 +181,8 @@ async function selectBatchCandidates(supabase: any, size: number) {
     .from("news_events")
     .select("*")
     .gte("created_at", thirtyDaysAgo)
-    .order("urgency_score", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(2500);
+    .limit(1500);
 
   if (error || !events) {
     return { error: error?.message || "Failed to fetch candidate events" };
@@ -198,16 +197,18 @@ async function selectBatchCandidates(supabase: any, size: number) {
     ...new Set(
       candidatePool.flatMap((e: any) => (Array.isArray(e.signal_ids) ? e.signal_ids : []))
     ),
-  ];
+  ] as string[];
 
   const signalMap = new Map<string, NewsSignalRow>();
+  const chunks: string[][] = [];
   for (let i = 0; i < allSignalIds.length; i += 200) {
-    const chunk = allSignalIds.slice(i, i + 200);
-    const { data: signals } = await supabase
-      .from("news_signals")
-      .select("*")
-      .in("id", chunk);
-    (signals ?? []).forEach((s: any) => signalMap.set(s.id, s));
+    chunks.push(allSignalIds.slice(i, i + 200));
+  }
+  const chunkResults = await Promise.all(
+    chunks.map((chunk) => supabase.from("news_signals").select("*").in("id", chunk))
+  );
+  for (const res of chunkResults) {
+    (res.data ?? []).forEach((s: any) => signalMap.set(s.id, s));
   }
 
   // Find events with genuine clean real media (excluding tracking pixels)
