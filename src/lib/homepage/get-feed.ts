@@ -33,6 +33,7 @@ import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { homeDebug } from "@/lib/homepage/feed-safety";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 
 const HOMEPAGE_POOL_LIMIT = 300;
 
@@ -48,10 +49,13 @@ async function buildFeedFromPool(
   tenant: TenantConfig,
   readerPrefs: ReaderPersonalizationPrefs
 ): Promise<GeneratedHomepageFeed | null> {
-  scheduleMissingTranslations(pool, displayLanguage, { max: 12 });
+  const eligibleWindowPool = pool.filter((a) =>
+    isWithinCanonicalReaderWindow(a.published_at ?? a.created_at)
+  );
+  scheduleMissingTranslations(eligibleWindowPool, displayLanguage, { max: 12 });
 
-  const langPool = filterPoolByLanguage(pool, displayLanguage);
-  const effectivePool = langPool.length > 0 ? langPool : pool;
+  const langPool = filterPoolByLanguage(eligibleWindowPool, displayLanguage);
+  const effectivePool = langPool.length > 0 ? langPool : eligibleWindowPool;
   homeDebug("homepage language pool", {
     displayLanguage,
     total: pool.length,

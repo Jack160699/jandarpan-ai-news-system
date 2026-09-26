@@ -21,6 +21,7 @@ import {
   getGoogleNewsCutoffIso,
   GOOGLE_NEWS_SITEMAP_LIMIT,
 } from "@/lib/seo/google-news";
+import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 const GENERATED_SELECT =
@@ -209,7 +210,9 @@ export async function fetchGeneratedArticlePool(
     })
   );
 
-  const publicRows = rows.filter((row) => isPublicGeneratedArticle(row));
+  const publicRows = rows.filter(
+    (row) => isPublicGeneratedArticle(row) && isWithinCanonicalReaderWindow(row.published_at)
+  );
 
   logLiveFeed("generated_pool", {
     publicCount: publicRows.length,

@@ -21,6 +21,7 @@ import {
   type CanonicalCategoryId,
 } from "@/lib/editorial/canonical-categories";
 import { getDistrict } from "@/lib/regional/districts";
+import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 
 /**
  * Filter stories strictly by canonical category metadata.
@@ -123,8 +124,10 @@ export function getPrioritizedStories(
   categoryId: string,
   districtSlug?: string | null
 ): BroadcastSegment[] {
-  // 1. Filter by category
-  const categoryMatched = stories.filter((s) => matchesCanonicalCategory(s, categoryId));
+  // 1. Filter by category and canonical 30-day window
+  const categoryMatched = stories.filter(
+    (s) => isWithinCanonicalReaderWindow(s.publishedAt) && matchesCanonicalCategory(s, categoryId)
+  );
   if (categoryMatched.length === 0) return [];
 
   const target = (districtSlug || "").trim().toLowerCase();

@@ -19,6 +19,7 @@ import { buildLocalBreakingAlerts } from "@/lib/regional/breaking-alerts";
 import { logRegionalAnalytics } from "@/lib/regional/analytics";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import { extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
+import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 
 export type HyperlocalArticleRef = {
   id: string;
@@ -92,6 +93,7 @@ export function routeArticlesByDistrict(
   const byDistrict = new Map<string, GeneratedArticleRow[]>();
 
   for (const row of rows) {
+    if (!isWithinCanonicalReaderWindow(row.published_at ?? row.created_at)) continue;
     const geo = geoFromRecord(row);
     if (!geo.is_chhattisgarh && !geo.districts.length) continue;
 

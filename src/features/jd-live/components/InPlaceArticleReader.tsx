@@ -5,6 +5,7 @@ import Image from "next/image";
 import type { BroadcastSegment } from "../types";
 import { useBroadcast } from "../BroadcastContext";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
+import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 
 function formatFullDate(dateStr?: string, lang: "hi" | "en" = "hi"): string {
   if (!dateStr) return "";
@@ -149,7 +150,9 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
       .split(/\s+/)
       .filter((w) => w.length > 3);
 
-    const candidates = queue.filter((s) => !s.isIntro && s.id !== currentId);
+    const candidates = queue.filter(
+      (s) => !s.isIntro && s.id !== currentId && isWithinCanonicalReaderWindow(s.publishedAt)
+    );
 
     const scored = candidates.map((s) => {
       let score = 0;

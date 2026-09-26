@@ -25,6 +25,7 @@ import {
 import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { wireArticlesToGeneratedPool } from "@/lib/news/live-feed/wire-to-generated";
 import { fetchGeneratedArticlePool, type GeneratedPoolSelect } from "@/lib/newsroom/generated/read";
+import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
@@ -75,7 +76,10 @@ function finalizePool(
   source: LivePoolSource,
   diagnostics: LivePoolDiagnostics
 ): ResolvedLivePool {
-  const ranked = rankPoolByFeedQuality(rows);
+  const eligibleRows = rows.filter((r) =>
+    isWithinCanonicalReaderWindow(r.published_at ?? r.created_at)
+  );
+  const ranked = rankPoolByFeedQuality(eligibleRows.length > 0 ? eligibleRows : rows);
   diagnostics.qualityRanked = true;
   diagnostics.finalCount = ranked.length;
   diagnostics.source = source;

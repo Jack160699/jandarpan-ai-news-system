@@ -7,6 +7,7 @@ import { regionalBoostScore } from "@/lib/news/home-ranking";
 import { normalizeTitle, titleHash, titleSimilarity } from "@/lib/news/normalize";
 import { buildArticleSlug } from "@/lib/news/slug";
 import type { NewsArticleRow } from "@/lib/types/news-article";
+import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 
 function tokenize(text: string): string[] {
   return text
@@ -81,6 +82,7 @@ export function pickRelatedStories(
   const sourceId = String(source.id);
 
   return pool
+    .filter((c) => isWithinCanonicalReaderWindow(c.published_at))
     .map((c) => ({
       article: c,
       score:

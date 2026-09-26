@@ -11,6 +11,7 @@ import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles"
 import { optimizeCdnImageUrl } from "@/lib/news/images/responsive-sizes";
 import { hasVerifiedRealMedia, isCleanRightsEligibleMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
 import { resolveCanonicalCategories } from "@/lib/editorial/canonical-categories";
+import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -562,12 +563,9 @@ export async function GET(req: NextRequest) {
       // HARD RULE: Only Chhattisgarh-relevant stories
       if (!isChhattisgarhOnlyStory(c)) return false;
 
-      // 30-day visible news window: articles published within the last 30 days remain fully eligible
-      const pubTime = new Date(c.publishedAt).getTime();
-      if (!isNaN(pubTime)) {
-        return pubTime >= (now - 30 * 24 * 3600 * 1000) && pubTime <= (now + 2 * 3600 * 1000);
-      }
-      return true;
+      // Authoritative 30-day visible news window rule:
+      // published_at >= now - 30 days
+      return isWithinCanonicalReaderWindow(c.publishedAt);
     });
 
     // 3. Separate Breaking Stories (only Chhattisgarh breaking with verified real media)
