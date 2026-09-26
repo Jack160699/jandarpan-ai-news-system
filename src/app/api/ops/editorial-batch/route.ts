@@ -233,8 +233,8 @@ async function selectBatchCandidates(supabase: any, size: number) {
   // Pure Media-First candidate pool: ONLY events with genuine photojournalism
   const mediaEligibleEvents = candidatePool.filter((ev: any) => eventsWithRealMedia.has(ev.id));
 
-  // Deterministic candidate selection over the real-media reservoir
-  const ranked = selectEditorialCandidates(mediaEligibleEvents as NewsEventRow[], Math.max(size * 3, 100), {
+  // Deterministic candidate selection over the full real-media reservoir
+  const ranked = selectEditorialCandidates(mediaEligibleEvents as NewsEventRow[], mediaEligibleEvents.length, {
     eventsWithRealMedia,
   });
 
