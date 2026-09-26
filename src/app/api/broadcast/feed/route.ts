@@ -543,15 +543,29 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Helper to add or enrich candidate
+    const addOrEnrichCandidate = (norm: BroadcastCandidate) => {
+      const existing = candidates.find((c) => c.id === norm.id || c.slug === norm.slug);
+      if (existing) {
+        if (!existing.headlineEn && norm.headlineEn) existing.headlineEn = norm.headlineEn;
+        if (!existing.headlineHi && norm.headlineHi) existing.headlineHi = norm.headlineHi;
+        if (!existing.summaryEn && norm.summaryEn) existing.summaryEn = norm.summaryEn;
+        if (!existing.summaryHi && norm.summaryHi) existing.summaryHi = norm.summaryHi;
+        if (!existing.articleBodyEn && norm.articleBodyEn) existing.articleBodyEn = norm.articleBodyEn;
+        if (!existing.articleBodyHi && norm.articleBodyHi) existing.articleBodyHi = norm.articleBodyHi;
+        return;
+      }
+      seenIds.add(norm.id);
+      seenSlugs.add(norm.slug);
+      candidates.push(norm);
+    };
+
     // Also pull from resolveLiveArticlePool (up to 300 live articles from last 30 days)
     try {
       const { rows } = await resolveLiveArticlePool(300, { select: "homepage" });
       for (const r of rows) {
         if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
-        if (seenIds.has(r.id) || seenSlugs.has(r.slug)) continue;
-        seenIds.add(r.id);
-        seenSlugs.add(r.slug);
-        candidates.push(normalizeGeneratedRow(r));
+        addOrEnrichCandidate(normalizeGeneratedRow(r));
       }
     } catch {
       // Live pool query error fallback
@@ -562,10 +576,7 @@ export async function GET(req: NextRequest) {
       const dbArticles = await fetchGeneratedArticlePool(300, { select: "homepage" });
       for (const r of (dbArticles || [])) {
         if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
-        if (seenIds.has(r.id) || seenSlugs.has(r.slug)) continue;
-        seenIds.add(r.id);
-        seenSlugs.add(r.slug);
-        candidates.push(normalizeGeneratedRow(r));
+        addOrEnrichCandidate(normalizeGeneratedRow(r));
       }
     } catch {
       // DB pool query error fallback
@@ -576,10 +587,7 @@ export async function GET(req: NextRequest) {
       const staticArticles = getStaticFallbackArticlePool();
       for (const r of staticArticles) {
         if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
-        if (seenIds.has(r.id) || seenSlugs.has(r.slug)) continue;
-        seenIds.add(r.id);
-        seenSlugs.add(r.slug);
-        candidates.push(normalizeGeneratedRow(r));
+        addOrEnrichCandidate(normalizeGeneratedRow(r));
       }
     } catch {
       // Static pool load fallback
