@@ -209,7 +209,10 @@ async function selectBatchCandidates(supabase: any, size: number) {
     (signals ?? []).forEach((s: any) => signalMap.set(s.id, s));
   }
 
-  // Find events with genuine clean real media
+  // Find events with genuine clean real media (excluding tracking pixels)
+  const isTrackingPixel = (url: string) =>
+    /scorecardresearch|doubleclick|google-analytics|tracker|beacon|1x1|pixel/i.test(url);
+
   const eventsWithRealMedia = new Set<string>();
   const eventMediaMap = new Map<string, string>();
 
@@ -218,23 +221,38 @@ async function selectBatchCandidates(supabase: any, size: number) {
       .map((id: string) => signalMap.get(id))
       .filter(Boolean) as NewsSignalRow[];
     const mediaCheck = discoverAndValidateCandidateMedia(sigs, usedImageUrls);
-    if (mediaCheck.valid && mediaCheck.imageUrl) {
+    if (mediaCheck.valid && mediaCheck.imageUrl && !isTrackingPixel(mediaCheck.imageUrl)) {
       eventsWithRealMedia.add(ev.id);
       eventMediaMap.set(ev.id, mediaCheck.imageUrl);
     }
   }
 
-  // Deterministic candidate selection
-  const ranked = selectEditorialCandidates(unrepresented as NewsEventRow[], size, {
+  // Pure Media-First candidate pool: ONLY events with genuine photojournalism
+  const mediaEligibleEvents = unrepresented.filter((ev: any) => eventsWithRealMedia.has(ev.id));
+
+  // Deterministic candidate selection over the real-media reservoir
+  const ranked = selectEditorialCandidates(mediaEligibleEvents as NewsEventRow[], size * 3, {
     eventsWithRealMedia,
   });
 
-  const selectedCandidates = ranked.slice(0, size).map((cand: any) => {
+  const seenNormalizedTitles = new Set<string>();
+  const selectedCandidates: any[] = [];
+
+  for (const cand of ranked) {
+    if (selectedCandidates.length >= size) break;
     const ev = cand as NewsEventRow;
     const sigs = (ev.signal_ids ?? [])
       .map((id: string) => signalMap.get(id))
       .filter(Boolean) as NewsSignalRow[];
-    const eventTitle = ev.canonical_title || (ev as any).title || "";
+    const eventTitle = (ev.canonical_title || (ev as any).title || "").trim();
+
+    // Deduplicate within the batch (e.g. wire variants of the same story)
+    const normalizedKey = eventTitle.toLowerCase().replace(/[^a-z0-9\u0900-\u097F]/g, "").slice(0, 35);
+    if (normalizedKey && seenNormalizedTitles.has(normalizedKey)) {
+      continue;
+    }
+    seenNormalizedTitles.add(normalizedKey);
+
     const districtRes = resolveCanonicalStoryDistrict({
       headline: eventTitle,
       summary: ev.event_summary,
@@ -249,7 +267,7 @@ async function selectBatchCandidates(supabase: any, size: number) {
 
     const score = scoreEditorialCandidate(ev, { eventsWithRealMedia });
 
-    return {
+    selectedCandidates.push({
       eventId: ev.id,
       title: eventTitle,
       category: ev.category,
@@ -267,8 +285,8 @@ async function selectBatchCandidates(supabase: any, size: number) {
       imageUrl: eventMediaMap.get(ev.id) || null,
       signalCount: sigs.length,
       eventRow: ev,
-    };
-  });
+    });
+  }
 
   return {
     requestedSize: size,
