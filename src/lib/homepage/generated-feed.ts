@@ -171,6 +171,9 @@ export function toHomeArticle(
     districtSlug: districtRes.districtSlug,
     districtHi: districtRes.nameHi || districtRes.displayTagHi,
     isStatewide: districtRes.isStatewide,
+    translations: row.translations,
+    editorial_metadata: row.editorial_metadata,
+    article_body: row.article_body,
   };
 }
 

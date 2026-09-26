@@ -50,6 +50,9 @@ export type HomeArticle = {
   districtSlug?: string | null;
   districtHi?: string;
   isStatewide?: boolean;
+  translations?: any;
+  editorial_metadata?: any;
+  article_body?: string | null;
   /** @deprecated Language filtering happens before feed assembly */
   localeMatch?: boolean;
 };
