@@ -293,6 +293,14 @@ async function selectBatchCandidates(supabase: any, size: number) {
 
   return {
     requestedSize: size,
+    diagnostics: {
+      eventsFound: events.length,
+      unrepresentedCount: unrepresented.length,
+      candidatePoolCount: candidatePool.length,
+      allSignalIdsCount: allSignalIds.length,
+      signalsLoaded: signalMap.size,
+      eventsWithRealMediaCount: eventsWithRealMedia.size,
+    },
     totalEligibleWithRealMedia: eventsWithRealMedia.size,
     selected: selectedCandidates,
   };
@@ -302,7 +310,7 @@ async function selectBatchCandidates(supabase: any, size: number) {
  * Execute a controlled production batch of candidate events.
  */
 async function runEditorialBatch(supabase: any, size: number, offset: number = 0) {
-  const selectionResult = await selectBatchCandidates(supabase, size + offset);
+  const selectionResult = await selectBatchCandidates(supabase, size + offset + 30);
   if ("error" in selectionResult) {
     return { error: selectionResult.error };
   }
