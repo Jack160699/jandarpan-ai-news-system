@@ -535,18 +535,22 @@ async function reconcileNewArticles(supabase: any, req: NextRequest) {
   const liveHiIds = new Set(queueHi.map((s: any) => s.id));
   const liveEnIds = new Set(queueEn.map((s: any) => s.id));
 
-  // Fetch the 23 newest articles from generated_articles
+  const { searchParams } = new URL(req.url);
+  const queryLimit = Number(searchParams.get("limit")) || 50;
+  const queryOffset = Number(searchParams.get("offset")) || 0;
+
+  // Fetch articles from generated_articles
   const { data: articles, error } = await supabase
     .from("generated_articles")
     .select("id, event_id, slug, headline, summary, article_body, hero_image_url, published_at, workflow_status, editorial_status, tags, editorial_metadata, created_at")
     .order("created_at", { ascending: false })
-    .limit(30);
+    .range(queryOffset, queryOffset + queryLimit - 1);
 
   if (error || !articles) {
     return { error: error?.message || "Failed to fetch generated_articles" };
   }
 
-  const newlyGenerated = articles.slice(0, 23);
+  const newlyGenerated = articles;
 
   const table: any[] = [];
   const publishedNotClean: string[] = [];
@@ -556,7 +560,8 @@ async function reconcileNewArticles(supabase: any, req: NextRequest) {
   for (const a of newlyGenerated) {
     const isGenerated = true;
     const isPublished = Boolean(a.published_at);
-    const heroImg = a.hero_image_url || "";
+    const resolvedMedia = extractVerifiedRealMediaUrl(a);
+    const heroImg = resolvedMedia || a.hero_image_url || "";
     const cleanMedia = isCleanRightsEligibleMedia(heroImg);
     const verifiedReal = hasVerifiedRealMedia(heroImg);
     const rejCheck = isRejectedImageUrl(heroImg);
@@ -632,6 +637,9 @@ async function reconcileNewArticles(supabase: any, req: NextRequest) {
       inLiveEn: inLiveQueueEn,
       reason: exclusionReason,
       heroImageUrl: heroImg,
+      rawHeroImageUrl: a.hero_image_url || null,
+      resolvedHeroImageUrl: resolvedMedia || null,
+      editorialMetadata: a.editorial_metadata || null,
       districtSlug: districtRes.districtSlug || null,
       tags,
       publishedAt: a.published_at,
