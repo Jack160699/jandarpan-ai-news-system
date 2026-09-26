@@ -661,6 +661,276 @@ async function reconcileNewArticles(supabase: any, req: NextRequest) {
   };
 }
 
+/**
+ * Audit all generated articles for bilingual completeness and geographic precision.
+ */
+async function auditBilingualAndGeo(supabase: any) {
+  const { data: articles, error } = await supabase
+    .from("generated_articles")
+    .select("id, event_id, slug, headline, summary, article_body, hero_image_url, published_at, workflow_status, editorial_status, tags, editorial_metadata, translations, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error || !articles) {
+    return { error: error?.message || "Failed to fetch generated_articles" };
+  }
+
+  const isDeva = (s: string) => /[\u0900-\u097F]/.test(s || "");
+
+  let fullyBilingualCount = 0;
+  let missingEnCount = 0;
+  let missingHiCount = 0;
+  let mixedLanguageCount = 0;
+
+  const table = articles.map((a: any, idx: number) => {
+    const rawMeta = a.editorial_metadata || {};
+    const trans = a.translations || rawMeta.translations || {};
+    const en = trans.en;
+    const hi = trans.hi;
+    const isSourceHindi = isDeva(a.headline);
+
+    // Full English check
+    const enHeadline = isSourceHindi ? en?.headline : a.headline;
+    const enSummary = isSourceHindi ? en?.summary : a.summary;
+    const enBody = isSourceHindi ? en?.article_body : a.article_body;
+    const hasFullEn = Boolean(enHeadline?.trim() && enSummary?.trim() && enBody?.trim());
+
+    // Full Hindi check
+    const hiHeadline = isSourceHindi ? a.headline : hi?.headline;
+    const hiSummary = isSourceHindi ? a.summary : hi?.summary;
+    const hiBody = isSourceHindi ? a.article_body : hi?.article_body;
+    const hasFullHi = Boolean(hiHeadline?.trim() && hiSummary?.trim() && hiBody?.trim());
+
+    if (hasFullEn && hasFullHi) fullyBilingualCount++;
+    if (!hasFullEn) missingEnCount++;
+    if (!hasFullHi) missingHiCount++;
+
+    // Mixed language check
+    let isMixed = false;
+    const mixedReasons: string[] = [];
+    if (hasFullEn) {
+      if (isDeva(enHeadline) || isDeva(enSummary) || isDeva(enBody)) {
+        isMixed = true;
+        mixedReasons.push("Devanagari in English representation");
+      }
+    }
+    if (hasFullHi) {
+      if (!isDeva(hiHeadline)) {
+        isMixed = true;
+        mixedReasons.push("Latin script in Hindi headline");
+      }
+    }
+    if (isMixed) mixedLanguageCount++;
+
+    const districtRes = resolveCanonicalStoryDistrict({
+      explicitDistrict: a.district_slug,
+      tags: a.tags,
+      headline: a.headline,
+      summary: a.summary,
+      body: a.article_body,
+      section: a.tags?.[0] || "chhattisgarh",
+    });
+
+    const resolvedMedia = extractVerifiedRealMediaUrl(a);
+    const heroImg = resolvedMedia || a.hero_image_url || "";
+    const cleanMedia = isCleanRightsEligibleMedia(heroImg);
+    const verifiedReal = hasVerifiedRealMedia(heroImg);
+    const rejCheck = isRejectedImageUrl(heroImg);
+    const mediaPass = cleanMedia && verifiedReal && !rejCheck.rejected;
+
+    return {
+      idx: idx + 1,
+      id: a.id,
+      slug: a.slug,
+      headline: a.headline,
+      isSourceHindi,
+      hasFullEn,
+      hasFullHi,
+      isFullyBilingual: hasFullEn && hasFullHi,
+      isMixed,
+      mixedReasons,
+      scope: districtRes.geographicScope,
+      districtSlug: districtRes.districtSlug,
+      districtNameHi: districtRes.nameHi,
+      districtNameEn: districtRes.nameEn,
+      localityHi: districtRes.localityHi,
+      localityEn: districtRes.localityEn,
+      mediaPass,
+      published: Boolean(a.published_at),
+    };
+  });
+
+  return {
+    total: articles.length,
+    fullyBilingualCount,
+    missingEnCount,
+    missingHiCount,
+    mixedLanguageCount,
+    table,
+  };
+}
+
+/**
+ * Backfill missing translations for database articles.
+ */
+async function backfillArticleTranslations(supabase: any, limit = 10, offset = 0) {
+  const { data: articles, error } = await supabase
+    .from("generated_articles")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error || !articles) {
+    return { error: error?.message || "Failed to fetch articles" };
+  }
+
+  const isDeva = (s: string) => /[\u0900-\u097F]/.test(s || "");
+  const results: any[] = [];
+
+  for (const a of articles) {
+    const rawMeta = a.editorial_metadata || {};
+    const trans = a.translations || rawMeta.translations || {};
+    const isSourceHindi = isDeva(a.headline);
+    const targetLang = isSourceHindi ? "en" : "hi";
+
+    const hasTarget = Boolean(
+      trans[targetLang]?.headline?.trim() &&
+      trans[targetLang]?.summary?.trim() &&
+      trans[targetLang]?.article_body?.trim()
+    );
+
+    if (hasTarget) {
+      results.push({ id: a.id, slug: a.slug, status: "already_translated", targetLang });
+      continue;
+    }
+
+    try {
+      const transResult = await translateGeneratedArticle(a, ["hi", "en"]);
+      results.push({
+        id: a.id,
+        slug: a.slug,
+        status: "translated",
+        targetLang,
+        transResult,
+      });
+    } catch (err: any) {
+      results.push({
+        id: a.id,
+        slug: a.slug,
+        status: "failed",
+        targetLang,
+        error: err?.message || String(err),
+      });
+    }
+  }
+
+  return {
+    totalChecked: articles.length,
+    results,
+  };
+}
+
+/**
+ * Generate full Bilingual Parity Matrix for representative production stories.
+ */
+async function generateBilingualMatrix(supabase: any) {
+  const { getStaticFallbackArticlePool } = await import("@/lib/news/fallback/wire-articles");
+  const staticPool = getStaticFallbackArticlePool();
+  const { data: dbArticles } = await supabase
+    .from("generated_articles")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(40);
+
+  const localSample: any[] = [];
+  const statewideSample: any[] = [];
+  const nationalIntlSample: any[] = [];
+
+  const candidatePool = [...staticPool, ...(dbArticles || [])];
+
+  for (const a of candidatePool) {
+    const districtRes = resolveCanonicalStoryDistrict({
+      explicitDistrict: a.district_slug || (a.geo_metadata as any)?.district,
+      tags: a.tags,
+      headline: a.headline,
+      summary: a.summary,
+      body: a.article_body,
+      section: a.tags?.[0],
+    });
+
+    const rawMeta = a.editorial_metadata || {};
+    const trans = a.translations || rawMeta.translations || {};
+    const isSourceHindi = /[\u0900-\u097F]/.test(a.headline || "");
+
+    const enBundle = isSourceHindi
+      ? trans.en
+      : {
+          headline: a.headline,
+          summary: a.summary,
+          article_body: a.article_body,
+        };
+    const hiBundle = isSourceHindi
+      ? {
+          headline: a.headline,
+          summary: a.summary,
+          article_body: a.article_body,
+        }
+      : trans.hi;
+
+    const item = {
+      id: a.id,
+      slug: a.slug,
+      scope: districtRes.geographicScope,
+      districtSlug: districtRes.districtSlug,
+      districtHi:
+        districtRes.nameHi ||
+        (districtRes.geographicScope === "international"
+          ? "विदेश डेस्क"
+          : districtRes.geographicScope === "national"
+          ? "राष्ट्रीय डेस्क"
+          : "राज्य डेस्क"),
+      districtEn:
+        districtRes.nameEn ||
+        (districtRes.geographicScope === "international"
+          ? "World Desk"
+          : districtRes.geographicScope === "national"
+          ? "National Desk"
+          : "State Desk"),
+      localityHi: districtRes.localityHi,
+      localityEn: districtRes.localityEn,
+      displayTagHi: districtRes.displayTagHi,
+      displayTagEn: districtRes.displayTagEn,
+      headlineHi: hiBundle?.headline || "",
+      headlineEn: enBundle?.headline || "",
+      summaryHi: hiBundle?.summary || "",
+      summaryEn: enBundle?.summary || "",
+      bodyHi: hiBundle?.article_body || "",
+      bodyEn: enBundle?.article_body || "",
+      hasFullHi: Boolean(hiBundle?.headline && hiBundle?.summary && hiBundle?.article_body),
+      hasFullEn: Boolean(enBundle?.headline && enBundle?.summary && enBundle?.article_body),
+      imageUrl: a.hero_image_url || "",
+      imageValid: hasVerifiedRealMedia(a.hero_image_url),
+    };
+
+    if (districtRes.geographicScope === "local" && localSample.length < 10) {
+      localSample.push(item);
+    } else if (districtRes.geographicScope === "statewide" && statewideSample.length < 5) {
+      statewideSample.push(item);
+    } else if (
+      (districtRes.geographicScope === "national" || districtRes.geographicScope === "international") &&
+      nationalIntlSample.length < 5
+    ) {
+      nationalIntlSample.push(item);
+    }
+  }
+
+  return {
+    localSample,
+    statewideSample,
+    nationalIntlSample,
+    matrixTotal: localSample.length + statewideSample.length + nationalIntlSample.length,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -684,6 +954,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ ok: true, action, reconciliation });
     }
 
+    if (action === "bilingual_audit") {
+      const audit = await auditBilingualAndGeo(supabase);
+      return NextResponse.json({ ok: true, action, audit });
+    }
+
+    if (action === "bilingual_matrix") {
+      const matrix = await generateBilingualMatrix(supabase);
+      return NextResponse.json({ ok: true, action, matrix });
+    }
+
     return NextResponse.json({ ok: false, error: `Unknown action: ${action}` }, { status: 400 });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err?.message || String(err) }, { status: 500 });
@@ -702,6 +982,11 @@ export async function POST(req: NextRequest) {
     if (action === "run_batch") {
       const batchResult = await runEditorialBatch(supabase, size, offset);
       return NextResponse.json({ ok: true, action, result: batchResult });
+    }
+
+    if (action === "backfill_translations") {
+      const backfillResult = await backfillArticleTranslations(supabase, size, offset);
+      return NextResponse.json({ ok: true, action, result: backfillResult });
     }
 
     return NextResponse.json({ ok: false, error: `Unknown action: ${action}` }, { status: 400 });

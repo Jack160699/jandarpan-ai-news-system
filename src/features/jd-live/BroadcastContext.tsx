@@ -132,11 +132,17 @@ function broadcastReducer(
       if (state.currentSegment) {
         const existingIdx = fullQueue.findIndex((s) => s.id === state.currentSegment?.id);
         const nextIdx = existingIdx >= 0 ? existingIdx : state.currentIndex;
+        let nextSelectedArticle = state.selectedArticle;
+        if (state.selectedArticle) {
+          const found = fullQueue.find((s) => s.id === state.selectedArticle?.id || s.slug === state.selectedArticle?.slug);
+          if (found) nextSelectedArticle = found;
+        }
         return {
           ...state,
           queue: fullQueue,
           breakingQueue: breaking,
           currentIndex: nextIdx,
+          selectedArticle: nextSelectedArticle,
         };
       }
 
@@ -160,11 +166,30 @@ function broadcastReducer(
     case "SET_LANGUAGE": {
       const updatedQueue = buildBroadcastQueue(state.queue, action.language);
       const curr = updatedQueue[state.currentIndex] || updatedQueue[0] || null;
+      let updatedSelectedArticle = state.selectedArticle;
+      if (state.selectedArticle) {
+        const found = updatedQueue.find(
+          (s) => s.id === state.selectedArticle?.id || s.slug === state.selectedArticle?.slug
+        );
+        if (found) {
+          updatedSelectedArticle = found;
+        } else {
+          const s = state.selectedArticle;
+          updatedSelectedArticle = {
+            ...s,
+            headline: action.language === "en" ? (s.headlineEn || s.headline) : (s.headlineHi || s.headline),
+            summary: action.language === "en" ? (s.summaryEn || s.summary) : (s.summaryHi || s.summary),
+            district: action.language === "en" ? (s.districtEn || s.district) : (s.districtHi || s.district),
+            categoryLabel: action.language === "en" ? (s.categoryLabelEn || s.categoryLabel) : (s.categoryLabelHi || s.categoryLabel),
+          };
+        }
+      }
       return {
         ...state,
         language: action.language,
         queue: updatedQueue,
         currentSegment: curr,
+        selectedArticle: updatedSelectedArticle,
         scriptReady: !!curr?.script,
         audioReady: false,
         segmentToken: state.segmentToken + 1,
@@ -414,10 +439,23 @@ export function BroadcastProvider({
     }
   }, [initialLanguage, state.language]);
 
-  const setLanguage = useCallback(
-    (lang: BroadcastLanguage) => dispatch({ type: "SET_LANGUAGE", language: lang }),
-    []
-  );
+  const setLanguage = useCallback((lang: BroadcastLanguage) => {
+    dispatch({ type: "SET_LANGUAGE", language: lang });
+    if (typeof window !== "undefined") {
+      fetch(`/api/broadcast/feed?lang=${lang}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.queue && data.queue.length > 0) {
+            dispatch({
+              type: "SET_QUEUE",
+              queue: data.queue,
+              breaking: data.breaking,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   const setCategory = useCallback(
     (category: string) => dispatch({ type: "SET_CATEGORY", category }),

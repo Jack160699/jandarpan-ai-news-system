@@ -273,10 +273,11 @@ export async function translateGeneratedArticle(
     sourceContentVersion?: string;
   }
 ): Promise<TranslationJobResult[]> {
-  const source = normalizeArticleLanguage(row.language);
-  const langs = (targets ?? parseTranslationTargets()).filter(
-    (t) => t !== source
-  );
+  const isDevanagari = /[\u0900-\u097F]/.test(row.headline || "");
+  const source: NewsroomLanguage = isDevanagari ? "hi" : "en";
+  const defaultTargets: NewsroomLanguage[] = source === "hi" ? ["en"] : ["hi"];
+  const targetList = targets ?? defaultTargets;
+  const langs = targetList.filter((t) => t !== source);
 
   const results: TranslationJobResult[] = [];
   const existing = getArticleTranslations(

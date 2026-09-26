@@ -39,21 +39,33 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
   const { language, queue } = state;
 
   const [fullContent, setFullContent] = useState<string>("");
+  const [serverHeadline, setServerHeadline] = useState<string>("");
+  const [serverSummary, setServerSummary] = useState<string>("");
+  const [serverDistrict, setServerDistrict] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
 
+  useEffect(() => {
+    setServerHeadline("");
+    setServerSummary("");
+    setServerDistrict("");
+  }, [article.slug]);
+
   const headline =
-    language === "en"
+    serverHeadline ||
+    (language === "en"
       ? article.headlineEn || article.headline
-      : article.headlineHi || article.headline;
+      : article.headlineHi || article.headline);
   const summary =
-    language === "en"
+    serverSummary ||
+    (language === "en"
       ? article.summaryEn || article.summary
-      : article.summaryHi || article.summary;
+      : article.summaryHi || article.summary);
   const rawDistrict =
-    language === "en"
+    serverDistrict ||
+    (language === "en"
       ? article.districtEn || article.district
-      : article.districtHi || article.district;
+      : article.districtHi || article.district);
   const category =
     language === "en"
       ? article.categoryLabelEn || article.categoryLabel
@@ -85,6 +97,9 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
         if (!cancelled && data) {
           const content = (data.content || "").trim();
           setFullContent(content);
+          if (data.headline) setServerHeadline(data.headline);
+          if (data.summary) setServerSummary(data.summary);
+          if (data.district) setServerDistrict(data.district);
         }
       })
       .catch((err) => {

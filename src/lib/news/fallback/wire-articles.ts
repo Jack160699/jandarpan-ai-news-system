@@ -7,6 +7,7 @@
  */
 
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
+import { STATIC_ENGLISH_TRANSLATIONS } from "./wire-translations-en";
 
 function row(
   partial: Pick<GeneratedArticleRow, "id" | "slug" | "headline" | "summary" | "hero_image_url"> &
@@ -14,6 +15,11 @@ function row(
 ): GeneratedArticleRow {
   const summary = partial.summary ?? null;
   const now = new Date().toISOString();
+  const enBundle = STATIC_ENGLISH_TRANSLATIONS[partial.id];
+  const translations = enBundle
+    ? { en: enBundle }
+    : ((partial as any).translations || partial.editorial_metadata?.translations || undefined);
+
   return {
     event_id: null,
     seo_title: partial.headline,
@@ -25,12 +31,14 @@ function row(
     editorial_status: "approved",
     homepage_pin: false,
     pinned_at: null,
+    translations,
     editorial_metadata: {
       ai_confidence: 0.98,
       used_fallback: false,
       is_breaking: partial.editorial_metadata?.is_breaking ?? false,
       source_count: 1,
       media_source_url: partial.hero_image_url,
+      translations,
       hero_media: partial.hero_image_url
         ? {
             media_url: partial.hero_image_url,

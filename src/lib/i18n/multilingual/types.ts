@@ -8,7 +8,7 @@ export type ArticleLocaleBundle = {
   seo_description: string;
   tags?: string[];
   reading_time: string;
-  translated_at: string;
+  translated_at?: string;
   model?: string;
   tone_profile?: string;
   /** Hash of source headline/summary/body at translation time */

@@ -318,11 +318,11 @@ function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
     summaryHi: hiTrans?.summary || (isDevanagari ? a.summary : undefined),
     summaryEn: enTrans?.summary || (!isDevanagari ? a.summary : undefined),
     articleBody: a.summary || "",
-    articleBodyHi: hiTrans?.article_body || a.summary || "",
-    articleBodyEn: enTrans?.article_body || a.summary || "",
+    articleBodyHi: hiTrans?.article_body || (isDevanagari ? a.summary : undefined),
+    articleBodyEn: enTrans?.article_body || (!isDevanagari ? a.summary : undefined),
     imageUrl: rawImg,
     section: a.section || "chhattisgarh",
-    language: a.language || "hi",
+    language: a.language || (isDevanagari ? "hi" : "en"),
     tags: a.tags || [],
     publishedAt: a.publishedAt,
     isBreaking: !!(a.ranking?.isBreaking),
@@ -371,11 +371,11 @@ function normalizeGeneratedRow(r: GeneratedArticleRow): BroadcastCandidate {
     summaryHi: hiTrans?.summary || (isDevanagari ? r.summary : undefined),
     summaryEn: enTrans?.summary || (!isDevanagari ? r.summary : undefined),
     articleBody: r.article_body || r.summary || "",
-    articleBodyHi: hiTrans?.article_body || r.article_body || r.summary || "",
-    articleBodyEn: enTrans?.article_body || r.article_body || r.summary || "",
+    articleBodyHi: hiTrans?.article_body || (isDevanagari ? r.article_body || r.summary : undefined),
+    articleBodyEn: enTrans?.article_body || (!isDevanagari ? r.article_body || r.summary : undefined),
     imageUrl: rawImg,
     section: sectionTag,
-    language: r.language || "hi",
+    language: r.language || (isDevanagari ? "hi" : "en"),
     tags: r.tags || [],
     publishedAt: r.published_at || r.created_at,
     isBreaking,
@@ -399,23 +399,57 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
   const catHi = SECTION_NAMES_HI[c.section] || "राज्य डेस्क";
   const catEn = SECTION_NAMES_EN[c.section] || "State Desk";
 
-  const rawHeadlineHi = c.headlineHi || (isDevanagari ? c.headline : c.headline);
-  const rawHeadlineEn = c.headlineEn || (!isDevanagari ? c.headline : c.headline);
-  const headlineHi = normalizeHeadlineForSpokenScript(rawHeadlineHi, c.summaryHi || c.summary, c.articleBodyHi || c.articleBody);
-  const headlineEn = normalizeHeadlineForSpokenScript(rawHeadlineEn, c.summaryEn || c.summary, c.articleBodyEn || c.articleBody);
-  const headline = targetLang === "en" ? (headlineEn || headlineHi) : (headlineHi || headlineEn);
+  const rawHeadlineHi = c.headlineHi || (isDevanagari ? c.headline : undefined);
+  const rawHeadlineEn = c.headlineEn || (!isDevanagari ? c.headline : undefined);
+  const headlineHi = rawHeadlineHi
+    ? normalizeHeadlineForSpokenScript(rawHeadlineHi, c.summaryHi, c.articleBodyHi)
+    : "";
+  const headlineEn = rawHeadlineEn
+    ? normalizeHeadlineForSpokenScript(rawHeadlineEn, c.summaryEn, c.articleBodyEn)
+    : "";
 
-  const summaryHi = c.summaryHi || (isDevanagari ? c.summary : c.summary);
-  const summaryEn = c.summaryEn || (!isDevanagari ? c.summary : c.summary);
-  const summary = targetLang === "en" ? (c.summaryEn || c.summary) : (c.summaryHi || c.summary);
-  const body = targetLang === "en" ? (c.articleBodyEn || c.articleBody) : (c.articleBodyHi || c.articleBody);
+  // Strict language representation — zero cross-language pollution
+  const headline =
+    targetLang === "en"
+      ? (headlineEn || "Regional News Update")
+      : (headlineHi || "प्रादेशिक समाचार अपडेट");
 
-  // Clean visible district vs statewide label — Never substitute "Chhattisgarh" for a district
-  const locationHi = districtRes.nameHi || (districtRes.isStatewide ? "राज्य डेस्क" : catHi);
-  const locationEn = districtRes.nameEn || (districtRes.isStatewide ? "State Desk" : catEn);
+  const summary =
+    targetLang === "en"
+      ? (c.summaryEn || "Editorial report in progress.")
+      : (c.summaryHi || "संपादकीय विवरण प्रक्रियाधीन है।");
+
+  const body =
+    targetLang === "en"
+      ? (c.articleBodyEn || "")
+      : (c.articleBodyHi || "");
+
+  // Clean visible district vs statewide vs national vs international label
+  const locationHi =
+    districtRes.displayTagHi ||
+    districtRes.nameHi ||
+    (districtRes.geographicScope === "international"
+      ? "विदेश डेस्क"
+      : districtRes.geographicScope === "national"
+      ? "राष्ट्रीय डेस्क"
+      : districtRes.isStatewide
+      ? "राज्य डेस्क"
+      : catHi);
+
+  const locationEn =
+    districtRes.displayTagEn ||
+    districtRes.nameEn ||
+    (districtRes.geographicScope === "international"
+      ? "World Desk"
+      : districtRes.geographicScope === "national"
+      ? "National Desk"
+      : districtRes.isStatewide
+      ? "State Desk"
+      : catEn);
+
   const location = targetLang === "hi" ? locationHi : locationEn;
 
-  // Build natural broadcast anchor script immediately (Headline once + short overview continuation)
+  // Build natural broadcast anchor script strictly in target language
   const scriptData = generateAnchorSpokenScript({
     headline,
     summary,
@@ -447,11 +481,11 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     id: c.id,
     slug: c.slug,
     headline,
-    headlineHi,
-    headlineEn,
+    headlineHi: headlineHi || c.headlineHi || (isDevanagari ? c.headline : ""),
+    headlineEn: headlineEn || c.headlineEn || (!isDevanagari ? c.headline : ""),
     summary,
-    summaryHi,
-    summaryEn,
+    summaryHi: c.summaryHi || (isDevanagari ? c.summary : ""),
+    summaryEn: c.summaryEn || (!isDevanagari ? c.summary : ""),
     script: scriptData.script,
     durationSec: scriptData.durationSec,
     imageUrl: finalImageUrl,
@@ -462,6 +496,12 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     districtHi: locationHi,
     districtEn: locationEn,
     districtSlug: districtRes.districtSlug || c.districtSlug || null,
+    locality: districtRes.localityEn,
+    localityHi: districtRes.localityHi,
+    localityEn: districtRes.localityEn,
+    geographicScope: districtRes.geographicScope,
+    displayTagHi: districtRes.displayTagHi,
+    displayTagEn: districtRes.displayTagEn,
     section: c.section,
     canonicalCategories: catRes.categories,
     primaryCategory: catRes.primaryCategory,

@@ -34,6 +34,12 @@ export type BroadcastSegment = {
   districtHi?: string | null;
   districtEn?: string | null;
   districtSlug?: string | null;
+  locality?: string | null;
+  localityHi?: string | null;
+  localityEn?: string | null;
+  geographicScope?: string | null;
+  displayTagHi?: string | null;
+  displayTagEn?: string | null;
   section: string;
   isBreaking: boolean;
   isLive: boolean;

@@ -83,32 +83,23 @@ export function matchesDistrictScope(
     return true;
   }
 
-  // 2. Hindi & English district label matching
+  // 2. Hindi & English district label exact matching
   const rawHi = (seg.districtHi || "").trim();
-  if (targetHi && rawHi && (rawHi === targetHi || rawHi.includes(targetHi) || targetHi.includes(rawHi))) {
+  if (targetHi && rawHi === targetHi) {
     return true;
   }
 
   const rawEn = (seg.districtEn || "").trim().toLowerCase();
-  if (targetEn && rawEn && (rawEn === targetEn || rawEn.includes(targetEn) || targetEn.includes(rawEn))) {
+  if (targetEn && rawEn === targetEn) {
     return true;
   }
 
-  const rawDist = (seg.district || seg.districtHi || "").toLowerCase();
-
-  // If story has no specific district or is statewide, allow it
-  if (
-    !rawDist ||
-    rawDist.includes("राज्य") ||
-    rawDist.includes("state") ||
-    rawDist.includes("छत्तीसगढ़") ||
-    rawDist.includes("chhattisgarh")
-  ) {
+  // If story has no specific district or is statewide, allow it in general view
+  if (!seg.districtSlug && (seg.geographicScope === "statewide" || !seg.district)) {
     return true;
   }
 
-  // Fallback to raw display string
-  return rawDist.includes(targetSlug) || (targetHi ? rawDist.includes(targetHi) : false);
+  return false;
 }
 
 /**
@@ -148,20 +139,14 @@ export function getPrioritizedStories(
       return true;
     }
 
-    // 2. Hindi & English district label matching
+    // 2. Exact match on official district names
     const rawHi = (s.districtHi || "").trim();
-    if (targetHi && rawHi && (rawHi === targetHi || rawHi.includes(targetHi) || targetHi.includes(rawHi))) {
+    if (targetHi && rawHi === targetHi) {
       return true;
     }
 
     const rawEn = (s.districtEn || "").trim().toLowerCase();
-    if (targetEn && rawEn && (rawEn === targetEn || rawEn.includes(targetEn) || targetEn.includes(rawEn))) {
-      return true;
-    }
-
-    // 3. Fallback to raw display string
-    const raw = `${s.district || ""}`.toLowerCase();
-    if (raw && (raw.includes(targetSlug) || (targetHi && raw.includes(targetHi)) || aliases.some((a) => raw.includes(a)))) {
+    if (targetEn && rawEn === targetEn) {
       return true;
     }
 
@@ -169,9 +154,10 @@ export function getPrioritizedStories(
   };
 
   const isStatewide = (s: BroadcastSegment) => {
+    if (s.geographicScope === "statewide") return true;
+    if (s.districtSlug) return false; // Story belongs to a specific district, never classify as generic statewide!
     const raw = `${s.district || ""} ${s.districtHi || ""}`.toLowerCase();
     return (
-      !raw ||
       raw.includes("राज्य") ||
       raw.includes("state") ||
       raw.includes("छत्तीसगढ़") ||
