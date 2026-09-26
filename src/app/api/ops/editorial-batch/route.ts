@@ -7,7 +7,10 @@ import {
 import {
   hasVerifiedRealMedia,
   isCleanRightsEligibleMedia,
+  isRejectedImageUrl,
+  extractVerifiedRealMediaUrl,
 } from "@/lib/news/images/validate";
+import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 import { translateGeneratedArticle } from "@/lib/i18n/multilingual/translate";
 import {
   selectEditorialCandidates,
@@ -512,6 +515,144 @@ async function runEditorialBatch(supabase: any, size: number, offset: number = 0
   };
 }
 
+/**
+ * Reconcile the exact 23 newly published canonical articles against live broadcast queue.
+ */
+async function reconcileNewArticles(supabase: any, req: NextRequest) {
+  const host = req.headers.get("host") || "www.jandarpan.news";
+  const proto = host.includes("localhost") ? "http" : "https";
+
+  // Fetch live broadcast queue in Hindi and English
+  const [resHi, resEn] = await Promise.all([
+    fetch(`${proto}://${host}/api/broadcast/feed?lang=hi`, { cache: "no-store" }).catch(() => null),
+    fetch(`${proto}://${host}/api/broadcast/feed?lang=en`, { cache: "no-store" }).catch(() => null),
+  ]);
+  const dataHi = resHi?.ok ? await resHi.json() : null;
+  const dataEn = resEn?.ok ? await resEn.json() : null;
+  const queueHi = dataHi?.queue || [];
+  const queueEn = dataEn?.queue || [];
+
+  const liveHiIds = new Set(queueHi.map((s: any) => s.id));
+  const liveEnIds = new Set(queueEn.map((s: any) => s.id));
+
+  // Fetch the 23 newest articles from generated_articles
+  const { data: articles, error } = await supabase
+    .from("generated_articles")
+    .select("id, event_id, slug, headline, summary, article_body, hero_image_url, published_at, workflow_status, editorial_status, tags, editorial_metadata, created_at")
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  if (error || !articles) {
+    return { error: error?.message || "Failed to fetch generated_articles" };
+  }
+
+  const newlyGenerated = articles.slice(0, 23);
+
+  const table: any[] = [];
+  const publishedNotClean: string[] = [];
+  const cleanNotLive: string[] = [];
+  const publishedNotLive: any[] = [];
+
+  for (const a of newlyGenerated) {
+    const isGenerated = true;
+    const isPublished = Boolean(a.published_at);
+    const heroImg = a.hero_image_url || "";
+    const cleanMedia = isCleanRightsEligibleMedia(heroImg);
+    const verifiedReal = hasVerifiedRealMedia(heroImg);
+    const rejCheck = isRejectedImageUrl(heroImg);
+    const mediaPass = cleanMedia && verifiedReal && !rejCheck.rejected;
+
+    const tags = Array.isArray(a.tags) ? a.tags : [];
+    
+    // Category pass
+    const catPass = tags.length > 0;
+
+    // District pass
+    const districtRes = resolveCanonicalStoryDistrict({
+      headline: a.headline,
+      summary: a.summary,
+      section: tags[0] || "chhattisgarh",
+      tags,
+    });
+    const districtPass = Boolean(districtRes.districtSlug || districtRes.isStatewide || tags.includes("chhattisgarh"));
+
+    // Live eligible check
+    const inLiveQueue = liveHiIds.has(a.id);
+    const inLiveQueueEn = liveEnIds.has(a.id);
+
+    // Exclusion reason diagnosis if not in live queue
+    let exclusionReason: string | null = null;
+    if (!inLiveQueue) {
+      if (!isPublished) {
+        exclusionReason = "not_published";
+      } else if (!mediaPass) {
+        exclusionReason = `media_rejected:${rejCheck.reason || (cleanMedia ? "unverified" : "not_clean")}`;
+      } else {
+        const inWindow = isWithinCanonicalReaderWindow(a.published_at);
+        if (!inWindow) {
+          exclusionReason = "outside_30_day_window";
+        } else {
+          // Check CG-only rule from broadcast/feed
+          const text = `${a.headline} ${a.summary}`.toLowerCase();
+          if (
+            (text.includes("पश्चिम बंगाल") || text.includes("जम्मू-कश्मीर") || text.includes("पंजाब") || text.includes("केरल") || text.includes("तमिलनाडु")) &&
+            !text.includes("छत्तीसगढ़") && !text.includes("chhattisgarh") && !districtRes.districtSlug
+          ) {
+            exclusionReason = "outside_state_filter:isChhattisgarhOnlyStory_hard_ban";
+          } else {
+            const isCgSection = tags.includes("chhattisgarh") || tags.includes("raipur");
+            const hasCgMention =
+              /छत्तीसगढ़|रायपुर|दुर्ग|भिलाई|बिलासपुर|बस्तर|सरगुजा|कोरबा|धमतरी|chhattisgarh/i.test(text) ||
+              Boolean(districtRes.districtSlug) ||
+              isCgSection;
+            if (!hasCgMention) {
+              exclusionReason = "missing_chhattisgarh_mention_or_district";
+            } else {
+              exclusionReason = "broadcast_queue_other_filter";
+            }
+          }
+        }
+      }
+    }
+
+    if (isPublished && !mediaPass) publishedNotClean.push(a.id);
+    if (mediaPass && !inLiveQueue) cleanNotLive.push(a.id);
+    if (isPublished && !inLiveQueue) publishedNotLive.push({ id: a.id, headline: a.headline, reason: exclusionReason, heroImageUrl: heroImg });
+
+    table.push({
+      id: a.id,
+      eventId: a.event_id,
+      headline: a.headline,
+      generated: isGenerated,
+      published: isPublished,
+      mediaPass,
+      categoryPass: catPass,
+      districtPass,
+      liveEligible: inLiveQueue,
+      inLiveEn: inLiveQueueEn,
+      reason: exclusionReason,
+      heroImageUrl: heroImg,
+      districtSlug: districtRes.districtSlug || null,
+      tags,
+      publishedAt: a.published_at,
+      createdAt: a.created_at,
+    });
+  }
+
+  return {
+    totalNewlyGenerated: newlyGenerated.length,
+    totalPublished: table.filter((r) => r.published).length,
+    totalMediaPass: table.filter((r) => r.mediaPass).length,
+    totalInLiveQueue: table.filter((r) => r.liveEligible).length,
+    setDifferences: {
+      publishedNotClean,
+      cleanNotLive,
+      publishedNotLive,
+    },
+    table,
+  };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -528,6 +669,11 @@ export async function GET(req: NextRequest) {
     if (action === "select_batch") {
       const selection = await selectBatchCandidates(supabase, size);
       return NextResponse.json({ ok: true, action, selection });
+    }
+
+    if (action === "reconcile_23") {
+      const reconciliation = await reconcileNewArticles(supabase, req);
+      return NextResponse.json({ ok: true, action, reconciliation });
     }
 
     return NextResponse.json({ ok: false, error: `Unknown action: ${action}` }, { status: 400 });
