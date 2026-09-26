@@ -175,7 +175,7 @@ async function selectBatchCandidates(supabase: any, size: number) {
       .filter((s: string) => Boolean(s))
   );
 
-  // Fetch recent events from last 30 days
+  // Fetch recent events from last 30 days (full unrepresented backlog)
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
   const { data: events, error } = await supabase
     .from("news_events")
@@ -183,7 +183,7 @@ async function selectBatchCandidates(supabase: any, size: number) {
     .gte("created_at", thirtyDaysAgo)
     .order("urgency_score", { ascending: false })
     .order("created_at", { ascending: false })
-    .limit(Math.max(size * 10, 200));
+    .limit(2500);
 
   if (error || !events) {
     return { error: error?.message || "Failed to fetch candidate events" };
@@ -192,22 +192,17 @@ async function selectBatchCandidates(supabase: any, size: number) {
   // Filter out already represented
   const unrepresented = events.filter((e: any) => !representedEventIds.has(e.id));
 
-  // Load signals for candidate events
-  const allSignalIds = [
-    ...new Set(
-      unrepresented.flatMap((e: any) => (Array.isArray(e.signal_ids) ? e.signal_ids : []))
-    ),
-  ];
+  // Directly load signals with verified real images from news_signals
+  const { data: mediaSignals } = await supabase
+    .from("news_signals")
+    .select("*")
+    .not("image_url", "is", null)
+    .neq("image_url", "")
+    .not("image_url", "ilike", "%unsplash%")
+    .limit(2500);
 
   const signalMap = new Map<string, NewsSignalRow>();
-  for (let i = 0; i < allSignalIds.length; i += 200) {
-    const chunk = allSignalIds.slice(i, i + 200);
-    const { data: signals } = await supabase
-      .from("news_signals")
-      .select("*")
-      .in("id", chunk);
-    (signals ?? []).forEach((s: any) => signalMap.set(s.id, s));
-  }
+  (mediaSignals ?? []).forEach((s: any) => signalMap.set(s.id, s));
 
   // Find events with genuine clean real media (excluding tracking pixels)
   const isTrackingPixel = (url: string) =>
@@ -220,6 +215,7 @@ async function selectBatchCandidates(supabase: any, size: number) {
     const sigs = (ev.signal_ids ?? [])
       .map((id: string) => signalMap.get(id))
       .filter(Boolean) as NewsSignalRow[];
+    if (sigs.length === 0) continue;
     const mediaCheck = discoverAndValidateCandidateMedia(sigs, usedImageUrls);
     if (mediaCheck.valid && mediaCheck.imageUrl && !isTrackingPixel(mediaCheck.imageUrl)) {
       eventsWithRealMedia.add(ev.id);
