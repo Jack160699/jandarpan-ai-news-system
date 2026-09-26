@@ -9,7 +9,10 @@ import {
   isCleanRightsEligibleMedia,
 } from "@/lib/news/images/validate";
 import { translateGeneratedArticle } from "@/lib/i18n/multilingual/translate";
-import { selectEditorialCandidates } from "@/lib/infrastructure/workers/editorial-priority";
+import {
+  selectEditorialCandidates,
+  scoreEditorialCandidate,
+} from "@/lib/infrastructure/workers/editorial-priority";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 import { resolveCanonicalCategories } from "@/lib/editorial/canonical-categories";
 import type { NewsEventRow, NewsSignalRow } from "@/lib/types/newsroom";
@@ -227,33 +230,39 @@ async function selectBatchCandidates(supabase: any, size: number) {
   });
 
   const selectedCandidates = ranked.slice(0, size).map((cand: any) => {
-    const ev = cand.event;
+    const ev = cand as NewsEventRow;
     const sigs = (ev.signal_ids ?? [])
       .map((id: string) => signalMap.get(id))
       .filter(Boolean) as NewsSignalRow[];
+    const eventTitle = ev.canonical_title || (ev as any).title || "";
     const districtRes = resolveCanonicalStoryDistrict({
-      headline: ev.title,
+      headline: eventTitle,
       summary: ev.event_summary,
       section: ev.category,
     });
     const catRes = resolveCanonicalCategories({
-      headline: ev.title,
+      headline: eventTitle,
       summary: ev.event_summary,
       tags: ev.category ? [ev.category] : [],
       district: districtRes.districtSlug,
     });
 
+    const score = scoreEditorialCandidate(ev, { eventsWithRealMedia });
+
     return {
       eventId: ev.id,
-      title: ev.title,
+      title: eventTitle,
       category: ev.category,
       canonicalCategories: catRes.categories,
       region: ev.region,
       districtSlug: districtRes.districtSlug,
       districtNameHi: districtRes.nameHi,
       districtNameEn: districtRes.nameEn,
-      score: cand.score,
-      reasons: cand.reasons,
+      score,
+      reasons: [
+        eventsWithRealMedia.has(ev.id) ? "real_media_boost" : "no_media",
+        ev.region === "chhattisgarh" ? "chhattisgarh_boost" : "national",
+      ],
       hasRealMedia: eventsWithRealMedia.has(ev.id),
       imageUrl: eventMediaMap.get(ev.id) || null,
       signalCount: sigs.length,
