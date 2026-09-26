@@ -5,8 +5,9 @@ async function main() {
     console.error("Error:", data.error);
     return;
   }
-  console.log("Total eligible with real media:", data.selection.totalEligibleWithRealMedia);
-  console.log("Selected candidates:", data.selection.selected.length);
+  console.log("Diagnostics:", data.selection?.diagnostics);
+  console.log("Total eligible with real media:", data.selection?.totalEligibleWithRealMedia);
+  console.log("Selected candidates:", data.selection?.selected?.length);
   data.selection.selected.forEach((s, idx) => {
     console.log(`[${idx + 1}] Event: ${s.eventId}`);
     console.log(`    Title: ${s.title}`);
