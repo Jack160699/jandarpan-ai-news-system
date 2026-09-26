@@ -37,10 +37,10 @@ const STOCK_MEDIA_RE =
 
 /** AI image generation or mockups */
 const AI_PLACEHOLDER_RE =
-  /midjourney|dall-e|stability\.ai|dreamstudio|ai-generated|newsroom-desk|raipur-city-ai/i;
+  /midjourney|dall-e|stability\.ai|dreamstudio|ai-generated|chatgpt-image|chatgpt|newsroom-desk|raipur-city-ai/i;
 
 const LOGO_ICON_RE =
-  /\/(logo|icon|favicon|avatar|sprite|emoji|banner-ad|ads?|advert|promo-thumb|brand-mark|app-icon|apple-touch)[\/._-]|logo\.|icon\.|favicon\.|\.svg(\?|$)|sprite|avatar-|profile-pic|apple-touch-icon/i;
+  /\/(logo|icon|favicon|avatar|sprite|emoji|banner-ad|ads?|advert|promo-thumb|brand-mark|app-icon|apple-touch|badge|schema)[\/._-]|logo\.|icon\.|favicon\.|\.svg(\?|$)|sprite|avatar-|profile-pic|apple-touch-icon|[-_]badge|[-_]schema/i;
 
 /** Generic provider logos that lack editorial news photograph content */
 const GENERIC_PROVIDER_LOGO_RE =
@@ -60,7 +60,7 @@ const BRAND_ASSET_RE =
   /\/brand\/|jan-darpan[-_](chhattisgarh[-_])?(logo|mark|og|icon)|jandarpan[-_](logo|mark|og)|social[-_]?lockup|transparency[-_]?preview|checkerboard|checkered[-_]?bg|alpha[-_]?preview/i;
 
 const TRACKING_PIXEL_RE =
-  /\/(pixel|beacon|track|analytics|collect)[\/._-]|1x1\.(gif|png|jpg)|spacer\.(gif|png)|tracking[-_]?pixel/i;
+  /\/(pixel|beacon|track|analytics|collect|tr(\?|\/))[\/._-]|1x1\.(gif|png|jpg)|spacer\.(gif|png)|tracking[-_]?pixel|facebook\.com\/tr|noscript=1|PageView/i;
 
 const AD_RE =
   /\/ad[sx]?[\/._-]|doubleclick|googlesyndication|adserver|taboola|outbrain|sponsored/i;

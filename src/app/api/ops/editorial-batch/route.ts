@@ -256,17 +256,38 @@ async function selectBatchCandidates(supabase: any, size: number) {
     }
     seenNormalizedTitles.add(normalizedKey);
 
+    // Filter out non-editorial / horoscope / streaming guide / gadget review noise
+    if (/राशिफल|राशि|कुंडली|नक्षत्र|horoscope|zodiac|astrology|live streaming|where to watch|how to watch|free stream|rtx \d+|iphone duo/i.test(eventTitle)) {
+      continue;
+    }
+
     const districtRes = resolveCanonicalStoryDistrict({
       headline: eventTitle,
       summary: ev.event_summary,
       section: ev.category,
     });
+
+    // Enforce district resolution or state-level Chhattisgarh identity
+    const isCgState = /छत्तीसगढ़|रायपुर|बिलासपुर|दुर्ग|भिलाई|बस्तर|सरगुजा|कोरबा|धमतरी|राजनांदगांव|chhattisgarh/i.test(eventTitle + " " + (ev.event_summary || ""));
+    if (!districtRes.districtSlug && !isCgState && ev.region !== "chhattisgarh") {
+      continue;
+    }
+
     const catRes = resolveCanonicalCategories({
       headline: eventTitle,
       summary: ev.event_summary,
       tags: ev.category ? [ev.category] : [],
       district: districtRes.districtSlug,
     });
+
+    if (!catRes.categories?.length) {
+      continue;
+    }
+
+    const imgUrl = eventMediaMap.get(ev.id);
+    if (!imgUrl || !hasVerifiedRealMedia(imgUrl) || !isCleanRightsEligibleMedia(imgUrl)) {
+      continue;
+    }
 
     const score = scoreEditorialCandidate(ev, { eventsWithRealMedia });
 
