@@ -1999,11 +1999,12 @@ html.dark .jdl-mobile-queue__active-dot {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 5px;
   background: var(--jdl-red, #c8102e);
   color: #ffffff !important;
   border: none;
-  border-radius: 3px;
-  padding: 3px 12px;
+  border-radius: 4px;
+  padding: 4px 10px;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -2039,9 +2040,9 @@ html.dark .jdl-mobile-queue__active-dot {
 .jdl-engagement-item {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px 5px;
-  border-radius: 4px;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 6px;
   font-size: 11px;
   line-height: 1;
   color: var(--jdl-ink-secondary, #4b5563);
@@ -2071,30 +2072,36 @@ html.dark .jdl-mobile-queue__active-dot {
 
 .jdl-engagement-btn--liked {
   color: #e11d48;
+  background: rgba(225, 29, 72, 0.08);
+}
+
+.jdl-engagement-btn--liked:hover {
+  background: rgba(225, 29, 72, 0.14);
 }
 
 .jdl-engagement-btn--whatsapp {
-  padding: 3px 6px;
+  padding: 4px 6px;
 }
 
 .jdl-engagement-btn--whatsapp:hover {
-  background: rgba(34, 197, 94, 0.12);
-  color: #16a34a;
+  background: rgba(37, 211, 102, 0.14);
 }
 
 .jdl-engagement-icon {
-  font-size: 12px;
-  line-height: 1;
+  width: 16px;
+  height: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .jdl-engagement-count {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.01em;
-  opacity: 0.9;
+  opacity: 0.95;
+  font-variant-numeric: tabular-nums;
 }
 
 .jdl-engagement-item--views {

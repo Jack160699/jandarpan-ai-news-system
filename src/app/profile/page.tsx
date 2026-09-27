@@ -61,11 +61,39 @@ export default function ProfilePage() {
     }));
   };
 
-  // Editing display profile state
+  // Editing display profile state (compact modal)
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState(displayName || "");
   const [editAvatar, setEditAvatar] = useState(avatarUrl || "");
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const openEditModal = () => {
+    setEditName(displayName || "");
+    setEditAvatar(avatarUrl || "");
+    setSaveStatus(null);
+    setIsEditingProfile(true);
+  };
+
+  const handleSignOut = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+    } finally {
+      if (typeof window !== "undefined") {
+        document.cookie.split(";").forEach((c) => {
+          const name = c.split("=")[0].trim();
+          if (name.startsWith("sb-") || name.includes("auth-token") || name.includes("jandarpan")) {
+            document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=${window.location.hostname}`;
+            document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+          }
+        });
+        localStorage.removeItem("sb-giiuqshoconjbpiueasp-auth-token");
+        window.location.href = "/";
+      }
+    }
+  };
 
   const districtSlug = prefsCtx?.prefs.homeDistrict?.trim() || "raipur";
   const districtObj = getDistrict(districtSlug);
@@ -104,7 +132,7 @@ export default function ProfilePage() {
         setTimeout(() => {
           setIsEditingProfile(false);
           setSaveStatus(null);
-        }, 1200);
+        }, 1000);
       } else {
         setSaveStatus(res.error || (isHi ? "त्रुटि हुई" : "Error saving"));
       }
@@ -137,9 +165,10 @@ export default function ProfilePage() {
             background: "linear-gradient(135deg, #0a1628 0%, #162d52 100%)",
             color: "#ffffff",
             borderRadius: 12,
-            padding: "20px 18px",
+            padding: "18px 18px",
             marginBottom: 20,
             boxShadow: "0 6px 20px rgba(10, 22, 40, 0.2)",
+            position: "relative",
           }}
         >
           {isLoggedIn ? (
@@ -196,20 +225,23 @@ export default function ProfilePage() {
 
                   <div
                     style={{
-                      fontSize: 11.5,
-                      color: "rgba(255, 255, 255, 0.72)",
+                      fontSize: 12,
+                      color: "rgba(255, 255, 255, 0.75)",
                       marginTop: 2,
                       display: "flex",
                       alignItems: "center",
                       gap: 6,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    <span>Google: {user?.email}</span>
+                    <span>{user?.email}</span>
                   </div>
 
                   <div
                     style={{
-                      fontSize: 11,
+                      fontSize: 11.5,
                       color: "rgba(255, 255, 255, 0.65)",
                       marginTop: 3,
                       display: "flex",
@@ -218,117 +250,54 @@ export default function ProfilePage() {
                     }}
                   >
                     <span>📍 {districtName}</span>
-                    <span>•</span>
-                    <span style={{ color: "#48bb78", fontWeight: 700 }}>✓ {isHi ? "Google प्रमाणित" : "Google Verified"}</span>
                   </div>
                 </div>
 
+                {/* Compact Pencil / Edit Icon at upper-right */}
                 <button
                   type="button"
-                  onClick={() => setIsEditingProfile((prev) => !prev)}
+                  onClick={openEditModal}
+                  aria-label={isHi ? "प्रोफ़ाइल संपादित करें" : "Edit profile"}
+                  title={isHi ? "प्रोफ़ाइल संपादित करें" : "Edit profile"}
                   style={{
-                    fontSize: 11.5,
-                    fontWeight: 700,
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(255, 255, 255, 0.16)",
+                    border: "1px solid rgba(255, 255, 255, 0.28)",
                     color: "#ffffff",
-                    background: isEditingProfile ? "rgba(255, 255, 255, 0.28)" : "rgba(255, 255, 255, 0.18)",
-                    border: "none",
-                    padding: "6px 12px",
-                    borderRadius: 20,
                     cursor: "pointer",
-                    whiteSpace: "nowrap",
                     flexShrink: 0,
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.28)";
+                    e.currentTarget.style.transform = "scale(1.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.16)";
+                    e.currentTarget.style.transform = "scale(1)";
                   }}
                 >
-                  {isEditingProfile ? (isHi ? "रद्द करें" : "Cancel") : (isHi ? "प्रोफ़ाइल बदलें" : "Edit Profile")}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                    <path d="m15 5 4 4" />
+                  </svg>
                 </button>
               </div>
-
-              {/* Inline Edit Display Profile Form */}
-              {isEditingProfile && (
-                <form
-                  onSubmit={handleSaveProfile}
-                  style={{
-                    marginTop: 16,
-                    paddingTop: 16,
-                    borderTop: "1px solid rgba(255, 255, 255, 0.15)",
-                  }}
-                >
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: "#ffffff" }}>
-                    {isHi ? "जन दर्पण डिस्प्ले प्रोफ़ाइल संपादित करें" : "Edit Jan Darpan Display Profile"}
-                  </div>
-
-                  <p style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.7)", margin: "0 0 10px", lineHeight: 1.4 }}>
-                    {isHi
-                      ? "नोट: जन दर्पण डिस्प्ले नाम/फ़ोटो बदलने से आपके मूल Google खाते पर कोई प्रभाव नहीं पड़ता है।"
-                      : "Note: Changing your Jan Darpan display name/photo does not alter your underlying Google account."}
-                  </p>
-
-                  <div style={{ marginBottom: 10 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "rgba(255, 255, 255, 0.8)", marginBottom: 4 }}>
-                      {isHi ? "डिस्प्ले नाम:" : "Display Name:"}
-                    </label>
-                    <input
-                      type="text"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      required
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: 6,
-                        border: "1px solid rgba(255, 255, 255, 0.3)",
-                        background: "rgba(255, 255, 255, 0.1)",
-                        color: "#ffffff",
-                        fontSize: 13,
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ marginBottom: 12 }}>
-                    <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "rgba(255, 255, 255, 0.8)", marginBottom: 4 }}>
-                      {isHi ? "प्रोफ़ाइल फ़ोटो लिंक (वैकल्पिक):" : "Profile Photo URL (optional):"}
-                    </label>
-                    <input
-                      type="url"
-                      value={editAvatar}
-                      onChange={(e) => setEditAvatar(e.target.value)}
-                      placeholder="https://..."
-                      style={{
-                        width: "100%",
-                        padding: "8px 10px",
-                        borderRadius: 6,
-                        border: "1px solid rgba(255, 255, 255, 0.3)",
-                        background: "rgba(255, 255, 255, 0.1)",
-                        color: "#ffffff",
-                        fontSize: 13,
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </div>
-
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <button
-                      type="submit"
-                      style={{
-                        background: "var(--jd-red, #9e1b22)",
-                        color: "#ffffff",
-                        border: "none",
-                        borderRadius: 6,
-                        padding: "7px 16px",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                      }}
-                    >
-                      {isHi ? "सहेजें" : "Save Changes"}
-                    </button>
-                    {saveStatus && (
-                      <span style={{ fontSize: 11.5, color: "#ffd700" }}>{saveStatus}</span>
-                    )}
-                  </div>
-                </form>
-              )}
             </div>
           ) : (
             /* Logged-out state: PROMINENT GOOGLE SIGN IN ONLY */
@@ -481,41 +450,8 @@ export default function ProfilePage() {
                 icon="flag"
                 title={isHi ? `प्राथमिक ज़िला: ${districtName}` : `Primary District: ${districtName}`}
                 subtitle={isHi ? "अपना क्षेत्रीय समाचार जिला चुनें" : "Select your local news district"}
+                last
               />
-              {isLoggedIn && (
-                <div
-                  onClick={() => signOut()}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "12px 14px",
-                    cursor: "pointer",
-                    color: "var(--jd-red, #9e1b22)",
-                    borderTop: "1px solid var(--jd-line-2, #e5dfd2)",
-                    background: "rgba(158, 27, 34, 0.03)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 6,
-                      background: "rgba(158, 27, 34, 0.1)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <JdIcon name="lock" size={16} stroke={2} color="var(--jd-red, #9e1b22)" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700 }}>
-                      {isHi ? "साइन आउट करें" : "Sign Out"}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </section>
@@ -833,6 +769,278 @@ export default function ProfilePage() {
             </div>
           )}
         </section>
+
+        {/* ─── TOPIC 4: DEDICATED LOGOUT (EXACT HIERARCHY REQUIREMENT #4) ───────── */}
+        {isLoggedIn && (
+          <section style={{ marginBottom: 20 }}>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={isLoggingOut}
+              aria-label={isHi ? "साइन आउट करें" : "Log out"}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                padding: "13px 18px",
+                borderRadius: 10,
+                background: "rgba(158, 27, 34, 0.08)",
+                border: "1.5px solid rgba(158, 27, 34, 0.28)",
+                color: "var(--jd-red, #9e1b22)",
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: isLoggingOut ? "wait" : "pointer",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                if (!isLoggingOut) {
+                  e.currentTarget.style.background = "var(--jd-red, #9e1b22)";
+                  e.currentTarget.style.color = "#ffffff";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isLoggingOut) {
+                  e.currentTarget.style.background = "rgba(158, 27, 34, 0.08)";
+                  e.currentTarget.style.color = "var(--jd-red, #9e1b22)";
+                }
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                style={{ flexShrink: 0 }}
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span>
+                {isLoggingOut
+                  ? isHi
+                    ? "साइन आउट हो रहा है..."
+                    : "Logging out..."
+                  : isHi
+                  ? "साइन आउट (Log out)"
+                  : "Log out"}
+              </span>
+            </button>
+          </section>
+        )}
+
+        {/* ─── COMPACT EDIT PROFILE MODAL ────────────────────────────────────── */}
+        {isEditingProfile && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={isHi ? "प्रोफ़ाइल संपादित करें" : "Edit Profile"}
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0, 0, 0, 0.65)",
+              backdropFilter: "blur(4px)",
+              zIndex: 10000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16,
+            }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setIsEditingProfile(false);
+            }}
+          >
+            <div
+              style={{
+                background: "var(--jd-paper, #ffffff)",
+                color: "var(--jd-ink, #16130d)",
+                border: "1px solid var(--jd-line, #e2dacd)",
+                borderRadius: 14,
+                boxShadow: "0 16px 40px rgba(0, 0, 0, 0.25)",
+                maxWidth: 440,
+                width: "100%",
+                padding: 22,
+                boxSizing: "border-box",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 12,
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 800,
+                    margin: 0,
+                    color: "var(--jd-ink)",
+                  }}
+                >
+                  {isHi ? "प्रोफ़ाइल संपादित करें" : "Edit Profile"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingProfile(false)}
+                  aria-label={isHi ? "बंद करें" : "Close"}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 18,
+                    color: "var(--jd-muted, #736b5e)",
+                    padding: 4,
+                    lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p
+                style={{
+                  fontSize: 11.5,
+                  color: "var(--jd-muted, #736b5e)",
+                  margin: "0 0 14px",
+                  lineHeight: 1.4,
+                }}
+              >
+                {isHi
+                  ? "नोट: जन दर्पण डिस्प्ले नाम/फ़ोटो बदलने से आपके मूल Google खाते पर कोई प्रभाव नहीं पड़ता है।"
+                  : "Note: Changing your Jan Darpan display name/photo does not alter your underlying Google account."}
+              </p>
+
+              <form onSubmit={handleSaveProfile}>
+                <div style={{ marginBottom: 12 }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "var(--jd-ink)",
+                      marginBottom: 5,
+                    }}
+                  >
+                    {isHi ? "डिस्प्ले नाम:" : "Display Name:"}
+                  </label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: 8,
+                      border: "1px solid var(--jd-line, #ccc)",
+                      background: "var(--jd-card, #fff)",
+                      color: "var(--jd-ink, #000)",
+                      fontSize: 13.5,
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "var(--jd-ink)",
+                      marginBottom: 5,
+                    }}
+                  >
+                    {isHi ? "प्रोफ़ाइल फ़ोटो लिंक (वैकल्पिक):" : "Profile Photo URL (optional):"}
+                  </label>
+                  <input
+                    type="url"
+                    value={editAvatar}
+                    onChange={(e) => setEditAvatar(e.target.value)}
+                    placeholder="https://..."
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: 8,
+                      border: "1px solid var(--jd-line, #ccc)",
+                      background: "var(--jd-card, #fff)",
+                      color: "var(--jd-ink, #000)",
+                      fontSize: 13.5,
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: 10,
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingProfile(false)}
+                    style={{
+                      background: "transparent",
+                      color: "var(--jd-muted, #555)",
+                      border: "1px solid var(--jd-line, #ccc)",
+                      borderRadius: 8,
+                      padding: "8px 14px",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {isHi ? "रद्द करें" : "Cancel"}
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      background: "var(--jd-red, #9e1b22)",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "8px 18px",
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {isHi ? "सहेजें" : "Save Changes"}
+                  </button>
+                </div>
+                {saveStatus && (
+                  <div
+                    style={{
+                      marginTop: 10,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color:
+                        saveStatus.includes("त्रुटि") || saveStatus.includes("Error")
+                          ? "#dc2626"
+                          : "#16a34a",
+                      textAlign: "right",
+                    }}
+                  >
+                    {saveStatus}
+                  </div>
+                )}
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* ─── PUBLISHER FOOTER DISCLOSURE ───────────────────────────────────── */}
         <section
