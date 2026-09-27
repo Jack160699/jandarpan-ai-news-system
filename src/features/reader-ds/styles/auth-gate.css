@@ -1,5 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════════════
    JAN DARPAN — PREMIUM AUTHENTICATION GATE & 5-SECOND PREVIEW
+   Visual Identity: Authentic Jan Darpan Newsroom
+   - 0-5s: Moderate blur (3.2px), fully recognizable newsroom, non-interactive
+   - After 5s: Focused, elegant glassmorphic authentication modal
+   - Strictly NO decorative emojis; clean SVGs only
    ═══════════════════════════════════════════════════════════════════════ */
 
 .jd-auth-gate-container {
@@ -9,76 +13,222 @@
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  background: var(--jd-paper, #fdfbf7);
-  color: var(--jd-ink, #111827);
-  font-family: var(--jd-ff-ui, system-ui, sans-serif);
+  background: var(--jd-paper, #f8fafc);
+  color: var(--jd-ink, #0f172a);
+  font-family: var(--jd-ff-ui, system-ui, -apple-system, sans-serif);
 }
 
-/* ─── 1. BLURRED JAN DARPAN PLATFORM BACKDROP ────────────────────────── */
+/* ─── 1. TOP NAV BAR (HEADER) ────────────────────────────────────────── */
+.jd-auth-header {
+  height: 54px;
+  border-bottom: 1px solid var(--jd-line, #e2e8f0);
+  background: var(--jd-paper-2, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  position: relative;
+  z-index: 25;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .jd-auth-header,
+.dark .jd-auth-header {
+  background: #0f172a;
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.jd-auth-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.jd-auth-brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.jd-auth-brand-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #c8102e;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 15px;
+  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.35);
+  flex-shrink: 0;
+}
+
+.jd-auth-brand-text {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: 0.05em;
+  color: var(--jd-ink, #0f172a);
+}
+
+[data-theme="dark"] .jd-auth-brand-text,
+.dark .jd-auth-brand-text {
+  color: #f8fafc;
+}
+
+.jd-auth-district-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: var(--jd-ink-3, #64748b);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-theme="dark"] .jd-auth-district-badge,
+.dark .jd-auth-district-badge {
+  background: rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+}
+
+.jd-auth-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.jd-auth-lang-switch {
+  display: inline-flex;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+[data-theme="dark"] .jd-auth-lang-switch,
+.dark .jd-auth-lang-switch {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jd-auth-lang-btn {
+  background: transparent;
+  color: var(--jd-ink-secondary, #64748b);
+  border: 0;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jd-auth-lang-btn--active {
+  background: #c8102e;
+  color: #ffffff;
+}
+
+.jd-auth-theme-btn {
+  background: transparent;
+  border: 1px solid var(--jd-line, #e2e8f0);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--jd-ink, #0f172a);
+  transition: background 0.15s ease;
+}
+
+[data-theme="dark"] .jd-auth-theme-btn,
+.dark .jd-auth-theme-btn {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+/* ─── 2. RECOGNIZABLE JAN DARPAN NEWSROOM BACKDROP ───────────────────── */
 .jd-auth-gate-backdrop {
   position: absolute;
-  inset: 0;
+  inset: 54px 0 0 0;
   overflow: hidden;
-  filter: blur(8px);
-  -webkit-filter: blur(8px);
   pointer-events: none !important;
   user-select: none !important;
   -webkit-user-select: none !important;
-  opacity: 0.88;
-  transform: scale(1.03); /* hides blur edge bleed */
   z-index: 1;
+  transition: filter 0.6s ease, opacity 0.6s ease;
 }
 
-[data-theme="dark"] .jd-auth-gate-backdrop,
-.dark .jd-auth-gate-backdrop {
-  opacity: 0.75;
+/* Phase 1: 0-5s Moderate Blur (recognizable structure, unreadable body text) */
+.jd-auth-gate-backdrop--preview {
+  filter: blur(3.2px);
+  -webkit-filter: blur(3.2px);
+  opacity: 0.96;
 }
 
-/* Simulated authentic Jan Darpan newsroom layout */
-.jd-auth-mock-shell {
-  max-width: 1440px;
+/* Phase 2: After 5s Modal Focus (softer contrast behind modal) */
+.jd-auth-gate-backdrop--modal {
+  filter: blur(4.2px);
+  -webkit-filter: blur(4.2px);
+  opacity: 0.52;
+}
+
+[data-theme="dark"] .jd-auth-gate-backdrop--modal,
+.dark .jd-auth-gate-backdrop--modal {
+  opacity: 0.42;
+}
+
+/* Simulated / Real Newsroom Layout */
+.jd-auth-newsroom-shell {
+  max-width: 1400px;
   margin: 0 auto;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 100vh;
   box-sizing: border-box;
 }
 
-.jd-auth-mock-grid {
+.jd-auth-newsroom-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
+  grid-template-columns: 1.55fr 1fr;
   gap: 20px;
-  flex: 1;
 }
 
 @media (max-width: 960px) {
-  .jd-auth-mock-grid {
+  .jd-auth-newsroom-grid {
     grid-template-columns: 1fr;
   }
 }
 
-.jd-auth-mock-tv {
+/* TV Broadcast Desk */
+.jd-auth-tv-card {
   background: #0f172a;
   border-radius: 12px;
   overflow: hidden;
   position: relative;
-  min-height: 420px;
+  min-height: 410px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
 
-.jd-auth-mock-anchor {
+.jd-auth-tv-video-mock {
   position: absolute;
   inset: 0;
   background-size: cover;
-  background-position: center 20%;
+  background-position: center 25%;
   background-repeat: no-repeat;
+  background-color: #1e293b;
 }
 
-.jd-auth-mock-overlay-ui {
+.jd-auth-tv-top-bar {
   position: absolute;
   top: 14px;
   left: 14px;
@@ -89,8 +239,29 @@
   z-index: 2;
 }
 
-.jd-auth-mock-pill {
-  background: rgba(0, 0, 0, 0.75);
+.jd-auth-live-pill {
+  background: rgba(0, 0, 0, 0.78);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.jd-auth-live-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.jd-auth-audio-pill {
+  background: rgba(0, 0, 0, 0.78);
   color: #ffffff;
   padding: 4px 10px;
   border-radius: 4px;
@@ -98,10 +269,11 @@
   font-weight: 700;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.jd-auth-mock-ticker {
+.jd-auth-breaking-ticker {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -110,183 +282,352 @@
   color: #ffffff;
   display: flex;
   align-items: center;
-  padding: 8px 14px;
+  padding: 10px 16px;
   font-size: 13px;
   font-weight: 700;
-  gap: 10px;
+  gap: 12px;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.jd-auth-mock-queue {
+.jd-auth-ticker-badge {
+  background: #7f1d1d;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Category Filter Strip */
+.jd-auth-categories-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+
+.jd-auth-category-pill {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--jd-paper-2, #ffffff);
+  border: 1px solid var(--jd-line, #e2e8f0);
+  color: var(--jd-ink-2, #334155);
+  white-space: nowrap;
+}
+
+.jd-auth-category-pill--active {
+  background: #c8102e;
+  color: #ffffff;
+  border-color: #c8102e;
+}
+
+/* News Queue Cards */
+.jd-auth-queue-column {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.jd-auth-mock-card {
+.jd-auth-news-card {
   display: flex;
   gap: 12px;
-  padding: 10px;
+  padding: 12px;
   background: var(--jd-paper-2, #ffffff);
   border: 1px solid var(--jd-line, #e2e8f0);
-  border-radius: 8px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
-.jd-auth-mock-thumb {
-  width: 90px;
-  height: 65px;
-  border-radius: 4px;
-  background: #cbd5e1;
+[data-theme="dark"] .jd-auth-news-card,
+.dark .jd-auth-news-card {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.jd-auth-card-thumb {
+  width: 96px;
+  height: 72px;
+  border-radius: 6px;
+  background: #94a3b8;
+  background-size: cover;
+  background-position: center;
   flex-shrink: 0;
 }
 
-.jd-auth-mock-lines {
+.jd-auth-card-body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+  min-width: 0;
 }
 
-.jd-auth-mock-line {
-  height: 10px;
-  background: #94a3b8;
-  border-radius: 2px;
-  opacity: 0.7;
+.jd-auth-card-meta {
+  font-size: 11px;
+  font-weight: 700;
+  color: #c8102e;
 }
 
-.jd-auth-mock-line--short {
-  width: 60%;
+.jd-auth-card-title-mock {
+  height: 14px;
+  background: var(--jd-ink, #0f172a);
+  opacity: 0.8;
+  border-radius: 3px;
+  width: 95%;
 }
 
-.jd-auth-mock-engagement {
+.jd-auth-card-title-mock--short {
+  width: 65%;
+}
+
+/* 5-Item Engagement Row in Preview Backdrop */
+.jd-auth-card-engagement {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 12px;
   margin-top: 4px;
-  font-size: 10.5px;
+  font-size: 11px;
+  font-weight: 700;
   color: #64748b;
 }
 
-/* ─── 2. TRANSLUCENT OVERLAY SCRIM ───────────────────────────────────── */
-.jd-auth-gate-scrim {
+.jd-auth-engagement-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jd-auth-read-badge {
+  margin-left: auto;
+  background: #c8102e;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ─── 3. TRANSLUCENT OVERLAY (SCRIM) ─────────────────────────────────── */
+.jd-auth-scrim {
   position: fixed;
-  inset: 0;
-  z-index: 5;
-  background: radial-gradient(circle at 50% 38%, rgba(248, 250, 252, 0.6) 0%, rgba(226, 232, 240, 0.82) 100%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  inset: 54px 0 0 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 16px;
+  padding: 16px 20px 32px;
   overflow-y: auto;
   box-sizing: border-box;
+  transition: background 0.6s ease, backdrop-filter 0.6s ease;
 }
 
-[data-theme="dark"] .jd-auth-gate-scrim,
-.dark .jd-auth-gate-scrim {
-  background: radial-gradient(circle at 50% 38%, rgba(15, 23, 42, 0.72) 0%, rgba(10, 15, 26, 0.9) 100%);
+/* Preview Phase: transparent, non-blocking */
+.jd-auth-scrim--preview {
+  background: transparent;
+  backdrop-filter: none;
+  pointer-events: none;
 }
 
-/* ─── 3. 5-SECOND PREVIEW STATUS BANNER ──────────────────────────────── */
-.jd-auth-preview-banner {
+/* Modal Phase: focused semi-translucent dark overlay */
+.jd-auth-scrim--modal {
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  pointer-events: auto;
+}
+
+[data-theme="dark"] .jd-auth-scrim--modal,
+.dark .jd-auth-scrim--modal {
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ─── 4. TOP 5-SECOND PREVIEW / STATUS BANNER ────────────────────────── */
+.jd-auth-status-banner {
   width: 100%;
-  max-width: 640px;
-  margin: 8px auto 20px;
-  background: rgba(200, 16, 46, 0.08);
-  border: 1px solid rgba(200, 16, 46, 0.25);
+  max-width: 620px;
+  margin: 6px auto 16px;
   border-radius: 30px;
-  padding: 6px 14px;
+  padding: 7px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   font-size: 12px;
-  color: #991b1b;
-  font-weight: 600;
-  backdrop-filter: blur(8px);
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  pointer-events: auto;
   transition: all 0.3s ease;
   flex-shrink: 0;
 }
 
-[data-theme="dark"] .jd-auth-preview-banner,
-.dark .jd-auth-preview-banner {
-  background: rgba(200, 16, 46, 0.15);
-  border-color: rgba(200, 16, 46, 0.4);
+.jd-auth-status-banner--preview {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(200, 16, 46, 0.3);
+  color: #991b1b;
+}
+
+[data-theme="dark"] .jd-auth-status-banner--preview,
+.dark .jd-auth-status-banner--preview {
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(239, 68, 68, 0.4);
   color: #fca5a5;
 }
 
-.jd-auth-preview-left {
-  display: flex;
-  align-items: center;
-  gap: 7px;
+.jd-auth-status-banner--locked {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #1e293b;
 }
 
-.jd-auth-preview-dot {
+[data-theme="dark"] .jd-auth-status-banner--locked,
+.dark .jd-auth-status-banner--locked {
+  background: rgba(30, 41, 59, 0.95);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+}
+
+.jd-auth-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.jd-auth-banner-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: #dc2626;
   box-shadow: 0 0 8px #dc2626;
-  animation: jd-preview-pulse 1.4s infinite;
+  flex-shrink: 0;
+  animation: jd-pulse 1.4s infinite;
 }
 
-@keyframes jd-preview-pulse {
+@keyframes jd-pulse {
   0% { transform: scale(0.9); opacity: 0.6; }
   50% { transform: scale(1.2); opacity: 1; }
   100% { transform: scale(0.9); opacity: 0.6; }
 }
 
-.jd-auth-preview-timer {
-  background: rgba(200, 16, 46, 0.16);
+.jd-auth-banner-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jd-auth-banner-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.jd-auth-banner-timer-badge {
+  background: #c8102e;
+  color: #ffffff;
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  white-space: nowrap;
 }
 
-/* ─── 4. PREMIUM AUTHENTICATION MODAL ────────────────────────────────── */
-.jd-auth-modal {
+.jd-auth-skip-btn {
+  background: transparent;
+  border: 1px solid rgba(200, 16, 46, 0.4);
+  color: #c8102e;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jd-auth-skip-btn:hover {
+  background: #c8102e;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .jd-auth-skip-btn,
+.dark .jd-auth-skip-btn {
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .jd-auth-skip-btn:hover,
+.dark .jd-auth-skip-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* ─── 5. CENTERED PREMIUM AUTHENTICATION MODAL ───────────────────────── */
+.jd-auth-modal-wrapper {
   width: 100%;
   max-width: 440px;
   margin: auto;
-  border-radius: 16px;
+  box-sizing: border-box;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Hidden during Phase 1 (0-5s preview) */
+.jd-auth-modal-wrapper--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(30px) scale(0.96);
+  visibility: hidden;
+}
+
+/* Focused during Phase 2 (>5s) */
+.jd-auth-modal-wrapper--visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+}
+
+.jd-auth-modal-card {
+  width: 100%;
+  border-radius: 18px;
   padding: 28px 24px 22px;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(0, 0, 0, 0.09);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18), 0 4px 12px rgba(0, 0, 0, 0.04);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  position: relative;
-  z-index: 10;
-  animation: jd-modal-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22), 0 4px 14px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
-[data-theme="dark"] .jd-auth-modal,
-.dark .jd-auth-modal {
-  background: rgba(22, 27, 38, 0.92);
+[data-theme="dark"] .jd-auth-modal-card,
+.dark .jd-auth-modal-card {
+  background: rgba(15, 23, 42, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-@keyframes jd-modal-enter {
-  from { opacity: 0; transform: translateY(12px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* Header & Branding */
-.jd-auth-brand-badge {
+/* Modal Branding */
+.jd-auth-modal-brand {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
-.jd-auth-brand-emblem {
+.jd-auth-modal-emblem {
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -296,51 +637,54 @@
   align-items: center;
   justify-content: center;
   font-weight: 900;
-  font-size: 17px;
+  font-size: 16px;
   box-shadow: 0 2px 8px rgba(200, 16, 46, 0.35);
+  flex-shrink: 0;
 }
 
-.jd-auth-brand-name {
-  font-size: 17px;
+.jd-auth-modal-title-text {
+  font-size: 18px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #111827;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--jd-ink, #0f172a);
 }
 
-[data-theme="dark"] .jd-auth-brand-name,
-.dark .jd-auth-brand-name {
+[data-theme="dark"] .jd-auth-modal-title-text,
+.dark .jd-auth-modal-title-text {
   color: #ffffff;
 }
 
-.jd-auth-title {
+/* Tagline & Subtitle */
+.jd-auth-tagline {
   font-size: 22px;
   font-weight: 800;
-  line-height: 1.25;
-  color: #111827;
+  line-height: 1.3;
+  color: var(--jd-ink, #0f172a);
   text-align: center;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
 }
 
-[data-theme="dark"] .jd-auth-title,
-.dark .jd-auth-title {
-  color: #ffffff;
+[data-theme="dark"] .jd-auth-tagline,
+.dark .jd-auth-tagline {
+  color: #f8fafc;
 }
 
 .jd-auth-subtitle {
   font-size: 13.5px;
   line-height: 1.45;
-  color: #4b5563;
+  color: #64748b;
   text-align: center;
-  margin: 0 0 20px;
+  margin: 0 0 18px;
+  font-weight: 500;
 }
 
 [data-theme="dark"] .jd-auth-subtitle,
 .dark .jd-auth-subtitle {
-  color: #9ca3af;
+  color: #94a3b8;
 }
 
-/* ─── 5. FOMO VALUE PILLS ────────────────────────────────────────────── */
+/* ─── 6. VALUE PILLS GRID (CLEAN SVGs ONLY — NO EMOJIS) ─────────────── */
 .jd-auth-fomo-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -348,228 +692,283 @@
   margin-bottom: 20px;
 }
 
+@media (max-width: 380px) {
+  .jd-auth-fomo-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .jd-auth-fomo-pill {
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 8px;
-  padding: 7px 10px;
   display: flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12px;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 11.5px;
   font-weight: 700;
-  color: #1f2937;
+  color: #334155;
+  transition: all 0.15s ease;
 }
 
 [data-theme="dark"] .jd-auth-fomo-pill,
 .dark .jd-auth-fomo-pill {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.08);
-  color: #e5e7eb;
+  color: #e2e8f0;
 }
 
 .jd-auth-fomo-icon {
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c8102e;
+  flex-shrink: 0;
 }
 
-/* ─── 6. LEGAL CONSENT CHECKBOX & POLICIES ───────────────────────────── */
+[data-theme="dark"] .jd-auth-fomo-icon,
+.dark .jd-auth-fomo-icon {
+  color: #f43f5e;
+}
+
+/* ─── 7. EXPLICIT TERMS & PRIVACY CONSENT CHECKBOX ───────────────────── */
 .jd-auth-consent-box {
-  background: rgba(0, 0, 0, 0.025);
+  background: rgba(0, 0, 0, 0.02);
   border: 1px solid rgba(0, 0, 0, 0.07);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 10px;
+  padding: 12px 14px;
   margin-bottom: 16px;
+  transition: border-color 0.2s ease;
 }
 
 [data-theme="dark"] .jd-auth-consent-box,
 .dark .jd-auth-consent-box {
-  background: rgba(255, 255, 255, 0.035);
-  border-color: rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.jd-auth-consent-box--warning {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.05) !important;
 }
 
 .jd-auth-checkbox-label {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
+  gap: 10px;
+  cursor: pointer;
   font-size: 12.5px;
   line-height: 1.45;
-  color: #374151;
-  cursor: pointer;
+  color: #334155;
   user-select: none;
 }
 
 [data-theme="dark"] .jd-auth-checkbox-label,
 .dark .jd-auth-checkbox-label {
-  color: #d1d5db;
+  color: #cbd5e1;
 }
 
 .jd-auth-checkbox-input {
   width: 17px;
   height: 17px;
-  margin-top: 1px;
+  margin-top: 2px;
   accent-color: #c8102e;
   cursor: pointer;
   flex-shrink: 0;
 }
 
-.jd-auth-link {
+.jd-auth-legal-link {
   color: #c8102e;
-  font-weight: 700;
   text-decoration: underline;
-  transition: opacity 0.15s ease;
+  text-underline-offset: 2px;
+  font-weight: 700;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
 }
 
-.jd-auth-link:hover {
-  opacity: 0.8;
+.jd-auth-legal-link:hover {
+  color: #991b1b;
 }
 
-.jd-auth-ugc-notice {
+[data-theme="dark"] .jd-auth-legal-link,
+.dark .jd-auth-legal-link {
+  color: #fca5a5;
+}
+
+.jd-auth-consent-subtext {
+  margin: 6px 0 0 27px;
   font-size: 11px;
-  line-height: 1.35;
-  color: #6b7280;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+  line-height: 1.4;
+  color: #64748b;
 }
 
-[data-theme="dark"] .jd-auth-ugc-notice,
-.dark .jd-auth-ugc-notice {
-  color: #9ca3af;
-  border-top-color: rgba(255, 255, 255, 0.08);
+[data-theme="dark"] .jd-auth-consent-subtext,
+.dark .jd-auth-consent-subtext {
+  color: #94a3b8;
 }
 
-/* ─── 7. GOOGLE SIGN-IN BUTTON ───────────────────────────────────────── */
+/* ─── 8. OFFICIAL GOOGLE SIGN-IN BUTTON ──────────────────────────────── */
 .jd-auth-google-btn {
   width: 100%;
-  min-height: 52px;
+  height: 48px;
+  border-radius: 10px;
+  border: 1px solid #dadce0;
+  background: #ffffff;
+  color: #3c4043;
+  font-size: 14.5px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: #ffffff;
-  color: #1f2937;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
 .jd-auth-google-btn:hover:not(:disabled) {
-  background: #fafafa;
+  background: #f8fafc;
+  border-color: #c8102e;
+  box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
 }
 
 .jd-auth-google-btn:active:not(:disabled) {
   transform: translateY(0);
+  background: #f1f5f9;
 }
 
 .jd-auth-google-btn:disabled {
-  opacity: 0.52;
+  opacity: 0.55;
   cursor: not-allowed;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
   box-shadow: none;
-  background: #f3f4f6;
-  border-color: #e5e7eb;
-  color: #9ca3af;
+}
+
+[data-theme="dark"] .jd-auth-google-btn,
+.dark .jd-auth-google-btn {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .jd-auth-google-btn:hover:not(:disabled),
+.dark .jd-auth-google-btn:hover:not(:disabled) {
+  background: #334155;
+  border-color: #f43f5e;
+  box-shadow: 0 4px 16px rgba(244, 63, 94, 0.2);
 }
 
 [data-theme="dark"] .jd-auth-google-btn:disabled,
 .dark .jd-auth-google-btn:disabled {
-  background: #1f2937;
-  border-color: #374151;
-  color: #6b7280;
+  background: #1e293b;
+  opacity: 0.45;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
-.jd-auth-consent-hint {
-  font-size: 11.5px;
-  color: #dc2626;
-  text-align: center;
-  margin-top: 6px;
-  font-weight: 600;
-}
-
-[data-theme="dark"] .jd-auth-consent-hint,
-.dark .jd-auth-consent-hint {
-  color: #f87171;
-}
-
-/* ─── 8. POLICY MODAL VIEWER ─────────────────────────────────────────── */
-.jd-policy-dialog-scrim {
+/* Modal In-Place Policy Dialogs */
+.jd-auth-policy-dialog-scrim {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.75);
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(4px);
-  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
+  box-sizing: border-box;
 }
 
-.jd-policy-dialog {
-  background: var(--jd-paper-2, #ffffff);
-  color: var(--jd-ink, #111827);
+.jd-auth-policy-dialog {
   width: 100%;
   max-width: 580px;
-  max-height: 80vh;
-  border-radius: 12px;
+  max-height: 82vh;
+  background: var(--jd-paper-2, #ffffff);
+  border-radius: 14px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--jd-line, #e2e8f0);
 }
 
-.jd-policy-dialog-header {
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--jd-line, #e2e8f0);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(0, 0, 0, 0.02);
+[data-theme="dark"] .jd-auth-policy-dialog,
+.dark .jd-auth-policy-dialog {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
 }
 
-.jd-policy-dialog-body {
-  padding: 18px;
+.jd-auth-policy-dialog-content {
   overflow-y: auto;
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1.6;
-  color: var(--jd-ink-secondary, #374151);
+  color: var(--jd-ink-2, #334155);
+  padding-right: 6px;
 }
 
-.jd-policy-dialog-close {
-  background: #c8102e;
-  color: #ffffff;
-  border: none;
-  padding: 5px 12px;
+[data-theme="dark"] .jd-auth-policy-dialog-content,
+.dark .jd-auth-policy-dialog-content {
+  color: #cbd5e1;
+}
+
+.jd-auth-policy-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--jd-line, #e2e8f0);
+}
+
+.jd-auth-policy-close-btn {
+  background: transparent;
+  border: 1px solid var(--jd-line, #cbd5e1);
   border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  color: var(--jd-ink, #0f172a);
 }
 
-/* ─── 9. MOBILE 390PX TUNING ─────────────────────────────────────────── */
-@media (max-width: 480px) {
-  .jd-auth-modal {
-    padding: 22px 18px 18px;
+[data-theme="dark"] .jd-auth-policy-close-btn,
+.dark .jd-auth-policy-close-btn {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #f8fafc;
+}
+
+/* ─── 9. MOBILE OPTIMIZATIONS (390PX) ────────────────────────────────── */
+@media (max-width: 440px) {
+  .jd-auth-header {
+    padding: 0 12px;
   }
-  .jd-auth-title {
+  .jd-auth-scrim {
+    padding: 12px 12px 24px;
+  }
+  .jd-auth-modal-card {
+    padding: 22px 18px 18px;
+    border-radius: 14px;
+  }
+  .jd-auth-tagline {
     font-size: 19px;
   }
   .jd-auth-subtitle {
     font-size: 12.5px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
-  .jd-auth-fomo-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-bottom: 16px;
-  }
-  .jd-auth-fomo-pill {
-    padding: 6px 8px;
+  .jd-auth-status-banner {
+    padding: 6px 12px;
     font-size: 11px;
+    margin-bottom: 12px;
   }
 }
