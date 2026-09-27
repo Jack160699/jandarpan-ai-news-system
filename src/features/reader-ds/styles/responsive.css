@@ -1793,6 +1793,11 @@
   max-width: 430px;
   margin: 0 auto;
   width: 100%;
+  background: var(--jd-paper-2, #ffffff);
+  border: 1px solid var(--jd-line);
+  border-radius: 8px;
+  padding: 24px 20px;
+  box-shadow: var(--jd-shadow-soft);
 }
 
 .jd-signin-brand-panel {
@@ -2035,6 +2040,7 @@
     max-width: 920px;
     display: grid;
     grid-template-columns: 1fr;
+    padding: 0;
     background: #fff;
     border: 1px solid var(--jd-line);
     box-shadow: var(--jd-shadow-soft);

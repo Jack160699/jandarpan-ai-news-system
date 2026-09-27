@@ -175,7 +175,7 @@ export function SignInPage() {
               style={{
                 fontSize: 24,
                 fontWeight: 800,
-                color: "var(--jd-navy)",
+                color: "var(--jd-ink)",
                 lineHeight: 1.25,
                 margin: 0,
               }}

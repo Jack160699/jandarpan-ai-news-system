@@ -22,7 +22,8 @@ const GOOGLE_SITE_VERIFICATION =
 
 const GA_MEASUREMENT_ID =
   process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ||
-  process.env.GA_MEASUREMENT_ID;
+  process.env.GA_MEASUREMENT_ID ||
+  "G-C2E2992MCL";
 
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenantConfig();
