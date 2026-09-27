@@ -22,35 +22,107 @@ export const POLICY_DOCUMENTS: Record<PolicySlug, PolicyDocument> = {
     path: "/terms",
     titleEn: "Terms & Conditions",
     titleHi: "नियम और शर्तें",
-    updated: "September 2026",
+    updated: "27 September 2026",
     sections: [
       {
-        heading: "1. Acceptance of Terms",
-        body: "By accessing or using Jan Darpan (https://www.jandarpan.news), operated by STRATXCEL SOLUTIONS (OPC) PRIVATE LIMITED, you agree to be bound by these Terms & Conditions and our Privacy Policy. If you do not agree to these terms, you may not access or use the platform.",
+        heading: "Platform & Operator Disclosure",
+        body: "Effective Date: 27 September 2026\nPlatform: Jan Darpan\nWebsite: https://www.jandarpan.news\nOperator/Publisher: STRATXCEL SOLUTIONS (OPC) PRIVATE LIMITED\n\nThese Terms & Conditions govern access to and use of Jan Darpan.\nBy creating an account or using the platform after accepting these Terms, you agree to comply with them and with applicable Indian law.",
       },
       {
-        heading: "2. Google Sign-In & Authentication",
-        body: "Jan Darpan requires secure Google OAuth 2.0 authentication to access full live news coverage, interactive television streams, and reader engagement features. By signing in with Google, you authorize Jan Darpan to verify your identity using your standard Google profile information (name, email address, and avatar image) in strict compliance with Google API Services User Data Policy.",
+        heading: "1. About Jan Darpan",
+        body: "Jan Darpan is a digital news and current-affairs platform focused primarily on Chhattisgarh, with selected national and international coverage where editorially relevant.\n\nContent may include reporting, summaries, translations, analysis, visual material, audio, AI-assisted content and other editorial formats.",
       },
       {
-        heading: "3. Permitted Editorial Use",
-        body: "All news reports, video broadcasts, anchor transcripts, photographs, and analytical articles published on Jan Darpan are protected under Indian and international copyright law. News content is provided exclusively for personal, non-commercial reading and informational purposes. Republication, automated scraping, syndication, or redistribution without prior written consent from the publisher is strictly prohibited.",
+        heading: "2. Google Authentication",
+        body: "Access to the Jan Darpan platform requires Google authentication.\n\nYou are responsible for maintaining control of the Google account used to access Jan Darpan and for activity conducted through your authenticated account, subject to applicable law.\n\nYou must not attempt to bypass authentication or access another person's account.",
       },
       {
-        heading: "4. User Conduct & Reader Participation",
-        body: "Registered readers may engage with published stories through likes, comments, and community discussions. All user submissions must comply with our Community Guidelines and applicable laws. You agree not to post defamatory, obscene, hate-inciting, unlawful, or sexually explicit material. Jan Darpan reserves the right to moderate, hide, or delete user contributions and suspend accounts that violate these rules.",
+        heading: "3. Eligibility",
+        body: "You must provide information that is accurate to the extent required for use of the platform.\n\nUse of the platform is subject to applicable age, privacy and consent requirements under Indian law.\n\nWe may restrict access where required for legal compliance, safety or protection of the platform.",
       },
       {
-        heading: "5. Intellectual Property & Brand Rights",
-        body: "Jan Darpan, the Jan Darpan brand lockup, official logos, masthead designs, and software systems are the exclusive intellectual property of STRATXCEL SOLUTIONS (OPC) PRIVATE LIMITED. No license or ownership right is granted by implication or otherwise.",
+        heading: "4. News and Editorial Disclaimer",
+        body: "Jan Darpan strives to provide timely, accurate and responsible reporting but does not warrant that every item will always be completely accurate, complete, current or free from error.\n\nNews may change as additional information becomes available.\n\nReaders should independently verify information before relying on it for decisions involving finance, health, law, safety, investment, employment or other material consequences.\n\nNothing on Jan Darpan constitutes professional legal, medical, financial, investment or other regulated professional advice.",
       },
       {
-        heading: "6. Disclaimers & Limitation of Liability",
-        body: "Jan Darpan strives to report accurate, fact-checked, and timely regional journalism. However, the platform and its news services are provided on an 'as is' and 'as available' basis. To the fullest extent permitted by law, Jan Darpan and its operating company disclaim all warranties and shall not be liable for any indirect, consequential, or punitive damages arising from the use of or inability to use the service.",
+        heading: "5. AI-Assisted Content",
+        body: "Jan Darpan may use artificial intelligence and automation for activities including translation, summarization, headline generation, narration, categorization, moderation, image processing and other editorial or operational processes.\n\nAI-assisted output may contain errors or omissions.\n\nWhere appropriate, Jan Darpan may review, modify, reject, correct or remove such content.\n\nNo AI-generated or AI-assisted content should be treated as a guarantee of factual accuracy merely because it appears on the platform.",
       },
       {
-        heading: "7. Governing Law & Grievance Redressal",
-        body: "These terms are governed by the laws of India. In compliance with Rule 11 of the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, any statutory grievances regarding published content or platform operations may be submitted to our designated Grievance Officer at shriyanshchandrakar@gmail.com or via our Grievance Redressal portal at /grievance-redressal.",
+        heading: "6. Third-Party Content",
+        body: "The platform may contain or reference content originating from third-party news agencies, public sources, websites, social platforms or other providers.\n\nThird-party material remains subject to the relevant owner's rights and terms.\n\nPublication, aggregation, transformation or display of third-party material does not automatically transfer ownership of that material to Jan Darpan.",
+      },
+      {
+        heading: "7. Copyright and Intellectual Property",
+        body: "Except for third-party material and material otherwise identified as belonging to another party, the Jan Darpan website, software, branding, original editorial work, interface, design and platform materials are protected by applicable intellectual-property law.\n\nYou must not copy, reproduce, scrape, republish, commercially exploit, distribute, modify or systematically extract substantial portions of Jan Darpan content without appropriate authorization or a lawful exception.\n\nNothing in these Terms removes rights available under applicable copyright law.",
+      },
+      {
+        heading: "8. Comments and User-Generated Content",
+        body: "Authenticated users may submit comments.\n\nYou must not submit content that is unlawful, threatening, abusive, defamatory, hateful, sexually explicit, invasive of privacy, fraudulent, impersonating, misleading, spam, malicious, infringing or otherwise prohibited by applicable law.\n\nYou must not publish another person's confidential or personal information without lawful authority.\n\nYou remain responsible for the content you submit.\n\nBy posting a comment, you grant Jan Darpan a non-exclusive, worldwide, royalty-free permission to host, display, reproduce, moderate and technically process that comment for operating, securing and promoting the platform, subject to applicable law.",
+      },
+      {
+        heading: "9. Moderation",
+        body: "Jan Darpan may, subject to applicable law, review, restrict, hide, remove or preserve comments or accounts where reasonably necessary to:\n• enforce these Terms;\n• maintain safety;\n• protect users;\n• address abuse;\n• respond to lawful requests;\n• investigate incidents;\n• maintain editorial standards; or\n• comply with applicable law.\n\nWe do not guarantee that all prohibited material will be detected immediately.",
+      },
+      {
+        heading: "10. Prohibited Activities",
+        body: "You must not:\n• bypass or attack authentication;\n• attempt unauthorized access;\n• interfere with platform availability;\n• introduce malware;\n• abuse APIs or automated systems;\n• scrape or systematically harvest data without authorization;\n• impersonate another person or organization;\n• manipulate engagement counts;\n• submit fraudulent comments or reports;\n• infringe intellectual-property or privacy rights;\n• use Jan Darpan for unlawful activities; or\n• violate applicable Indian law.",
+      },
+      {
+        heading: "11. Availability and Changes",
+        body: "We may modify, suspend, replace or discontinue portions of the platform where reasonably necessary for maintenance, security, development, legal compliance or operational reasons.\n\nWe do not guarantee uninterrupted availability.\n\nNews feeds, external services, hosting providers, network services and other dependencies may experience interruptions beyond our control.",
+      },
+      {
+        heading: "12. External Links",
+        body: "Jan Darpan may link to external websites and services.\n\nSuch links are provided for convenience or editorial reference.\n\nJan Darpan does not control and is not responsible for third-party websites, their availability, security, privacy practices, transactions or content.",
+      },
+      {
+        heading: "13. Limitation of Liability",
+        body: "To the maximum extent permitted by applicable law, Jan Darpan and its operator will not be liable for indirect, incidental, consequential, special or unforeseeable losses arising from use of or inability to use the platform.\n\nThis does not exclude liability that cannot lawfully be excluded or limited under Indian law, including liability arising from circumstances where such exclusion is legally prohibited.",
+      },
+      {
+        heading: "14. Indemnity",
+        body: "To the maximum extent permitted by law, you agree to indemnify and hold harmless Jan Darpan, its operator, personnel and service providers from claims, losses, liabilities, costs and reasonable expenses arising from:\n• your unlawful use of the platform;\n• your violation of these Terms;\n• your comments or other submitted content;\n• your infringement of third-party rights; or\n• your misuse of the service.\n\nThis clause applies only to the extent permitted by applicable law.",
+      },
+      {
+        heading: "15. Account Suspension or Termination",
+        body: "We may restrict or terminate access where reasonably necessary because of:\n• violation of these Terms;\n• suspected abuse or fraud;\n• security threats;\n• unlawful conduct;\n• repeated policy violations;\n• legal requirements; or\n• operational/security reasons.\n\nTermination does not remove rights or obligations that have already accrued.",
+      },
+      {
+        heading: "16. Privacy",
+        body: "Your use of Jan Darpan is also governed by our Privacy Policy.\n\nThe Privacy Policy explains how personal data is collected, used, stored, protected and processed.",
+      },
+      {
+        heading: "17. Editorial Standards and Legal Compliance",
+        body: "Jan Darpan aims to follow applicable Indian law and relevant standards governing digital news and current-affairs publishing.\n\nEditorial processes may take into account applicable provisions of the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, relevant governmental directions and applicable journalistic standards.\n\nNothing in these Terms overrides applicable law.",
+      },
+      {
+        heading: "18. Grievance Redressal",
+        body: "Complaints relating to platform use, content or digital-media matters may be submitted through the designated Jan Darpan grievance mechanism.\n\nThe applicable grievance officer and contact details will be published on the Jan Darpan grievance page (/grievance-redressal).\n\nComplaints will be handled in accordance with applicable law and applicable regulatory timelines.",
+      },
+      {
+        heading: "19. Changes to These Terms",
+        body: "We may update these Terms from time to time.\n\nThe current version and effective date will be published on this page.\n\nWhere a material change requires renewed consent, we may require users to accept the updated Terms before continued access.",
+      },
+      {
+        heading: "20. Governing Law and Jurisdiction",
+        body: "These Terms are governed by the laws of India.\n\nSubject to mandatory jurisdictional requirements under applicable law, disputes shall be subject to the jurisdiction of the competent courts having territorial jurisdiction over the registered office of the operator.",
+      },
+      {
+        heading: "21. Severability",
+        body: "If any provision of these Terms is held invalid or unenforceable, the remaining provisions will continue to operate to the extent permitted by law.",
+      },
+      {
+        heading: "22. No Waiver",
+        body: "Failure to enforce any provision of these Terms immediately does not constitute a waiver of the right to enforce it later.",
+      },
+      {
+        heading: "23. Entire Agreement",
+        body: "These Terms, together with the Privacy Policy and other policies expressly incorporated into them, constitute the applicable user agreement governing use of Jan Darpan, subject to applicable law.",
+      },
+      {
+        heading: "24. Contact",
+        body: "For general support, privacy or legal-policy matters:\nEmail: shriyanshchandrakar@gmail.com\nWebsite: https://www.jandarpan.news\n\nBy continuing to use Jan Darpan after accepting these Terms, you acknowledge that you have read, understood and agreed to them.",
       },
     ],
   },

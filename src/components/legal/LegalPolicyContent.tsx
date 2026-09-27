@@ -34,8 +34,8 @@ export function LegalPolicyContent({
             <p
               className={
                 isGate
-                  ? "legal-policy-content__body"
-                  : "mt-2 text-[15px] leading-relaxed text-stone-600 dark:text-stone-300"
+                  ? "legal-policy-content__body whitespace-pre-line"
+                  : "mt-2 text-[15px] leading-relaxed text-stone-600 dark:text-stone-300 whitespace-pre-line"
               }
             >
               {section.body}
