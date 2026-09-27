@@ -13,25 +13,17 @@ import { NextResponse } from "next/server";
 import { createAdminServerClient } from "@/lib/supabase";
 import { THIRD_PARTY_BRANDED_OR_TEMPLATE_RE } from "@/lib/news/images/validate";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const CRON_SECRET = process.env.CRON_SECRET ?? "";
-const ADMIN_SECRET = process.env.ADMIN_API_SECRET ?? "";
 
-function isAuthorized(req: Request): boolean {
-  const auth = req.headers.get("authorization") ?? "";
-  const token = auth.replace(/^Bearer\s+/i, "").trim();
-  if (CRON_SECRET && token === CRON_SECRET) return true;
-  if (ADMIN_SECRET && token === ADMIN_SECRET) return true;
-  return false;
-}
 
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-  }
+  const auth = await verifyCronRequest(request, { capability: "admin" });
+  if (!auth.authorized) return cronAuthFailureResponse(auth);
 
   const supabase = createAdminServerClient();
 
@@ -105,3 +97,4 @@ export async function GET(request: Request) {
     { headers: noStoreHeaders() }
   );
 }
+
