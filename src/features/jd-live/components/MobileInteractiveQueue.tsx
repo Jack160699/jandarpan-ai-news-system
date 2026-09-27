@@ -351,22 +351,25 @@ export function MobileInteractiveQueue() {
                     language === "hi" ? "TV पर चलाएं" : "Play on TV"
                   }`}
                 >
-                  {/* UPPER SECTION: IMAGE + HEADLINE (Single tap = TV play, Double tap = Like) */}
+                  {/* TOP CONTENT ROW: Left thumbnail + Right headline/metadata (Single tap = TV play, Double tap = Like) */}
                   <div
                     className="jdl-queue-card__main-content"
                     onClick={() => handleContentClick(story)}
                     role="button"
                     tabIndex={-1}
                   >
-                    {/* 1. IMAGE (16:9 full card width editorial visual) */}
+                    {/* LEFT: Compact Landscape Thumbnail */}
                     <div
-                      className="jdl-queue-card__media-wrap"
+                      className="jdl-queue-card__thumb-wrap"
                       aria-hidden="true"
                     >
                       <QueueThumbnail src={story.imageUrl} alt="" />
+                    </div>
 
-                      {/* Overlaid Badges: Location & Status */}
-                      <div className="jdl-queue-card__media-badges">
+                    {/* RIGHT: Story Content (Meta, Headline, Live Status) */}
+                    <div className="jdl-queue-card__body">
+                      {/* District / Category Tag + Breaking Badge + Consumed Status + Time */}
+                      <div className="jdl-queue-card__meta">
                         <span className="jdl-queue-card__tag">📍 {locationTag}</span>
                         {story.isBreaking && (
                           <span className="jdl-queue-card__breaking">
@@ -378,23 +381,10 @@ export function MobileInteractiveQueue() {
                             ✓ {language === "hi" ? "सुना गया" : "Consumed"}
                           </span>
                         )}
+                        <span className="jdl-queue-card__time">{timeLabel}</span>
                       </div>
 
-                      <span className="jdl-queue-card__media-time">{timeLabel}</span>
-
-                      {/* Instagram-like Double Tap Heart Feedback Overlay */}
-                      {heartBursts[story.id] && (
-                        <div
-                          className="jdl-queue-card__heart-burst"
-                          aria-hidden="true"
-                        >
-                          <HeartIcon filled={true} />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 2. HEADLINE / PRIMARY STORY CONTENT (Directly underneath image) */}
-                    <div className="jdl-queue-card__body">
+                      {/* Headline: maximum two lines */}
                       <h3 className="jdl-queue-card__headline" title={headline}>
                         {headline}
                       </h3>
@@ -419,9 +409,20 @@ export function MobileInteractiveQueue() {
                         </div>
                       )}
                     </div>
+
+                    {/* Instagram-like Double Tap Heart Feedback Overlay */}
+                    {heartBursts[story.id] && (
+                      <div
+                        className="jdl-queue-card__heart-burst"
+                        aria-hidden="true"
+                      >
+                        <HeartIcon filled={true} />
+                      </div>
+                    )}
                   </div>
 
-                  {/* 3. FULL-WIDTH ENGAGEMENT STRIP (Directly attached beneath headline) */}
+                  {/* BOTTOM ACTION STRIP: Full Story-Row Width */}
+                  {/* Exactly 5 balanced actions: Like | Comment | Views | WhatsApp | पढ़ें */}
                   {/* Exactly 5 actions: Like | Comment | Views | WhatsApp | पढ़ें */}
                   <CardEngagementRow
                     story={story}
