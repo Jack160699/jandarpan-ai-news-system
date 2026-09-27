@@ -149,7 +149,7 @@ export function MobileInteractiveQueue() {
       }
     } catch {}
 
-    dispatch({ type: "INTERRUPT_BREAKING", segment: DURG_SOLAR_AD_SEGMENT });
+    dispatch({ type: "PLAY_AD" });
     dispatch({ type: "SET_PLAYING", isPlaying: true });
     dispatch({ type: "SET_MUTED", isMuted: false });
 
@@ -346,7 +346,12 @@ export function MobileInteractiveQueue() {
                     style={{ width: "100%", cursor: "pointer" }}
                     aria-label="दुर्ग सोलर विज्ञापन — टीवी पर देखें"
                   >
-                    <DurgSolarInlineAd index={Math.floor((idx + 1) / 3)} />
+                    <DurgSolarInlineAd
+                      index={Math.floor((idx + 1) / 3)}
+                      onBannerClick={() => {
+                        handleSelectAdOnTv();
+                      }}
+                    />
                   </div>
                 )}
               </React.Fragment>

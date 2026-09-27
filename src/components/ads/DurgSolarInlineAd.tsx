@@ -5,6 +5,7 @@ import React from "react";
 type DurgSolarInlineAdProps = {
   index?: number;
   className?: string;
+  onBannerClick?: (e: React.MouseEvent) => void;
 };
 
 /**
@@ -18,7 +19,11 @@ type DurgSolarInlineAdProps = {
  * - NO Share, WhatsApp, Play, Pause, Mute, or extra navigation controls.
  * - Click navigates to https://durgsolar.com.
  */
-export function DurgSolarInlineAd({ index, className = "" }: DurgSolarInlineAdProps) {
+export function DurgSolarInlineAd({
+  index,
+  className = "",
+  onBannerClick,
+}: DurgSolarInlineAdProps) {
   return (
     <div
       className={`jd-inline-ad ${className}`}
@@ -72,6 +77,11 @@ export function DurgSolarInlineAd({ index, className = "" }: DurgSolarInlineAdPr
         href="https://durgsolar.com"
         target="_blank"
         rel="noopener noreferrer"
+        onClick={(e) => {
+          if (onBannerClick) {
+            onBannerClick(e);
+          }
+        }}
         title="Durg Solar: Waaree 3 kW ₹72,000* | 5 kW ₹1,82,000* — Call +91 77778 12777 | durgsolar.com"
         aria-label="Durg Solar Advertisement"
         style={{

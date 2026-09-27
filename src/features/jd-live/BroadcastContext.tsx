@@ -323,6 +323,24 @@ function broadcastReducer(
     }
     case "SET_SELECTED_ARTICLE":
       return { ...state, selectedArticle: action.article };
+    case "PLAY_AD": {
+      const savedIndex = state.mode !== "breaking"
+        ? state.currentIndex
+        : (state.preBreakingIndex ?? state.currentIndex);
+      return {
+        ...state,
+        currentSegment: DURG_SOLAR_AD_SEGMENT,
+        preBreakingIndex: savedIndex,
+        countdownRank: 0,
+        isIntro: false,
+        mode: "normal",
+        status: "playing",
+        scriptReady: !!DURG_SOLAR_AD_SEGMENT.script,
+        audioReady: false,
+        segmentToken: state.segmentToken + 1,
+        consecutiveNewsCount: 0,
+      };
+    }
     case "INTERRUPT_BREAKING": {
       const savedIndex = state.mode !== "breaking"
         ? state.currentIndex
