@@ -23,7 +23,10 @@ import { traceMiddleware } from "@/lib/observability/admin-boot";
 import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { evaluateSessionGuard } from "@/lib/auth/middleware-session-guard";
-import { requiresMiddlewareSupabaseAuth } from "@/lib/auth/middleware-auth-policy";
+import {
+  isReaderProtectedPath,
+  requiresMiddlewareSupabaseAuth,
+} from "@/lib/auth/middleware-auth-policy";
 import {
   E2E_AUTH_COOKIE,
   isE2eAuthEnabled,
@@ -273,6 +276,22 @@ export async function middleware(request: NextRequest) {
     const login = new URL("/admin/login", request.url);
     login.searchParams.set("next", pathname);
     return redirectWithCookies(request, `${login.pathname}${login.search}`, response);
+  }
+
+  // ─── Reader Mandatory Google-Only Auth Gate ──────────────────────────────
+  // Protects: /, /live, /story/*, /district/*, /category/*, /profile, /archive
+  // When unauthenticated, immediately redirects to /login?next=...
+  if (isReaderProtectedPath(pathname) && !hasAuth) {
+    const login = new URL("/login", request.url);
+    const search = request.nextUrl.search || "";
+    login.searchParams.set("next", `${pathname}${search}`);
+    return redirectWithCookies(request, `${login.pathname}${login.search}`, response);
+  }
+
+  // Already authenticated user visiting /login: seamless return to intended destination
+  if ((pathname === "/login" || pathname === "/login/") && hasAuth) {
+    const next = request.nextUrl.searchParams.get("next") || "/";
+    return redirectWithCookies(request, next, response);
   }
 
   // Path RBAC is enforced in admin layout + API guards from the membership

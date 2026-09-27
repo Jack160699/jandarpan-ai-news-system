@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import { Masthead } from "../../components/Masthead";
@@ -70,6 +70,15 @@ export function SignInPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Already authenticated: automatically forward to next destination
+  useEffect(() => {
+    if (isLoggedIn && typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next") || "/";
+      window.location.href = next;
+    }
+  }, [isLoggedIn]);
+
   async function onGoogle() {
     setStatus(null);
     clearAuthError();
@@ -77,7 +86,7 @@ export function SignInPage() {
     try {
       const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
       const next = params?.get("next");
-      await signInWithGoogle(next || "/profile");
+      await signInWithGoogle(next || "/");
     } catch (e) {
       setStatus(e instanceof Error ? e.message : t("signin.googleFailed"));
       setBusy(false);
@@ -122,25 +131,6 @@ export function SignInPage() {
           </p>
           <div style={{ marginTop: 28, display: "flex", gap: 12, justifyContent: "center" }}>
             <Link
-              href="/profile"
-              className="jd-ui"
-              style={{
-                display: "inline-flex",
-                minHeight: 44,
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0 20px",
-                background: "var(--jd-navy)",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 14,
-                textDecoration: "none",
-                borderRadius: 4,
-              }}
-            >
-              प्रोफ़ाइल देखें
-            </Link>
-            <Link
               href="/"
               className="jd-ui"
               style={{
@@ -183,7 +173,7 @@ export function SignInPage() {
             <h1
               className="jd-serif"
               style={{
-                fontSize: 26,
+                fontSize: 24,
                 fontWeight: 800,
                 color: "var(--jd-navy)",
                 lineHeight: 1.25,
@@ -205,7 +195,7 @@ export function SignInPage() {
               {t("signin.subtitle")}
             </p>
 
-            {/* Direct Google Authentication CTA */}
+            {/* Direct Google-Only Authentication CTA */}
             <div style={{ marginTop: 32 }}>
               <button
                 type="button"
@@ -213,7 +203,7 @@ export function SignInPage() {
                 disabled={busy || !configured}
                 style={{
                   width: "100%",
-                  minHeight: 50,
+                  minHeight: 52,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -231,7 +221,7 @@ export function SignInPage() {
                 }}
               >
                 <GoogleGlyph />
-                <span>Google से साइन इन / साइन अप करें</span>
+                <span>{busy ? t("signin.loading") : t("signin.google")}</span>
               </button>
 
               <p
@@ -243,7 +233,7 @@ export function SignInPage() {
                   lineHeight: 1.4,
                 }}
               >
-                जन दर्पण केवल सुरक्षित Google प्रमाणीकरण का उपयोग करता है।
+                {t("signin.privacyTrust")}
               </p>
             </div>
 
@@ -258,25 +248,6 @@ export function SignInPage() {
                 {t("signin.supabaseMissing")}
               </p>
             ) : null}
-
-            <div style={{ textAlign: "center", marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--jd-line-2)" }}>
-              <Link
-                href="/"
-                className="jd-ui"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "var(--jd-navy)",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  textDecoration: "underline",
-                  minHeight: 44,
-                }}
-              >
-                {t("signin.guest")}
-              </Link>
-            </div>
           </div>
         </div>
       </main>

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { AppChrome } from "@/components/navigation/AppChrome";
 import { ThemeScript } from "@/components/reader/ThemeScript";
@@ -18,6 +19,10 @@ import "@/styles/globals.css";
 
 const GOOGLE_SITE_VERIFICATION =
   "oqiFouZAWNqKNdef92A7wMcF-xaLQO9d-YnT-dNIpm4";
+
+const GA_MEASUREMENT_ID =
+  process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ||
+  process.env.GA_MEASUREMENT_ID;
 
 export async function generateMetadata(): Promise<Metadata> {
   const tenant = await getTenantConfig();
@@ -75,6 +80,24 @@ export default async function RootLayout({
           </ReaderPreferencesProvider>
         </TenantRoot>
         <Analytics />
+        {GA_MEASUREMENT_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${GA_MEASUREMENT_ID}', {
+                  page_path: window.location.pathname,
+                });
+              `}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

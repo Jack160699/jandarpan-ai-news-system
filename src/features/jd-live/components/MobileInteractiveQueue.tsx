@@ -8,6 +8,8 @@ import { CANONICAL_CATEGORIES, getPrioritizedStories } from "../lib/categories";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
+import { CardEngagementRow } from "./CardEngagementRow";
+import { useStoryEngagement } from "../useStoryEngagement";
 
 function formatRelativeTime(dateStr?: string, lang: "hi" | "en" = "hi"): string {
   if (!dateStr) return lang === "hi" ? "अभी" : "Just now";
@@ -108,6 +110,9 @@ export function MobileInteractiveQueue() {
   const filteredStories = useMemo(() => {
     return getPrioritizedStories(allStories, selectedCategory, prefs.homeDistrict);
   }, [allStories, selectedCategory, prefs.homeDistrict]);
+
+  const storyIds = useMemo(() => filteredStories.map((s) => s.id), [filteredStories]);
+  const { engagementMap, toggleLike, fetchComments, addComment } = useStoryEngagement(storyIds);
 
   const handleSelectStoryOnTv = (seg: BroadcastSegment) => {
     try {
@@ -270,27 +275,25 @@ export function MobileInteractiveQueue() {
                       {headline}
                     </h3>
 
-                    {/* Bottom Action Row: Playback state + Exclusive "पढ़ें" button */}
-                    <div className="jdl-queue-card__action-row">
-                      {isActiveOnTv ? (
-                        <span className="jdl-queue-card__live-indicator">
-                          <span className="jdl-queue-card__pulse-dot" aria-hidden="true" />
-                          <span>{language === "hi" ? "चल रहा है" : "Playing"}</span>
-                        </span>
-                      ) : (
-                        <span />
-                      )}
+                    {/* If actively playing on TV, show compact status chip */}
+                    {isActiveOnTv && (
+                      <div className="jdl-queue-card__live-chip" aria-label={language === "hi" ? "टीवी पर लाइव चल रहा है" : "Live on TV"}>
+                        <span className="jdl-queue-card__pulse-dot" aria-hidden="true" />
+                        <span>{language === "hi" ? "टीवी पर लाइव" : "LIVE ON TV"}</span>
+                      </div>
+                    )}
 
-                      {/* ONLY this action opens the article reader */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleOpenArticle(e, story)}
-                        className="jdl-queue-card__read-btn"
-                        aria-label={`${headline} — ${language === "hi" ? "पढ़ें" : "Read"}`}
-                      >
-                        <span>{language === "hi" ? "पढ़ें" : "Read"}</span>
-                      </button>
-                    </div>
+                    {/* Engagement Row: ❤️ Like -> 💬 Comment -> 👁 Views -> 🟢 WhatsApp icon -> 📖 पढ़ें */}
+                    <CardEngagementRow
+                      story={story}
+                      headline={headline}
+                      language={language}
+                      engagement={engagementMap[story.id]}
+                      onOpenArticle={handleOpenArticle}
+                      onToggleLike={toggleLike}
+                      onFetchComments={fetchComments}
+                      onAddComment={addComment}
+                    />
                   </div>
                 </article>
 

@@ -11,7 +11,11 @@ let envCheckLogged = false;
 
 function trimEnv(value: string | undefined): string {
   if (!value) return "";
-  return value.replace(/^\uFEFF/, "").trim().replace(/^['"]|['"]$/g, "");
+  return value
+    .replace(/^\uFEFF/, "")
+    .trim()
+    .replace(/^[\\"']+|[\\"']+$/g, "")
+    .trim();
 }
 
 export type SupabaseEnvDiagnostics = {

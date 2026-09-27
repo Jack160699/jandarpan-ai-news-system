@@ -63,10 +63,33 @@ function isReaderAuthCallback(pathname: string): boolean {
   return pathname === "/auth/callback" || pathname.startsWith("/auth/callback/");
 }
 
+export function isReaderAuthGateExempt(pathname: string): boolean {
+  if (
+    pathname === "/login" ||
+    pathname.startsWith("/login/") ||
+    pathname === "/auth/callback" ||
+    pathname.startsWith("/auth/callback/") ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/manifest.json" ||
+    pathname === "/favicon.ico" ||
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/dashboard")
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function isReaderProtectedPath(pathname: string): boolean {
+  return !isReaderAuthGateExempt(pathname);
+}
+
 /**
  * Whether middleware should call updateSupabaseSession (auth.getUser).
  *
- * Public reader pages, SEO routes, and public APIs are excluded.
+ * Public reader pages require Google auth; session is validated if cookies exist.
  * Protected desk pages always validate. Login pages validate only when
  * session cookies are present (redirect already-authenticated users).
  * Reader OAuth callback always refreshes so PKCE cookies land correctly.
@@ -90,6 +113,10 @@ export function requiresMiddlewareSupabaseAuth(
   }
 
   if (isAuthLoginPage(pathname) && hasAuthSessionCookies(request)) {
+    return true;
+  }
+
+  if (isReaderProtectedPath(pathname) && hasAuthSessionCookies(request)) {
     return true;
   }
 

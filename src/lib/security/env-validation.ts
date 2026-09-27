@@ -3,7 +3,7 @@
  * Optional integrations must warn, never escalate the whole platform to Critical.
  */
 
-import { isProductionDeployment } from "@/lib/infrastructure/production";
+import { isProductionDeployment, isDeployedEnvironment } from "@/lib/infrastructure/production";
 import { isLocalEnrichMisconfiguredForProduction } from "@/lib/ai/providers/local-enrich-flag";
 
 export type EnvIssue = {
@@ -74,7 +74,7 @@ export function validateProductionEnv(): EnvIssue[] {
     });
   }
 
-  if (process.env.ENABLE_E2E_AUTH === "1") {
+  if (process.env.ENABLE_E2E_AUTH === "1" && isDeployedEnvironment()) {
     issues.push({
       key: "ENABLE_E2E_AUTH",
       severity: "error",
@@ -106,12 +106,13 @@ export function validateProductionEnv(): EnvIssue[] {
   }
 
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-  if (SECRET_PATTERNS.some((p) => p.test(anonKey))) {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  if (anonKey && serviceKey && anonKey === serviceKey) {
     issues.push({
       key: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
       severity: "error",
       class: "security",
-      message: "Anon key appears to be a service/secret key — rotate immediately",
+      message: "Anon key is identical to service role key — rotate immediately",
     });
   }
 

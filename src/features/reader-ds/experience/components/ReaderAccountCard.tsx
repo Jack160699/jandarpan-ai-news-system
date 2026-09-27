@@ -344,27 +344,6 @@ export function ReaderAccountCard({ districtLabel }: Props) {
         {busy ? t("signin.loading") : t("accountCard.googleSignIn")}
       </button>
 
-      <button
-        type="button"
-        data-testid="jd-account-continue-guest"
-        className="jd-ui"
-        onClick={() => continueAsGuest()}
-        style={{
-          marginTop: 8,
-          width: "100%",
-          minHeight: 40,
-          background: "transparent",
-          border: "none",
-          color: "var(--jd-ink-3)",
-          fontWeight: 600,
-          fontSize: 13,
-          cursor: "pointer",
-          textDecoration: "underline",
-        }}
-      >
-        {t("accountCard.continueGuest")}
-      </button>
-
       <ul
         data-testid="jd-account-benefits"
         style={{

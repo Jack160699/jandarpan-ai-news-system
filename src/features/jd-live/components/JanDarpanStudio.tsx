@@ -109,6 +109,11 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   const segmentTokenRef = useRef(segmentToken);
   segmentTokenRef.current = segmentToken;
 
+  // Track playback instances and session timestamps to strictly prevent duplicates
+  // across React rerenders, feed polling, and continuous playback.
+  const recordedPlayInstancesRef = useRef<Set<string>>(new Set());
+  const lastStoryPlayTimeRef = useRef<Map<string, number>>(new Map());
+
   const lastToggleRef = useRef(0);
   const [copied, setCopied] = useState(false);
 
@@ -171,6 +176,55 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
       hardSafetyTimer = setTimeout(() => {
         advanceToNext();
       }, deadManSafetyMs);
+
+      // Record genuine story play on TV:
+      // Policy: A view is counted ONLY when Jan Darpan's TV agent genuinely runs/displays that story on an active user's screen.
+      // Strictly guards against:
+      // - Card rendering in feed (does not count)
+      // - Feed fetch / background polling (does not count)
+      // - React rerenders (deduped via recordedPlayInstancesRef)
+      // - Hidden/background tabs (visibilityState === "visible" && !document.hidden)
+      // - Story prefetching (does not count)
+      // - Article reader view (does not count)
+      // - Same story playing continuously across 30s boundaries (deduped via segmentToken instance)
+      const now = Date.now();
+      const playKey = `${currentSegment.id}_${token}`;
+      const lastPlayTime = lastStoryPlayTimeRef.current.get(currentSegment.id) || 0;
+      const isNewSession = now - lastPlayTime >= 30000;
+
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "visible" &&
+        !document.hidden &&
+        currentSegment &&
+        !currentSegment.isIntro &&
+        currentSegment.id &&
+        !recordedPlayInstancesRef.current.has(playKey)
+      ) {
+        if (lastPlayTime > 0 && !isNewSession) {
+          // Rapid restart within 30s: mark instance as handled without inflating view count
+          recordedPlayInstancesRef.current.add(playKey);
+        } else {
+          // Legitimate genuine playback: record view
+          recordedPlayInstancesRef.current.add(playKey);
+          lastStoryPlayTimeRef.current.set(currentSegment.id, now);
+
+          try {
+            const uid = typeof window !== "undefined" ? localStorage.getItem("jd_anon_uid") || "" : "";
+            const cycleToken = `play_${currentSegment.id}_${token}_${Math.floor(now / 30000)}`;
+            void fetch("/api/story/engagement", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "view",
+                storyId: currentSegment.id,
+                playCycleId: cycleToken,
+                userId: uid,
+              }),
+            }).catch(() => {});
+          } catch {}
+        }
+      }
 
       try {
         await speak({
