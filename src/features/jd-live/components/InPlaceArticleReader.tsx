@@ -450,58 +450,8 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
         )}
       </section>
 
-      {/* ORIGINAL SOURCE CONTINUATION (Requirement #19, #21, #53) */}
-      {(serverSourceUrl || article.sourceUrl || article.canonicalUrl) && (
-        <div
-          className="jd-reader-continuation-wrap"
-          style={{
-            margin: "20px 0 14px",
-            display: "flex",
-            justifyContent: "flex-end",
-            width: "100%",
-          }}
-        >
-          <a
-            href={serverSourceUrl || article.sourceUrl || article.canonicalUrl || "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="jd-reader-continuation-btn"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 18px",
-              borderRadius: "8px",
-              fontSize: "14px",
-              fontWeight: 700,
-              color: "#ffffff",
-              background: "linear-gradient(135deg, #c8102e 0%, #990011 100%)",
-              textDecoration: "none",
-              boxShadow: "0 2px 8px rgba(200, 16, 46, 0.25)",
-              transition: "transform 0.15s ease, box-shadow 0.15s ease",
-            }}
-            title={language === "hi" ? "मूल खबर देखें" : "View original source article"}
-            aria-label={language === "hi" ? "मूल खबर देखें / और पढ़ें" : "View original report"}
-          >
-            <span>{language === "hi" ? "मूल खबर देखें / और पढ़ें" : "View original report"}</span>
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <polyline points="15 3 21 3 21 9" />
-              <line x1="10" y1="14" x2="21" y2="3" />
-            </svg>
-          </a>
-        </div>
-      )}
+
+
 
       {/* ARTICLE BOTTOM ACTION BAR (Exact 5 Actions: Like + count | Comment + count | Views + count | WhatsApp | वापस लाइव) */}
       <section className="jd-reader-actions-section" aria-label="Story actions">

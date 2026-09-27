@@ -18,6 +18,8 @@ import type { WorkerId } from "@/lib/infrastructure/workers/types";
 import { pipelineLog } from "@/lib/observability/production-log";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import { createAdminServerClient } from "@/lib/supabase";
+import { DAILY_INVENTORY_TARGET } from "@/app/api/admin/daily-inventory/route";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -126,6 +128,28 @@ async function handleOrchestrate(request: Request) {
     );
   }
 
+  // Report daily inventory progress toward 50+ target
+  let dailyInventory: { todayCount: number; target: number; gap: number; met: boolean } | null = null;
+  try {
+    const supabase = createAdminServerClient();
+    const istOffsetMs = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(Date.now() + istOffsetMs);
+    const startOfIstDay = new Date(
+      Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - istOffsetMs
+    );
+    const { count } = await supabase
+      .from("generated_articles")
+      .select("id", { count: "exact", head: true })
+      .eq("workflow_status", "published")
+      .gte("published_at", startOfIstDay.toISOString());
+    const todayCount = count ?? 0;
+    const gap = Math.max(0, DAILY_INVENTORY_TARGET - todayCount);
+    dailyInventory = { todayCount, target: DAILY_INVENTORY_TARGET, gap, met: todayCount >= DAILY_INVENTORY_TARGET };
+    pipelineLog("[daily_inventory]", dailyInventory);
+  } catch {
+    // Non-fatal — inventory count is observability only
+  }
+
   return NextResponse.json(
     {
       ok: result.ok,
@@ -134,6 +158,7 @@ async function handleOrchestrate(request: Request) {
       degraded: result.degraded,
       workers: result.workers,
       availableWorkers: listWorkers(),
+      dailyInventory,
     },
     {
       headers: noStoreHeaders(),

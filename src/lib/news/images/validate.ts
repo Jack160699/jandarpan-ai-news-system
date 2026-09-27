@@ -52,7 +52,7 @@ const GENERIC_PROVIDER_LOGO_RE =
  * and studio/anchor broadcast stills to maintain clean unbranded editorial integrity.
  */
 export const THIRD_PARTY_BRANDED_OR_TEMPLATE_RE =
-  /amarujala|ibc24|dainik-?bhaskar|bhaskar\.com|aajtak|zeenews|abplive|ndtv\.com|news18|republicworld|tv9hindi|tv9|etvbharat|haribhoomi|patrika\.com|kpnews|ytimg\.com|youtube\.com.*thumbnail|debate-template|tv-?anchor|news-?anchor|anchor-?desk|studio-?screen|studio-?anchor|presenter-frame|pti_cg[0-9]|shah-mat|01101010|Shah-Mat|Balod-Road-Accident|CG-Teacher-Suspended|Rajnandgaon-Ganesh-Jhanki-Cancel|images-1-4|(?:watermark|channel-?bug|lower-?third|masthead|bulletin-?graphic|breaking-?news-?(?:template|live|banner|graphic)|overlay-?graphic|broadcast-?bug|station-?logo)/i;
+  /amarujala|ibc24|dainik-?bhaskar|bhaskar\.com|bhaskarassets\.com|db\.bhaskar|dainikbhaskar|aajtak|zeenews|abplive|ndtv\.com|news18|republicworld|tv9hindi|tv9|etvbharat|haribhoomi|lalluram|bansalnews|bansal-news|patrika\.com|kpnews|ytimg\.com|youtube\.com.*thumbnail|naidunia|navbharat|hindi\.news18|cgkhabar|cg-khabar|newzbullet|debate-template|tv-?anchor|news-?anchor|anchor-?desk|studio-?screen|studio-?anchor|presenter-frame|pti_cg[0-9]|shah-mat|01101010|Shah-Mat|Balod-Road-Accident|CG-Teacher-Suspended|Rajnandgaon-Ganesh-Jhanki-Cancel|images-1-4|(?:watermark|channel-?bug|lower-?third|masthead|bulletin-?graphic|breaking-?news-?(?:template|live|banner|graphic)|overlay-?graphic|broadcast-?bug|station-?logo)/i;
 
 
 /** Jan Darpan brand / OG / social lockups must never be editorial story media. */

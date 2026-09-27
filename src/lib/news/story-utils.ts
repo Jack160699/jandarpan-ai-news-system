@@ -18,7 +18,7 @@ export function storyBodyParagraphs(article: NewsArticleRow): string[] {
 
   if (!raw) {
     return [
-      "This story is filed from our live regional wire. Read the full report at the original publisher using the source link above.",
+      "यह समाचार जन दर्पण की क्षेत्रीय संवाददाता टीम द्वारा कवर किया जा रहा है। अधिक विवरण शीघ्र उपलब्ध होगा।",
     ];
   }
 
