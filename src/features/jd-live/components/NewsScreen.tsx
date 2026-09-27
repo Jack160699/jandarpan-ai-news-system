@@ -198,7 +198,7 @@ export function NewsScreen() {
                 </svg>
               </div>
               <span className="jdl-virtual-screen__fallback-channel">
-                {language === "hi" ? "जन दर्पण लाइव" : "JAN DARPAN LIVE"}
+                {language === "hi" ? "जन दर्पण" : "JAN DARPAN"}
               </span>
               <span className="jdl-virtual-screen__fallback-tag">
                 {displayLocation || (language === "hi" ? "विशेष कवरेज" : "Special Coverage")}

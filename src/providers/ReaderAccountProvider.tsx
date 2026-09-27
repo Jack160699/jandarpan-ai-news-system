@@ -87,9 +87,8 @@ const DEFAULT_VALUE: ReaderAccountContextValue = {
   user: null,
   isLoggedIn: false,
   loading: false,
-  displayName: "Guest Reader",
+  displayName: "Reader",
   avatarInitial: "R",
-  avatarUrl: null,
   email: null,
   syncStatus: null,
   authError: null,
@@ -108,7 +107,7 @@ const DEFAULT_VALUE: ReaderAccountContextValue = {
 
 function loadGuest(): GuestProfile {
   if (typeof window === "undefined") {
-    return { displayName: "Guest Reader", streakDays: 1, lastVisit: "" };
+    return { displayName: "Reader", streakDays: 1, lastVisit: "" };
   }
   try {
     const raw = localStorage.getItem(ACCOUNT_KEY);
@@ -136,10 +135,10 @@ function loadGuest(): GuestProfile {
     }
     const base = raw
       ? (JSON.parse(raw) as GuestProfile)
-      : { displayName: "Guest Reader", streakDays: streak, lastVisit: today };
+      : { displayName: "Reader", streakDays: streak, lastVisit: today };
     return { ...base, streakDays: streak, lastVisit: today };
   } catch {
-    return { displayName: "Guest Reader", streakDays: 1, lastVisit: "" };
+    return { displayName: "Reader", streakDays: 1, lastVisit: "" };
   }
 }
 
@@ -404,7 +403,7 @@ export function ReaderAccountProvider({ children }: { children: ReactNode }) {
         "Reader"
       );
     }
-    return guest?.displayName ?? "Guest Reader";
+    return guest?.displayName ?? "Reader";
   }, [editable, activeUser, guest]);
 
   const avatarUrl = useMemo(() => {

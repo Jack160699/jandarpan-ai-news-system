@@ -1,15 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminServerClient } from "@/lib/supabase/admin";
+import { createCookieServerClient } from "@/lib/supabase/server";
 import { checkPublicApiRateLimit } from "@/lib/security/public-rate-limit";
+import type { User } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
+ * Authoritative Server-Side User Session Resolver
+ *
+ * Verifies authenticated identity from:
+ * 1. Supabase Auth cookie session (App Router cookieStore)
+ * 2. Authorization: Bearer <token> (API / programmatic callers)
+ *
+ * Never trusts client-supplied user IDs in request bodies or query params.
+ */
+async function getAuthenticatedUser(request: NextRequest): Promise<User | null> {
+  // 1. Attempt session resolution via authenticated cookies
+  try {
+    const cookieClient = await createCookieServerClient();
+    const {
+      data: { user },
+      error,
+    } = await cookieClient.auth.getUser();
+    if (!error && user) {
+      return user;
+    }
+  } catch {
+    // Cookie read failed, proceed to header fallback
+  }
+
+  // 2. Attempt token resolution via Authorization header Bearer token
+  const authHeader = request.headers.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.substring(7).trim();
+    if (token) {
+      try {
+        const adminClient = createAdminServerClient();
+        const {
+          data: { user },
+          error,
+        } = await adminClient.auth.getUser(token);
+        if (!error && user) {
+          return user;
+        }
+      } catch {
+        // Bearer resolution failed
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Story Engagement API
  *
  * GET: Fetch batch engagement counts for stories (views, likes, comments, user_liked)
- * POST: Record views (idempotent play cycle), likes (toggle), or comments
+ * POST: Record views (authenticated), likes (authenticated toggle), comments (authenticated)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -28,12 +77,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: true, data: {} });
     }
 
-    const userId = searchParams.get("userId") || null;
-    const supabase = createAdminServerClient();
+    // Determine user identity strictly from verified session (ignore query params)
+    const user = await getAuthenticatedUser(request);
+    const verifiedUserId = user?.id || null;
 
+    const supabase = createAdminServerClient();
     const { data, error } = await (supabase as any).rpc("get_stories_engagement", {
       p_story_ids: storyIds,
-      p_user_id: userId,
+      p_user_id: verifiedUserId,
     });
 
     if (error) {
@@ -59,19 +110,29 @@ export async function POST(request: NextRequest) {
     const rate = await checkPublicApiRateLimit(request, "story-engagement", 120, 60);
     if (!rate.allowed) return rate.response;
 
+    // Strict Server-Side Authentication Enforcement (Objectives B, C; Requirements 14, 15, 36)
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized: Active authenticated session required for engagement." },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { action, storyId } = body;
 
-    if (!storyId || typeof storyId !== "string") {
-      return NextResponse.json({ ok: false, error: "Missing storyId" }, { status: 400 });
+    if (!storyId || typeof storyId !== "string" || !storyId.trim()) {
+      return NextResponse.json({ ok: false, error: "Missing or invalid storyId" }, { status: 400 });
     }
 
+    const cleanStoryId = storyId.trim();
     const supabase = createAdminServerClient();
 
-    // 1. Record Story Play (View)
+    // 1. Record Story Play (View) — Authenticated User Only
     if (action === "view") {
-      const { playCycleId, userId } = body;
-      if (!playCycleId || typeof playCycleId !== "string") {
+      const { playCycleId } = body;
+      if (!playCycleId || typeof playCycleId !== "string" || !playCycleId.trim()) {
         return NextResponse.json(
           { ok: false, error: "Missing playCycleId" },
           { status: 400 }
@@ -79,9 +140,9 @@ export async function POST(request: NextRequest) {
       }
 
       const { data, error } = await (supabase as any).rpc("record_story_play", {
-        p_story_id: storyId,
-        p_play_cycle_id: playCycleId,
-        p_user_id: userId || null,
+        p_story_id: cleanStoryId,
+        p_play_cycle_id: playCycleId.trim(),
+        p_user_id: user.id, // Strictly derived from verified session
       });
 
       if (error) {
@@ -95,19 +156,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 2. Toggle Like
+    // 2. Toggle Like — Authenticated User Only
     if (action === "like") {
-      const { userId } = body;
-      if (!userId || typeof userId !== "string") {
-        return NextResponse.json(
-          { ok: false, error: "Missing userId for like" },
-          { status: 400 }
-        );
-      }
-
       const { data, error } = await (supabase as any).rpc("toggle_story_like", {
-        p_story_id: storyId,
-        p_user_id: userId,
+        p_story_id: cleanStoryId,
+        p_user_id: user.id, // Strictly derived from verified session; ignores any body.userId
       });
 
       if (error) {
@@ -121,9 +174,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 3. Add Comment
+    // 3. Add Comment — Authenticated User Only
     if (action === "comment") {
-      const { userId, userName, text } = body;
+      const { text } = body;
       if (!text || typeof text !== "string" || !text.trim()) {
         return NextResponse.json(
           { ok: false, error: "Comment text cannot be empty" },
@@ -132,13 +185,17 @@ export async function POST(request: NextRequest) {
       }
 
       const cleanText = text.trim().slice(0, 2000);
-      const cleanUser = (userName || "Reader").trim().slice(0, 80);
-      const cleanUserId = (userId || "anonymous").trim();
+      const verifiedUserName = (
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split("@")[0] ||
+        "Reader"
+      ).trim().slice(0, 80);
 
       const { data, error } = await (supabase as any).rpc("add_story_comment", {
-        p_story_id: storyId,
-        p_user_id: cleanUserId,
-        p_user_name: cleanUser,
+        p_story_id: cleanStoryId,
+        p_user_id: user.id, // Strictly derived from verified session; ignores any body.userId
+        p_user_name: verifiedUserName, // Strictly derived from verified account; no "Guest Reader"
         p_comment_text: cleanText,
       });
 

@@ -23,33 +23,31 @@ export interface StoryCommentItem {
 const engagementCache: Record<string, StoryEngagementData> = {};
 
 export function useStoryEngagement(storyIds: string[] = []) {
-  const { user, displayName } = useReaderAccount();
-  const userId = user?.id || (typeof window !== "undefined" ? localStorage.getItem("jd_anon_uid") || "" : "");
-  
-  // Initialize anonymous id if needed
+  const { user } = useReaderAccount();
+
+  // Purge any legacy anonymous test IDs from client storage
   useEffect(() => {
-    if (typeof window !== "undefined" && !localStorage.getItem("jd_anon_uid")) {
-      const anon = "anon_" + Math.random().toString(36).slice(2, 10);
-      localStorage.setItem("jd_anon_uid", anon);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("jd_anon_uid");
+      } catch {}
     }
   }, []);
 
   const [engagementMap, setEngagementMap] = useState<Record<string, StoryEngagementData>>(() => ({
     ...engagementCache,
   }));
-  const [loading, setLoading] = useState(false);
   const fetchedIdsRef = useRef<Set<string>>(new Set());
 
-  // Fetch engagement counts in batch
+  // Fetch authoritative engagement counts in batch
   const fetchEngagement = useCallback(
     async (ids: string[]) => {
       const toFetch = ids.filter((id) => id && id.trim());
       if (toFetch.length === 0) return;
 
       try {
-        const uid = user?.id || (typeof window !== "undefined" ? localStorage.getItem("jd_anon_uid") : "") || "";
         const res = await fetch(
-          `/api/story/engagement?ids=${encodeURIComponent(toFetch.join(","))}&userId=${encodeURIComponent(uid)}`
+          `/api/story/engagement?ids=${encodeURIComponent(toFetch.join(","))}`
         );
         if (!res.ok) return;
         const data = await res.json();
@@ -65,7 +63,7 @@ export function useStoryEngagement(storyIds: string[] = []) {
         console.warn("[useStoryEngagement] Failed to fetch engagement:", e);
       }
     },
-    [user?.id]
+    []
   );
 
   useEffect(() => {
@@ -76,12 +74,11 @@ export function useStoryEngagement(storyIds: string[] = []) {
     }
   }, [storyIds, fetchEngagement]);
 
-  // Record a genuine story play on TV
+  // Record a genuine story play on TV (Authenticated User Only)
   const recordStoryPlay = useCallback(
     async (storyId: string, playCycleId: string) => {
-      if (!storyId || !playCycleId) return;
+      if (!storyId || !playCycleId || !user?.id) return;
       try {
-        const uid = user?.id || (typeof window !== "undefined" ? localStorage.getItem("jd_anon_uid") : "") || "";
         const res = await fetch("/api/story/engagement", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -89,7 +86,6 @@ export function useStoryEngagement(storyIds: string[] = []) {
             action: "view",
             storyId,
             playCycleId,
-            userId: uid,
           }),
         });
         if (res.ok) {
@@ -110,12 +106,13 @@ export function useStoryEngagement(storyIds: string[] = []) {
     [user?.id]
   );
 
-  // Toggle story like (persisted to authoritative backend)
+  // Toggle story like (persisted to authoritative backend, authenticated only)
   const toggleLike = useCallback(
     async (storyId: string): Promise<boolean> => {
-      if (!storyId) return false;
-      const uid = user?.id || (typeof window !== "undefined" ? localStorage.getItem("jd_anon_uid") : "") || "";
-      if (!uid) return false;
+      if (!storyId || !user?.id) {
+        // If not logged in, prompt user or return false
+        return false;
+      }
 
       try {
         const res = await fetch("/api/story/engagement", {
@@ -124,7 +121,6 @@ export function useStoryEngagement(storyIds: string[] = []) {
           body: JSON.stringify({
             action: "like",
             storyId,
-            userId: uid,
           }),
         });
 
@@ -152,11 +148,10 @@ export function useStoryEngagement(storyIds: string[] = []) {
     [user?.id]
   );
 
-  // Post a comment
+  // Post a comment (authenticated session only)
   const addComment = useCallback(
     async (storyId: string, commentText: string): Promise<StoryCommentItem | null> => {
-      if (!storyId || !commentText.trim()) return null;
-      const uid = user?.id || (typeof window !== "undefined" ? localStorage.getItem("jd_anon_uid") : "") || "";
+      if (!storyId || !commentText.trim() || !user?.id) return null;
 
       try {
         const res = await fetch("/api/story/engagement", {
@@ -165,8 +160,6 @@ export function useStoryEngagement(storyIds: string[] = []) {
           body: JSON.stringify({
             action: "comment",
             storyId,
-            userId: uid,
-            userName: displayName || "Reader",
             text: commentText.trim(),
           }),
         });
@@ -191,7 +184,7 @@ export function useStoryEngagement(storyIds: string[] = []) {
       }
       return null;
     },
-    [user?.id, displayName]
+    [user?.id]
   );
 
   // Fetch comments for a story

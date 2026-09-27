@@ -12,67 +12,18 @@ import { selectNextPlayableStory } from "../lib/queue-engine";
 
 /**
  * TeleprompterReadingStrip — Live broadcast synchronized reading strip.
- *
- * Rules:
- * - Displays the full story broadcast narration text beside "मुख्य खबर".
- * - Utilizes 100% of the available TV width without leaving it empty.
- * - Scrolls in synchronization with anchor narration duration.
- * - Freezes immediately when broadcast is paused; resumes when playing.
- * - Resets smoothly when story switches.
+/**
+ * Clean Television Lower-Third Headline Strip.
+ * Requirements #31, #32:
+ * - Clean static headline of the currently selected story.
+ * - No running/scrolling/marquee ticker text in English or Hindi.
+ * - 100% stable presentation matching the selected story visual & audio.
  */
-function TeleprompterReadingStrip({
-  text,
-  isPlaying,
-  durationSec,
-}: {
-  text: string;
-  isPlaying: boolean;
-  durationSec: number;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
-  const [scrollDist, setScrollDist] = useState(0);
-
-  useEffect(() => {
-    const measure = () => {
-      if (containerRef.current && textRef.current) {
-        const containerW = containerRef.current.clientWidth;
-        const textW = textRef.current.scrollWidth;
-        if (textW > containerW + 4) {
-          setScrollDist(textW - containerW + 32);
-        } else {
-          setScrollDist(0);
-        }
-      }
-    };
-    measure();
-    const handleResize = () => measure();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [text]);
-
-  const isOverflowing = scrollDist > 0;
-  // Calibrate reading strip to anchor speech delivery: rate 0.94 averages ~9.8 chars/sec
-  const naturalSpokenSec = Math.max(16, Math.ceil(text.length / 9.8));
-  const effectiveDuration = Math.max(durationSec || 0, naturalSpokenSec);
-
+function SelectedStoryHeadlineStrip({ headline }: { headline: string }) {
   return (
-    <div ref={containerRef} className="jdl-tv__lt-headline-wrap">
-      <div
-        ref={textRef}
-        key={text}
-        className={`jdl-tv__lt-headline ${isOverflowing ? "jdl-tv__lt-headline--marquee" : ""}`}
-        style={
-          isOverflowing
-            ? ({
-                "--marquee-dist": `-${scrollDist}px`,
-                "--marquee-duration": `${effectiveDuration}s`,
-                animationPlayState: isPlaying ? "running" : "paused",
-              } as React.CSSProperties)
-            : undefined
-        }
-      >
-        {text}
+    <div className="jdl-tv__lt-headline-wrap">
+      <div className="jdl-tv__lt-headline" title={headline}>
+        {headline}
       </div>
     </div>
   );
@@ -591,15 +542,12 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
                 : (language === "hi" ? "मुख्य खबर" : "TOP STORY")}
             </span>
           </div>
-          <TeleprompterReadingStrip
-            text={
-              currentSegment?.script ||
-              (currentHeadline
-                ? `${currentHeadline} — ${currentSegment?.summary || ""}`
-                : "")
+          <SelectedStoryHeadlineStrip
+            headline={
+              currentSegment?.isAd
+                ? (language === "hi" ? "दुर्ग सोलर — विश्वसनीय रूफटॉप सोलर सॉल्यूशंस" : "Durg Solar — Reliable Rooftop Solar")
+                : currentHeadline
             }
-            isPlaying={isPlaying}
-            durationSec={currentSegment?.durationSec || 16}
           />
         </div>
       </div>

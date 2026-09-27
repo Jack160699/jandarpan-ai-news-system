@@ -268,7 +268,7 @@ export function CardEngagementRow({
         <button
           type="button"
           onClick={(e) => onOpenArticle(e, story)}
-          className="jdl-queue-card__read-btn"
+          className="jdl-engagement-item jdl-queue-card__read-btn"
           aria-label={`${headline} — ${language === "hi" ? "पढ़ें" : "Read"}`}
         >
           <BookIcon />
