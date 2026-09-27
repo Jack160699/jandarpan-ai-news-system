@@ -309,6 +309,12 @@
   animation: jdl-breaking-pulse 1.2s infinite;
 }
 
+.jdl-tv__lt-badge--ad {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+  color: #ffffff !important;
+  letter-spacing: 0.05em;
+}
+
 .jdl-tv__lt-headline-wrap {
   position: relative;
   background: linear-gradient(to right, #ffffff 0%, #f6f8fb 94%, #e5eaf3 100%);
@@ -1861,7 +1867,7 @@ html.dark .jdl-mobile-queue__active-dot {
   border-bottom: 1px solid var(--jd-line, #dcd5c5);
   box-sizing: border-box;
   text-align: left;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .jdl-queue-card:last-child {
@@ -1874,6 +1880,33 @@ html.dark .jdl-mobile-queue__active-dot {
 
 .jdl-queue-card--tv-active {
   background: rgba(200, 16, 46, 0.04);
+}
+
+.jdl-queue-card--consumed {
+  opacity: 0.68;
+}
+
+.jdl-queue-card--consumed:hover {
+  opacity: 0.95;
+}
+
+.jdl-queue-card__consumed-tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--jd-muted, #716957);
+  background: rgba(22, 19, 13, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jdl-queue-card {
+    transition: none !important;
+  }
 }
 
 .jdl-queue-card__thumb-wrap {
@@ -2827,6 +2860,19 @@ html.dark {
       background: rgba(20, 32, 54, 0.95);
       border-color: rgba(150, 175, 215, 0.28);
     }
+  }
+
+  & .jdl-queue-card--consumed {
+    opacity: 0.65;
+
+    &:hover {
+      opacity: 0.95;
+    }
+  }
+
+  & .jdl-queue-card__consumed-tag {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(231, 237, 246, 0.7);
   }
 
   & .jdl-queue-card__headline {

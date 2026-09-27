@@ -17,6 +17,7 @@ import type {
 import { generateAnchorSpokenScript } from "@/lib/broadcast/anchor-script-engine";
 import { speechController } from "./speechController";
 import { matchesCanonicalCategory } from "./lib/categories";
+import { DURG_SOLAR_AD_SEGMENT } from "./lib/ad-segment";
 
 function buildBroadcastQueue(
   rawQueue: BroadcastSegment[],
@@ -110,6 +111,7 @@ const initialState: BroadcastState = {
   segmentToken: 1,
   selectedCategory: "all",
   selectedArticle: null,
+  consecutiveNewsCount: 0,
 };
 
 function broadcastReducer(
@@ -203,16 +205,38 @@ function broadcastReducer(
       if (state.queue.length === 0) return state;
 
       const currentId = state.currentSegment?.id;
-      const updatedPlayed = currentId
+      const wasAd = Boolean(state.currentSegment?.isAd);
+
+      const updatedPlayed = currentId && !wasAd
         ? Array.from(new Set([...state.playedIds, currentId]))
         : state.playedIds;
 
-      // Exact filtered queue pool based on selectedCategory
+      const currentNewsCount = state.consecutiveNewsCount ?? 0;
+      const nextNewsCount = wasAd ? 0 : currentNewsCount + 1;
+
+      // Filtered queue pool of eligible news stories based on selectedCategory
       const pool = state.selectedCategory === "all"
-        ? state.queue
-        : state.queue.filter((s) => matchesCanonicalCategory(s, state.selectedCategory));
+        ? state.queue.filter((s) => !s.isAd)
+        : state.queue.filter((s) => !s.isAd && matchesCanonicalCategory(s, state.selectedCategory));
       
       if (pool.length === 0) return state;
+
+      // TV Ad Experience: Exactly after every 3 eligible news stories (Requirement #28, #29, #30, #31, #32)
+      if (!wasAd && nextNewsCount >= 3) {
+        return {
+          ...state,
+          currentSegment: DURG_SOLAR_AD_SEGMENT,
+          countdownRank: 0,
+          isIntro: false,
+          mode: "normal",
+          status: "playing",
+          scriptReady: !!DURG_SOLAR_AD_SEGMENT.script,
+          audioReady: false,
+          segmentToken: state.segmentToken + 1,
+          playedIds: updatedPlayed,
+          consecutiveNewsCount: 0,
+        };
+      }
 
       // If returning from breaking story
       if (state.mode === "breaking") {
@@ -238,35 +262,21 @@ function broadcastReducer(
           segmentToken: state.segmentToken + 1,
           playedIds: updatedPlayed,
           playedBreakingIds: playedBreaking,
+          consecutiveNewsCount: nextNewsCount,
         };
       }
 
-      // Find current item's index in the filtered pool
+      // Find next highest-priority unread/unplayed eligible story
+      const unplayedSeg = pool.find((s) => !updatedPlayed.includes(s.id));
       const currentPoolIdx = pool.findIndex((s) => s.id === currentId);
       const nextPoolIdx = currentPoolIdx + 1;
 
-      if (nextPoolIdx >= pool.length) {
-        // Continuous loop: Prefer unplayed in pool
-        const unplayedSeg = pool.find((s) => !updatedPlayed.includes(s.id));
-        const loopSeg = unplayedSeg || pool[0];
-        const nextPlayed = unplayedSeg ? updatedPlayed : [];
+      const seg = unplayedSeg
+        ? unplayedSeg
+        : (nextPoolIdx < pool.length ? pool[nextPoolIdx] : pool[0]);
 
-        return {
-          ...state,
-          currentIndex: state.queue.findIndex((s) => s.id === loopSeg.id),
-          currentSegment: loopSeg,
-          countdownRank: 0,
-          isIntro: false,
-          mode: loopSeg?.isBreaking ? "breaking" : "normal",
-          status: "playing",
-          scriptReady: !!loopSeg?.script,
-          audioReady: false,
-          segmentToken: state.segmentToken + 1,
-          playedIds: nextPlayed,
-        };
-      }
+      const nextPlayed = unplayedSeg ? updatedPlayed : [];
 
-      const seg = pool[nextPoolIdx];
       return {
         ...state,
         currentIndex: state.queue.findIndex((s) => s.id === seg.id),
@@ -278,7 +288,8 @@ function broadcastReducer(
         scriptReady: !!seg.script,
         audioReady: false,
         segmentToken: state.segmentToken + 1,
-        playedIds: updatedPlayed,
+        playedIds: nextPlayed,
+        consecutiveNewsCount: nextNewsCount,
       };
     }
     case "SET_CATEGORY": {

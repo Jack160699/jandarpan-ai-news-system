@@ -62,23 +62,77 @@ export function NewsScreen() {
     return language === "hi" ? "राज्य डेस्क" : "State Desk";
   }, [seg?.id, seg?.headline, seg?.summary, seg?.section, rawDistrict, language]);
 
-  // Determine active media URL — Genuine Real Source Media Only
+  // Determine active media URL — Genuine Real Source Media Only or approved Ad Creative
+  const isAd = Boolean(seg?.isAd);
+
   const activeMediaUrl = useMemo(() => {
     let img = seg?.imageUrl?.trim() || "";
     if (img.startsWith("http://")) {
       img = img.replace(/^http:\/\//i, "https://");
     }
+    if (isAd && img) return img;
     if (img && !imageError && hasVerifiedRealMedia(img)) {
       return img;
     }
     return null;
-  }, [seg?.id, seg?.imageUrl, imageError]);
+  }, [seg?.id, seg?.imageUrl, imageError, isAd]);
 
   return (
-    <div className="jdl-virtual-screen" aria-live="polite">
+    <div className={`jdl-virtual-screen ${isAd ? "jdl-virtual-screen--ad" : ""}`} aria-live="polite">
       {/* Story media container */}
       <div className="jdl-virtual-screen__media-box">
-        {activeMediaUrl ? (
+        {isAd ? (
+          /* TV Advertisement Display: Clean aspect-ratio container with dedicated advertisement styling */
+          <div
+            className="jdl-tv-ad-screen"
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#08101e",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                top: 8,
+                left: 8,
+                zIndex: 4,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: "rgba(193, 154, 62, 0.92)",
+                color: "#08101e",
+                padding: "3px 8px",
+                borderRadius: 4,
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+              }}
+            >
+              <span>📢 विज्ञापन</span>
+              <span style={{ opacity: 0.6 }}>•</span>
+              <span>दुर्ग सोलर</span>
+            </div>
+            {activeMediaUrl && (
+              <img
+                src={activeMediaUrl}
+                alt="दुर्ग सोलर — विशेष विज्ञापन"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  display: "block",
+                }}
+              />
+            )}
+          </div>
+        ) : activeMediaUrl ? (
           <>
             {/* Ambient background matching the news photograph */}
             <div

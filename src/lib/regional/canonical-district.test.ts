@@ -20,7 +20,7 @@ describe("resolveCanonicalStoryDistrict", () => {
     expect(res.districtSlug).toBe("durg");
     expect(res.nameHi).toBe("दुर्ग");
     expect(res.nameEn).toBe("Durg");
-    expect(res.displayTagHi).toBe("दुर्ग");
+    expect(res.displayTagHi).toBe("दुर्ग (भिलाई)");
   });
 
   it("resolves Raipur from city mention", () => {

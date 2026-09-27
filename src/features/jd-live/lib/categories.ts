@@ -22,6 +22,7 @@ import {
 } from "@/lib/editorial/canonical-categories";
 import { getDistrict } from "@/lib/regional/districts";
 import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
+import { checkStoryEditorialEligibility } from "@/lib/editorial/eligibility";
 
 /**
  * Filter stories strictly by canonical category metadata.
@@ -104,58 +105,69 @@ export function matchesDistrictScope(
 
 /**
  * Prioritizes and filters stories by:
- * 1. Category match (or all if category === 'all')
- * 2. District priority:
- *    - Selected district matching stories FIRST (using canonical district identity)
+ * 1. Editorial Eligibility Gate:
+ *    - Strict 30-day canonical window (published_at >= now - 30 days)
+ *    - Rejection of generic meta/roundup stories ("आज की प्रमुख खबरें...", etc.)
+ *    - Hard media quality gate (real verified media only)
+ * 2. Category match (or all if category === 'all')
+ * 3. Personalized Consumption Priority:
+ *    - Unread / unheard stories FIRST
+ *    - Already consumed stories at the BOTTOM
+ * 4. District priority within each consumption tier:
+ *    - Selected district matching stories FIRST
  *    - Broader Chhattisgarh statewide / desk stories SECOND
- *    - Other eligible broadcast stories THIRD (so queue never starves)
+ *    - Other eligible broadcast stories THIRD
+ * 5. Strict chronological ordering (published_at DESC) preserved in all groups.
  */
 export function getPrioritizedStories(
   stories: BroadcastSegment[],
   categoryId: string,
-  districtSlug?: string | null
+  districtSlug?: string | null,
+  consumedIds?: Set<string>
 ): BroadcastSegment[] {
-  // 1. Filter by category and canonical 30-day window
-  const categoryMatched = stories.filter(
-    (s) => isWithinCanonicalReaderWindow(s.publishedAt) && matchesCanonicalCategory(s, categoryId)
-  );
-  if (categoryMatched.length === 0) return [];
+  // 1. Editorial eligibility filter + category match
+  const eligibleMatched = stories.filter((s) => {
+    // Ads bypass standard news eligibility checks
+    if ((s as any).isAd) return true;
+
+    // Strict editorial eligibility: 30-day window, not a generic roundup, verified media
+    const check = checkStoryEditorialEligibility(s);
+    if (!check.eligible) return false;
+
+    return matchesCanonicalCategory(s, categoryId);
+  });
+
+  if (eligibleMatched.length === 0) return [];
 
   const target = (districtSlug || "").trim().toLowerCase();
-  if (!target || target === "all" || target === "statewide") {
-    return categoryMatched;
-  }
+  const isTargetStatewide = !target || target === "all" || target === "statewide";
 
-  const districtObj = getDistrict(target);
+  const districtObj = !isTargetStatewide ? getDistrict(target) : null;
   const targetSlug = districtObj?.slug ?? target;
   const targetHi = districtObj?.nameHi ?? "";
   const targetEn = (districtObj?.name ?? target).toLowerCase();
   const aliases = (districtObj?.aliases ?? []).map((a) => a.toLowerCase());
 
   const isDistrictMatch = (s: BroadcastSegment) => {
-    // 1. Direct canonical slug match
+    if (isTargetStatewide) return false;
     const segSlug = (s.districtSlug || "").trim().toLowerCase();
     if (segSlug && (segSlug === targetSlug || aliases.includes(segSlug))) {
       return true;
     }
-
-    // 2. Exact match on official district names
     const rawHi = (s.districtHi || "").trim();
     if (targetHi && rawHi === targetHi) {
       return true;
     }
-
     const rawEn = (s.districtEn || "").trim().toLowerCase();
     if (targetEn && rawEn === targetEn) {
       return true;
     }
-
     return false;
   };
 
   const isStatewide = (s: BroadcastSegment) => {
     if (s.geographicScope === "statewide") return true;
-    if (s.districtSlug) return false; // Story belongs to a specific district, never classify as generic statewide!
+    if (s.districtSlug) return false;
     const raw = `${s.district || ""} ${s.districtHi || ""}`.toLowerCase();
     return (
       raw.includes("राज्य") ||
@@ -167,20 +179,6 @@ export function getPrioritizedStories(
     );
   };
 
-  const districtStories: BroadcastSegment[] = [];
-  const statewideStories: BroadcastSegment[] = [];
-  const otherStories: BroadcastSegment[] = [];
-
-  for (const story of categoryMatched) {
-    if (isDistrictMatch(story)) {
-      districtStories.push(story);
-    } else if (isStatewide(story)) {
-      statewideStories.push(story);
-    } else {
-      otherStories.push(story);
-    }
-  }
-
   const sortByFreshnessDesc = (arr: BroadcastSegment[]) => {
     return [...arr].sort((a, b) => {
       const tA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
@@ -189,11 +187,48 @@ export function getPrioritizedStories(
     });
   };
 
-  // Selected District -> matching stories first -> then broader statewide stories -> then other stories
-  // Freshness preserved within each tier
-  return [
-    ...sortByFreshnessDesc(districtStories),
-    ...sortByFreshnessDesc(statewideStories),
-    ...sortByFreshnessDesc(otherStories),
-  ];
+  // Helper to order a group by district priority -> statewide -> other (strictly chronological within tier)
+  const orderTiered = (items: BroadcastSegment[]): BroadcastSegment[] => {
+    if (isTargetStatewide) {
+      return sortByFreshnessDesc(items);
+    }
+    const district: BroadcastSegment[] = [];
+    const statewide: BroadcastSegment[] = [];
+    const other: BroadcastSegment[] = [];
+
+    for (const story of items) {
+      if (isDistrictMatch(story)) {
+        district.push(story);
+      } else if (isStatewide(story)) {
+        statewide.push(story);
+      } else {
+        other.push(story);
+      }
+    }
+
+    return [
+      ...sortByFreshnessDesc(district),
+      ...sortByFreshnessDesc(statewide),
+      ...sortByFreshnessDesc(other),
+    ];
+  };
+
+  // Partition by personalized consumption state if provided
+  if (consumedIds && consumedIds.size > 0) {
+    const unconsumed: BroadcastSegment[] = [];
+    const consumed: BroadcastSegment[] = [];
+
+    for (const s of eligibleMatched) {
+      if (consumedIds.has(s.id)) {
+        consumed.push(s);
+      } else {
+        unconsumed.push(s);
+      }
+    }
+
+    return [...orderTiered(unconsumed), ...orderTiered(consumed)];
+  }
+
+  return orderTiered(eligibleMatched);
 }
+

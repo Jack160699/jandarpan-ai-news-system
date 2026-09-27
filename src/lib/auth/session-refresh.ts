@@ -65,16 +65,15 @@ function envFlag(name: string): string {
 }
 
 export function isE2eAuthEnabled(request?: Request): boolean {
+  const nodeEnv = envFlag("NODE_ENV");
+  const vercelEnv = envFlag("VERCEL_ENV");
+  if (nodeEnv === "production" || vercelEnv === "production") return false;
+
   if (request?.headers.get(E2E_AUTH_HEADER) === E2E_AUTH_HEADER_VALUE) {
     return true;
   }
 
   if (envFlag("ENABLE_E2E_AUTH") === "1") return true;
-
-  const nodeEnv = envFlag("NODE_ENV");
-  const vercelEnv = envFlag("VERCEL_ENV");
-  if (nodeEnv === "production") return false;
-  if (vercelEnv === "production") return false;
 
   // Pulled Vercel project env often sets VERCEL=1 / VERCEL="1".
   if (envFlag("VERCEL") === "1") return false;

@@ -7,6 +7,7 @@ import { useBroadcastQueue } from "../useBroadcastQueue";
 import { useBroadcastScript } from "../useBroadcastScript";
 import { useAnchorVoice } from "../useAnchorVoice";
 import { speechController } from "../speechController";
+import { useStoryConsumption } from "../useStoryConsumption";
 
 /**
  * TeleprompterReadingStrip — Live broadcast synchronized reading strip.
@@ -101,6 +102,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   } = state;
   const { generateScript } = useBroadcastScript();
   const { speak, stop } = useAnchorVoice();
+  const { markConsumed } = useStoryConsumption();
   useBroadcastQueue();
 
   const isPlayingRef = useRef(isPlaying);
@@ -234,6 +236,17 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           segmentToken: token,
         });
       } catch {}
+
+      // Authoritative story consumption completion (Requirement #6, #11)
+      if (
+        !cancelled &&
+        currentSegment &&
+        !currentSegment.isIntro &&
+        !currentSegment.isAd &&
+        currentSegment.id
+      ) {
+        void markConsumed(currentSegment.id);
+      }
 
       if (hardSafetyTimer) {
         clearTimeout(hardSafetyTimer);
@@ -559,11 +572,13 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
           </div>
         )}
 
-        {/* Layer 3: Lower-Third Headline Bar (Full available width, fixed label मुख्य खबर / TOP STORY) */}
-        <div className="jdl-tv__lower-third" aria-live="polite">
-          <div className="jdl-tv__lt-badge">
+        {/* Layer 3: Lower-Third Headline Bar (Full available width, fixed label मुख्य खबर / TOP STORY or विज्ञापन / ADVERTISEMENT) */}
+        <div className={`jdl-tv__lower-third ${currentSegment?.isAd ? "jdl-tv__lower-third--ad" : ""}`} aria-live="polite">
+          <div className={`jdl-tv__lt-badge ${currentSegment?.isAd ? "jdl-tv__lt-badge--ad" : ""}`}>
             <span>
-              {language === "hi" ? "मुख्य खबर" : "TOP STORY"}
+              {currentSegment?.isAd
+                ? (language === "hi" ? "विज्ञापन" : "ADVERTISEMENT")
+                : (language === "hi" ? "मुख्य खबर" : "TOP STORY")}
             </span>
           </div>
           <TeleprompterReadingStrip

@@ -59,6 +59,14 @@ export type BroadcastSegment = {
   canonicalCategories?: string[];
   /** Primary dominant category tag */
   primaryCategory?: string;
+  /** True if this is a commercial advertisement segment */
+  isAd?: boolean;
+  adCampaign?: string;
+  adUrl?: string;
+  /** Internal external story provenance */
+  sourceUrl?: string | null;
+  sourceName?: string | null;
+  canonicalUrl?: string | null;
 };
 
 export type BroadcastState = {
@@ -85,6 +93,7 @@ export type BroadcastState = {
   preBreakingIndex?: number;
   selectedCategory: string;
   selectedArticle: BroadcastSegment | null;
+  consecutiveNewsCount?: number;
 };
 
 export type BroadcastAction =

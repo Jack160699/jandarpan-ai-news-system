@@ -19,6 +19,7 @@ import { DevelopingStoryTeaserCard } from "./DevelopingStoryTeaserCard";
 import { FormatStoryCard } from "./FormatStoryCard";
 import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
 import { resolveCanonicalCategories } from "@/lib/editorial/canonical-categories";
+import { checkStoryEditorialEligibility } from "@/lib/editorial/eligibility";
 
 const LocalPulseLazy = dynamic(
   () =>
@@ -201,8 +202,11 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       if (!a?.id || !a?.slug || !a?.headline?.trim()) continue;
       if (seen.has(a.id) || seen.has(a.slug)) continue;
 
-      // ABSOLUTE MEDIA RULE: ONLY PUBLISH IF HAS VERIFIED REAL SOURCE MEDIA
-      const verifiedImg = extractVerifiedRealMediaUrl(a);
+      // EDITORIAL ELIGIBILITY GATE: 30-day window, reject generic roundups, real media
+      const elig = checkStoryEditorialEligibility(a);
+      if (!elig.eligible) continue;
+
+      const verifiedImg = extractVerifiedRealMediaUrl(a) || a.imageUrl;
       if (!verifiedImg || !hasVerifiedRealMedia(verifiedImg)) continue;
 
       const hasDev = isDevanagari(a.headline);
@@ -264,8 +268,31 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
         isLive: true,
         priorityScore: a.priorityScore || 50,
         publishedAt: a.publishedAt || new Date().toISOString(),
+        sourceUrl: (a as any).editorial_metadata?.source_attribution?.[0]?.article_url || (a as any).sourceUrl || null,
+        sourceName: (a as any).editorial_metadata?.source_attribution?.[0]?.source || (a as any).source || null,
+        canonicalUrl: (a as any).canonicalUrl || null,
       });
     }
+
+    // Starting Story: Prioritize unread / unconsumed stories first on TV (Requirement #12)
+    try {
+      if (typeof window !== "undefined") {
+        const raw = localStorage.getItem("jd_consumed_stories_v1");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const consumedIds = new Set<string>();
+          for (const [id, rec] of Object.entries(parsed as any)) {
+            if ((rec as any).consumed) consumedIds.add(id);
+          }
+          if (consumedIds.size > 0) {
+            const unconsumed = queue.filter((s) => !consumedIds.has(s.id));
+            const consumed = queue.filter((s) => consumedIds.has(s.id));
+            return [...unconsumed, ...consumed];
+          }
+        }
+      }
+    } catch {}
+
     return queue;
   }, [feed, broadcastLang]);
 

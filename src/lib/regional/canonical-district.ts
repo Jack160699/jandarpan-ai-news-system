@@ -191,7 +191,7 @@ function detectGeographicScope(
     allTags.includes("chhattisgarh") ||
     allTags.includes("raipur") ||
     section === "chhattisgarh" ||
-    /छत्तीसगढ़|chhattisgarh/i.test(text)
+    /छत्तीसगढ़|chhattisgarh|साय\s*कैबिनेट|विष्णु\s*देव|महानदी\s*भवन|मंत्रालय|राज्य\s*सरकार|प्रदेश\s*के\s*सभी/i.test(text)
   ) {
     return "statewide";
   }
@@ -238,8 +238,29 @@ export function resolveCanonicalStoryDistrict(
     };
   };
 
+  // Helper to validate whether candidate district conflicts with external non-CG story content
+  const hasConflict = (candidate: string | null | undefined): boolean => {
+    if (!candidate) return false;
+    const text = `${headline} ${summary || ""} ${body || ""}`.toLowerCase();
+    const hlLower = headline.toLowerCase();
+    const EXTERNAL_CITIES = [
+      "mumbai", "मुंबई", "delhi", "दिल्ली", "नई दिल्ली", "new delhi",
+      "kolkata", "कोलकाता", "chennai", "चेन्नई", "bengaluru", "bangalore", "बेंगलुरु",
+      "hyderabad", "हैदराबाद", "pune", "पुणे", "lucknow", "लखनऊ", "patna", "पटना",
+      "jaipur", "जयपुर", "ahmedabad", "अहमदाबाद", "bhopal", "भोपाल", "indore", "इंदौर"
+    ];
+    const hasExternal = EXTERNAL_CITIES.some((city) => hlLower.includes(city));
+    if (!hasExternal) return false;
+    const CG_SIGS = [
+      "chhattisgarh", "छत्तीसगढ़", "raipur", "रायपुर", "durg", "दुर्ग", "bhilai", "भिलाई",
+      "bilaspur", "बिलासपुर", "bastar", "बस्तर", "korba", "कोरबा", "rajnandgaon", "राजनंदगांव",
+      "साय", "विष्णु देव"
+    ];
+    return !CG_SIGS.some((sig) => text.includes(sig));
+  };
+
   // 1. Explicit district metadata (from DB / CMS / props)
-  if (explicitDistrict && !isInvalidDistrict(explicitDistrict)) {
+  if (explicitDistrict && !isInvalidDistrict(explicitDistrict) && !hasConflict(explicitDistrict)) {
     const d = getDistrict(explicitDistrict);
     if (d) return packageDistrict(d);
   }
@@ -258,7 +279,7 @@ export function resolveCanonicalStoryDistrict(
       gm.districtSlug ||
       gm.district;
 
-    if (geoCandidate && !isInvalidDistrict(geoCandidate)) {
+    if (geoCandidate && !isInvalidDistrict(geoCandidate) && !hasConflict(geoCandidate)) {
       const d = getDistrict(geoCandidate);
       if (d) return packageDistrict(d);
     }

@@ -7,6 +7,7 @@ import { useBroadcast } from "../BroadcastContext";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 import { useStoryEngagement, type StoryCommentItem } from "../useStoryEngagement";
+import { useStoryConsumption } from "../useStoryConsumption";
 import { StoryCommentModal } from "./StoryCommentModal";
 import {
   HeartIcon,
@@ -59,13 +60,26 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
   const [serverHeadline, setServerHeadline] = useState<string>("");
   const [serverSummary, setServerSummary] = useState<string>("");
   const [serverDistrict, setServerDistrict] = useState<string>("");
+  const [serverSourceUrl, setServerSourceUrl] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
+
+  const { markConsumed } = useStoryConsumption([article.id]);
+
+  // Meaningful reader consumption tracking: records story as read after 2 seconds dwell (Requirement #6)
+  useEffect(() => {
+    if (!article.id) return;
+    const timer = setTimeout(() => {
+      void markConsumed(article.id);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [article.id, markConsumed]);
 
   useEffect(() => {
     setServerHeadline("");
     setServerSummary("");
     setServerDistrict("");
+    setServerSourceUrl("");
   }, [article.slug]);
 
   const headline =
@@ -117,6 +131,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
           if (data.headline) setServerHeadline(data.headline);
           if (data.summary) setServerSummary(data.summary);
           if (data.district) setServerDistrict(data.district);
+          if (data.sourceUrl) setServerSourceUrl(data.sourceUrl);
         }
       })
       .catch((err) => {
@@ -434,6 +449,59 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
           </>
         )}
       </section>
+
+      {/* ORIGINAL SOURCE CONTINUATION (Requirement #19, #21, #53) */}
+      {(serverSourceUrl || article.sourceUrl || article.canonicalUrl) && (
+        <div
+          className="jd-reader-continuation-wrap"
+          style={{
+            margin: "20px 0 14px",
+            display: "flex",
+            justifyContent: "flex-end",
+            width: "100%",
+          }}
+        >
+          <a
+            href={serverSourceUrl || article.sourceUrl || article.canonicalUrl || "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="jd-reader-continuation-btn"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "10px 18px",
+              borderRadius: "8px",
+              fontSize: "14px",
+              fontWeight: 700,
+              color: "#ffffff",
+              background: "linear-gradient(135deg, #c8102e 0%, #990011 100%)",
+              textDecoration: "none",
+              boxShadow: "0 2px 8px rgba(200, 16, 46, 0.25)",
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            }}
+            title={language === "hi" ? "मूल खबर देखें" : "View original source article"}
+            aria-label={language === "hi" ? "मूल खबर देखें / और पढ़ें" : "View original report"}
+          >
+            <span>{language === "hi" ? "मूल खबर देखें / और पढ़ें" : "View original report"}</span>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </a>
+        </div>
+      )}
 
       {/* ARTICLE BOTTOM ACTION BAR (Exact 5 Actions: Like + count | Comment + count | Views + count | WhatsApp | वापस लाइव) */}
       <section className="jd-reader-actions-section" aria-label="Story actions">

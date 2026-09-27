@@ -10,6 +10,8 @@ import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
 import { CardEngagementRow } from "./CardEngagementRow";
 import { useStoryEngagement } from "../useStoryEngagement";
+import { useStoryConsumption } from "../useStoryConsumption";
+import { DURG_SOLAR_AD_SEGMENT } from "../lib/ad-segment";
 
 function formatRelativeTime(dateStr?: string, lang: "hi" | "en" = "hi"): string {
   if (!dateStr) return lang === "hi" ? "अभी" : "Just now";
@@ -103,16 +105,17 @@ export function MobileInteractiveQueue() {
 
   // Clean stories pool
   const allStories = useMemo(() => {
-    return queue.filter((s) => !s.isIntro);
+    return queue.filter((s) => !s.isIntro && !s.isAd);
   }, [queue]);
 
-  // District-first ordering with statewide fallback + canonical category filter
-  const filteredStories = useMemo(() => {
-    return getPrioritizedStories(allStories, selectedCategory, prefs.homeDistrict);
-  }, [allStories, selectedCategory, prefs.homeDistrict]);
-
-  const storyIds = useMemo(() => filteredStories.map((s) => s.id), [filteredStories]);
+  const storyIds = useMemo(() => allStories.map((s) => s.id), [allStories]);
+  const { consumedIds, markRead } = useStoryConsumption(storyIds);
   const { engagementMap, toggleLike, fetchComments, addComment } = useStoryEngagement(storyIds);
+
+  // District-first ordering with statewide fallback + canonical category filter + personalized unread queue
+  const filteredStories = useMemo(() => {
+    return getPrioritizedStories(allStories, selectedCategory, prefs.homeDistrict, consumedIds);
+  }, [allStories, selectedCategory, prefs.homeDistrict, consumedIds]);
 
   const handleSelectStoryOnTv = (seg: BroadcastSegment) => {
     try {
@@ -136,9 +139,32 @@ export function MobileInteractiveQueue() {
     }
   };
 
+  const handleSelectAdOnTv = () => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("jdl_audio_unlocked", "1");
+        if ("speechSynthesis" in window && window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      }
+    } catch {}
+
+    dispatch({ type: "INTERRUPT_BREAKING", segment: DURG_SOLAR_AD_SEGMENT });
+    dispatch({ type: "SET_PLAYING", isPlaying: true });
+    dispatch({ type: "SET_MUTED", isMuted: false });
+
+    if (typeof window !== "undefined") {
+      const tvEl = document.querySelector(".jdl-tv");
+      if (tvEl) {
+        tvEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+  };
+
   const handleOpenArticle = (e: React.MouseEvent, story: BroadcastSegment) => {
     e.stopPropagation();
     setSelectedArticle(story);
+    void markRead(story.id);
 
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -228,11 +254,15 @@ export function MobileInteractiveQueue() {
               (language === "hi" ? "राज्य डेस्क" : "State Desk");
             const timeLabel = formatRelativeTime(story.publishedAt, language);
 
+            const isConsumed = consumedIds.has(story.id);
+
             return (
               <React.Fragment key={story.id}>
                 {/* Fast-scanning compact card: Tapping anywhere (image, headline, body) plays story on TV */}
                 <article
-                  className={`jdl-queue-card ${isActiveOnTv ? "jdl-queue-card--tv-active" : ""}`}
+                  className={`jdl-queue-card ${isActiveOnTv ? "jdl-queue-card--tv-active" : ""} ${
+                    isConsumed ? "jdl-queue-card--consumed" : ""
+                  }`}
                   onClick={() => handleSelectStoryOnTv(story)}
                   role="button"
                   tabIndex={0}
@@ -262,6 +292,11 @@ export function MobileInteractiveQueue() {
                       {story.isBreaking && (
                         <span className="jdl-queue-card__breaking">
                           {language === "hi" ? "ब्रेकिंग" : "BREAKING"}
+                        </span>
+                      )}
+                      {isConsumed && (
+                        <span className="jdl-queue-card__consumed-tag">
+                          ✓ {language === "hi" ? "सुना गया" : "Consumed"}
                         </span>
                       )}
                       <span className="jdl-queue-card__time">{timeLabel}</span>
@@ -297,8 +332,22 @@ export function MobileInteractiveQueue() {
                   </div>
                 </article>
 
-                {(idx + 1) % 5 === 0 && (
-                  <DurgSolarInlineAd index={Math.floor((idx + 1) / 5)} />
+                {(idx + 1) % 3 === 0 && (
+                  <div
+                    onClick={handleSelectAdOnTv}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelectAdOnTv();
+                      }
+                    }}
+                    style={{ width: "100%", cursor: "pointer" }}
+                    aria-label="दुर्ग सोलर विज्ञापन — टीवी पर देखें"
+                  >
+                    <DurgSolarInlineAd index={Math.floor((idx + 1) / 3)} />
+                  </div>
                 )}
               </React.Fragment>
             );

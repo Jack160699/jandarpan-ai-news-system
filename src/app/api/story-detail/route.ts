@@ -121,6 +121,19 @@ export async function GET(req: NextRequest) {
 
     const activeDistrict = lang === "hi" ? locationHi : locationEn;
 
+    const sourceAttribution = (article as any).editorial_metadata?.source_attribution?.[0];
+    const sourceUrl =
+      sourceAttribution?.article_url ||
+      (article as any).editorial_metadata?.media_source_url ||
+      (article as any).source_url ||
+      null;
+    const sourceName =
+      sourceAttribution?.source ||
+      sourceAttribution?.provider ||
+      (article as any).source_name ||
+      null;
+    const canonicalUrl = (article as any).canonical_url || sourceUrl || null;
+
     return NextResponse.json({
       slug: article.slug,
       headline: activeHeadline,
@@ -147,6 +160,9 @@ export async function GET(req: NextRequest) {
           ? hiFields?.readingTime || article.reading_time || "3 मिनट"
           : enFields?.readingTime || "3 min read",
       translationStatus,
+      sourceUrl,
+      sourceName,
+      canonicalUrl,
     });
   } catch (err: any) {
     console.error("[api/story-detail] error fetching article:", err);
