@@ -50,3 +50,5 @@ next-env.d.ts
 /playwright-report/
 /test-results/
 supabase/.temp/
+sa_parsed.json
+*service_account*.json
