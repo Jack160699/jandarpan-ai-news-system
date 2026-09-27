@@ -49,14 +49,31 @@ export default async function AboutPage() {
         </nav>
 
         <header className="border-b border-stone-200 dark:border-stone-800 pb-6 mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <img
+              src="/brand/google-auth-logo-120.png"
+              alt="Jan Darpan Official Logo"
+              width={64}
+              height={64}
+              className="rounded-xl shadow-md border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 p-1"
+            />
+            <div>
+              <span className="text-2xl md:text-3xl font-black tracking-tight text-stone-900 dark:text-stone-50 uppercase font-sans block">
+                Jan Darpan · जन दर्पण
+              </span>
+              <p className="text-sm md:text-base font-bold text-[var(--jd-red)] m-0">
+                छत्तीसगढ़ की खबरें, सबसे पहले।
+              </p>
+            </div>
+          </div>
           <span className="inline-block rounded-full bg-red-100 dark:bg-red-950/60 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--jd-red)] dark:text-red-400 mb-3">
-            Institutional & Corporate Disclosure
+            Institutional & Corporate Disclosure · Official Public Homepage
           </span>
           <h1 className="m-0 jd-serif text-3xl md:text-4xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
             About {CANONICAL_IDENTITY.publication.name}
           </h1>
           <p className="mt-2 text-base text-stone-600 dark:text-stone-400 leading-relaxed">
-            {CANONICAL_IDENTITY.publication.description}
+            {CANONICAL_IDENTITY.publication.description} Jan Darpan is Chhattisgarh's premier live digital news and broadcasting platform, delivering hyperlocal journalism across all 33 districts alongside essential national coverage in Hindi and English.
           </p>
         </header>
 
@@ -153,6 +170,14 @@ export default async function AboutPage() {
               Readers, sources, and regulatory authorities can inspect our published policies and monthly compliance disclosures:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <Link href="/privacy" className="p-3 rounded-lg border border-red-300 dark:border-red-900/60 hover:border-red-500 transition-colors bg-red-50/40 dark:bg-red-950/20">
+                <span className="font-bold block text-[var(--jd-red)] dark:text-red-400">Privacy Policy · गोपनीयता नीति</span>
+                <span className="text-xs text-stone-600 dark:text-stone-400">Google OAuth 2.0 user data, storage, retention & rights</span>
+              </Link>
+              <Link href="/terms" className="p-3 rounded-lg border border-red-300 dark:border-red-900/60 hover:border-red-500 transition-colors bg-red-50/40 dark:bg-red-950/20">
+                <span className="font-bold block text-[var(--jd-red)] dark:text-red-400">Terms & Conditions · नियम और शर्तें</span>
+                <span className="text-xs text-stone-600 dark:text-stone-400">Platform terms, Google sign-in & acceptable use rules</span>
+              </Link>
               <Link href="/grievance-redressal" className="p-3 rounded-lg border border-stone-200 dark:border-stone-800 hover:border-red-400 transition-colors bg-white dark:bg-stone-900">
                 <span className="font-semibold block text-stone-900 dark:text-stone-100">Grievance Redressal</span>
                 <span className="text-xs text-stone-500">Statutory Rule 11 grievance redressal mechanism</span>

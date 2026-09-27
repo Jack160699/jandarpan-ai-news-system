@@ -22,23 +22,35 @@ export const POLICY_DOCUMENTS: Record<PolicySlug, PolicyDocument> = {
     path: "/terms",
     titleEn: "Terms & Conditions",
     titleHi: "नियम और शर्तें",
-    updated: "May 2026",
+    updated: "September 2026",
     sections: [
       {
-        heading: "Acceptance",
-        body: "By using Jan Darpan you agree to these terms. If you do not agree, please do not use the service.",
+        heading: "1. Acceptance of Terms",
+        body: "By accessing or using Jan Darpan (https://www.jandarpan.news), operated by STRATXCEL SOLUTIONS (OPC) PRIVATE LIMITED, you agree to be bound by these Terms & Conditions and our Privacy Policy. If you do not agree to these terms, you may not access or use the platform.",
       },
       {
-        heading: "Editorial use",
-        body: "News content is provided for personal, non-commercial reading unless otherwise stated. Republication requires written permission.",
+        heading: "2. Google Sign-In & Authentication",
+        body: "Jan Darpan requires secure Google OAuth 2.0 authentication to access full live news coverage, interactive television streams, and reader engagement features. By signing in with Google, you authorize Jan Darpan to verify your identity using your standard Google profile information (name, email address, and avatar image) in strict compliance with Google API Services User Data Policy.",
       },
       {
-        heading: "Accounts & conduct",
-        body: "You must not misuse the platform, attempt unauthorized access, or submit unlawful material through tip lines or forms.",
+        heading: "3. Permitted Editorial Use",
+        body: "All news reports, video broadcasts, anchor transcripts, photographs, and analytical articles published on Jan Darpan are protected under Indian and international copyright law. News content is provided exclusively for personal, non-commercial reading and informational purposes. Republication, automated scraping, syndication, or redistribution without prior written consent from the publisher is strictly prohibited.",
       },
       {
-        heading: "Limitation of liability",
-        body: "We strive for accuracy but do not guarantee completeness. Jan Darpan is not liable for indirect damages arising from use of the service.",
+        heading: "4. User Conduct & Reader Participation",
+        body: "Registered readers may engage with published stories through likes, comments, and community discussions. All user submissions must comply with our Community Guidelines and applicable laws. You agree not to post defamatory, obscene, hate-inciting, unlawful, or sexually explicit material. Jan Darpan reserves the right to moderate, hide, or delete user contributions and suspend accounts that violate these rules.",
+      },
+      {
+        heading: "5. Intellectual Property & Brand Rights",
+        body: "Jan Darpan, the Jan Darpan brand lockup, official logos, masthead designs, and software systems are the exclusive intellectual property of STRATXCEL SOLUTIONS (OPC) PRIVATE LIMITED. No license or ownership right is granted by implication or otherwise.",
+      },
+      {
+        heading: "6. Disclaimers & Limitation of Liability",
+        body: "Jan Darpan strives to report accurate, fact-checked, and timely regional journalism. However, the platform and its news services are provided on an 'as is' and 'as available' basis. To the fullest extent permitted by law, Jan Darpan and its operating company disclaim all warranties and shall not be liable for any indirect, consequential, or punitive damages arising from the use of or inability to use the service.",
+      },
+      {
+        heading: "7. Governing Law & Grievance Redressal",
+        body: "These terms are governed by the laws of India. In compliance with Rule 11 of the Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules, 2021, any statutory grievances regarding published content or platform operations may be submitted to our designated Grievance Officer at shriyanshchandrakar@gmail.com or via our Grievance Redressal portal at /grievance-redressal.",
       },
     ],
   },
@@ -47,23 +59,39 @@ export const POLICY_DOCUMENTS: Record<PolicySlug, PolicyDocument> = {
     path: "/privacy",
     titleEn: "Privacy Policy",
     titleHi: "गोपनीयता नीति",
-    updated: "May 2026",
+    updated: "September 2026",
     sections: [
       {
-        heading: "Data we collect",
-        body: "We may collect device identifiers, language preferences, reading activity, and information you submit voluntarily (e.g. news tips).",
+        heading: "1. Scope & Commitment",
+        body: "Jan Darpan (https://www.jandarpan.news), published by STRATXCEL SOLUTIONS (OPC) PRIVATE LIMITED, is committed to safeguarding reader privacy. This Privacy Policy explains how we collect, store, protect, and handle your personal information when you access our digital news platform and authenticate via Google Sign-In.",
       },
       {
-        heading: "How we use data",
-        body: "Data helps deliver localized news, improve performance, personalize content, and meet legal obligations.",
+        heading: "2. Information We Collect via Google OAuth",
+        body: "When you authenticate using Google Sign-In, we request only the non-sensitive identity scopes (openid, email, profile). We collect: (a) your full name, (b) verified email address, (c) public profile image URL, and (d) Google unique user identifier. We never request access to your Google Drive, Gmail, contacts, search history, or any sensitive scopes.",
       },
       {
-        heading: "Sharing",
-        body: "We do not sell personal data. Limited sharing occurs with analytics, hosting, and advertising partners under contract.",
+        heading: "3. Technical & Telemetry Data",
+        body: "To maintain platform stability, localized news filtering, and compliance reporting, our servers automatically collect non-personally identifiable technical telemetry, including browser type, operating system, IP address, regional language preference (Hindi/English), and reading engagement metrics (e.g., article views, reading duration).",
       },
       {
-        heading: "Your rights",
-        body: "You may request access, correction, or deletion of personal data where applicable law provides those rights.",
+        heading: "4. How We Use Your Information",
+        body: "Your personal data is used solely to: (a) authenticate your identity and maintain your live newsroom session; (b) personalize regional district coverage based on your saved district preference; (c) attribute reader comments, reactions, and bookmarks to your profile; and (d) comply with statutory Indian digital media regulations. Jan Darpan's use of information received from Google APIs adheres to the Google API Services User Data Policy, including Limited Use requirements.",
+      },
+      {
+        heading: "5. Data Storage, Security & Encryption",
+        body: "All user profile records and session tokens are encrypted at rest using industry-standard AES-256 encryption and encrypted in transit using TLS 1.3. User credentials and authentication tokens are securely managed via enterprise-grade Supabase Auth infrastructure with Row-Level Security (RLS) policies enforcing zero cross-tenant or unauthorized data exposure.",
+      },
+      {
+        heading: "6. Data Sharing & Third-Party Disclosure",
+        body: "Jan Darpan maintains a strict zero-sale policy: we do NOT sell, lease, or monetize your personal data to advertisers, data brokers, or third parties. Limited technical data processing is conducted solely by vetted cloud infrastructure providers (Vercel for CDN hosting, Supabase for authentication and database management, Google Cloud for OAuth identity) under strict data protection agreements.",
+      },
+      {
+        heading: "7. Retention & User Rights (Account Deletion)",
+        body: "We retain your profile data only for as long as your account remains active. You possess full rights under applicable data protection laws to: (a) inspect the personal data held about you; (b) request correction of inaccurate data; (c) revoke Jan Darpan's OAuth access via your Google Account Security Settings at any time; and (d) request permanent deletion of your account, comments, and profile data by emailing our support desk at shriyanshchandrakar@gmail.com.",
+      },
+      {
+        heading: "8. Grievance Officer & Contact",
+        body: "For any questions, concerns, or data privacy requests, you may contact our designated Grievance & Data Protection Officer: Shriyansh Chandrakar, STRATXCEL SOLUTIONS (OPC) PRIVATE LIMITED, Email: shriyanshchandrakar@gmail.com, Registered Address: Raipur, Chhattisgarh, India.",
       },
     ],
   },
