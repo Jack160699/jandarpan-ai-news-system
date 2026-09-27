@@ -89,6 +89,7 @@ const DEFAULT_VALUE: ReaderAccountContextValue = {
   loading: false,
   displayName: "Reader",
   avatarInitial: "R",
+  avatarUrl: null,
   email: null,
   syncStatus: null,
   authError: null,
