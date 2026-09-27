@@ -18,145 +18,12 @@
   font-family: var(--jd-ff-ui, system-ui, -apple-system, sans-serif);
 }
 
-/* ─── 1. TOP NAV BAR (HEADER) ────────────────────────────────────────── */
-.jd-auth-header {
-  height: 54px;
-  border-bottom: 1px solid var(--jd-line, #e2e8f0);
-  background: var(--jd-paper-2, #ffffff);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 18px;
-  position: relative;
-  z-index: 25;
-  box-sizing: border-box;
-}
-
-[data-theme="dark"] .jd-auth-header,
-.dark .jd-auth-header {
-  background: #0f172a;
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-.jd-auth-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.jd-auth-brand-logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-  color: inherit;
-}
-
-.jd-auth-brand-circle {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #c8102e;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 900;
-  font-size: 15px;
-  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.35);
-  flex-shrink: 0;
-}
-
-.jd-auth-brand-text {
-  font-weight: 800;
-  font-size: 17px;
-  letter-spacing: 0.05em;
-  color: var(--jd-ink, #0f172a);
-}
-
-[data-theme="dark"] .jd-auth-brand-text,
-.dark .jd-auth-brand-text {
-  color: #f8fafc;
-}
-
-.jd-auth-district-badge {
-  font-size: 11px;
-  font-weight: 700;
-  background: rgba(0, 0, 0, 0.05);
-  padding: 3px 8px;
-  border-radius: 4px;
-  color: var(--jd-ink-3, #64748b);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-[data-theme="dark"] .jd-auth-district-badge,
-.dark .jd-auth-district-badge {
-  background: rgba(255, 255, 255, 0.08);
-  color: #94a3b8;
-}
-
-.jd-auth-header-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.jd-auth-lang-switch {
-  display: inline-flex;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 6px;
-  padding: 2px;
-  gap: 2px;
-}
-
-[data-theme="dark"] .jd-auth-lang-switch,
-.dark .jd-auth-lang-switch {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.jd-auth-lang-btn {
-  background: transparent;
-  color: var(--jd-ink-secondary, #64748b);
-  border: 0;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px 9px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.jd-auth-lang-btn--active {
-  background: #c8102e;
-  color: #ffffff;
-}
-
-.jd-auth-theme-btn {
-  background: transparent;
-  border: 1px solid var(--jd-line, #e2e8f0);
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--jd-ink, #0f172a);
-  transition: background 0.15s ease;
-}
-
-[data-theme="dark"] .jd-auth-theme-btn,
-.dark .jd-auth-theme-btn {
-  border-color: rgba(255, 255, 255, 0.12);
-  color: #f8fafc;
-}
-
-/* ─── 2. RECOGNIZABLE JAN DARPAN NEWSROOM BACKDROP ───────────────────── */
+/* ─── 1. RECOGNIZABLE JAN DARPAN REAL PRODUCTION BACKDROP ─────────── */
 .jd-auth-gate-backdrop {
-  position: absolute;
-  inset: 54px 0 0 0;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
   pointer-events: none !important;
   user-select: none !important;
@@ -169,256 +36,25 @@
 .jd-auth-gate-backdrop--preview {
   filter: blur(3.2px);
   -webkit-filter: blur(3.2px);
-  opacity: 0.96;
+  opacity: 0.98;
 }
 
 /* Phase 2: After 5s Modal Focus (softer contrast behind modal) */
 .jd-auth-gate-backdrop--modal {
-  filter: blur(4.2px);
-  -webkit-filter: blur(4.2px);
-  opacity: 0.52;
+  filter: blur(4.5px);
+  -webkit-filter: blur(4.5px);
+  opacity: 0.42;
 }
 
 [data-theme="dark"] .jd-auth-gate-backdrop--modal,
 .dark .jd-auth-gate-backdrop--modal {
-  opacity: 0.42;
+  opacity: 0.35;
 }
 
-/* Simulated / Real Newsroom Layout */
-.jd-auth-newsroom-shell {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  box-sizing: border-box;
-}
-
-.jd-auth-newsroom-grid {
-  display: grid;
-  grid-template-columns: 1.55fr 1fr;
-  gap: 20px;
-}
-
-@media (max-width: 960px) {
-  .jd-auth-newsroom-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* TV Broadcast Desk */
-.jd-auth-tv-card {
-  background: #0f172a;
-  border-radius: 12px;
-  overflow: hidden;
-  position: relative;
-  min-height: 410px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-}
-
-.jd-auth-tv-video-mock {
-  position: absolute;
-  inset: 0;
-  background-size: cover;
-  background-position: center 25%;
-  background-repeat: no-repeat;
-  background-color: #1e293b;
-}
-
-.jd-auth-tv-top-bar {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 2;
-}
-
-.jd-auth-live-pill {
-  background: rgba(0, 0, 0, 0.78);
-  color: #ffffff;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.jd-auth-live-indicator-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #ef4444;
-  box-shadow: 0 0 6px #ef4444;
-}
-
-.jd-auth-audio-pill {
-  background: rgba(0, 0, 0, 0.78);
-  color: #ffffff;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.jd-auth-breaking-ticker {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #c8102e;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  padding: 10px 16px;
-  font-size: 13px;
-  font-weight: 700;
-  gap: 12px;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.jd-auth-ticker-badge {
-  background: #7f1d1d;
-  color: #fff;
-  padding: 2px 7px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-/* Category Filter Strip */
-.jd-auth-categories-strip {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 4px 0;
-  scrollbar-width: none;
-}
-
-.jd-auth-category-pill {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 5px 12px;
-  border-radius: 20px;
-  background: var(--jd-paper-2, #ffffff);
-  border: 1px solid var(--jd-line, #e2e8f0);
-  color: var(--jd-ink-2, #334155);
-  white-space: nowrap;
-}
-
-.jd-auth-category-pill--active {
-  background: #c8102e;
-  color: #ffffff;
-  border-color: #c8102e;
-}
-
-/* News Queue Cards */
-.jd-auth-queue-column {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.jd-auth-news-card {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: var(--jd-paper-2, #ffffff);
-  border: 1px solid var(--jd-line, #e2e8f0);
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-}
-
-[data-theme="dark"] .jd-auth-news-card,
-.dark .jd-auth-news-card {
-  background: #1e293b;
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.jd-auth-card-thumb {
-  width: 96px;
-  height: 72px;
-  border-radius: 6px;
-  background: #94a3b8;
-  background-size: cover;
-  background-position: center;
-  flex-shrink: 0;
-}
-
-.jd-auth-card-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-width: 0;
-}
-
-.jd-auth-card-meta {
-  font-size: 11px;
-  font-weight: 700;
-  color: #c8102e;
-}
-
-.jd-auth-card-title-mock {
-  height: 14px;
-  background: var(--jd-ink, #0f172a);
-  opacity: 0.8;
-  border-radius: 3px;
-  width: 95%;
-}
-
-.jd-auth-card-title-mock--short {
-  width: 65%;
-}
-
-/* 5-Item Engagement Row in Preview Backdrop */
-.jd-auth-card-engagement {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.jd-auth-engagement-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.jd-auth-read-badge {
-  margin-left: auto;
-  background: #c8102e;
-  color: #ffffff;
-  padding: 2px 7px;
-  border-radius: 4px;
-  font-size: 10.5px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* ─── 3. TRANSLUCENT OVERLAY (SCRIM) ─────────────────────────────────── */
+/* ─── 2. TRANSLUCENT OVERLAY (SCRIM) ─────────────────────────────────── */
 .jd-auth-scrim {
   position: fixed;
-  inset: 54px 0 0 0;
+  inset: 0;
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -572,6 +208,62 @@
 .dark .jd-auth-skip-btn:hover {
   background: #dc2626;
   color: #ffffff;
+}
+
+.jd-auth-banner-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jd-auth-banner-lang-switch {
+  display: inline-flex;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+[data-theme="dark"] .jd-auth-banner-lang-switch,
+.dark .jd-auth-banner-lang-switch {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.jd-auth-banner-lang-btn {
+  background: transparent;
+  color: var(--jd-ink-secondary, #64748b);
+  border: 0;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jd-auth-banner-lang-btn--active {
+  background: #c8102e;
+  color: #ffffff;
+}
+
+.jd-auth-banner-theme-btn {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--jd-ink, #0f172a);
+  transition: background 0.15s ease;
+}
+
+[data-theme="dark"] .jd-auth-banner-theme-btn,
+.dark .jd-auth-banner-theme-btn {
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
 }
 
 /* ─── 5. CENTERED PREMIUM AUTHENTICATION MODAL ───────────────────────── */

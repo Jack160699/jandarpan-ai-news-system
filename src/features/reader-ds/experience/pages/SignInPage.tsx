@@ -7,6 +7,7 @@ import { useReaderAccount } from "@/providers/ReaderAccountProvider";
 import { useReaderPreferences } from "@/providers/ReaderPreferencesProvider";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
+import { ReaderLivePage } from "@/features/reader-ds/live/ReaderLivePage";
 import "@/features/reader-ds/styles/auth-gate.css";
 
 const CONSENT_VERSION = "2026-09-v1";
@@ -75,7 +76,7 @@ function GlobeLanguageIcon() {
 
 function SunIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="5" />
       <line x1="12" y1="1" x2="12" y2="3" />
       <line x1="12" y1="21" x2="12" y2="23" />
@@ -91,60 +92,8 @@ function SunIcon() {
 
 function MoonIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="#dc2626" aria-hidden="true">
-      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-    </svg>
-  );
-}
-
-function MessageIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function WhatsAppIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true">
-      <path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.978-.275-.1-.476-.15-.676.15-.2.301-.777.978-.952 1.179-.176.2-.351.226-.652.075s-1.272-.469-2.423-1.496c-.896-.798-1.5-1.784-1.676-2.085-.175-.301-.019-.464.132-.613.136-.135.301-.351.451-.527.15-.175.2-.301.301-.501.1-.2.05-.376-.025-.526-.075-.15-.676-1.63-.927-2.232-.244-.588-.493-.508-.676-.518l-.577-.01c-.2 0-.526.075-.802.376s-1.053 1.028-1.053 2.508 1.078 2.91 1.229 3.111c.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.898.12.578-.087 1.78-.727 2.03-1.43.25-.702.25-1.304.175-1.43-.075-.125-.276-.2-.577-.35zM12.04 2C6.516 2 2.028 6.488 2.028 12.012c0 1.954.56 3.782 1.53 5.334L2 22l4.823-1.503c1.488.887 3.224 1.39 5.217 1.39 5.524 0 10.012-4.488 10.012-10.012C22.052 6.488 17.564 2 12.04 2z" />
-    </svg>
-  );
-}
-
-function BookReadIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-    </svg>
-  );
-}
-
-function VolumeIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
     </svg>
   );
 }
@@ -233,114 +182,11 @@ export function SignInPage({ feed }: SignInPageProps) {
     }
   };
 
-  // Format sample news items if feed has items or fallback to authentic Chhattisgarh news
-  const breakingNewsText = feed?.breakingTicker?.[0]?.headline || (
-    isHindi
-      ? "रायपुर-दुर्ग नेशनल हाईवे पर भारी जलभराव से यातायात प्रभावित, प्रशासन ने जारी किया अलर्ट..."
-      : "Heavy waterlogging disrupts traffic on Raipur-Durg Highway, administration issues alert..."
-  );
-
-  const newsItems = feed?.trending?.length
-    ? feed.trending.slice(0, 4).map((art, idx) => ({
-        tag: `${art.categoryLabel || (isHindi ? "राज्य" : "State")} • ${art.readingTime || "2 min"}`,
-        headline: art.headline,
-        likes: idx === 0 ? 2 : 0,
-        comments: idx === 0 ? 2 : 0,
-        views: idx === 1 || idx === 3 ? 2 : 0,
-        img: art.imageUrl || "/images/anchor-fallback.jpg"
-      }))
-    : [
-        {
-          tag: isHindi ? "रायपुर • 13 घंटे पहले" : "Raipur • 13h ago",
-          headline: isHindi
-            ? "राजधानी रायपुर में स्मार्ट सिटी प्रोजेक्ट्स के तहत 12 नए जंक्शंस पर मॉडर्न ट्रैफिक सिस्टम शुरू"
-            : "Smart City Projects roll out modern traffic surveillance across 12 major Raipur junctions",
-          likes: 2,
-          comments: 2,
-          views: 0,
-          img: "/images/anchor-fallback.jpg"
-        },
-        {
-          tag: isHindi ? "बिलासपुर • 1 दिन पहले" : "Bilaspur • 1d ago",
-          headline: isHindi
-            ? "बिलासपुर रेल मंडल में 4 नई मेमू ट्रेनों के संचालन की तैयारी, दैनिक यात्रियों को बड़ी राहत"
-            : "Bilaspur railway division readies 4 new MEMU routes, offering relief to daily passengers",
-          likes: 0,
-          comments: 0,
-          views: 2,
-          img: "/images/anchor-fallback.jpg"
-        },
-        {
-          tag: isHindi ? "बस्तर • 1 दिन पहले" : "Bastar • 1d ago",
-          headline: isHindi
-            ? "चित्रकोट और तीरथगढ़ जलप्रपात देखने उमड़े सैलानी, पर्यटन विभाग ने तैनात किए लाइफ गार्ड्स"
-            : "Chitrakote and Tirathgarh waterfalls see surge in visitors, tourism dept deploys safety team",
-          likes: 0,
-          comments: 0,
-          views: 0,
-          img: "/images/anchor-fallback.jpg"
-        },
-        {
-          tag: isHindi ? "दुर्ग • 2 दिन पहले" : "Durg • 2d ago",
-          headline: isHindi
-            ? "भिलाई इस्पात संयंत्र में ग्रीन स्टील उत्पादन के लिए नए सौर ऊर्जा प्रोजेक्ट का शुभारंभ"
-            : "Bhilai Steel Plant initiates landmark solar integration project for green manufacturing",
-          likes: 0,
-          comments: 0,
-          views: 2,
-          img: "/images/anchor-fallback.jpg"
-        },
-      ];
-
   return (
     <div className="jd-auth-gate-container">
-      {/* ─── 1. TOP HEADER (BRAND + DISTRICT + LANGUAGE + THEME) ────── */}
-      <header className="jd-auth-header">
-        <div className="jd-auth-header-left">
-          <div className="jd-auth-brand-logo">
-            <div className="jd-auth-brand-circle">ज</div>
-            <span className="jd-auth-brand-text">
-              {isHindi ? "जन दर्पण" : "JAN DARPAN"}
-            </span>
-          </div>
-          <span className="jd-auth-district-badge">
-            {isHindi ? "रायपुर ▾" : "Raipur ▾"}
-          </span>
-        </div>
-
-        <div className="jd-auth-header-right">
-          {/* Language Switcher */}
-          <div className="jd-auth-lang-switch">
-            <button
-              type="button"
-              onClick={() => setLanguage("hi")}
-              className={`jd-auth-lang-btn ${isHindi ? "jd-auth-lang-btn--active" : ""}`}
-            >
-              हिंदी
-            </button>
-            <button
-              type="button"
-              onClick={() => setLanguage("en")}
-              className={`jd-auth-lang-btn ${!isHindi ? "jd-auth-lang-btn--active" : ""}`}
-            >
-              EN
-            </button>
-          </div>
-
-          {/* Theme Toggle */}
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="jd-auth-theme-btn"
-            aria-label={prefs.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {prefs.theme === "dark" ? <SunIcon /> : <MoonIcon />}
-          </button>
-        </div>
-      </header>
-
-      {/* ─── 2. AUTHENTIC JAN DARPAN NEWSROOM BACKDROP ──────────────── */}
-      {/* Moderately blurred (3.2px), fully recognizable layout, unreadable body text */}
+      {/* ─── 1. AUTHENTIC JAN DARPAN PRODUCTION EXPERIENCE BACKDROP ─── */}
+      {/* Reuses actual production components: ReaderLivePage (Masthead, TV Studio, Queue, Engagement Row) */}
+      {/* Moderately blurred (3.2px), visually authentic, zero content leakage, non-interactive */}
       <div
         className={`jd-auth-gate-backdrop ${
           previewPhase === "preview"
@@ -350,97 +196,10 @@ export function SignInPage({ feed }: SignInPageProps) {
         aria-hidden="true"
         tabIndex={-1}
       >
-        <div className="jd-auth-newsroom-shell">
-          {/* Category Filter Strip */}
-          <div className="jd-auth-categories-strip">
-            {[
-              isHindi ? "सभी" : "All",
-              isHindi ? "राज्य" : "State",
-              isHindi ? "राजनीति" : "Politics",
-              isHindi ? "विकास" : "Development",
-              isHindi ? "अपराध" : "Crime",
-              isHindi ? "बस्तर" : "Bastar",
-              isHindi ? "सरगुजा" : "Surguja",
-              isHindi ? "खेल" : "Sports",
-            ].map((cat, idx) => (
-              <span
-                key={idx}
-                className={`jd-auth-category-pill ${idx === 0 ? "jd-auth-category-pill--active" : ""}`}
-              >
-                {cat}
-              </span>
-            ))}
-          </div>
-
-          <div className="jd-auth-newsroom-grid">
-            {/* Left: TV Studio Live Anchor Desk */}
-            <div className="jd-auth-tv-card">
-              <div
-                className="jd-auth-tv-video-mock"
-                style={{
-                  backgroundImage: "url('/images/anchor-fallback.jpg')",
-                }}
-              />
-              <div className="jd-auth-tv-top-bar">
-                <div className="jd-auth-live-pill">
-                  <span className="jd-auth-live-indicator-dot" />
-                  <span>LIVE • {isHindi ? "रायपुर (छत्तीसगढ़)" : "Raipur (CG)"}</span>
-                </div>
-                <div className="jd-auth-audio-pill">
-                  <VolumeIcon />
-                  <span>{isHindi ? "आवाज़" : "Audio"}</span>
-                </div>
-              </div>
-              <div className="jd-auth-breaking-ticker">
-                <span className="jd-auth-ticker-badge">
-                  {isHindi ? "मुख्य खबर" : "BREAKING"}
-                </span>
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {breakingNewsText}
-                </span>
-              </div>
-            </div>
-
-            {/* Right: Live Editorial Queue Cards */}
-            <div className="jd-auth-queue-column">
-              {newsItems.map((item, idx) => (
-                <div key={idx} className="jd-auth-news-card">
-                  <div
-                    className="jd-auth-card-thumb"
-                    style={{ backgroundImage: `url(${item.img})` }}
-                  />
-                  <div className="jd-auth-card-body">
-                    <span className="jd-auth-card-meta">{item.tag}</span>
-                    <div className="jd-auth-card-title-mock" />
-                    <div className="jd-auth-card-title-mock jd-auth-card-title-mock--short" />
-                    {/* Exactly 5-Section Engagement Row */}
-                    <div className="jd-auth-card-engagement">
-                      <span className="jd-auth-engagement-item">
-                        <HeartIcon /> {item.likes}
-                      </span>
-                      <span className="jd-auth-engagement-item">
-                        <MessageIcon /> {item.comments}
-                      </span>
-                      <span className="jd-auth-engagement-item">
-                        <EyeIcon /> {item.views}
-                      </span>
-                      <span className="jd-auth-engagement-item">
-                        <WhatsAppIcon />
-                      </span>
-                      <span className="jd-auth-read-badge">
-                        <BookReadIcon />
-                        <span>{isHindi ? "पढ़ें" : "Read"}</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        {feed ? <ReaderLivePage feed={feed} /> : null}
       </div>
 
-      {/* ─── 3. OVERLAY & 5-SECOND PREVIEW / AUTHENTICATION MODAL ────── */}
+      {/* ─── 2. OVERLAY & 5-SECOND PREVIEW / AUTHENTICATION MODAL ────── */}
       <div
         className={`jd-auth-scrim ${
           previewPhase === "preview" ? "jd-auth-scrim--preview" : "jd-auth-scrim--modal"
@@ -482,9 +241,32 @@ export function SignInPage({ feed }: SignInPageProps) {
                 </button>
               </>
             ) : (
-              <span style={{ fontSize: 11, fontWeight: 800, color: "#c8102e" }}>
-                {isHindi ? "सुरक्षित लॉगिन" : "Secure Gate"}
-              </span>
+              <div className="jd-auth-banner-controls">
+                <div className="jd-auth-banner-lang-switch">
+                  <button
+                    type="button"
+                    onClick={() => setLanguage("hi")}
+                    className={`jd-auth-banner-lang-btn ${isHindi ? "jd-auth-banner-lang-btn--active" : ""}`}
+                  >
+                    हिंदी
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLanguage("en")}
+                    className={`jd-auth-banner-lang-btn ${!isHindi ? "jd-auth-banner-lang-btn--active" : ""}`}
+                  >
+                    EN
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="jd-auth-banner-theme-btn"
+                  aria-label={prefs.theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {prefs.theme === "dark" ? <SunIcon /> : <MoonIcon />}
+                </button>
+              </div>
             )}
           </div>
         </div>
