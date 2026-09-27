@@ -69,6 +69,18 @@ export function isReaderAuthGateExempt(pathname: string): boolean {
     pathname.startsWith("/login/") ||
     pathname === "/auth/callback" ||
     pathname.startsWith("/auth/callback/") ||
+    pathname === "/terms" ||
+    pathname.startsWith("/terms/") ||
+    pathname === "/privacy" ||
+    pathname.startsWith("/privacy/") ||
+    pathname === "/community-guidelines" ||
+    pathname === "/cookies" ||
+    pathname === "/copyright-content-removal" ||
+    pathname === "/editorial-policy" ||
+    pathname === "/fact-check-policy" ||
+    pathname === "/grievance-redressal" ||
+    pathname === "/contact" ||
+    pathname === "/about" ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
     pathname === "/manifest.json" ||
