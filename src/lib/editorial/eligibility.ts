@@ -25,6 +25,20 @@ const GENERIC_ROUNDUP_PATTERNS = [
   /live\s*updates?:\s*(?:top\s*stories|today'?s\s*headlines)/i,
 ];
 
+/** Commercial/promotional content patterns — must NOT enter editorial news feed */
+const COMMERCIAL_PROMO_PATTERNS = [
+  /iphone\s*\d+/i,
+  /reliance\s*digital/i,
+  /amazon\s*(?:great|sale|festival|offer)/i,
+  /flipkart\s*(?:sale|offer|festival|big\s*billion)/i,
+  /\bblack\s*friday\b/i,
+  /mega\s*(?:sale|offer|deal)/i,
+  /(?:discount|cashback|emi)\s*offer/i,
+  /(?:smartphone|laptop|tv|gadget)\s*(?:offer|deal|price\s*cut)/i,
+  /(?:ऑफर|सेल|डिस्काउंट|छूट)\s*(?:पर|में|के)/i,
+  /(?:reliance|jio|amazon|flipkart|meesho)\s*(?:offer|sale|deal|ऑफर|सेल)/i,
+];
+
 /** External non-Chhattisgarh locations */
 const EXTERNAL_LOCATIONS = [
   "mumbai", "मुंबई", "delhi", "दिल्ली", "नई दिल्ली", "new delhi",
@@ -48,6 +62,15 @@ const CG_DISTRICT_SIGNALS = [
   "sarangarh", "सारंगढ़", "khairagarh", "खैरागढ़", "pendra", "पेंड्रा", "gaurela", "गौरेला",
   "विष्णु देव साय", "विष्णुदेव साय", "साय कैबिनेट", "महानदी", "इंद्रावती"
 ];
+
+/**
+ * Validates whether a headline or summary represents commercial promotional content.
+ */
+export function isCommercialPromoStory(headline?: string | null, summary?: string | null): boolean {
+  if (!headline) return false;
+  const text = `${headline} ${summary || ""}`.trim();
+  return COMMERCIAL_PROMO_PATTERNS.some((p) => p.test(text));
+}
 
 /**
  * Validates whether a headline or summary represents a generic meta-content roundup.
@@ -111,6 +134,11 @@ export function checkStoryEditorialEligibility(story: {
   // 1. Canonical 30-Day Window
   if (!isWithinCanonicalReaderWindow(story.publishedAt)) {
     return { eligible: false, reason: "outside_canonical_30day_window" };
+  }
+
+  // 1.5 Reject Commercial/Promotional Content
+  if (isCommercialPromoStory(story.headline, story.summary)) {
+    return { eligible: false, reason: "commercial_promo_rejected" };
   }
 
   // 2. Reject Generic Roundups

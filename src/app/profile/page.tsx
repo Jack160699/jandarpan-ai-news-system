@@ -64,13 +64,15 @@ export default function ProfilePage() {
   // Editing display profile state (compact modal)
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editName, setEditName] = useState(displayName || "");
-  const [editAvatar, setEditAvatar] = useState(avatarUrl || "");
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string>(avatarUrl || "");
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const openEditModal = () => {
     setEditName(displayName || "");
-    setEditAvatar(avatarUrl || "");
+    setEditAvatarFile(null);
+    setEditAvatarPreview(avatarUrl || "");
     setSaveStatus(null);
     setIsEditingProfile(true);
   };
@@ -120,21 +122,35 @@ export default function ProfilePage() {
     setSaveStatus(isHi ? "सहेजा जा रहा है..." : "Saving...");
 
     try {
-      const res = await updateDisplayName(editName);
-      if (res.ok) {
-        const local = loadLocalEditableProfile() ?? DEFAULT_EDITABLE_PROFILE;
-        let updated = applyCustomDisplayName(local, editName);
-        if (editAvatar) {
-          updated = applyCustomAvatarUrl(updated, editAvatar);
+      if (editAvatarFile) {
+        // Upload file to Supabase storage via /api/reader/profile multipart
+        const formData = new FormData();
+        formData.set("displayName", editName);
+        formData.set("avatar", editAvatarFile);
+        const res = await fetch("/api/reader/profile", { method: "POST", body: formData });
+        if (res.ok) {
+          const json = await res.json();
+          const newAvatarUrl: string = json?.avatarUrl || editAvatarPreview;
+          const local = loadLocalEditableProfile() ?? DEFAULT_EDITABLE_PROFILE;
+          let updated = applyCustomDisplayName(local, editName);
+          updated = applyCustomAvatarUrl(updated, newAvatarUrl);
+          saveLocalEditableProfile(updated);
+          setSaveStatus(isHi ? "सफलतापूर्वक सहेजा गया!" : "Saved successfully!");
+          setTimeout(() => { setIsEditingProfile(false); setSaveStatus(null); }, 1000);
+        } else {
+          setSaveStatus(isHi ? "फ़ोटो अपलोड विफल" : "Photo upload failed");
         }
-        saveLocalEditableProfile(updated);
-        setSaveStatus(isHi ? "सफलतापूर्वक सहेजा गया!" : "Saved successfully!");
-        setTimeout(() => {
-          setIsEditingProfile(false);
-          setSaveStatus(null);
-        }, 1000);
       } else {
-        setSaveStatus(res.error || (isHi ? "त्रुटि हुई" : "Error saving"));
+        const res = await updateDisplayName(editName);
+        if (res.ok) {
+          const local = loadLocalEditableProfile() ?? DEFAULT_EDITABLE_PROFILE;
+          const updated = applyCustomDisplayName(local, editName);
+          saveLocalEditableProfile(updated);
+          setSaveStatus(isHi ? "सफलतापूर्वक सहेजा गया!" : "Saved successfully!");
+          setTimeout(() => { setIsEditingProfile(false); setSaveStatus(null); }, 1000);
+        } else {
+          setSaveStatus(res.error || (isHi ? "त्रुटि हुई" : "Error saving"));
+        }
       }
     } catch {
       setSaveStatus(isHi ? "त्रुटि हुई" : "Error saving");
@@ -958,28 +974,70 @@ export default function ProfilePage() {
                       fontSize: 12,
                       fontWeight: 700,
                       color: "var(--jd-ink)",
-                      marginBottom: 5,
+                      marginBottom: 8,
                     }}
                   >
-                    {isHi ? "प्रोफ़ाइल फ़ोटो लिंक (वैकल्पिक):" : "Profile Photo URL (optional):"}
+                    {isHi ? "प्रोफ़ाइल फ़ोटो (वैकल्पिक):" : "Profile Photo (optional):"}
                   </label>
+                  {/* Photo preview */}
+                  {editAvatarPreview && (
+                    <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+                      <Image
+                        src={editAvatarPreview}
+                        alt="Preview"
+                        width={44}
+                        height={44}
+                        style={{ borderRadius: "50%", objectFit: "cover", border: "2px solid var(--jd-line)" }}
+                        unoptimized
+                      />
+                      <span style={{ fontSize: 11.5, color: "var(--jd-muted)" }}>
+                        {isHi ? "वर्तमान फ़ोटो" : "Current photo"}
+                      </span>
+                    </div>
+                  )}
+                  {/* Hidden file input */}
                   <input
-                    type="url"
-                    value={editAvatar}
-                    onChange={(e) => setEditAvatar(e.target.value)}
-                    placeholder="https://..."
-                    style={{
-                      width: "100%",
-                      padding: "9px 12px",
-                      borderRadius: 8,
-                      border: "1px solid var(--jd-line, #ccc)",
-                      background: "var(--jd-card, #fff)",
-                      color: "var(--jd-ink, #000)",
-                      fontSize: 13.5,
-                      boxSizing: "border-box",
+                    id="profile-avatar-file"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setEditAvatarFile(file);
+                        const previewUrl = URL.createObjectURL(file);
+                        setEditAvatarPreview(previewUrl);
+                      }
                     }}
                   />
+                  <label
+                    htmlFor="profile-avatar-file"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "8px 14px",
+                      borderRadius: 8,
+                      border: "1.5px dashed var(--jd-line, #ccc)",
+                      background: "var(--jd-card, #f8f5f0)",
+                      color: "var(--jd-ink)",
+                      fontSize: 12.5,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      transition: "border-color 0.15s ease",
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="17 8 12 3 7 8"/>
+                      <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    {editAvatarFile
+                      ? (isHi ? `${editAvatarFile.name.slice(0, 20)}...` : "File selected ✓")
+                      : (isHi ? "फ़ोटो चुनें (JPG/PNG)" : "Choose photo (JPG/PNG)")}
+                  </label>
                 </div>
+
 
                 <div
                   style={{

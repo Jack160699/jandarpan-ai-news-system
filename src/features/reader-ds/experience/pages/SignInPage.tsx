@@ -288,7 +288,34 @@ export function SignInPage({ feed }: SignInPageProps) {
           >
             {/* Header Branding */}
             <div className="jd-auth-modal-brand">
-              <div className="jd-auth-modal-emblem" aria-hidden="true">ज</div>
+              <div className="jd-auth-modal-emblem" aria-hidden="true">
+                {/* Official Jan Darpan Brand Seal */}
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 28 28"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  {/* Crimson background circle */}
+                  <circle cx="14" cy="14" r="14" fill="#c8102e" />
+                  {/* Gold accent ring */}
+                  <circle cx="14" cy="14" r="11.5" fill="none" stroke="#d4a84b" strokeWidth="1" />
+                  {/* Devanagari ज letterform */}
+                  <text
+                    x="14"
+                    y="19.5"
+                    textAnchor="middle"
+                    fontFamily="'Noto Serif Devanagari', serif"
+                    fontWeight="700"
+                    fontSize="14"
+                    fill="#ffffff"
+                  >
+                    ज
+                  </text>
+                </svg>
+              </div>
               <span className="jd-auth-modal-title-text">
                 {isHindi ? "जन दर्पण" : "Jan Darpan"}
               </span>

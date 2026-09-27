@@ -388,26 +388,6 @@ export function MobileInteractiveQueue() {
                       <h3 className="jdl-queue-card__headline" title={headline}>
                         {headline}
                       </h3>
-
-                      {/* If actively playing on TV, show compact status chip */}
-                      {isActiveOnTv && (
-                        <div
-                          className="jdl-queue-card__live-chip"
-                          aria-label={
-                            language === "hi"
-                              ? "टीवी पर लाइव चल रहा है"
-                              : "Live on TV"
-                          }
-                        >
-                          <span
-                            className="jdl-queue-card__pulse-dot"
-                            aria-hidden="true"
-                          />
-                          <span>
-                            {language === "hi" ? "टीवी पर लाइव" : "LIVE ON TV"}
-                          </span>
-                        </div>
-                      )}
                     </div>
 
                     {/* Instagram-like Double Tap Heart Feedback Overlay */}

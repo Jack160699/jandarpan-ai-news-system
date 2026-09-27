@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useJdDsT } from "../i18n";
 import { BrandMark } from "./BrandMark";
@@ -29,6 +30,9 @@ type MastheadProps = {
  * Compact sticky phone masthead:
  * Left — approved compact lockup on home; mark + title on inner pages.
  * Right — Day/Night toggle + Language toggle on home; Search · Notifications · Profile on inner pages.
+ *
+ * Scroll-hide: slides upward when user scrolls down, reveals on upward scroll.
+ * Respects prefers-reduced-motion (transition is skipped if user has reduced-motion preference).
  */
 export function Masthead({
   pageTitle,
@@ -43,8 +47,42 @@ export function Masthead({
   const { language, setLanguage } = useLanguage();
   const isHomeBrand = !closeHref && !back && !pageTitle;
 
+  const headerRef = useRef<HTMLElement>(null);
+  const lastScrollY = useRef(0);
+  const ticking = useRef(false);
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
+    const handleScroll = () => {
+      if (ticking.current) return;
+      ticking.current = true;
+      requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const header = headerRef.current;
+        if (header) {
+          if (currentY > lastScrollY.current && currentY > 60) {
+            // Scrolling down — hide header
+            header.classList.add("jd-masthead--hidden");
+          } else {
+            // Scrolling up — show header
+            header.classList.remove("jd-masthead--hidden");
+          }
+        }
+        lastScrollY.current = currentY;
+        ticking.current = false;
+      });
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+
   return (
     <header
+      ref={headerRef}
       className="jd-masthead"
       data-jd-locale={locale}
       data-testid="jd-masthead"
@@ -59,6 +97,8 @@ export function Masthead({
         padding: "6px 8px 6px 10px",
         height: "56px",
         boxSizing: "border-box",
+        transition: "transform 0.25s ease",
+        willChange: "transform",
       }}
     >
       <div

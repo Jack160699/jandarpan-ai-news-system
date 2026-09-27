@@ -16,17 +16,8 @@ export function useBroadcastQueue() {
   const playedIdsRef = useRef(state.playedIds);
   playedIdsRef.current = state.playedIds;
 
-  const playedBreakingIdsRef = useRef(state.playedBreakingIds);
-  playedBreakingIdsRef.current = state.playedBreakingIds;
-
   const sessionSeedRef = useRef(state.sessionSeed);
   sessionSeedRef.current = state.sessionSeed;
-
-  const modeRef = useRef(state.mode);
-  modeRef.current = state.mode;
-
-  const currentSegmentRef = useRef(state.currentSegment);
-  currentSegmentRef.current = state.currentSegment;
 
   const fetchFeed = useCallback(async () => {
     try {
@@ -37,19 +28,10 @@ export function useBroadcastQueue() {
       const data = await res.json() as { queue: BroadcastSegment[]; breaking: BroadcastSegment[] };
       lastFetchRef.current = Date.now();
 
-      // ALWAYS populate the queue first — this must happen before any breaking interruption
-      // so NEXT_SEGMENT has stories to advance into after breaking ends.
+      // Populate the queue — feed refresh NEVER interrupts or replaces the active story.
+      // Breaking story auto-interruption has been intentionally removed:
+      // the active-story lock in SET_QUEUE already protects activeStoryId.
       dispatch({ type: "SET_QUEUE", queue: data.queue, breaking: data.breaking });
-
-      // If there's a new breaking story we haven't shown, interrupt into it during active broadcast
-      if (data.breaking && data.breaking.length > 0 && modeRef.current === "normal") {
-        const latestBreaking = data.breaking[0];
-        const alreadyPlayed = playedBreakingIdsRef.current.includes(latestBreaking.id);
-        const isCurrent = latestBreaking.id === currentSegmentRef.current?.id;
-        if (!alreadyPlayed && !isCurrent) {
-          dispatch({ type: "INTERRUPT_BREAKING", segment: latestBreaking });
-        }
-      }
     } catch {
       // Silently ignore — keep existing queue
     }

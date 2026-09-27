@@ -206,6 +206,17 @@ html[data-font-scale="xl"] .jd-ds {
   overflow-x: hidden;
   overflow-y: visible;
 }
+
+/* Scroll-hide: masthead slides off the top when user scrolls down in the feed */
+.jd-masthead--hidden {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jd-masthead--hidden {
+    transform: none;
+  }
+}
 .jd-ds .jd-bottom-nav a:focus-visible {
   outline: 2px solid var(--jd-gold);
   outline-offset: -2px;

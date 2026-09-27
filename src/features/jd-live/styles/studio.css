@@ -1969,10 +1969,10 @@ html.dark .jdl-mobile-queue__active-dot {
 
 .jdl-queue-card__headline {
   margin: 0;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 15.5px;
+  font-weight: 750;
   color: var(--jd-ink, #16130d);
-  line-height: 1.35;
+  line-height: 1.38;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -2189,8 +2189,8 @@ html.dark .jdl-mobile-queue__active-dot {
   }
 
   .jdl-queue-card__headline {
-    font-size: 13px;
-    line-height: 1.32;
+    font-size: 13.5px;
+    line-height: 1.34;
   }
 
   .jdl-engagement-item {
@@ -2202,6 +2202,14 @@ html.dark .jdl-mobile-queue__active-dot {
   .jdl-queue-card__read-btn {
     font-size: 11px;
     padding: 0 4px;
+  }
+}
+
+@media (min-width: 768px) {
+  .jdl-queue-card__headline {
+    font-size: 16.5px;
+    font-weight: 750;
+    line-height: 1.38;
   }
 }
 
