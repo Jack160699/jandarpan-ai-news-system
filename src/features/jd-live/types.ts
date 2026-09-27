@@ -94,10 +94,21 @@ export type BroadcastState = {
   selectedCategory: string;
   selectedArticle: BroadcastSegment | null;
   consecutiveNewsCount?: number;
+  /** Full eligible pool of stories before category/consumption partitioning */
+  rawPool: BroadcastSegment[];
+  /** Stable string ID of the current active story */
+  activeStoryId: string | null;
+  /** Authoritative set of consumed story IDs */
+  consumedIds: Set<string>;
+  /** Timestamp of last feed refresh */
+  lastFeedRefresh?: number;
 };
 
 export type BroadcastAction =
   | { type: "SET_QUEUE"; queue: BroadcastSegment[]; breaking: BroadcastSegment[] }
+  | { type: "SET_CONSUMED_IDS"; consumedIds: Set<string> }
+  | { type: "MARK_CONSUMED"; storyId: string }
+  | { type: "SELECT_STORY"; story: BroadcastSegment }
   | { type: "SET_LANGUAGE"; language: BroadcastLanguage }
   | { type: "SET_MODE"; mode: BroadcastMode }
   | { type: "SET_STATUS"; status: BroadcastStatus }

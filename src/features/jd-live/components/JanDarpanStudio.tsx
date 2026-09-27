@@ -8,6 +8,7 @@ import { useBroadcastScript } from "../useBroadcastScript";
 import { useAnchorVoice } from "../useAnchorVoice";
 import { speechController } from "../speechController";
 import { useStoryConsumption } from "../useStoryConsumption";
+import { selectNextPlayableStory } from "../lib/queue-engine";
 
 /**
  * TeleprompterReadingStrip — Live broadcast synchronized reading strip.
@@ -125,14 +126,18 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
     if (!currentSegment.script) {
       void generateScript(currentSegment);
     }
-    // Preload next story script
+    // Preload next story script from canonical queue
     if (queue.length > 1) {
-      const nextSeg = queue[(currentIndex + 1) % queue.length];
+      const nextSeg = selectNextPlayableStory({
+        queue,
+        consumedIds: state.consumedIds,
+        activeStoryId: currentSegment?.id,
+      });
       if (nextSeg && !nextSeg.script) {
         void generateScript(nextSeg);
       }
     }
-  }, [currentSegment?.id, currentSegment?.script, currentIndex, queue, generateScript]);
+  }, [currentSegment?.id, currentSegment?.script, queue, state.consumedIds, generateScript]);
 
   // ─── UNIFIED BROADCAST RUNTIME ENGINE ─────────────────────────────────────
   // Deterministic state machine:
@@ -245,6 +250,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
         !currentSegment.isAd &&
         currentSegment.id
       ) {
+        dispatch({ type: "MARK_CONSUMED", storyId: currentSegment.id });
         void markConsumed(currentSegment.id);
       }
 
@@ -278,7 +284,11 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
   // Instrument broadcast runtime state for automated E2E testing
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const nextStory = queue[(currentIndex + 1) % Math.max(1, queue.length)];
+      const nextStory = selectNextPlayableStory({
+        queue,
+        consumedIds: state.consumedIds,
+        activeStoryId: currentSegment?.id,
+      });
       (window as unknown as { __JD_BROADCAST_STATE__?: unknown }).__JD_BROADCAST_STATE__ = {
         currentIndex,
         currentStoryId: currentSegment?.id || "",
@@ -293,7 +303,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
         imageUrl: currentSegment?.imageUrl || "",
       };
     }
-  }, [currentIndex, currentSegment, queue, mode, segmentToken, anchorState, isPlaying]);
+  }, [currentIndex, currentSegment, queue, mode, segmentToken, anchorState, isPlaying, state.consumedIds]);
 
   const currentHeadline =
     language === "en"
@@ -381,7 +391,7 @@ export function JanDarpanStudio({ embedded = false }: { embedded?: boolean }) {
         data-testid="jd-broadcast-instrumentation"
         data-current-index={currentIndex}
         data-current-id={currentSegment?.id || ""}
-        data-next-id={queue[(currentIndex + 1) % Math.max(1, queue.length)]?.id || ""}
+        data-next-id={selectNextPlayableStory({ queue, consumedIds: state.consumedIds, activeStoryId: currentSegment?.id })?.id || ""}
         data-queue-count={queue.length}
         data-mode={mode}
         data-segment-token={segmentToken}

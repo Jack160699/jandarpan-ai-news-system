@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useBroadcast } from "../BroadcastContext";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
+import { selectNextPlayableStory } from "../lib/queue-engine";
 
 /**
  * Single clean virtual broadcast display for Jan Darpan Live TV.
@@ -22,16 +23,19 @@ export function NewsScreen() {
   const [imageError, setImageError] = useState(false);
   const [aspectFit, setAspectFit] = useState<"cover" | "contain">("cover");
 
-  // Next story preload
+  // Preload next story image — use authoritative canonical next story, not index arithmetic
   useEffect(() => {
-    if (typeof window === "undefined" || !queue || queue.length <= 1) return;
-    const nextIdx = (currentIndex + 1) % queue.length;
-    const nextSeg = queue[nextIdx];
+    if (typeof window === "undefined" || !queue || queue.length <= 1 || !currentSegment) return;
+    const nextSeg = selectNextPlayableStory({
+      queue,
+      consumedIds: state.consumedIds,
+      activeStoryId: currentSegment.id,
+    });
     if (nextSeg?.imageUrl && hasVerifiedRealMedia(nextSeg.imageUrl)) {
       const preloadImg = new window.Image();
       preloadImg.src = nextSeg.imageUrl;
     }
-  }, [currentIndex, queue]);
+  }, [currentSegment?.id, queue, state.consumedIds]);
 
   // Reset error states on story change
   useEffect(() => {

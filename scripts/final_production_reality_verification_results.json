@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-09-27T11:47:00.820Z",
+  "productionUrl": "https://www.jandarpan.news",
+  "testA_preview": {
+    "status": "PASS",
+    "hasReaderLiveMain": true,
+    "hasMasthead": true,
+    "hasBroadcastLayout": true,
+    "hasOldMockShell": false,
+    "backdropStyles": {
+      "filter": "blur(3.2px)",
+      "pointerEvents": "none",
+      "userSelect": "none",
+      "opacity": "0.98",
+      "position": "fixed"
+    },
+    "modalHiddenDuringPreview": true,
+    "modalVisibleAfter5s": true,
+    "brandTitle": "जन दर्पण",
+    "tagline": "छत्तीसगढ़ की खबरें, सबसे पहले।",
+    "subtitle": "लाइव खबरें देखने के लिए Google से एक टैप में प्रवेश करें।",
+    "fomoPills": [
+      "लाइव टीवी प्रसारण",
+      "33 ज़िले स्थानीय कवरेज",
+      "100% सत्यापित रिपोर्टिंग",
+      "द्विभाषी (हिंदी / EN)"
+    ],
+    "termsUncheckedByDefault": true,
+    "googleDisabledByDefault": true,
+    "screenshots": [
+      "C:\\Users\\shriyansh chandrakar\\.gemini\\antigravity-ide\\brain\\030cd03b-74e5-4148-9230-61309a430039\\final_01_preview_desktop_light.png",
+      "C:\\Users\\shriyansh chandrakar\\.gemini\\antigravity-ide\\brain\\030cd03b-74e5-4148-9230-61309a430039\\final_02_modal_desktop_light.png"
+    ]
+  },
+  "testB_googleBranding": {
+    "status": "PASS",
+    "oauthDestination": "https://accounts.google.com/v3/signin/identifier?opparams=%253Fredirect_to%253Dhttps%25253A%25252F%25252Fwww.jandarpan.news%25252Fauth%25252Fcallback%25253Fnext%25253D%2525252F&dsh=S-1442583113%3A1790509642439369&client_id=502200355392-jiatqsb58l3p4ufargkouee51cpqj6qa.apps.googleusercontent.com&o2v=2&prompt=select_account&redirect_uri=https%3A%2F%2Fgiiuqshoconjbpiueasp.supabase.co%2Fauth%2Fv1%2Fcallback&response_type=code&scope=email+profile&service=lso&state=6cd9904a-9a21-4d7c-8db9-336a3d62a647&flowName=GeneralOAuthLite&continue=https%3A%2F%2Faccounts.google.com%2Fsignin%2Foauth%2Flegacy%2Fconsent%3Fauthuser%3Dunknown%26part%3DAJi8hAMhTtEg7bHqCt8U9m1KC9cB8qZlBuIZV12uNvqSzYaYHDL1SLqXCE_zKpjtjMUABlRWYKcrycbryYuCTzwA5yXD6bCxpAlP9jxVJy2nKlFq3CeN70YIrbZgZLxY-Na6c7vOubCgixi8mfc6vybcTs0Uip7c7dkjuycW-V5QkHtzGNQE3UJgfafzEs4CvX6fqNXCJQijAyZWivu28IKIsRw8EtL59wTQOahDS9WuRSMwVVnHwWZn8ra_CburmWp2q6hdyCBe8gyw1qjJfDdGEZLQhPBaSOPCuTWN-XD-4QOCtWH61k3pzVZgKjYSKnE3Rag-WRAraURGNGOekaD6zcvZlJoDwpBfE3IrSGLB8fHT3jmJl94ImFNybkr6lLZZRohgBqKavZg_OrnX68RhRmviE_2D2-957CQg9mXkFCJOMGcMGovcQbPa3FiENV2hTvnt4XenaJcUpv7bWtLf5Qco3ui8ukZJfZjz9JtTv5VlY9Z9Kow%26flowName%3DGeneralOAuthFlow%26as%3DS-1442583113%253A1790509642439369%26client_id%3D502200355392-jiatqsb58l3p4ufargkouee51cpqj6qa.apps.googleusercontent.com%23&app_domain=https%3A%2F%2Fgiiuqshoconjbpiueasp.supabase.co&rart=ANgoxcdDHRvsjUYEMgeMGIaCSEASLVwjJK6vjrP2VnzntDLL6DdQDk5rjw5O0YbK0UHwDoJNdipEITADu3NV9-RrS1hDsoNzJiXAbl3qyTfeffZKR_ud79c",
+    "oauthTitle": "Sign in - Google Accounts",
+    "hasSilverwest": false,
+    "hasSupabaseDomain": false,
+    "hasJanDarpanText": true,
+    "screenshot": "C:\\Users\\shriyansh chandrakar\\.gemini\\antigravity-ide\\brain\\030cd03b-74e5-4148-9230-61309a430039\\final_06_google_oauth_screen.png"
+  },
+  "testC_authenticatedSession": {
+    "status": "PASS",
+    "authUrl": "https://www.jandarpan.news/",
+    "hasAuthGate": false,
+    "engagementRowCount": 29,
+    "screenshot": "C:\\Users\\shriyansh chandrakar\\.gemini\\antigravity-ide\\brain\\030cd03b-74e5-4148-9230-61309a430039\\final_07_authenticated_production_home.png"
+  },
+  "testD_reloadAndLogout": {
+    "status": "PASS",
+    "postReloadGate": false,
+    "gateReturnsAfterLogout": true
+  }
+}

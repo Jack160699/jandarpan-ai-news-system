@@ -31,7 +31,9 @@ const EXTERNAL_LOCATIONS = [
   "kolkata", "कोलकाता", "chennai", "चेन्नई", "bengaluru", "bangalore", "बेंगलुरु",
   "hyderabad", "हैदराबाद", "pune", "पुणे", "lucknow", "लखनऊ", "patna", "पटना",
   "jaipur", "जयपुर", "ahmedabad", "अहमदाबाद", "bhopal", "भोपाल", "indore", "इंदौर",
-  "varanasi", "वाराणसी", "kanpur", "कानपुर", "chandigarh", "चंडीगढ़"
+  "varanasi", "वाराणसी", "kanpur", "कानपुर", "chandigarh", "चंडीगढ़",
+  "punjab", "पंजाब", "amritsar", "अमृतसर", "jalandhar", "जालंधर", "ludhiana", "लुधियाना",
+  "kerala", "केरल", "tamil nadu", "तमिलनाडु", "bihar", "बिहार", "haryana", "हरियाणा"
 ];
 
 const CG_DISTRICT_SIGNALS = [

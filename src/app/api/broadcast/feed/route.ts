@@ -119,16 +119,7 @@ const SECTION_NAMES_EN: Record<string, string> = {
   entertainment: "Entertainment",
 };
 
-/** Deterministic pseudo-random number for session-based ordering */
-function getPseudoRandom(seedStr: string, index: number): number {
-  let hash = 0;
-  const combined = `${seedStr}_${index}`;
-  for (let i = 0; i < combined.length; i++) {
-    hash = (hash << 5) - hash + combined.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash % 1000) / 1000;
-}
+
 
 /** Detect district name from text */
 function detectDistrict(text: string): string | null {
@@ -519,6 +510,7 @@ export async function GET(req: NextRequest) {
     const seed = searchParams.get("seed") || "default_seed";
     const excludeParam = searchParams.get("exclude") || "";
     const excludeIds = new Set(excludeParam.split(",").map((s) => s.trim()).filter(Boolean));
+    const userId = searchParams.get("userId");
 
     // 1. Gather articles from both generated homepage feed and live pool
     const candidates: BroadcastCandidate[] = [];
@@ -616,17 +608,38 @@ export async function GET(req: NextRequest) {
       return isWithinCanonicalReaderWindow(c.publishedAt);
     });
 
+    // Query server-side consumption if userId was provided
+    if (userId) {
+      try {
+        const { createAdminServerClient } = await import("@/lib/supabase/admin");
+        const supabase = createAdminServerClient();
+        const { data: batch } = await (supabase as any).rpc("get_user_consumption_batch", {
+          p_user_id: userId,
+          p_story_ids: pool.map((c) => c.id),
+        });
+        if (batch && typeof batch === "object") {
+          for (const [sId, rec] of Object.entries(batch as Record<string, any>)) {
+            if (rec?.consumed) {
+              excludeIds.add(sId);
+            }
+          }
+        }
+      } catch {}
+    }
+
     // 3. Separate Breaking Stories (only Chhattisgarh breaking with verified real media)
     const breakingCandidates = pool.filter((c) => c.isBreaking);
     const nonBreakingCandidates = pool.filter((c) => !c.isBreaking);
 
     // 4. Chronological ordering: NEWEST ARTICLE FIRST
-    // Strictly chronological by original published_at, no seriousness or artificial priority score overrides
+    // Deterministic comparator: published_at DESC, with id fallback
     const sortByPublishedAtDesc = (arr: BroadcastCandidate[]) => {
       return [...arr].sort((a, b) => {
-        const tA = new Date(a.publishedAt).getTime() || 0;
-        const tB = new Date(b.publishedAt).getTime() || 0;
-        return tB - tA;
+        const tA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+        const tB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+        const diff = (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
+        if (diff !== 0) return diff;
+        return String(b.id || "").localeCompare(String(a.id || ""));
       });
     };
 

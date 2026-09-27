@@ -1859,15 +1859,15 @@ html.dark .jdl-mobile-queue__active-dot {
 /* ─── COMPACT EDITORIAL NEWS CARD (Requirements #5, #6, #7) ─────────────── */
 .jdl-queue-card {
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: 12px;
+  flex-direction: column;
+  gap: 6px;
   width: 100%;
   padding: 10px 0;
   border-bottom: 1px solid var(--jd-line, #dcd5c5);
   box-sizing: border-box;
   text-align: left;
   transition: background 0.15s ease, opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
 }
 
 .jdl-queue-card:last-child {
@@ -1904,9 +1904,29 @@ html.dark .jdl-mobile-queue__active-dot {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .jdl-queue-card {
+  .jdl-queue-card,
+  .jdl-queue-card__heart-burst {
     transition: none !important;
+    animation: none !important;
   }
+}
+
+.jdl-queue-card__main-content {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  border-radius: 6px;
+  padding: 2px;
+  transition: background 0.15s ease;
+}
+
+.jdl-queue-card__main-content:hover {
+  background: rgba(0, 0, 0, 0.015);
 }
 
 .jdl-queue-card__thumb-wrap {
@@ -1925,7 +1945,7 @@ html.dark .jdl-mobile-queue__active-dot {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .jdl-queue-card__meta {
@@ -1977,24 +1997,6 @@ html.dark .jdl-mobile-queue__active-dot {
   color: var(--jdl-red, #c8102e);
 }
 
-.jdl-queue-card__action-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
-  gap: 8px;
-}
-
-.jdl-queue-card__live-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--jdl-red, #c8102e);
-  letter-spacing: 0.02em;
-}
-
 .jdl-queue-card__live-chip {
   display: inline-flex;
   align-items: center;
@@ -2028,55 +2030,69 @@ html.dark .jdl-mobile-queue__active-dot {
   }
 }
 
-.jdl-queue-card__read-btn {
-  display: inline-flex;
+/* Instagram-like Double Tap Heart Animation Feedback */
+.jdl-queue-card__heart-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 25;
+  pointer-events: none;
+  animation: jdl-heart-burst 0.72s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  background: var(--jdl-red, #c8102e);
-  color: #ffffff !important;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(200, 16, 46, 0.35);
-  transition: transform 0.1s ease, background 0.15s ease, box-shadow 0.15s ease;
-  margin-left: auto;
-  flex-shrink: 0;
+  filter: drop-shadow(0 4px 14px rgba(225, 29, 72, 0.65));
 }
 
-.jdl-queue-card__read-btn:hover {
-  background: var(--jdl-red-dark, #a00d24);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.45);
+.jdl-queue-card__heart-burst svg {
+  width: 52px;
+  height: 52px;
 }
 
-.jdl-queue-card__read-btn:active {
-  transform: translateY(0);
+@keyframes jdl-heart-burst {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0;
+  }
 }
 
-/* ─── NEWS CARD ENGAGEMENT ROW ────────────────────────────────────── */
+/* ─── NEWS CARD FULL-WIDTH ENGAGEMENT ROW (Requirements #30, #34, #54) ────── */
 .jdl-card-engagement-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
+  gap: 5px;
   width: 100%;
-  margin-top: auto;
-  padding-top: 4px;
+  margin-top: 2px;
+  padding: 4px 0 2px 0;
   flex-wrap: nowrap;
+  box-sizing: border-box;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .jdl-engagement-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
+  justify-content: center;
+  gap: 5px;
+  min-height: 38px;
+  padding: 6px 8px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 11.5px;
+  font-weight: 700;
   line-height: 1;
   color: var(--jdl-ink-secondary, #4b5563);
   background: transparent;
@@ -2084,7 +2100,8 @@ html.dark .jdl-mobile-queue__active-dot {
   text-decoration: none;
   user-select: none;
   white-space: nowrap;
-  flex-shrink: 0;
+  flex: 1 1 0%;
+  box-sizing: border-box;
 }
 
 .jdl-engagement-btn {
@@ -2101,19 +2118,22 @@ html.dark .jdl-mobile-queue__active-dot {
 
 .jdl-engagement-btn:active {
   transform: translateY(0);
+  background: rgba(0, 0, 0, 0.12);
 }
 
 .jdl-engagement-btn--liked {
   color: #e11d48;
-  background: rgba(225, 29, 72, 0.08);
+  background: rgba(225, 29, 72, 0.09);
 }
 
 .jdl-engagement-btn--liked:hover {
-  background: rgba(225, 29, 72, 0.14);
+  background: rgba(225, 29, 72, 0.15);
 }
 
 .jdl-engagement-btn--whatsapp {
-  padding: 4px 6px;
+  flex: 0 0 44px;
+  min-width: 44px;
+  padding: 6px;
 }
 
 .jdl-engagement-btn--whatsapp:hover {
@@ -2139,6 +2159,37 @@ html.dark .jdl-mobile-queue__active-dot {
 
 .jdl-engagement-item--views {
   opacity: 0.85;
+}
+
+.jdl-queue-card__read-btn {
+  flex: 1.25 1 0%;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--jdl-red, #c8102e);
+  color: #ffffff !important;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(200, 16, 46, 0.35);
+  transition: transform 0.1s ease, background 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.jdl-queue-card__read-btn:hover {
+  background: var(--jdl-red-dark, #a00d24);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(200, 16, 46, 0.45);
+}
+
+.jdl-queue-card__read-btn:active {
+  transform: translateY(0);
 }
 
 /* ─── COMMENT MODAL ───────────────────────────────────────────────── */
@@ -2887,6 +2938,29 @@ html.dark {
     background: var(--jd-red-bright, #e05a63);
     box-shadow: 0 0 6px rgba(224, 90, 99, 0.8);
   }
+
+  & .jdl-card-engagement-row {
+    border-top-color: rgba(150, 175, 215, 0.12);
+  }
+
+  & .jdl-engagement-item {
+    color: rgba(231, 237, 246, 0.78);
+  }
+
+  & .jdl-engagement-btn {
+    background: rgba(255, 255, 255, 0.06);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+    }
+  }
+
+  & .jdl-engagement-btn--liked {
+    background: rgba(225, 29, 72, 0.18);
+    color: #fb7185;
+  }
+
 
   /* Open Article Reader */
   & .jd-open-reader {
