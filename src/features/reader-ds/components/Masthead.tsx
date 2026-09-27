@@ -65,9 +65,11 @@ export function Masthead({
           if (currentY > lastScrollY.current && currentY > 60) {
             // Scrolling down — hide header
             header.classList.add("jd-masthead--hidden");
+            document.body.classList.add("jd-header-hidden");
           } else {
             // Scrolling up — show header
             header.classList.remove("jd-masthead--hidden");
+            document.body.classList.remove("jd-header-hidden");
           }
         }
         lastScrollY.current = currentY;
@@ -76,7 +78,11 @@ export function Masthead({
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      // Ensure cleanup on unmount
+      document.body.classList.remove("jd-header-hidden");
+    };
   }, []);
 
 

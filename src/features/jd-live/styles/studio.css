@@ -959,6 +959,14 @@
     top: 56px;
     z-index: 30;
     box-shadow: 0 4px 16px rgba(10, 22, 40, 0.4);
+    transition: top 0.25s ease;
+  }
+
+  /* When masthead hides on scroll, TV expands to top of viewport */
+  .jd-masthead--hidden ~ * .jdl-broadcast-tv-col,
+  .jd-masthead--hidden + * .jdl-broadcast-tv-col,
+  body.jd-header-hidden .jdl-broadcast-tv-col {
+    top: 0;
   }
 
   .jdl-mobile-queue__header {
@@ -967,6 +975,21 @@
     top: calc(56px + 56.25vw);
     z-index: 29;
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+    transition: top 0.25s ease;
+  }
+
+  /* When masthead hides, queue header also shifts up */
+  body.jd-header-hidden .jdl-mobile-queue__header {
+    top: calc(0px + 56.25vw);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .jdl-broadcast-tv-col {
+      transition: none;
+    }
+    .jdl-mobile-queue__header {
+      transition: none;
+    }
   }
 }
 
