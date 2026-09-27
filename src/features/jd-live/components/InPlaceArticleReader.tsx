@@ -6,6 +6,16 @@ import type { BroadcastSegment } from "../types";
 import { useBroadcast } from "../BroadcastContext";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
+import { useStoryEngagement, type StoryCommentItem } from "../useStoryEngagement";
+import { StoryCommentModal } from "./StoryCommentModal";
+import {
+  HeartIcon,
+  CommentIcon,
+  ViewsIcon,
+  WhatsAppIcon,
+  BookIcon,
+  formatEngagementCount,
+} from "./CardEngagementRow";
 
 function formatFullDate(dateStr?: string, lang: "hi" | "en" = "hi"): string {
   if (!dateStr) return "";
@@ -30,13 +40,20 @@ function formatFullDate(dateStr?: string, lang: "hi" | "en" = "hi"): string {
  * 1. OPEN READING CANVAS: Integrated into page layout, no boxy card shell or heavy borders.
  * 2. PREMIUM READABLE TYPOGRAPHY: Large prominent headline, generous paragraph spacing, optimal line height.
  * 3. NO PUBLIC SOURCE LABELS: Remove public source/provider labels from UI while preserving backend provenance.
- * 4. UNIFIED CONTROL SYSTEM: Back, Share, WhatsApp icon buttons share identical dimensions, radius, and weights.
- * 5. RELATED ARTICLES: Horizontal geometry (IMAGE LEFT + CONTENT RIGHT) powered by canonical metadata.
- * 6. FIRST-CLASS LIGHT/DARK CONTRAST: High readability across themes.
+ * 4. ARTICLE BOTTOM BAR: Exactly 5 actions: Like + count | Comment + count | Views + count | WhatsApp | वापस लाइव.
+ * 5. COMMENTS EXPERIENCE: Initial 5 comments + Load more, keeps article open.
+ * 6. RELATED ARTICLES: Open layout matching homepage card geometry (IMAGE LEFT + CONTENT RIGHT).
+ * 7. FIRST-CLASS LIGHT/DARK CONTRAST: High readability across themes.
  */
 export function InPlaceArticleReader({ article }: { article: BroadcastSegment }) {
   const { state, setSelectedArticle } = useBroadcast();
   const { language, queue } = state;
+
+  const { engagementMap, toggleLike, fetchComments, addComment } = useStoryEngagement([article.id]);
+  const engagement = engagementMap[article.id] || { views: 0, likes: 0, comments: 0, user_liked: false };
+  const [liking, setLiking] = useState<boolean>(false);
+  const [commentModalOpen, setCommentModalOpen] = useState<boolean>(false);
+  const [commentsList, setCommentsList] = useState<StoryCommentItem[]>([]);
 
   const [fullContent, setFullContent] = useState<string>("");
   const [serverHeadline, setServerHeadline] = useState<string>("");
@@ -122,10 +139,45 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
     return hasVerifiedRealMedia(s) ? s : "";
   }, [article.imageUrl]);
 
-  const handleShareWhatsApp = () => {
-    const shareText = `${headline}\n\nपूरी खबर जन दर्पण पर पढ़ें:\nhttps://www.jandarpan.news/story/${article.slug || ""}`;
-    const url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+  const handleLikeClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (liking) return;
+    setLiking(true);
+    try {
+      await toggleLike(article.id);
+    } finally {
+      setLiking(false);
+    }
+  };
+
+  const handleCommentClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCommentModalOpen(true);
+    const list = await fetchComments(article.id);
+    setCommentsList(list);
+  };
+
+  const handlePostComment = async (text: string): Promise<boolean> => {
+    const newComment = await addComment(article.id, text);
+    if (newComment) {
+      setCommentsList((prev) => [newComment, ...prev]);
+      return true;
+    }
+    return false;
+  };
+
+  const handleShareWhatsApp = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.jandarpan.news";
+    const storyUrl = article.slug ? `${origin}/story/${article.slug}` : origin;
+    const text = encodeURIComponent(`📰 ${headline}\n\nपढ़ें जन दर्पण पर: ${storyUrl}`);
+    const url = `https://api.whatsapp.com/send?text=${text}`;
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleBackToLive = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedArticle(null);
   };
 
   const handleCopyLink = () => {
@@ -383,57 +435,91 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
         )}
       </section>
 
-      {/* ARTICLE ACTIONS - Unified Jan Darpan Action Row (Requirement #22) */}
+      {/* ARTICLE BOTTOM ACTION BAR (Exact 5 Actions: Like + count | Comment + count | Views + count | WhatsApp | वापस लाइव) */}
       <section className="jd-reader-actions-section" aria-label="Story actions">
         <div className="jd-reader-actions-bar">
+          {/* 1. Like + count */}
           <button
             type="button"
-            onClick={() => setSelectedArticle(null)}
-            className="jd-control-btn jd-control-btn--action"
-            title={language === "hi" ? "लाइव खबरों पर वापस जाएं" : "Return to live feed"}
+            className={`jdl-engagement-item jdl-engagement-btn ${engagement.user_liked ? "jdl-engagement-btn--liked" : ""}`}
+            onClick={handleLikeClick}
+            disabled={liking}
+            aria-label={engagement.user_liked ? (language === "hi" ? "पसंद हटाएं" : "Unlike story") : (language === "hi" ? "पसंद करें" : "Like story")}
+            title={engagement.user_liked ? (language === "hi" ? "पसंद हटाया" : "Unlike") : (language === "hi" ? "पसंद करें" : "Like")}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <span className="jdl-engagement-icon" aria-hidden="true">
+              <HeartIcon filled={engagement.user_liked} />
+            </span>
+            <span className="jdl-engagement-count">{formatEngagementCount(engagement.likes)}</span>
+          </button>
+
+          {/* 2. Comment + count */}
+          <button
+            type="button"
+            className="jdl-engagement-item jdl-engagement-btn"
+            onClick={handleCommentClick}
+            aria-label={language === "hi" ? "टिप्पणियां देखें या लिखें" : "View or add comments"}
+            title={language === "hi" ? "टिप्पणियां देखें / लिखें" : "Comments"}
+          >
+            <span className="jdl-engagement-icon" aria-hidden="true">
+              <CommentIcon />
+            </span>
+            <span className="jdl-engagement-count">{formatEngagementCount(engagement.comments)}</span>
+          </button>
+
+          {/* 3. Views + count */}
+          <div
+            className="jdl-engagement-item jdl-engagement-item--views"
+            title={`${engagement.views.toLocaleString()} ${language === "hi" ? "बार देखा गया" : "views"}`}
+            aria-label={`${engagement.views.toLocaleString()} views`}
+          >
+            <span className="jdl-engagement-icon" aria-hidden="true">
+              <ViewsIcon />
+            </span>
+            <span className="jdl-engagement-count">{formatEngagementCount(engagement.views)}</span>
+          </div>
+
+          {/* 4. WhatsApp (Icon-only SVG, NO text, NO count) */}
+          <button
+            type="button"
+            className="jdl-engagement-item jdl-engagement-btn jdl-engagement-btn--whatsapp"
+            onClick={handleShareWhatsApp}
+            aria-label={language === "hi" ? "WhatsApp पर शेयर करें" : "Share on WhatsApp"}
+            title={language === "hi" ? "WhatsApp पर शेयर करें" : "Share on WhatsApp"}
+          >
+            <span className="jdl-engagement-icon jdl-engagement-icon--whatsapp" aria-hidden="true">
+              <WhatsAppIcon />
+            </span>
+          </button>
+
+          {/* 5. वापस लाइव (Returns user to live feed without breaking sticky TV) */}
+          <button
+            type="button"
+            onClick={handleBackToLive}
+            className="jd-reader-back-to-live-btn"
+            aria-label={language === "hi" ? "लाइव खबरों पर वापस जाएं" : "Return to live feed"}
+            title={language === "hi" ? "वापस लाइव" : "Back to Live"}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
               <line x1="19" y1="12" x2="5" y2="12" />
               <polyline points="12 19 5 12 12 5" />
             </svg>
             <span>{language === "hi" ? "वापस लाइव" : "Back to Live"}</span>
           </button>
-
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="jd-control-btn jd-control-btn--action"
-            title={copied ? (language === "hi" ? "लिंक कॉपी हो गया!" : "Copied!") : (language === "hi" ? "लिंक कॉपी करें" : "Copy link")}
-          >
-            {copied ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-                <polyline points="16 6 12 2 8 6" />
-                <line x1="12" y1="2" x2="12" y2="15" />
-              </svg>
-            )}
-            <span>{copied ? (language === "hi" ? "कॉपी हुआ!" : "Copied!") : (language === "hi" ? "शेयर लिंक" : "Share Link")}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleShareWhatsApp}
-            className="jd-control-btn jd-control-btn--action jd-control-btn--wa-action"
-            title={language === "hi" ? "व्हाट्सएप पर साझा करें" : "Share on WhatsApp"}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
-            </svg>
-            <span>WhatsApp</span>
-          </button>
         </div>
       </section>
 
-      {/* RELATED ARTICLES - Horizontal Geometry: IMAGE LEFT + CONTENT RIGHT (Requirements #23 & #24) */}
+      {/* RELATED ARTICLES - Open Layout matching Homepage Card System (Requirement #6) */}
       {relatedArticles.length > 0 && (
         <section className="jd-reader-related-section" aria-label={language === "hi" ? "संबंधित खबरें" : "Related Articles"}>
           <div className="jd-reader-related-head">
@@ -443,7 +529,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
             </h2>
           </div>
 
-          {/* Exact same geometry as main queue: IMAGE LEFT, CONTENT RIGHT */}
+          {/* Open card list following homepage geometry */}
           <div className="jdl-mobile-queue__list jd-reader-related-list">
             {relatedArticles.map((rel) => {
               const relHeadline =
@@ -494,7 +580,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
                         src={rel.imageUrl}
                         alt=""
                         fill
-                        sizes="84px"
+                        sizes="82px"
                         className="jdl-mobile-queue__thumb"
                         style={{ objectFit: "cover" }}
                         unoptimized
@@ -533,7 +619,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
                       {relHeadline}
                     </h3>
 
-                    {/* Bottom-right: bold, highlighted 'पढ़ें' button */}
+                    {/* Bottom-right: bold, highlighted 'पढ़ें' button with SVG book icon */}
                     <div className="jdl-queue-card__action-row">
                       <span />
                       <button
@@ -545,6 +631,7 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
                         className="jdl-queue-card__read-btn"
                         aria-label={`${relHeadline} — ${language === "hi" ? "पढ़ें" : "Read"}`}
                       >
+                        <BookIcon />
                         <span>{language === "hi" ? "पढ़ें" : "Read"}</span>
                       </button>
                     </div>
@@ -555,6 +642,17 @@ export function InPlaceArticleReader({ article }: { article: BroadcastSegment })
           </div>
         </section>
       )}
+
+      {/* In-place Comment Drawer / Modal for article reader */}
+      <StoryCommentModal
+        isOpen={commentModalOpen}
+        onClose={() => setCommentModalOpen(false)}
+        storyId={article.id}
+        headline={headline}
+        language={language}
+        comments={commentsList}
+        onAddComment={handlePostComment}
+      />
     </article>
   );
 }

@@ -16,7 +16,7 @@ interface CardEngagementRowProps {
   onAddComment: (storyId: string, text: string) => Promise<StoryCommentItem | null>;
 }
 
-function formatEngagementCount(num: number): string {
+export function formatEngagementCount(num: number): string {
   if (!num || num <= 0) return "0";
   if (num >= 1000000) {
     return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
@@ -32,7 +32,7 @@ function formatEngagementCount(num: number): string {
  * Unified design family: 16x16 optical size, ~1.85px stroke, crisp vectors.
  */
 
-function HeartIcon({ filled }: { filled: boolean }) {
+export function HeartIcon({ filled }: { filled: boolean }) {
   if (filled) {
     return (
       <svg
@@ -69,7 +69,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function CommentIcon() {
+export function CommentIcon() {
   return (
     <svg
       width="16"
@@ -88,7 +88,7 @@ function CommentIcon() {
   );
 }
 
-function ViewsIcon() {
+export function ViewsIcon() {
   return (
     <svg
       width="16"
@@ -108,7 +108,7 @@ function ViewsIcon() {
   );
 }
 
-function WhatsAppIcon() {
+export function WhatsAppIcon() {
   return (
     <svg
       width="16"
@@ -126,7 +126,7 @@ function WhatsAppIcon() {
   );
 }
 
-function BookIcon() {
+export function BookIcon() {
   return (
     <svg
       width="13"

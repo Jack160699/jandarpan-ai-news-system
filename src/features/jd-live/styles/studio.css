@@ -2300,6 +2300,53 @@ html.dark .jdl-mobile-queue__active-dot {
   cursor: not-allowed;
 }
 
+.jdl-comment-modal__badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--jdl-muted, #6b7280);
+  margin-left: 4px;
+}
+
+.jdl-comment-modal__empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  color: #9ca3af;
+}
+
+.jdl-comment-modal__empty-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.jdl-comment-modal__more-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
+}
+
+.jdl-comment-modal__load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--jdl-line, #e5e7eb);
+  color: var(--jdl-ink, #111827);
+  border-radius: 20px;
+  padding: 7px 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.jdl-comment-modal__load-more-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
 /* Dark mode support */
 [data-theme="dark"] .jdl-engagement-item,
 .dark .jdl-engagement-item {
@@ -2643,8 +2690,8 @@ html.dark .jdl-mobile-queue__active-dot {
 
 /* ─── ARTICLE ACTIONS SECTION ─────────────────────────────────────────── */
 .jd-reader-actions-section {
-  margin: 36px 0 32px;
-  padding: 20px 0;
+  margin: 32px 0 28px;
+  padding: 16px 0;
   border-top: 1px solid var(--jd-line, #e2ddd0);
   border-bottom: 1px solid var(--jd-line, #e2ddd0);
 }
@@ -2652,11 +2699,38 @@ html.dark .jdl-mobile-queue__active-dot {
 .jd-reader-actions-bar {
   display: flex;
   align-items: center;
+  gap: 6px;
+  width: 100%;
   flex-wrap: wrap;
-  gap: 12px;
 }
 
-/* ─── RELATED ARTICLES (Exact Geometry: IMAGE LEFT + CONTENT RIGHT) ────── */
+.jd-reader-back-to-live-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--jdl-red, #c8102e);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.jd-reader-back-to-live-btn:hover {
+  background: var(--jdl-red-dark, #a00d24);
+  transform: translateY(-1px);
+}
+
+.jd-reader-back-to-live-btn:active {
+  transform: translateY(0);
+}
+
+/* ─── RELATED ARTICLES (Open Layout matching Homepage Card System) ────── */
 .jd-reader-related-section {
   margin-top: 36px;
   padding-top: 24px;
@@ -2688,26 +2762,33 @@ html.dark .jdl-mobile-queue__active-dot {
 .jd-reader-related-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   width: 100%;
 }
 
 .jdl-queue-card--related {
   display: flex !important;
   flex-direction: row !important;
+  align-items: stretch !important;
   gap: 12px !important;
   width: 100% !important;
+  padding: 10px 0 !important;
+  border: none !important;
+  border-bottom: 1px solid var(--jd-line, #dcd5c5) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   box-sizing: border-box !important;
-  background: var(--jd-paper-card, #ffffff);
-  border: 1px solid var(--jd-line, #e2ddd0);
-  border-radius: 6px;
-  padding: 10px 12px;
-  transition: all 0.15s ease;
+  text-align: left !important;
+  transition: background 0.15s ease !important;
+}
+
+.jdl-queue-card--related:last-child {
+  border-bottom: none !important;
 }
 
 .jdl-queue-card--related:hover {
-  border-color: rgba(14, 27, 61, 0.25);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  background: rgba(10, 37, 80, 0.02) !important;
+  border-color: var(--jd-line, #dcd5c5) !important;
+  box-shadow: none !important;
 }
 
 /* ─── FIRST-CLASS DARK MODE TOKEN AUDIT ───────────────────────────────── */
@@ -2856,12 +2937,22 @@ html.dark {
   }
 
   & .jdl-queue-card--related {
-    background: rgba(16, 26, 44, 0.75);
-    border-color: rgba(150, 175, 215, 0.16);
+    background: transparent !important;
+    border-bottom-color: rgba(150, 175, 215, 0.18) !important;
 
     &:hover {
-      background: rgba(22, 36, 62, 0.95);
-      border-color: rgba(150, 175, 215, 0.32);
+      background: rgba(255, 255, 255, 0.03) !important;
+    }
+  }
+
+  & .jdl-comment-modal__load-more-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.28);
     }
   }
 }
