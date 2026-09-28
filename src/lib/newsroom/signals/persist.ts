@@ -195,7 +195,7 @@ export async function persistNewsSignals(
       provider,
       batchIndex,
       batchSize: batch.length,
-      onConflict: "article_url",
+      onConflict: "url_fingerprint",
       ignoreDuplicates: true,
       samplePayload: summarizeInsertRows(batch as Record<string, unknown>[]),
     });
@@ -203,7 +203,7 @@ export async function persistNewsSignals(
     const { data, error } = await supabase
       .from("news_signals")
       .upsert(batch, {
-        onConflict: "article_url",
+        onConflict: "url_fingerprint",
         ignoreDuplicates: true,
       })
       .select("id");

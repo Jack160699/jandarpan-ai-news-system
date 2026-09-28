@@ -142,7 +142,7 @@ export async function publishToLegacyArticles(
     logIngestTrace("legacy_upsert_attempt", {
       batchIndex,
       batchSize: batch.length,
-      onConflict: "article_url",
+      onConflict: "url_fingerprint",
       ignoreDuplicates: false,
       samplePayload: summarizeInsertRows(batch as Record<string, unknown>[]),
     });
@@ -150,7 +150,7 @@ export async function publishToLegacyArticles(
     const { data, error } = await supabase
       .from("news_articles")
       .upsert(batch, {
-        onConflict: "article_url",
+        onConflict: "url_fingerprint",
         // Refresh existing wire rows (published_at, title, images) — do not freeze on old URLs
         ignoreDuplicates: false,
       })
