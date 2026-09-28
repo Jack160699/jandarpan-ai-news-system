@@ -3,13 +3,11 @@
   "crons": [
     {
       "path": "/api/cron/orchestrate",
-      "schedule": "30 0 * * *",
-      "comment": "Morning editorial run — 06:00 IST (00:30 UTC). Fetches, deduplicates, validates, publishes. Includes editorial_generate + editorial_images workers."
+      "schedule": "30 0 * * *"
     },
     {
       "path": "/api/admin/audit-branded-images",
-      "schedule": "0 1 * * *",
-      "comment": "Daily branded image audit at 01:00 UTC (06:30 IST). Removes third-party watermarked images, marks for regeneration."
+      "schedule": "0 1 * * *"
     }
   ]
 }
