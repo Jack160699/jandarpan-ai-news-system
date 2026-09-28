@@ -1,0 +1,125 @@
+# Authoritative twice-daily editorial orchestration.
+#
+# Schedule (all times UTC / Asia/Kolkata = UTC+05:30):
+#   Morning  → 00:30 UTC = 06:00 IST   (primary editorial window, mirrors Vercel Cron backup)
+#   Evening  → 12:30 UTC = 18:00 IST   (second daily editorial window)
+#
+# This workflow is the AUTHORITATIVE scheduler for twice-daily editorial runs.
+# Vercel Cron at 00:30 UTC acts as a backup for the morning run only.
+# GitHub Actions workers.yml (every 30 min) handles continuous ingestion + light processing.
+#
+# Relation to other workflows:
+#   workers.yml   → every 30 min, all stages (ingestion → editorial → publish)
+#   ingest.yml    → every 30 min, ingestion only
+#   editorial.yml → 06:00 IST + 18:00 IST, dedicated full editorial flush
+
+name: Editorial Orchestration (Morning + Evening)
+
+on:
+  schedule:
+    - cron: "30 0 * * *"    # Morning:  00:30 UTC = 06:00 IST (Asia/Kolkata)
+    - cron: "30 12 * * *"   # Evening:  12:30 UTC = 18:00 IST (Asia/Kolkata)
+  workflow_dispatch:
+
+jobs:
+  editorial-orchestrate:
+    name: Full Editorial Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      APP_URL: ${{ secrets.PRODUCTION_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate and normalize production URL
+        run: |
+          if [ -z "${APP_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "ERROR: Set GitHub secrets PRODUCTION_URL and CRON_SECRET"
+            exit 1
+          fi
+          # Normalize apex domain to www
+          case "$APP_URL" in
+            https://jandarpan.news|http://jandarpan.news|\
+            https://jandarpan.news/|http://jandarpan.news/)
+              echo "::warning::Normalizing PRODUCTION_URL apex → https://www.jandarpan.news"
+              echo "APP_URL=https://www.jandarpan.news" >> "$GITHUB_ENV"
+              ;;
+          esac
+          echo "Using APP_URL=${APP_URL}"
+
+      - name: Stage 1 — News ingestion
+        continue-on-error: true
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "fetch_news" \
+            "/api/fetch-news" \
+            "POST" \
+            "{}" \
+            "300"
+
+      - name: Stage 2 — Signal clustering
+        continue-on-error: true
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "cluster" \
+            "/api/cron/cluster" \
+            "POST" \
+            "{}" \
+            "300"
+
+      - name: Stage 3 — AI enrichment
+        continue-on-error: true
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "ai_enrich" \
+            "/api/cron/orchestrate" \
+            "POST" \
+            '{"workers":["ai_enrich"]}' \
+            "300"
+
+      - name: Stage 4 — Editorial generation (primary)
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "editorial_generate" \
+            "/api/cron/editorial-generate" \
+            "POST" \
+            "{}" \
+            "300"
+
+      - name: Stage 5 — Edition publication
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "edition_publish" \
+            "/api/cron/edition-publish" \
+            "POST" \
+            "{}" \
+            "300"
+
+      - name: Stage 6 — Full orchestrate (mopping up)
+        continue-on-error: true
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "orchestrate" \
+            "/api/cron/orchestrate" \
+            "POST" \
+            "{}" \
+            "300"
+
+      - name: Stage 7 — Image branding audit
+        continue-on-error: true
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "audit-branded-images" \
+            "/api/admin/audit-branded-images" \
+            "GET"
+
+      - name: Stage 8 — Worker health
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "workers-health" \
+            "/api/cron/workers/health" \
+            "GET"

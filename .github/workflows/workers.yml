@@ -1,8 +1,14 @@
+# Authoritative scheduler: GitHub Actions (this file) + Vercel Cron (00:30 UTC backup).
+# Morning run: 00:30 UTC = 06:00 IST (Asia/Kolkata)
+# Evening run: 12:30 UTC = 18:00 IST (Asia/Kolkata)
+# Timezone reference: all schedules use UTC; IST = UTC+05:30.
 name: Enterprise Workers
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "*/30 * * * *"   # continuous: every 30 min ingestion + light pipeline
+    - cron: "30 0 * * *"     # morning editorial burst: 00:30 UTC = 06:00 IST
+    - cron: "30 12 * * *"    # evening editorial burst: 12:30 UTC = 18:00 IST
   workflow_dispatch:
 
 jobs:
@@ -97,4 +103,12 @@ jobs:
           bash .github/scripts/invoke-cron-endpoint.sh \
             "workers-health" \
             "/api/cron/workers/health" \
+            "GET"
+
+      - name: Image branding audit (idempotent — safe to run every cycle)
+        continue-on-error: true
+        run: |
+          bash .github/scripts/invoke-cron-endpoint.sh \
+            "audit-branded-images" \
+            "/api/admin/audit-branded-images" \
             "GET"
