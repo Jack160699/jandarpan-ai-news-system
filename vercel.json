@@ -4,27 +4,12 @@
     {
       "path": "/api/cron/orchestrate",
       "schedule": "30 0 * * *",
-      "comment": "Morning editorial run — 06:00 IST (00:30 UTC). Fetches, deduplicates, validates, publishes."
-    },
-    {
-      "path": "/api/cron/orchestrate",
-      "schedule": "30 12 * * *",
-      "comment": "Evening editorial run — 18:00 IST (12:30 UTC). Tops up daily inventory to 50+ stories."
-    },
-    {
-      "path": "/api/cron/editorial-generate",
-      "schedule": "5,20,35,50 * * * *",
-      "comment": "Continuous AI editorial generation — every 15 min. Drains worker queue."
+      "comment": "Morning editorial run — 06:00 IST (00:30 UTC). Fetches, deduplicates, validates, publishes. Includes editorial_generate + editorial_images workers."
     },
     {
       "path": "/api/admin/audit-branded-images",
       "schedule": "0 1 * * *",
-      "comment": "Daily branded image audit at 01:00 UTC (06:30 IST). Removes third-party watermarked images."
-    },
-    {
-      "path": "/api/cron/sweep-backlog",
-      "schedule": "0 23 * * *",
-      "comment": "Daily backlog cleanup at 23:00 UTC."
+      "comment": "Daily branded image audit at 01:00 UTC (06:30 IST). Removes third-party watermarked images, marks for regeneration."
     }
   ]
 }
