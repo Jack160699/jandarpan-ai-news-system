@@ -138,15 +138,17 @@ export function ReaderHomepage({
     for (const a of rawList) {
       if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
 
-      // STRICT REAL MEDIA RULE: Clean, verified real story media only
-      const verifiedUrl = extractVerifiedRealMediaUrl(a) || a.imageUrl;
-      if (!verifiedUrl || !hasVerifiedRealMedia(verifiedUrl)) continue;
+      // MEDIA RULE: only clean, verified real photos are ever shown — but a story is never
+      // dropped for lacking one. Images attach asynchronously; the card renders its tinted
+      // fallback until then. (Stock/branded images are still never displayed.)
+      const candidateUrl = extractVerifiedRealMediaUrl(a) || a.imageUrl;
+      const verifiedUrl = candidateUrl && hasVerifiedRealMedia(candidateUrl) ? candidateUrl : undefined;
 
       seen.add(a.slug);
       out.push(
         toReaderStory({
           ...a,
-          imageUrl: verifiedUrl,
+          imageUrl: verifiedUrl ?? "",
         })
       );
     }

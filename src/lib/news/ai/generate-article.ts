@@ -1660,24 +1660,24 @@ async function prepareCandidate(
     };
   }
 
-  // 1. DETERMINISTIC PRE-AI MEDIA GATE: Candidate must possess genuine, clean photojournalism.
-  // If no valid clean media exists, never spend expensive AI generation tokens on this event!
+  // 1. MEDIA IS NOT A PUBLICATION GATE. Text eligibility is independent of image availability:
+  // the article publishes as soon as it passes the text/quality/language/geo gates, and its image
+  // is attached asynchronously by the editorial-image worker (see persistGeneratedArticle:
+  // image.status "queued" / pending_attachment). This gate used to discard 536 of 993 signals (54%)
+  // in 48h before a single AI token was spent — mostly ingestion's Unsplash stock fillers, which
+  // are still never used as story photos (the rights/branding checks below stay in force: a clean
+  // real source photo is used when present, otherwise nothing is invented).
   const mediaCheck = discoverAndValidateCandidateMedia(
     signals,
     storyIndex?.usedImageUrls
   );
   if (!mediaCheck.valid || !mediaCheck.imageUrl) {
-    logEditorial("candidate_rejected_pre_ai_no_media", {
+    logEditorial("candidate_no_source_media_async_image", {
       eventId: event.id,
       reason: mediaCheck.reason,
     });
-    return {
-      candidate: null,
-      skipped: true,
-      reason: mediaCheck.reason ?? "no_clean_eligible_real_media",
-    };
   }
-  const preValidatedRealImageUrl = mediaCheck.imageUrl;
+  const preValidatedRealImageUrl = mediaCheck.imageUrl ?? null;
 
   // 2. EARLY DETERMINISTIC DISTRICT & CATEGORY RESOLUTION (Zero AI cost)
   const earlyDistrict = resolveCanonicalStoryDistrict({
