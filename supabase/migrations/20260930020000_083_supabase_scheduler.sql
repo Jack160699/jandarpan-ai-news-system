@@ -150,6 +150,8 @@ select cron.unschedule(jobid) from cron.job where jobname = 'jd-cron-jobs';
 select cron.schedule('jd-cron-jobs', '4-59/15 * * * *', $job$ select public.jd_invoke_cron('cron-jobs', '/api/cron/jobs', 'POST', 290000); $job$);
 select cron.unschedule(jobid) from cron.job where jobname = 'jd-process-ai';
 select cron.schedule('jd-process-ai', '8-59/15 * * * *', $job$ select public.jd_invoke_cron('process-ai', '/api/process-ai', 'POST', 60000); $job$);
+select cron.unschedule(jobid) from cron.job where jobname = 'jd-audio-generate';
+select cron.schedule('jd-audio-generate', '9-59/10 * * * *', $job$ select public.jd_invoke_cron('audio-generate', '/api/cron/audio-generate', 'POST', 290000); $job$);
 select cron.unschedule(jobid) from cron.job where jobname = 'jd-translation-backfill';
 select cron.schedule('jd-translation-backfill', '10-59/15 * * * *', $job$ select public.jd_invoke_cron('translation-backfill', '/api/cron/translation-backfill', 'POST', 290000); $job$);
 select cron.unschedule(jobid) from cron.job where jobname = 'jd-edition-publish';

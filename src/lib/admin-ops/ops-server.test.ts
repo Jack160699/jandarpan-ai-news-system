@@ -19,8 +19,8 @@ describe("run actions", () => {
     expect(rateLimitRetryAfterSec(t0, 60, base + 500_000)).toBe(0);
   });
 
-  it("accepts only the six known actions", () => {
-    expect(RUN_ACTION_IDS).toHaveLength(6);
+  it("accepts only the seven known actions", () => {
+    expect(RUN_ACTION_IDS).toHaveLength(7);
     for (const id of RUN_ACTION_IDS) {
       expect(isRunActionId(id)).toBe(true);
       expect(RUN_ACTION_META[id].label.length).toBeGreaterThan(5);

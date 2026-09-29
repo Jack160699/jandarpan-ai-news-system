@@ -13,6 +13,7 @@
 import { createAdminServerClient } from "@/lib/supabase";
 import { getActiveCronSecret } from "@/lib/infrastructure/auth/cron-auth";
 import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
+import { generateVoiceSamples } from "@/lib/voice/samples";
 
 import { RUN_ACTION_IDS, RUN_ACTION_META, isRunActionId, type RunActionId } from "@/lib/admin-ops/run-actions-meta";
 
@@ -20,7 +21,7 @@ export { RUN_ACTION_IDS, isRunActionId };
 export type { RunActionId };
 
 type ActionDef = {
-  kind: "http" | "rpc" | "local";
+  kind: "http" | "rpc" | "local" | "voice";
   path?: string;
   method?: "GET" | "POST";
   rpc?: string;
@@ -75,6 +76,12 @@ export const RUN_ACTIONS: Record<RunActionId, ActionDef> = {
     minIntervalSec: 120,
     leaseTtlSec: 600,
     timeoutMs: 295_000,
+  },
+  voice_test: {
+    kind: "voice",
+    minIntervalSec: 300,
+    leaseTtlSec: 600,
+    timeoutMs: 280_000,
   },
 };
 
@@ -187,6 +194,10 @@ export async function startManualRun(
         const { data, error } = await supabase.rpc(def.rpc as never, {} as never);
         if (error) throw new Error(error.message);
         detail = (data as Record<string, unknown>) ?? {};
+      } else if (def.kind === "voice") {
+        const samples = await generateVoiceSamples(runId);
+        detail = { samples };
+        if (samples.every((s) => !s.ok)) throw Object.assign(new Error("all_voice_samples_failed"), { detail });
       } else if (def.kind === "local") {
         await revalidateNewsroomCaches({ publishedStories: 1 });
         detail = { revalidated: ["homepage", "latest", "district", "stories"] };

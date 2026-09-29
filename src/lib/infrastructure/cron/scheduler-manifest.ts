@@ -99,6 +99,17 @@ export const SCHEDULER_JOBS: readonly SchedulerJob[] = [
     timeoutMs: 60_000,
   },
   {
+    id: "audio-generate",
+    label: "News audio generation (Google TTS)",
+    path: "/api/cron/audio-generate",
+    method: "POST",
+    cron: "9-59/10 * * * *",
+    everyMinutes: 10,
+    opsJob: "audio-generate",
+    critical: false,
+    timeoutMs: 290_000,
+  },
+  {
     id: "translation-backfill",
     label: "Translation backfill",
     path: "/api/cron/translation-backfill",

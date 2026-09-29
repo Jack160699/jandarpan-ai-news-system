@@ -30,7 +30,8 @@ import {
   type SourceRowView,
   type SubsystemStatus,
 } from "@/lib/admin-ops/health";
-import type { FunnelCounts, OpsSnapshotRaw, Tone } from "@/lib/admin-ops/types";
+import { googleTtsConfigured } from "@/lib/voice/google-auth";
+import type { FunnelCounts, OpsSnapshotRaw, Tone, VoiceSampleView, VoiceSnapshot } from "@/lib/admin-ops/types";
 
 export const OPS_SNAPSHOT_TAG = "admin-ops-snapshot";
 export const DAILY_PUBLISH_TARGET = Number(process.env.DAILY_PUBLISH_TARGET) || 100;
@@ -84,7 +85,14 @@ export type OpsView = {
   subsystems: SubsystemStatus[];
   overall: Tone;
   scheduler: { pgCronInstalled: boolean; dispatch: OpsSnapshotRaw["scheduler"] };
+  voice: {
+    configured: boolean;
+    snapshot: VoiceSnapshot | null;
+    samples: { runId: string; at: string; status: string; items: VoiceSampleView[] } | null;
+  };
 };
+
+export type VoiceData = { snapshot: VoiceSnapshot | null; samples: OpsView["voice"]["samples"] };
 
 const FUNNEL_LABELS: Array<[keyof FunnelCounts, string]> = [
   ["fetched", "Fetched"],
@@ -101,7 +109,7 @@ const FUNNEL_LABELS: Array<[keyof FunnelCounts, string]> = [
 
 export function buildOpsView(
   raw: OpsSnapshotRaw,
-  runtime: { snapshotLatencyMs: number; now?: number }
+  runtime: { snapshotLatencyMs: number; now?: number; voice?: VoiceData }
 ): OpsView {
   const now = runtime.now ?? Date.now();
   const lagMinutes = ageMinutes(raw.publishing.latest?.published_at, now);
@@ -209,6 +217,11 @@ export function buildOpsView(
     subsystems,
     overall,
     scheduler: { pgCronInstalled: raw.pg_cron_installed, dispatch: raw.scheduler },
+    voice: {
+      configured: googleTtsConfigured(),
+      snapshot: runtime.voice?.snapshot ?? null,
+      samples: runtime.voice?.samples ?? null,
+    },
   };
 }
 
@@ -228,7 +241,32 @@ const cachedRawSnapshot = unstable_cache(fetchRawSnapshot, ["admin-ops-snapshot-
   tags: [OPS_SNAPSHOT_TAG],
 });
 
+/** Voice monitoring data. Every part is optional: a missing migration must never break the dashboard. */
+async function fetchVoiceData(): Promise<VoiceData> {
+  if (!isSupabaseConfigured()) return { snapshot: null, samples: null };
+  const supabase = createAdminServerClient();
+  const [snap, run] = await Promise.all([
+    supabase.rpc("admin_voice_snapshot" as never).then((r) => (r.error ? null : (r.data as unknown as VoiceSnapshot)), () => null),
+    supabase
+      .from("admin_manual_runs" as never)
+      .select("id,status,detail,created_at")
+      .eq("action", "voice_test")
+      .in("status", ["ok", "failed"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then((r) => (r.error ? null : (r.data as { id: string; status: string; detail: { samples?: VoiceSampleView[] } | null; created_at: string } | null)), () => null),
+  ]);
+  const samples = run?.detail?.samples
+    ? { runId: run.id, at: run.created_at, status: run.status, items: run.detail.samples }
+    : null;
+  return { snapshot: snap, samples };
+}
+
 export async function getOpsView(options?: { fresh?: boolean }): Promise<OpsView> {
-  const { raw, latencyMs } = options?.fresh ? await fetchRawSnapshot() : await cachedRawSnapshot();
-  return buildOpsView(raw, { snapshotLatencyMs: latencyMs });
+  const [{ raw, latencyMs }, voice] = await Promise.all([
+    options?.fresh ? fetchRawSnapshot() : cachedRawSnapshot(),
+    fetchVoiceData(),
+  ]);
+  return buildOpsView(raw, { snapshotLatencyMs: latencyMs, voice });
 }

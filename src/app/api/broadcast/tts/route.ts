@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { synthesizeShortVoice } from "@/lib/news/shorts/voice";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { checkPublicApiRateLimit } from "@/lib/security/public-rate-limit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 90;
 
 export async function GET(req: NextRequest) {
+  // This endpoint turns caller-supplied text into paid TTS audio. It was completely open;
+  // bound the abuse surface: per-client rate limit and a broadcast-length cap.
+  const rate = await checkPublicApiRateLimit(req, "broadcast-tts", 20, 3600);
+  if (!rate.allowed) return rate.response;
+
   const { searchParams } = new URL(req.url);
   const text = searchParams.get("text")?.trim();
   const lang = (searchParams.get("lang") || "hi") as NewsroomLanguage;
@@ -14,10 +20,13 @@ export async function GET(req: NextRequest) {
   if (!text || text.length < 2) {
     return NextResponse.json({ error: "missing_text" }, { status: 400 });
   }
+  if (text.length > 700) {
+    return NextResponse.json({ error: "text_too_long", max: 700 }, { status: 413 });
+  }
 
   // Reuse existing synthesizeShortVoice from the shorts pipeline
   const result = await synthesizeShortVoice({
-    script: text.slice(0, 4096),
+    script: text,
     language: lang,
     slug,
   });

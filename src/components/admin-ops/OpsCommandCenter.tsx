@@ -20,6 +20,7 @@ import {
   useNow,
 } from "@/components/admin-ops/OpsPanels";
 import { RunControls } from "@/components/admin-ops/RunControls";
+import { VoicePanel } from "@/components/admin-ops/VoicePanel";
 import { UsersPanel } from "@/components/admin-ops/UsersPanel";
 
 const POLL_MS = Number(process.env.NEXT_PUBLIC_ADMIN_OPS_POLL_MS) || 60_000;
@@ -111,6 +112,7 @@ export function OpsCommandCenter({
       </div>
       <PerformancePanel view={view} />
       <ProvidersPanel view={view} now={now} />
+      <VoicePanel view={view} now={now} />
       <JobsPanel view={view} now={now} />
       {canViewUsers ? <UsersPanel total={view.users.total} /> : null}
     </div>

@@ -7,6 +7,7 @@ export const RUN_ACTION_IDS = [
   "reprocess_stale",
   "refresh_rankings",
   "refresh_analytics",
+  "voice_test",
 ] as const;
 export type RunActionId = (typeof RUN_ACTION_IDS)[number];
 
@@ -35,6 +36,10 @@ export const RUN_ACTION_META: Record<RunActionId, { label: string; description: 
   refresh_analytics: {
     label: "Refresh analytics",
     description: "Drain the worker-job queue (analytics aggregation, snapshots, embeddings).",
+  },
+  voice_test: {
+    label: "Generate voice test samples",
+    description: "Hindi + English, breaking + normal bulletin via Google TTS; audition them in the Voice panel.",
   },
 };
 

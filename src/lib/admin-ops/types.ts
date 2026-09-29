@@ -70,6 +70,63 @@ export type SourceStateRow = {
   last_error_category: string | null;
 };
 
+export type VoiceSnapshot = {
+  by_status: Record<string, number>;
+  last_24h: {
+    generated: number;
+    failed: number;
+    characters: number;
+    estimated_cost_usd: number;
+    avg_latency_ms: number | null;
+    avg_duration_ms: number | null;
+  };
+  by_provider_24h: Array<{
+    provider: string;
+    voice_model: string;
+    ready: number;
+    failed: number;
+    avg_latency_ms: number | null;
+    cost_usd: number | null;
+  }>;
+  failure_reasons: Array<{ reason: string; n: number }>;
+  recent: Array<{
+    id: string;
+    article_id: string;
+    headline: string;
+    language: string;
+    script_kind: string;
+    style: string;
+    status: string;
+    provider: string | null;
+    voice_model: string;
+    voice_name: string;
+    duration_ms: number | null;
+    latency_ms: number | null;
+    characters: number | null;
+    attempts: number;
+    error: string | null;
+    updated_at: string;
+  }>;
+  pending_articles: number;
+};
+
+export type VoiceSampleView = {
+  name: string;
+  label: string;
+  ok: boolean;
+  provider?: string;
+  model?: string;
+  voiceName?: string;
+  latencyMs?: number;
+  durationMs?: number | null;
+  characters?: number;
+  estimatedCostUsd?: number;
+  fallbackUsed?: boolean;
+  storagePath?: string;
+  error?: string;
+  validationFailures?: string[];
+};
+
 export type OpsSnapshotRaw = {
   generated_at: string;
   day_start: string;
