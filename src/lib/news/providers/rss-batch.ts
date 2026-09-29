@@ -14,6 +14,14 @@ import {
   type RSSSource,
 } from "@/lib/news/providers/rss-sources";
 import type { NormalizedArticle, RssSourceAnalytics } from "@/lib/news/types";
+import { shouldPollSource } from "@/lib/news/ingestion/source-health";
+import {
+  buildSourceKey,
+  loadAllIngestionSourceStates,
+} from "@/lib/news/ingestion/source-state";
+
+/** Direct Chhattisgarh publisher feeds — the scarce, high-value supply; never backed off past 30 min. */
+const HIGH_VALUE_SOURCE_IDS = new Set(["ibc24-cg-direct", "bhilai-times-direct"]);
 
 export const RSS_FEED_BATCH_SIZE = 4;
 
@@ -38,6 +46,8 @@ export type RssBatchedSummary = {
   articlesRecoveredByFallback: number;
   errors: string[];
   durationMs: number;
+  /** Feeds not polled this run because adaptive backoff says they are not due. */
+  sourcesSkippedBackoff?: number;
 };
 
 export async function runRssBatched(options: {
@@ -48,10 +58,21 @@ export async function runRssBatched(options: {
   const startedAt = Date.now();
   const batchSize = options.batchSize ?? RSS_FEED_BATCH_SIZE;
 
-  const health = await loadSourceHealth();
-  const activeSources = [...RSS_SOURCES]
-    .filter((s) => !isSourceSkipped(s, health))
+  const [health, sourceStates] = await Promise.all([
+    loadSourceHealth(),
+    loadAllIngestionSourceStates().catch(() => new Map()),
+  ]);
+  const enabledSources = [...RSS_SOURCES].filter((s) => !isSourceSkipped(s, health));
+  // Adaptive polling: a feed that keeps returning only duplicates is polled less often
+  // (see source-health.ts). Producing feeds and high-value publishers stay every-run.
+  const activeSources = enabledSources
+    .filter((s) =>
+      shouldPollSource(sourceStates.get(buildSourceKey("rss", s.id)), {
+        highValue: HIGH_VALUE_SOURCE_IDS.has(s.id),
+      })
+    )
     .sort((a, b) => sourceEffectivePriority(b) - sourceEffectivePriority(a));
+  const sourcesSkippedBackoff = enabledSources.length - activeSources.length;
 
   const allAnalytics: RssSourceAnalytics[] = [];
   const allErrors: string[] = [];
@@ -162,5 +183,6 @@ export async function runRssBatched(options: {
     articlesRecoveredByFallback,
     errors: allErrors,
     durationMs: Date.now() - startedAt,
+    sourcesSkippedBackoff,
   };
 }

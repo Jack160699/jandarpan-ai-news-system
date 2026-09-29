@@ -38,6 +38,10 @@ export type FinalizeCronInput = {
   errorCode?: string;
   workers?: CronRunRecord["workers"];
   metadata?: Record<string, unknown>;
+  trigger?: string;
+  processed?: number;
+  skipped?: number;
+  failed?: number;
   err?: unknown;
 };
 
@@ -57,6 +61,10 @@ export async function finalizeCronRun(input: FinalizeCronInput): Promise<void> {
     workers: input.workers,
     error: input.error,
     metadata: input.metadata,
+    trigger: input.trigger,
+    processed: input.processed,
+    skipped: input.skipped,
+    failed: input.failed,
   });
 
   logOpsEvent({

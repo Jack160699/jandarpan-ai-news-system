@@ -51,10 +51,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const tenant = await getTenantConfig();
-  const organization = await fetchOrganizationSettings();
-  const readerLang = await getServerReaderLanguage();
-  const languageChosen = await getServerLanguageChosen();
+  // Independent request-scoped lookups — run in parallel, not as a 4-step waterfall.
+  const [tenant, organization, readerLang, languageChosen] = await Promise.all([
+    getTenantConfig(),
+    fetchOrganizationSettings(),
+    getServerReaderLanguage(),
+    getServerLanguageChosen(),
+  ]);
   const langCfg = getLanguageConfig(readerLang);
 
   return (
