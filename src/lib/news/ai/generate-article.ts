@@ -1679,6 +1679,8 @@ async function prepareCandidate(
   // review so it can be recorded; "local" marks the deterministic fallback
   // draft (buildFallbackDraftFromFactPack), which never called an LLM.
   let writerProvider: AiProviderId | null = null;
+  // Model that actually produced the draft (audit trail) — never a hard-coded label.
+  let writerModel: string | null = null;
   // Persisted into editorial_metadata.premium_editorial below â€” the audit
   // trail for why (if at all) the premium Gemini model was used.
   let premiumEditorialUsed = false;
@@ -1705,6 +1707,7 @@ async function prepareCandidate(
       premiumEditorialUsed = llmResult.premium;
       premiumEditorialReason = llmResult.premiumReason;
       writerProvider = llmResult.provider;
+      writerModel = llmResult.model ?? null;
     }
     return parsed;
   }
@@ -1751,7 +1754,7 @@ async function prepareCandidate(
   }
 
   let generationProvider: AiProviderId = writerProvider ?? "codecraft";
-  let generationModel: string = "deepseek-v4-pro-max";
+  let generationModel: string = writerModel ?? (writerProvider === "local" ? "local-fallback" : "unknown");
   let repairProvider: AiProviderId | null = null;
   let repairModel: string | null = null;
   let finalProvider: AiProviderId = generationProvider;
@@ -1795,7 +1798,7 @@ async function prepareCandidate(
 
     if (repairResult.repaired) {
       repairProvider = repairResult.provider ?? "codecraft";
-      repairModel = repairResult.model ?? "deepseek-v4-pro-max";
+      repairModel = repairResult.model ?? "unknown";
       const repairedDraft = repairResult.draft;
 
       // Re-run ALL relevant gates from scratch on the repaired draft!

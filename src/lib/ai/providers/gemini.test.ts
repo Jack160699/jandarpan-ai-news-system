@@ -20,6 +20,7 @@ vi.mock("next/server", async (importOriginal) => {
 });
 
 import { isGeminiConfigured, requestGeminiChat, resolveGeminiModel } from "./gemini";
+import { resetProviderHealthForTests } from "./health";
 
 // health.ts's provider-health registry (src/lib/ai/providers/health.ts) is a
 // module-level Map with no exported reset. Several tests below deliberately
@@ -35,6 +36,7 @@ import { isGeminiConfigured, requestGeminiChat, resolveGeminiModel } from "./gem
 let fakeNowMs = Date.parse("2026-01-01T00:00:00Z");
 
 beforeEach(() => {
+  resetProviderHealthForTests();
   vi.useFakeTimers();
   vi.setSystemTime(fakeNowMs);
   fakeNowMs += 20 * 60 * 1000;

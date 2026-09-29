@@ -22,6 +22,8 @@ export function maxRetryAttempts(operation: string): number {
 export function isNeverRetryError(err: ClassifiedAiError): boolean {
   if (!err.retryable) return true;
   if (err.invalidRequest) return true;
+  // A timed-out provider is failed over, not re-waited on (each retry costs another full timeout).
+  if (err.code === "ai_timeout") return true;
   if (err.httpStatus === 400) return true;
   const msg = err.message.toLowerCase();
   return (

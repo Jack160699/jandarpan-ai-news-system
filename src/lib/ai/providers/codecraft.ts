@@ -6,20 +6,32 @@ import {
   recordProviderRequestStarted,
 } from "@/lib/ai/providers/health";
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
+import { effectiveTimeoutMs } from "@/lib/ai/providers/circuit-policy";
+import { scopeModelOverride } from "@/lib/ai/providers/model-scope";
 import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib/ai/providers/quota";
 import { buildAiUsageRecord, recordAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import type { ChatCompletionRequest, ChatCompletionResult, ClassifiedAiError } from "@/lib/ai/providers/types";
 
+/**
+ * CodeCraft is only "configured" when both a key AND an explicit model are set.
+ * There is deliberately no built-in default model: the previous hard-coded
+ * "deepseek-v4-pro-max" default was not a model this gateway serves, so a missing
+ * env var silently produced a guaranteed failure on every candidate.
+ */
 export function isCodeCraftConfigured(): boolean {
-  return Boolean(process.env.CODECRAFT_API_KEY?.trim());
+  return Boolean(
+    process.env.CODECRAFT_API_KEY?.trim() &&
+      (process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || process.env.CODECRAFT_REPAIR_MODEL?.trim())
+  );
 }
 
 export function resolveCodeCraftModel(operation: string, override?: string): string {
-  if (override?.trim()) return override.trim();
-  if (operation === "editorial_repair") {
-    return process.env.CODECRAFT_REPAIR_MODEL?.trim() || "deepseek-v4-pro-max";
-  }
-  return process.env.CODECRAFT_EDITORIAL_MODEL?.trim() || "deepseek-v4-pro-max";
+  const scoped = scopeModelOverride("codecraft", override);
+  if (scoped) return scoped;
+  const editorial = process.env.CODECRAFT_EDITORIAL_MODEL?.trim();
+  const repair = process.env.CODECRAFT_REPAIR_MODEL?.trim();
+  if (operation === "editorial_repair") return repair || editorial || "";
+  return editorial || repair || "";
 }
 
 function healthKeyFor(model: string): string {
@@ -94,7 +106,7 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
   recordProviderRequestStarted(healthKeyFor(model), request.operation);
 
   const controller = new AbortController();
-  const timeoutMs = request.timeoutMs ?? 45_000;
+  const timeoutMs = effectiveTimeoutMs("codecraft", request.timeoutMs);
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -126,14 +138,14 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       const classified = classifyCodeCraftFailure(res.status, detail);
-      if (classified.authFailure || classified.rateLimited) {
-        markProviderUnhealthy(healthKeyFor(model), {
-          reason: classified.authFailure ? "codecraft_unauthorized" : classified.message,
-          httpStatus: res.status,
-          authFailure: classified.authFailure,
-          rateLimited: classified.rateLimited,
-        });
-      }
+      markProviderUnhealthy(healthKeyFor(model), {
+        reason: classified.authFailure ? "codecraft_unauthorized" : classified.message,
+        httpStatus: res.status,
+        authFailure: classified.authFailure,
+        rateLimited: classified.rateLimited,
+        invalidRequest: classified.invalidRequest,
+        code: classified.code,
+      });
       throw classified;
     }
 
@@ -168,8 +180,10 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
   } catch (err) {
     if (err && typeof err === "object" && "retryable" in err && "code" in err) throw err;
     const message = err instanceof Error && err.name === "AbortError" ? "Request timed out" : (err instanceof Error ? err.message.slice(0, 240) : "CodeCraft request failed");
-    const retryable = err instanceof Error && err.name === "AbortError";
-    throw { code: retryable ? "ai_timeout" : "ai_network_error", message, retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
+    const isTimeout = err instanceof Error && err.name === "AbortError";
+    const code = isTimeout ? "ai_timeout" : "ai_network_error";
+    markProviderUnhealthy(healthKeyFor(model), { reason: message, code });
+    throw { code, message, retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
   } finally {
     clearTimeout(timer);
   }
@@ -181,6 +195,9 @@ export async function requestCodeCraftChat(request: ChatCompletionRequest): Prom
   }
 
   const model = resolveCodeCraftModel(request.operation, request.model);
+  if (!model) {
+    return { ok: false, provider: "codecraft", latencyMs: 0, error: { code: "ai_unavailable", message: "No CodeCraft model configured (set CODECRAFT_EDITORIAL_MODEL)", retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
+  }
 
   if (!isProviderHealthy(healthKeyFor(model))) {
     return { ok: false, provider: "codecraft", latencyMs: 0, error: { code: "ai_provider_cooldown", message: `codecraft/${model} temporarily unhealthy`, retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
