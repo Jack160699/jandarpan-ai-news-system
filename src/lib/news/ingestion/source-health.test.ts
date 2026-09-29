@@ -44,6 +44,12 @@ describe("deriveSourceHealth", () => {
     expect(deriveSourceHealth({ ...base, consecutive_empty_runs: 31 }, { now: NOW }).status).toBe("degraded");
   });
 
+  it("a feed that succeeded recently but has a null last_attempted_at is NOT 'never run' (RSS path)", () => {
+    const r = deriveSourceHealth({ ...base, last_attempted_at: null }, { now: NOW });
+    expect(r.status).toBe("healthy");
+    expect(deriveSourceHealth({ ...base, last_attempted_at: null, last_successful_at: null }, { now: NOW }).status).toBe("never_run");
+  });
+
   it("maps quota / rate-limit / failures / retired / disabled / orphaned", () => {
     expect(deriveSourceHealth({ ...base, quota_exhausted_until: new Date(NOW + 3_600_000).toISOString() }, { now: NOW }).status).toBe("rate_limited");
     expect(deriveSourceHealth({ ...base, rate_limited_until: new Date(NOW + 60_000).toISOString() }, { now: NOW }).status).toBe("rate_limited");

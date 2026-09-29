@@ -93,8 +93,14 @@ export function deriveSourceHealth(
     return out("failing", `${row.consecutive_failures} consecutive failures`);
   }
 
-  const attemptedHours = hoursAgo(row.last_attempted_at, now);
-  if (attemptedHours === null) return out("never_run", "never attempted");
+  // The RSS path stamps last_successful_at on every poll but leaves last_attempted_at null, so a
+  // source counts as attempted if EITHER timestamp exists (verified: 33 producing feeds had a
+  // null last_attempted_at and were wrongly reported as never run).
+  const attemptedHours = Math.min(
+    hoursAgo(row.last_attempted_at, now) ?? Infinity,
+    hoursSinceSuccess ?? Infinity
+  );
+  if (!Number.isFinite(attemptedHours)) return out("never_run", "never attempted");
 
   // A source not attempted for a long time is not "healthy" just because it was once.
   if (hoursSinceSuccess === null) return out("failing", "never succeeded");
