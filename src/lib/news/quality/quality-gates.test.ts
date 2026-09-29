@@ -86,6 +86,26 @@ describe("headline quality", () => {
     expect(r.failures).toContain("generic_boilerplate");
   });
 
+  it.each([
+    "29 सितंबर के मुख्य और ताजा समाचार: देश-दुनिया की लाइव ब्रेकिंग न्यूज अपडेट",
+    "देश और दुनिया के ताजा समाचारों का लाइव अपडेट, जानिए 29 सितंबर की बड़ी खबरें",
+    "Amar Ujala publishes live breaking news page for 22 September",
+    "आज का अंक ज्योतिष: मूलांक 4 और 8 वालों को रहना होगा सतर्क",
+    "रामगढ़ में आज की प्रमुख खबरों से जुड़ा अपडेट सामने आया",
+  ])("blocks dated roundup / live-update pages: %s", (h) => {
+    const r = evaluateHeadlineQuality({ headline: h, language: /[\u0900-\u097F]/.test(h) ? "hi" : "en" });
+    expect(r.failures).toContain("generic_roundup");
+  });
+
+  it("does not flag a real story that mentions a date", () => {
+    expect(
+      evaluateHeadlineQuality({ headline: "रायपुर में 29 सितंबर को होगी बिजली कटौती, पंडरी और शंकर नगर प्रभावित", language: "hi" }).failures
+    ).not.toContain("generic_roundup");
+    expect(
+      evaluateHeadlineQuality({ headline: "Raipur power cut on 29 September to affect Pandri and Shankar Nagar", language: "en" }).failures
+    ).not.toContain("generic_roundup");
+  });
+
   it("blocks placeholders", () => {
     expect(evaluateHeadlineQuality({ headline: "Desk draft 2026-09-26", language: "en" }).failures).toContain("placeholder");
     expect(evaluateHeadlineQuality({ headline: "[Headline here] for the story", language: "en" }).failures).toContain("placeholder");

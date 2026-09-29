@@ -13,7 +13,7 @@ import {
   collectionPageJsonLd,
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
-import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 
 export const revalidate = 60;
 
@@ -39,27 +39,21 @@ export default async function LatestPage() {
     }
   }
 
-  // Authoritative publication timestamp: newest published article first
-  const baseArticles = [...bySlug.values()]
+  // Latest = strict published_at descending over the Chhattisgarh-first scope
+  // (district + statewide + a controlled share of India-relevant). National /
+  // international / unknown-geography stories never enter this feed, ranking score
+  // never reorders it, and a story is NOT dropped for lacking an image — images
+  // attach asynchronously and must not gate publication.
+  // The static fallback pool is no longer merged in: fetchGeneratedArticlePool only
+  // returns it when the database has zero public rows.
+  const { rows: selected } = selectFeedRows([...bySlug.values()], {
+    feed: "cg_home",
+    order: "chronological",
+    limit: 100,
+  });
+  const articles = selected
     .map((r) => toHomeArticle(r, undefined, displayLanguage))
-    .filter((a): a is NonNullable<typeof a> => a !== null && hasVerifiedRealMedia(a.imageUrl));
-
-  const { getStaticFallbackArticlePool } = await import("@/lib/news/fallback/wire-articles");
-  const fallback = getStaticFallbackArticlePool()
-    .map((r) => toHomeArticle(r, undefined, displayLanguage))
-    .filter((a): a is NonNullable<typeof a> => a !== null && hasVerifiedRealMedia(a.imageUrl));
-
-  const seenSlugs = new Set(baseArticles.map((a) => a.slug));
-  for (const a of fallback) {
-    if (!seenSlugs.has(a.slug)) {
-      seenSlugs.add(a.slug);
-      baseArticles.push(a);
-    }
-  }
-
-  const articles = baseArticles
-    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    .slice(0, 100);
+    .filter((a): a is NonNullable<typeof a> => a !== null);
 
   const jsonLd = [
     collectionPageJsonLd({

@@ -34,8 +34,15 @@ import type { GeneratedHomepageFeed } from "@/lib/homepage/types";
 import { homeDebug } from "@/lib/homepage/feed-safety";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 
-const HOMEPAGE_POOL_LIMIT = 300;
+// The homepage builds ~10 segments from this pool and needs far fewer than 300 rows;
+// each row carries heavy jsonb (editorial_metadata/translations). Override with
+// HOMEPAGE_POOL_LIMIT if a deployment needs more.
+const HOMEPAGE_POOL_LIMIT = Math.min(
+  300,
+  Math.max(60, Number(process.env.HOMEPAGE_POOL_LIMIT) || 140)
+);
 
 type HomepageFeedBuild = {
   feed: GeneratedHomepageFeed | null;
@@ -54,8 +61,15 @@ async function buildFeedFromPool(
   );
   scheduleMissingTranslations(eligibleWindowPool, displayLanguage, { max: 12 });
 
-  const langPool = filterPoolByLanguage(eligibleWindowPool, displayLanguage);
-  const effectivePool = langPool.length > 0 ? langPool : eligibleWindowPool;
+  // Chhattisgarh-first scope: district + statewide + a controlled share of India-relevant.
+  // National / international / unknown-geography stories are not part of the default
+  // homepage. Freshness class leads the ordering (see rankPoolByFeedQuality).
+  const cgFirstPool = selectFeedRows(eligibleWindowPool, {
+    feed: "cg_home",
+    order: "fresh_ranked",
+  }).rows;
+  const langPool = filterPoolByLanguage(cgFirstPool, displayLanguage);
+  const effectivePool = langPool.length > 0 ? langPool : cgFirstPool;
   homeDebug("homepage language pool", {
     displayLanguage,
     total: pool.length,
