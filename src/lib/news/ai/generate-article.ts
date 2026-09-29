@@ -56,6 +56,8 @@ import { createAdminServerClient } from "@/lib/supabase";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
 import { geoFromRecord, mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
+import { evaluatePublicationGates, gateAuditPayload } from "@/lib/news/quality/publication-gates";
+import type { EditorialLanguage } from "@/lib/news/quality/script-detect";
 import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
 import {
   createEmptyLedger,
@@ -966,11 +968,41 @@ async function persistGeneratedArticle(input: {
     region: input.event.region,
     category,
   });
-  const geo = mergeGeoMetadata(
+  const mergedGeo = mergeGeoMetadata(
     geoFromRecord(input.event),
     ...signalGeos,
     draftGeo
   );
+
+  // Publication gates: language script, headline quality, geography scope.
+  // Geography is re-derived from evidence — a district is only ever recorded when the
+  // source text proves it (never inherited from a feed/region hint or event guess).
+  const gates = evaluatePublicationGates({
+    language: (input.draft.language === "hi" ? "hi" : "en") as EditorialLanguage,
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    body: input.draft.article_body,
+    sourceTitle: input.signals.map((s) => s.title).filter(Boolean).join(" | "),
+    sourceText: input.signals.map((s) => s.raw_content ?? "").join("\n").slice(0, 8000),
+    source: input.signals[0]?.source ?? null,
+    region: input.event.region,
+    category,
+  });
+  const geoInCg =
+    gates.geo.scope === "DISTRICT_SPECIFIC" ||
+    gates.geo.scope === "STATEWIDE_CHHATTISGARH" ||
+    gates.geo.scope === "INDIA_RELEVANT_TO_CHHATTISGARH";
+  const geo = {
+    ...mergedGeo,
+    state: geoInCg ? mergedGeo.state : gates.geo.scope === "UNKNOWN" ? "unknown" : "india",
+    is_chhattisgarh: geoInCg,
+    primary_district: gates.geo.districtSlug,
+    districts: gates.geo.districts,
+    scope: gates.geo.scope,
+    scope_method: gates.geo.method,
+    scope_confidence: gates.geo.confidence,
+    scope_evidence: gates.geo.evidence.slice(0, 8),
+  };
   const regionalTopic = scoreRegionalTopic({
     headline: input.draft.headline,
     summary: input.draft.summary,
@@ -988,7 +1020,9 @@ async function persistGeneratedArticle(input: {
   // regardless of this flag, so a human can review them.
   // Publication is performed by the edition scheduler only (not by continuous crons).
   // We now instantly publish articles that pass the deterministic validation gates.
-  const autoPublish = input.quality.publish_allowed;
+  // Gate failures (wrong-language script, generic headline, unknown geography) keep the
+  // draft as a pending row for evaluation — it is never auto-published.
+  const autoPublish = input.quality.publish_allowed && !gates.blocksAutoPublish;
   const nowIso = new Date().toISOString();
   const urgency = Number(input.event.urgency_score ?? 0);
   const aiConfidence = Number(input.quality.ai_confidence ?? 0);
@@ -1009,8 +1043,12 @@ async function persistGeneratedArticle(input: {
     trustedSources >= 3;
 
   // Shadow may generate, score and image drafts, but it must never publish.
+  // The breaking override may skip pacing but must NEVER skip the publication gates.
   const breakingPatch =
-    breakingOverride && isAutonomousPublishingEnabled()
+    breakingOverride &&
+    isAutonomousPublishingEnabled() &&
+    !gates.blocksAutoPublish &&
+    input.quality.publishDecision !== "reject"
       ? buildPublicPublishPatch(new Date())
       : null;
 
@@ -1248,6 +1286,12 @@ async function persistGeneratedArticle(input: {
       media_source_url: heroMedia?.source_url ?? null,
       media_rights_status: heroMedia?.rights_status ?? "licensed",
       ai_confidence: input.quality.ai_confidence,
+      publication_gates: gateAuditPayload(gates),
+      source_published_at: input.signals
+        .map((s) => s.published_at)
+        .filter((v): v is string => Boolean(v))
+        .sort()
+        .slice(-1)[0] ?? null,
       source_attribution: input.attributions,
       quality_report: input.quality,
       quality_breakdown: input.quality.quality_breakdown,
@@ -1444,6 +1488,7 @@ async function runFullValidationSequence(input: {
   evidenceSufficient: boolean;
   freshness: EditorialFreshnessDecision;
   writerProvider: AiProviderId;
+  language: SupportedEditorialLanguage;
 }): Promise<{
   quality: EditorialQualityReport;
   hqGate: ReturnType<typeof applyHumanQualityAndEvidenceGate>;
@@ -1490,6 +1535,33 @@ async function runFullValidationSequence(input: {
     );
   }
 
+  // Step 3b: publication gates — language script, headline quality, geography scope.
+  const gates = evaluatePublicationGates({
+    language: input.language === "hi" ? "hi" : "en",
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    body: input.draft.article_body,
+    sourceTitle: input.signals.map((s) => s.title).filter(Boolean).join(" | "),
+    sourceText: input.signals.map((s) => s.raw_content ?? "").join("\n").slice(0, 8000),
+    source: input.signals[0]?.source ?? null,
+    region: input.event.region,
+    category: input.event.category,
+    recentHeadlines: input.existingHeadlines,
+  });
+  const gateRejects = gates.failures.filter((f) => f.severity === "reject");
+  if (gateRejects.length > 0) {
+    hqGate.quality = {
+      ...hqGate.quality,
+      publish_allowed: false,
+      passed: false,
+      publishDecision: "reject",
+      rejectionReasons: [
+        ...hqGate.quality.rejectionReasons,
+        ...gateRejects.map((f) => f.code),
+      ],
+    };
+  }
+
   const hardClaimIssues = claimIssues.filter((c) => !c.retryable);
   if (hardClaimIssues.length > 0) {
     hqGate.quality = {
@@ -1512,7 +1584,10 @@ async function runFullValidationSequence(input: {
     };
   }
 
-  const canPublish = hqGate.quality.publish_allowed && hardClaimIssues.length === 0;
+  // Quarantine-level failures (unknown geography) do not block validation itself — the
+  // draft is persisted for evaluation by persistGeneratedArticle, which refuses to auto-publish it.
+  const canPublish =
+    hqGate.quality.publish_allowed && hardClaimIssues.length === 0 && !gates.mustReject;
   const failureCodes = Array.from(
     new Set([
       ...hqGate.quality.rejectionReasons,
@@ -1775,6 +1850,7 @@ async function prepareCandidate(
     evidenceSufficient: articleTypeClassification.evidenceSufficient,
     freshness,
     writerProvider: generationProvider,
+    language,
   });
 
   // Step 2: Optional one-time repair if not published and repair is viable
@@ -1815,6 +1891,7 @@ async function prepareCandidate(
         evidenceSufficient: articleTypeClassification.evidenceSufficient,
         freshness,
         writerProvider: repairProvider,
+        language,
       });
 
       // No previous approval may be reused. Repaired draft must satisfy all gates independently.
