@@ -6,6 +6,7 @@ import { after } from "next/server";
 import {
   classifyAiHttpFailure,
   classifyAiNetworkError,
+  withRateLimitHints,
 } from "@/lib/ai/providers/errors";
 import {
   hydrateProviderHealth,
@@ -18,6 +19,12 @@ import {
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
 import { effectiveTimeoutMs } from "@/lib/ai/providers/circuit-policy";
 import { scopeModelOverride } from "@/lib/ai/providers/model-scope";
+import {
+  BUDGET_EXHAUSTED_CODE,
+  NO_NETWORK_CALL_CODES,
+  refundLlmCall,
+  tryConsumeLlmCall,
+} from "@/lib/ai/providers/call-budget";
 import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib/ai/providers/quota";
 import type { QuotaReservation } from "@/lib/ai/providers/quota";
 import { isGeminiConfigured, requestGeminiChat } from "@/lib/ai/providers/gemini";
@@ -205,7 +212,7 @@ async function postChat(
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      const classified = classifyAiHttpFailure(res.status, detail);
+      const classified = withRateLimitHints(classifyAiHttpFailure(res.status, detail), res.headers);
       markProviderUnhealthy(healthKeyFor(config), {
         reason: classified.authFailure
           ? `${config.id}_unauthorized`
@@ -215,6 +222,8 @@ async function postChat(
         rateLimited: classified.rateLimited,
         invalidRequest: classified.invalidRequest,
         code: classified.code,
+        dailyExhausted: classified.dailyExhausted,
+        retryAfterMs: classified.retryAfterMs,
       });
       throw classified;
     }
@@ -573,10 +582,28 @@ export async function requestChatCompletion(
 
   let lastFailure: ChatCompletionResult | null = null;
 
+  const budgetExhausted = (): ChatCompletionResult => ({
+    ok: false,
+    provider: attempts[0]?.id ?? "gemini",
+    latencyMs: 0,
+    error: {
+      code: BUDGET_EXHAUSTED_CODE,
+      message: "per-run LLM call budget exhausted",
+      retryable: false,
+      authFailure: false,
+      invalidRequest: false,
+      rateLimited: false,
+    },
+  });
+
   for (let i = 0; i < attempts.length; i++) {
     const attempt = attempts[i]!;
+    // Per-run governor: a run may only make a bounded number of REAL provider calls.
+    if (!tryConsumeLlmCall(request.operation)) return lastFailure ?? budgetExhausted();
     const result = await attempt.invoke();
     if (result.ok) return result;
+    // Answered locally (open circuit / own quota / busy slot): nothing was sent, give the call back.
+    if (result.latencyMs === 0 && NO_NETWORK_CALL_CODES.has(result.error.code)) refundLlmCall(request.operation);
 
     lastFailure = result;
     const next = attempts[i + 1];
@@ -593,7 +620,12 @@ export async function requestChatCompletion(
   }
 
   // Autonomous fallback if primary provider chain failed
-  if (!lastFailure?.ok && isGeminiConfigured() && !attempts.some((a) => a.id === "gemini")) {
+  if (
+    !lastFailure?.ok &&
+    isGeminiConfigured() &&
+    !attempts.some((a) => a.id === "gemini") &&
+    tryConsumeLlmCall(request.operation)
+  ) {
     console.warn(`[ai-fallback] Primary chain failed (${lastFailure?.error?.code}); invoking Gemini fallback`);
     const fallbackRequest: ChatCompletionRequest = {
       ...request,

@@ -20,6 +20,8 @@
  * - `editorial_generate` → worker id alias; scheduled cron is `editorial-generate`
  * - `cluster` → retired (not scheduled)
  * - `revalidate` → handled inside orchestrate/cache paths, not a standalone cron
+ * - `workers-health` → no longer scheduled (migration 089); job health is evaluated by admin_ops_snapshot.
+ *   The route stays for manual use.
  */
 
 export const REGISTERED_CRON_JOBS = [
@@ -34,7 +36,6 @@ export const REGISTERED_CRON_JOBS = [
   "serp-tracker",
   "gsc-intelligence",
   "seo-autonomous",
-  "workers-health",
 ] as const;
 
 export type RegisteredCronJobId = (typeof REGISTERED_CRON_JOBS)[number];

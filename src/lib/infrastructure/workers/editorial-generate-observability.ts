@@ -14,7 +14,8 @@ export const GENERATION_LANE_TARGETS = {
   noSuccessMaxMs: 60 * 60 * 1000,
   budgetMs: 280_000,
   batchLimit: 6,
-  lockWindowSec: 840,
+  // Crash-safety TTL only (the lease is released when the run ends). Route maxDuration is 300s.
+  lockWindowSec: 360,
 } as const;
 
 export type EditorialGenerateLaneOutcome = "success" | "degraded" | "failed";

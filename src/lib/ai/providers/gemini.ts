@@ -29,6 +29,7 @@ import { buildAiUsageRecord, recordAiProviderUsage } from "@/lib/observability/a
 import type { ChatCompletionRequest, ChatCompletionResult, ClassifiedAiError } from "@/lib/ai/providers/types";
 
 import { effectiveTimeoutMs } from "@/lib/ai/providers/circuit-policy";
+import { withRateLimitHints } from "@/lib/ai/providers/errors";
 import { scopeModelOverride } from "@/lib/ai/providers/model-scope";
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -132,7 +133,7 @@ async function postGemini(request: ChatCompletionRequest, model: string): Promis
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      const classified = classifyGeminiFailure(res.status, detail);
+      const classified = withRateLimitHints(classifyGeminiFailure(res.status, detail), res.headers);
       markProviderUnhealthy(healthKeyFor(model), {
         reason: classified.authFailure ? "gemini_unauthorized" : classified.message,
         httpStatus: res.status,
@@ -140,6 +141,8 @@ async function postGemini(request: ChatCompletionRequest, model: string): Promis
         rateLimited: classified.rateLimited,
         invalidRequest: classified.invalidRequest,
         code: classified.code,
+        dailyExhausted: classified.dailyExhausted,
+        retryAfterMs: classified.retryAfterMs,
       });
       throw classified;
     }

@@ -7,6 +7,8 @@ export const RETIRED_CRON_JOBS = [
   "editorial_generate",
   "cluster",
   "revalidate",
+  // Unscheduled by migration 089: covered by the admin ops snapshot's per-job health evaluation.
+  "workers-health",
 ] as const;
 
 export type RetiredCronJobId = (typeof RETIRED_CRON_JOBS)[number];
@@ -31,8 +33,6 @@ export const CRON_STALE_THRESHOLD_BY_JOB_MS: Record<string, number> = {
   "translation-backfill": 3 * 60 * 60 * 1000,
   // Daily
   cleanup: 36 * 60 * 60 * 1000,
-  // Hourly health
-  "workers-health": 3 * 60 * 60 * 1000,
 };
 
 export function staleThresholdForJob(job: string, defaultMs: number): number {

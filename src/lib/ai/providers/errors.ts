@@ -9,6 +9,55 @@ export function isAiQuotaExhaustionMessage(message: string): boolean {
   return EXHAUSTED_QUOTA_RE.test(message);
 }
 
+/** Wording that means "your DAILY allowance / credits are gone" (as opposed to a per-minute burst limit). */
+const DAILY_EXHAUSTED_RE =
+  /per\s*-?\s*day|\bdaily\b|\brpd\b|\btpd\b|insufficient_quota|no credits? remaining|credit balance|billing|payment required|out of credits/i;
+
+/**
+ * True only when the provider says the DAILY budget is spent. A plain 429 / "rate limit" (per-minute)
+ * is NOT daily-exhausted — it recovers within the minute and must not disable a provider for hours.
+ * HTTP 402 (payment required) is always treated as daily-exhausted.
+ */
+export function detectDailyExhaustion(status: number | undefined, message: string): boolean {
+  if (status === 402) return true;
+  if (status !== undefined && status !== 429 && status !== 200) return false;
+  return DAILY_EXHAUSTED_RE.test(message ?? "");
+}
+
+const MAX_RETRY_AFTER_MS = 24 * 3_600_000;
+
+/** Parse a Retry-After header: delta-seconds (may be fractional) or an HTTP-date. Returns ms, or undefined. */
+export function parseRetryAfterMs(
+  value: string | null | undefined,
+  now: number = Date.now()
+): number | undefined {
+  const raw = value?.trim();
+  if (!raw) return undefined;
+  if (/^\d+(\.\d+)?$/.test(raw)) {
+    const ms = Math.round(Number(raw) * 1000);
+    return Number.isFinite(ms) && ms >= 0 ? Math.min(ms, MAX_RETRY_AFTER_MS) : undefined;
+  }
+  const at = Date.parse(raw);
+  if (Number.isNaN(at)) return undefined;
+  return Math.min(Math.max(0, at - now), MAX_RETRY_AFTER_MS);
+}
+
+/** Add Retry-After and daily-exhaustion hints to an already-classified provider failure. */
+export function withRateLimitHints(
+  err: ClassifiedAiError,
+  headers: { get(name: string): string | null } | null | undefined,
+  now: number = Date.now()
+): ClassifiedAiError {
+  const retryAfterMs = parseRetryAfterMs(headers?.get("retry-after"), now);
+  const dailyExhausted = detectDailyExhaustion(err.httpStatus, err.message);
+  if (retryAfterMs === undefined && !dailyExhausted) return err;
+  return {
+    ...err,
+    ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
+    ...(dailyExhausted ? { dailyExhausted: true, retryable: false, rateLimited: true } : {}),
+  };
+}
+
 export function parseOpenAiErrorBody(body: string): {
   message: string;
   type?: string;

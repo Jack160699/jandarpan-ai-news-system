@@ -15,6 +15,7 @@ import { createExecutionDeadline } from "@/lib/serverless/deadline";
 import { detectCronTrigger, recordCronRun } from "@/lib/observability/cron-monitor";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { googleTtsConfigured } from "@/lib/voice/google-auth";
+import { audioGenerationEnabled } from "@/lib/voice/enabled";
 import { runAudioBatch } from "@/lib/voice/generate-article-audio";
 
 export const runtime = "nodejs";
@@ -30,6 +31,13 @@ async function handle(request: Request) {
 
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ ok: false, error: "supabase_not_configured" }, { status: 500, headers: noStoreHeaders() });
+  }
+  if (!audioGenerationEnabled()) {
+    // No DB write, no provider call: a disabled worker must cost nothing.
+    return NextResponse.json(
+      { ok: true, skipped: true, reason: "audio_generation_disabled" },
+      { headers: noStoreHeaders() }
+    );
   }
   if (!googleTtsConfigured()) {
     await recordCronRun({
@@ -48,7 +56,7 @@ async function handle(request: Request) {
   const deadline = createExecutionDeadline(Math.ceil(200_000 / 0.82));
   const limit = Math.max(1, Math.min(10, Number(process.env.AUDIO_BATCH_LIMIT) || 4));
 
-  const result = await runWorkerEndpoint(JOB, 600, async () => {
+  const result = await runWorkerEndpoint(JOB, 360, async () => {
     const batch = await runAudioBatch({ limit, shouldStop: () => !deadline.hasBudgetFor(45_000) });
     return {
       ok: true,

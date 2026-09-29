@@ -72,7 +72,7 @@ async function handleOrchestrate(request: Request) {
     }
   }
 
-  const lockResult = await runWorkerEndpoint("orchestrate", 1700, async () => {
+  const lockResult = await runWorkerEndpoint("orchestrate", 360, async () => {
     const result = await runCronOrchestration({
       requestUrl: request.url,
       workers: workers?.length ? workers : undefined,

@@ -106,6 +106,8 @@ export function markProviderUnhealthy(
     rateLimited?: boolean;
     invalidRequest?: boolean;
     code?: string;
+    dailyExhausted?: boolean;
+    retryAfterMs?: number;
   }
 ): void {
   const state = getState(provider);
@@ -118,6 +120,8 @@ export function markProviderUnhealthy(
     rateLimited: Boolean(input.rateLimited),
     invalidRequest: Boolean(input.invalidRequest),
     consecutiveFailures,
+    dailyExhausted: Boolean(input.dailyExhausted),
+    retryAfterMs: input.retryAfterMs,
   };
   const cooldownMs = circuitCooldownMs(failure);
   const failureClass = classifyCircuitFailure(failure);

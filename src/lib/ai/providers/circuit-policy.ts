@@ -32,20 +32,31 @@ export function looksLikeModelUnavailable(err: {
 export type CircuitFailureInput = Pick<
   ClassifiedAiError,
   "code" | "httpStatus" | "message" | "authFailure" | "rateLimited" | "invalidRequest"
-> & { consecutiveFailures: number };
+> & { consecutiveFailures: number; dailyExhausted?: boolean; retryAfterMs?: number };
 
 export type CircuitFailureClass =
   | "model_unavailable"
   | "auth"
+  | "daily_exhausted"
   | "rate_limited"
   | "transient";
+
+/** Milliseconds until the next 00:00:00 UTC (provider daily quotas reset on the UTC day). */
+export function msUntilUtcMidnight(now: number = Date.now()): number {
+  const d = new Date(now);
+  const next = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
+  return Math.max(1_000, next - now);
+}
 
 export function classifyCircuitFailure(input: CircuitFailureInput): CircuitFailureClass {
   if (input.authFailure) return "auth";
   if (looksLikeModelUnavailable(input)) return "model_unavailable";
+  if (input.dailyExhausted) return "daily_exhausted";
   if (input.rateLimited) return "rate_limited";
   return "transient";
 }
+
+const MAX_RETRY_AFTER_COOLDOWN_MS = HOUR;
 
 /**
  * Cooldown before the provider/model is probed again.
@@ -54,18 +65,23 @@ export function classifyCircuitFailure(input: CircuitFailureInput): CircuitFailu
  * - rate_limited: 60s doubling to 15m (per-minute windows recover fast)
  * - transient (timeout/5xx/network): 2m doubling to 30m
  */
-export function circuitCooldownMs(input: CircuitFailureInput): number {
+export function circuitCooldownMs(input: CircuitFailureInput, now: number = Date.now()): number {
   const n = Math.max(1, input.consecutiveFailures);
+  // A provider-supplied Retry-After is a floor (capped at 1h so a bogus header cannot park a provider).
+  const floor = Math.min(input.retryAfterMs ?? 0, MAX_RETRY_AFTER_COOLDOWN_MS);
   switch (classifyCircuitFailure(input)) {
     case "model_unavailable":
       return 6 * HOUR;
     case "auth":
       return 30 * MIN;
+    case "daily_exhausted":
+      // Disabled until the UTC day resets: no paid probing for the rest of the day.
+      return msUntilUtcMidnight(now);
     case "rate_limited":
-      return Math.min(15 * MIN, MIN * 2 ** (n - 1));
+      return Math.max(floor, Math.min(15 * MIN, MIN * 2 ** (n - 1)));
     case "transient":
     default:
-      return Math.min(30 * MIN, 2 * MIN * 2 ** (n - 1));
+      return Math.max(floor, Math.min(30 * MIN, 2 * MIN * 2 ** (n - 1)));
   }
 }
 

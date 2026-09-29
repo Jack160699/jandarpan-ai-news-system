@@ -7,6 +7,8 @@ describe("REGISTERED_CRON_JOBS", () => {
     expect(REGISTERED_CRON_JOBS).not.toContain("cluster");
     expect(REGISTERED_CRON_JOBS).not.toContain("revalidate");
     expect(isRegisteredCronJob("editorial_generate")).toBe(false);
+    // workers-health is covered by admin_ops_snapshot and no longer scheduled.
+    expect(REGISTERED_CRON_JOBS).not.toContain("workers-health");
   });
 
   it("includes active scheduled jobs", () => {
@@ -16,7 +18,6 @@ describe("REGISTERED_CRON_JOBS", () => {
         "orchestrate",
         "editorial-generate",
         "edition-publish",
-        "workers-health",
         "translation-backfill",
       ])
     );

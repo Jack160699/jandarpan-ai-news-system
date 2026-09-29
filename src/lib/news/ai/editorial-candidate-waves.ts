@@ -7,6 +7,7 @@ export async function prepareEditorialCandidateWaves<TEvent, TPrepared>({
   prepare,
   isCandidate,
   maxAttempts,
+  shouldStop,
 }: {
   ranked: TEvent[];
   limit: number;
@@ -14,6 +15,8 @@ export async function prepareEditorialCandidateWaves<TEvent, TPrepared>({
   prepare: (event: TEvent) => Promise<TPrepared>;
   isCandidate: (prepared: TPrepared) => boolean;
   maxAttempts?: number;
+  /** Checked before each wave; true ends the search (e.g. the run's LLM call budget is spent). */
+  shouldStop?: () => boolean;
 }): Promise<{
   attempted: TEvent[];
   prepared: TPrepared[];
@@ -28,7 +31,8 @@ export async function prepareEditorialCandidateWaves<TEvent, TPrepared>({
   while (
     cursor < ranked.length &&
     candidateCount < target &&
-    (!maxAttempts || attempted.length < maxAttempts)
+    (!maxAttempts || attempted.length < maxAttempts) &&
+    !shouldStop?.()
   ) {
     const remaining = maxAttempts
       ? Math.min(target - candidateCount, maxAttempts - attempted.length)

@@ -1,5 +1,5 @@
 /**
- * Regenerates the pg_cron registration block inside the scheduler migration from
+ * Regenerates the pg_cron registration block inside scheduler migration 089 from
  * src/lib/infrastructure/cron/scheduler-manifest.ts.
  *
  *   pnpm exec tsx scripts/generate-scheduler-migration.ts
@@ -17,7 +17,7 @@ const MIGRATION = path.join(
   "..",
   "supabase",
   "migrations",
-  "20260930020000_083_supabase_scheduler.sql"
+  "20260930080000_089_scheduler_hardening.sql"
 );
 const BEGIN = "-- BEGIN GENERATED JOBS (scripts/generate-scheduler-migration.ts)";
 const END = "-- END GENERATED JOBS";

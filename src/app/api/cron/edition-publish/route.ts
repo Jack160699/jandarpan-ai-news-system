@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
 import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
+import { acquireWorkerRunLease } from "@/lib/infrastructure/workers/run-guard";
 import { publishScheduledForCurrentEdition } from "@/lib/newsroom/edition-scheduler";
 import {
   finalizeCronRun,
@@ -11,6 +12,9 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+/** Crash-safety TTL only: the lease is released as soon as the run finishes. */
+const LEASE_TTL_SEC = 120;
+
 async function run(request: Request) {
   const { startedAt, requestId } = instrumentCronStart("edition-publish", request);
   const auth = await verifyCronRequest(request, { capability: "pipeline" });
@@ -18,7 +22,20 @@ async function run(request: Request) {
     return cronAuthFailureResponse(auth);
   }
 
-  const result = await publishScheduledForCurrentEdition(new Date());
+  const lease = await acquireWorkerRunLease("edition-publish", LEASE_TTL_SEC);
+  if (!lease.acquired) {
+    return NextResponse.json(
+      { ok: true, skipped: true, reason: "overlap_lock" },
+      { headers: noStoreHeaders() }
+    );
+  }
+
+  let result: Awaited<ReturnType<typeof publishScheduledForCurrentEdition>>;
+  try {
+    result = await publishScheduledForCurrentEdition(new Date());
+  } finally {
+    await lease.release();
+  }
   const durationMs = Date.now() - startedAt;
 
   await finalizeCronRun({

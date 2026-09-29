@@ -17,19 +17,27 @@ describe("resolveChatChain", () => {
     expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini", "groq"]);
   });
 
-  it("returns codecraft and groq for editorial_review, without openai by default", () => {
-    expect(resolveChatChain("editorial_review")).toEqual(["codecraft", "groq"]);
+  it("keeps codecraft OUT of editorial_review (operation-scoped), leaving groq", () => {
+    expect(resolveChatChain("editorial_review")).toEqual(["groq"]);
   });
 
-  it("falls back to the writer chain default for an unknown operation", () => {
-    expect(resolveChatChain("some_unknown_operation")).toEqual(["codecraft", "gemini", "groq"]);
+  it("keeps codecraft out of an unknown/lightweight operation", () => {
+    expect(resolveChatChain("some_unknown_operation")).toEqual(["gemini", "groq"]);
+    expect(resolveChatChain("translation")).not.toContain("codecraft");
+  });
+
+  it("uses codecraft for repair, and for other operations only when CODECRAFT_OPERATIONS enables them", () => {
+    expect(resolveChatChain("editorial_repair")).toContain("codecraft");
+    vi.stubEnv("CODECRAFT_OPERATIONS", "editorial_generate,editorial_review");
+    expect(resolveChatChain("editorial_review")).toEqual(["codecraft", "groq"]);
+    expect(resolveChatChain("editorial_repair")).not.toContain("codecraft");
   });
 
   it("keeps editorial chains strictly codecraft/gemini/groq even when AI_PROVIDER_OPENAI_ENABLED=true", () => {
     vi.stubEnv("AI_PROVIDER_OPENAI_ENABLED", "true");
     expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini", "groq"]);
-    expect(resolveChatChain("editorial_review")).toEqual(["codecraft", "groq"]);
-    expect(resolveChatChain("some_unknown_operation")).toEqual(["codecraft", "gemini", "groq"]);
+    expect(resolveChatChain("editorial_review")).toEqual(["groq"]);
+    expect(resolveChatChain("some_unknown_operation")).toEqual(["gemini", "groq"]);
   });
 
   it("removes openai again when the flag is set to anything other than 'true'", () => {

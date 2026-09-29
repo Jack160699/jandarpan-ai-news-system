@@ -67,7 +67,9 @@ const HINDI_NOISE_RE =
 const PADDING_PHRASES_RE =
   /(इससे क्षेत्रीय विकास को नई दिशा मिलेगी|यह एक महत्वपूर्ण कदम है जो|निष्कर्षतः कहा जा सकता है कि|overall this shows that|in conclusion,? it is clear)/i;
 
-const MAX_GENERATION_DEPTH_RETRIES = 1;
+// Each depth retry is another paid LLM call for a draft that already failed to parse. Default 0; opt in with
+// EDITORIAL_DEPTH_MAX_RETRIES (0-4) when the AI budget allows.
+const MAX_GENERATION_DEPTH_RETRIES = 0;
 
 export function maxEditorialDepthRetries(): number {
   const raw = process.env.EDITORIAL_DEPTH_MAX_RETRIES?.trim();

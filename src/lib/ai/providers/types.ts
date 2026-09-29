@@ -41,6 +41,10 @@ export type ClassifiedAiError = {
   authFailure: boolean;
   invalidRequest: boolean;
   rateLimited: boolean;
+  /** Provider asked us to wait this long (Retry-After), in ms. */
+  retryAfterMs?: number;
+  /** The provider reports its DAILY quota/credit is spent — do not probe again until the UTC day resets. */
+  dailyExhausted?: boolean;
 };
 
 export type OpenAiTelemetryContext = {

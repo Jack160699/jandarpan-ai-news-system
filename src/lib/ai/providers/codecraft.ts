@@ -7,6 +7,7 @@ import {
 } from "@/lib/ai/providers/health";
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
 import { effectiveTimeoutMs } from "@/lib/ai/providers/circuit-policy";
+import { withRateLimitHints } from "@/lib/ai/providers/errors";
 import { scopeModelOverride } from "@/lib/ai/providers/model-scope";
 import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib/ai/providers/quota";
 import { buildAiUsageRecord, recordAiProviderUsage } from "@/lib/observability/ai-usage/record";
@@ -137,7 +138,7 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      const classified = classifyCodeCraftFailure(res.status, detail);
+      const classified = withRateLimitHints(classifyCodeCraftFailure(res.status, detail), res.headers);
       markProviderUnhealthy(healthKeyFor(model), {
         reason: classified.authFailure ? "codecraft_unauthorized" : classified.message,
         httpStatus: res.status,
@@ -145,6 +146,8 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
         rateLimited: classified.rateLimited,
         invalidRequest: classified.invalidRequest,
         code: classified.code,
+        dailyExhausted: classified.dailyExhausted,
+        retryAfterMs: classified.retryAfterMs,
       });
       throw classified;
     }
@@ -153,7 +156,10 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
     const { content, error: streamError } = parseSseChunks(rawStreamText);
 
     if (streamError) {
-      const classified = classifyCodeCraftFailure(200, JSON.stringify({ error: { message: streamError } }));
+      const classified = withRateLimitHints(
+        classifyCodeCraftFailure(200, JSON.stringify({ error: { message: streamError } })),
+        res.headers
+      );
       if (classified.authFailure || classified.rateLimited) {
         markProviderUnhealthy(healthKeyFor(model), {
           reason: classified.message,

@@ -53,7 +53,11 @@ type ProviderLimits = {
  * real, account-sourced per-model limits actually used in routing.
  */
 const PROVIDER_DEFAULT_LIMITS: Record<AiProviderId, ProviderLimits> = {
-  codecraft: { rpm: 60, tpm: 1_000_000, rpd: 20_000, tpd: 50_000_000, maxConcurrent: 5 },
+  // CodeCraft is a controlled-budget provider. These are deliberately CONSERVATIVE SAFETY defaults, not the
+  // account's real limits (the previous 60 rpm / 20,000 rpd / 50M tpd were unsourced and effectively no cap).
+  // Raise them explicitly per model with AI_QUOTA_CODECRAFT_<MODEL>_{RPM,TPM,RPD,TPD}_LIMIT once the real
+  // plan limits are known.
+  codecraft: { rpm: 6, tpm: 30_000, rpd: 300, tpd: 400_000, maxConcurrent: 1 },
   gemini: { rpm: 10, tpm: 250_000, rpd: 250, tpd: null, maxConcurrent: 2 },
   groq: { rpm: 28, tpm: 5_000, rpd: 1_000, tpd: 150_000, maxConcurrent: 2 },
   cloudflare: { rpm: 40, tpm: 2_000_000, rpd: 9_000, tpd: 20_000_000, maxConcurrent: 1 },
