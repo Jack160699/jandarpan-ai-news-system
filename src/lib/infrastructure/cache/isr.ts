@@ -35,6 +35,10 @@ export async function revalidateNewsroomCaches(options?: {
       revalidatePath("/story", "layout");
     }
     revalidatePath(ISR_PATHS.home);
+    // Chronological / district feeds are read-through of the same pool — refresh them too,
+    // targeted by path rather than purging the whole application.
+    revalidatePath("/latest");
+    revalidatePath("/district", "layout");
     revalidatePath("/category", "layout");
     revalidatePath(ISR_PATHS.sitemap);
 

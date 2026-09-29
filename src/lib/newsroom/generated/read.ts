@@ -163,19 +163,30 @@ export async function fetchGeneratedArticlePool(
 
   const result = await safeQuery<Record<string, unknown>[]>(
     async (signal) => {
-      let q = supabase
-        .from("generated_articles")
-        .select(columns)
-        .not("published_at", "is", null)
-        .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
-        .order("published_at", { ascending: false, nullsFirst: false })
-        .abortSignal(signal);
+      const run = async (relation: "generated_articles" | "generated_articles_feed") => {
+        let q = supabase
+          .from(relation as "generated_articles")
+          .select(columns)
+          .not("published_at", "is", null)
+          .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
+          .order("published_at", { ascending: false, nullsFirst: false })
+          .abortSignal(signal);
 
-      if (options?.cursorPublishedAt) {
-        q = q.lt("published_at", options.cursorPublishedAt);
+        if (options?.cursorPublishedAt) {
+          q = q.lt("published_at", options.cursorPublishedAt);
+        }
+        return q.limit(bounded);
+      };
+
+      // List pages read the slim view (whitelisted editorial_metadata, ~1/3 of the JSON).
+      // Fall back to the base table if the view is not deployed yet (migration 084).
+      let res =
+        mode === "homepage" ? await run("generated_articles_feed") : await run("generated_articles");
+      if (mode === "homepage" && res.error && /generated_articles_feed|42P01|PGRST205/.test(
+        `${res.error.code ?? ""} ${res.error.message ?? ""}`
+      )) {
+        res = await run("generated_articles");
       }
-
-      const res = await q.limit(bounded);
       return { data: (res.data ?? null) as Record<string, unknown>[] | null, error: res.error };
     },
     {
