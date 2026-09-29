@@ -57,6 +57,7 @@ import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
 import { geoFromRecord, mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { evaluatePublicationGates, gateAuditPayload } from "@/lib/news/quality/publication-gates";
+import { checkStoryDuplicate, storeArticleEmbedding } from "@/lib/news/dedupe/cross-language";
 import type { EditorialLanguage } from "@/lib/news/quality/script-detect";
 import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
 import {
@@ -1719,6 +1720,31 @@ async function prepareCandidate(
   }
 
   const language = resolveLanguage(event, signals);
+
+  // Cross-language / same-language duplicate of an already PUBLISHED story (multilingual embeddings).
+  // Runs before any LLM call. In "shadow" mode (default) this only records the decision.
+  const duplicate = await checkStoryDuplicate({
+    eventId: event.id,
+    headline: event.canonical_title,
+    summary: event.event_summary,
+    language,
+  });
+  if (duplicate.enforced && duplicate.decision !== "distinct") {
+    logEditorial("candidate_duplicate_of_published", {
+      eventId: event.id,
+      decision: duplicate.decision,
+      similarity: duplicate.similarity,
+      matchedArticleId: duplicate.match?.articleId,
+    });
+    return {
+      candidate: null,
+      skipped: true,
+      reason:
+        duplicate.decision === "cross_language_variant"
+          ? "duplicate_cross_language_variant"
+          : "duplicate_published_story",
+    };
+  }
   let articleTypeClassification = classifyEventArticleType(event, signals);
   let { factPackText, sourceTexts, attributions } = buildFactPack(
     event,
@@ -2443,6 +2469,15 @@ export async function generateEditorialsFromEvents(options?: {
         });
         generated++;
         if (saved.article.published_at) published++;
+        if (saved.article.published_at) {
+          // Make this story matchable by later candidates in any language.
+          await storeArticleEmbedding({
+            id: saved.article.id,
+            headline: saved.article.headline,
+            summary: saved.article.summary,
+            language: saved.article.language,
+          });
+        }
         existingHeadlines.push(candidate.draft.headline);
         existingBodyFingerprints.push(
           fingerprintBody(candidate.draft.article_body)

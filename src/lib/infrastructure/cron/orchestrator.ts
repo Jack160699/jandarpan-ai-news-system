@@ -280,7 +280,10 @@ export async function runCronOrchestration(
   }
 
   const durationMs = Date.now() - started;
-  const ok = results.some((r) => r.ok && !r.skipped);
+  // ok means "no worker failed". It used to mean "at least one worker did non-skipped work", so a
+  // healthy run where every worker was legitimately idle/skipped (empty queue, dedicated lane) was
+  // recorded as a FAILURE — 8 of 12 production orchestrate runs — and the dashboard cried wolf.
+  const ok = !results.some((r) => !r.ok && !r.skipped);
 
   logIngestionAnalytics({
     event: "orchestrate_complete",

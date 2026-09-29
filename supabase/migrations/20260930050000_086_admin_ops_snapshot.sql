@@ -174,6 +174,7 @@ declare
   v_ai        jsonb;
   v_cron      jsonb;
   v_sched     jsonb := null;
+  v_xlang     integer := null;
 begin
   -- ---------------- users ----------------
   with acts as (
@@ -310,6 +311,14 @@ begin
           from public.news_signals where created_at >= v_24h group by 1) s)
   ) into v_geo;
 
+  -- cross-language duplicate decisions (table arrives with migration 088; tolerate its absence)
+  begin
+    execute 'select count(*)::int from public.story_language_links where created_at >= $1 and decision = ''cross_language_variant'''
+      into v_xlang using v_24h;
+  exception when others then
+    v_xlang := null;
+  end;
+
   -- ---------------- language ----------------
   select jsonb_build_object(
     'today', (select coalesce(jsonb_object_agg(language, n), '{}'::jsonb) from (
@@ -329,7 +338,7 @@ begin
         where published_at >= v_day and editorial_status = any (v_pub_status)
           and (translations is null or translations = '{}'::jsonb)
           and (editorial_metadata->'translations' is null or editorial_metadata->'translations' = '{}'::jsonb)),
-    'cross_language_duplicates', null
+    'cross_language_duplicates', v_xlang
   ) into v_lang;
 
   -- ---------------- failure center ----------------
