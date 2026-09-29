@@ -100,7 +100,9 @@ function okBody(bytes = buildSilentMp3(8)) {
   return JSON.stringify({ audioContent: Buffer.from(bytes).toString("base64") });
 }
 
-function routedFetch(handler: (url: string, body: any) => Response) {
+type TtsBody = { input: { text?: string; prompt?: string; markup?: string }; voice: Record<string, string>; audioConfig: Record<string, unknown> };
+
+function routedFetch(handler: (url: string, body: TtsBody) => Response) {
   return vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
     if (String(url).includes("oauth2.googleapis.com")) {
       return new Response(JSON.stringify({ access_token: "ya29.test", expires_in: 3600 }), { status: 200 });
@@ -111,7 +113,7 @@ function routedFetch(handler: (url: string, body: any) => Response) {
 
 describe("Google TTS providers", () => {
   it("Gemini-TTS sends prompt + text + model + voice + MP3 and returns audio", async () => {
-    let seen: any;
+    let seen!: TtsBody;
     const fetchMock = routedFetch((_u, body) => {
       seen = body;
       return new Response(okBody(), { status: 200 });
@@ -128,7 +130,7 @@ describe("Google TTS providers", () => {
   });
 
   it("Chirp 3 HD sends markup with pause tags, a Chirp voice and a speaking rate", async () => {
-    let seen: any;
+    let seen!: TtsBody;
     const fetchMock = routedFetch((_u, body) => {
       seen = body;
       return new Response(okBody(), { status: 200 });
