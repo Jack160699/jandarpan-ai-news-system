@@ -2,21 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { REGISTERED_CRON_JOBS } from "@/lib/infrastructure/cron/registered-jobs";
+import { SCHEDULER_JOBS } from "@/lib/infrastructure/cron/scheduler-manifest";
 
 const ROOT = process.cwd();
 
 describe("editorial-generate schedule contract", () => {
-  it("registers /api/cron/editorial-generate in vercel.json or QStash", () => {
-    const vercel = JSON.parse(
-      fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8")
-    ) as { crons?: Array<{ path: string; schedule: string }> };
-
-    if (vercel.crons?.length) {
-      const entry = vercel.crons.find(
-        (c) => c.path === "/api/cron/editorial-generate"
-      );
-      expect(entry?.schedule).toBeDefined();
-    }
+  it("schedules /api/cron/editorial-generate in the Supabase scheduler manifest", () => {
+    // Vercel Hobby cannot run sub-daily crons and GitHub Actions schedules are
+    // throttled; the manifest (pg_cron) is the runtime scheduler.
+    const entry = SCHEDULER_JOBS.find((j) => j.path === "/api/cron/editorial-generate");
+    expect(entry).toBeDefined();
+    expect(entry!.everyMinutes).toBeLessThanOrEqual(15);
   });
 
   it("lists editorial-generate after orchestrate in registered jobs", () => {
@@ -24,19 +20,6 @@ describe("editorial-generate schedule contract", () => {
     const orchestrateIdx = REGISTERED_CRON_JOBS.indexOf("orchestrate");
     expect(editorialIdx).toBeGreaterThan(orchestrateIdx);
     expect(REGISTERED_CRON_JOBS).not.toContain("editorial_generate");
-  });
-
-  it("schedules editorial-generate in QStash setup script", () => {
-    const script = fs.readFileSync(
-      path.join(ROOT, "scripts/setup-qstash-schedules.mjs"),
-      "utf8"
-    );
-    expect(script).toContain("/api/cron/editorial-generate");
-    expect(script).toContain("10,40 * * * *");
-    expect(script).toContain('scheduleId: "jandarpan-editorial-generate"');
-    expect(script).not.toMatch(
-      /RETIRED_SCHEDULE_IDS\s*=\s*\[[^\]]*"jandarpan-editorial-generate"/
-    );
   });
 
   it("excludes editorial_generate from job_processor batch claims", () => {

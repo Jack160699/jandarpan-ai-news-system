@@ -115,10 +115,16 @@ export async function markAiQueueOutcome(
     await supabase
       .from("news_ai_queue")
       .update({
-        status: "failed",
+        // Dead-letter: permanent error or attempts exhausted. Never re-claimed.
+        status: "dead",
         processed_at: new Date().toISOString(),
         processing_started_at: null,
+        lease_owner: null,
+        lease_expires_at: null,
+        attempts: attempt,
+        failure_class: classifyAiQueueFailure(msg),
         error: encodeAiQueueRetryMeta(meta),
+        updated_at: new Date().toISOString(),
       })
       .eq("article_id", articleId)
       .in("status", ["pending", "processing"]);
@@ -146,14 +152,40 @@ export async function markAiQueueOutcome(
       status: "pending",
       processed_at: null,
       processing_started_at: null,
+      lease_owner: null,
+      lease_expires_at: null,
+      attempts: attempt,
+      next_attempt_at: nextRetryAt,
+      failure_class: classifyAiQueueFailure(msg),
       error: encodeAiQueueRetryMeta(meta),
+      updated_at: new Date().toISOString(),
     })
     .eq("article_id", articleId)
     .in("status", ["pending", "processing"]);
 }
 
+/** Coarse failure class stored on the row so the admin failure center can group by cause. */
+export function classifyAiQueueFailure(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("quota") || m.includes("429") || m.includes("rate")) return "provider_quota";
+  if (m.includes("timeout") || m.includes("timed out") || m.includes("abort")) return "provider_timeout";
+  if (m.includes("duplicate")) return "duplicate";
+  if (m.includes("stale")) return "stale_source";
+  if (m.includes("geo")) return "missing_geography";
+  if (m.includes("quality") || m.includes("validation")) return "quality_rejection";
+  if (m.includes("article_not_found") || m.includes("no_enrichment")) return "no_enrichment";
+  if (m.includes("unauthorized") || m.includes("401") || m.includes("403") || m.includes("invalid")) return "provider_config";
+  if (m.includes("database") || m.includes("supabase") || m.includes("postgres")) return "database_error";
+  return "unknown";
+}
+
 export async function countDeadAiQueue(): Promise<number> {
   const supabase = createAdminClient();
+  const { count: deadCount } = await supabase
+    .from("news_ai_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "dead");
+  if (deadCount && deadCount > 0) return deadCount;
   const { data } = await supabase
     .from("news_ai_queue")
     .select("error")
