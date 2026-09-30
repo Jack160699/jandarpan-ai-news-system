@@ -3,7 +3,7 @@
 **Goal:** the production news pipeline must not depend on Vercel Pro. Vercel Hobby serves the website; Supabase Free
 (pg_cron + pg_net + Edge Functions) runs the workers. ₹0 additional platform cost.
 
-**Status:** design + feasibility evidence only. Nothing here is deployed, no secrets were created, no Vercel/Supabase setting was changed.
+**Status (2026-09-30):** the worker is IMPLEMENTED and verified locally under a real Deno runtime (see §7). Nothing is deployed, no secrets or Vault entries were created, no Vercel/Supabase setting was changed, and migration 089 is still unapplied.
 
 ## 1. Why the current worker paths cannot stay on Vercel Hobby
 
@@ -153,3 +153,58 @@ Free plan: **500 000 invocations/month**, no duration charge listed. One invocat
 7. `VERCEL_ENV`-gated behaviour (`isProductionDeployment()`) must be set explicitly in the Edge env or refactored to a neutral flag.
 
 Not blockers: `sharp` (stubbed, never executed), `next/headers` (only reachable from cookie-auth helpers), revalidation (stays with orchestrate), bundle size (0.5 MB).
+
+## 7. Implementation and verification (2026-09-30)
+
+### 7.1 What exists
+
+| Piece | Path |
+|---|---|
+| Entry (Deno) | `src/edge/editorial-worker/serve.ts` + `bootstrap-env.ts` (env parity, imported first) |
+| Handler (runtime-agnostic) | `src/lib/edge/editorial-worker/{handler,auth,classify,logging,resources,deps}.ts` |
+| Runtime ports (no stubs) | `src/lib/runtime/background.ts` (Next `after()`) / `background.edge.ts` (drain); `supabase.edge.ts` (service-role/env subset of the Supabase barrel) |
+| Sharp-free image API | `src/lib/news/ai/editorial-image-enqueue.ts` (generate-editorial-image.ts re-exports it) |
+| Per-run telemetry | `src/lib/ai/providers/run-telemetry.ts` (provider/model/tokens/latency/error code per call) |
+| Generation options | `generateEditorialsFromEvents({ limit, eventId, dryRun, skipUpdates, stopAfterLlmCall, ignoreBackoff, maxAttempts })` |
+| Function shell | `supabase/functions/editorial-worker/index.ts` (imports the git-ignored `worker.bundle.js`), `config.toml` `[functions.editorial-worker] verify_jwt = false` |
+| Build / audit / tests | `pnpm edge:check`, `pnpm edge:build`, `scripts/edge-deno-smoke.mjs`, `scripts/edge-one-story-test.mjs` |
+
+Behaviour: one candidate per invocation; fail-CLOSED lease on the same `editorial-generate` key as the Vercel lane (`acquireWorkerRunLease(..., { failOpen: false })`);
+run mode refuses to spend AI budget unless Redis-backed quota storage is configured (in-memory counters reset every isolate, so CodeCraft RPM/TPM/RPD/TPD would not be enforced);
+`EDGE_WORKER_MAX_LLM_CALLS` (default 2) caps provider calls; `EDGE_WORKER_DEADLINE_MS` (default 135 s) returns `deadline_exceeded` and deliberately keeps the lease until its TTL;
+401/403/404 are non-retryable for every adapter, 429 honours `Retry-After` (inline wait only if <= 8 s, otherwise fail over; circuit floor = Retry-After), retries are jittered (>= 0.75x base),
+and a failed candidate is backed off (15/30/60/120 min, dead-letter at 4) by `editorial_candidate_attempts` (migration 089) so it is never retried immediately.
+
+### 7.2 Compatibility audit (strict, no stubs)
+
+`node scripts/edge-bundle-check.mjs` fails the build if anything Edge cannot run is reachable. Original findings, each fixed at the source rather than stubbed:
+`next/headers` (via the Supabase barrel: explicit Edge port), `next/server after()` (runtime port used by 4 provider files), bare `crypto` (5 files -> `node:crypto`),
+`Buffer` global (explicit `node:buffer` import), `sharp` (pulled in by the AI-cost dashboard via generate-editorial-image; split into a sharp-free module and the dashboard now imports the queue module).
+Result: 195 modules, 0.53 MB bundle, only `node:async_hooks` (per-run budget/telemetry `AsyncLocalStorage`), `node:crypto`, `node:buffer` remain; no filesystem access; no unsupported dynamic imports (18 literal ones, all bundled).
+Real Deno 2.9.6 executes the bundle: boot, `process.env` bridging, `AsyncLocalStorage`, auth, validation and test-mode gating all pass (`scripts/edge-deno-smoke.mjs`, 8/8).
+
+### 7.3 One-story test (real Deno, real Supabase data, real Gemini, dry run)
+
+20/20 checks (`scripts/edge-one-story-test.mjs`): lease held elsewhere -> `overlap_lock` with zero provider calls; one selected event processed; AI answered (gemini-3.5-flash-lite after gemini-3.6-flash daily quota fallback);
+publication gates ran; budget respected; nothing persisted; lease released; no secrets in logs; provider fault injection (local mock, Redis/circuit persistence off): 401 and 404 -> exactly 1 request and classified
+`provider_auth` / `provider_invalid_request`; 429 (`Retry-After: 30`) -> 1 request, `provider_quota_exhausted`; 503 -> 2 requests 758-865 ms apart (jittered backoff), `provider_upstream`.
+
+| Measure (local Deno 2.9.6, Windows) | Run 1 | Run 2 | Supabase Free limit |
+|---|---|---|---|
+| Request wall time | 16.3 s | 6.5 s | 150 s wall / 150 s idle timeout |
+| Provider latency (sum) | 11.2 s | 3.1 s | - |
+| CPU (process.cpuUsage, worker-reported) | 250 ms | 219 ms | 2 s per request (I/O wait excluded) - **UNVERIFIED on Supabase's meter** |
+| CPU (whole process delta incl. TLS/boot) | 328 ms | 297 ms | same |
+| Peak RSS | 78.6 MB | 84.0 MB | 256 MB |
+| Provider calls | 3 (1 embedding + 2 Gemini) | 3 | - |
+| Tokens (writer call) | 2 933 in / 260 out | 2 933 in / 285 out | - |
+| Bundle | 0.53 MB | | 20 MB |
+
+CodeCraft itself was not exercised against the real service (its key is not available locally); its adapter was exercised against the mock for 401/404/429/503.
+
+### 7.4 Findings from the test
+
+* A run inherently writes operational telemetry (`worker_run_leases` test key, `ai_provider_usage_events` +3/run). No article, run record or candidate-attempt row was written.
+* **Publication-gate hole found and fixed:** e-paper page listings ("30092026 Raipur Main - 30 Sep 2026 - Page 10 - epaper.haribhoomi.com", urgency 90) ranked first, cost two paid calls, and one draft
+  ("Raipur News Updates: Comprehensive Coverage for September 30, 2026") passed the gates. Now rejected before any LLM call (`isEpaperPageListingTitle`) and the roundup patterns cover month-first dates and "comprehensive coverage" filler. 12 such events existed in 7 days; 1 generic-like article was already published.
+* The same event was gated in run 1 and allowed in run 2: gate outcomes depend on the (non-deterministic) draft.

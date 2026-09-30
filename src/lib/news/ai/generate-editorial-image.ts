@@ -7,6 +7,10 @@
 
 import { requestImageGeneration } from "@/lib/ai/providers";
 import { createAdminServerClient } from "@/lib/supabase";
+import {
+  isEditorialImageGenerationEnabled,
+  isEditoriallyEligibleSourceImageUrl,
+} from "@/lib/news/ai/editorial-image-enqueue";
 import { getPublicSupabaseEnv } from "@/lib/supabase/env";
 import { scoreSourceConfidence } from "@/lib/news/ai/event-clustering";
 import { logEditorialImageAnalytics } from "@/lib/news/ai/editorial-image-analytics";
@@ -174,24 +178,8 @@ function logImageGenerationPhase(
   );
 }
 
-export function isEditorialImageGenerationEnabled(): boolean {
-  return isImageProviderAvailable();
-}
-
 function getStorageBucket(): string {
   return process.env.NEWSROOM_STORAGE_BUCKET?.trim() || "editorial-images";
-}
-
-export function isEditoriallyEligibleSourceImageUrl(url: string | null): boolean {
-  if (!url || !isDisplayableImage(url)) return false;
-  const lower = url.toLowerCase();
-  return ![
-    "images.unsplash.com",
-    "plus.unsplash.com",
-    "source.unsplash.com",
-    "pexels.com",
-    "pixabay.com",
-  ].some((host) => lower.includes(host));
 }
 
 function pickSourceSignalImage(signals: NewsSignalRow[]): string | null {
@@ -1526,50 +1514,13 @@ export async function processEditorialImageQueue(
   };
 }
 
-export async function queueEditorialImageForArticle(
-  generatedArticleId: string,
-  options?: { force?: boolean; priority?: number; customPrompt?: string }
-): Promise<{ enqueued: boolean; reason: string }> {
-  const result = await enqueueEditorialImageDetailed(generatedArticleId, {
-    force: options?.force,
-    priority: options?.priority,
-    customPrompt: options?.customPrompt,
-  });
-  if (result.enqueued) {
-    logEditorialImageAnalytics({
-      event: "resolve_start",
-      articleId: generatedArticleId,
-      metadata: {
-        enqueued: true,
-        reason: result.reason,
-        aiEnabled: isEditorialImageGenerationEnabled(),
-      },
-    });
-  } else {
-    logEditorialImageAnalytics({
-      event: "resolve_start",
-      articleId: generatedArticleId,
-      metadata: {
-        enqueued: false,
-        reason: result.reason,
-        aiEnabled: isEditorialImageGenerationEnabled(),
-      },
-    });
-  }
-  return { enqueued: result.enqueued, reason: result.reason };
-}
-
-/**
- * Clean editorial policy: Never assign generic Unsplash/stock placeholders to news articles.
- * Returns empty string — live candidates must have genuine source photojournalism.
- */
-export function initialHeroPlaceholder(
-  category: string,
-  region?: string | null
-): string {
-  return "";
-}
-
+// Sharp-free half of the API lives in editorial-image-enqueue.ts (used by the generation path / Edge worker).
+export {
+  initialHeroPlaceholder,
+  isEditorialImageGenerationEnabled,
+  isEditoriallyEligibleSourceImageUrl,
+  queueEditorialImageForArticle,
+} from "@/lib/news/ai/editorial-image-enqueue";
 export {
   enqueueEditorialImage,
   countPendingEditorialImages,

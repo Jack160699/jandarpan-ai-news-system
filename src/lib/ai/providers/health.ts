@@ -2,6 +2,7 @@
  * In-memory AI provider health — avoids retry storms on bad keys.
  */
 
+import { runInBackground } from "@/lib/runtime/background";
 import { isLocalEnrichEnabled } from "@/lib/ai/providers/local-enrich-flag";
 import { circuitCooldownMs, classifyCircuitFailure } from "@/lib/ai/providers/circuit-policy";
 import type {
@@ -242,16 +243,8 @@ function persistProviderState(
   const work = import("@/lib/ai/providers/circuit-store")
     .then((m) => m.writeCircuitState(snapshot))
     .catch(() => undefined);
-  // Keep the serverless invocation alive until the write lands.
-  void import("next/server")
-    .then(({ after }) => {
-      try {
-        after(() => work);
-      } catch {
-        /* outside a request scope — the promise still runs to completion */
-      }
-    })
-    .catch(() => undefined);
+  // Keep the invocation alive until the write lands (runtime port: Next after() / Edge drain).
+  runInBackground(() => work);
 }
 
 /**

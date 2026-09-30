@@ -1,4 +1,4 @@
-import { after } from "next/server";
+import { runInBackground } from "@/lib/runtime/background";
 import {
   isProviderHealthy,
   markProviderUnhealthy,
@@ -39,7 +39,7 @@ function healthKeyFor(model: string): string {
   return `codecraft:${model}`;
 }
 
-function classifyCodeCraftFailure(status: number, body: string): ClassifiedAiError {
+export function classifyCodeCraftFailure(status: number, body: string): ClassifiedAiError {
   let message = `HTTP ${status}`;
   try {
     const json = JSON.parse(body) as { error?: { message?: string; type?: string } };
@@ -235,7 +235,7 @@ export async function requestCodeCraftChat(request: ChatCompletionRequest): Prom
 
     void reconcileQuotaUsage(quota.reservation, { inputTokens, outputTokens });
 
-    after(() =>
+    runInBackground(() =>
       recordAiProviderUsage(
         buildAiUsageRecord({
           provider: "codecraft",
@@ -259,7 +259,7 @@ export async function requestCodeCraftChat(request: ChatCompletionRequest): Prom
   } catch (err) {
     const error = err && typeof err === "object" && "code" in err ? (err as ClassifiedAiError) : { code: "ai_network_error", message: "CodeCraft request failed", retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
     void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
-    after(() =>
+    runInBackground(() =>
       recordAiProviderUsage(
       buildAiUsageRecord({
         provider: "codecraft",

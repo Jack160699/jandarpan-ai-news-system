@@ -45,7 +45,9 @@
     "qstash:setup": "node scripts/setup-qstash-schedules.mjs",
     "audit:editorial-depth": "npx tsx scripts/audit-editorial-depth.ts",
     "ops:regen-editorial-depth": "npx tsx scripts/regenerate-editorial-depth.ts",
-    "ops:regen-editorial-depth-apply": "npx tsx scripts/regenerate-editorial-depth.ts --apply"
+    "ops:regen-editorial-depth-apply": "npx tsx scripts/regenerate-editorial-depth.ts --apply",
+    "edge:check": "node scripts/edge-bundle-check.mjs src/edge/editorial-worker/serve.ts",
+    "edge:build": "node scripts/edge-bundle-check.mjs src/edge/editorial-worker/serve.ts --out supabase/functions/editorial-worker/worker.bundle.js"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.53.1",

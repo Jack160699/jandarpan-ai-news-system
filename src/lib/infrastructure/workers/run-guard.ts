@@ -43,9 +43,19 @@ const NOOP_RELEASE = async () => {};
  */
 export async function acquireWorkerRunLease(
   workerKey: string,
-  windowSec: number
+  windowSec: number,
+  options?: {
+    /**
+     * Default true (Vercel lanes: a broken lease table must never stop the newsroom).
+     * false = FAIL CLOSED: throw `lease_unavailable` instead of proceeding without exclusion. The Edge worker uses
+     * this so it can never run concurrently with the Vercel lane when the lease cannot be verified.
+     */
+    failOpen?: boolean;
+  }
 ): Promise<WorkerRunLease> {
+  const failOpen = options?.failOpen !== false;
   if (!isSupabaseConfigured()) {
+    if (!failOpen) throw new Error("lease_unavailable: supabase_not_configured");
     const now = Date.now();
     if ((memoryLocks.get(workerKey) ?? 0) > now) {
       return { acquired: false, release: NOOP_RELEASE };
@@ -83,6 +93,9 @@ export async function acquireWorkerRunLease(
       },
     };
   } catch (err) {
+    if (!failOpen) {
+      throw new Error(`lease_unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    }
     console.error(
       "[run-guard] lease unavailable, failing open:",
       err instanceof Error ? err.message : err

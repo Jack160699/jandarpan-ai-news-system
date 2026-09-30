@@ -16,7 +16,7 @@
  * the same reason.
  */
 
-import { after } from "next/server";
+import { runInBackground } from "@/lib/runtime/background";
 import {
   isProviderHealthy,
   markProviderUnhealthy,
@@ -70,7 +70,7 @@ function healthKeyFor(model: string): string {
   return `gemini:${model}`;
 }
 
-function classifyGeminiFailure(status: number, body: string): ClassifiedAiError {
+export function classifyGeminiFailure(status: number, body: string): ClassifiedAiError {
   let message = `HTTP ${status}`;
   let apiStatus: string | undefined;
   try {
@@ -237,7 +237,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     // `void recordAiProviderUsage(...)` can lose the race when the response
     // is the last thing the handler does, silently dropping the usage/audit
     // row even though the Gemini call itself succeeded.
-    after(() =>
+    runInBackground(() =>
       recordAiProviderUsage(
         buildAiUsageRecord({
           provider: "gemini",
@@ -263,7 +263,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     const error = err && typeof err === "object" && "code" in err ? (err as ClassifiedAiError) : { code: "ai_network_error", message: "Gemini request failed", retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
     // No real tokens were consumed — give the reserved estimate back.
     void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
-    after(() =>
+    runInBackground(() =>
       recordAiProviderUsage(
       buildAiUsageRecord({
         provider: "gemini",

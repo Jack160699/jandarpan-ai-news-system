@@ -2,7 +2,7 @@
  * Article normalization, validation, dedupe (URL + fuzzy title)
  */
 
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import type { NormalizedArticle } from "@/lib/news/types";
 import { detectLanguage } from "@/lib/news/language";
 import { isValidNewsArticle } from "@/lib/news/sanitize-article";

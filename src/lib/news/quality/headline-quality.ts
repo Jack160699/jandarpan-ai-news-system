@@ -39,6 +39,12 @@ const ROUNDUP_PATTERNS: RegExp[] = [
   new RegExp(`live\\s*(breaking\\s*)?news\\s*(page|updates?|blog)`, "i"),
   new RegExp(`(top|main|breaking)\\s*(news|headlines|stories)\\s*(for|of|on)\\s*(\\d{1,2}\\s*)?(${MONTHS_EN})`, "i"),
   new RegExp(`(news|headlines|live\\s*updates?)\\s*(for|of|on)\\s*(\\d{1,2}\\s*)(${MONTHS_EN})`, "i"),
+  // Month-first dates ("... Coverage for September 30, 2026") - seen in a draft that passed the gates on 2026-09-30.
+  new RegExp(`(news|updates?|headlines|coverage|roundup|digest)\\s*(for|of|on)\\s*(${MONTHS_EN})\\s*\\d{1,2}`, "i"),
+  // Filler "coverage" headlines: they describe a page, not an event.
+  /\b(comprehensive|complete)\s+(news\s+)?(coverage|roundup|digest)\b/i,
+  /(व्यापक|समग्र)\s*(समाचार\s*)?(कवरेज|खबरों?)/,
+  /\be-?paper\b|ई-?पेपर/i,
 ];
 
 export function isRoundupHeadline(headline: string | null | undefined): boolean {

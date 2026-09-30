@@ -84,6 +84,8 @@ export async function recordAiProviderUsage(
   }
 }
 
+import { noteProviderCall } from "@/lib/ai/providers/run-telemetry";
+
 export function buildAiUsageRecord(input: {
   provider: AiProviderId;
   operation: string;
@@ -106,6 +108,26 @@ export function buildAiUsageRecord(input: {
 }): AiProviderUsageRecord {
   const promptText = [input.system, input.user].filter(Boolean).join("\n");
   const promptHash = promptText ? hashPrompt(promptText) : undefined;
+
+  // Run-scoped telemetry (no-op outside a withRunTelemetry scope): metadata only, never prompt/completion text.
+  const errorMeta = input.metadata?.error;
+  // Adapters report a failed call's classified code as fallbackReason (metadata.error on the OpenAI-compatible path).
+  const failureCode = !input.success
+    ? typeof errorMeta === "string"
+      ? errorMeta
+      : (input.fallbackReason ?? null)
+    : null;
+  noteProviderCall({
+    provider: input.provider,
+    model: input.model,
+    operation: input.operation,
+    endpoint: input.endpoint,
+    success: input.success,
+    latencyMs: input.latencyMs ?? null,
+    inputTokens: input.inputTokens,
+    outputTokens: input.outputTokens,
+    errorCode: failureCode,
+  });
 
   return {
     provider: input.provider,

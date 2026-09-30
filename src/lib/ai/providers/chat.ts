@@ -2,7 +2,7 @@
  * Resilient chat completions — OpenAI primary, OpenRouter secondary, retries on transient errors only.
  */
 
-import { after } from "next/server";
+import { runInBackground } from "@/lib/runtime/background";
 import {
   classifyAiHttpFailure,
   classifyAiNetworkError,
@@ -271,7 +271,7 @@ async function postChat(
         context: request.context,
         metadata: { provider: config.id },
       });
-      after(() => recordOpenAiUsage(openAiRecord));
+      runInBackground(() => recordOpenAiUsage(openAiRecord));
     }
     const usageRecord = buildAiUsageRecord({
       provider: config.id,
@@ -288,7 +288,7 @@ async function postChat(
       completion: content,
       context: request.context,
     });
-    after(() => recordAiProviderUsage(usageRecord));
+    runInBackground(() => recordAiProviderUsage(usageRecord));
 
     if (allowsPromptCache(request.cachePolicy)) {
       void storePromptCache({
@@ -469,7 +469,7 @@ async function requestFromProviderInner(
         context: request.context,
         metadata: { provider: config.id, error: errorCode },
       });
-      after(() => recordOpenAiUsage(openAiRecord));
+      runInBackground(() => recordOpenAiUsage(openAiRecord));
     }
     const usageRecord = buildAiUsageRecord({
       provider: config.id,
@@ -486,7 +486,7 @@ async function requestFromProviderInner(
       context: request.context,
       fallbackReason: errorCode,
     });
-    after(() => recordAiProviderUsage(usageRecord));
+    runInBackground(() => recordAiProviderUsage(usageRecord));
     const error =
       err && typeof err === "object" && "code" in err
         ? (err as ClassifiedAiError)

@@ -10,7 +10,7 @@ import {
 } from "@/lib/observability/ai-cost/currency";
 import { getOpenAiUsageDashboard } from "@/lib/observability/ai-cost/dashboard";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
-import { countPendingEditorialImages } from "@/lib/news/ai/generate-editorial-image";
+import { countPendingEditorialImages } from "@/lib/news/ai/editorial-image-queue";
 
 export type MoneyAmount = DualCurrency & {
   usdLabel: string;

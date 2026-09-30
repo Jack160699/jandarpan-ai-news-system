@@ -98,7 +98,7 @@ import {
   initialHeroPlaceholder,
   isEditoriallyEligibleSourceImageUrl,
   queueEditorialImageForArticle,
-} from "@/lib/news/ai/generate-editorial-image";
+} from "@/lib/news/ai/editorial-image-enqueue";
 import {
   hasVerifiedRealMedia,
   isCleanRightsEligibleMedia,
@@ -172,7 +172,8 @@ import { logNewsroom } from "@/lib/newsroom/logger";
 import { EDITORIAL_CAPACITY } from "@/lib/newsroom/editorial-capacity";
 import { selectEditorialCandidates } from "@/lib/infrastructure/workers/editorial-priority";
 import { prepareEditorialCandidateWaves } from "./editorial-candidate-waves";
-import { isLlmBudgetExhausted } from "@/lib/ai/providers/call-budget";
+import { isLlmBudgetExhausted, llmBudgetSnapshot } from "@/lib/ai/providers/call-budget";
+import { isEpaperPageListingTitle } from "@/lib/news/quality/source-title-quality";
 import {
   clearCandidateAttempts,
   isCandidateBlocked,
@@ -2193,10 +2194,27 @@ export async function generateEditorialFromEvent(
 /**
  * Batch-generate editorials; rescues top scorers if entire batch would fail.
  */
-export async function generateEditorialsFromEvents(options?: {
+export type GenerateEditorialsOptions = {
   limit?: number;
-}): Promise<BatchEditorialResult> {
+  /** Process exactly this event (test / targeted run). Still subject to every eligibility, freshness and quality gate. */
+  eventId?: string;
+  /** Run the whole pipeline (LLM + gates) but persist nothing and record no candidate-attempt history. */
+  dryRun?: boolean;
+  /** Cap on events one call may attempt. Defaults to EDITORIAL_MAX_CANDIDATE_ATTEMPTS or max(limit*2, 8). */
+  maxAttempts?: number;
+  /** Skip the "refresh already-published stories" pass (each refresh can cost an LLM call). */
+  skipUpdates?: boolean;
+  /** Stop scanning candidates as soon as one real provider call has been spent (one-item workers). */
+  stopAfterLlmCall?: boolean;
+  /** Ignore candidate-attempt backoff/dead-letter state (explicit test runs only). */
+  ignoreBackoff?: boolean;
+};
+
+export async function generateEditorialsFromEvents(
+  options?: GenerateEditorialsOptions
+): Promise<BatchEditorialResult> {
   const limit = options?.limit ?? INFRA_CONFIG.editorialBatchLimit;
+  const dryRun = options?.dryRun === true;
 
   if (!isEditorialEnabled()) {
     return {
@@ -2252,6 +2270,13 @@ export async function generateEditorialsFromEvents(options?: {
     }
   }
 
+  if (options?.eventId) {
+    // Targeted run: exactly this event, regardless of ranking. Freshness/eligibility gates below still apply.
+    const one = await supabase.from("news_events").select("*").eq("id", options.eventId).limit(1);
+    events = one.data ?? [];
+    error = one.error;
+  }
+
   if (error || !events?.length) {
     return {
       generated: 0,
@@ -2272,7 +2297,9 @@ export async function generateEditorialsFromEvents(options?: {
 
   // Bound update pass: already-published events that may have new signals (max 3).
   const MAX_EXISTING_UPDATES = 3;
-  const updateCandidates = (events as NewsEventRow[])
+  const updateCandidates = options?.skipUpdates || options?.eventId
+    ? []
+    : (events as NewsEventRow[])
     .filter(
       (e) =>
         isWithinAutoGenerationWindow(e) &&
@@ -2296,7 +2323,12 @@ export async function generateEditorialsFromEvents(options?: {
     });
   }
 
-  const eligible = resolvable;
+  // E-paper page listings are scans of printed pages, not stories: reject them BEFORE any LLM call is spent.
+  const eligible = resolvable.filter((e) => !isEpaperPageListingTitle(e.canonical_title));
+  const filteredEpaperListings = resolvable.length - eligible.length;
+  if (filteredEpaperListings > 0) {
+    logEditorial("epaper_listing_filter", { resolvable: resolvable.length, filteredEpaperListings });
+  }
 
   // Pre-generation media discovery: Identify candidates with clean real photojournalism
   const allEligibleSignalIds = uniqueSignalIds(eligible);
@@ -2327,10 +2359,12 @@ export async function generateEditorialsFromEvents(options?: {
   // Persistent failure history: skip events still in exponential backoff or dead-lettered (fail-open on DB error).
   const attemptStates = await loadCandidateAttemptStates(eligible.map((e) => e.id));
   const nowMs = Date.now();
-  const unblocked = eligible.filter((e) => {
-    const st = attemptStates.get(e.id);
-    return !st || !isCandidateBlocked(st, nowMs);
-  });
+  const unblocked = options?.ignoreBackoff
+    ? eligible
+    : eligible.filter((e) => {
+        const st = attemptStates.get(e.id);
+        return !st || !isCandidateBlocked(st, nowMs);
+      });
   const blockedByBackoff = eligible.length - unblocked.length;
   if (blockedByBackoff > 0) {
     logEditorial("candidate_backoff_filter", { eligible: eligible.length, blockedByBackoff });
@@ -2382,8 +2416,14 @@ export async function generateEditorialsFromEvents(options?: {
     concurrency: INFRA_CONFIG.editorialConcurrency,
     // Bound how many events one batch may even attempt (each attempt can cost an LLM call): 2x the batch, not 4x/20.
     // EDITORIAL_MAX_CANDIDATE_ATTEMPTS lets a one-item worker cap it lower.
-    maxAttempts: Math.max(1, Number(process.env.EDITORIAL_MAX_CANDIDATE_ATTEMPTS) || Math.max(limit * 2, 8)),
-    shouldStop: () => isLlmBudgetExhausted("editorial_generate"),
+    maxAttempts: Math.max(
+      1,
+      options?.maxAttempts ??
+        (Number(process.env.EDITORIAL_MAX_CANDIDATE_ATTEMPTS) || Math.max(limit * 2, 8))
+    ),
+    shouldStop: () =>
+      isLlmBudgetExhausted("editorial_generate") ||
+      (options?.stopAfterLlmCall === true && (llmBudgetSnapshot()?.used ?? 0) > 0),
     prepare: (event) =>
       prepareCandidate(
         event,
@@ -2441,6 +2481,28 @@ export async function generateEditorialsFromEvents(options?: {
     confidenceScores.push(candidate.quality.ai_confidence);
 
     if (candidate.repaired) repaired++;
+
+    if (dryRun) {
+      // Everything up to and including the publication gates ran; nothing is written.
+      results.push({
+        eventId: event.id,
+        ok: candidate.quality.publish_allowed,
+        published: false,
+        repaired: candidate.repaired,
+        dryRun: true,
+        reason: candidate.quality.publish_allowed ? "dry_run_publish_allowed" : "dry_run_gated",
+        draftPreview: {
+          headline: candidate.draft.headline,
+          summary: candidate.draft.summary,
+          language: candidate.draft.language,
+          bodyChars: candidate.draft.article_body.length,
+          publishAllowed: candidate.quality.publish_allowed,
+          hardReject: candidate.quality.hard_reject,
+        },
+        ...qualityResultFields(candidate.quality),
+      });
+      continue;
+    }
 
     // Persist publish_allowed candidates as normal, and also persist
     // non-hard-rejected candidates (repair/hold â€” e.g. below the autonomous
@@ -2617,13 +2679,13 @@ export async function generateEditorialsFromEvents(options?: {
   }
 
   // Persist failure history (backoff / dead-letter) and clear it for events that finally published.
-  for (const f of failedEventReasons) {
+  for (const f of dryRun ? [] : failedEventReasons) {
     const rec = await recordCandidateFailure(f.eventId, f.reason);
     if (rec?.deadLettered) {
       logEditorial("candidate_dead_lettered", { eventId: f.eventId, attempts: rec.attempts, reason: f.reason });
     }
   }
-  await clearCandidateAttempts(succeededEventIds);
+  if (!dryRun) await clearCandidateAttempts(succeededEventIds);
 
   // Batch rescue has been removed to enforce the strict CodeCraft generation rules.
   // If an article fails generation, it will not be aggressively rescued.
