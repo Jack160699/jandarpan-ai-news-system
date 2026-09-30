@@ -311,6 +311,34 @@ describe("handler: safe test mode", () => {
   });
 });
 
+describe("handler: log capture for secret scanning (test mode only, opt-in)", () => {
+  const testEnv = { EDGE_WORKER_SECRET: SECRET, NEWSROOM_GENERATE_ARTICLES: "true", EDGE_WORKER_TEST_MODE: "true" };
+
+  it("returns every console line the run emitted (including library output) and restores console", async () => {
+    const before = console.warn;
+    const { deps } = makeDeps({
+      env: testEnv,
+      logSink: undefined, // production default: console.log, which is what the capture sees
+      generate: vi.fn(async () => {
+        console.warn("[lib] something from a dependency");
+        return batch();
+      }),
+    });
+    const r = await run(req({ mode: "test", event_id: EVENT, include_logs: true }), deps);
+    expect(r.body.debug_logs?.some((l) => l.includes("[lib] something from a dependency"))).toBe(true);
+    expect(r.body.debug_logs?.some((l) => l.includes('"event":"run_start"'))).toBe(true);
+    expect(r.body.runtime_probe).toBeTruthy();
+    expect(console.warn).toBe(before); // restored
+  });
+
+  it("is never returned in run mode, or when not requested", async () => {
+    const a = makeDeps();
+    expect((await run(req({ include_logs: true }), a.deps)).body.debug_logs).toBeUndefined();
+    const b = makeDeps({ env: testEnv });
+    expect((await run(req({ mode: "test", event_id: EVENT }), b.deps)).body.debug_logs).toBeUndefined();
+  });
+});
+
 describe("handler: wall-clock deadline", () => {
   it("returns deadline_exceeded and does NOT release the lease (TTL expires it; never risk an overlap)", async () => {
     vi.useFakeTimers();

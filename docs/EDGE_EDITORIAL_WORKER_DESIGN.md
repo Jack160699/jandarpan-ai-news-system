@@ -208,3 +208,32 @@ CodeCraft itself was not exercised against the real service (its key is not avai
 * **Publication-gate hole found and fixed:** e-paper page listings ("30092026 Raipur Main - 30 Sep 2026 - Page 10 - epaper.haribhoomi.com", urgency 90) ranked first, cost two paid calls, and one draft
   ("Raipur News Updates: Comprehensive Coverage for September 30, 2026") passed the gates. Now rejected before any LLM call (`isEpaperPageListingTitle`) and the roundup patterns cover month-first dates and "comprehensive coverage" filler. 12 such events existed in 7 days; 1 generic-like article was already published.
 * The same event was gated in run 1 and allowed in run 2: gate outcomes depend on the (non-deterministic) draft.
+
+## 8. Real Supabase Edge runtime validation (2026-09-30)
+
+Migration 089 was applied to production first (kill switch `enabled=false`, prune off, scheduler inert: 0 dispatch rows, empty pg_net queue, no Vault secrets, 0 failed cron runs), then the function was deployed
+(`supabase functions deploy editorial-worker --no-verify-jwt --use-api`, server-side bundling, no Docker) and validated with `scripts/edge-remote-validate.mjs` using TEMPORARY secrets that are unset in a `finally` block.
+
+Hosted runtime: `supabase-edge-runtime-1.76.0 (compatible with Deno v2.1.4)`, region `ap-south-1`. Validation found two incompatibilities that local Deno 2.9.6 did NOT show:
+
+| # | Hosted-runtime behaviour | Fix |
+|---|---|---|
+| 1 | `process.env` is **read-only** (`NotSupported` on assignment); the bundle crashed at boot with an opaque `WORKER_ERROR` | `bootstrap-env.ts` installs an overlay `process` (plain `env` object seeded from `Deno.env`); the entry file imports the bundle dynamically and returns a diagnosable `boot_failed` JSON on any boot error |
+| 2 | a `window` global exists although it is a server, so `assertServerOnly()` threw "must run on the server" | `isBrowserRuntime()` = `window` AND `document` (the rule supabase-js uses); regression test added |
+| 3 | `process.cpuUsage()` is **not implemented** (logs `Not implemented: process.cpuUsage()`, returns zeros) and `process.memoryUsage().rss` is 0 | the tracker now reports CPU/RSS as **unverified** unless the counters move; heap comes from a real source (test added) |
+
+Final run: 20/20 checks. Boot ok; auth (401/401/405); scheduler-triggered call -> `kill_switch_off` (Edge read `scheduler_control` from 089); run mode -> `durable_quota_unavailable` (no Redis); test-mode gating;
+lease refusal with zero provider calls; one selected event: AI answered and gates ran (`dry_run_gated`/`quality_rejected`); provider calls bounded (2 of 2 budget); one candidate reached the model; nothing written;
+lease released; no secrets in captured console output; temporary secrets removed.
+
+| Measurement (real Supabase Edge) | Cold | Warm | Limit |
+|---|---|---|---|
+| Client-observed request wall time | 13.5 s | 7.4 s | 150 s |
+| Worker-measured wall time | 12.5 s | 6.8 s | 150 s |
+| Provider latency (2 Gemini calls) | 4.5 s | 4.1 s | - |
+| Tokens (generate + repair) | 2 381 in / 706 out | 2 378 in / 675 out | - |
+| Heap peak | 17.2 MB | 17.2 MB | 256 MB total (RSS **unverified**: stubbed) |
+| CPU | **UNVERIFIED** | **UNVERIFIED** | 2 s (exact value only in the Supabase dashboard / analytics) |
+
+CPU bound: both invocations completed; the platform terminates an invocation that exceeds its CPU limit, so CPU stayed under the limit. That is enforcement evidence, not a measurement.
+Nothing else exposes CPU: response headers carry only `sb-request-id`, `x-deno-execution-id`, `x-sb-edge-region`; the CLI has no logs/metrics command.

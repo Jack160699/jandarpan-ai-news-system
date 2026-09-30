@@ -23,6 +23,7 @@ import {
 } from "@/lib/edge/editorial-worker/classify";
 import { createWorkerLogger } from "@/lib/edge/editorial-worker/logging";
 import {
+  probeRuntime,
   startResourceTracker,
   type ResourceReport,
 } from "@/lib/edge/editorial-worker/resources";
@@ -110,7 +111,41 @@ export type WorkerResponseBody = {
   resources: ResourceReport | null;
   lease: { key: string; acquired: boolean } | null;
   candidate_pool?: BatchEditorialResult["candidatePool"] | null;
+  /** Test mode + include_logs only: everything the run wrote to console (raw, for secret scanning). */
+  debug_logs?: string[];
+  runtime_probe?: Record<string, unknown>;
 };
+
+/** Capture console output for the duration of a test-mode run; the original console still receives every line. */
+function captureConsole(): { lines: string[]; restore: () => void } {
+  const lines: string[] = [];
+  const methods = ["log", "info", "warn", "error", "debug"] as const;
+  const originals = methods.map((m) => console[m]);
+  methods.forEach((m, i) => {
+    console[m] = (...args: unknown[]) => {
+      if (lines.length < 300) {
+        lines.push(
+          args
+            .map((a) => {
+              if (typeof a === "string") return a;
+              try {
+                return JSON.stringify(a);
+              } catch {
+                return String(a);
+              }
+            })
+            .join(" ")
+            .slice(0, 800)
+        );
+      }
+      originals[i]!.apply(console, args as never);
+    };
+  });
+  return {
+    lines,
+    restore: () => methods.forEach((m, i) => (console[m] = originals[i]!)),
+  };
+}
 
 function intEnv(env: Record<string, string | undefined>, name: string, fallback: number, min: number, max: number): number {
   const n = Number(env[name]);
@@ -130,6 +165,7 @@ type RequestBody = {
   dry_run?: unknown;
   ignore_backoff?: unknown;
   lease_key?: unknown;
+  include_logs?: unknown;
 };
 
 async function readBody(request: Request): Promise<RequestBody | "too_large" | "invalid"> {
@@ -170,6 +206,7 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
   const trigger = (request.headers.get("x-jd-trigger") ?? "manual").trim().toLowerCase().slice(0, 20);
   const log = createWorkerLogger({ run_id: runId, correlation_id: correlationId, trigger }, deps.logSink);
 
+  let capture: ReturnType<typeof captureConsole> | null = null;
   const respond = (
     status: WorkerStatus,
     httpStatus: number,
@@ -197,6 +234,7 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
       resources: fields.resources ?? null,
       lease: fields.lease ?? null,
       candidate_pool: fields.candidate_pool,
+      ...(capture ? { debug_logs: capture.lines.slice(), runtime_probe: probeRuntime() } : {}),
     };
     return json(body, httpStatus);
   };
@@ -228,6 +266,7 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
   let dryRun = false;
   let ignoreBackoff = false;
   let leaseKey = WORKER_LEASE_KEY;
+  let includeLogs = false;
 
   if (mode === "test") {
     if (deps.env.EDGE_WORKER_TEST_MODE !== "true") {
@@ -239,11 +278,13 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
     eventId = body.event_id;
     dryRun = body.dry_run !== false; // test mode is dry by default; persisting must be explicit
     ignoreBackoff = body.ignore_backoff === true;
+    includeLogs = body.include_logs === true;
     if (typeof body.lease_key === "string" && /^[a-z0-9:_-]{3,60}$/i.test(body.lease_key)) leaseKey = body.lease_key;
   } else if (body.event_id !== undefined) {
     return respond("bad_request", 400, { ok: false, error_reason: "event_id is only accepted in test mode" });
   }
 
+  if (includeLogs) capture = captureConsole();
   log.info("run_start", { mode, dry_run: dryRun, event_id: eventId ?? null, lease_key: leaseKey });
 
   let heldLease: { release: () => Promise<void> } | null = null;
@@ -457,5 +498,6 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
   } finally {
     // Always release, except after a deadline: generation may still be running, so the TTL must expire the lease.
     if (heldLease && !keepLease) await heldLease.release().catch(() => undefined);
+    capture?.restore();
   }
 }
