@@ -12,6 +12,7 @@
  */
 
 import { createAdminServerClient } from "@/lib/supabase";
+import { normalizeTitle } from "@/lib/news/normalize";
 
 export const MAX_CANDIDATE_ATTEMPTS = 4;
 export const CANDIDATE_BACKOFF_BASE_MS = 15 * 60_000;
@@ -131,4 +132,38 @@ export async function clearCandidateAttempts(eventIds: string[]): Promise<void> 
   } catch {
     /* best effort */
   }
+}
+
+/**
+ * Story identity for backoff purposes: events are keyed by id, so two events for the SAME story (identical normalised
+ * title) would otherwise each get their own retry budget and defeat the backoff / dead-letter. The clusterer no longer
+ * creates such twins (migration 092), and this keeps the editorial slate safe from any that already exist.
+ */
+export function storyKey(title: string): string {
+  return normalizeTitle(title).replace(/\s+/g, "");
+}
+
+/**
+ * Drops events that are blocked themselves OR share a story key with a blocked event, then keeps only the first event
+ * per story key (callers pass them best-first). Pure -- unit tested.
+ */
+export function selectUnblockedDistinctStories<T extends { id: string; canonical_title: string }>(
+  events: T[],
+  states: Map<string, CandidateAttemptState>,
+  now: number = Date.now()
+): T[] {
+  const blockedKeys = new Set<string>();
+  for (const e of events) {
+    const st = states.get(e.id);
+    if (st && isCandidateBlocked(st, now)) blockedKeys.add(storyKey(e.canonical_title));
+  }
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const e of events) {
+    const key = storyKey(e.canonical_title);
+    if (blockedKeys.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    out.push(e);
+  }
+  return out;
 }

@@ -176,10 +176,11 @@ import { isLlmBudgetExhausted, llmBudgetSnapshot } from "@/lib/ai/providers/call
 import { isEpaperPageListingTitle, isGenericRoundupSourceTitle } from "@/lib/news/quality/source-title-quality";
 import {
   clearCandidateAttempts,
-  isCandidateBlocked,
   loadCandidateAttemptStates,
   recordCandidateFailure,
+  selectUnblockedDistinctStories,
 } from "./candidate-attempts";
+import { EDITORIAL_EVENT_COLUMNS, hydrateEditorialEvents } from "./editorial-event-columns";
 import { isSafeBatchRescueCandidate } from "./editorial-batch-rescue";
 import {
   AUTO_GENERATION_MAX_AGE_HOURS,
@@ -2273,13 +2274,16 @@ export async function generateEditorialsFromEvents(
   ).toISOString();
   const fetchLimit = Math.max(limit * 40, 80);
 
-  let { data: events, error } = await supabase
+  const first = await supabase
     .from("news_events")
-    .select("*")
+    .select(EDITORIAL_EVENT_COLUMNS)
+    .neq("coverage_status", "superseded")
     .gte("created_at", windowStart)
     .order("urgency_score", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(fetchLimit);
+  let events: NewsEventRow[] | null = first.error ? null : hydrateEditorialEvents(first.data);
+  let error = first.error;
 
   if (!error && (events?.length ?? 0) < limit * 5) {
     const expandedStart = new Date(
@@ -2287,21 +2291,22 @@ export async function generateEditorialsFromEvents(
     ).toISOString();
     const expanded = await supabase
       .from("news_events")
-      .select("*")
+      .select(EDITORIAL_EVENT_COLUMNS)
+      .neq("coverage_status", "superseded")
       .gte("created_at", expandedStart)
       .order("urgency_score", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(fetchLimit);
     if (!expanded.error && expanded.data?.length) {
-      events = expanded.data;
+      events = hydrateEditorialEvents(expanded.data);
       error = expanded.error;
     }
   }
 
   if (options?.eventId) {
     // Targeted run: exactly this event, regardless of ranking. Freshness/eligibility gates below still apply.
-    const one = await supabase.from("news_events").select("*").eq("id", options.eventId).limit(1);
-    events = one.data ?? [];
+    const one = await supabase.from("news_events").select(EDITORIAL_EVENT_COLUMNS).eq("id", options.eventId).limit(1);
+    events = hydrateEditorialEvents(one.data);
     error = one.error;
   }
 
@@ -2393,12 +2398,11 @@ export async function generateEditorialsFromEvents(
   // Persistent failure history: skip events still in exponential backoff or dead-lettered (fail-open on DB error).
   const attemptStates = await loadCandidateAttemptStates(eligible.map((e) => e.id));
   const nowMs = Date.now();
+  // Backoff is keyed per event but applies per STORY: an event whose same-titled twin is blocked is blocked too, and a
+  // slate holds each story once (a duplicate event must not buy a story a fresh retry budget).
   const unblocked = options?.ignoreBackoff
     ? eligible
-    : eligible.filter((e) => {
-        const st = attemptStates.get(e.id);
-        return !st || !isCandidateBlocked(st, nowMs);
-      });
+    : selectUnblockedDistinctStories(eligible, attemptStates, nowMs);
   const blockedByBackoff = eligible.length - unblocked.length;
   if (blockedByBackoff > 0) {
     logEditorial("candidate_backoff_filter", { eligible: eligible.length, blockedByBackoff });
