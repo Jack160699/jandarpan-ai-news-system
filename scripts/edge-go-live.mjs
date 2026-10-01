@@ -62,6 +62,7 @@ const FLAGS = {
   NEWSROOM_USE_EMBEDDINGS: "true",
   NEWSROOM_LEGACY_BRIDGE: "false", // signals only: no news_articles copy, no dead-end news_ai_queue rows
   AUDIO_GENERATION_ENABLED: "false",
+  AI_QUOTA_REQUIRE_DURABLE: "true", // Edge isolates are ephemeral: a quota-store outage must fail CLOSED, never fall back to memory
   EDGE_WORKER_MAX_LLM_CALLS: "2",
   EDITORIAL_MAX_CANDIDATE_ATTEMPTS: "3",
   APP_BASE_URL: SITE,

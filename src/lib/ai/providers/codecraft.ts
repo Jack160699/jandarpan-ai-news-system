@@ -234,7 +234,7 @@ export async function requestCodeCraftChat(request: ChatCompletionRequest): Prom
 
   const slot = acquireConcurrencySlot("codecraft");
   if (!slot.acquired) {
-    void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
+    await reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
     return { ok: false, provider: "codecraft", latencyMs: 0, error: { code: "ai_provider_busy", message: "codecraft concurrency limit reached", retryable: false, authFailure: false, invalidRequest: false, rateLimited: false } };
   }
 
@@ -251,7 +251,9 @@ export async function requestCodeCraftChat(request: ChatCompletionRequest): Prom
       },
     });
 
-    void reconcileQuotaUsage(quota.reservation, { inputTokens, outputTokens });
+    // Awaited (not fire-and-forget): on Edge the isolate can be torn down once the response is sent, which would drop
+    // the correction. reconcileQuotaUsage never throws and warns when Redis did not apply it.
+    await reconcileQuotaUsage(quota.reservation, { inputTokens, outputTokens });
 
     runInBackground(() =>
       recordAiProviderUsage(
@@ -276,7 +278,7 @@ export async function requestCodeCraftChat(request: ChatCompletionRequest): Prom
     return { ok: true, content, provider: "codecraft", model, latencyMs };
   } catch (err) {
     const error = err && typeof err === "object" && "code" in err ? (err as ClassifiedAiError) : { code: "ai_network_error", message: "CodeCraft request failed", retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
-    void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
+    await reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
     runInBackground(() =>
       recordAiProviderUsage(
       buildAiUsageRecord({

@@ -193,6 +193,30 @@ describe("reserveQuota — provider+model bucket isolation", () => {
   });
 });
 
+describe("reserveQuota when the durable store does not answer", () => {
+  it("fails CLOSED (and warns) when AI_QUOTA_REQUIRE_DURABLE=true - no silent per-process fallback", async () => {
+    mockIsRedisConfigured.mockReturnValue(true);
+    mockRedisEval.mockResolvedValue(null);
+    vi.stubEnv("AI_QUOTA_REQUIRE_DURABLE", "true");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const r = await reserveQuota({ provider: "codecraft", model: "m-closed", operation: "t", estimatedTokens: 100 });
+    expect(r.allowed).toBe(false);
+    if (!r.allowed) expect(r.reason).toContain("quota store unavailable");
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("durable quota store did not answer"));
+    warn.mockRestore();
+  });
+
+  it("without the flag it still degrades to memory, but never silently", async () => {
+    mockIsRedisConfigured.mockReturnValue(true);
+    mockRedisEval.mockResolvedValue(null);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const r = await reserveQuota({ provider: "codecraft", model: "m-open", operation: "t", estimatedTokens: 100 });
+    expect(r.allowed).toBe(true);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
+
 describe("reconcileQuotaUsage (Redis)", () => {
   const reservation = { provider: "codecraft", model: "m", tokenWeight: 512, priority: "normal", tpdTracked: true } as const;
 

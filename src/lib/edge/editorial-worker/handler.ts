@@ -38,6 +38,8 @@ import {
 import type { BatchEditorialResult } from "@/lib/news/ai/editorial-types";
 import type { GenerateEditorialsOptions } from "@/lib/news/ai/generate-article";
 
+import { PROBE_MODEL_RE } from "@/lib/edge/editorial-worker/governor-probe";
+
 export const WORKER_LEASE_KEY = "editorial-generate";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -82,6 +84,10 @@ export type WorkerDeps = {
   verifyDurableQuota?(): Promise<boolean>;
   /** quota_probe mode: N concurrent atomic check-and-increments against a throwaway key; exactly `limit` may win. */
   probeQuotaAtomicity?(): Promise<{ winners: number; limit: number; parallel: number } | null>;
+  /** quota_probe `governor`: reserve/observe phases on a throwaway codecraft model (see governor-probe.ts). */
+  probeGovernor?(input: { phase: "reserve" | "observe"; model: string }): Promise<unknown>;
+  /** quota_probe `ai`: exactly one tiny real CodeCraft request through the app path. */
+  probeAi?(): Promise<unknown>;
   recordRun(run: {
     ok: boolean;
     degraded: boolean;
@@ -123,7 +129,17 @@ export type WorkerResponseBody = {
   lease: { key: string; acquired: boolean } | null;
   candidate_pool?: BatchEditorialResult["candidatePool"] | null;
   /** quota_probe mode only: result of the Redis round-trip + atomicity check run from inside the Edge runtime. */
-  quota_probe?: { configured: boolean; verified: boolean; atomic: boolean | null; winners: number | null; limit: number | null; parallel: number | null; latency_ms: number | null };
+  quota_probe?: {
+    configured: boolean;
+    verified: boolean;
+    atomic: boolean | null;
+    winners: number | null;
+    limit: number | null;
+    parallel: number | null;
+    latency_ms: number | null;
+    governor?: unknown;
+    ai?: unknown;
+  };
   /** Test mode + include_logs only: everything the run wrote to console (raw, for secret scanning). */
   debug_logs?: string[];
   runtime_probe?: Record<string, unknown>;
@@ -148,6 +164,9 @@ type RequestBody = {
   ignore_backoff?: unknown;
   lease_key?: unknown;
   include_logs?: unknown;
+  governor?: unknown;
+  model?: unknown;
+  ai?: unknown;
 };
 
 async function readBody(request: Request): Promise<RequestBody | "too_large" | "invalid"> {
@@ -248,11 +267,18 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
     const verified = configured && deps.verifyDurableQuota ? await deps.verifyDurableQuota() : false;
     const atom = configured && verified && deps.probeQuotaAtomicity ? await deps.probeQuotaAtomicity() : null;
     const atomic = atom ? atom.winners === atom.limit : null;
+    let governor: unknown;
+    if (body.governor === "reserve" || body.governor === "observe") {
+      const model = typeof body.model === "string" && PROBE_MODEL_RE.test(body.model) ? body.model : null;
+      if (!model) return respond("bad_request", 400, { ok: false, error_reason: "governor probe needs model matching edge-probe-[a-z0-9]{4,16}" });
+      governor = configured && verified && deps.probeGovernor ? await deps.probeGovernor({ phase: body.governor, model }) : null;
+    }
+    const ai = body.ai === true && configured && verified && deps.probeAi ? await deps.probeAi() : undefined;
     const pass = configured && verified && atomic === true;
     log.info("quota_probe", { configured, verified, atomic });
     return respond(pass ? "quota_probe_ok" : "quota_probe_failed", 200, {
       ok: pass,
-      quota_probe: { configured, verified, atomic, winners: atom?.winners ?? null, limit: atom?.limit ?? null, parallel: atom?.parallel ?? null, latency_ms: configured ? Date.now() - t0 : null },
+      quota_probe: { configured, verified, atomic, winners: atom?.winners ?? null, limit: atom?.limit ?? null, parallel: atom?.parallel ?? null, latency_ms: configured ? Date.now() - t0 : null, ...(governor !== undefined ? { governor } : {}), ...(ai !== undefined ? { ai } : {}) },
     });
   }
 

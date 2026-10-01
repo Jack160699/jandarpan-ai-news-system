@@ -370,6 +370,18 @@ export async function reserveQuota(input: {
       [1, tokenWeight, limits.rpm, limits.tpm, rpdLimit, tpdLimit, 60, longTtlSecs]
     );
     if (evalResult === null) {
+      console.warn(`[ai-quota] durable quota store did not answer for ${input.provider}${model ? "/" + model : ""}`);
+      // Edge isolates are ephemeral, so per-process counters cannot enforce provider limits there: the Edge workers set
+      // AI_QUOTA_REQUIRE_DURABLE=true and this fails CLOSED instead of silently degrading.
+      if (process.env.AI_QUOTA_REQUIRE_DURABLE === "true") {
+        return {
+          allowed: false,
+          scope: "rpm",
+          provider: input.provider,
+          model,
+          reason: `${input.provider}${model ? "/" + model : ""} quota store unavailable (durable quota required)`,
+        };
+      }
       // Redis reachable-but-erroring or unreachable mid-request — degrade to
       // the in-memory counter rather than fail the whole operation closed.
       const longTtlMs = longTtlSecs * 1_000;
