@@ -198,28 +198,97 @@ async function callWorker(fn, body = {}, headers = {}, secret = generated.EDGE_W
   return { http: res.status, ms: Date.now() - t0, body: json };
 }
 
+/** Direct (non-npx) tool call: gh/vitest args may contain characters a shell would mangle. */
+const direct = (tool, args, opts = {}) => execFileSync(tool, args, { encoding: "utf8", ...opts });
+
 async function preflight() {
   if (!usable(generated.EDGE_WORKER_SECRET)) { console.log("BLOCKED - run `provision --apply` first (no generated secrets found)."); process.exitCode = 2; return false; }
+  const skipAi = cliArgs.includes("--skip-ai");
   const ctl = (await rest("scheduler_control?select=enabled,prune_enabled&id=eq.1")).json?.[0];
   ok("scheduler kill switch is OFF before preflight", ctl?.enabled === false, JSON.stringify(ctl));
   ok("storage pruning enabled", ctl?.prune_enabled === true);
 
+  // ---- Redis (local probe) --------------------------------------------------------------------------------
   if (usable(supplied.UPSTASH_REDIS_REST_URL)) {
     const r = await redisAtomicityProbe(supplied.UPSTASH_REDIS_REST_URL, supplied.UPSTASH_REDIS_REST_TOKEN);
     ok("Redis reachable + atomic quota operations", r.reachable && r.atomic, `${r.wins}/${r.parallel} winners at limit ${r.limit}`);
   } else ok("Redis credentials available locally for the probe", false, "supply UPSTASH_REDIS_REST_* in .env.edge-provision.local");
 
-  // every worker authenticates, and a scheduler-triggered call is inert while the switch is OFF
+  // ---- every worker authenticates, and a scheduler-triggered call is inert while the switch is OFF -----------
   for (const fn of ["editorial-worker", "fetch-worker", "cluster-worker", "translation-worker"]) {
     const unauth = await fetch(`${FN}/${fn}`, { method: "POST", body: "{}" }).then((r) => r.status);
     const sched = await callWorker(fn, {}, { "x-jd-trigger": "scheduler" });
     ok(`${fn}: rejects unauthenticated (401) and is inert under the kill switch`, unauth === 401 && sched.body?.status === "kill_switch_off", `${unauth} / ${sched.body?.status}`);
   }
-  // editorial run mode must now pass the durable-quota guard (a manual run would call the AI, so only assert the guard clears)
+
+  // ---- Redis-backed quota governor, from INSIDE the Edge runtime -------------------------------------------
+  const qp = await callWorker("editorial-worker", { mode: "quota_probe" });
+  const q = qp.body?.quota_probe;
+  ok("Edge: durable quota configured, verified (real EVAL) and atomic", q?.configured === true && q?.verified === true && q?.atomic === true, `${q?.winners}/${q?.parallel} winners at limit ${q?.limit}`);
+  const model = "edge-probe-" + crypto.randomBytes(4).toString("hex");
+  const g1 = (await callWorker("editorial-worker", { mode: "quota_probe", governor: "reserve", model })).body?.quota_probe?.governor;
+  await new Promise((r) => setTimeout(r, 3000));
+  const g2 = (await callWorker("editorial-worker", { mode: "quota_probe", governor: "observe", model })).body?.quota_probe?.governor;
+  const L = g1?.limits ?? {};
+  ok("internal CodeCraft limits unchanged (6 RPM / 30,000 TPM / 300 RPD / 400,000 TPD / 1 concurrent)", L.rpm === 6 && L.tpm === 30000 && L.rpd === 300 && L.tpd === 400000 && L.max_concurrent === 1, JSON.stringify(L));
+  ok("governor allows exactly the RPM budget of 10 parallel reservations", g1?.allowed === 6 && g1?.denied === 4 && JSON.stringify(g1?.denied_scopes) === '["rpm"]', `allowed ${g1?.allowed}, denied ${g1?.denied}`);
+  ok("a FRESH Edge invocation sees the same counters and is denied", g2?.seen_on_arrival?.rpm === "6" && g2?.allowed === 0 && g2?.cleaned_up === true, `rpm on arrival ${g2?.seen_on_arrival?.rpm}, allowed ${g2?.allowed}`);
+  ok("concurrency limit holds (second slot refused, reusable after release)", g1?.concurrency?.first_acquired === true && g1?.concurrency?.second_acquired === false && g1?.concurrency?.after_release_acquired === true, JSON.stringify(g1?.concurrency));
+
+  // ---- leases (the same RPC the workers use) ------------------------------------------------------------
+  const lk = "preflight-" + crypto.randomBytes(3).toString("hex");
+  const l1 = (await rpc("acquire_run_lease", { p_key: lk, p_owner: "a", p_ttl_seconds: 30 })).json;
+  const l2 = (await rpc("acquire_run_lease", { p_key: lk, p_owner: "b", p_ttl_seconds: 30 })).json;
+  await rpc("release_run_lease", { p_key: lk, p_owner: "a" });
+  const l3 = (await rpc("acquire_run_lease", { p_key: lk, p_owner: "b", p_ttl_seconds: 5 })).json;
+  await rpc("release_run_lease", { p_key: lk, p_owner: "b" });
+  sql(`delete from worker_run_leases where lease_key = '${lk}';`);
+  ok("leases: second holder refused, available again after release", l1 === true && l2 === false && l3 === true, `${l1}/${l2}/${l3}`);
+
+  // ---- CodeCraft health: never poke a provider whose circuit is open ---------------------------------------
+  const cc = supplied.CODECRAFT_EDITORIAL_MODEL;
+  const circ = sql(`select disabled_until, last_error from ai_provider_circuit where key = 'codecraft:${String(cc).replace(/'/g, "")}' and disabled_until > now();`)[0];
+  if (circ) ok("CodeCraft healthy", false, `circuit OPEN until ${circ.disabled_until}: ${String(circ.last_error).slice(0, 110)}`);
+  else if (skipAi) ok("CodeCraft healthy", false, "not verified (--skip-ai)");
+  else {
+    const ai = (await callWorker("editorial-worker", { mode: "quota_probe", ai: true })).body?.quota_probe?.ai;
+    ok("CodeCraft healthy: one real request OK, JSON valid, usage reconciled into Redis", ai?.ok === true && ai?.json_valid === true && ai?.rpd_delta === 1 && ai?.tpd_delta > 0,
+      ai?.ok ? `${ai.model}, tokens counted ${ai.tpd_delta}, ${ai.latency_ms}ms` : `${ai?.error_code} ${ai?.http_status ?? ""} ${String(ai?.error_message ?? "").slice(0, 110)}`);
+  }
+
+  // ---- Gemini fallback: the models the app really defaults to, one tiny call each ---------------------------
+  for (const m of ["gemini-3.6-flash", "gemini-3.5-flash-lite"]) {
+    let detail = "";
+    let pass = false;
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, { method: "POST", headers: { "x-goog-api-key": pulled.GEMINI_API_KEY, "content-type": "application/json" }, body: JSON.stringify({ contents: [{ parts: [{ text: "Reply with the single word: ok" }] }], generationConfig: { maxOutputTokens: 64, temperature: 0 } }) });
+      const j = await r.json();
+      pass = r.status === 200 && typeof j.candidates?.[0]?.content?.parts?.[0]?.text === "string";
+      detail = `HTTP ${r.status}`;
+    } catch (e) { detail = String(e.message).slice(0, 80); }
+    ok(`Gemini fallback healthy: ${m}`, pass, detail);
+  }
+
+  // ---- publication gates: the actual gate/quality test suites -----------------------------------------------
+  try {
+    const out = direct(process.platform === "win32" ? "npx.cmd" : "npx", ["--no-install", "vitest", "run", "publication-gates", "quality-gates", "headline", "source-title", "geo", "stale", "fresh", "dedupe"], { shell: process.platform === "win32" });
+    const plain = out.replace(/\x1b\[[0-9;]*m/g, "");
+    const m = /Tests\s+(\d+) passed/.exec(plain);
+    ok("publication gates (geo/freshness/headline/language) test suites pass", !/\bfailed\b/.test(plain) && !!m, m ? `${m[1]} tests` : "no summary");
+  } catch (e) { ok("publication gates (geo/freshness/headline/language) test suites pass", false, "vitest failed"); }
+
+  // ---- database headroom --------------------------------------------------------------------------------
   const dbsz = Number(sql("select (pg_database_size(current_database())/1048576)::int as mb;")[0]?.mb);
   ok("database comfortably below the 500 MB Free ceiling", dbsz > 0 && dbsz < 450, `${dbsz} MB`);
-  const gh = JSON.parse(run("gh", ["api", "repos/Jack160699/jandarpan-ai-news-system/actions/workflows", "--jq", "[.workflows[] | {name, state, path}]"]) || "[]");
-  console.log("  GitHub workflows:", gh.map((w) => `${w.name}(${w.state})`).join(", "));
+
+  // ---- duplicate schedulers: informational + the lease that makes an editorial overlap impossible -------------
+  try {
+    const gh = JSON.parse(direct("gh", ["api", "repos/Jack160699/jandarpan-ai-news-system/actions/workflows", "--jq", "[.workflows[] | {name, state, path}]"]) || "[]");
+    const active = gh.filter((w) => w.state === "active" && /(ingest|workers|editorial|drain)\.yml$/.test(w.path));
+    console.log("  Legacy GitHub schedules still ACTIVE (retired only after the first healthy Edge cycle):", active.map((w) => w.path.split("/").pop()).join(", ") || "(none)");
+  } catch (e) { console.log("  (could not list GitHub workflows)"); }
+  const sharedLease = fs.readFileSync("src/lib/edge/editorial-worker/handler.ts", "utf8").includes('WORKER_LEASE_KEY = "editorial-generate"');
+  ok("editorial: Edge and legacy Vercel lanes share the 'editorial-generate' lease (cannot generate concurrently)", sharedLease);
   return summary();
 }
 
