@@ -57,3 +57,12 @@ Deploy: `supabase functions deploy <name> --no-verify-jwt --use-api` for `editor
 ## Hosted-runtime facts learned (Supabase Edge 1.76 / Deno 2.1.4-compatible)
 
 `process.env` is read-only (bootstrap installs an overlay) · a `window` global exists on the server (`isBrowserRuntime()` = window AND document) · `process.cpuUsage()`/RSS are stubbed (reported as UNVERIFIED) · CJS dependencies need real `node:` builtins through a prelude (no `require`).
+
+## Legacy editorial schedules (paused while CodeCraft billing/policy verification is open)
+
+Only calls to the dedicated lane `POST /api/cron/editorial-generate` can reach CodeCraft (`editorial_generate`/`editorial_repair` are the only operations in its allow-list). Two legacy GitHub steps make that call and are gated on the repo variable `LEGACY_EDITORIAL_ENABLED` (unset = paused):
+
+- `workers.yml` - Stage C (editorial generation)
+- `editorial.yml` - Stage 4 (editorial generation, primary)
+
+Everything else keeps running (ingestion, clustering, `ai_enrich`, jobs, publication, health, image audit). `orchestrate` with the default body does **not** generate: the registry maps it to the `scheduled_cron` trigger, which `resolveDirectEditorialGate` denies. Re-enable with `gh variable set LEGACY_EDITORIAL_ENABLED --body true`; retire the steps for good once the Edge pipeline is proven (see the section above).
