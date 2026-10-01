@@ -208,7 +208,7 @@ function secondsUntilUtcMidnight(): number {
  * with an unknown TPD is never silently disabled, and its counter is never
  * fabricated by incrementing a number nobody configured.
  */
-const RESERVE_SCRIPT = `
+export const QUOTA_RESERVE_SCRIPT = `
 local rpmKey, tpmKey, rpdKey, tpdKey = KEYS[1], KEYS[2], KEYS[3], KEYS[4]
 local reqW = tonumber(ARGV[1])
 local tokW = tonumber(ARGV[2])
@@ -233,18 +233,44 @@ if tpdLimit >= 0 then
   if tpd + tokW > tpdLimit then return {0, 'tpd'} end
 end
 
+-- A window counter must ALWAYS carry a TTL. TTL < 0 (no expiry) is set here, which also self-heals any key that was
+-- ever left without one (a TTL-less tpm counter once made CodeCraft permanently "over its TPM limit").
 redis.call('INCRBY', rpmKey, reqW)
-if rpm == 0 then redis.call('EXPIRE', rpmKey, shortTtl) end
+if redis.call('TTL', rpmKey) < 0 then redis.call('EXPIRE', rpmKey, shortTtl) end
 redis.call('INCRBY', tpmKey, tokW)
-if tpm == 0 then redis.call('EXPIRE', tpmKey, shortTtl) end
+if redis.call('TTL', tpmKey) < 0 then redis.call('EXPIRE', tpmKey, shortTtl) end
 redis.call('INCRBY', rpdKey, reqW)
-if rpd == 0 then redis.call('EXPIRE', rpdKey, longTtl) end
+if redis.call('TTL', rpdKey) < 0 then redis.call('EXPIRE', rpdKey, longTtl) end
 if tpdLimit >= 0 then
   redis.call('INCRBY', tpdKey, tokW)
-  if tpd == 0 then redis.call('EXPIRE', tpdKey, longTtl) end
+  if redis.call('TTL', tpdKey) < 0 then redis.call('EXPIRE', tpdKey, longTtl) end
 end
 
 return {1, 'ok'}
+`;
+
+/**
+ * Reconciliation (estimate -> real usage) as ONE atomic script. Plain INCRBY on a key whose window already expired
+ * (a generate+repair call outlasts the 60 s tpm window) RECREATES the key with NO TTL, so the counter never resets.
+ * This adjusts a counter only while its window still exists, never lets it go negative, and guarantees a TTL.
+ * KEYS[1]=tpm, KEYS[2]=tpd (optional). ARGV: delta, shortTtl, longTtl. Returns {tpm, tpd} (-1 = window gone, skipped).
+ */
+export const QUOTA_RECONCILE_SCRIPT = `
+local delta = tonumber(ARGV[1])
+local function adjust(key, ttl)
+  if redis.call('EXISTS', key) == 0 then return -1 end
+  local v = redis.call('INCRBY', key, delta)
+  if v < 0 then
+    redis.call('SET', key, 0, 'KEEPTTL')
+    v = 0
+  end
+  if redis.call('TTL', key) < 0 then redis.call('EXPIRE', key, ttl) end
+  return v
+end
+local tpm = adjust(KEYS[1], ARGV[2])
+local tpd = -1
+if KEYS[2] then tpd = adjust(KEYS[2], ARGV[3]) end
+return {tpm, tpd}
 `;
 
 type MemoryCounter = { value: number; resetAt: number };
@@ -365,7 +391,7 @@ export async function reserveQuota(input: {
   if (isRedisConfigured()) {
     const longTtlSecs = secondsUntilUtcMidnight();
     const evalResult = await redisEval<[number, string]>(
-      RESERVE_SCRIPT,
+      QUOTA_RESERVE_SCRIPT,
       keys,
       [1, tokenWeight, limits.rpm, limits.tpm, rpdLimit, tpdLimit, 60, longTtlSecs]
     );
@@ -436,12 +462,15 @@ export async function reconcileQuotaUsage(
 
   try {
     if (isRedisConfigured()) {
-      const ops = [redisIncrBy(tpmKey, delta)];
-      if (reservation.tpdTracked) ops.push(redisIncrBy(tpdKey, delta));
-      const applied = await Promise.all(ops);
-      // redisIncrBy swallows its own errors and returns null; surface it so a missed reconcile is observable
-      // (the counters then keep the up-front reservation estimate).
-      if (applied.some((v) => v === null)) {
+      const applied = await redisEval<[number, number]>(
+        QUOTA_RECONCILE_SCRIPT,
+        reservation.tpdTracked ? [tpmKey, tpdKey] : [tpmKey],
+        [delta, 60, secondsUntilUtcMidnight()]
+      );
+      // redisEval swallows its own errors and returns null; surface it so a missed reconcile is observable
+      // (the counters then keep the up-front reservation estimate). A window that already ended is skipped by the
+      // script (-1) - that is correct, not a failure.
+      if (applied === null) {
         console.warn(`[ai-quota] reconcile not applied for ${reservation.provider}${reservation.model ? "/" + reservation.model : ""} (delta ${delta}); counters keep the reservation estimate`);
       }
     } else {
@@ -652,7 +681,7 @@ export function estimateCloudflareNeurons(input: CloudflareNeuronEstimateInput):
   return tiles * FLUX_SCHNELL_NEURONS_PER_512_TILE + input.steps * FLUX_SCHNELL_NEURONS_PER_STEP;
 }
 
-const NEURON_RESERVE_SCRIPT = `
+export const NEURON_RESERVE_SCRIPT = `
 local key = KEYS[1]
 local weight = tonumber(ARGV[1])
 local limit = tonumber(ARGV[2])
@@ -660,8 +689,22 @@ local ttl = ARGV[3]
 local used = tonumber(redis.call('GET', key) or '0')
 if used + weight > limit then return {0, used} end
 redis.call('INCRBYFLOAT', key, weight)
-if used == 0 then redis.call('EXPIRE', key, ttl) end
+-- the daily budget must ALWAYS expire at the UTC reset (also self-heals a key that lost its TTL)
+if redis.call('TTL', key) < 0 then redis.call('EXPIRE', key, ttl) end
 return {1, used + weight}
+`;
+
+/** Atomic, TTL-safe neuron reconcile (same hazard as the token counters: plain INCRBYFLOAT would resurrect an expired daily key with no TTL). */
+export const NEURON_RECONCILE_SCRIPT = `
+local key = KEYS[1]
+if redis.call('EXISTS', key) == 0 then return '-1' end
+local v = tonumber(redis.call('INCRBYFLOAT', key, ARGV[1]))
+if v < 0 then
+  redis.call('SET', key, '0', 'KEEPTTL')
+  v = 0
+end
+if redis.call('TTL', key) < 0 then redis.call('EXPIRE', key, ARGV[2]) end
+return tostring(v)
 `;
 
 const NEURON_KEY = "ai-quota:cloudflare:neurons:daily";
@@ -712,7 +755,8 @@ export async function reconcileCloudflareNeurons(estimatedNeurons: number, actua
   if (delta === 0) return;
   try {
     if (isRedisConfigured()) {
-      await redisIncrBy(NEURON_KEY, delta);
+      const applied = await redisEval<string>(NEURON_RECONCILE_SCRIPT, [NEURON_KEY], [delta, secondsUntilUtcMidnight()]);
+      if (applied === null) console.warn(`[ai-quota] cloudflare neuron reconcile not applied (delta ${delta}); counter keeps the reservation estimate`);
     } else {
       memoryNeuronsUsed = Math.max(0, memoryNeuronsUsed + delta);
     }

@@ -27,6 +27,10 @@ import {
   peekQuota,
   reconcileCloudflareNeurons,
   reconcileQuotaUsage,
+  QUOTA_RECONCILE_SCRIPT,
+  QUOTA_RESERVE_SCRIPT,
+  NEURON_RESERVE_SCRIPT,
+  NEURON_RECONCILE_SCRIPT,
   reserveCloudflareNeurons,
   reserveQuota,
 } from "./quota";
@@ -220,20 +224,50 @@ describe("reserveQuota when the durable store does not answer", () => {
 describe("reconcileQuotaUsage (Redis)", () => {
   const reservation = { provider: "codecraft", model: "m", tokenWeight: 512, priority: "normal", tpdTracked: true } as const;
 
-  it("applies the delta to both tpm and tpd", async () => {
+  it("applies the delta to tpm and tpd through ONE atomic, TTL-safe script", async () => {
     mockIsRedisConfigured.mockReturnValue(true);
-    mockRedisIncrBy.mockResolvedValue(123);
+    mockRedisEval.mockResolvedValue([679, 1191]);
     await reconcileQuotaUsage(reservation as never, { inputTokens: 338, outputTokens: 494 });
-    expect(mockRedisIncrBy).toHaveBeenCalledWith("ai-quota:codecraft:m:tpm", 320);
-    expect(mockRedisIncrBy).toHaveBeenCalledWith("ai-quota:codecraft:m:tpd", 320);
+    expect(mockRedisEval).toHaveBeenCalledTimes(1);
+    const [script, keys, args] = mockRedisEval.mock.calls[0] as [string, string[], Array<string | number>];
+    expect(script).toBe(QUOTA_RECONCILE_SCRIPT);
+    expect(keys).toEqual(["ai-quota:codecraft:m:tpm", "ai-quota:codecraft:m:tpd"]);
+    expect(args[0]).toBe(320); // 832 actual - 512 reserved
+    expect(args[1]).toBe(60); // tpm window TTL guaranteed
+    expect(mockRedisIncrBy).not.toHaveBeenCalled(); // plain INCRBY would resurrect an expired window with NO TTL
+  });
+
+  it("the scripts only ever adjust a window that still exists and always leave a TTL (no resurrection, never negative)", () => {
+    expect(QUOTA_RECONCILE_SCRIPT).toMatch(/EXISTS/);
+    expect(QUOTA_RECONCILE_SCRIPT).toMatch(/KEEPTTL/);
+    expect(QUOTA_RECONCILE_SCRIPT).toMatch(/TTL', key\) < 0/);
+    for (const s of [QUOTA_RESERVE_SCRIPT, NEURON_RESERVE_SCRIPT]) expect(s).not.toMatch(/if (rpm|tpm|rpd|tpd|used) == 0 then redis.call\('EXPIRE'/);
+    expect(QUOTA_RESERVE_SCRIPT.match(/'TTL', \w+\) < 0/g)).toHaveLength(4);
+    expect(NEURON_RECONCILE_SCRIPT).toMatch(/EXISTS/);
+  });
+
+  it("tracks only tpm when the provider has no tpd", async () => {
+    mockIsRedisConfigured.mockReturnValue(true);
+    mockRedisEval.mockResolvedValue([10, -1]);
+    await reconcileQuotaUsage({ ...reservation, tpdTracked: false } as never, { inputTokens: 100, outputTokens: 100 });
+    expect((mockRedisEval.mock.calls[0] as [string, string[]])[1]).toEqual(["ai-quota:codecraft:m:tpm"]);
   });
 
   it("warns (instead of failing silently) when Redis did not apply the correction", async () => {
     mockIsRedisConfigured.mockReturnValue(true);
-    mockRedisIncrBy.mockResolvedValue(null);
+    mockRedisEval.mockResolvedValue(null);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     await reconcileQuotaUsage(reservation as never, { inputTokens: 10, outputTokens: 10 });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("reconcile not applied for codecraft/m"));
+    warn.mockRestore();
+  });
+
+  it("an already-ended window (script returns -1) is NOT a failure and does not warn", async () => {
+    mockIsRedisConfigured.mockReturnValue(true);
+    mockRedisEval.mockResolvedValue([-1, -1]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await reconcileQuotaUsage(reservation as never, { inputTokens: 10, outputTokens: 10 });
+    expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
   });
 });
