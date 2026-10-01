@@ -86,6 +86,10 @@ export type AiRoundTripResult = {
   provider?: string;
   latency_ms: number | null;
   error_code?: string;
+  /** Provider's (sanitised, truncated) error text and HTTP status - never contains credentials. */
+  error_message?: string;
+  http_status?: number;
+  retry_after_ms?: number;
   json_valid?: boolean;
   counters_before?: Counters;
   counters_after?: Counters;
@@ -94,6 +98,14 @@ export type AiRoundTripResult = {
   tpm_delta?: number | null;
   rpd_delta?: number | null;
 };
+
+/** Provider error text for diagnostics: strip anything credential-shaped and cap the length. */
+export function sanitizeProviderMessage(message: unknown): string {
+  return String(message ?? "")
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/\b(sk|key|tok)[-_][A-Za-z0-9_-]{8,}/gi, "[redacted]")
+    .slice(0, 240);
+}
 
 const num = (v: string | null) => (v === null ? 0 : Number(v));
 
@@ -125,7 +137,14 @@ export async function aiRoundTrip(): Promise<AiRoundTripResult> {
     model,
     provider: r.provider,
     latency_ms: latency,
-    ...(r.ok ? {} : { error_code: r.error.code }),
+    ...(r.ok
+      ? {}
+      : {
+          error_code: r.error.code,
+          error_message: sanitizeProviderMessage(r.error.message),
+          http_status: r.error.httpStatus,
+          retry_after_ms: r.error.retryAfterMs,
+        }),
     json_valid: jsonValid,
     counters_before: before,
     counters_after: after,

@@ -8,7 +8,7 @@ vi.mock("@/lib/infrastructure/cache/redis", () => ({
   redisDel: vi.fn(async () => {}),
 }));
 
-import { PROBE_MODEL_RE, governorProbe } from "./governor-probe";
+import { PROBE_MODEL_RE, governorProbe, sanitizeProviderMessage } from "./governor-probe";
 import { __resetQuotaCountersForTests } from "@/lib/ai/providers/quota";
 
 beforeEach(() => __resetQuotaCountersForTests());
@@ -34,6 +34,12 @@ describe("governor probe (internal codecraft limits)", () => {
   it("caps concurrency at 1 and frees the slot on release", async () => {
     const r = await governorProbe({ phase: "reserve", model: "edge-probe-conc0001" });
     expect(r.concurrency).toEqual({ max: 1, first_acquired: true, second_acquired: false, after_release_acquired: true });
+  });
+
+  it("sanitises provider error text before it is returned", () => {
+    expect(sanitizeProviderMessage("bad Bearer abc.def-123 token")).toBe("bad Bearer [redacted] token");
+    expect(sanitizeProviderMessage("x".repeat(500))).toHaveLength(240);
+    expect(sanitizeProviderMessage(undefined)).toBe("");
   });
 
   it("only throwaway probe model names are accepted", () => {
