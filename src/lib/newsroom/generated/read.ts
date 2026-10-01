@@ -51,6 +51,7 @@ const POOL_QUERY_TIMEOUT_MS = 4_000;
 function selectColumns(mode: GeneratedPoolSelectMode): string {
   switch (mode) {
     case "homepage":
+    case "homepage_bodies":
       return GENERATED_SELECT_HOMEPAGE;
     case "sitemap":
       return GENERATED_SELECT_SITEMAP;
@@ -163,7 +164,9 @@ export async function fetchGeneratedArticlePool(
 
   const result = await safeQuery<Record<string, unknown>[]>(
     async (signal) => {
-      const run = async (relation: "generated_articles" | "generated_articles_feed") => {
+      const run = async (
+        relation: "generated_articles" | "generated_articles_feed" | "generated_articles_feed_full"
+      ) => {
         let q = supabase
           .from(relation as "generated_articles")
           .select(columns)
@@ -180,9 +183,11 @@ export async function fetchGeneratedArticlePool(
 
       // List pages read the slim view (whitelisted editorial_metadata, ~1/3 of the JSON).
       // Fall back to the base table if the view is not deployed yet (migration 084).
-      let res =
-        mode === "homepage" ? await run("generated_articles_feed") : await run("generated_articles");
-      if (mode === "homepage" && res.error && /generated_articles_feed|42P01|PGRST205/.test(
+      // "homepage" omits translated article bodies (migration 093); "homepage_bodies" keeps them.
+      const listView = mode === "homepage_bodies" ? "generated_articles_feed_full" : "generated_articles_feed";
+      const isListMode = mode === "homepage" || mode === "homepage_bodies";
+      let res = isListMode ? await run(listView) : await run("generated_articles");
+      if (isListMode && res.error && /generated_articles_feed|42P01|PGRST205/.test(
         `${res.error.code ?? ""} ${res.error.message ?? ""}`
       )) {
         res = await run("generated_articles");

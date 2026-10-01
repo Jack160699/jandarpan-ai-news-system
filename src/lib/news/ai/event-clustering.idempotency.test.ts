@@ -113,7 +113,7 @@ class FakeDb {
       }
       if (mode === "maybe") {
         const ev = db.events.find((e) => e.id === eqId);
-        return { data: ev ? { clustering_metadata: ev.clustering_metadata } : null, error: null };
+        return { data: ev ? { clustering_metadata: ev.clustering_metadata, signal_ids: ev.signal_ids } : null, error: null };
       }
       // list read: newest-updated first, hard API cap like PostgREST max_rows
       const list = db.events

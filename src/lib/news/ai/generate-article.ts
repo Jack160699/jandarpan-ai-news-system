@@ -569,6 +569,65 @@ async function loadExistingSignalIdSet(signalIds: string[]): Promise<Set<string>
   return existing;
 }
 
+type StoryIndexRow = {
+  id: string | null;
+  headline: string | null;
+  event_id: string | null;
+  hero_image_url: string | null;
+  workflow_status: string | null;
+  published_at: string | null;
+  fingerprint: string | null;
+};
+
+/**
+ * The 500 most recent articles WITHOUT their bodies. The body fingerprint is persisted (migration 094); only rows that
+ * do not have one yet are read in full, fingerprinted with the same application hash, and written back -- so this was
+ * ~500 article bodies per 5-minute editorial wake and is now one small row per article.
+ */
+async function loadStoryIndexRows(supabase: ReturnType<typeof createAdminServerClient>): Promise<StoryIndexRow[]> {
+  const META = "id, headline, event_id, hero_image_url, workflow_status, published_at";
+  const withFp = await supabase
+    .from("generated_articles")
+    .select(`${META}, body_fingerprint` as never)
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  if (withFp.error) {
+    // Column not deployed yet (migration 094): keep the previous behaviour exactly.
+    const legacy = await supabase
+      .from("generated_articles")
+      .select(`${META}, article_body`)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    return (legacy.data ?? []).map((r) => ({
+      ...(r as unknown as StoryIndexRow),
+      fingerprint: r.article_body ? fingerprintBody(r.article_body) : null,
+    }));
+  }
+
+  const rows = (withFp.data ?? []) as unknown as Array<Omit<StoryIndexRow, "fingerprint"> & { body_fingerprint: string | null }>;
+  const out: StoryIndexRow[] = rows.map((r) => ({ ...r, fingerprint: r.body_fingerprint }));
+  const missing = out.filter((r) => !r.fingerprint && r.id);
+  for (let i = 0; i < missing.length; i += 25) {
+    const chunk = missing.slice(i, i + 25);
+    const { data: bodies } = await supabase
+      .from("generated_articles")
+      .select("id, article_body")
+      .in("id", chunk.map((r) => r.id as string));
+    const writes: PromiseLike<unknown>[] = [];
+    for (const b of bodies ?? []) {
+      if (!b.article_body) continue;
+      const fp = fingerprintBody(b.article_body);
+      const row = chunk.find((r) => r.id === b.id);
+      if (row) row.fingerprint = fp;
+      writes.push(supabase.from("generated_articles").update({ body_fingerprint: fp } as never).eq("id", b.id));
+    }
+    // Awaited (a serverless worker may be frozen right after it responds); best effort -- the next wake retries.
+    await Promise.allSettled(writes);
+  }
+  return out;
+}
+
 async function loadExistingStoryIndex(): Promise<{
   headlines: string[];
   bodyFingerprints: string[];
@@ -578,11 +637,7 @@ async function loadExistingStoryIndex(): Promise<{
   usedImageUrls: Set<string>;
 }> {
   const supabase = createAdminServerClient();
-  const { data } = await supabase
-    .from("generated_articles")
-    .select("id, headline, article_body, event_id, hero_image_url, workflow_status, published_at")
-    .order("created_at", { ascending: false })
-    .limit(500);
+  const data = await loadStoryIndexRows(supabase);
   const headlines: string[] = [];
   const bodyFingerprints: string[] = [];
   const eventIds: string[] = [];
@@ -590,7 +645,7 @@ async function loadExistingStoryIndex(): Promise<{
   const usedImageUrls = new Set<string>();
   for (const row of data ?? []) {
     if (row.headline) headlines.push(row.headline);
-    if (row.article_body) bodyFingerprints.push(fingerprintBody(row.article_body));
+    if (row.fingerprint) bodyFingerprints.push(row.fingerprint);
     if (row.hero_image_url && typeof row.hero_image_url === "string") {
       usedImageUrls.add(row.hero_image_url.trim().toLowerCase());
     }
