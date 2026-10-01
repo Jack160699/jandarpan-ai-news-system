@@ -5,6 +5,7 @@
 
 import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
 import { isRedisConfigured, redisDel, redisEval } from "@/lib/infrastructure/cache/redis";
+import { aiRoundTrip, governorProbe } from "@/lib/edge/editorial-worker/governor-probe";
 import { drainBackground } from "@/lib/runtime/background";
 import { acquireWorkerRunLease } from "@/lib/infrastructure/workers/run-guard";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
@@ -46,6 +47,8 @@ export function createProductionDeps(env: Record<string, string | undefined> = p
       if (results.some((r) => r === null)) return null;
       return { winners: results.filter((r) => Number(r) === 1).length, limit, parallel };
     },
+    probeGovernor: (input) => governorProbe(input),
+    probeAi: () => aiRoundTrip(),
     recordRun: (run) =>
       recordCronRun({
         job: "editorial-generate",

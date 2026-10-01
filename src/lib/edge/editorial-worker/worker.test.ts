@@ -218,6 +218,40 @@ describe("handler: quota_probe (read-only Redis diagnostic)", () => {
   });
 });
 
+describe("handler: quota_probe governor/ai options", () => {
+  const base = () =>
+    makeDeps({
+      verifyDurableQuota: async () => true,
+      probeQuotaAtomicity: async () => ({ winners: 3, limit: 3, parallel: 20 }),
+      probeGovernor: vi.fn(async () => ({ allowed: 6 })),
+      probeAi: vi.fn(async () => ({ ok: true })),
+    });
+
+  it("runs the governor phase only for a throwaway edge-probe model and never the AI probe unless asked", async () => {
+    const { deps } = base();
+    const r = await run(req({ mode: "quota_probe", governor: "reserve", model: "edge-probe-abcd1234" }), deps);
+    expect(r.body.quota_probe).toMatchObject({ governor: { allowed: 6 } });
+    expect(deps.probeGovernor).toHaveBeenCalledWith({ phase: "reserve", model: "edge-probe-abcd1234" });
+    expect(deps.probeAi).not.toHaveBeenCalled();
+  });
+
+  it("rejects governor probes on a real model name (cannot touch production counters)", async () => {
+    const { deps } = base();
+    const r = await run(req({ mode: "quota_probe", governor: "reserve", model: "deepseek-v4-pro-0813" }), deps);
+    expect(r.status).toBe(400);
+    expect(deps.probeGovernor).not.toHaveBeenCalled();
+  });
+
+  it("makes the single real AI request only when ai:true and the durable quota is verified", async () => {
+    const { deps } = base();
+    await run(req({ mode: "quota_probe", ai: true }), deps);
+    expect(deps.probeAi).toHaveBeenCalledTimes(1);
+    const unverified = makeDeps({ verifyDurableQuota: async () => false, probeAi: vi.fn(async () => ({ ok: true })) });
+    await run(req({ mode: "quota_probe", ai: true }), unverified.deps);
+    expect(unverified.deps.probeAi).not.toHaveBeenCalled();
+  });
+});
+
 describe("handler: lease (shared with the Vercel lane)", () => {
   it("uses the existing editorial-generate lease key and skips cleanly when it is held", async () => {
     const { deps } = makeDeps({ acquireLease: vi.fn(async () => ({ acquired: false, release: async () => {} })) });
