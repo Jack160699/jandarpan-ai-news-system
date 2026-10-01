@@ -252,6 +252,52 @@ describe("handler: quota_probe governor/ai options", () => {
   });
 });
 
+describe("handler: explicit outcomes (business rejections are NOT infrastructure failures)", () => {
+  const cases: Array<[string, string]> = [
+    ["stale_candidate:source_evidence_older_than_72h", "rejected_stale"],
+    ["stale_candidate:live_event_without_recent_source_evidence", "rejected_freshness"],
+    ["quality_checks_failed", "rejected_quality"],
+    ["retryable:validation_failed:thin_body", "rejected_quality"],
+    ["slug_already_exists", "rejected_duplicate"],
+    ["quarantine:validation_failed:x;manual_review_required", "quarantined"],
+  ];
+
+  for (const [reason, expected] of cases) {
+    it(`${reason} -> status ${expected}, ok=true, recorded as a skip with the reason kept as the outcome`, async () => {
+      const { deps } = makeDeps({ generate: vi.fn(async () => batch({ results: [{ eventId: EVENT, ok: false, reason }] })) });
+      const r = await run(req(), deps);
+      expect(r.body).toMatchObject({ ok: true, status: expected, event_id: EVENT });
+      expect(deps.recordRun).toHaveBeenCalledWith(
+        expect.objectContaining({ ok: true, failed: 0, skipped: 1, error: undefined, metadata: expect.objectContaining({ outcome: expected, outcome_reason: reason }) }),
+      );
+    });
+  }
+
+  it("a genuine provider failure is STILL a failure (ok=false, failed=1, error recorded)", async () => {
+    const { deps } = makeDeps({
+      generate: vi.fn(async () => {
+        noteProviderCall({ provider: "codecraft", model: "m", operation: "editorial_generate", endpoint: "chat.completions", success: false, latencyMs: 5, inputTokens: 0, outputTokens: 0, errorCode: "ai_upstream_error" });
+        return batch({ results: [{ eventId: EVENT, ok: false, reason: "llm_generation_failed" }] });
+      }),
+    });
+    const r = await run(req(), deps);
+    expect(r.body).toMatchObject({ ok: false, status: "failed", error_class: "provider_upstream" });
+    expect(deps.recordRun).toHaveBeenCalledWith(expect.objectContaining({ ok: false, failed: 1, error: "llm_generation_failed", metadata: expect.objectContaining({ outcome: "failure" }) }));
+  });
+
+  it("an unclassified reason is not silently turned into a pass: it stays a failure", async () => {
+    const { deps } = makeDeps({ generate: vi.fn(async () => batch({ results: [{ eventId: EVENT, ok: false, reason: "something_unknown" }] })) });
+    const r = await run(req(), deps);
+    expect(r.body).toMatchObject({ ok: false, status: "failed" });
+  });
+
+  it("no eligible item is the explicit no_work outcome", async () => {
+    const { deps } = makeDeps();
+    await run(req(), deps);
+    expect(deps.recordRun).toHaveBeenCalledWith(expect.objectContaining({ ok: true, failed: 0, skipped: 1, metadata: expect.objectContaining({ outcome: "no_work" }) }));
+  });
+});
+
 describe("handler: lease (shared with the Vercel lane)", () => {
   it("uses the existing editorial-generate lease key and skips cleanly when it is held", async () => {
     const { deps } = makeDeps({ acquireLease: vi.fn(async () => ({ acquired: false, release: async () => {} })) });

@@ -3,6 +3,7 @@ import {
   checkStoryEditorialEligibility,
   isGenericRoundupStory,
   hasLocationIntegrityConflict,
+  resolveVerifiedStoryMedia,
 } from "./eligibility";
 import { getPrioritizedStories } from "@/features/jd-live/lib/categories";
 import { DURG_SOLAR_AD_SEGMENT } from "@/features/jd-live/lib/ad-segment";
@@ -109,28 +110,30 @@ describe("Editorial Eligibility & Integrity (Acceptance Tests #46 - #52)", () =>
     });
   });
 
-  describe("4. Media Quality Gate (Acceptance Test #50)", () => {
-    it("rejects stories with missing, empty, or placeholder image URLs", () => {
-      const recentDate = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
-      const invalidImages = [
-        null,
-        undefined,
-        "",
-        "   ",
-        "/placeholder.svg",
-        "https://example.com/placeholder-avatar.png",
-      ];
+  describe("4. Media is a display rule, not an eligibility rule", () => {
+    const recentDate = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+    const noImages = [null, undefined, "", "   ", "/placeholder.svg", "https://example.com/placeholder-avatar.png", "https://images.unsplash.com/photo-123?w=1200"];
 
-      for (const imageUrl of invalidImages) {
+    it("never rejects a valid story because its media is missing, a placeholder or generic stock", () => {
+      for (const imageUrl of noImages) {
         const res = checkStoryEditorialEligibility({
           id: "no-media-1",
           headline: "बालोद में सड़क चौड़ीकरण कार्य प्रारंभ",
           publishedAt: recentDate,
           imageUrl: imageUrl as string,
         });
-        expect(res.eligible).toBe(false);
-        expect(res.reason).toBe("invalid_or_missing_media");
+        expect(res.eligible).toBe(true);
       }
+    });
+
+    it("still refuses to PRESENT missing / placeholder / generic stock images as real source media", () => {
+      for (const imageUrl of noImages) {
+        expect(resolveVerifiedStoryMedia({ imageUrl: imageUrl as string })).toBe("");
+      }
+    });
+
+    it("keeps a verified real image for display", () => {
+      expect(resolveVerifiedStoryMedia({ imageUrl: validImageUrl })).toBe(validImageUrl);
     });
   });
 

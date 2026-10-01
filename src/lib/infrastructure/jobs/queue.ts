@@ -157,7 +157,7 @@ export async function enqueueJobs(
 export async function claimJobBatch(
   limit = DEFAULT_BATCH,
   jobTypes?: JobType[],
-  options?: { oldestFirst?: boolean; excludeJobTypes?: JobType[] }
+  options?: { oldestFirst?: boolean; newestFirst?: boolean; excludeJobTypes?: JobType[] }
 ): Promise<WorkerJobRow[]> {
   await reclaimStaleClaimedJobs();
 
@@ -169,9 +169,11 @@ export async function claimJobBatch(
     .select("*")
     .eq("status", "pending")
     .lte("scheduled_at", now)
-    .order("scheduled_at", { ascending: true });
+    // newestFirst: freshest work first (used by translation, so a just-published story gets its other-language
+    // version before any older backlog). Default and oldestFirst keep the original FIFO.
+    .order("scheduled_at", { ascending: options?.newestFirst ? false : true });
 
-  if (!options?.oldestFirst) {
+  if (!options?.oldestFirst && !options?.newestFirst) {
     // Normal mode: honor priority, but keep FIFO inside priority bands.
     query = query.order("priority", { ascending: false });
   }
@@ -309,6 +311,7 @@ export async function processJobBatch(
     workerId?: string;
     deadline?: ExecutionDeadline;
     oldestFirst?: boolean;
+    newestFirst?: boolean;
   }
 ): Promise<{
   processed: number;
@@ -320,6 +323,7 @@ export async function processJobBatch(
 }> {
   const jobs = await claimJobBatch(options?.limit, options?.jobTypes, {
     oldestFirst: options?.oldestFirst,
+    newestFirst: options?.newestFirst,
     excludeJobTypes: options?.excludeJobTypes,
   });
   const deadline = options?.deadline;

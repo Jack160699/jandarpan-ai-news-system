@@ -108,6 +108,15 @@ export function hasLocationIntegrityConflict(
   return true;
 }
 
+/**
+ * The one place that decides which image (if any) may be presented as real source media for a story.
+ * Stock / generic / placeholder / fake URLs resolve to "" - the story then renders text-first.
+ */
+export function resolveVerifiedStoryMedia(story: Parameters<typeof extractVerifiedRealMediaUrl>[0] & { imageUrl?: string | null }): string {
+  const candidate = extractVerifiedRealMediaUrl(story) || story.imageUrl || "";
+  return candidate && hasVerifiedRealMedia(candidate) ? candidate : "";
+}
+
 export type StoryEligibilityResult = {
   eligible: boolean;
   reason?: string;
@@ -172,11 +181,8 @@ export function checkStoryEditorialEligibility(story: {
     return { eligible: false, reason: "generic_roundup_rejected" };
   }
 
-  // 3. Hard Media Quality Gate
-  const mediaUrl = extractVerifiedRealMediaUrl(story) || story.imageUrl;
-  if (!hasVerifiedRealMedia(mediaUrl)) {
-    return { eligible: false, reason: "invalid_or_missing_media" };
-  }
-
+  // 3. Media is NOT an eligibility criterion. A valid article without verified source media is still a valid
+  // article: it renders as a text-first card. The verified-real-media rule governs what image may be DISPLAYED
+  // (see resolveVerifiedStoryMedia), never whether the story is shown.
   return { eligible: true };
 }

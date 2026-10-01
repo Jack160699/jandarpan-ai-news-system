@@ -463,7 +463,69 @@ export type FailureCategory =
   | "translation_failure"
   | "database_error"
   | "provider_error"
+  /** An empty shard / nothing due: a successful run that had no work (NOT a failure). */
+  | "no_work"
+  /** Held for human review by a safety / validation rule. */
+  | "quarantine"
+  /** Retries exhausted: a job or candidate was moved to the dead-letter state. */
+  | "dead_letter"
   | "other";
+
+/**
+ * The six reader-meaningful classes the failure center groups by. The point of the grouping: a gate saying "no" or a
+ * shard with nothing to fetch must never read as an infrastructure outage.
+ */
+export type FailureClass = "infrastructure" | "quality_rejection" | "stale_freshness" | "no_work" | "quarantine" | "dead_letter";
+
+export const FAILURE_CLASSES: readonly FailureClass[] = ["infrastructure", "quality_rejection", "stale_freshness", "no_work", "quarantine", "dead_letter"];
+
+export const FAILURE_CLASS_LABEL: Record<FailureClass, string> = {
+  infrastructure: "Infrastructure / provider failure",
+  quality_rejection: "Quality rejection",
+  stale_freshness: "Stale / freshness rejection",
+  no_work: "No work / empty shard",
+  quarantine: "Quarantine",
+  dead_letter: "Dead-letter",
+};
+
+export function failureClassOf(category: FailureCategory): FailureClass {
+  switch (category) {
+    case "quality_rejection":
+    case "duplicate":
+    case "missing_geography":
+      return "quality_rejection";
+    case "stale_source":
+      return "stale_freshness";
+    case "no_work":
+      return "no_work";
+    case "quarantine":
+      return "quarantine";
+    case "dead_letter":
+      return "dead_letter";
+    default:
+      return "infrastructure";
+  }
+}
+
+/**
+ * Categorize one item WITH its context. Status/source can force a category (a dead job is dead-letter whatever its
+ * last error text says; a quarantined row is quarantine). Falls back to the reason text.
+ */
+export function categorizeFailureItem(input: { reason: string; status?: string | null; source?: string | null }): FailureCategory {
+  const status = (input.status ?? "").toLowerCase();
+  const source = (input.source ?? "").toLowerCase();
+  const reason = (input.reason ?? "").toLowerCase();
+  if (status === "dead" || status === "dead_lettered" || reason === "dead_lettered") return "dead_letter";
+  if (status === "quarantined" || reason.startsWith("quarantine") || reason === "quarantined") return "quarantine";
+  if (reason === "no_work" || reason.includes("empty_shard") || reason.includes("nothing_due")) return "no_work";
+  if (status === "rejected_stale" || reason === "rejected_stale") return "stale_source";
+  if (reason === "rejected_freshness" || reason.startsWith("stale_candidate:") || reason.includes("freshness")) return "stale_source";
+  if (reason === "rejected_quality") return "quality_rejection";
+  if (reason === "rejected_duplicate" || status === "rejected_duplicate") return "duplicate";
+  if (status === "rejected_geo") return "missing_geography";
+  void source;
+  return categorizeFailure(input.reason);
+}
 
 export function categorizeFailure(reason: string): FailureCategory {
   const r = reason.toLowerCase();
@@ -486,10 +548,13 @@ export const FAILURE_CATEGORY_LABEL: Record<FailureCategory, string> = {
   provider_error: "Provider / model error",
   quality_rejection: "Quality rejection",
   duplicate: "Duplicate",
-  stale_source: "Stale source",
+  stale_source: "Stale / freshness rejection",
   missing_geography: "Missing geography",
   image_failure: "Image failure",
   translation_failure: "Translation failure",
   database_error: "Database error",
+  no_work: "No work / empty shard",
+  quarantine: "Quarantine",
+  dead_letter: "Dead-letter",
   other: "Other",
 };

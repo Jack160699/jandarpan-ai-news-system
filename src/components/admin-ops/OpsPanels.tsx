@@ -409,6 +409,15 @@ export function FailurePanel({ view }: { view: OpsView }) {
         <div className="ops-share"><b>{fmt(q.quarantined ?? 0)}</b><span>Quarantined</span></div>
         <div className="ops-share"><b>{fmt(Object.entries(q).filter(([k]) => k.startsWith("rejected_")).reduce((a, [, n]) => a + n, 0))}</b><span>Rejected (stale/dup/geo/quality)</span></div>
       </div>
+      {/* The six classes: a gate saying "no" or an empty shard must never read as an infrastructure outage. */}
+      <div className="ops-shares" style={{ marginBottom: "0.9rem" }} data-testid="failure-classes">
+        {view.failureClasses.map((c) => (
+          <div key={c.klass} className="ops-share" data-class={c.klass}>
+            <b style={c.klass === "infrastructure" && c.total > 0 ? { color: "var(--anr-danger,#b91c1c)" } : undefined}>{fmt(c.total)}</b>
+            <span>{c.label}</span>
+          </div>
+        ))}
+      </div>
       {view.failures.length === 0 ? (
         <Av3EmptyState title="No failures recorded" message="No failed jobs, rejections or provider errors in the measured windows." />
       ) : (

@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { requireAdminPermission } from "@/lib/auth/admin-authorization";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 import { createAdminServerClient } from "@/lib/supabase";
-import { categorizeFailure, FAILURE_CATEGORY_LABEL, type FailureCategory } from "@/lib/admin-ops/health";
+import { categorizeFailureItem, FAILURE_CATEGORY_LABEL, type FailureCategory } from "@/lib/admin-ops/health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
     rows.push({ kind: "cron_run", id: c.id, title: c.job, reason: c.error ?? "cron failure", status: "failed", at: c.created_at });
   }
 
-  const matched = rows.filter((r) => categorizeFailure(r.reason) === category).slice(0, 60);
+  const matched = rows.filter((r) => categorizeFailureItem({ reason: r.reason, status: r.status }) === category).slice(0, 60);
   return NextResponse.json(
     { ok: true, category, label: FAILURE_CATEGORY_LABEL[category], total: matched.length, rows: matched },
     { headers: noStoreHeaders() }

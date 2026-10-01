@@ -109,12 +109,11 @@ export function toHomeArticle(
   const localized = resolveLocalizedFieldsStrict(row, displayLanguage);
   if (!localized?.headline?.trim()) return null;
 
+  // MEDIA RULE (attribution, not visibility): an image is only ever shown if it is VERIFIED real source media
+  // (resolveImageUrls rejects stock/generic/fake URLs, so a rejected image resolves to ""). A valid article without
+  // one is still rendered - as a text-first card (imageUrl === "") - instead of silently vanishing from every feed.
+  // Images attach asynchronously; their absence must never hide a successfully edited article.
   const { hero, og } = resolveImageUrls(row);
-  // ABSOLUTE MEDIA RULE: ONLY SHOW REAL NEWS WITH REAL SOURCE MEDIA.
-  // If NO REAL USABLE MEDIA = DO NOT PUBLISH
-  if (!hero || !hasVerifiedRealMedia(hero)) {
-    return null;
-  }
   const hours = hoursSince(row.published_at);
   const meta = row.editorial_metadata ?? {};
   const confidence = meta.ai_confidence ?? 0.55;

@@ -27,6 +27,9 @@ import type { ClassifiedAiError } from "@/lib/ai/providers/types";
 
 const CLOUDFLARE_ACCOUNTS_URL = "https://api.cloudflare.com/client/v4/accounts";
 
+/** Circuit/health key for image operations ONLY (embeddings have their own - see cloudflare-embeddings.ts). */
+export const CLOUDFLARE_IMAGES_HEALTH_KEY = "cloudflare:images";
+
 /**
  * Default image dimensions/steps — configurable per call, but these are the
  * values used for capacity forecasting (see quota.ts's
@@ -94,7 +97,7 @@ async function postCloudflareImage(input: {
   const apiToken = process.env.CLOUDFLARE_API_TOKEN!.trim();
   const model = resolveCloudflareImageModel();
   const started = Date.now();
-  recordProviderRequestStarted("cloudflare", input.operation);
+  recordProviderRequestStarted(CLOUDFLARE_IMAGES_HEALTH_KEY, input.operation);
   console.log(
     `[cloudflare-image] requesting ${model} width=${input.width} height=${input.height} steps=${input.steps}`
   );
@@ -123,7 +126,7 @@ async function postCloudflareImage(input: {
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       const classified = classifyCloudflareFailure(res.status, detail);
-      markProviderUnhealthy("cloudflare", {
+      markProviderUnhealthy(CLOUDFLARE_IMAGES_HEALTH_KEY, {
         reason: classified.authFailure ? "cloudflare_unauthorized" : classified.message,
         httpStatus: res.status,
         authFailure: classified.authFailure,
@@ -153,7 +156,7 @@ async function postCloudflareImage(input: {
       url = `data:image/png;base64,${json.result.image}`;
     }
 
-    recordProviderRequestCompleted("cloudflare", input.operation, latencyMs);
+    recordProviderRequestCompleted(CLOUDFLARE_IMAGES_HEALTH_KEY, input.operation, latencyMs);
     return { url, latencyMs };
   } catch (err) {
     if (err && typeof err === "object" && "retryable" in err && "code" in err) throw err;
@@ -193,7 +196,7 @@ export async function requestCloudflareImageGeneration(input: {
       },
     };
   }
-  if (!isProviderHealthy("cloudflare")) {
+  if (!isProviderHealthy(CLOUDFLARE_IMAGES_HEALTH_KEY)) {
     return {
       error: {
         code: "ai_provider_cooldown",
