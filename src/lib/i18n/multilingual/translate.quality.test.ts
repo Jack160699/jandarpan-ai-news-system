@@ -102,6 +102,22 @@ describe("translateGeneratedArticle: Hindi representation is stored only when it
     expect(upsert).not.toHaveBeenCalled();
   });
 
+  it("a provider failure / unusable output is reported as translation_failed (NOT a gate rejection) with its reason", async () => {
+    chat.mockResolvedValue({ ok: false, provider: "gemini", latencyMs: 5, error: { code: "ai_quota_exhausted" } });
+    let res = await translateGeneratedArticle(row, ["hi"]);
+    expect(res[0]!.error).toBe("translation_failed:provider_failed:ai_quota_exhausted");
+
+    chat.mockResolvedValue({ ok: true, content: "not json at all", provider: "gemini", model: "m", latencyMs: 5 });
+    res = await translateGeneratedArticle(row, ["hi"]);
+    expect(res[0]!.error).toBe("translation_failed:invalid_json");
+
+    modelReturns({ headline: "", summary: "" });
+    res = await translateGeneratedArticle(row, ["hi"]);
+    expect(res[0]!.error).toBe("translation_failed:missing_fields");
+    expect(update).not.toHaveBeenCalled();
+    expect(storeCache).not.toHaveBeenCalled();
+  });
+
   it("the source article is untouched when its translation is rejected (English stays available to English readers)", async () => {
     modelReturns({ ...HI, headline: "Chhattisgarh Police Headquarters Issues Transfer Orders for Inspectors" });
     await translateGeneratedArticle(row, ["hi"]);

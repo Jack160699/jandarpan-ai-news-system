@@ -83,8 +83,11 @@ export async function translateArticleBundle(input: {
   /** Intended: news_events.urgency_score; resolved via resolveTranslationUrgencyScore */
   urgencyScore?: number | null;
   sourceContentVersion?: string;
-  /** Called with the quality-gate codes when a translation is REJECTED (so callers can surface why). */
-  onReject?: (codes: string[]) => void;
+  /**
+   * Called whenever no translation is produced, with WHY: kind "gate" = the quality gate rejected a produced translation;
+   * "provider" = the model call failed; "invalid_output" = the model output was unusable. (Observability only.)
+   */
+  onReject?: (codes: string[], kind?: "gate" | "provider" | "invalid_output") => void;
 }): Promise<ArticleLocaleBundle | null> {
   if (!isAnyChatProviderConfigured()) return null;
   if (input.sourceLanguage === input.targetLanguage) {
@@ -160,7 +163,7 @@ Return JSON only:
     });
     if (q.ok) return true;
     console.warn("[translation] rejected " + JSON.stringify({ articleId: input.articleId ?? null, target: input.targetLanguage, codes: q.codes }));
-    input.onReject?.(q.codes);
+    input.onReject?.(q.codes, "gate");
     return false;
   };
 
@@ -226,15 +229,30 @@ Return JSON only:
       context: { worker: "translation", articleId: input.articleId },
     });
 
-    if (!result.ok) return null;
+    if (!result.ok) {
+      input.onReject?.([`provider_failed:${result.error?.code ?? "unknown"}`], "provider");
+      return null;
+    }
 
     const text = result.content.trim();
-    if (!text) return null;
+    if (!text) {
+      input.onReject?.(["empty_output"], "invalid_output");
+      return null;
+    }
 
-    const parsed = JSON.parse(text) as LlmTranslationResponse;
+    let parsed: LlmTranslationResponse;
+    try {
+      parsed = JSON.parse(text) as LlmTranslationResponse;
+    } catch {
+      input.onReject?.(["invalid_json"], "invalid_output");
+      return null;
+    }
     const headline = parsed.headline?.trim();
     const summary = parsed.summary?.trim();
-    if (!headline || !summary) return null;
+    if (!headline || !summary) {
+      input.onReject?.(["missing_fields"], "invalid_output");
+      return null;
+    }
 
     const modelLabel = modelOverride ?? result.provider;
 
@@ -315,10 +333,10 @@ export async function translateGeneratedArticle(
 
   const links: TranslationLinkRow[] = [];
   for (const lang of langs) {
-    let rejection: string[] | null = null;
+    let rejection: { codes: string[]; kind: string } | null = null;
     const bundle = await translateArticleBundle({
-      onReject: (codes) => {
-        rejection = codes;
+      onReject: (codes, kind) => {
+        rejection = { codes, kind: kind ?? "gate" };
       },
       headline: row.headline,
       summary: row.summary ?? "",
@@ -335,7 +353,12 @@ export async function translateGeneratedArticle(
 
     if (!bundle) {
       // A quality-gate rejection is reported with its codes; the translation is NOT stored (and so never shown).
-      results.push({ language: lang, ok: false, error: rejection ? `translation_rejected:${(rejection as string[]).join(",")}`.slice(0, 300) : "translation_failed" });
+      const why = rejection as { codes: string[]; kind: string } | null;
+      results.push({
+        language: lang,
+        ok: false,
+        error: why ? `${why.kind === "gate" ? "translation_rejected" : "translation_failed"}:${why.codes.join(",")}`.slice(0, 300) : "translation_failed",
+      });
       continue;
     }
 
