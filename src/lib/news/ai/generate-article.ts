@@ -57,7 +57,7 @@ import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
 import { geoFromRecord, mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { evaluatePublicationGates, gateAuditPayload } from "@/lib/news/quality/publication-gates";
-import { checkStoryDuplicate, storeArticleEmbedding } from "@/lib/news/dedupe/cross-language";
+import { checkStoryDuplicate, duplicateRejectionReason, storeArticleEmbedding } from "@/lib/news/dedupe/cross-language";
 import type { EditorialLanguage } from "@/lib/news/quality/script-detect";
 import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
 import {
@@ -941,6 +941,34 @@ async function persistGeneratedArticle(input: {
   independentReview?: IndependentReviewResult;
   premiumEditorial?: { used: boolean; reason: string | null };
 }): Promise<EditorialGenerationResult> {
+  // AUTHORITATIVE same-story check on the FINAL drafted text, before anything is written or published. The early check
+  // (generateOne) only sees the event's raw title/summary, which is often mixed-language source text and can score well
+  // below the threshold (0.766 observed) even when the finished articles are 0.95 similar - that let the same story be
+  // published three times. In "enforce" mode a duplicate of an already-published story is rejected here.
+  const finalDuplicate = await checkStoryDuplicate({
+    eventId: input.event.id,
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    language: input.draft.language === "hi" ? "hi" : "en",
+  });
+  const finalDuplicateReason = duplicateRejectionReason(finalDuplicate);
+  if (finalDuplicateReason) {
+    logEditorial("draft_duplicate_of_published", {
+      eventId: input.event.id,
+      decision: finalDuplicate.decision,
+      similarity: finalDuplicate.similarity,
+      matchedArticleId: finalDuplicate.match?.articleId,
+    });
+    return {
+      ok: false,
+      article: null,
+      draft: input.draft,
+      quality: input.quality,
+      skipped: false,
+      reason: finalDuplicateReason,
+    };
+  }
+
   const supabase = createAdminServerClient();
   const slug = optimizeSeoSlug(input.draft.headline, input.event.id);
   const category =
