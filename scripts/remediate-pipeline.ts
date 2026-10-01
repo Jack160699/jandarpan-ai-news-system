@@ -176,6 +176,7 @@ if (!APPLY) {
   console.log("Dry run only. Re-run with --apply to execute it.");
 } else {
   console.log("Applying…");
-  execFileSync("npx", ["--no-install", "supabase", "db", "query", "--linked", "-f", OUT], { stdio: "inherit", shell: process.platform === "win32" });
+  // shell:true on Windows splits an unquoted path at spaces ("C:\Users\first last\...") - quote it.
+  execFileSync("npx", ["--no-install", "supabase", "db", "query", "--linked", "-f", process.platform === "win32" ? `"${OUT}"` : OUT], { stdio: "inherit", shell: process.platform === "win32" });
   console.log("Applied.");
 }
