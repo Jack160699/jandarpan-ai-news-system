@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
-import { countPendingEditorialImages } from "@/lib/news/ai/generate-editorial-image";
+import { countPendingEditorialImages } from "@/lib/news/ai/editorial-image-queue";
 import { countPendingJobs } from "@/lib/infrastructure/jobs/queue";
 
 export type QueueHealthSnapshot = {

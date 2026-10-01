@@ -472,9 +472,12 @@ export function JobsPanel({ view, now }: { view: OpsView; now: number }) {
     <Av3Panel
       title="Scheduled jobs"
       subtitle={
-        view.scheduler.pgCronInstalled
+        (view.scheduler.pgCronInstalled
           ? "Supabase pg_cron scheduler is installed."
-          : "pg_cron is NOT installed — these runs come from external schedulers (GitHub Actions, throttled). Apply migration 083."
+          : "pg_cron is NOT installed — these runs come from external schedulers (GitHub Actions, throttled). Apply migration 083.") +
+        (view.scheduler.control.known
+          ? ` Kill switch: ${view.scheduler.control.enabled ? "ON (dispatching)" : "OFF (paused)"} · pruning: ${view.scheduler.control.pruneEnabled ? "on" : "off"}${view.scheduler.control.lastPruneAt ? ` (last ${view.scheduler.control.lastPruneAt.slice(0, 16)}Z)` : ""}.`
+          : " Kill-switch state unavailable (apply migration 089).")
       }
     >
       <div className="ops-table-scroll">

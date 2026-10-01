@@ -22,6 +22,7 @@ import {
   type ErrorClass,
 } from "@/lib/edge/editorial-worker/classify";
 import { createWorkerLogger } from "@/lib/edge/editorial-worker/logging";
+import { captureConsole } from "@/lib/edge/worker-kit/console-capture";
 import {
   probeRuntime,
   startResourceTracker,
@@ -115,37 +116,6 @@ export type WorkerResponseBody = {
   debug_logs?: string[];
   runtime_probe?: Record<string, unknown>;
 };
-
-/** Capture console output for the duration of a test-mode run; the original console still receives every line. */
-function captureConsole(): { lines: string[]; restore: () => void } {
-  const lines: string[] = [];
-  const methods = ["log", "info", "warn", "error", "debug"] as const;
-  const originals = methods.map((m) => console[m]);
-  methods.forEach((m, i) => {
-    console[m] = (...args: unknown[]) => {
-      if (lines.length < 300) {
-        lines.push(
-          args
-            .map((a) => {
-              if (typeof a === "string") return a;
-              try {
-                return JSON.stringify(a);
-              } catch {
-                return String(a);
-              }
-            })
-            .join(" ")
-            .slice(0, 800)
-        );
-      }
-      originals[i]!.apply(console, args as never);
-    };
-  });
-  return {
-    lines,
-    restore: () => methods.forEach((m, i) => (console[m] = originals[i]!)),
-  };
-}
 
 function intEnv(env: Record<string, string | undefined>, name: string, fallback: number, min: number, max: number): number {
   const n = Number(env[name]);

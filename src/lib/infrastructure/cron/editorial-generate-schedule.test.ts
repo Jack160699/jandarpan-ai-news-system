@@ -2,17 +2,20 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { REGISTERED_CRON_JOBS } from "@/lib/infrastructure/cron/registered-jobs";
-import { SCHEDULER_JOBS } from "@/lib/infrastructure/cron/scheduler-manifest";
+import { EDGE_SCHEDULER_JOBS } from "@/lib/infrastructure/cron/scheduler-manifest";
 
 const ROOT = process.cwd();
 
 describe("editorial-generate schedule contract", () => {
-  it("schedules /api/cron/editorial-generate in the Supabase scheduler manifest", () => {
-    // Vercel Hobby cannot run sub-daily crons and GitHub Actions schedules are
-    // throttled; the manifest (pg_cron) is the runtime scheduler.
-    const entry = SCHEDULER_JOBS.find((j) => j.path === "/api/cron/editorial-generate");
+  it("schedules editorial generation on the Supabase Edge worker (not Vercel) at <= 10 min cadence", () => {
+    // Vercel Hobby cannot run sub-daily crons and GitHub Actions schedules are throttled; the manifest (pg_cron) is the
+    // runtime scheduler, and the expensive AI path runs on Supabase Edge so Vercel Hobby only carries the website.
+    const entry = EDGE_SCHEDULER_JOBS.find((j) => j.function === "editorial-worker");
     expect(entry).toBeDefined();
-    expect(entry!.everyMinutes).toBeLessThanOrEqual(15);
+    expect(entry!.everyMinutes).toBeLessThanOrEqual(10);
+    // exactly ONE dispatch per wake (one story per invocation): no fan-out in the schedule itself
+    expect(entry!.dispatches).toHaveLength(1);
+    expect(entry!.dispatches[0]!.leaseKey).toBe("editorial-generate");
   });
 
   it("lists editorial-generate after orchestrate in registered jobs", () => {

@@ -84,13 +84,47 @@ export type OpsView = {
   performance: OpsSnapshotRaw["performance"];
   subsystems: SubsystemStatus[];
   overall: Tone;
-  scheduler: { pgCronInstalled: boolean; dispatch: OpsSnapshotRaw["scheduler"] };
+  scheduler: { pgCronInstalled: boolean; dispatch: OpsSnapshotRaw["scheduler"]; control: SchedulerControl };
+  /** The one-glance answer: is the publishing pipeline running, stalled, or deliberately paused? */
+  pipeline: PipelineState;
   voice: {
     configured: boolean;
     snapshot: VoiceSnapshot | null;
     samples: { runId: string; at: string; status: string; items: VoiceSampleView[] } | null;
   };
 };
+
+/** scheduler_control (migration 089): the database kill switch + the retention switch. */
+export type SchedulerControl = {
+  /** false when the table could not be read (migration not applied) - never assume the scheduler is on. */
+  known: boolean;
+  enabled: boolean | null;
+  pruneEnabled: boolean | null;
+  lastPruneAt: string | null;
+};
+
+export type PipelineState = { state: "running" | "stalled" | "paused"; reason: string };
+
+export const UNKNOWN_SCHEDULER_CONTROL: SchedulerControl = { known: false, enabled: null, pruneEnabled: null, lastPruneAt: null };
+
+/** Pure: derive running / stalled / paused from the kill switch and publication freshness. */
+export function derivePipelineState(input: {
+  control: SchedulerControl;
+  paceMessage: string;
+  lagMinutes: number | null;
+}): PipelineState {
+  if (input.control.known && input.control.enabled === false) {
+    return { state: "paused", reason: "Scheduler kill switch is OFF - nothing is being dispatched" };
+  }
+  if (input.paceMessage === "Publishing pipeline stalled") {
+    const lag = input.lagMinutes;
+    return { state: "stalled", reason: lag === null ? "No article has ever been published" : `No article published for ${lag >= 120 ? Math.round(lag / 60) + " h" : Math.round(lag) + " min"}` };
+  }
+  return {
+    state: "running",
+    reason: input.lagMinutes === null ? "Publishing" : `Last publish ${input.lagMinutes >= 120 ? Math.round(input.lagMinutes / 60) + " h" : Math.round(input.lagMinutes) + " min"} ago`,
+  };
+}
 
 export type VoiceData = { snapshot: VoiceSnapshot | null; samples: OpsView["voice"]["samples"] };
 
@@ -109,7 +143,7 @@ const FUNNEL_LABELS: Array<[keyof FunnelCounts, string]> = [
 
 export function buildOpsView(
   raw: OpsSnapshotRaw,
-  runtime: { snapshotLatencyMs: number; now?: number; voice?: VoiceData }
+  runtime: { snapshotLatencyMs: number; now?: number; voice?: VoiceData; schedulerControl?: SchedulerControl }
 ): OpsView {
   const now = runtime.now ?? Date.now();
   const lagMinutes = ageMinutes(raw.publishing.latest?.published_at, now);
@@ -216,7 +250,16 @@ export function buildOpsView(
     performance: raw.performance,
     subsystems,
     overall,
-    scheduler: { pgCronInstalled: raw.pg_cron_installed, dispatch: raw.scheduler },
+    scheduler: {
+      pgCronInstalled: raw.pg_cron_installed,
+      dispatch: raw.scheduler,
+      control: runtime.schedulerControl ?? UNKNOWN_SCHEDULER_CONTROL,
+    },
+    pipeline: derivePipelineState({
+      control: runtime.schedulerControl ?? UNKNOWN_SCHEDULER_CONTROL,
+      paceMessage: pace.message,
+      lagMinutes,
+    }),
     voice: {
       configured: googleTtsConfigured(),
       snapshot: runtime.voice?.snapshot ?? null,
@@ -263,10 +306,28 @@ async function fetchVoiceData(): Promise<VoiceData> {
   return { snapshot: snap, samples };
 }
 
+/** Kill switch state. Optional like voice: a missing migration must never break the dashboard. */
+async function fetchSchedulerControl(): Promise<SchedulerControl> {
+  if (!isSupabaseConfigured()) return UNKNOWN_SCHEDULER_CONTROL;
+  try {
+    const { data, error } = await createAdminServerClient()
+      .from("scheduler_control" as never)
+      .select("enabled,prune_enabled,last_prune_at")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error || !data) return UNKNOWN_SCHEDULER_CONTROL;
+    const row = data as { enabled: boolean; prune_enabled: boolean; last_prune_at: string | null };
+    return { known: true, enabled: row.enabled, pruneEnabled: row.prune_enabled, lastPruneAt: row.last_prune_at };
+  } catch {
+    return UNKNOWN_SCHEDULER_CONTROL;
+  }
+}
+
 export async function getOpsView(options?: { fresh?: boolean }): Promise<OpsView> {
-  const [{ raw, latencyMs }, voice] = await Promise.all([
+  const [{ raw, latencyMs }, voice, schedulerControl] = await Promise.all([
     options?.fresh ? fetchRawSnapshot() : cachedRawSnapshot(),
     fetchVoiceData(),
+    fetchSchedulerControl(),
   ]);
-  return buildOpsView(raw, { snapshotLatencyMs: latencyMs, voice });
+  return buildOpsView(raw, { snapshotLatencyMs: latencyMs, voice, schedulerControl });
 }

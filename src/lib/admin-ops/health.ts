@@ -4,7 +4,7 @@
  */
 
 import { CG_DISTRICTS } from "@/lib/regional/districts";
-import { SCHEDULER_JOBS, stallThresholdMs } from "@/lib/infrastructure/cron/scheduler-manifest";
+import { HEALTH_JOBS, stallThresholdMs } from "@/lib/infrastructure/cron/scheduler-manifest";
 import {
   deriveSourceHealth,
   SOURCE_STATUS_LABEL,
@@ -119,7 +119,7 @@ export type JobHealth = {
 
 export function evaluateJobs(snapshot: OpsSnapshotRaw, now: number): JobHealth[] {
   const byOpsJob = new Map<string, CronJobRow>(snapshot.cron.jobs.map((j) => [j.job, j]));
-  return SCHEDULER_JOBS.map((job) => {
+  return HEALTH_JOBS.map((job) => {
     const row = byOpsJob.get(job.opsJob);
     const age = ageMinutes(row?.last_run_at, now);
     const stalled = age === null || age * MIN > stallThresholdMs(job);

@@ -23,3 +23,4 @@ export {
 } from "@/lib/supabase/env";
 
 export { createAdminServerClient, createAdminClient } from "@/lib/supabase/admin";
+export { createAnonServerClient, createServerAnonClient } from "@/lib/supabase/anon";

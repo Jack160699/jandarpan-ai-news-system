@@ -83,6 +83,15 @@ export function OpsCommandCenter({
             {view.overall === "healthy" ? "All critical systems operating" : view.overall === "warning" ? "Degraded — attention needed" : "Critical — the pipeline needs intervention"}
             <Av3StatusBadge label={view.overall} tone={view.overall} />
           </div>
+          <div className="ops-topbar__status" data-testid="pipeline-state">
+            <ToneDot tone={view.pipeline.state === "running" ? "healthy" : view.pipeline.state === "paused" ? "warning" : "critical"} />
+            Publishing pipeline: {view.pipeline.state.toUpperCase()} — {view.pipeline.reason}
+            {view.scheduler.control.known ? (
+              <Av3StatusBadge label={view.scheduler.control.enabled ? "scheduler on" : "scheduler off"} tone={view.scheduler.control.enabled ? "healthy" : "warning"} />
+            ) : (
+              <Av3StatusBadge label="scheduler state unknown" tone="warning" />
+            )}
+          </div>
           <div className="ops-topbar__meta">
             Snapshot {generated}Z · query {view.snapshotLatencyMs}ms · refreshes every {Math.round(POLL_MS / 1000)}s
             {error ? ` · last refresh failed: ${error}` : ""}

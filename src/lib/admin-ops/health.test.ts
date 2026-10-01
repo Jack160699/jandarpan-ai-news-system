@@ -12,7 +12,7 @@ import {
   freshnessTone,
   geoShares,
 } from "@/lib/admin-ops/health";
-import { SCHEDULER_JOBS } from "@/lib/infrastructure/cron/scheduler-manifest";
+import { HEALTH_JOBS } from "@/lib/infrastructure/cron/scheduler-manifest";
 import { RSS_SOURCES } from "@/lib/news/providers/rss-sources";
 import type { OpsSnapshotRaw } from "@/lib/admin-ops/types";
 
@@ -68,7 +68,7 @@ describe("cron / scheduler jobs", () => {
   const by = Object.fromEntries(jobs.map((j) => [j.id, j]));
 
   it("covers every manifest job", () => {
-    expect(jobs.map((j) => j.id).sort()).toEqual(SCHEDULER_JOBS.map((j) => j.id).sort());
+    expect(jobs.map((j) => j.id).sort()).toEqual(HEALTH_JOBS.map((j) => j.id).sort());
   });
 
   it("flags critical lanes that have not run recently as critical (real 3–7h burst gaps)", () => {

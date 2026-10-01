@@ -422,3 +422,15 @@ enabled = true
 # Authenticated by the bearer secret inside the handler (pg_net/pg_cron cannot present a user JWT).
 verify_jwt = false
 entrypoint = "./functions/editorial-worker/index.ts"
+
+[functions.fetch-worker]
+verify_jwt = false
+entrypoint = "./functions/fetch-worker/index.ts"
+
+[functions.cluster-worker]
+verify_jwt = false
+entrypoint = "./functions/cluster-worker/index.ts"
+
+[functions.translation-worker]
+verify_jwt = false
+entrypoint = "./functions/translation-worker/index.ts"

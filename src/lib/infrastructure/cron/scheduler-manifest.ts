@@ -43,6 +43,31 @@ export type SchedulerJob = {
   leaseKey: string | null;
 };
 
+/**
+ * A job served by a Supabase Edge Function. One logical job (one dashboard row, one ops_cron_runs.job) may be
+ * dispatched several times per cycle - one entry per shard - so every invocation stays small and bounded.
+ */
+export type EdgeSchedulerJob = {
+  id: string;
+  label: string;
+  /** Edge Function slug (supabase/functions/<function>). */
+  function: string;
+  /** ops_cron_runs.job the worker records under (shared by all shards). */
+  opsJob: string;
+  critical: boolean;
+  /** Nominal interval of the whole cycle, used for stall detection. */
+  everyMinutes: number;
+  timeoutMs: number;
+  dispatches: ReadonlyArray<{
+    /** Appended to the pg_cron name: jd-edge-<id>[-<suffix>]. */
+    suffix: string;
+    cron: string;
+    body: Record<string, unknown>;
+    /** worker_run_leases key the worker holds while running (dispatcher skips while held). */
+    leaseKey: string | null;
+  }>;
+};
+
 /** Pure-database maintenance jobs: run inside Postgres (pg_cron), no HTTP hop, nothing on Vercel. */
 export type DbMaintenanceJob = {
   id: string;
@@ -52,42 +77,6 @@ export type DbMaintenanceJob = {
 };
 
 export const SCHEDULER_JOBS: readonly SchedulerJob[] = [
-  {
-    id: "fetch-news",
-    label: "Fetch news (RSS + NewsData + GNews)",
-    path: "/api/fetch-news",
-    method: "POST",
-    cron: "*/10 * * * *",
-    everyMinutes: 10,
-    opsJob: "fetch-news",
-    critical: true,
-    timeoutMs: 290_000,
-    leaseKey: "fetch-news",
-  },
-  {
-    id: "cluster",
-    label: "Cluster signals into events",
-    path: "/api/cron/cluster",
-    method: "POST",
-    cron: "3-59/10 * * * *",
-    everyMinutes: 10,
-    opsJob: "cluster",
-    critical: true,
-    timeoutMs: 290_000,
-    leaseKey: "cluster",
-  },
-  {
-    id: "editorial-generate",
-    label: "Editorial generation",
-    path: "/api/cron/editorial-generate",
-    method: "POST",
-    cron: "1-59/10 * * * *",
-    everyMinutes: 10,
-    opsJob: "editorial-generate",
-    critical: true,
-    timeoutMs: 290_000,
-    leaseKey: "editorial-generate",
-  },
   {
     id: "orchestrate",
     label: "Orchestrate (images, snapshots, analytics)",
@@ -111,18 +100,6 @@ export const SCHEDULER_JOBS: readonly SchedulerJob[] = [
     critical: false,
     timeoutMs: 290_000,
     leaseKey: "cron_jobs",
-  },
-  {
-    id: "translation-backfill",
-    label: "Translation backfill",
-    path: "/api/cron/translation-backfill",
-    method: "POST",
-    cron: "10-59/30 * * * *",
-    everyMinutes: 30,
-    opsJob: "translation-backfill",
-    critical: false,
-    timeoutMs: 290_000,
-    leaseKey: "translation-backfill",
   },
   {
     id: "edition-publish",
@@ -206,6 +183,77 @@ export const DISABLED_SCHEDULER_JOBS: readonly SchedulerJob[] = [
   },
 ] as const;
 
+/** RSS feeds are split into this many shards per ingestion cycle (every feed polled once per cycle). */
+export const FETCH_SHARDS = 10;
+
+/**
+ * The heavy recurring pipeline, served by Supabase Edge Functions so Vercel Hobby only carries the website.
+ *  - fetch: 10 shards (~10 feeds each), one per minute offset, every 10 min
+ *  - cluster: every 10 min
+ *  - editorial: wakes every 5 min but processes EXACTLY ONE candidate per wake, behind the lease, the Redis quota governor,
+ *    the per-run LLM budget, persistent backoff and the circuit breaker (no burst is possible)
+ *  - translation: every 30 min, small batch
+ */
+export const EDGE_SCHEDULER_JOBS: readonly EdgeSchedulerJob[] = [
+  {
+    id: "fetch-news",
+    label: "Fetch news (RSS shards + NewsData + GNews)",
+    function: "fetch-worker",
+    opsJob: "fetch-news",
+    critical: true,
+    everyMinutes: 10,
+    timeoutMs: 150_000,
+    dispatches: Array.from({ length: FETCH_SHARDS }, (_, i) => ({
+      suffix: String(i),
+      cron: `${i}-59/10 * * * *`,
+      body: { shard: i, shards: FETCH_SHARDS },
+      leaseKey: `edge-fetch-${FETCH_SHARDS}-${i}`,
+    })),
+  },
+  {
+    id: "cluster",
+    label: "Cluster signals into events",
+    function: "cluster-worker",
+    opsJob: "cluster",
+    critical: true,
+    everyMinutes: 10,
+    timeoutMs: 150_000,
+    dispatches: [{ suffix: "", cron: "7-59/10 * * * *", body: {}, leaseKey: "edge-cluster" }],
+  },
+  {
+    id: "editorial-generate",
+    label: "Editorial generation (1 story per wake)",
+    function: "editorial-worker",
+    opsJob: "editorial-generate",
+    critical: true,
+    everyMinutes: 5,
+    timeoutMs: 150_000,
+    dispatches: [{ suffix: "", cron: "2-59/5 * * * *", body: {}, leaseKey: "editorial-generate" }],
+  },
+  {
+    id: "translation",
+    label: "Translation backfill",
+    function: "translation-worker",
+    opsJob: "translation-backfill",
+    critical: false,
+    everyMinutes: 30,
+    timeoutMs: 150_000,
+    dispatches: [{ suffix: "", cron: "10-59/30 * * * *", body: {}, leaseKey: "edge-translation" }],
+  },
+] as const;
+
+export const EDGE_JOB_PREFIX = "jd-edge-";
+
+export function edgeDispatchName(job: Pick<EdgeSchedulerJob, "id">, suffix: string): string {
+  return `${EDGE_JOB_PREFIX}${job.id}${suffix ? "-" + suffix : ""}`;
+}
+
+/** One dashboard row per logical job: Vercel HTTP jobs + Edge jobs (shards collapse to their shared ops job). */
+export const HEALTH_JOBS: ReadonlyArray<Pick<SchedulerJob, "id" | "label" | "opsJob" | "critical" | "everyMinutes">> = [
+  ...SCHEDULER_JOBS,
+  ...EDGE_SCHEDULER_JOBS.map((j) => ({ id: j.id, label: j.label, opsJob: j.opsJob, critical: j.critical, everyMinutes: j.everyMinutes })),
+];
+
 /** Job ids registered by an earlier migration that the current one must unschedule. */
 export const RETIRED_SCHEDULER_JOB_IDS: readonly string[] = [
   // Legacy wire-article enrichment; the editorial pipeline does not depend on it and it burned AI quota.
@@ -216,6 +264,11 @@ export const RETIRED_SCHEDULER_JOB_IDS: readonly string[] = [
   "cleanup",
   // Replaced by prune-scheduler-logs.
   "scheduler-log-cleanup",
+  // Moved to Supabase Edge Functions (migration 090): the Vercel HTTP dispatches are unscheduled.
+  "fetch-news",
+  "cluster",
+  "editorial-generate",
+  "translation-backfill",
 ] as const;
 
 /** Runs entirely inside Postgres. Retention is gated by scheduler_control.prune_enabled (default false). */
@@ -255,11 +308,13 @@ export function renderSchedulerSql(
     disabled?: readonly SchedulerJob[];
     retiredIds?: readonly string[];
     maintenance?: readonly DbMaintenanceJob[];
+    edgeJobs?: readonly EdgeSchedulerJob[];
   } = {}
 ): string {
   const disabled = opts.disabled ?? DISABLED_SCHEDULER_JOBS;
   const retiredIds = opts.retiredIds ?? RETIRED_SCHEDULER_JOB_IDS;
   const maintenance = opts.maintenance ?? DB_MAINTENANCE_JOBS;
+  const edge = opts.edgeJobs ?? EDGE_SCHEDULER_JOBS;
   const lines: string[] = [];
   const unschedule = (name: string) =>
     lines.push(`select cron.unschedule(jobid) from cron.job where jobname = '${name}';`);
@@ -273,6 +328,17 @@ export function renderSchedulerSql(
     lines.push(
       `select cron.schedule('${name}', '${job.cron}', $job$ select public.jd_invoke_cron('${job.id}', '${job.path}', '${job.method}', ${job.timeoutMs}, ${lease}); $job$);`
     );
+  }
+  for (const job of edge) {
+    for (const d of job.dispatches) {
+      const name = edgeDispatchName(job, d.suffix);
+      const lease = d.leaseKey === null ? "null" : `'${d.leaseKey}'`;
+      const body = JSON.stringify(d.body).replace(/'/g, "''");
+      unschedule(name);
+      lines.push(
+        `select cron.schedule('${name}', '${d.cron}', $job$ select public.jd_invoke_edge('${job.id}', '${job.function}', '${body}'::jsonb, ${job.timeoutMs}, ${lease}); $job$);`
+      );
+    }
   }
   for (const job of maintenance) {
     const name = schedulerJobName(job.id);

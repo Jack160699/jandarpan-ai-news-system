@@ -13,7 +13,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { createRequire } from "node:module";
+import { createRequire, builtinModules } from "node:module";
+const NODE_BUILTINS = new Set(builtinModules.filter((m) => !m.startsWith("_")));
 
 const root = process.cwd();
 const req = createRequire(path.join(root, "package.json"));
@@ -32,7 +33,40 @@ const chainTarget = chainIdx >= 0 ? args[chainIdx + 1] : null;
 const entry = args.find((a, i) => !a.startsWith("--") && (outIdx < 0 || i !== outIdx + 1) && (impIdx < 0 || i !== impIdx + 1) && (chainIdx < 0 || i !== chainIdx + 1)) ?? "src/edge/editorial-worker/serve.ts";
 
 /** Node builtins the Supabase Edge runtime provides through its node: compatibility layer. */
-const ALLOWED_NODE_BUILTINS = new Set(["node:async_hooks", "node:crypto", "node:buffer"]);
+const ALLOWED_NODE_BUILTINS = new Set([
+  "node:async_hooks",
+  "node:crypto",
+  "node:buffer",
+  // Real node: modules (provided by Deno / Supabase Edge) that THIRD-PARTY CJS code requires with bare names. The only such
+  // consumer is rss-parser/xml2js/sax, which require stream/http/https/url at load; feeds are fetched with fetch() and only
+  // parser.parseString() is used, so no socket is ever opened.
+  "node:stream",
+  "node:http",
+  "node:https",
+  "node:url",
+  // xml2js/sax (rss-parser's XML parser): EventEmitter + timers. Standard modules in Deno / Supabase Edge.
+  "node:events",
+  "node:timers",
+]);
+/**
+ * Builtins that third-party CJS may require with a bare name. They are imported as REAL node: modules by a prelude (banner)
+ * and handed to CJS callers as `module.exports` - exactly what require("events") returns in Node (the class itself, not a
+ * namespace object). Anything else a dependency requires (fs, child_process, net, os...) is NOT shimmed: it becomes a plain
+ * node: import and is reported by the allow-list check below.
+ */
+const CJS_PRELUDE_BUILTINS = ["stream", "http", "https", "url", "events", "timers"];
+const PRELUDE_BANNER =
+  CJS_PRELUDE_BUILTINS.map((m) => `import * as __nb_${m} from "node:${m}";`).join("\n") +
+  "\nglobalThis.__NODE_BUILTINS = {" +
+  CJS_PRELUDE_BUILTINS.map((m) => `${m}: __nb_${m}.default ?? __nb_${m}`).join(",") +
+  "};";
+
+/**
+ * Bare builtins imported by THIRD-PARTY code are mapped to their real node: equivalents (never stubbed) through a thin
+ * ESM re-export - the hosted Edge runtime is ESM-only and has no require(), so a CJS dependency's require("events") would
+ * otherwise crash at boot. The allow-list above still decides which node: modules are acceptable (fs, child_process, net,
+ * os, ... stay forbidden and are reported).
+ */
 /** Never acceptable in the bundle graph. */
 const FORBIDDEN = [
   { re: /^next(\/|$)/, why: "Next.js API (not available outside the Next runtime)" },
@@ -45,6 +79,8 @@ const FORBIDDEN = [
 const EDGE_PORTS = {
   "@/lib/runtime/background": "src/lib/runtime/background.edge.ts",
   "@/lib/supabase": "src/lib/runtime/supabase.edge.ts",
+  "@/lib/observability/sentry": "src/lib/runtime/sentry.edge.ts",
+  "@/lib/infrastructure/cache/isr": "src/lib/runtime/isr.edge.ts",
 };
 
 function resolveAlias(spec) {
@@ -58,6 +94,18 @@ function resolveAlias(spec) {
 const plugin = {
   name: "edge-alias",
   setup(b) {
+    // Third-party CJS (node_modules only) that requires a bare builtin gets the REAL node: module through a thin ESM
+    // re-export, which also avoids a runtime require(). First-party code must already use the node: prefix (audited).
+    b.onResolve({ filter: /^[a-z_]+(\/[a-z_]+)?$/ }, (a) => {
+      if (!NODE_BUILTINS.has(a.path) || !a.importer.replace(/\\/g, "/").includes("/node_modules/")) return null;
+      return { path: a.path, namespace: "node-builtin-wrap" };
+    });
+    b.onLoad({ filter: /.*/, namespace: "node-builtin-wrap" }, (a) => ({
+      contents: CJS_PRELUDE_BUILTINS.includes(a.path)
+        ? `module.exports = globalThis.__NODE_BUILTINS[${JSON.stringify(a.path)}];`
+        : `export * from "node:${a.path}"; export { default } from "node:${a.path}";`,
+      loader: "js",
+    }));
     b.onResolve({ filter: /^@\// }, (a) => {
       if (EDGE_PORTS[a.path]) return { path: path.join(root, EDGE_PORTS[a.path]) };
       const p = resolveAlias(a.path);
@@ -78,6 +126,7 @@ const build = await esb
     logLevel: "silent",
     metafile: true,
     minify: true,
+    banner: { js: PRELUDE_BANNER },
     // next/*, sharp etc. are left external ON PURPOSE so the audit can see and report them (no stubbing).
     external: ["next", "next/*", "sharp", "server-only", "node:*", "fs", "path", "os", "crypto", "child_process", "net", "tls", "http", "https", "zlib", "stream", "util", "buffer", "url"],
   })
@@ -147,11 +196,17 @@ if (importersOf) {
 
 const externals = new Set();
 for (const imports of graph.values()) for (const im of imports) if (im.external) externals.add(im.path);
+// the prelude's node: imports are not in the module graph; include the ones that are actually wired to a require()
+for (const [file, imports] of graph) {
+  if (!file.startsWith("node-builtin-wrap:")) continue;
+  const name = file.slice("node-builtin-wrap:".length);
+  if (CJS_PRELUDE_BUILTINS.includes(name)) externals.add("node:" + name);
+}
 
 const problems = [];
 for (const ext of externals) {
   const bad = FORBIDDEN.find((f) => f.re.test(ext));
-  const bareBuiltin = !ext.startsWith("node:") && !bad && /^(crypto|path|os|stream|util|zlib|http|https|tls|url|buffer)$/.test(ext);
+  const bareBuiltin = !ext.startsWith("node:") && !bad && NODE_BUILTINS.has(ext);
   if (bad) problems.push({ ext, why: bad.why });
   else if (bareBuiltin) problems.push({ ext, why: "bare Node builtin - use the node: prefix" });
   else if (ext.startsWith("node:") && !ALLOWED_NODE_BUILTINS.has(ext)) problems.push({ ext, why: "node: builtin outside the audited allow-list" });
