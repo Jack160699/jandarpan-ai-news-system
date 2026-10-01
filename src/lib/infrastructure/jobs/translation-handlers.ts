@@ -7,6 +7,7 @@
  */
 
 import type { JobHandler, JobType } from "@/lib/infrastructure/jobs/types";
+import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
 import { createAdminServerClient } from "@/lib/supabase";
 import { normalizeArticleLanguage } from "@/lib/i18n/languages";
 import {
@@ -21,8 +22,10 @@ import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import { asJson } from "@/types/json";
 
 export const translationBatch: JobHandler = async (job) => {
-  if (!process.env.OPENAI_API_KEY?.trim()) {
-    return { ok: true, result: { skipped: true, reason: "no_openai" } };
+  // Translation runs through the provider chain (Gemini / Groq / ...), NOT OpenAI. The old guard required an unrelated
+  // OPENAI_API_KEY, so on any runtime without that key (e.g. the Supabase Edge worker) every job was a silent "completed" skip.
+  if (!isAnyChatProviderConfigured()) {
+    return { ok: true, result: { skipped: true, reason: "no_ai_provider" } };
   }
 
   const limit = Number(job.payload.limit ?? process.env.TRANSLATION_ENQUEUE_BATCH ?? 40);
@@ -51,8 +54,8 @@ export const translationBatch: JobHandler = async (job) => {
 };
 
 export const translateArticle: JobHandler = async (job) => {
-  if (!process.env.OPENAI_API_KEY?.trim()) {
-    return { ok: true, result: { skipped: true, reason: "no_openai" } };
+  if (!isAnyChatProviderConfigured()) {
+    return { ok: true, result: { skipped: true, reason: "no_ai_provider" } };
   }
 
   const {
