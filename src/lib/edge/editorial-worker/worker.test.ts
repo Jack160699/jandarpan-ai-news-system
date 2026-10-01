@@ -259,6 +259,8 @@ describe("handler: explicit outcomes (business rejections are NOT infrastructure
     ["quality_checks_failed", "rejected_quality"],
     ["retryable:validation_failed:thin_body", "rejected_quality"],
     ["slug_already_exists", "rejected_duplicate"],
+    ["duplicate_published_story", "rejected_duplicate"],
+    ["duplicate_cross_language_variant", "rejected_duplicate"],
     ["quarantine:validation_failed:x;manual_review_required", "quarantined"],
   ];
 

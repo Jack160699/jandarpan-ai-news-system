@@ -55,3 +55,17 @@ describe("helpers", () => {
     expect(embeddingTextFor("H", "x".repeat(1000)).length).toBeLessThan(410);
   });
 });
+
+import { duplicateRejectionReason } from "./cross-language";
+
+describe("duplicateRejectionReason (final drafted-text check)", () => {
+  it("rejects only ENFORCED, non-distinct decisions", () => {
+    expect(duplicateRejectionReason({ decision: "duplicate_same_language", enforced: true })).toBe("duplicate_published_story");
+    expect(duplicateRejectionReason({ decision: "cross_language_variant", enforced: true })).toBe("duplicate_cross_language_variant");
+  });
+  it("shadow mode and distinct stories never block", () => {
+    expect(duplicateRejectionReason({ decision: "duplicate_same_language", enforced: false })).toBeNull();
+    expect(duplicateRejectionReason({ decision: "distinct", enforced: true })).toBeNull();
+    expect(duplicateRejectionReason({ decision: "distinct", enforced: false })).toBeNull();
+  });
+});

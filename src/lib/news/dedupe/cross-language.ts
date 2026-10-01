@@ -82,6 +82,15 @@ export type DuplicateCheck = {
   match: { articleId: string; language: string | null; headline: string } | null;
 };
 
+/**
+ * The rejection reason for a duplicate check result, or null when the story may proceed. Only an ENFORCED, non-distinct
+ * decision rejects (shadow mode never blocks). Shared by the early (event text) and the final (drafted text) checks.
+ */
+export function duplicateRejectionReason(check: Pick<DuplicateCheck, "decision" | "enforced">): string | null {
+  if (!check.enforced || check.decision === "distinct") return null;
+  return check.decision === "cross_language_variant" ? "duplicate_cross_language_variant" : "duplicate_published_story";
+}
+
 const DISTINCT: DuplicateCheck = { decision: "distinct", mode: "shadow", enforced: false, similarity: null, match: null };
 
 export async function checkStoryDuplicate(input: {
