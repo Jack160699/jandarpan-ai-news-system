@@ -2,7 +2,7 @@
  * Intelligent editorial image prompt builder — uses full article context + brief
  */
 
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import {
   briefToPromptFragment,
   buildEditorialImageBrief,

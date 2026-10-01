@@ -156,10 +156,7 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
     for (const a of candidates) {
       if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
 
-      // ABSOLUTE MEDIA RULE: ONLY SHOW REAL NEWS WITH REAL SOURCE MEDIA
-      const imgUrl = extractVerifiedRealMediaUrl(a) || a.imageUrl;
-      if (!hasVerifiedRealMedia(imgUrl)) continue;
-
+      // Media never gates a story (images attach asynchronously); see ReaderHomepage.
       if (!isCgStory(a)) continue;
       const enBundle = (a as any).translations?.en || (a as any).editorial_metadata?.translations?.en;
       const displayHeadline = locale === "en" ? (enBundle?.headline || a.headline) : a.headline;

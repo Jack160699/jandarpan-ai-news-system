@@ -2,7 +2,9 @@
  * In-memory AI provider health — avoids retry storms on bad keys.
  */
 
+import { runInBackground } from "@/lib/runtime/background";
 import { isLocalEnrichEnabled } from "@/lib/ai/providers/local-enrich-flag";
+import { circuitCooldownMs, classifyCircuitFailure } from "@/lib/ai/providers/circuit-policy";
 import type {
   AiProviderHealthSnapshot,
   AiProviderId,
@@ -10,8 +12,11 @@ import type {
   ProviderTelemetryPhase,
 } from "@/lib/ai/providers/types";
 
-const AUTH_COOLDOWN_MS = 15 * 60 * 1000;
-const DEFAULT_COOLDOWN_MS = 10_000;
+/**
+ * Cooldowns come from circuit-policy.ts and survive serverless cold starts via
+ * circuit-store.ts (table ai_provider_circuit). This registry is the hot,
+ * per-instance view; hydrateProviderHealth() merges the persisted state in.
+ */
 
 type ProviderState = {
   provider: HealthKey;
@@ -100,19 +105,32 @@ export function markProviderUnhealthy(
     httpStatus?: number;
     authFailure?: boolean;
     rateLimited?: boolean;
+    invalidRequest?: boolean;
+    code?: string;
+    dailyExhausted?: boolean;
+    retryAfterMs?: number;
   }
 ): void {
   const state = getState(provider);
-  const cooldownMs = input.authFailure
-    ? AUTH_COOLDOWN_MS
-    : input.rateLimited
-      ? 10_000
-      : DEFAULT_COOLDOWN_MS;
+  const consecutiveFailures = state.consecutiveFailures + 1;
+  const failure = {
+    code: input.code ?? "ai_failure",
+    httpStatus: input.httpStatus,
+    message: input.reason,
+    authFailure: Boolean(input.authFailure),
+    rateLimited: Boolean(input.rateLimited),
+    invalidRequest: Boolean(input.invalidRequest),
+    consecutiveFailures,
+    dailyExhausted: Boolean(input.dailyExhausted),
+    retryAfterMs: input.retryAfterMs,
+  };
+  const cooldownMs = circuitCooldownMs(failure);
+  const failureClass = classifyCircuitFailure(failure);
 
   state.healthy = false;
   state.disabledUntil = Date.now() + cooldownMs;
   state.lastFailureAt = Date.now();
-  state.consecutiveFailures += 1;
+  state.consecutiveFailures = consecutiveFailures;
   state.totalFailure += 1;
   state.lastError = input.reason.slice(0, 240);
   state.lastHttpStatus = input.httpStatus ?? null;
@@ -122,9 +140,12 @@ export function markProviderUnhealthy(
     provider,
     reason: input.reason,
     httpStatus: input.httpStatus ?? null,
+    failureClass,
+    cooldownMs,
     disabledUntil: new Date(state.disabledUntil).toISOString(),
     consecutiveFailures: state.consecutiveFailures,
   });
+  persistProviderState(provider, state, failureClass);
 
   if (provider === "openai" && input.authFailure && input.httpStatus === 401) {
     const now = Date.now();
@@ -144,6 +165,7 @@ export function recordProviderSuccess(
   latencyMs: number
 ): void {
   const state = getState(provider);
+  const wasOpen = !state.healthy || state.consecutiveFailures > 0;
   state.healthy = true;
   state.disabledUntil = null;
   state.consecutiveFailures = 0;
@@ -153,6 +175,8 @@ export function recordProviderSuccess(
   state.lastError = null;
   state.lastHttpStatus = null;
   registry.set(provider, state);
+  // Only persist when a success actually closes an open/failing circuit — keeps writes rare.
+  if (wasOpen) persistProviderState(provider, state, null);
 }
 
 export function recordProviderRequestStarted(
@@ -188,6 +212,97 @@ export function recordProviderFallback(
     to,
     reason,
   });
+}
+
+export type PersistedProviderState = {
+  key: string;
+  disabledUntil: number | null;
+  consecutiveFailures: number;
+  lastError: string | null;
+  lastFailureAt: number | null;
+  lastSuccessAt: number | null;
+  failureClass?: string | null;
+};
+
+/** Fire-and-forget write of a state change; never throws, never blocks the request. */
+function persistProviderState(
+  key: HealthKey,
+  state: ProviderState,
+  failureClass: string | null
+): void {
+  if (process.env.VITEST || process.env.AI_CIRCUIT_PERSIST === "off") return;
+  const snapshot: PersistedProviderState = {
+    key,
+    disabledUntil: state.disabledUntil,
+    consecutiveFailures: state.consecutiveFailures,
+    lastError: state.lastError,
+    lastFailureAt: state.lastFailureAt,
+    lastSuccessAt: state.lastSuccessAt,
+    failureClass,
+  };
+  const work = import("@/lib/ai/providers/circuit-store")
+    .then((m) => m.writeCircuitState(snapshot))
+    .catch(() => undefined);
+  // Keep the invocation alive until the write lands (runtime port: Next after() / Edge drain).
+  runInBackground(() => work);
+}
+
+/**
+ * Merge circuit state persisted by other invocations into this instance.
+ * Only ever extends a cooldown / adopts a newer failure count — a locally
+ * observed success is never overwritten by staler persisted state.
+ */
+export function mergePersistedProviderState(rows: PersistedProviderState[]): number {
+  let merged = 0;
+  const now = Date.now();
+  for (const row of rows) {
+    const state = getState(row.key);
+    const persistedOpen = row.disabledUntil !== null && row.disabledUntil > now;
+    const localSuccessNewer =
+      state.lastSuccessAt !== null &&
+      (row.lastFailureAt === null || state.lastSuccessAt > row.lastFailureAt);
+    if (persistedOpen && !localSuccessNewer) {
+      if (!state.disabledUntil || state.disabledUntil < row.disabledUntil!) {
+        state.disabledUntil = row.disabledUntil;
+        state.healthy = false;
+        merged++;
+      }
+    }
+    if (row.consecutiveFailures > state.consecutiveFailures && !localSuccessNewer) {
+      state.consecutiveFailures = row.consecutiveFailures;
+    }
+    if (!state.lastError && row.lastError) state.lastError = row.lastError;
+    if (row.lastFailureAt && (!state.lastFailureAt || row.lastFailureAt > state.lastFailureAt)) {
+      state.lastFailureAt = row.lastFailureAt;
+    }
+    if (row.lastSuccessAt && (!state.lastSuccessAt || row.lastSuccessAt > state.lastSuccessAt)) {
+      state.lastSuccessAt = row.lastSuccessAt;
+    }
+    registry.set(row.key, state);
+  }
+  return merged;
+}
+
+let lastHydratedAt = 0;
+const HYDRATE_TTL_MS = 15_000;
+
+/** Load persisted circuit state (throttled). Call at the start of any provider chain. */
+export async function hydrateProviderHealth(force = false): Promise<void> {
+  if (process.env.VITEST || process.env.AI_CIRCUIT_PERSIST === "off") return;
+  if (!force && Date.now() - lastHydratedAt < HYDRATE_TTL_MS) return;
+  lastHydratedAt = Date.now();
+  try {
+    const { readCircuitStates } = await import("@/lib/ai/providers/circuit-store");
+    mergePersistedProviderState(await readCircuitStates());
+  } catch {
+    /* persistence is best-effort; in-memory state still protects this instance */
+  }
+}
+
+/** Test helper. */
+export function resetProviderHealthForTests(): void {
+  registry.clear();
+  lastHydratedAt = 0;
 }
 
 export function getAiProviderHealthSnapshots(): AiProviderHealthSnapshot[] {

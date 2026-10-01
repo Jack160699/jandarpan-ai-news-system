@@ -2,7 +2,7 @@
  * Stable, SEO-safe article slugs — Hindi + Latin, dedupe, hash fallback
  */
 
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 
 const MAX_SLUG_LEN = 96;
 const DEVANAGARI_RE = /[\u0900-\u097F]/;

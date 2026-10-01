@@ -7,6 +7,7 @@
  * the response Content-Type and handles both defensively.
  */
 
+import { Buffer } from "node:buffer";
 import {
   isProviderHealthy,
   markProviderUnhealthy,

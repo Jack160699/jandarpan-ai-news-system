@@ -25,10 +25,14 @@ import {
   finalizeCronRun,
   instrumentCronStart,
 } from "@/lib/observability/cron-instrumentation";
+import { acquireWorkerRunLease } from "@/lib/infrastructure/workers/run-guard";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
+
+/** Crash-safety TTL only: the lease is released as soon as the run finishes. */
+const LEASE_TTL_SEC = 360;
 
 export async function GET(request: NextRequest) {
   return handleBackfill(request);
@@ -60,6 +64,14 @@ async function handleBackfill(request: NextRequest) {
     return NextResponse.json(
       { ok: false, error: "Supabase not configured" },
       { status: 500, headers: noStoreHeaders() }
+    );
+  }
+
+  const lease = await acquireWorkerRunLease("translation-backfill", LEASE_TTL_SEC);
+  if (!lease.acquired) {
+    return NextResponse.json(
+      { ok: true, skipped: true, reason: "overlap_lock" },
+      { headers: noStoreHeaders() }
     );
   }
 
@@ -188,5 +200,7 @@ async function handleBackfill(request: NextRequest) {
       { ok: false, error: message },
       { status: 500, headers: noStoreHeaders() }
     );
+  } finally {
+    await lease.release();
   }
 }

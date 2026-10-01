@@ -26,7 +26,23 @@ export type CronRunRecord = {
   workers?: WorkerResult[];
   error?: string;
   metadata?: Record<string, unknown>;
+  /** scheduler | manual | github | vercel | unknown */
+  trigger?: string;
+  processed?: number;
+  skipped?: number;
+  failed?: number;
 };
+
+/** Best-effort trigger attribution from the request that started the run. */
+export function detectCronTrigger(request?: Request): string {
+  if (!request) return "unknown";
+  const ua = request.headers.get("user-agent") ?? "";
+  if (/jandarpan-supabase-scheduler/i.test(ua)) return "scheduler";
+  if (request.headers.get("x-jd-manual-run")) return "manual";
+  if (request.headers.get("x-vercel-cron") === "1" || /vercel-cron/i.test(ua)) return "vercel";
+  if (/curl|github/i.test(ua)) return "github";
+  return "unknown";
+}
 
 type CronState = Record<string, CronRunRecord>;
 
@@ -54,7 +70,14 @@ export async function recordCronRun(record: CronRunRecord): Promise<void> {
         degraded: record.degraded ?? false,
         workers: record.workers ?? null,
         error: record.error ?? null,
-      });
+        started_at: record.startedAt,
+        run_id: record.requestId ?? null,
+        trigger: record.trigger ?? null,
+        processed: record.processed ?? record.entityCount ?? null,
+        skipped: record.skipped ?? null,
+        failed: record.failed ?? null,
+        metadata: (record.metadata ?? null) as never,
+      } as never);
     } catch {
       /* best-effort durability */
     }

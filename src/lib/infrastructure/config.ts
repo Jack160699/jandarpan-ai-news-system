@@ -8,8 +8,12 @@ import { isFreeCapacityMode } from "@/lib/ai/providers/local-enrich-flag";
 const FREE_CAPACITY_MODE = isFreeCapacityMode();
 
 export const INFRA_CONFIG = {
-  /** Serverless budget before soft stop (ms) */
-  ingestBudgetMs: Number(process.env.INGEST_BUDGET_MS) || 52_000,
+  /**
+   * Serverless budget before soft stop (ms). The default was 52s (sized for the 60s Hobby
+   * limit) and every production ingest run finished as "partial_timeout". The ingest route has
+   * maxDuration = 300 on Fluid compute, so allow ~190s (x0.82 stop ratio => ~156s of work).
+   */
+  ingestBudgetMs: Number(process.env.INGEST_BUDGET_MS) || 190_000,
   /** Orchestrate pipeline budget — must stay below route maxDuration */
   orchestrateBudgetMs: Number(process.env.ORCHESTRATE_BUDGET_MS) || 110_000,
   ingestStopRatio: Number(process.env.INGEST_STOP_RATIO) || 0.82,

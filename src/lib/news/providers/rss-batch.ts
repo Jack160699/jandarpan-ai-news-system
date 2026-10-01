@@ -14,6 +14,14 @@ import {
   type RSSSource,
 } from "@/lib/news/providers/rss-sources";
 import type { NormalizedArticle, RssSourceAnalytics } from "@/lib/news/types";
+import { shouldPollSource } from "@/lib/news/ingestion/source-health";
+import {
+  buildSourceKey,
+  loadAllIngestionSourceStates,
+} from "@/lib/news/ingestion/source-state";
+
+/** Direct Chhattisgarh publisher feeds — the scarce, high-value supply; never backed off past 30 min. */
+const HIGH_VALUE_SOURCE_IDS = new Set(["ibc24-cg-direct", "bhilai-times-direct"]);
 
 export const RSS_FEED_BATCH_SIZE = 4;
 
@@ -38,20 +46,43 @@ export type RssBatchedSummary = {
   articlesRecoveredByFallback: number;
   errors: string[];
   durationMs: number;
+  /** Feeds not polled this run because adaptive backoff says they are not due. */
+  sourcesSkippedBackoff?: number;
 };
+
+/** Deterministic feed partition: shard i of n takes every feed whose rank (by priority) is congruent to i mod n. */
+export function selectRssShard<T>(sorted: readonly T[], shard?: { index: number; count: number }): T[] {
+  if (!shard || shard.count <= 1) return [...sorted];
+  const index = ((Math.floor(shard.index) % shard.count) + shard.count) % shard.count;
+  return sorted.filter((_, i) => i % shard.count === index);
+}
 
 export async function runRssBatched(options: {
   shouldStop: () => boolean;
   onBatchComplete: (batch: RssBatchPayload) => Promise<void>;
   batchSize?: number;
+  /** Edge workers poll a slice of the feeds per invocation so each call stays small and bounded. */
+  shard?: { index: number; count: number };
 }): Promise<RssBatchedSummary> {
   const startedAt = Date.now();
   const batchSize = options.batchSize ?? RSS_FEED_BATCH_SIZE;
 
-  const health = await loadSourceHealth();
-  const activeSources = [...RSS_SOURCES]
-    .filter((s) => !isSourceSkipped(s, health))
+  const [health, sourceStates] = await Promise.all([
+    loadSourceHealth(),
+    loadAllIngestionSourceStates().catch(() => new Map()),
+  ]);
+  const enabledSources = [...RSS_SOURCES].filter((s) => !isSourceSkipped(s, health));
+  // Adaptive polling: a feed that keeps returning only duplicates is polled less often
+  // (see source-health.ts). Producing feeds and high-value publishers stay every-run.
+  const activeSources = enabledSources
+    .filter((s) =>
+      shouldPollSource(sourceStates.get(buildSourceKey("rss", s.id)), {
+        highValue: HIGH_VALUE_SOURCE_IDS.has(s.id),
+      })
+    )
     .sort((a, b) => sourceEffectivePriority(b) - sourceEffectivePriority(a));
+  const sourcesSkippedBackoff = enabledSources.length - activeSources.length;
+  const shardSources = selectRssShard(activeSources, options.shard);
 
   const allAnalytics: RssSourceAnalytics[] = [];
   const allErrors: string[] = [];
@@ -62,14 +93,14 @@ export async function runRssBatched(options: {
   let batchesSkipped = 0;
   let articlesRecoveredByFallback = 0;
 
-  for (let i = 0; i < activeSources.length; i += batchSize) {
+  for (let i = 0; i < shardSources.length; i += batchSize) {
     if (options.shouldStop()) {
-      batchesSkipped += Math.ceil((activeSources.length - i) / batchSize);
+      batchesSkipped += Math.ceil((shardSources.length - i) / batchSize);
       console.warn("[rss-batch] Stopping — deadline reached");
       break;
     }
 
-    const slice = activeSources.slice(i, i + batchSize);
+    const slice = shardSources.slice(i, i + batchSize);
     const batchStarted = Date.now();
 
     const results = await Promise.allSettled(
@@ -162,5 +193,6 @@ export async function runRssBatched(options: {
     articlesRecoveredByFallback,
     errors: allErrors,
     durationMs: Date.now() - startedAt,
+    sourcesSkippedBackoff,
   };
 }

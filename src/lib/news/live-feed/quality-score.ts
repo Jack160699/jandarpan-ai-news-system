@@ -2,6 +2,7 @@
  * Feed quality scoring — freshness, images, regional/Hindi relevance, trust, engagement.
  */
 
+import { classifyFreshness, freshnessRank } from "@/lib/feed/freshness";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 const TRUSTED_SOURCES = [
@@ -137,11 +138,24 @@ export function computeFeedQualityScore(row: GeneratedArticleRow): FeedQualityBr
   };
 }
 
-/** Sort pool for homepage — CG / Raipur / Hindi / politics first */
+/**
+ * Sort pool for homepage.
+ *
+ * Freshness CLASS is the primary key (<1h, 1–3h, 3–6h, 6–12h, 12–24h, 1–2d, older):
+ * a quality score can reorder stories inside a class but can never lift an older
+ * class above a newer one. (Previously freshness was just ~28 of ~100 points, so a
+ * 3-day-old image+CG-keyword story could outrank a 1-hour-old one.)
+ */
 export function rankPoolByFeedQuality(
-  rows: GeneratedArticleRow[]
+  rows: GeneratedArticleRow[],
+  now: Date = new Date()
 ): GeneratedArticleRow[] {
+  const cls = (r: GeneratedArticleRow) =>
+    freshnessRank(classifyFreshness(r.published_at ?? r.created_at, now));
   return [...rows].sort((a, b) => {
+    const ca = cls(a);
+    const cb = cls(b);
+    if (ca !== cb) return ca - cb;
     const sa = computeFeedQualityScore(a).total;
     const sb = computeFeedQualityScore(b).total;
     if (sb !== sa) return sb - sa;

@@ -2,12 +2,14 @@
  * Resilient chat completions — OpenAI primary, OpenRouter secondary, retries on transient errors only.
  */
 
-import { after } from "next/server";
+import { runInBackground } from "@/lib/runtime/background";
 import {
   classifyAiHttpFailure,
   classifyAiNetworkError,
+  withRateLimitHints,
 } from "@/lib/ai/providers/errors";
 import {
+  hydrateProviderHealth,
   isProviderHealthy,
   markProviderUnhealthy,
   recordProviderRequestCompleted,
@@ -15,6 +17,14 @@ import {
   recordProviderFallback,
 } from "@/lib/ai/providers/health";
 import { withTransientAiRetry } from "@/lib/ai/providers/retry";
+import { effectiveTimeoutMs } from "@/lib/ai/providers/circuit-policy";
+import { scopeModelOverride } from "@/lib/ai/providers/model-scope";
+import {
+  BUDGET_EXHAUSTED_CODE,
+  NO_NETWORK_CALL_CODES,
+  refundLlmCall,
+  tryConsumeLlmCall,
+} from "@/lib/ai/providers/call-budget";
 import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib/ai/providers/quota";
 import type { QuotaReservation } from "@/lib/ai/providers/quota";
 import { isGeminiConfigured, requestGeminiChat } from "@/lib/ai/providers/gemini";
@@ -102,6 +112,8 @@ function resolveGroqModelChain(operation: string, override?: string): string[] {
 
 /** REST configs for the OpenAI-compatible providers (openai, openrouter, groq) — excludes gemini, which has its own request shape (see gemini.ts). Each provider maps to an ordered array of configs since Groq can have more than one (primary reviewer model + in-provider fallback model). */
 function getRestProviderConfigs(operation: string, modelOverride?: string): Partial<Record<AiProviderId, ProviderConfig[]>> {
+  // A model override is written for one provider; never hand it to the others
+  // (a DeepSeek id sent to Groq/OpenAI/OpenRouter is a guaranteed 400/404).
   const configs: Partial<Record<AiProviderId, ProviderConfig[]>> = {};
   const openaiKey = process.env.OPENAI_API_KEY?.trim();
   if (openaiKey) {
@@ -109,7 +121,7 @@ function getRestProviderConfigs(operation: string, modelOverride?: string): Part
       id: "openai",
       url: OPENAI_CHAT_URL,
       apiKey: openaiKey,
-      model: resolveOpenAiModel(modelOverride),
+      model: resolveOpenAiModel(scopeModelOverride("openai", modelOverride)),
     }];
   }
   const openrouterKey = process.env.OPENROUTER_API_KEY?.trim();
@@ -118,7 +130,7 @@ function getRestProviderConfigs(operation: string, modelOverride?: string): Part
       id: "openrouter",
       url: OPENROUTER_CHAT_URL,
       apiKey: openrouterKey,
-      model: resolveOpenRouterModel(modelOverride),
+      model: resolveOpenRouterModel(scopeModelOverride("openrouter", modelOverride)),
       extraHeaders: {
         "HTTP-Referer":
           process.env.OPENROUTER_REFERER?.trim() || "https://newspaper-motion.local",
@@ -128,7 +140,7 @@ function getRestProviderConfigs(operation: string, modelOverride?: string): Part
   }
   const groqKey = process.env.GROQ_API_KEY?.trim();
   if (groqKey) {
-    configs.groq = resolveGroqModelChain(operation, modelOverride).map((model) => ({
+    configs.groq = resolveGroqModelChain(operation, scopeModelOverride("groq", modelOverride)).map((model) => ({
       id: "groq" as const,
       url: GROQ_CHAT_URL,
       apiKey: groqKey,
@@ -158,7 +170,7 @@ async function postChat(
   recordProviderRequestStarted(healthKeyFor(config), request.operation);
 
   const controller = new AbortController();
-  const timeoutMs = request.timeoutMs ?? 45_000;
+  const timeoutMs = effectiveTimeoutMs(config.id, request.timeoutMs);
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -168,7 +180,7 @@ async function postChat(
     ];
 
     const body: Record<string, unknown> = {
-      model: request.model ?? config.model,
+      model: config.model,
       temperature: request.temperature ?? 0.35,
       messages,
     };
@@ -200,7 +212,7 @@ async function postChat(
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      const classified = classifyAiHttpFailure(res.status, detail);
+      const classified = withRateLimitHints(classifyAiHttpFailure(res.status, detail), res.headers);
       markProviderUnhealthy(healthKeyFor(config), {
         reason: classified.authFailure
           ? `${config.id}_unauthorized`
@@ -208,6 +220,10 @@ async function postChat(
         httpStatus: res.status,
         authFailure: classified.authFailure,
         rateLimited: classified.rateLimited,
+        invalidRequest: classified.invalidRequest,
+        code: classified.code,
+        dailyExhausted: classified.dailyExhausted,
+        retryAfterMs: classified.retryAfterMs,
       });
       throw classified;
     }
@@ -243,7 +259,7 @@ async function postChat(
       const openAiRecord = buildUsageRecord({
         operation: request.operation,
         endpoint: "chat.completions",
-        model: request.model ?? config.model,
+        model: config.model,
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
         cachedTokens: usage.cachedTokens,
@@ -255,13 +271,13 @@ async function postChat(
         context: request.context,
         metadata: { provider: config.id },
       });
-      after(() => recordOpenAiUsage(openAiRecord));
+      runInBackground(() => recordOpenAiUsage(openAiRecord));
     }
     const usageRecord = buildAiUsageRecord({
       provider: config.id,
       operation: request.operation,
       endpoint: "chat.completions",
-      model: request.model ?? config.model,
+      model: config.model,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
       cachedTokens: usage.cachedTokens,
@@ -272,7 +288,7 @@ async function postChat(
       completion: content,
       context: request.context,
     });
-    after(() => recordAiProviderUsage(usageRecord));
+    runInBackground(() => recordAiProviderUsage(usageRecord));
 
     if (allowsPromptCache(request.cachePolicy)) {
       void storePromptCache({
@@ -282,14 +298,14 @@ async function postChat(
         worker: request.context?.worker ?? request.operation,
         articleId: request.context?.articleId,
         eventId: request.context?.eventId,
-        model: request.model ?? config.model,
+        model: config.model,
         result: content,
         inputTokens: usage.inputTokens,
         outputTokens: usage.outputTokens,
         estimatedCostUsd: buildUsageRecord({
           operation: request.operation,
           endpoint: "chat.completions",
-          model: request.model ?? config.model,
+          model: config.model,
           inputTokens: usage.inputTokens,
           outputTokens: usage.outputTokens,
           success: true,
@@ -307,7 +323,14 @@ async function postChat(
     ) {
       throw err;
     }
-    throw classifyAiNetworkError(err);
+    const network = classifyAiNetworkError(err);
+    // Timeouts / network failures must open the circuit too — otherwise a hung
+    // provider is re-tried (and waited on) for every candidate.
+    markProviderUnhealthy(healthKeyFor(config), {
+      reason: network.message,
+      code: network.code,
+    });
+    throw network;
   } finally {
     clearTimeout(timer);
   }
@@ -347,7 +370,7 @@ async function requestFromProvider(
       eventId: request.context?.eventId,
     });
     if (cached.hit && cached.result) {
-      return { ok: true, content: cached.result, provider: config.id, model: request.model ?? config.model, latencyMs: 0 };
+      return { ok: true, content: cached.result, provider: config.id, model: config.model, latencyMs: 0 };
     }
   }
 
@@ -424,7 +447,7 @@ async function requestFromProviderInner(
       },
     });
     if (reservation) void reconcileQuotaUsage(reservation, { inputTokens, outputTokens });
-    return { ok: true, content, provider: config.id, model: request.model ?? config.model, latencyMs };
+    return { ok: true, content, provider: config.id, model: config.model, latencyMs };
   } catch (err) {
     if (reservation) void reconcileQuotaUsage(reservation, { inputTokens: 0, outputTokens: 0 });
     const errorCode =
@@ -435,7 +458,7 @@ async function requestFromProviderInner(
       const openAiRecord = buildUsageRecord({
         operation: request.operation,
         endpoint: "chat.completions",
-        model: request.model ?? config.model,
+        model: config.model,
         inputTokens: 0,
         outputTokens: 0,
         latencyMs: Date.now() - started,
@@ -446,13 +469,13 @@ async function requestFromProviderInner(
         context: request.context,
         metadata: { provider: config.id, error: errorCode },
       });
-      after(() => recordOpenAiUsage(openAiRecord));
+      runInBackground(() => recordOpenAiUsage(openAiRecord));
     }
     const usageRecord = buildAiUsageRecord({
       provider: config.id,
       operation: request.operation,
       endpoint: "chat.completions",
-      model: request.model ?? config.model,
+      model: config.model,
       inputTokens: 0,
       outputTokens: 0,
       latencyMs: Date.now() - started,
@@ -463,7 +486,7 @@ async function requestFromProviderInner(
       context: request.context,
       fallbackReason: errorCode,
     });
-    after(() => recordAiProviderUsage(usageRecord));
+    runInBackground(() => recordAiProviderUsage(usageRecord));
     const error =
       err && typeof err === "object" && "code" in err
         ? (err as ClassifiedAiError)
@@ -486,6 +509,7 @@ async function requestFromProviderInner(
 export async function requestChatCompletion(
   request: ChatCompletionRequest
 ): Promise<ChatCompletionResult> {
+  await hydrateProviderHealth();
   const chain = resolveChatChain(request.operation);
   const restConfigs = getRestProviderConfigs(request.operation, request.model);
 
@@ -558,10 +582,28 @@ export async function requestChatCompletion(
 
   let lastFailure: ChatCompletionResult | null = null;
 
+  const budgetExhausted = (): ChatCompletionResult => ({
+    ok: false,
+    provider: attempts[0]?.id ?? "gemini",
+    latencyMs: 0,
+    error: {
+      code: BUDGET_EXHAUSTED_CODE,
+      message: "per-run LLM call budget exhausted",
+      retryable: false,
+      authFailure: false,
+      invalidRequest: false,
+      rateLimited: false,
+    },
+  });
+
   for (let i = 0; i < attempts.length; i++) {
     const attempt = attempts[i]!;
+    // Per-run governor: a run may only make a bounded number of REAL provider calls.
+    if (!tryConsumeLlmCall(request.operation)) return lastFailure ?? budgetExhausted();
     const result = await attempt.invoke();
     if (result.ok) return result;
+    // Answered locally (open circuit / own quota / busy slot): nothing was sent, give the call back.
+    if (result.latencyMs === 0 && NO_NETWORK_CALL_CODES.has(result.error.code)) refundLlmCall(request.operation);
 
     lastFailure = result;
     const next = attempts[i + 1];
@@ -578,7 +620,12 @@ export async function requestChatCompletion(
   }
 
   // Autonomous fallback if primary provider chain failed
-  if (!lastFailure?.ok && isGeminiConfigured() && !attempts.some((a) => a.id === "gemini")) {
+  if (
+    !lastFailure?.ok &&
+    isGeminiConfigured() &&
+    !attempts.some((a) => a.id === "gemini") &&
+    tryConsumeLlmCall(request.operation)
+  ) {
     console.warn(`[ai-fallback] Primary chain failed (${lastFailure?.error?.code}); invoking Gemini fallback`);
     const fallbackRequest: ChatCompletionRequest = {
       ...request,

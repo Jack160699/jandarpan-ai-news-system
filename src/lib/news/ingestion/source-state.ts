@@ -137,6 +137,30 @@ export async function loadIngestionSourceState(
   }
 }
 
+/** All source-state rows for a tenant scope in one query (poll gating / dashboards). */
+export async function loadAllIngestionSourceStates(
+  tenantId: string | null = null
+): Promise<Map<string, IngestionSourceStateRow>> {
+  const map = new Map<string, IngestionSourceStateRow>();
+  if (!isSupabaseConfigured()) {
+    for (const row of memory.values()) {
+      if ((row.tenant_id ?? null) === tenantId) map.set(row.source_key, row);
+    }
+    return map;
+  }
+  try {
+    let q = db().from("ingestion_source_state").select("*");
+    q = tenantId ? q.eq("tenant_id", tenantId) : q.is("tenant_id", null);
+    const { data } = await q;
+    for (const row of (data as IngestionSourceStateRow[] | null) ?? []) {
+      map.set(row.source_key, row);
+    }
+  } catch {
+    /* fall through with whatever was loaded */
+  }
+  return map;
+}
+
 export async function upsertIngestionSourceState(
   patch: Partial<IngestionSourceStateRow> & {
     source_key: string;

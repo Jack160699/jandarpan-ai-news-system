@@ -21,9 +21,17 @@ const SERVER_ONLY_KEYS = [
   "NEWSDATA_API_KEY",
 ] as const;
 
+/**
+ * True only in a real browser. `window` alone is NOT enough: the Supabase Edge runtime defines a `window` global
+ * although it is a server, so browsers are identified by `window` AND `document` (same rule supabase-js uses).
+ */
+export function isBrowserRuntime(): boolean {
+  return typeof window !== "undefined" && typeof document !== "undefined";
+}
+
 /** Throws if a server-only secret is referenced in a browser bundle. */
 export function assertServerOnly(caller: string): void {
-  if (typeof window !== "undefined") {
+  if (isBrowserRuntime()) {
     throw new Error(
       `${caller} must run on the server — never import admin clients or service role env in client components`
     );

@@ -16,7 +16,7 @@
  * the same reason.
  */
 
-import { after } from "next/server";
+import { runInBackground } from "@/lib/runtime/background";
 import {
   isProviderHealthy,
   markProviderUnhealthy,
@@ -27,6 +27,10 @@ import { withTransientAiRetry } from "@/lib/ai/providers/retry";
 import { acquireConcurrencySlot, reconcileQuotaUsage, reserveQuota } from "@/lib/ai/providers/quota";
 import { buildAiUsageRecord, recordAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import type { ChatCompletionRequest, ChatCompletionResult, ClassifiedAiError } from "@/lib/ai/providers/types";
+
+import { effectiveTimeoutMs } from "@/lib/ai/providers/circuit-policy";
+import { withRateLimitHints } from "@/lib/ai/providers/errors";
+import { scopeModelOverride } from "@/lib/ai/providers/model-scope";
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
@@ -45,9 +49,10 @@ export function isGeminiConfigured(): boolean {
  * GEMINI_PREMIUM_EDITORIAL_MODEL.
  */
 export function resolveGeminiModel(operation: string, override?: string, premium?: boolean): string {
-  if (override?.trim() && (override.toLowerCase().startsWith("gemini") || override.toLowerCase().includes("flash") || override.toLowerCase().includes("pro"))) {
-    return override.trim();
-  }
+  // Strict family check: the old loose match (includes "pro"/"flash") accepted
+  // "deepseek-v4-pro-max" and sent a DeepSeek id to the Gemini API.
+  const scoped = scopeModelOverride("gemini", override);
+  if (scoped) return scoped.replace(/^models\//i, "");
   if (premium) {
     return process.env.GEMINI_PREMIUM_EDITORIAL_MODEL?.trim() || "gemini-3.6-flash";
   }
@@ -65,7 +70,7 @@ function healthKeyFor(model: string): string {
   return `gemini:${model}`;
 }
 
-function classifyGeminiFailure(status: number, body: string): ClassifiedAiError {
+export function classifyGeminiFailure(status: number, body: string): ClassifiedAiError {
   let message = `HTTP ${status}`;
   let apiStatus: string | undefined;
   try {
@@ -97,7 +102,7 @@ async function postGemini(request: ChatCompletionRequest, model: string): Promis
   recordProviderRequestStarted(healthKeyFor(model), request.operation);
 
   const controller = new AbortController();
-  const timeoutMs = request.timeoutMs ?? 45_000;
+  const timeoutMs = effectiveTimeoutMs("gemini", request.timeoutMs);
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -128,12 +133,16 @@ async function postGemini(request: ChatCompletionRequest, model: string): Promis
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
-      const classified = classifyGeminiFailure(res.status, detail);
+      const classified = withRateLimitHints(classifyGeminiFailure(res.status, detail), res.headers);
       markProviderUnhealthy(healthKeyFor(model), {
         reason: classified.authFailure ? "gemini_unauthorized" : classified.message,
         httpStatus: res.status,
         authFailure: classified.authFailure,
         rateLimited: classified.rateLimited,
+        invalidRequest: classified.invalidRequest,
+        code: classified.code,
+        dailyExhausted: classified.dailyExhausted,
+        retryAfterMs: classified.retryAfterMs,
       });
       throw classified;
     }
@@ -160,6 +169,8 @@ async function postGemini(request: ChatCompletionRequest, model: string): Promis
     const message = err instanceof Error && err.name === "AbortError" ? "Request timed out" : (err instanceof Error ? err.message.slice(0, 240) : "Gemini request failed");
     const retryable = err instanceof Error && err.name === "AbortError";
     const network: ClassifiedAiError = { code: retryable ? "ai_timeout" : "ai_network_error", message, retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
+    // Timeouts / network failures open the circuit too (see circuit-policy.ts).
+    markProviderUnhealthy(healthKeyFor(model), { reason: message, code: network.code });
     throw network;
   } finally {
     clearTimeout(timer);
@@ -226,7 +237,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     // `void recordAiProviderUsage(...)` can lose the race when the response
     // is the last thing the handler does, silently dropping the usage/audit
     // row even though the Gemini call itself succeeded.
-    after(() =>
+    runInBackground(() =>
       recordAiProviderUsage(
         buildAiUsageRecord({
           provider: "gemini",
@@ -252,7 +263,7 @@ export async function requestGeminiChat(request: ChatCompletionRequest): Promise
     const error = err && typeof err === "object" && "code" in err ? (err as ClassifiedAiError) : { code: "ai_network_error", message: "Gemini request failed", retryable: true, authFailure: false, invalidRequest: false, rateLimited: false };
     // No real tokens were consumed — give the reserved estimate back.
     void reconcileQuotaUsage(quota.reservation, { inputTokens: 0, outputTokens: 0 });
-    after(() =>
+    runInBackground(() =>
       recordAiProviderUsage(
       buildAiUsageRecord({
         provider: "gemini",

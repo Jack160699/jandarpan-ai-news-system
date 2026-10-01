@@ -171,6 +171,14 @@ export async function publishGeneratedArticle(
     return { ok: false, message: gateCheck.message };
   }
 
+  // Deterministic publication gates (language script, headline quality, geography scope) recorded at
+  // generation time. A draft that failed them stays quarantined unless an editor explicitly overrides.
+  const gates = meta0.publication_gates as { passed?: boolean; failures?: Array<{ code?: string }> } | undefined;
+  if (gates && gates.passed === false && !options?.allowManualOverride) {
+    const codes = (gates.failures ?? []).map((f) => f.code).filter(Boolean).join(",");
+    return { ok: false, message: `publication_gates_failed:${codes || "unspecified"}` };
+  }
+
   const { validateGeneratedArticle } = await import(
     "@/lib/news/ai/generated-article-validation"
   );

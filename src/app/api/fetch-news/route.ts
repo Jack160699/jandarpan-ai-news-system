@@ -215,7 +215,7 @@ async function handleFetchNews(request: Request) {
     userAgent,
   });
 
-  const lockResult = await runWorkerEndpoint("fetch-news", 1700, async () => {
+  const lockResult = await runWorkerEndpoint("fetch-news", 360, async () => {
     const health = await buildQueueHealthSnapshot().catch(() => null);
     if (health?.pauseIngestion) {
       const outcome = classifyIngestionOutcome({

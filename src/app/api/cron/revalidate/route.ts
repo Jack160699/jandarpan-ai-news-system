@@ -30,8 +30,12 @@ async function handleRevalidate(request: Request) {
     return cronAuthFailureResponse(auth);
   }
 
+  // Optional hint from Edge workers: { publishedStories: n } also refreshes the story layout.
+  const hint = (await request.json().catch(() => ({}))) as { publishedStories?: unknown };
+  const publishedStories = Number.isFinite(Number(hint?.publishedStories)) ? Math.max(0, Number(hint.publishedStories)) : 0;
+
   try {
-    await revalidateNewsroomCaches();
+    await revalidateNewsroomCaches(publishedStories > 0 ? { publishedStories } : undefined);
     await finalizeCronRun({
       job: "revalidate",
       startedAt,

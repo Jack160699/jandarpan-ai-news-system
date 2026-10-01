@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ARTICLE_DEPTH_RULES,
   classifyArticleType,
@@ -224,8 +224,13 @@ describe("editorial depth quality gates", () => {
       articleType: "standard_report",
       factPackText: "x",
     });
+    // Default is zero paid depth retries; opting in via env allows exactly that many.
+    expect(maxEditorialDepthRetries()).toBe(0);
+    expect(shouldRetryDepthFailure(failing, 0)).toBe(false);
+    vi.stubEnv("EDITORIAL_DEPTH_MAX_RETRIES", "1");
     expect(shouldRetryDepthFailure(failing, 0)).toBe(true);
     expect(shouldRetryDepthFailure(failing, maxEditorialDepthRetries())).toBe(false);
+    vi.unstubAllEnvs();
   });
 });
 

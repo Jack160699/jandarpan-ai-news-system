@@ -2,7 +2,7 @@
  * Resilient article sanitization + soft validation before DB upsert
  */
 
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import { canonicalArticleUrl, isPlaceholderImage, isValidHttpUrl } from "@/lib/news/normalize";
 import { buildArticleSlug } from "@/lib/news/slug";
 import type { NormalizedArticle, NewsProviderId } from "@/lib/news/types";

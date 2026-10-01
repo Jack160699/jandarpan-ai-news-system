@@ -27,6 +27,24 @@ describe("prepareEditorialCandidateWaves", () => {
     expect(prepare).not.toHaveBeenCalledWith("unused");
   });
 
+  it("stops before the next wave when shouldStop turns true (LLM budget spent)", async () => {
+    let calls = 0;
+    const prepare = vi.fn(async () => {
+      calls += 1;
+      return { candidate: null };
+    });
+    const result = await prepareEditorialCandidateWaves({
+      ranked: [1, 2, 3, 4, 5, 6],
+      limit: 1,
+      concurrency: 1,
+      prepare,
+      isCandidate: (prepared) => prepared.candidate !== null,
+      shouldStop: () => calls >= 2,
+    });
+    expect(result.attempted).toEqual([1, 2]);
+    expect(prepare).toHaveBeenCalledTimes(2);
+  });
+
   it("stops cleanly after exhausting a fully ineligible queue", async () => {
     const result = await prepareEditorialCandidateWaves({
       ranked: [1, 2, 3],

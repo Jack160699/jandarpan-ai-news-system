@@ -21,10 +21,9 @@ import {
 } from "@/lib/infrastructure/workers/editorial-generate-observability";
 import { createExecutionDeadline } from "@/lib/serverless/deadline";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
-import { recordCronRun } from "@/lib/observability/cron-monitor";
+import { detectCronTrigger, recordCronRun } from "@/lib/observability/cron-monitor";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { pipelineLog } from "@/lib/observability/production-log";
-import { flushDailyQuotaKeys } from "@/lib/ai/providers/quota";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -65,19 +64,6 @@ async function handleEditorialGenerate(request: Request) {
       { ok: false, error: "supabase_not_configured" },
       { status: 500, headers: noStoreHeaders() }
     );
-  }
-
-  // Flush stale daily quota Redis keys before every editorial run.
-  // Providers (Gemini, Groq, CodeCraft) reset their RPD limits at UTC midnight,
-  // but the in-app Redis keys were previously anchored to the first request of
-  // the day (86_400s flat TTL), causing up to 9h of phantom exhaustion per day.
-  // This call deletes those keys so the pipeline starts with a fresh quota window.
-  // Errors are non-fatal — the editorial run proceeds regardless.
-  try {
-    const flush = await flushDailyQuotaKeys();
-    pipelineLog("[quota_flush]", { flushed: flush.flushed.length, errors: flush.errors.length });
-  } catch (err) {
-    pipelineLog("[quota_flush_error]", { error: err instanceof Error ? err.message : String(err) });
   }
 
   const lockResult = await runWorkerEndpoint(
@@ -160,6 +146,9 @@ async function handleEditorialGenerate(request: Request) {
   const degraded = Boolean(lockResult.degraded);
   const queue = await getEditorialGenerateQueueMetrics().catch(() => null);
 
+  // Structured stage counters for the admin funnel / failure center.
+  const workerMeta = ((lockResult.details?.result as { metadata?: Record<string, unknown> } | undefined)
+    ?.metadata ?? {}) as Record<string, unknown>;
   await recordCronRun({
     job: CRON_JOB_ID,
     ok: lockResult.ok,
@@ -167,6 +156,10 @@ async function handleEditorialGenerate(request: Request) {
     durationMs,
     degraded,
     entityCount: lockResult.processed,
+    trigger: detectCronTrigger(request),
+    processed: Number(workerMeta.published ?? lockResult.processed ?? 0),
+    skipped: Number(workerMeta.skipped ?? 0) + Number(workerMeta.rejected ?? 0),
+    failed: lockResult.failed,
     ...(lockResult.ok
       ? {}
       : { error: lockResult.reason ?? "editorial_generate_failed" }),
@@ -175,6 +168,13 @@ async function handleEditorialGenerate(request: Request) {
       queueDepth: queue?.pending ?? lockResult.details?.queueDepth,
       oldestPendingAgeMs:
         queue?.oldestPendingAgeMs ?? lockResult.details?.oldestPendingAgeMs,
+      generated: workerMeta.generated ?? null,
+      published: workerMeta.published ?? null,
+      rejected: workerMeta.rejected ?? null,
+      skipped: workerMeta.skipped ?? null,
+      skipReasonCounts: workerMeta.skipReasonCounts ?? null,
+      candidatePool: workerMeta.candidatePool ?? null,
+      errors: workerMeta.errors ?? null,
     },
   });
 

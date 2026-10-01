@@ -114,6 +114,32 @@ export type StoryEligibilityResult = {
 };
 
 /**
+ * Text-only eligibility: 30-day window, no promo, no roundup, valid headline. NEVER depends on
+ * media — a story is not withheld from readers because its image has not been attached yet.
+ */
+export function checkStoryTextEligibility(story: {
+  headline?: string;
+  summary?: string;
+  publishedAt?: string | null;
+}): StoryEligibilityResult {
+  if (!story?.headline || !story.headline.trim()) return { eligible: false, reason: "empty_headline" };
+  if (!isWithinCanonicalReaderWindow(story.publishedAt)) {
+    return { eligible: false, reason: "outside_canonical_30day_window" };
+  }
+  if (isCommercialPromoStory(story.headline, story.summary)) {
+    return { eligible: false, reason: "commercial_promo_rejected" };
+  }
+  if (isGenericRoundupStory(story.headline, story.summary)) {
+    return { eligible: false, reason: "generic_roundup_rejected" };
+  }
+  return { eligible: true };
+}
+
+/**
+ * Editorial eligibility WITH the hard media requirement — only for visual broadcast surfaces
+ * (live TV queue) that cannot render a story without a photo. Reader list pages use
+ * checkStoryTextEligibility instead.
+ *
  * Single authoritative editorial eligibility gate for Jan Darpan newsroom:
  * 1. Must be within the 30-day canonical window (published_at >= now - 30 days)
  * 2. Must NOT be a generic roundup / meta story

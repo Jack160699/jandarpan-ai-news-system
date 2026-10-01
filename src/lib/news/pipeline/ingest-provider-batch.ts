@@ -23,11 +23,9 @@ import {
 } from "@/lib/news/sanitize-article";
 import { dedupeArticles } from "@/lib/news/normalize";
 import { revalidateLiveHomepage } from "@/lib/news/revalidate-home";
-import {
-  persistNewsSignals,
-  publishToLegacyArticles,
-  logNewsroom,
-} from "@/lib/newsroom";
+import { persistNewsSignals } from "@/lib/newsroom/signals/persist";
+import { publishToLegacyArticles } from "@/lib/newsroom/bridge/legacy-publish";
+import { logNewsroom } from "@/lib/newsroom/logger";
 import type { NormalizedArticle, NewsProviderId } from "@/lib/news/types";
 import { logIngestTrace } from "@/lib/news/pipeline/ingest-trace";
 

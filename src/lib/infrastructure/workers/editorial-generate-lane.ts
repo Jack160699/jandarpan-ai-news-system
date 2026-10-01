@@ -25,6 +25,7 @@ import {
 } from "@/lib/infrastructure/workers/editorial-generate-observability";
 import type { WorkerContext, WorkerResult } from "@/lib/infrastructure/workers/types";
 import { createAdminClient } from "@/lib/supabase";
+import { defaultRunCallBudget, llmBudgetSnapshot, withLlmCallBudget } from "@/lib/ai/providers/call-budget";
 
 export type LaneBatchSummary = {
   processed: number;
@@ -146,7 +147,9 @@ export async function runEditorialGenerateLane(
   );
   const targetPublished = Math.max(
     batchSize,
-    Number(process.env.EDITORIAL_TARGET_PUBLISHED) || 12
+    // One batch per run by default (was 12 → up to 3 sequential batches). At the every-10-minute cadence this still
+    // allows well over 100 stories/day while keeping per-run AI spend bounded.
+    Number(process.env.EDITORIAL_TARGET_PUBLISHED) || 4
   );
   const maxBatches = Math.max(1, Math.min(8, Math.ceil(targetPublished / batchSize)));
 
@@ -160,57 +163,63 @@ export async function runEditorialGenerateLane(
   const combinedSkipReasonCounts: Record<string, number> = {};
   let lastCandidatePool: any = null;
 
-  for (let batchIndex = 0; batchIndex < maxBatches; batchIndex++) {
-    // Only continue into subsequent batches if at least 50s remains before serverless deadline
-    if (batchIndex > 0 && shouldSkipForDeadline(ctx.deadline, 50_000)) {
-      break;
-    }
-    if (totalPublished >= targetPublished) {
-      break;
-    }
+  // Per-run governor: at most EDITORIAL_MAX_LLM_CALLS_PER_RUN real provider calls (default 12) across generate + repair + failover.
+  const budgetRun = await withLlmCallBudget(defaultRunCallBudget(), async () => {
+    for (let batchIndex = 0; batchIndex < maxBatches; batchIndex++) {
+      if (llmBudgetSnapshot()?.remaining === 0) break;
+      // Only continue into subsequent batches if at least 50s remains before serverless deadline
+      if (batchIndex > 0 && shouldSkipForDeadline(ctx.deadline, 50_000)) {
+        break;
+      }
+      if (totalPublished >= targetPublished) {
+        break;
+      }
 
-    const direct = await generateEditorialsFromEvents({
-      limit: batchSize,
-    });
+      const direct = await generateEditorialsFromEvents({
+        limit: batchSize,
+      });
 
-    if (!direct) break;
+      if (!direct) break;
 
-    totalGenerated += direct.generated ?? 0;
-    totalPublished += direct.published ?? 0;
-    totalRejected += direct.rejected ?? 0;
-    totalSkipped += direct.skipped ?? 0;
-    totalUpdates += direct.updates ?? 0;
+      totalGenerated += direct.generated ?? 0;
+      totalPublished += direct.published ?? 0;
+      totalRejected += direct.rejected ?? 0;
+      totalSkipped += direct.skipped ?? 0;
+      totalUpdates += direct.updates ?? 0;
 
-    if (direct.topStory?.storyId) {
-      allGeneratedArticleIds.push(direct.topStory.storyId);
-    }
-    for (const r of direct.results ?? []) {
-      if (r.articleId) {
-        allGeneratedArticleIds.push(r.articleId);
+      if (direct.topStory?.storyId) {
+        allGeneratedArticleIds.push(direct.topStory.storyId);
+      }
+      for (const r of direct.results ?? []) {
+        if (r.articleId) {
+          allGeneratedArticleIds.push(r.articleId);
+        }
+      }
+      if (direct.errors?.length) {
+        allErrors.push(...direct.errors);
+      }
+      if (direct.skipReasonCounts) {
+        for (const [k, v] of Object.entries(direct.skipReasonCounts)) {
+          combinedSkipReasonCounts[k] = (combinedSkipReasonCounts[k] ?? 0) + v;
+        }
+      }
+      if (direct.candidatePool) {
+        lastCandidatePool = direct.candidatePool;
+      }
+
+      // If no stories were generated or published in this batch, stop iterating
+      if (
+        (direct.generated ?? 0) === 0 &&
+        (direct.published ?? 0) === 0 &&
+        (direct.skipped ?? 0) > 0 &&
+        (direct.rejected ?? 0) === 0
+      ) {
+        break;
       }
     }
-    if (direct.errors?.length) {
-      allErrors.push(...direct.errors);
-    }
-    if (direct.skipReasonCounts) {
-      for (const [k, v] of Object.entries(direct.skipReasonCounts)) {
-        combinedSkipReasonCounts[k] = (combinedSkipReasonCounts[k] ?? 0) + v;
-      }
-    }
-    if (direct.candidatePool) {
-      lastCandidatePool = direct.candidatePool;
-    }
 
-    // If no stories were generated or published in this batch, stop iterating
-    if (
-      (direct.generated ?? 0) === 0 &&
-      (direct.published ?? 0) === 0 &&
-      (direct.skipped ?? 0) > 0 &&
-      (direct.rejected ?? 0) === 0
-    ) {
-      break;
-    }
-  }
+  });
+  const llmCalls = { used: budgetRun.used, max: budgetRun.max };
 
   const uniqueArticleIds = [...new Set(allGeneratedArticleIds)];
   const madeProgress = totalGenerated > 0 || totalPublished > 0;
@@ -263,6 +272,7 @@ export async function runEditorialGenerateLane(
       errors: allErrors.slice(0, 10),
       skipReasonCounts: combinedSkipReasonCounts,
       candidatePool: lastCandidatePool,
+      llmCalls,
     },
   });
 }

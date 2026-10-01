@@ -1,0 +1,24 @@
+/**
+ * Source-title quality: recognises "events" whose canonical title is not a story at all, so they can be rejected
+ * BEFORE any LLM call is spent on them.
+ *
+ * Seen in production (2026-09-30): e-paper page listings such as
+ *   "30092026 Raipur Main - 30 Sep 2026 - Page 10 - epaper.haribhoomi.com"
+ * were clustered as events with urgency 90, ranked first, cost two paid calls, and one draft
+ * ("Raipur News Updates: Comprehensive Coverage for September 30, 2026") even passed the publication gates.
+ * An e-paper page is a scan of a printed page, not reportable news text.
+ */
+
+const EPAPER_HOST_RE = /\b[a-z0-9-]*e-?paper[a-z0-9.-]*\.(com|in|net|org|co)\b/i;
+/** "DDMMYYYY <edition> - 30 Sep 2026 - Page 10" (any site). */
+const DATED_PAGE_LISTING_RE = /^\d{8}\s+.+?\s[-–]\s+\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\s+[-–]\s+(page|पृष्ठ)\s*\d+/i;
+const EPAPER_WORD_RE = /\be-?paper\b|ई-?पेपर/i;
+const PAGE_NUMBER_RE = /\b(page|pg)\.?\s*\d+\b|पृष्ठ\s*\d+/i;
+
+export function isEpaperPageListingTitle(title: string | null | undefined): boolean {
+  const t = (title ?? "").trim();
+  if (!t) return false;
+  if (EPAPER_HOST_RE.test(t)) return true;
+  if (DATED_PAGE_LISTING_RE.test(t)) return true;
+  return EPAPER_WORD_RE.test(t) && PAGE_NUMBER_RE.test(t);
+}

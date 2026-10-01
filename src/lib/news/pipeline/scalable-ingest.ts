@@ -6,7 +6,7 @@ import { logIngestionAnalytics } from "@/lib/infrastructure/analytics/ingestion"
 import { evaluateIngestionAlert } from "@/lib/observability/alerts";
 import { createAdminServerClient } from "@/lib/supabase";
 import { countPendingAiQueue } from "@/lib/news/ai/queue";
-import { logNewsroom } from "@/lib/newsroom";
+import { logNewsroom } from "@/lib/newsroom/logger";
 import type { ImageEnrichmentAnalytics } from "@/lib/news/images/enrich";
 import {
   emptyEarlyDedupMetrics,
@@ -103,10 +103,20 @@ function mergePersistenceFromProvider(
   if (ingested.partialPersistence) acc.anyBatchSucceeded = true;
 }
 
+export type ScalableIngestOptions = {
+  /** Poll only this slice of the RSS feeds (Edge workers). Omitted = all feeds (legacy Vercel behaviour). */
+  rssShard?: { index: number; count: number };
+  /** Skip the paid/quota-limited API providers (NewsData, GNews); they run on one designated shard only. */
+  skipApiProviders?: boolean;
+};
+
 export async function runScalableIngestion(
-  deadline: ExecutionDeadline
+  deadline: ExecutionDeadline,
+  options: ScalableIngestOptions = {}
 ): Promise<ScalableIngestResult> {
-  await bootstrapPlatformSources().catch(() => 0);
+  if (!options.rssShard || options.rssShard.index === 0) {
+    await bootstrapPlatformSources().catch(() => 0);
+  }
 
   const startedAt = Date.now();
   const completedProviders: string[] = [];
@@ -139,7 +149,7 @@ export async function runScalableIngestion(
     anyBatchFailed: false,
   };
 
-  const apiResults = await runParallelApiProviders();
+  const apiResults = options.skipApiProviders ? [] : await runParallelApiProviders();
 
   for (const run of apiResults) {
     if (deadline.shouldStop()) {
@@ -208,6 +218,7 @@ export async function runScalableIngestion(
   if (!deadline.shouldStop()) {
     rssSummary = await runRssBatched({
       shouldStop: () => deadline.shouldStop(),
+      shard: options.rssShard,
       onBatchComplete: async (batch) => {
         if (!batch.articles.length) return;
 
@@ -319,6 +330,7 @@ export async function runScalableIngestion(
         signal_ids_sample: insertedSignalIds.slice(0, 20),
         newsroom_layers: ["news_signals", "news_events"],
         scalable: true,
+        rss_shard: options.rssShard ?? null,
         early_dedup: earlyDedup,
         early_duplicates_total: earlyDupTotal,
         image_enrichment_attempted: imageAnalytics?.total ?? 0,

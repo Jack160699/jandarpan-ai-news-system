@@ -52,3 +52,7 @@ next-env.d.ts
 supabase/.temp/
 sa_parsed.json
 *service_account*.json
+
+# generated operator artifacts
+remediation-plan.sql
+voice-samples/

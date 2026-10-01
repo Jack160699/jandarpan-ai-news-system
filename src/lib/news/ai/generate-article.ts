@@ -56,6 +56,9 @@ import { createAdminServerClient } from "@/lib/supabase";
 import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { runWithConcurrency } from "@/lib/infrastructure/concurrency/pool";
 import { geoFromRecord, mergeGeoMetadata, tagGeoFromContent } from "@/lib/regional/geo-tagging";
+import { evaluatePublicationGates, gateAuditPayload } from "@/lib/news/quality/publication-gates";
+import { checkStoryDuplicate, storeArticleEmbedding } from "@/lib/news/dedupe/cross-language";
+import type { EditorialLanguage } from "@/lib/news/quality/script-detect";
 import { scoreRegionalTopic } from "@/lib/regional/topic-scoring";
 import {
   createEmptyLedger,
@@ -95,7 +98,7 @@ import {
   initialHeroPlaceholder,
   isEditoriallyEligibleSourceImageUrl,
   queueEditorialImageForArticle,
-} from "@/lib/news/ai/generate-editorial-image";
+} from "@/lib/news/ai/editorial-image-enqueue";
 import {
   hasVerifiedRealMedia,
   isCleanRightsEligibleMedia,
@@ -169,6 +172,14 @@ import { logNewsroom } from "@/lib/newsroom/logger";
 import { EDITORIAL_CAPACITY } from "@/lib/newsroom/editorial-capacity";
 import { selectEditorialCandidates } from "@/lib/infrastructure/workers/editorial-priority";
 import { prepareEditorialCandidateWaves } from "./editorial-candidate-waves";
+import { isLlmBudgetExhausted, llmBudgetSnapshot } from "@/lib/ai/providers/call-budget";
+import { isEpaperPageListingTitle } from "@/lib/news/quality/source-title-quality";
+import {
+  clearCandidateAttempts,
+  isCandidateBlocked,
+  loadCandidateAttemptStates,
+  recordCandidateFailure,
+} from "./candidate-attempts";
 import { isSafeBatchRescueCandidate } from "./editorial-batch-rescue";
 import {
   AUTO_GENERATION_MAX_AGE_HOURS,
@@ -490,6 +501,10 @@ async function callEditorialLlm(
     // exhaustion. Per-minute rate limits (rateLimited=true) are transient —
     // quota window resets within ≤60s — so return null (soft reject) instead
     // and allow the candidate to be retried on the next 30-min pipeline run.
+    // The per-run call budget is a governor decision: stop this run's LLM work, do not count it against the event.
+    if (result.error.code === "ai_run_budget_exhausted") {
+      throw new Error("RUN_BUDGET_EXHAUSTED");
+    }
     const isDailyExhaustion =
       (result.error.code === "quota_exhausted" || result.error.code === "ai_quota_exhausted") &&
       !result.error.rateLimited;
@@ -966,11 +981,41 @@ async function persistGeneratedArticle(input: {
     region: input.event.region,
     category,
   });
-  const geo = mergeGeoMetadata(
+  const mergedGeo = mergeGeoMetadata(
     geoFromRecord(input.event),
     ...signalGeos,
     draftGeo
   );
+
+  // Publication gates: language script, headline quality, geography scope.
+  // Geography is re-derived from evidence — a district is only ever recorded when the
+  // source text proves it (never inherited from a feed/region hint or event guess).
+  const gates = evaluatePublicationGates({
+    language: (input.draft.language === "hi" ? "hi" : "en") as EditorialLanguage,
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    body: input.draft.article_body,
+    sourceTitle: input.signals.map((s) => s.title).filter(Boolean).join(" | "),
+    sourceText: input.signals.map((s) => s.raw_content ?? "").join("\n").slice(0, 8000),
+    source: input.signals[0]?.source ?? null,
+    region: input.event.region,
+    category,
+  });
+  const geoInCg =
+    gates.geo.scope === "DISTRICT_SPECIFIC" ||
+    gates.geo.scope === "STATEWIDE_CHHATTISGARH" ||
+    gates.geo.scope === "INDIA_RELEVANT_TO_CHHATTISGARH";
+  const geo = {
+    ...mergedGeo,
+    state: geoInCg ? mergedGeo.state : gates.geo.scope === "UNKNOWN" ? "unknown" : "india",
+    is_chhattisgarh: geoInCg,
+    primary_district: gates.geo.districtSlug,
+    districts: gates.geo.districts,
+    scope: gates.geo.scope,
+    scope_method: gates.geo.method,
+    scope_confidence: gates.geo.confidence,
+    scope_evidence: gates.geo.evidence.slice(0, 8),
+  };
   const regionalTopic = scoreRegionalTopic({
     headline: input.draft.headline,
     summary: input.draft.summary,
@@ -988,7 +1033,9 @@ async function persistGeneratedArticle(input: {
   // regardless of this flag, so a human can review them.
   // Publication is performed by the edition scheduler only (not by continuous crons).
   // We now instantly publish articles that pass the deterministic validation gates.
-  const autoPublish = input.quality.publish_allowed;
+  // Gate failures (wrong-language script, generic headline, unknown geography) keep the
+  // draft as a pending row for evaluation — it is never auto-published.
+  const autoPublish = input.quality.publish_allowed && !gates.blocksAutoPublish;
   const nowIso = new Date().toISOString();
   const urgency = Number(input.event.urgency_score ?? 0);
   const aiConfidence = Number(input.quality.ai_confidence ?? 0);
@@ -1009,8 +1056,12 @@ async function persistGeneratedArticle(input: {
     trustedSources >= 3;
 
   // Shadow may generate, score and image drafts, but it must never publish.
+  // The breaking override may skip pacing but must NEVER skip the publication gates.
   const breakingPatch =
-    breakingOverride && isAutonomousPublishingEnabled()
+    breakingOverride &&
+    isAutonomousPublishingEnabled() &&
+    !gates.blocksAutoPublish &&
+    input.quality.publishDecision !== "reject"
       ? buildPublicPublishPatch(new Date())
       : null;
 
@@ -1248,6 +1299,12 @@ async function persistGeneratedArticle(input: {
       media_source_url: heroMedia?.source_url ?? null,
       media_rights_status: heroMedia?.rights_status ?? "licensed",
       ai_confidence: input.quality.ai_confidence,
+      publication_gates: gateAuditPayload(gates),
+      source_published_at: input.signals
+        .map((s) => s.published_at)
+        .filter((v): v is string => Boolean(v))
+        .sort()
+        .slice(-1)[0] ?? null,
       source_attribution: input.attributions,
       quality_report: input.quality,
       quality_breakdown: input.quality.quality_breakdown,
@@ -1444,6 +1501,7 @@ async function runFullValidationSequence(input: {
   evidenceSufficient: boolean;
   freshness: EditorialFreshnessDecision;
   writerProvider: AiProviderId;
+  language: SupportedEditorialLanguage;
 }): Promise<{
   quality: EditorialQualityReport;
   hqGate: ReturnType<typeof applyHumanQualityAndEvidenceGate>;
@@ -1490,6 +1548,33 @@ async function runFullValidationSequence(input: {
     );
   }
 
+  // Step 3b: publication gates — language script, headline quality, geography scope.
+  const gates = evaluatePublicationGates({
+    language: input.language === "hi" ? "hi" : "en",
+    headline: input.draft.headline,
+    summary: input.draft.summary,
+    body: input.draft.article_body,
+    sourceTitle: input.signals.map((s) => s.title).filter(Boolean).join(" | "),
+    sourceText: input.signals.map((s) => s.raw_content ?? "").join("\n").slice(0, 8000),
+    source: input.signals[0]?.source ?? null,
+    region: input.event.region,
+    category: input.event.category,
+    recentHeadlines: input.existingHeadlines,
+  });
+  const gateRejects = gates.failures.filter((f) => f.severity === "reject");
+  if (gateRejects.length > 0) {
+    hqGate.quality = {
+      ...hqGate.quality,
+      publish_allowed: false,
+      passed: false,
+      publishDecision: "reject",
+      rejectionReasons: [
+        ...hqGate.quality.rejectionReasons,
+        ...gateRejects.map((f) => f.code),
+      ],
+    };
+  }
+
   const hardClaimIssues = claimIssues.filter((c) => !c.retryable);
   if (hardClaimIssues.length > 0) {
     hqGate.quality = {
@@ -1512,7 +1597,10 @@ async function runFullValidationSequence(input: {
     };
   }
 
-  const canPublish = hqGate.quality.publish_allowed && hardClaimIssues.length === 0;
+  // Quarantine-level failures (unknown geography) do not block validation itself — the
+  // draft is persisted for evaluation by persistGeneratedArticle, which refuses to auto-publish it.
+  const canPublish =
+    hqGate.quality.publish_allowed && hardClaimIssues.length === 0 && !gates.mustReject;
   const failureCodes = Array.from(
     new Set([
       ...hqGate.quality.rejectionReasons,
@@ -1585,24 +1673,24 @@ async function prepareCandidate(
     };
   }
 
-  // 1. DETERMINISTIC PRE-AI MEDIA GATE: Candidate must possess genuine, clean photojournalism.
-  // If no valid clean media exists, never spend expensive AI generation tokens on this event!
+  // 1. MEDIA IS NOT A PUBLICATION GATE. Text eligibility is independent of image availability:
+  // the article publishes as soon as it passes the text/quality/language/geo gates, and its image
+  // is attached asynchronously by the editorial-image worker (see persistGeneratedArticle:
+  // image.status "queued" / pending_attachment). This gate used to discard 536 of 993 signals (54%)
+  // in 48h before a single AI token was spent — mostly ingestion's Unsplash stock fillers, which
+  // are still never used as story photos (the rights/branding checks below stay in force: a clean
+  // real source photo is used when present, otherwise nothing is invented).
   const mediaCheck = discoverAndValidateCandidateMedia(
     signals,
     storyIndex?.usedImageUrls
   );
   if (!mediaCheck.valid || !mediaCheck.imageUrl) {
-    logEditorial("candidate_rejected_pre_ai_no_media", {
+    logEditorial("candidate_no_source_media_async_image", {
       eventId: event.id,
       reason: mediaCheck.reason,
     });
-    return {
-      candidate: null,
-      skipped: true,
-      reason: mediaCheck.reason ?? "no_clean_eligible_real_media",
-    };
   }
-  const preValidatedRealImageUrl = mediaCheck.imageUrl;
+  const preValidatedRealImageUrl = mediaCheck.imageUrl ?? null;
 
   // 2. EARLY DETERMINISTIC DISTRICT & CATEGORY RESOLUTION (Zero AI cost)
   const earlyDistrict = resolveCanonicalStoryDistrict({
@@ -1644,6 +1732,31 @@ async function prepareCandidate(
   }
 
   const language = resolveLanguage(event, signals);
+
+  // Cross-language / same-language duplicate of an already PUBLISHED story (multilingual embeddings).
+  // Runs before any LLM call. In "shadow" mode (default) this only records the decision.
+  const duplicate = await checkStoryDuplicate({
+    eventId: event.id,
+    headline: event.canonical_title,
+    summary: event.event_summary,
+    language,
+  });
+  if (duplicate.enforced && duplicate.decision !== "distinct") {
+    logEditorial("candidate_duplicate_of_published", {
+      eventId: event.id,
+      decision: duplicate.decision,
+      similarity: duplicate.similarity,
+      matchedArticleId: duplicate.match?.articleId,
+    });
+    return {
+      candidate: null,
+      skipped: true,
+      reason:
+        duplicate.decision === "cross_language_variant"
+          ? "duplicate_cross_language_variant"
+          : "duplicate_published_story",
+    };
+  }
   let articleTypeClassification = classifyEventArticleType(event, signals);
   let { factPackText, sourceTexts, attributions } = buildFactPack(
     event,
@@ -1679,6 +1792,8 @@ async function prepareCandidate(
   // review so it can be recorded; "local" marks the deterministic fallback
   // draft (buildFallbackDraftFromFactPack), which never called an LLM.
   let writerProvider: AiProviderId | null = null;
+  // Model that actually produced the draft (audit trail) — never a hard-coded label.
+  let writerModel: string | null = null;
   // Persisted into editorial_metadata.premium_editorial below â€” the audit
   // trail for why (if at all) the premium Gemini model was used.
   let premiumEditorialUsed = false;
@@ -1705,6 +1820,7 @@ async function prepareCandidate(
       premiumEditorialUsed = llmResult.premium;
       premiumEditorialReason = llmResult.premiumReason;
       writerProvider = llmResult.provider;
+      writerModel = llmResult.model ?? null;
     }
     return parsed;
   }
@@ -1726,6 +1842,13 @@ async function prepareCandidate(
       eventId: event.id,
       message: err instanceof Error ? err.message : "LLM failed",
     });
+    if (err instanceof Error && err.message === "RUN_BUDGET_EXHAUSTED") {
+      return {
+        candidate: null,
+        skipped: false,
+        reason: "RUN_BUDGET_EXHAUSTED",
+      };
+    }
     if (err instanceof Error && err.message === "DEFERRED_QUOTA") {
       return {
         candidate: null,
@@ -1751,7 +1874,7 @@ async function prepareCandidate(
   }
 
   let generationProvider: AiProviderId = writerProvider ?? "codecraft";
-  let generationModel: string = "deepseek-v4-pro-max";
+  let generationModel: string = writerModel ?? (writerProvider === "local" ? "local-fallback" : "unknown");
   let repairProvider: AiProviderId | null = null;
   let repairModel: string | null = null;
   let finalProvider: AiProviderId = generationProvider;
@@ -1772,6 +1895,7 @@ async function prepareCandidate(
     evidenceSufficient: articleTypeClassification.evidenceSufficient,
     freshness,
     writerProvider: generationProvider,
+    language,
   });
 
   // Step 2: Optional one-time repair if not published and repair is viable
@@ -1795,7 +1919,7 @@ async function prepareCandidate(
 
     if (repairResult.repaired) {
       repairProvider = repairResult.provider ?? "codecraft";
-      repairModel = repairResult.model ?? "deepseek-v4-pro-max";
+      repairModel = repairResult.model ?? "unknown";
       const repairedDraft = repairResult.draft;
 
       // Re-run ALL relevant gates from scratch on the repaired draft!
@@ -1812,6 +1936,7 @@ async function prepareCandidate(
         evidenceSufficient: articleTypeClassification.evidenceSufficient,
         freshness,
         writerProvider: repairProvider,
+        language,
       });
 
       // No previous approval may be reused. Repaired draft must satisfy all gates independently.
@@ -2069,10 +2194,27 @@ export async function generateEditorialFromEvent(
 /**
  * Batch-generate editorials; rescues top scorers if entire batch would fail.
  */
-export async function generateEditorialsFromEvents(options?: {
+export type GenerateEditorialsOptions = {
   limit?: number;
-}): Promise<BatchEditorialResult> {
+  /** Process exactly this event (test / targeted run). Still subject to every eligibility, freshness and quality gate. */
+  eventId?: string;
+  /** Run the whole pipeline (LLM + gates) but persist nothing and record no candidate-attempt history. */
+  dryRun?: boolean;
+  /** Cap on events one call may attempt. Defaults to EDITORIAL_MAX_CANDIDATE_ATTEMPTS or max(limit*2, 8). */
+  maxAttempts?: number;
+  /** Skip the "refresh already-published stories" pass (each refresh can cost an LLM call). */
+  skipUpdates?: boolean;
+  /** Stop scanning candidates as soon as one real provider call has been spent (one-item workers). */
+  stopAfterLlmCall?: boolean;
+  /** Ignore candidate-attempt backoff/dead-letter state (explicit test runs only). */
+  ignoreBackoff?: boolean;
+};
+
+export async function generateEditorialsFromEvents(
+  options?: GenerateEditorialsOptions
+): Promise<BatchEditorialResult> {
   const limit = options?.limit ?? INFRA_CONFIG.editorialBatchLimit;
+  const dryRun = options?.dryRun === true;
 
   if (!isEditorialEnabled()) {
     return {
@@ -2128,6 +2270,13 @@ export async function generateEditorialsFromEvents(options?: {
     }
   }
 
+  if (options?.eventId) {
+    // Targeted run: exactly this event, regardless of ranking. Freshness/eligibility gates below still apply.
+    const one = await supabase.from("news_events").select("*").eq("id", options.eventId).limit(1);
+    events = one.data ?? [];
+    error = one.error;
+  }
+
   if (error || !events?.length) {
     return {
       generated: 0,
@@ -2148,7 +2297,9 @@ export async function generateEditorialsFromEvents(options?: {
 
   // Bound update pass: already-published events that may have new signals (max 3).
   const MAX_EXISTING_UPDATES = 3;
-  const updateCandidates = (events as NewsEventRow[])
+  const updateCandidates = options?.skipUpdates || options?.eventId
+    ? []
+    : (events as NewsEventRow[])
     .filter(
       (e) =>
         isWithinAutoGenerationWindow(e) &&
@@ -2172,7 +2323,12 @@ export async function generateEditorialsFromEvents(options?: {
     });
   }
 
-  const eligible = resolvable;
+  // E-paper page listings are scans of printed pages, not stories: reject them BEFORE any LLM call is spent.
+  const eligible = resolvable.filter((e) => !isEpaperPageListingTitle(e.canonical_title));
+  const filteredEpaperListings = resolvable.length - eligible.length;
+  if (filteredEpaperListings > 0) {
+    logEditorial("epaper_listing_filter", { resolvable: resolvable.length, filteredEpaperListings });
+  }
 
   // Pre-generation media discovery: Identify candidates with clean real photojournalism
   const allEligibleSignalIds = uniqueSignalIds(eligible);
@@ -2200,9 +2356,25 @@ export async function generateEditorialsFromEvents(options?: {
     }
   }
 
-  const rankedPending = selectEditorialCandidates(eligible, eligible.length, {
+  // Persistent failure history: skip events still in exponential backoff or dead-lettered (fail-open on DB error).
+  const attemptStates = await loadCandidateAttemptStates(eligible.map((e) => e.id));
+  const nowMs = Date.now();
+  const unblocked = options?.ignoreBackoff
+    ? eligible
+    : eligible.filter((e) => {
+        const st = attemptStates.get(e.id);
+        return !st || !isCandidateBlocked(st, nowMs);
+      });
+  const blockedByBackoff = eligible.length - unblocked.length;
+  if (blockedByBackoff > 0) {
+    logEditorial("candidate_backoff_filter", { eligible: eligible.length, blockedByBackoff });
+  }
+
+  const rankedPending = selectEditorialCandidates(unblocked, unblocked.length, {
     eventsWithRealMedia,
   });
+  const failedEventReasons: Array<{ eventId: string; reason: string }> = [];
+  const succeededEventIds: string[] = [];
 
   let generated = 0;
   let published = 0;
@@ -2242,7 +2414,16 @@ export async function generateEditorialsFromEvents(options?: {
     ranked: rankedPending,
     limit,
     concurrency: INFRA_CONFIG.editorialConcurrency,
-    maxAttempts: Math.max(limit * 4, 20),
+    // Bound how many events one batch may even attempt (each attempt can cost an LLM call): 2x the batch, not 4x/20.
+    // EDITORIAL_MAX_CANDIDATE_ATTEMPTS lets a one-item worker cap it lower.
+    maxAttempts: Math.max(
+      1,
+      options?.maxAttempts ??
+        (Number(process.env.EDITORIAL_MAX_CANDIDATE_ATTEMPTS) || Math.max(limit * 2, 8))
+    ),
+    shouldStop: () =>
+      isLlmBudgetExhausted("editorial_generate") ||
+      (options?.stopAfterLlmCall === true && (llmBudgetSnapshot()?.used ?? 0) > 0),
     prepare: (event) =>
       prepareCandidate(
         event,
@@ -2292,6 +2473,7 @@ export async function generateEditorialsFromEvents(options?: {
         ok: false,
         reason: prepared.reason,
       });
+      if (prepared.reason) failedEventReasons.push({ eventId: event.id, reason: prepared.reason });
       continue;
     }
 
@@ -2299,6 +2481,28 @@ export async function generateEditorialsFromEvents(options?: {
     confidenceScores.push(candidate.quality.ai_confidence);
 
     if (candidate.repaired) repaired++;
+
+    if (dryRun) {
+      // Everything up to and including the publication gates ran; nothing is written.
+      results.push({
+        eventId: event.id,
+        ok: candidate.quality.publish_allowed,
+        published: false,
+        repaired: candidate.repaired,
+        dryRun: true,
+        reason: candidate.quality.publish_allowed ? "dry_run_publish_allowed" : "dry_run_gated",
+        draftPreview: {
+          headline: candidate.draft.headline,
+          summary: candidate.draft.summary,
+          language: candidate.draft.language,
+          bodyChars: candidate.draft.article_body.length,
+          publishAllowed: candidate.quality.publish_allowed,
+          hardReject: candidate.quality.hard_reject,
+        },
+        ...qualityResultFields(candidate.quality),
+      });
+      continue;
+    }
 
     // Persist publish_allowed candidates as normal, and also persist
     // non-hard-rejected candidates (repair/hold â€” e.g. below the autonomous
@@ -2363,11 +2567,21 @@ export async function generateEditorialsFromEvents(options?: {
         });
         generated++;
         if (saved.article.published_at) published++;
+        if (saved.article.published_at) {
+          // Make this story matchable by later candidates in any language.
+          await storeArticleEmbedding({
+            id: saved.article.id,
+            headline: saved.article.headline,
+            summary: saved.article.summary,
+            language: saved.article.language,
+          });
+        }
         existingHeadlines.push(candidate.draft.headline);
         existingBodyFingerprints.push(
           fingerprintBody(candidate.draft.article_body)
         );
         usedEventIds.add(event.id);
+        if (attemptStates.has(event.id)) succeededEventIds.push(event.id);
         if (
           saved.article.published_at &&
           (!lastPublishedStory ||
@@ -2439,6 +2653,7 @@ export async function generateEditorialsFromEvents(options?: {
       });
       if (!quarantine) failedCandidates.push(candidate);
       rejected++;
+      failedEventReasons.push({ eventId: event.id, reason });
       results.push({
         eventId: event.id,
         ok: false,
@@ -2462,6 +2677,15 @@ export async function generateEditorialsFromEvents(options?: {
       });
     }
   }
+
+  // Persist failure history (backoff / dead-letter) and clear it for events that finally published.
+  for (const f of dryRun ? [] : failedEventReasons) {
+    const rec = await recordCandidateFailure(f.eventId, f.reason);
+    if (rec?.deadLettered) {
+      logEditorial("candidate_dead_lettered", { eventId: f.eventId, attempts: rec.attempts, reason: f.reason });
+    }
+  }
+  if (!dryRun) await clearCandidateAttempts(succeededEventIds);
 
   // Batch rescue has been removed to enforce the strict CodeCraft generation rules.
   // If an article fails generation, it will not be aggressively rescued.
@@ -2529,6 +2753,8 @@ export async function generateEditorialsFromEvents(options?: {
     qualityPassRate: validationPassRate(qualityMetrics),
     candidatePool,
     skipReasonCounts,
+    blockedByBackoff,
+    failuresRecorded: failedEventReasons.length,
   });
 
   return {

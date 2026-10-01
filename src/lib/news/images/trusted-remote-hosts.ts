@@ -3,6 +3,8 @@
  * Keep this list intentional — never allow arbitrary hostnames (SSRF risk).
  */
 
+import { Buffer } from "node:buffer";
+
 export type TrustedRemotePattern = {
   protocol: "https";
   hostname: string;

@@ -2,9 +2,9 @@
  * Worker run guard — overlap prevention + structured cron responses
  */
 
-import { isDuplicateRequest } from "@/lib/infrastructure/cache/dedup";
 import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { isProductionDeployment } from "@/lib/infrastructure/production";
+import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 
 export type WorkerRunPayload = {
   ok: boolean;
@@ -28,25 +28,91 @@ export function isCacheDegraded(): boolean {
  * Prevents overlapping cron invocations (GitHub Actions + manual triggers).
  * Uses Redis/memory dedup when available; falls back to in-process lock.
  */
+export type WorkerRunLease = { acquired: boolean; release: () => Promise<void> };
+
+const NOOP_RELEASE = async () => {};
+
+/**
+ * Overlap protection backed by a Postgres lease (public.acquire_run_lease) so it
+ * works across serverless instances and is RELEASED as soon as the run finishes —
+ * unlike the old Redis window lock, which held for the full window and forced
+ * the previous "bypass". The TTL (windowSec) only matters if a run crashes.
+ *
+ * Fails OPEN on infrastructure errors: a broken lease table must never stop the
+ * newsroom (worst case is the pre-existing behaviour: possible overlap).
+ */
+export async function acquireWorkerRunLease(
+  workerKey: string,
+  windowSec: number,
+  options?: {
+    /**
+     * Default true (Vercel lanes: a broken lease table must never stop the newsroom).
+     * false = FAIL CLOSED: throw `lease_unavailable` instead of proceeding without exclusion. The Edge worker uses
+     * this so it can never run concurrently with the Vercel lane when the lease cannot be verified.
+     */
+    failOpen?: boolean;
+  }
+): Promise<WorkerRunLease> {
+  const failOpen = options?.failOpen !== false;
+  if (!isSupabaseConfigured()) {
+    if (!failOpen) throw new Error("lease_unavailable: supabase_not_configured");
+    const now = Date.now();
+    if ((memoryLocks.get(workerKey) ?? 0) > now) {
+      return { acquired: false, release: NOOP_RELEASE };
+    }
+    memoryLocks.set(workerKey, now + windowSec * 1000);
+    return {
+      acquired: true,
+      release: async () => {
+        memoryLocks.delete(workerKey);
+      },
+    };
+  }
+
+  const owner = `${process.env.VERCEL_DEPLOYMENT_ID ?? "local"}:${crypto.randomUUID()}`;
+  try {
+    const supabase = createAdminServerClient();
+    const { data, error } = await supabase.rpc("acquire_run_lease" as never, {
+      p_key: workerKey,
+      p_owner: owner,
+      p_ttl_seconds: windowSec,
+    } as never);
+    if (error) throw new Error(error.message);
+    if (data !== true) return { acquired: false, release: NOOP_RELEASE };
+    return {
+      acquired: true,
+      release: async () => {
+        try {
+          await createAdminServerClient().rpc("release_run_lease" as never, {
+            p_key: workerKey,
+            p_owner: owner,
+          } as never);
+        } catch {
+          /* lease expires on its own TTL */
+        }
+      },
+    };
+  } catch (err) {
+    if (!failOpen) {
+      throw new Error(`lease_unavailable: ${err instanceof Error ? err.message : String(err)}`);
+    }
+    console.error(
+      "[run-guard] lease unavailable, failing open:",
+      err instanceof Error ? err.message : err
+    );
+    return { acquired: true, release: NOOP_RELEASE };
+  }
+}
+
+/** Back-compat boolean API (no release). Prefer acquireWorkerRunLease. */
 export async function acquireWorkerRunLock(
   workerKey: string,
   windowSec: number
 ): Promise<boolean> {
   if (isProductionDeployment() && !isRedisConfigured()) {
-    console.error(
-      "[run-guard] UPSTASH_REDIS not configured in production — worker overlap protection is degraded"
-    );
+    console.warn("[run-guard] UPSTASH_REDIS not configured — using database lease only");
   }
-
-  return true; // bypass lock
-  const duplicate = await isDuplicateRequest(`worker:lock:${workerKey}`, windowSec);
-  if (duplicate) return false;
-
-  const now = Date.now();
-  const until = memoryLocks.get(workerKey) ?? 0;
-  if (until > now) return false;
-  memoryLocks.set(workerKey, now + windowSec * 1000);
-  return true;
+  return (await acquireWorkerRunLease(workerKey, windowSec)).acquired;
 }
 
 export async function runWorkerEndpoint<T extends Record<string, unknown>>(
@@ -62,8 +128,8 @@ export async function runWorkerEndpoint<T extends Record<string, unknown>>(
 ): Promise<WorkerRunPayload> {
   const started = Date.now();
 
-  const acquired = await acquireWorkerRunLock(workerKey, lockWindowSec);
-  if (!acquired) {
+  const lease = await acquireWorkerRunLease(workerKey, lockWindowSec);
+  if (!lease.acquired) {
     return {
       ok: true,
       processed: 0,
@@ -105,5 +171,7 @@ export async function runWorkerEndpoint<T extends Record<string, unknown>>(
       duration_ms: Date.now() - started,
       reason: msg,
     };
+  } finally {
+    await lease.release();
   }
 }

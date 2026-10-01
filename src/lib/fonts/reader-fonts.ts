@@ -30,7 +30,9 @@ export const notoDevanagari = Noto_Serif_Devanagari({
   weight: ["400", "600"],
   display: "swap",
   adjustFontFallback: true,
-  preload: false,
+  // Hindi-first product: headline/body text is Devanagari on most pages, so preload it for LCP
+  // text stability (previously false → late swap and layout shift on first paint).
+  preload: true,
 });
 
 /** Meta labels, timestamps */

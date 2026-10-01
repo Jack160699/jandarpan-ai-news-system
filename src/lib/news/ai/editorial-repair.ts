@@ -198,6 +198,23 @@ export type RepairDraftResult = {
   model?: string;
 };
 
+/** Plain-language fixes for the deterministic publication-gate codes. */
+export function gateRepairHints(failureCodes: string[], language: SupportedEditorialLanguage): string {
+  const lines: string[] = [];
+  const langName = language === "hi" ? "Hindi (Devanagari script only)" : "English (Latin script only)";
+  if (failureCodes.some((c) => c.startsWith("script_mismatch"))) {
+    lines.push(
+      `- The headline, summary and body MUST be written entirely in ${langName}. Do not mix in the other language's script; translate all of it.`
+    );
+  }
+  if (failureCodes.some((c) => c.startsWith("headline:"))) {
+    lines.push(
+      "- The headline must be specific: name the place, person, organisation or number and state what happened. Never use generic headlines such as 'Regional News Update', 'Latest News' or 'Breaking News'."
+    );
+  }
+  return lines.length ? `GATE FIXES REQUIRED:\n${lines.join("\n")}\n` : "";
+}
+
 export async function regenerateFullArticle(input: {
   draft: EditorialDraft;
   factPackText: string;
@@ -212,9 +229,10 @@ export async function regenerateFullArticle(input: {
       : "Write in English.";
 
   const codes = input.failureCodes.map(c => "* " + c).join("\n");
+  const gateHints = gateRepairHints(input.failureCodes, input.language);
   try {
     const modelOverride = process.env.NEWSROOM_EDITORIAL_MODEL?.trim();
-    const systemContent = `\nYou are repairing an article that failed quality validation.\nPREVIOUS ATTEMPT FAILED WITH:\n${codes}\nREQUIRED CORRECTION:\n- retain only facts supported by the fact pack\n- do not repeat the summary as the body\n- do not repeat paragraphs\n- do not invent facts\n- rebuild the complete body when required\n- preserve attribution\n- preserve uncertainty\n- satisfy the article-type depth requirement when evidence permits\n\nReturn EXACTLY this JSON schema:\n{\n  "headline": "string",\n  "summary": "string",\n  "sections": {\n    "lead": "string",\n    "details": "string",\n    "context": "string"\n  }\n}`;
+    const systemContent = `\nYou are repairing an article that failed quality validation.\nPREVIOUS ATTEMPT FAILED WITH:\n${codes}\n${gateHints}REQUIRED CORRECTION:\n- retain only facts supported by the fact pack\n- do not repeat the summary as the body\n- do not repeat paragraphs\n- do not invent facts\n- rebuild the complete body when required\n- preserve attribution\n- preserve uncertainty\n- satisfy the article-type depth requirement when evidence permits\n\nReturn EXACTLY this JSON schema:\n{\n  "headline": "string",\n  "summary": "string",\n  "sections": {\n    "lead": "string",\n    "details": "string",\n    "context": "string"\n  }\n}`;
     const userContent = `Current headline: ${input.draft.headline}
 Current summary: ${input.draft.summary}
 Current body: ${input.draft.article_body}

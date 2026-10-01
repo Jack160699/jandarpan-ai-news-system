@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 
 /** Rough token estimate (~4 chars/token for English, ~2.5 for Hindi/Devanagari) */
 export function estimateTokensFromText(text: string): number {

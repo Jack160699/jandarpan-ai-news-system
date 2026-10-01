@@ -1212,6 +1212,13 @@ export type Database = {
           id: string
           processed_at: string | null
           status: string
+          attempts: number
+          failure_class: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_attempt_at: string | null
+          reject_reason: string | null
+          updated_at: string
         }
         Insert: {
           article_id: number
@@ -1220,6 +1227,13 @@ export type Database = {
           id?: string
           processed_at?: string | null
           status?: string
+          attempts?: number
+          failure_class?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string | null
+          reject_reason?: string | null
+          updated_at?: string
         }
         Update: {
           article_id?: number
@@ -1228,6 +1242,13 @@ export type Database = {
           id?: string
           processed_at?: string | null
           status?: string
+          attempts?: number
+          failure_class?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_attempt_at?: string | null
+          reject_reason?: string | null
+          updated_at?: string
         }
         Relationships: [
           {

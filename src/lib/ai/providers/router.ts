@@ -26,6 +26,24 @@ const CHAT_OPERATION_CHAINS: Record<string, AiProviderId[]> = {
   classification_lightweight: LIGHTWEIGHT_CHAIN,
 };
 
+/**
+ * CodeCraft is a controlled-budget provider. It is only used for the operations listed in
+ * CODECRAFT_OPERATIONS (default: editorial_generate, editorial_repair). Translation, review and
+ * lightweight/classification calls never touch it unless it is explicitly enabled for them, so
+ * secondary work cannot drain the CodeCraft allowance.
+ */
+export const CODECRAFT_DEFAULT_OPERATIONS = ["editorial_generate", "editorial_repair"] as const;
+
+export function codecraftAllowedOperations(env: Record<string, string | undefined> = process.env): Set<string> {
+  const raw = env.CODECRAFT_OPERATIONS?.trim();
+  if (raw === undefined || raw === "") return new Set(CODECRAFT_DEFAULT_OPERATIONS);
+  return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+}
+
+function withCodecraftScope(chain: AiProviderId[], operation: string): AiProviderId[] {
+  return codecraftAllowedOperations().has(operation) ? chain : chain.filter((p) => p !== "codecraft");
+}
+
 export function isOpenAiProviderEnabled(): boolean {
   return process.env.AI_PROVIDER_OPENAI_ENABLED === "true";
 }
@@ -39,7 +57,7 @@ function withOpenAiGate(chain: AiProviderId[]): AiProviderId[] {
 /** Provider order for a chat-completion-shaped operation (writer, reviewer, translation, repair, lightweight). */
 export function resolveChatChain(operation: string): AiProviderId[] {
   const chain = CHAT_OPERATION_CHAINS[operation] ?? WRITER_CHAIN;
-  return withOpenAiGate(chain);
+  return withCodecraftScope(withOpenAiGate(chain), operation);
 }
 
 /** Provider that should have generated the draft, used to pick a *different* reviewer provider at call time. */

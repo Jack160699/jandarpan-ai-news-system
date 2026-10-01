@@ -11,6 +11,8 @@
  * - CRON_API_SECRET — legacy master alias
  * - CRON_INGEST_SECRET, CRON_PIPELINE_SECRET, CRON_OPS_SECRET, CRON_ADMIN_SECRET — scoped
  * - ADMIN_SECRET — admin capability only (legacy)
+ * - CRON_SCHEDULER_SECRET — the Supabase pg_cron scheduler's own revocable credential
+ *   (see scheduler-manifest.ts). Accepted for ingest/pipeline/ops, NEVER for admin.
  *
  * Vercel Cron (when CRON_SECRET is set) also sends x-vercel-cron: 1
  */
@@ -86,6 +88,9 @@ export function collectAcceptedSecrets(capability?: CronCapability): string[] {
   if (capability === "admin") {
     const adminSecret = process.env.ADMIN_SECRET?.trim();
     if (adminSecret) secrets.add(adminSecret);
+  } else {
+    const scheduler = process.env.CRON_SCHEDULER_SECRET?.trim();
+    if (scheduler) secrets.add(scheduler);
   }
 
   return [...secrets];
@@ -98,6 +103,7 @@ export function cronSecretEnvKeysForCapability(
   const keys = ["CRON_SECRET", "CRON_API_SECRET"];
   if (capability) keys.push(CAPABILITY_ENV_KEYS[capability]);
   if (capability === "admin") keys.push("ADMIN_SECRET");
+  else keys.push("CRON_SCHEDULER_SECRET");
   return keys;
 }
 

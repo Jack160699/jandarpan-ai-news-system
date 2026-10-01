@@ -102,6 +102,16 @@ export type BatchEditorialResult = {
     published?: boolean;
     repaired?: boolean;
     updated?: boolean;
+    /** Set on dry runs: the draft was generated and gated but nothing was written. */
+    dryRun?: boolean;
+    draftPreview?: {
+      headline: string;
+      summary: string;
+      language: string;
+      bodyChars: number;
+      publishAllowed: boolean;
+      hardReject: boolean;
+    };
     reason?: string;
     confidence?: number;
     readability?: number;

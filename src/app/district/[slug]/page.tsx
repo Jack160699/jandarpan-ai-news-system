@@ -9,16 +9,16 @@ import { isDistrictV3Enabled } from "@/features/district-v3/config";
 import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { DistrictHomepage } from "@/features/reader-ds/pages";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
+import { comparePublishedDesc } from "@/lib/feed/freshness";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 import { filterPoolByLanguage } from "@/lib/i18n/article-language";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchMonetizationPayload } from "@/lib/monetization/fetch-payload";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import {
   buildRegionalRankingPersonalization,
-  filterRowsForDistrict,
   getAllDistrictSlugs,
   getDistrict,
-  prioritizePrimaryDistrict,
 } from "@/lib/regional";
 import { rankArticlesForHomepage } from "@/lib/news/ai/ranking";
 import {
@@ -83,26 +83,23 @@ export default async function DistrictPage({ params }: PageProps) {
     readerDs ? getTenantConfig() : Promise.resolve(null),
   ]);
   const langPool = filterPoolByLanguage(pool, displayLanguage);
-  // STRICT DISTRICT SCOPING: Query layer returns ONLY selected district stories
-  const districtRows = prioritizePrimaryDistrict(
-    filterRowsForDistrict(langPool, slug),
-    slug
-  );
-
-  const { getStaticFallbackArticlePool } = await import("@/lib/news/fallback/wire-articles");
-  const fallbackMatches = filterRowsForDistrict(getStaticFallbackArticlePool(), slug);
-  const seenIds = new Set(districtRows.map((r) => r.id || r.slug));
-  for (const r of fallbackMatches) {
-    if (!seenIds.has(r.id || r.slug)) {
-      seenIds.add(r.id || r.slug);
-      districtRows.push(r);
-    }
-  }
+  // STRICT DISTRICT ISOLATION: only stories whose text proves this district
+  // (scope DISTRICT_SPECIFIC). No statewide / national / international / unknown
+  // backfill, and no static fallback merge — an empty district stays empty.
+  const districtRows = selectFeedRows(langPool, {
+    feed: "district",
+    districtSlug: slug,
+    order: "chronological",
+    limit: 80,
+  }).rows;
   const personalization = buildRegionalRankingPersonalization({
     homeDistrict: slug,
     regionBoostMultiplier: 1.3,
   });
-  const rankedPrimary = rankArticlesForHomepage(districtRows, { personalization });
+  // Ranking supplies card metadata (sections, badges); chronology is authoritative.
+  const rankedPrimary = rankArticlesForHomepage(districtRows, { personalization }).sort(
+    (a, b) => comparePublishedDesc(a.row, b.row)
+  );
   const rankedFallback: typeof rankedPrimary = [];
 
   const toArticles = (
