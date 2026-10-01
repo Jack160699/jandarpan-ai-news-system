@@ -249,6 +249,23 @@ async function preflight() {
   const cc = supplied.CODECRAFT_EDITORIAL_MODEL;
   const circ = sql(`select disabled_until, last_error from ai_provider_circuit where key = 'codecraft:${String(cc).replace(/'/g, "")}' and disabled_until > now();`)[0];
   if (circ) ok("CodeCraft healthy", false, `circuit OPEN until ${circ.disabled_until}: ${String(circ.last_error).slice(0, 110)}`);
+  else if (cliArgs.includes("--codecraft-result")) {
+    // Reuse the ONE recorded real request instead of spending a second one. It must be recent, from the configured model,
+    // HTTP 200 with valid JSON and API-reported usage, and the Redis counters must have moved by exactly that usage.
+    let detail = "";
+    let pass = false;
+    try {
+      const r = JSON.parse(fs.readFileSync(cliArgs[cliArgs.indexOf("--codecraft-result") + 1], "utf8"));
+      const ageMin = (Date.now() - Date.parse(r.at)) / 60000;
+      const total = r.http?.usage?.total_tokens;
+      pass = ageMin >= 0 && ageMin < 30 && r.app_result?.ok === true && r.http?.http_status === 200 && r.json_valid === true &&
+        r.codecraft_http_requests === 1 && r.configured_model === cc && r.http?.model_in_response === cc &&
+        Number.isFinite(total) && r.redis_delta?.rpd === 1 && r.redis_delta?.tpd === total && r.redis_delta?.tpm === total &&
+        (r.reconcile_warnings ?? []).length === 0;
+      detail = `single request ${ageMin.toFixed(0)} min ago: HTTP ${r.http?.http_status}, ${r.http?.model_in_response}, ${total} tokens, Redis delta ${r.redis_delta?.tpd}`;
+    } catch (e) { detail = "result file unreadable: " + String(e.message).slice(0, 60); }
+    ok("CodeCraft healthy: one real request OK, JSON valid, usage reconciled into Redis, circuit closed", pass, detail);
+  }
   else if (skipAi) ok("CodeCraft healthy", false, "not verified (--skip-ai)");
   else {
     const ai = (await callWorker("editorial-worker", { mode: "quota_probe", ai: true })).body?.quota_probe?.ai;
