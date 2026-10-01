@@ -173,7 +173,7 @@ import { EDITORIAL_CAPACITY } from "@/lib/newsroom/editorial-capacity";
 import { selectEditorialCandidates } from "@/lib/infrastructure/workers/editorial-priority";
 import { prepareEditorialCandidateWaves } from "./editorial-candidate-waves";
 import { isLlmBudgetExhausted, llmBudgetSnapshot } from "@/lib/ai/providers/call-budget";
-import { isEpaperPageListingTitle } from "@/lib/news/quality/source-title-quality";
+import { isEpaperPageListingTitle, isGenericRoundupSourceTitle } from "@/lib/news/quality/source-title-quality";
 import {
   clearCandidateAttempts,
   isCandidateBlocked,
@@ -2352,10 +2352,16 @@ export async function generateEditorialsFromEvents(
   }
 
   // E-paper page listings are scans of printed pages, not stories: reject them BEFORE any LLM call is spent.
-  const eligible = resolvable.filter((e) => !isEpaperPageListingTitle(e.canonical_title));
-  const filteredEpaperListings = resolvable.length - eligible.length;
+  const notEpaper = resolvable.filter((e) => !isEpaperPageListingTitle(e.canonical_title));
+  const filteredEpaperListings = resolvable.length - notEpaper.length;
   if (filteredEpaperListings > 0) {
     logEditorial("epaper_listing_filter", { resolvable: resolvable.length, filteredEpaperListings });
+  }
+  // Aggregator live-page / roundup events can never pass the headline gate: skip them BEFORE any paid call too.
+  const eligible = notEpaper.filter((e) => !isGenericRoundupSourceTitle(e.canonical_title));
+  const filteredRoundupSources = notEpaper.length - eligible.length;
+  if (filteredRoundupSources > 0) {
+    logEditorial("roundup_source_filter", { candidates: notEpaper.length, filteredRoundupSources });
   }
 
   // Pre-generation media discovery: Identify candidates with clean real photojournalism
