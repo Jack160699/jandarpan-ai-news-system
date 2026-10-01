@@ -58,11 +58,8 @@ Deploy: `supabase functions deploy <name> --no-verify-jwt --use-api` for `editor
 
 `process.env` is read-only (bootstrap installs an overlay) · a `window` global exists on the server (`isBrowserRuntime()` = window AND document) · `process.cpuUsage()`/RSS are stubbed (reported as UNVERIFIED) · CJS dependencies need real `node:` builtins through a prelude (no `require`).
 
-## Legacy editorial schedules (paused while CodeCraft billing/policy verification is open)
+## Legacy editorial schedules (RETIRED)
 
-Only calls to the dedicated lane `POST /api/cron/editorial-generate` can reach CodeCraft (`editorial_generate`/`editorial_repair` are the only operations in its allow-list). Two legacy GitHub steps make that call and are gated on the repo variable `LEGACY_EDITORIAL_ENABLED` (unset = paused):
+The Edge pipeline proved a full cycle in production (fetch -> signal -> cluster -> queue -> Edge editorial -> CodeCraft -> gates -> published article, 2026-10-01 18:32 UTC). The two legacy GitHub steps that called `POST /api/cron/editorial-generate` (`workers.yml` Stage C, `editorial.yml` Stage 4) were removed; the Supabase scheduler is the only editorial scheduler. Ingestion, clustering, `ai_enrich`, jobs, publication, health and the image audit workflows are unchanged. `drain.yml` is manual-only and still available for emergencies.
 
-- `workers.yml` - Stage C (editorial generation)
-- `editorial.yml` - Stage 4 (editorial generation, primary)
-
-Everything else keeps running (ingestion, clustering, `ai_enrich`, jobs, publication, health, image audit). `orchestrate` with the default body does **not** generate: the registry maps it to the `scheduled_cron` trigger, which `resolveDirectEditorialGate` denies. Re-enable with `gh variable set LEGACY_EDITORIAL_ENABLED --body true`; retire the steps for good once the Edge pipeline is proven (see the section above).
+Token budgets: `OPENAI_REPAIR_MAX_TOKENS=3000` and `OPENAI_EDITORIAL_MAX_TOKENS=5000` are provisioned as Edge secrets because the CodeCraft model spends hidden reasoning tokens (the default 500-token repair budget returned an empty response).
