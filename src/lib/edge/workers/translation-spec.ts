@@ -37,7 +37,8 @@ export const TRANSLATION_SPEC: WorkerSpec<TranslationParams> = {
       limit: params.processLimit,
       jobTypes: ["translate_article", "translation_batch"],
       workerId: "edge_translation",
-      oldestFirst: true,
+      // Freshest first: a just-published story must get its Hindi/English version before the older backlog.
+      newestFirst: true,
       deadline,
     });
     const failed = processed.failed + processed.dead;

@@ -43,16 +43,18 @@ export function TrendingRankRow({
       >
         {rank}
       </div>
-      <div style={{ width: 84, height: 60, flexShrink: 0, borderRadius: 3, overflow: "hidden" }}>
-        <ArticleImage
-          src={story.imageUrl}
-          alt={story.headline}
-          altIsPhotoDescription={false}
-          ratio="thumb"
-          sizes="84px"
-          category={story.kicker ?? "trending"}
-        />
-      </div>
+      {story.imageUrl ? (
+        <div style={{ width: 84, height: 60, flexShrink: 0, borderRadius: 3, overflow: "hidden" }}>
+          <ArticleImage
+            src={story.imageUrl}
+            alt={story.headline}
+            altIsPhotoDescription={false}
+            ratio="thumb"
+            sizes="84px"
+            category={story.kicker ?? "trending"}
+          />
+        </div>
+      ) : null}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ marginBottom: 2 }}>
           <Tag>{story.kicker ?? "ट्रेंडिंग"}</Tag>

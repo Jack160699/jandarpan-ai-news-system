@@ -305,6 +305,50 @@ export function resetProviderHealthForTests(): void {
   lastHydratedAt = 0;
 }
 
+/** Cloudflare capabilities that keep INDEPENDENT circuits (an outage of one must never disable another). */
+export const CLOUDFLARE_CAPABILITY_HEALTH_KEYS = ["cloudflare:embeddings", "cloudflare:images"] as const;
+
+/** Worst-case view across keys, for dashboards that show one row per provider. Never used to GATE a capability. */
+function mergedProviderState(provider: HealthKey, keys: readonly HealthKey[]): ProviderState {
+  const states = [provider, ...keys].map((k) => getState(k));
+  const now = Date.now();
+  const maxOf = (pick: (s: ProviderState) => number | null) => {
+    const v = states.map(pick).filter((x): x is number => typeof x === "number");
+    return v.length ? Math.max(...v) : null;
+  };
+  const latestFailure = [...states].sort((a, b) => (b.lastFailureAt ?? 0) - (a.lastFailureAt ?? 0))[0]!;
+  const disabledUntil = maxOf((s) => (s.disabledUntil !== null && now < s.disabledUntil ? s.disabledUntil : null));
+  return {
+    provider,
+    healthy: disabledUntil === null,
+    disabledUntil,
+    lastSuccessAt: maxOf((s) => s.lastSuccessAt),
+    lastFailureAt: maxOf((s) => s.lastFailureAt),
+    consecutiveFailures: Math.max(...states.map((s) => s.consecutiveFailures)),
+    totalRequests: states.reduce((a, s) => a + s.totalRequests, 0),
+    totalSuccess: states.reduce((a, s) => a + s.totalSuccess, 0),
+    totalFailure: states.reduce((a, s) => a + s.totalFailure, 0),
+    lastLatencyMs: states.find((s) => s.lastLatencyMs)?.lastLatencyMs ?? 0,
+    lastError: latestFailure.lastError,
+    lastHttpStatus: latestFailure.lastHttpStatus,
+  };
+}
+
+/** Per-capability health for the independent Cloudflare circuits (embeddings vs images). */
+export function getCloudflareCapabilityHealth(): Array<{ capability: "embeddings" | "images"; healthy: boolean; disabledUntil: string | null; lastError: string | null }> {
+  const now = Date.now();
+  return CLOUDFLARE_CAPABILITY_HEALTH_KEYS.map((key) => {
+    const s = getState(key);
+    const disabled = s.disabledUntil !== null && now < s.disabledUntil ? s.disabledUntil : null;
+    return {
+      capability: key.endsWith("embeddings") ? ("embeddings" as const) : ("images" as const),
+      healthy: disabled === null,
+      disabledUntil: disabled ? new Date(disabled).toISOString() : null,
+      lastError: s.lastError,
+    };
+  });
+}
+
 export function getAiProviderHealthSnapshots(): AiProviderHealthSnapshot[] {
   const providers: AiProviderId[] = [
     "gemini",
@@ -315,7 +359,7 @@ export function getAiProviderHealthSnapshots(): AiProviderHealthSnapshot[] {
     "local",
   ];
   return providers.map((provider) => {
-    const s = getState(provider);
+    const s = provider === "cloudflare" ? mergedProviderState(provider, CLOUDFLARE_CAPABILITY_HEALTH_KEYS) : getState(provider);
     const now = Date.now();
     const disabled =
       s.disabledUntil !== null && now < s.disabledUntil ? s.disabledUntil : null;

@@ -13,7 +13,10 @@ import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
 import { RSS_SOURCES } from "@/lib/news/providers/rss-sources";
 import {
   ageMinutes,
-  categorizeFailure,
+  FAILURE_CLASSES,
+  FAILURE_CLASS_LABEL,
+  categorizeFailureItem,
+  failureClassOf,
   evaluateDistrictCoverage,
   evaluateJobs,
   evaluatePace,
@@ -24,6 +27,7 @@ import {
   worst,
   type DistrictCoverage,
   type FailureCategory,
+  type FailureClass,
   type GeoShares,
   type JobHealth,
   type PaceStatus,
@@ -43,6 +47,19 @@ export type FailureGroup = {
   total: number;
   items: Array<{ source: string; reason: string; n: number }>;
 };
+
+/** Explicit run outcomes recorded by the Edge workers (ops_cron_runs.metadata.outcome) in the last 24h. */
+export type OutcomeCounts = {
+  /** false when it could not be read - the dashboard then shows only the classic sources, never invents zeros. */
+  known: boolean;
+  byOutcome: Array<{ job: string; outcome: string; n: number }>;
+  deadLetteredCandidates24h: number;
+};
+
+export const UNKNOWN_OUTCOME_COUNTS: OutcomeCounts = { known: false, byOutcome: [], deadLetteredCandidates24h: 0 };
+
+/** One tile of the failure center: a business/ops class, never mixed with infrastructure failure. */
+export type FailureClassSummary = { klass: FailureClass; label: string; total: number };
 
 export type OpsView = {
   generatedAt: string;
@@ -79,6 +96,8 @@ export type OpsView = {
   };
   language: OpsSnapshotRaw["language"];
   failures: FailureGroup[];
+  /** Fixed six-class summary (infrastructure / quality / stale-freshness / no-work / quarantine / dead-letter). */
+  failureClasses: FailureClassSummary[];
   queue: OpsSnapshotRaw["queue"];
   ai: OpsSnapshotRaw["ai"];
   performance: OpsSnapshotRaw["performance"];
@@ -143,7 +162,7 @@ const FUNNEL_LABELS: Array<[keyof FunnelCounts, string]> = [
 
 export function buildOpsView(
   raw: OpsSnapshotRaw,
-  runtime: { snapshotLatencyMs: number; now?: number; voice?: VoiceData; schedulerControl?: SchedulerControl }
+  runtime: { snapshotLatencyMs: number; now?: number; voice?: VoiceData; schedulerControl?: SchedulerControl; outcomes?: OutcomeCounts }
 ): OpsView {
   const now = runtime.now ?? Date.now();
   const lagMinutes = ageMinutes(raw.publishing.latest?.published_at, now);
@@ -189,23 +208,33 @@ export function buildOpsView(
 
   // Failure center: group every source of failure under the requested categories.
   const groups = new Map<FailureCategory, FailureGroup>();
-  const add = (source: string, reason: string, n: number) => {
-    const category = categorizeFailure(reason);
+  const add = (source: string, reason: string, n: number, status?: string | null) => {
+    const category = categorizeFailureItem({ reason, status, source });
     const g = groups.get(category) ?? { category, total: 0, items: [] };
     g.total += n;
     g.items.push({ source, reason, n });
     groups.set(category, g);
   };
   for (const r of raw.failures.editorial_skip_reasons_24h) add("editorial (24h)", r.reason, Number(r.n));
-  for (const r of raw.failures.ai_queue_reasons) add(`ai_queue:${r.status}`, r.reason, Number(r.n));
-  for (const r of raw.failures.dead_jobs) add(`worker_jobs:${r.job_type}`, r.reason, Number(r.n));
+  for (const r of raw.failures.ai_queue_reasons) add(`ai_queue:${r.status}`, r.reason, Number(r.n), r.status);
+  for (const r of raw.failures.dead_jobs) add(`worker_jobs:${r.job_type}`, r.reason, Number(r.n), "dead");
   for (const r of raw.failures.ai_failures_24h) add(`ai:${r.provider}/${r.model}`, r.reason, Number(r.n));
   for (const r of raw.failures.cron_failures_24h) add(`cron:${r.job}`, r.last_error || "cron failure", Number(r.n));
   for (const [code, n] of Object.entries(raw.language.gate_failure_codes_24h ?? {})) add("publication gate", code, Number(n));
   for (const r of raw.sources.provider_errors_24h) add("ingestion", r.error, Number(r.n));
+  // Explicit worker outcomes: business rejections / empty shards are recorded as outcomes (ok=true runs), so they no longer
+  // masquerade as cron failures. "failure" is already counted above through ok=false runs, so it is skipped here.
+  const outcomes = runtime.outcomes ?? UNKNOWN_OUTCOME_COUNTS;
+  const NOT_A_PROBLEM = new Set(["published", "ok", "degraded", "failure", "generated_unpublished", "skipped", "kill_switch_off"]);
+  for (const o of outcomes.byOutcome) if (!NOT_A_PROBLEM.has(o.outcome)) add(`edge:${o.job}`, o.outcome, o.n);
+  if (outcomes.deadLetteredCandidates24h > 0) add("editorial candidates", "dead_lettered", outcomes.deadLetteredCandidates24h, "dead_lettered");
   const failures = [...groups.values()]
     .map((g) => ({ ...g, items: g.items.sort((a, b) => b.n - a.n) }))
     .sort((a, b) => b.total - a.total);
+
+  const classTotals = new Map<FailureClass, number>(FAILURE_CLASSES.map((k) => [k, 0]));
+  for (const g of failures) classTotals.set(failureClassOf(g.category), (classTotals.get(failureClassOf(g.category)) ?? 0) + g.total);
+  const failureClasses: FailureClassSummary[] = FAILURE_CLASSES.map((klass) => ({ klass, label: FAILURE_CLASS_LABEL[klass], total: classTotals.get(klass) ?? 0 }));
 
   const overall = worst(
     freshnessTone(lagMinutes),
@@ -245,6 +274,7 @@ export function buildOpsView(
     },
     language: raw.language,
     failures,
+    failureClasses,
     queue: raw.queue,
     ai: raw.ai,
     performance: raw.performance,
@@ -323,11 +353,38 @@ async function fetchSchedulerControl(): Promise<SchedulerControl> {
   }
 }
 
+/** Explicit worker outcomes from the last 24h. Optional like the others: failure to read it never breaks the dashboard. */
+async function fetchOutcomeCounts(): Promise<OutcomeCounts> {
+  if (!isSupabaseConfigured()) return UNKNOWN_OUTCOME_COUNTS;
+  try {
+    const supabase = createAdminServerClient();
+    const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
+    const [runs, dead] = await Promise.all([
+      supabase.from("ops_cron_runs" as never).select("job,metadata").gte("created_at", since).not("metadata->>outcome", "is", null).limit(3000),
+      supabase.from("editorial_candidate_attempts" as never).select("event_id", { count: "exact", head: true }).gte("dead_lettered_at", since),
+    ]);
+    if (runs.error) return UNKNOWN_OUTCOME_COUNTS;
+    const tally = new Map<string, { job: string; outcome: string; n: number }>();
+    for (const r of ((runs.data ?? []) as unknown) as Array<{ job: string; metadata: { outcome?: string } | null }>) {
+      const outcome = r.metadata?.outcome;
+      if (!outcome) continue;
+      const key = `${r.job}|${outcome}`;
+      const cur = tally.get(key) ?? { job: r.job, outcome, n: 0 };
+      cur.n += 1;
+      tally.set(key, cur);
+    }
+    return { known: true, byOutcome: [...tally.values()], deadLetteredCandidates24h: Number(dead.count ?? 0) };
+  } catch {
+    return UNKNOWN_OUTCOME_COUNTS;
+  }
+}
+
 export async function getOpsView(options?: { fresh?: boolean }): Promise<OpsView> {
-  const [{ raw, latencyMs }, voice, schedulerControl] = await Promise.all([
+  const [{ raw, latencyMs }, voice, schedulerControl, outcomes] = await Promise.all([
     options?.fresh ? fetchRawSnapshot() : cachedRawSnapshot(),
     fetchVoiceData(),
     fetchSchedulerControl(),
+    fetchOutcomeCounts(),
   ]);
-  return buildOpsView(raw, { snapshotLatencyMs: latencyMs, voice, schedulerControl });
+  return buildOpsView(raw, { snapshotLatencyMs: latencyMs, voice, schedulerControl, outcomes });
 }

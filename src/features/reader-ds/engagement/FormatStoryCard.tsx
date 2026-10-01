@@ -42,17 +42,19 @@ export function FormatStoryCard({
         alignItems: "flex-start",
       }}
     >
-      <div style={{ width: 104, flexShrink: 0, borderRadius: 3, overflow: "hidden" }}>
-        <ArticleImage
-          src={story.imageUrl}
-          alt={story.headline}
-          altIsPhotoDescription={false}
-          ratio="thumb"
-          sizes="104px"
-          tone={tone}
-          category={story.kicker ?? "general"}
-        />
-      </div>
+      {story.imageUrl ? (
+        <div style={{ width: 104, flexShrink: 0, borderRadius: 3, overflow: "hidden" }}>
+          <ArticleImage
+            src={story.imageUrl}
+            alt={story.headline}
+            altIsPhotoDescription={false}
+            ratio="thumb"
+            sizes="104px"
+            tone={tone}
+            category={story.kicker ?? "general"}
+          />
+        </div>
+      ) : null}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div>
           <div style={{ marginBottom: 3, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>

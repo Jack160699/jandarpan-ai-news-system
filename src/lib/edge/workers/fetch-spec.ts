@@ -45,7 +45,16 @@ export const FETCH_SPEC: WorkerSpec<FetchParams> = {
     const persistenceSucceeded = !(result.allBatchesFailed || result.persistenceFailed);
     if (result.inserted > 0 && !result.persistenceFailed) await revalidateNewsroomCaches();
 
+    // Nothing attempted = no feed in this shard was due/assigned (and no provider ran): "no_work", not a failure.
+    const nothingAttempted =
+      result.healthySources.length === 0 &&
+      result.failedSources.length === 0 &&
+      result.errors.length === 0 &&
+      result.completedProviders.length === 0 &&
+      result.totalFetched === 0;
+
     const outcome = classifyIngestionOutcome({
+      nothingAttempted,
       fetched: result.totalFetched,
       inserted: result.inserted,
       signalsInserted: result.signalsInserted,
@@ -66,6 +75,7 @@ export const FETCH_SPEC: WorkerSpec<FetchParams> = {
       degraded: outcome.degraded,
       processed: result.inserted + result.signalsInserted,
       failed: outcome.status === "failed" ? 1 : 0,
+      skipped: outcome.classification === "no_work" ? 1 : 0,
       error: outcome.status === "failed" ? (result.errors[0] ?? "ingestion_failed").slice(0, 200) : undefined,
       details: {
         fetched: result.totalFetched,
@@ -80,6 +90,8 @@ export const FETCH_SPEC: WorkerSpec<FetchParams> = {
         healthy_feeds: result.healthySources.length,
         failed_feeds: result.failedSources.length,
         classification: outcome.classification,
+        // Explicit outcome vocabulary shared with the editorial worker and the admin failure center.
+        outcome: outcome.classification === "no_work" ? "no_work" : outcome.status === "failed" ? "failure" : outcome.status === "degraded" ? "degraded" : "ok",
         api_providers_ran: apiOnThisShard,
         errors: result.errors.slice(0, 5).map((e) => e.slice(0, 160)),
       },

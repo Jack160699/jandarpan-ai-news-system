@@ -143,6 +143,10 @@ export function ArticleImage({
       })
     : "";
 
+  // No source image => no image frame at all: the story is a clean text-first card (never an empty tinted
+  // block, never an invented/stock picture). Hooks above have already run, so this early return is safe.
+  if (!src || !src.trim()) return null;
+
   const fixedH = FIXED_H[ratio];
   const [c0, c1] = TONES[tone] ?? TONES.city;
   const safeAlt = display.alt || (altIsPhotoDescription ? alt : "Editorial visual placeholder");

@@ -255,4 +255,30 @@ describe("describeIngestionOutcome", () => {
     expect(msg.detail.toLowerCase()).toContain("persistence");
   });
 });
-
+
+describe("classifyIngestionOutcome: no_work (empty shard / nothing due) is NOT a failure", () => {
+  const empty = (o: Partial<IngestionOutcomeInput> = {}) =>
+    baseInput({ fetched: 0, inserted: 0, signalsInserted: 0, duplicates: 0, queuedForAI: 0, completedProviders: [], skippedProviders: [], nothingAttempted: true, ...o });
+
+  it("a shard with nothing due is no_work: ok, not degraded, status success", () => {
+    const o = classifyIngestionOutcome(empty());
+    expect(o.classification).toBe("no_work");
+    expect(o.status).toBe("success");
+    expect(o.ok).toBe(true);
+    expect(o.degraded).toBe(false);
+  });
+
+  it("the SAME empty result without the nothingAttempted flag is still a genuine failure (feeds were tried and all failed)", () => {
+    const o = classifyIngestionOutcome(empty({ nothingAttempted: false, errors: ["rss: a failed", "rss: b failed"] }));
+    expect(o.classification).toBe("failed_all_providers");
+    expect(o.ok).toBe(false);
+  });
+
+  it("nothingAttempted never masks errors, fetched items or a persistence failure", () => {
+    expect(classifyIngestionOutcome(empty({ errors: ["rss: x failed"] })).classification).not.toBe("no_work");
+    expect(classifyIngestionOutcome(empty({ fetched: 5 })).classification).not.toBe("no_work");
+    const p = classifyIngestionOutcome(empty({ persistenceSucceeded: false }));
+    expect(p.classification).toBe("failed_persistence");
+    expect(p.ok).toBe(false);
+  });
+});

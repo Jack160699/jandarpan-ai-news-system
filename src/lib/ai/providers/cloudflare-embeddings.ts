@@ -25,9 +25,17 @@ import {
 import { buildAiUsageRecord, logAiProviderUsage } from "@/lib/observability/ai-usage/record";
 import type { AiUsageContext } from "@/lib/observability/ai-usage/record";
 import { estimateTokensFromText } from "@/lib/observability/ai-cost/token-estimate";
+import { planEmbeddingInput, type EmbeddingPlan } from "@/lib/ai/providers/embedding-input";
 import type { ClassifiedAiError } from "@/lib/ai/providers/types";
 
 const CLOUDFLARE_ACCOUNTS_URL = "https://api.cloudflare.com/client/v4/accounts";
+
+/**
+ * Circuit/health key for embeddings ONLY. Cloudflare serves several capabilities from one account; they must not
+ * share a circuit - an embeddings failure (e.g. an oversized request) once opened the shared "cloudflare" circuit and
+ * made image processing report provider_unavailable. Image operations use their own key (cloudflare-images.ts).
+ */
+export const CLOUDFLARE_EMBEDDINGS_HEALTH_KEY = "cloudflare:embeddings";
 
 /**
  * Cloudflare's current recommended multilingual embedding model on Workers
@@ -95,7 +103,7 @@ async function postCloudflareEmbeddings(
   const apiToken = process.env.CLOUDFLARE_API_TOKEN!.trim();
   const model = resolveCloudflareEmbeddingModel();
   const started = Date.now();
-  recordProviderRequestStarted("cloudflare", "embeddings");
+  recordProviderRequestStarted(CLOUDFLARE_EMBEDDINGS_HEALTH_KEY, "embeddings");
 
   const controller = new AbortController();
   const timeoutMs = 20_000;
@@ -117,12 +125,16 @@ async function postCloudflareEmbeddings(
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
       const classified = classifyCloudflareFailure(res.status, detail);
-      markProviderUnhealthy("cloudflare", {
-        reason: classified.authFailure ? "cloudflare_unauthorized" : classified.message,
-        httpStatus: res.status,
-        authFailure: classified.authFailure,
-        rateLimited: classified.rateLimited,
-      });
+      // A 400 means OUR request was invalid (e.g. context length exceeded): the provider is healthy, so it must not
+      // open a circuit. Only auth / quota / upstream / network conditions are provider-health signals.
+      if (!classified.invalidRequest) {
+        markProviderUnhealthy(CLOUDFLARE_EMBEDDINGS_HEALTH_KEY, {
+          reason: classified.authFailure ? "cloudflare_unauthorized" : classified.message,
+          httpStatus: res.status,
+          authFailure: classified.authFailure,
+          rateLimited: classified.rateLimited,
+        });
+      }
       throw classified;
     }
 
@@ -135,7 +147,7 @@ async function postCloudflareEmbeddings(
     if (json.success === false) {
       const message = json.errors?.[0]?.message?.slice(0, 240) || "Cloudflare embeddings request failed";
       const classified: ClassifiedAiError = { code: "ai_http_error", message, retryable: false, authFailure: false, invalidRequest: false, rateLimited: false };
-      markProviderUnhealthy("cloudflare", { reason: message });
+      markProviderUnhealthy(CLOUDFLARE_EMBEDDINGS_HEALTH_KEY, { reason: message });
       throw classified;
     }
 
@@ -160,7 +172,7 @@ async function postCloudflareEmbeddings(
       throw mismatch;
     }
 
-    recordProviderRequestCompleted("cloudflare", "embeddings", latencyMs);
+    recordProviderRequestCompleted(CLOUDFLARE_EMBEDDINGS_HEALTH_KEY, "embeddings", latencyMs);
     return {
       vectors,
       model,
@@ -182,11 +194,62 @@ async function postCloudflareEmbeddings(
   }
 }
 
+type EmbeddingResult = { vectors: number[][]; model: string } | { error: ClassifiedAiError };
+
+function logEmbeddingPlan(operation: string, plan: EmbeddingPlan): void {
+  console.warn(
+    "[cloudflare-embeddings] " +
+      JSON.stringify({
+        event: "input_reduced",
+        operation,
+        input_texts: plan.inputTexts,
+        truncated_texts: plan.truncatedTexts,
+        chunks: plan.batches.length,
+        estimated_tokens_before: plan.originalEstimatedTokens,
+        estimated_tokens_after: plan.plannedEstimatedTokens,
+        request_token_budget: plan.limits.requestTokenBudget,
+        text_token_cap: plan.limits.textTokenCap,
+      }),
+  );
+}
+
+/**
+ * Public entry point. NEVER sends an oversized request: the input is capped per text and split into token-budgeted
+ * chunks (in order) BEFORE any provider call, and the reduction is logged. Vectors come back positionally aligned with
+ * `input.texts`. The first failing chunk aborts with that error (partial vectors are never returned).
+ */
 export async function requestCloudflareEmbeddings(input: {
   operation: string;
   texts: string[];
   context?: AiUsageContext;
-}): Promise<{ vectors: number[][]; model: string } | { error: ClassifiedAiError }> {
+}): Promise<EmbeddingResult> {
+  if (!input.texts.length) return requestEmbeddingChunk(input);
+  const plan = planEmbeddingInput(input.texts);
+  if (plan.reduced) logEmbeddingPlan(input.operation, plan);
+
+  const vectors: number[][] = new Array(input.texts.length);
+  let model = "";
+  for (const batch of plan.batches) {
+    const r = await requestEmbeddingChunk({ operation: input.operation, texts: batch.texts, context: input.context });
+    if ("error" in r) return r;
+    model = r.model;
+    if (r.vectors.length !== batch.texts.length) {
+      return {
+        error: { code: "ai_invalid_request", message: "embedding count mismatch for chunk", retryable: false, authFailure: false, invalidRequest: true, rateLimited: false },
+      };
+    }
+    batch.indices.forEach((originalIndex, k) => {
+      vectors[originalIndex] = r.vectors[k]!;
+    });
+  }
+  return { vectors, model };
+}
+
+async function requestEmbeddingChunk(input: {
+  operation: string;
+  texts: string[];
+  context?: AiUsageContext;
+}): Promise<EmbeddingResult> {
   if (!isCloudflareEmbeddingsConfigured()) {
     return {
       error: {
@@ -202,7 +265,7 @@ export async function requestCloudflareEmbeddings(input: {
   if (!input.texts.length) {
     return { vectors: [], model: resolveCloudflareEmbeddingModel() };
   }
-  if (!isProviderHealthy("cloudflare")) {
+  if (!isProviderHealthy(CLOUDFLARE_EMBEDDINGS_HEALTH_KEY)) {
     return {
       error: {
         code: "ai_provider_cooldown",

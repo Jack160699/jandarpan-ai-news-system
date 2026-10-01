@@ -69,6 +69,31 @@ export function classifyCandidateReason(reason: string | null | undefined): Erro
   return "unclassified";
 }
 
+/**
+ * BUSINESS-RULE outcomes of a run that produced no article. These are the pipeline working as designed (a gate said
+ * no), NOT infrastructure failures, and are recorded as explicit outcomes instead of status "failed".
+ */
+export type CandidateOutcome = "rejected_stale" | "rejected_freshness" | "rejected_quality" | "rejected_duplicate" | "quarantined";
+
+export function classifyCandidateOutcome(reason: string | null | undefined): CandidateOutcome | null {
+  if (!reason) return null;
+  if (reason.startsWith("stale_candidate:")) {
+    // source evidence too old => stale; "live event without recent evidence" => freshness rule
+    return /older_than|too_old/.test(reason) ? "rejected_stale" : "rejected_freshness";
+  }
+  if (reason.startsWith("quarantine:")) return "quarantined";
+  if (reason === "slug_already_exists" || reason.startsWith("duplicate")) return "rejected_duplicate";
+  if (
+    reason === "quality_checks_failed" ||
+    reason.startsWith("retryable:") ||
+    reason.startsWith("validation_failed") ||
+    reason.includes("validation_failed")
+  ) {
+    return "rejected_quality";
+  }
+  return null;
+}
+
 export type RunFailureClassification = {
   errorClass: ErrorClass;
   providerRetryable: boolean | null;

@@ -19,7 +19,7 @@ import { DevelopingStoryTeaserCard } from "./DevelopingStoryTeaserCard";
 import { FormatStoryCard } from "./FormatStoryCard";
 import { DurgSolarInlineAd } from "@/components/ads/DurgSolarInlineAd";
 import { resolveCanonicalCategories } from "@/lib/editorial/canonical-categories";
-import { checkStoryEditorialEligibility } from "@/lib/editorial/eligibility";
+import { checkStoryEditorialEligibility, resolveVerifiedStoryMedia } from "@/lib/editorial/eligibility";
 
 const LocalPulseLazy = dynamic(
   () =>
@@ -203,8 +203,8 @@ export function AliveHomeBriefingSlot({ feed, excludeSlugs }: SlotProps) {
       const elig = checkStoryEditorialEligibility(a);
       if (!elig.eligible) continue;
 
-      const verifiedImg = extractVerifiedRealMediaUrl(a) || a.imageUrl;
-      if (!verifiedImg || !hasVerifiedRealMedia(verifiedImg)) continue;
+      // Verified real media only; an article without one stays in the queue as a text-first item (never skipped).
+      const verifiedImg = resolveVerifiedStoryMedia(a);
 
       const hasDev = isDevanagari(a.headline);
       const enTrans = (a as any).translations?.en || (a as any).editorial_metadata?.translations?.en;

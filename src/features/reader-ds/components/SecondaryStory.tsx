@@ -31,17 +31,19 @@ export function SecondaryStory({
         alignItems: "flex-start",
       }}
     >
-      <div style={{ width: 96, flexShrink: 0, borderRadius: 4, overflow: "hidden" }}>
-        <ArticleImage
-          src={story.imageUrl}
-          alt={story.headline}
-          altIsPhotoDescription={false}
-          ratio="thumb"
-          sizes="96px"
-          tone={tone}
-          category={story.kicker ?? "general"}
-        />
-      </div>
+      {story.imageUrl ? (
+        <div style={{ width: 96, flexShrink: 0, borderRadius: 4, overflow: "hidden" }}>
+          <ArticleImage
+            src={story.imageUrl}
+            alt={story.headline}
+            altIsPhotoDescription={false}
+            ratio="thumb"
+            sizes="96px"
+            tone={tone}
+            category={story.kicker ?? "general"}
+          />
+        </div>
+      ) : null}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <div style={{ marginBottom: 3 }}>
           <Tag>{story.kicker ?? "ख़बर"}</Tag>

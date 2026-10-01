@@ -200,16 +200,18 @@ export function AajKaDarpan({ briefing, feed }: AajKaDarpanProps) {
                   prefetch={false}
                   className="jd-darpan-side__item"
                 >
-                  <div className="jd-darpan-side__img">
-                    <ArticleImage
-                      src={story.imageUrl}
-                      alt={story.headline}
-                      altIsPhotoDescription={false}
-                      ratio="thumb"
-                      sizes="80px"
-                      category={story.section || "general"}
-                    />
-                  </div>
+                  {story.imageUrl ? (
+                    <div className="jd-darpan-side__img">
+                      <ArticleImage
+                        src={story.imageUrl}
+                        alt={story.headline}
+                        altIsPhotoDescription={false}
+                        ratio="thumb"
+                        sizes="80px"
+                        category={story.section || "general"}
+                      />
+                    </div>
+                  ) : null}
                   <div className="jd-darpan-side__content">
                     <span className="jd-ui jd-darpan-side__tag">{tagLabel}</span>
                     <h3 className="jd-serif jd-darpan-side__headline">

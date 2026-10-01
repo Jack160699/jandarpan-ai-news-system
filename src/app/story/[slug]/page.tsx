@@ -69,11 +69,10 @@ export async function generateMetadata({ params, searchParams }: PageProps) {
 
   const generated = await getStoryArticleBySlug(slug);
   if (generated) {
+    // A published story is always indexable; the OG image is only set when verified real media exists.
     const verified = extractVerifiedRealMediaUrl(generated);
-    if (!verified || !hasVerifiedRealMedia(verified)) {
-      return { title: "Story not found" };
-    }
-    const ogImage = resolveArticleDisplayImage(generated).ogUrl;
+    const hasVerified = Boolean(verified && hasVerifiedRealMedia(verified));
+    const ogImage = hasVerified ? resolveArticleDisplayImage(generated).ogUrl : "";
     return buildLocalizedStoryMetadata(generated, {
       displayLanguage: displayLang,
       ogImage: ogImage || undefined,
@@ -92,11 +91,6 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
 
   const generatedRow = await getStoryArticleBySlug(slug);
   if (!generatedRow) notFound();
-
-  const verifiedMedia = extractVerifiedRealMediaUrl(generatedRow);
-  if (!verifiedMedia || !hasVerifiedRealMedia(verifiedMedia)) {
-    notFound();
-  }
 
   if (
     generatedRow.slug &&

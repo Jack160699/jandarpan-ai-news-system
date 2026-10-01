@@ -23,6 +23,8 @@ export type IngestionStatus = "success" | "degraded" | "failed";
 export type IngestionClassification =
   | "healthy_new_content"
   | "healthy_no_novel_content"
+  /** Nothing was due / assigned (e.g. an empty RSS shard): not a failure, not degraded - there was simply no work. */
+  | "no_work"
   | "degraded_provider_failure"
   | "degraded_quota"
   | "skipped_backpressure"
@@ -80,6 +82,11 @@ export type IngestionOutcomeInput = {
   skippedBackpressure?: boolean;
   /** Missing Supabase / provider credentials. */
   configurationFailed?: boolean;
+  /**
+   * True when no source was even attempted (nothing due / no feeds assigned to this shard) and nothing errored.
+   * Such a run is "no_work", never "failed_all_providers".
+   */
+  nothingAttempted?: boolean;
 };
 
 const KNOWN_SOURCE_PROVIDERS = ["newsdata", "gnews", "rss"] as const;
@@ -188,6 +195,18 @@ export function classifyIngestionOutcome(
       ok: false,
       degraded: false,
       failureReason: "persistence_failed",
+    };
+  }
+
+  // Nothing was due: an explicit, non-failure outcome (empty shard). Checked BEFORE the all-providers failure rule.
+  if (input.nothingAttempted && input.errors.length === 0 && input.fetched === 0 && !persistedUseful) {
+    return {
+      ...base,
+      status: "success",
+      classification: "no_work",
+      ok: true,
+      degraded: false,
+      failureReason: null,
     };
   }
 

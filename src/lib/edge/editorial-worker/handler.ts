@@ -18,6 +18,7 @@
 
 import { authorizeWorkerRequest } from "@/lib/edge/editorial-worker/auth";
 import {
+  classifyCandidateOutcome,
   classifyRunFailure,
   type ErrorClass,
 } from "@/lib/edge/editorial-worker/classify";
@@ -49,6 +50,11 @@ export type WorkerStatus =
   | "dry_run_ok"
   | "dry_run_gated"
   | "no_eligible_item"
+  | "rejected_stale"
+  | "rejected_freshness"
+  | "rejected_quality"
+  | "rejected_duplicate"
+  | "quarantined"
   | "failed"
   | "overlap_lock"
   | "kill_switch_off"
@@ -433,13 +439,22 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
     } else if (item.ok && item.articleId) {
       status = "generated_unpublished";
     } else {
-      status = "failed";
       errorReason = item.reason ?? batch.errors[0] ?? null;
       const cls = classifyRunFailure({ reason: errorReason, calls });
-      errorClass = cls.errorClass;
-      providerRetryable = cls.providerRetryable;
+      // A gate saying "no" (stale / freshness / quality / duplicate / quarantine) is an explicit OUTCOME, not a failure.
+      // Only a provider/runtime problem (no draft produced, invalid model output, unclassified) stays "failed".
+      const businessOutcome = cls.providerRetryable === null && cls.errorClass !== "invalid_output" ? classifyCandidateOutcome(errorReason) : null;
+      if (businessOutcome) {
+        status = businessOutcome;
+        errorClass = cls.errorClass;
+      } else {
+        status = "failed";
+        errorClass = cls.errorClass;
+        providerRetryable = cls.providerRetryable;
+      }
     }
 
+    const isRejection = status.startsWith("rejected_") || status === "quarantined";
     const ok = status !== "failed";
     const resultFields = {
       ok,
@@ -489,14 +504,18 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
           startedAt,
           durationMs: Date.now() - startedAtMs,
           runId,
-          error: errorReason ?? undefined,
+          // Only genuine failures carry an error: a business rejection is an outcome, kept in metadata.outcome_reason.
+          error: status === "failed" ? (errorReason ?? undefined) : undefined,
           processed: status === "published" ? 1 : 0,
-          skipped: status === "no_eligible_item" ? 1 : 0,
+          skipped: status === "no_eligible_item" || isRejection ? 1 : 0,
           failed: status === "failed" ? 1 : 0,
           metadata: {
             runtime: "supabase-edge",
             correlation_id: correlationId,
             status,
+            // Explicit outcome vocabulary shared with the fetch worker and the admin failure center.
+            outcome: status === "failed" ? "failure" : status === "no_eligible_item" ? "no_work" : status,
+            outcome_reason: errorReason,
             event_id: resultFields.event_id,
             article_id: resultFields.article_id,
             provider,
