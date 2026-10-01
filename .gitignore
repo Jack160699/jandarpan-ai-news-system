@@ -56,3 +56,4 @@ sa_parsed.json
 # generated operator artifacts
 remediation-plan.sql
 voice-samples/
+.edge-secrets.local
