@@ -53,6 +53,8 @@ export type WorkerStatus =
   | "not_enabled"
   | "no_ai_provider"
   | "durable_quota_unavailable"
+  | "quota_probe_ok"
+  | "quota_probe_failed"
   | "deadline_exceeded"
   | "bad_request"
   | "unauthorized"
@@ -72,6 +74,14 @@ export type WorkerDeps = {
    * in-memory counters reset each call and RPM/TPM/RPD/TPD limits would NOT be enforced.
    */
   isDurableQuotaConfigured(): boolean;
+  /**
+   * A real round-trip through the shared counters' own code path (an EVAL). Credentials being present is not enough:
+   * if the atomic call fails the quota governor silently degrades to per-isolate memory, so run mode must refuse.
+   * Optional so a deployment without a probe keeps the configured-only check.
+   */
+  verifyDurableQuota?(): Promise<boolean>;
+  /** quota_probe mode: N concurrent atomic check-and-increments against a throwaway key; exactly `limit` may win. */
+  probeQuotaAtomicity?(): Promise<{ winners: number; limit: number; parallel: number } | null>;
   recordRun(run: {
     ok: boolean;
     degraded: boolean;
@@ -112,6 +122,8 @@ export type WorkerResponseBody = {
   resources: ResourceReport | null;
   lease: { key: string; acquired: boolean } | null;
   candidate_pool?: BatchEditorialResult["candidatePool"] | null;
+  /** quota_probe mode only: result of the Redis round-trip + atomicity check run from inside the Edge runtime. */
+  quota_probe?: { configured: boolean; verified: boolean; atomic: boolean | null; winners: number | null; limit: number | null; parallel: number | null; latency_ms: number | null };
   /** Test mode + include_logs only: everything the run wrote to console (raw, for secret scanning). */
   debug_logs?: string[];
   runtime_probe?: Record<string, unknown>;
@@ -204,6 +216,7 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
       resources: fields.resources ?? null,
       lease: fields.lease ?? null,
       candidate_pool: fields.candidate_pool,
+      ...(fields.quota_probe ? { quota_probe: fields.quota_probe } : {}),
       ...(capture ? { debug_logs: capture.lines.slice(), runtime_probe: probeRuntime() } : {}),
     };
     return json(body, httpStatus);
@@ -225,6 +238,22 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
   const body = await readBody(request);
   if (body === "too_large" || body === "invalid") {
     return respond("bad_request", 400, { ok: false, error_reason: `body_${body}` });
+  }
+
+  // Read-only Redis diagnostic: authenticated, no AI, no database, no lease. Proves the shared quota store is reachable and
+  // atomic from inside the Edge runtime without enabling generation.
+  if (body.mode === "quota_probe") {
+    const configured = deps.isDurableQuotaConfigured();
+    const t0 = Date.now();
+    const verified = configured && deps.verifyDurableQuota ? await deps.verifyDurableQuota() : false;
+    const atom = configured && verified && deps.probeQuotaAtomicity ? await deps.probeQuotaAtomicity() : null;
+    const atomic = atom ? atom.winners === atom.limit : null;
+    const pass = configured && verified && atomic === true;
+    log.info("quota_probe", { configured, verified, atomic });
+    return respond(pass ? "quota_probe_ok" : "quota_probe_failed", 200, {
+      ok: pass,
+      quota_probe: { configured, verified, atomic, winners: atom?.winners ?? null, limit: atom?.limit ?? null, parallel: atom?.parallel ?? null, latency_ms: configured ? Date.now() - t0 : null },
+    });
   }
 
   const mode: "run" | "test" = body.mode === "test" ? "test" : "run";
@@ -283,6 +312,10 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
     if (mode === "run" && !deps.isDurableQuotaConfigured()) {
       log.error("skipped", { reason: "durable_quota_unavailable", hint: "set UPSTASH_REDIS_REST_URL/TOKEN as Edge secrets" });
       return respond("durable_quota_unavailable", 200, { ok: false, mode, error_reason: "durable_quota_unavailable" });
+    }
+    if (mode === "run" && deps.verifyDurableQuota && !(await deps.verifyDurableQuota())) {
+      log.error("skipped", { reason: "durable_quota_unavailable", hint: "Redis is configured but an atomic EVAL round-trip failed" });
+      return respond("durable_quota_unavailable", 200, { ok: false, mode, error_reason: "durable_quota_unverified" });
     }
     if (mode === "test" && !deps.isDurableQuotaConfigured()) {
       log.warn("ephemeral_quota", { note: "provider limits are per-isolate in this test run" });

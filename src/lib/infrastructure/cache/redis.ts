@@ -87,13 +87,16 @@ export async function redisEval<T = unknown>(
   if (!cfg) return null;
 
   try {
-    const res = await fetch(`${cfg.url}/eval`, {
+    // Generic command endpoint with EVAL's positional form. The `/eval` path rejects a [script, keys, args]
+    // body ("wrong number of arguments for 'eval'"), which made every reservation silently fall back to the
+    // per-process counter.
+    const res = await fetch(cfg.url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${cfg.token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify([script, keys, args.map(String)]),
+      body: JSON.stringify(["EVAL", script, String(keys.length), ...keys, ...args.map(String)]),
       signal: AbortSignal.timeout(2_500),
     });
     if (!res.ok) return null;

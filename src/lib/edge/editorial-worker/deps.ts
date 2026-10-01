@@ -4,7 +4,7 @@
  */
 
 import { isAnyChatProviderConfigured } from "@/lib/ai/providers/chat";
-import { isRedisConfigured } from "@/lib/infrastructure/cache/redis";
+import { isRedisConfigured, redisDel, redisEval } from "@/lib/infrastructure/cache/redis";
 import { drainBackground } from "@/lib/runtime/background";
 import { acquireWorkerRunLease } from "@/lib/infrastructure/workers/run-guard";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
@@ -34,6 +34,18 @@ export function createProductionDeps(env: Record<string, string | undefined> = p
     isSchedulerEnabled: readSchedulerEnabled,
     isAnyProviderConfigured: isAnyChatProviderConfigured,
     isDurableQuotaConfigured: isRedisConfigured,
+    verifyDurableQuota: async () => (await redisEval<number>("return 1", [], [])) === 1,
+    probeQuotaAtomicity: async () => {
+      const key = `jd:edge-quota-probe:${crypto.randomUUID()}`;
+      const limit = 3;
+      const parallel = 20;
+      const script =
+        "local c = redis.call('INCR', KEYS[1]); if c > tonumber(ARGV[1]) then redis.call('DECR', KEYS[1]); return 0 end; redis.call('EXPIRE', KEYS[1], 60); return 1";
+      const results = await Promise.all(Array.from({ length: parallel }, () => redisEval<number>(script, [key], [limit])));
+      await redisDel(key);
+      if (results.some((r) => r === null)) return null;
+      return { winners: results.filter((r) => Number(r) === 1).length, limit, parallel };
+    },
     recordRun: (run) =>
       recordCronRun({
         job: "editorial-generate",
