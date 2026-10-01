@@ -82,6 +82,9 @@ jobs:
             "300"
 
       - name: Stage 4 — Editorial generation (primary)
+        # PAUSED: this call can reach CodeCraft (editorial_generate/editorial_repair) while the account is under billing/policy verification.
+        # Re-enable by setting the repo variable LEGACY_EDITORIAL_ENABLED=true (Settings > Secrets and variables > Actions > Variables).
+        if: ${{ vars.LEGACY_EDITORIAL_ENABLED == 'true' }}
         run: |
           bash .github/scripts/invoke-cron-endpoint.sh \
             "editorial_generate" \
