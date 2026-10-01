@@ -64,6 +64,9 @@ const FLAGS = {
   AUDIO_GENERATION_ENABLED: "false",
   // deepseek-v4-pro-0813 spends hidden reasoning tokens: a 500-token repair budget came back EMPTY (ai_empty_response) in the first
   // production cycle. Visible output + reasoning must fit; these are caps, not charges (the governor reconciles to real usage).
+  // Default is "shadow" (decide + record, never block): the first production cycle published the same story twice (similarity 0.956 vs the 0.88
+  // same-language threshold; unrelated stories scored 0.50-0.56). enforce makes the duplicate gate actually block.
+  CROSS_LANG_DEDUPE_MODE: "enforce",
   OPENAI_REPAIR_MAX_TOKENS: "3000",
   OPENAI_EDITORIAL_MAX_TOKENS: "5000",
   AI_QUOTA_REQUIRE_DURABLE: "true", // Edge isolates are ephemeral: a quota-store outage must fail CLOSED, never fall back to memory
