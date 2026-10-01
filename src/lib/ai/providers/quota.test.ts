@@ -7,11 +7,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // "Redis path wiring" block exercises the in-memory fallback.
 const mockIsRedisConfigured = vi.fn(() => false);
 const mockRedisEval = vi.fn();
+const mockRedisIncrBy = vi.fn(async (..._args: unknown[]): Promise<number | null> => null);
 vi.mock("@/lib/infrastructure/cache/redis", () => ({
   isRedisConfigured: () => mockIsRedisConfigured(),
   redisEval: (...args: unknown[]) => mockRedisEval(...args),
   redisGet: vi.fn(async () => null),
-  redisIncrBy: vi.fn(async () => null),
+  redisIncrBy: (...args: unknown[]) => mockRedisIncrBy(...args),
 }));
 
 import {
@@ -35,6 +36,8 @@ afterEach(() => {
   vi.unstubAllEnvs();
   mockIsRedisConfigured.mockReturnValue(false);
   mockRedisEval.mockReset();
+  mockRedisIncrBy.mockReset();
+  mockRedisIncrBy.mockResolvedValue(null);
   __resetCloudflareNeuronsForTests();
   __resetQuotaCountersForTests();
 });
@@ -187,6 +190,27 @@ describe("reserveQuota — provider+model bucket isolation", () => {
     const fallback = getProviderLimits("groq", "qwen/qwen3.6-27b");
     const providerLevel = getProviderLimits("groq");
     expect(fallback).toEqual(providerLevel);
+  });
+});
+
+describe("reconcileQuotaUsage (Redis)", () => {
+  const reservation = { provider: "codecraft", model: "m", tokenWeight: 512, priority: "normal", tpdTracked: true } as const;
+
+  it("applies the delta to both tpm and tpd", async () => {
+    mockIsRedisConfigured.mockReturnValue(true);
+    mockRedisIncrBy.mockResolvedValue(123);
+    await reconcileQuotaUsage(reservation as never, { inputTokens: 338, outputTokens: 494 });
+    expect(mockRedisIncrBy).toHaveBeenCalledWith("ai-quota:codecraft:m:tpm", 320);
+    expect(mockRedisIncrBy).toHaveBeenCalledWith("ai-quota:codecraft:m:tpd", 320);
+  });
+
+  it("warns (instead of failing silently) when Redis did not apply the correction", async () => {
+    mockIsRedisConfigured.mockReturnValue(true);
+    mockRedisIncrBy.mockResolvedValue(null);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await reconcileQuotaUsage(reservation as never, { inputTokens: 10, outputTokens: 10 });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("reconcile not applied for codecraft/m"));
+    warn.mockRestore();
   });
 });
 
