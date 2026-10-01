@@ -172,6 +172,20 @@ describe("handler: durable quota (limits must be enforceable across isolates)", 
     expect(deps.generate).not.toHaveBeenCalled();
   });
 
+  it("run mode refuses when Redis is configured but the atomic EVAL round-trip fails (no silent per-isolate fallback)", async () => {
+    const { deps } = makeDeps({ verifyDurableQuota: vi.fn(async () => false) });
+    const r = await run(req(), deps);
+    expect(r.body).toMatchObject({ ok: false, status: "durable_quota_unavailable", error_reason: "durable_quota_unverified" });
+    expect(deps.acquireLease).not.toHaveBeenCalled();
+    expect(deps.generate).not.toHaveBeenCalled();
+  });
+
+  it("run mode proceeds when the durable-quota round-trip succeeds", async () => {
+    const { deps } = makeDeps({ verifyDurableQuota: vi.fn(async () => true) });
+    await run(req(), deps);
+    expect(deps.generate).toHaveBeenCalledTimes(1);
+  });
+
   it("test mode may proceed with ephemeral quota (one dry-run story) and says so in the log", async () => {
     const { deps, lines } = makeDeps({
       isDurableQuotaConfigured: () => false,
@@ -180,6 +194,27 @@ describe("handler: durable quota (limits must be enforceable across isolates)", 
     await run(req({ mode: "test", event_id: EVENT }), deps);
     expect(deps.generate).toHaveBeenCalledTimes(1);
     expect(lines.some((l) => JSON.parse(l).event === "ephemeral_quota")).toBe(true);
+  });
+});
+
+describe("handler: quota_probe (read-only Redis diagnostic)", () => {
+  it("is authenticated, never touches the lease, the kill switch or the AI, and reports atomicity", async () => {
+    const { deps } = makeDeps({
+      verifyDurableQuota: vi.fn(async () => true),
+      probeQuotaAtomicity: vi.fn(async () => ({ winners: 3, limit: 3, parallel: 20 })),
+    });
+    const r = await run(req({ mode: "quota_probe" }), deps);
+    expect(r.body).toMatchObject({ ok: true, status: "quota_probe_ok", quota_probe: { configured: true, verified: true, atomic: true, winners: 3 } });
+    expect(deps.acquireLease).not.toHaveBeenCalled();
+    expect(deps.isSchedulerEnabled).not.toHaveBeenCalled();
+    expect(deps.generate).not.toHaveBeenCalled();
+  });
+
+  it("fails when the counters are not atomic or Redis is missing", async () => {
+    const bad = makeDeps({ verifyDurableQuota: async () => true, probeQuotaAtomicity: async () => ({ winners: 9, limit: 3, parallel: 20 }) });
+    expect((await run(req({ mode: "quota_probe" }), bad.deps)).body).toMatchObject({ ok: false, status: "quota_probe_failed" });
+    const none = makeDeps({ isDurableQuotaConfigured: () => false });
+    expect((await run(req({ mode: "quota_probe" }), none.deps)).body).toMatchObject({ ok: false, status: "quota_probe_failed", quota_probe: { configured: false } });
   });
 });
 

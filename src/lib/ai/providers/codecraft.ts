@@ -64,7 +64,23 @@ export function classifyCodeCraftFailure(status: number, body: string): Classifi
   return { code: "ai_http_error", message, httpStatus: status, retryable: false, authFailure: false, invalidRequest: false, rateLimited: false };
 }
 
-function parseSseChunks(rawText: string): { content: string; error?: string } {
+export type CodeCraftUsage = { inputTokens: number; outputTokens: number };
+
+/**
+ * The gateway reports real token usage (including hidden reasoning tokens) in the final stream chunk. A chars/4 estimate
+ * undercounted a reasoning model ~25x (832 real vs ~34 estimated on the live verification call), which made the TPM/TPD
+ * governor meaningless - so real usage is preferred and the estimate is only a fallback.
+ */
+export function readCodeCraftUsage(raw: unknown): CodeCraftUsage | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const u = raw as Record<string, unknown>;
+  const input = Number(u.prompt_tokens ?? u.input_tokens);
+  const output = Number(u.completion_tokens ?? u.output_tokens);
+  if (!Number.isFinite(input) || !Number.isFinite(output) || input < 0 || output < 0 || input + output === 0) return undefined;
+  return { inputTokens: Math.round(input), outputTokens: Math.round(output) };
+}
+
+export function parseSseChunks(rawText: string): { content: string; error?: string; usage?: CodeCraftUsage } {
   // Support direct non-SSE JSON responses from CodeCraft
   try {
     const directJson = JSON.parse(rawText);
@@ -73,10 +89,11 @@ function parseSseChunks(rawText: string): { content: string; error?: string } {
     }
     const directContent = directJson.choices?.[0]?.message?.content || directJson.choices?.[0]?.text;
     if (typeof directContent === "string" && directContent.trim()) {
-      return { content: directContent };
+      return { content: directContent, usage: readCodeCraftUsage(directJson.usage) };
     }
   } catch {}
 
+  let usage: CodeCraftUsage | undefined;
   let content = "";
   const lines = rawText.split("\n");
   for (const line of lines) {
@@ -89,6 +106,7 @@ function parseSseChunks(rawText: string): { content: string; error?: string } {
       if (parsed.error?.message) {
         return { content: "", error: parsed.error.message };
       }
+      usage = readCodeCraftUsage(parsed.usage) ?? usage;
       const delta =
         parsed.choices?.[0]?.delta?.content ||
         parsed.choices?.[0]?.delta?.text ||
@@ -97,7 +115,7 @@ function parseSseChunks(rawText: string): { content: string; error?: string } {
       if (delta && typeof delta === "string") content += delta;
     } catch {}
   }
-  return { content };
+  return { content, usage };
 }
 
 async function postCodeCraft(request: ChatCompletionRequest, model: string): Promise<{ content: string; latencyMs: number; inputTokens: number; outputTokens: number }> {
@@ -153,7 +171,7 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
     }
 
     const rawStreamText = await res.text();
-    const { content, error: streamError } = parseSseChunks(rawStreamText);
+    const { content, error: streamError, usage } = parseSseChunks(rawStreamText);
 
     if (streamError) {
       const classified = withRateLimitHints(
@@ -180,8 +198,8 @@ async function postCodeCraft(request: ChatCompletionRequest, model: string): Pro
     return {
       content: content.trim(),
       latencyMs,
-      inputTokens: Math.ceil(request.user.length / 4),
-      outputTokens: Math.ceil(content.length / 4),
+      inputTokens: usage?.inputTokens ?? Math.ceil(request.user.length / 4),
+      outputTokens: usage?.outputTokens ?? Math.ceil(content.length / 4),
     };
   } catch (err) {
     if (err && typeof err === "object" && "retryable" in err && "code" in err) throw err;

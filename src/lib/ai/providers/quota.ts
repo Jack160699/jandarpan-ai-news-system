@@ -426,7 +426,12 @@ export async function reconcileQuotaUsage(
     if (isRedisConfigured()) {
       const ops = [redisIncrBy(tpmKey, delta)];
       if (reservation.tpdTracked) ops.push(redisIncrBy(tpdKey, delta));
-      await Promise.all(ops);
+      const applied = await Promise.all(ops);
+      // redisIncrBy swallows its own errors and returns null; surface it so a missed reconcile is observable
+      // (the counters then keep the up-front reservation estimate).
+      if (applied.some((v) => v === null)) {
+        console.warn(`[ai-quota] reconcile not applied for ${reservation.provider}${reservation.model ? "/" + reservation.model : ""} (delta ${delta}); counters keep the reservation estimate`);
+      }
     } else {
       const now = Date.now();
       const tpm = memoryGet(tpmKey, now);
