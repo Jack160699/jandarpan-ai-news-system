@@ -2,6 +2,7 @@
  * Persist raw provider output → news_signals (never public)
  */
 
+import { joinDescriptionAndContent } from "@/lib/news/ingestion/feed-fulltext";
 import { createAdminServerClient } from "@/lib/supabase";
 import { tagGeoFromContent } from "@/lib/regional/geo-tagging";
 import { canonicalArticleUrl } from "@/lib/news/normalize";
@@ -74,10 +75,8 @@ export function normalizedToSignal(
   article: NormalizedArticle,
   meta?: JsonObject
 ): NewsSignalInsert {
-  const rawContent = [article.description, article.content]
-    .filter(Boolean)
-    .join("\n\n")
-    .trim();
+  // description is usually the lead of content: joining both double-counts it (and inflates the body-evidence length).
+  const rawContent = joinDescriptionAndContent(article.description, article.content);
 
   const geo = tagGeoFromContent({
     title: article.title,
@@ -105,9 +104,10 @@ export function normalizedToSignal(
       title_hash: meta?.title_hash,
       url_hash: meta?.url_hash,
       slug: meta?.slug,
-      geo,
-      embedded_video: article.embedded_video,
+      geo,
+      embedded_video: article.embedded_video,
       media_records: article.media_records,
+      text_enrichment: article.text_enrichment,
       ...(meta ?? {}),
     }),
   };

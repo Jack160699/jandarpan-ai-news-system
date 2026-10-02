@@ -29,6 +29,8 @@ export type NormalizedArticle = {
    * Discovered embeddable videos (e.g. YouTube)
    */
   embedded_video?: import("@/lib/media/media-record").EmbeddedVideo[];
+  /** How the source text was obtained + publisher attribution (stored in ingestion_metadata.text_enrichment). */
+  text_enrichment?: import("@/lib/news/ingestion/feed-fulltext").TextEnrichment;
   /**
    * Ingestion source-state key (e.g. rss:haribhoomi). Used to advance cursors
    * only after successful news_signals persistence.

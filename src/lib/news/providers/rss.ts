@@ -23,6 +23,7 @@ import {
   safeParsePublishedAt,
 } from "@/lib/news/sanitize-article";
 import { enrichRssArticlesBatch } from "@/lib/news/rss-enrich";
+import { pickFeedBodyText, type TextEnrichment } from "@/lib/news/ingestion/feed-fulltext";
 import { parseFeedResilient } from "@/lib/news/rss-fetch";
 import {
   isRssSourceBlocked,
@@ -95,10 +96,16 @@ function mapRssItem(
       articleUrl = rawLink;
     }
 
+    // The publisher's own full text when its feed carries it (<content:encoded>), else the longest excerpt field.
+    const feedBody = pickFeedBodyText(item as unknown as Record<string, unknown>);
     const rawContent =
+      feedBody?.text ??
       item.contentSnippet ??
       (item.content ? stripHtml(String(item.content)) : null) ??
       (item.summary ? stripHtml(String(item.summary)) : null);
+    const textEnrichment: TextEnrichment | undefined = feedBody
+      ? { method: feedBody.method, chars: feedBody.text.length, publisher: source.name, source_url: articleUrl }
+      : undefined;
 
     let description =
       item.contentSnippet?.trim() ??
@@ -135,6 +142,7 @@ function mapRssItem(
       title,
       description,
       content: rawContent ? String(rawContent).slice(0, 8000) : description,
+      text_enrichment: textEnrichment,
       image_url: imageUrl,
       source: source.name,
       author: item.creator?.trim() ?? null,
