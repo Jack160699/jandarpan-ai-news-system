@@ -7,6 +7,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { getServiceRoleEnv } from "@/lib/supabase/env";
 import { assertServerOnly } from "@/utils/env";
+import { egressMeterEnabled, meteredFetch } from "@/lib/observability/egress-meter";
 
 const globalForSupabase = globalThis as unknown as {
   __supabaseAdmin?: SupabaseClient<Database>;
@@ -20,7 +21,12 @@ function adminOptions() {
     },
     global:
       typeof globalThis.fetch === "function"
-        ? { fetch: globalThis.fetch.bind(globalThis) }
+        ? {
+            // JD_EGRESS_METER=true counts requests/bytes per table for the workers' run metadata (see egress-meter.ts).
+            fetch: egressMeterEnabled()
+              ? meteredFetch(globalThis.fetch.bind(globalThis))
+              : globalThis.fetch.bind(globalThis),
+          }
         : undefined,
   };
 }

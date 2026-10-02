@@ -10,8 +10,14 @@ import { drainBackground } from "@/lib/runtime/background";
 import { acquireWorkerRunLease } from "@/lib/infrastructure/workers/run-guard";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { generateEditorialsFromEvents } from "@/lib/news/ai/generate-article";
+import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 import { createAdminServerClient } from "@/lib/supabase";
 import type { WorkerDeps } from "@/lib/edge/editorial-worker/handler";
+
+const PURGE_GATE_KEY = "jd:site-purge-gate";
+const PURGE_DEBOUNCE_SECONDS = 1800;
+const PURGE_GATE_SCRIPT =
+  "local r = redis.call('SET', KEYS[1], '1', 'NX', 'EX', tonumber(ARGV[1])); if r then return 1 else return 0 end";
 
 async function readSchedulerEnabled(): Promise<boolean | null> {
   try {
@@ -65,6 +71,13 @@ export function createProductionDeps(env: Record<string, string | undefined> = p
         metadata: run.metadata,
       }),
     drainBackground: (ms) => drainBackground(ms),
+    // Publishing is what changes list pages: purge the site's caches (bounded, never throws -- see isr.edge.ts).
+    // Debounced to one purge per PURGE_DEBOUNCE_SECONDS: every purge forces the next list/hub request to re-read its pool.
+    revalidatePublished: async () => {
+      const gate = await redisEval<number>(PURGE_GATE_SCRIPT, [PURGE_GATE_KEY], [PURGE_DEBOUNCE_SECONDS]).catch(() => null);
+      if (gate === 0) return; // purged within the last window; the cache TTL bounds staleness
+      await revalidateNewsroomCaches({ publishedStories: 1 });
+    },
     env,
     newId: () => crypto.randomUUID(),
   };

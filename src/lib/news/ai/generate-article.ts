@@ -570,6 +570,9 @@ async function loadExistingSignalIdSet(signalIds: string[]): Promise<Set<string>
   return existing;
 }
 
+/** Recent-article window used for headline / body-fingerprint / hero-image duplicate checks (1.5 days at 100 stories/day; the authoritative final-text dedupe covers older). Re-read on every 5-min editorial wake, so it is bounded. */
+const STORY_INDEX_LIMIT = 150;
+
 type StoryIndexRow = {
   id: string | null;
   headline: string | null;
@@ -591,7 +594,7 @@ async function loadStoryIndexRows(supabase: ReturnType<typeof createAdminServerC
     .from("generated_articles")
     .select(`${META}, body_fingerprint` as never)
     .order("created_at", { ascending: false })
-    .limit(500);
+    .limit(STORY_INDEX_LIMIT);
 
   if (withFp.error) {
     // Column not deployed yet (migration 094): keep the previous behaviour exactly.
@@ -599,7 +602,7 @@ async function loadStoryIndexRows(supabase: ReturnType<typeof createAdminServerC
       .from("generated_articles")
       .select(`${META}, article_body`)
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(STORY_INDEX_LIMIT);
     return (legacy.data ?? []).map((r) => ({
       ...(r as unknown as StoryIndexRow),
       fingerprint: r.article_body ? fingerprintBody(r.article_body) : null,
@@ -2316,10 +2319,6 @@ export async function generateEditorialsFromEvents(
   }
 
   const supabase = createAdminServerClient();
-  const storyIndex = await loadExistingStoryIndex();
-  const existingHeadlines = [...storyIndex.headlines];
-  const existingBodyFingerprints = [...storyIndex.bodyFingerprints];
-  const usedEventIds = new Set(storyIndex.eventIds);
   const qualityMetrics = createGenerationQualityMetrics();
   const validationAttempts = new Map<string, number>();
 
@@ -2391,6 +2390,13 @@ export async function generateEditorialsFromEvents(
       results: [],
     };
   }
+
+  // Read AFTER the candidate pool: a wake with nothing to do (the common idle case, every 5 minutes) returns above without
+  // paying for the recent-article index.
+  const storyIndex = await loadExistingStoryIndex();
+  const existingHeadlines = [...storyIndex.headlines];
+  const existingBodyFingerprints = [...storyIndex.bodyFingerprints];
+  const usedEventIds = new Set(storyIndex.eventIds);
 
   const windowed = (events as NewsEventRow[]).filter(
     (e) => isWithinAutoGenerationWindow(e) && !usedEventIds.has(e.id)

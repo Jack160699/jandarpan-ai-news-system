@@ -14,6 +14,7 @@ type UntypedQuery = PromiseLike<QueryResult> & {
   insert: (values: unknown) => UntypedQuery;
   eq: (column: string, value: unknown) => UntypedQuery;
   is: (column: string, value: unknown) => UntypedQuery;
+  in: (column: string, values: unknown[]) => UntypedQuery;
   limit: (count: number) => UntypedQuery;
   maybeSingle: () => PromiseLike<QueryResult>;
 };
@@ -137,9 +138,21 @@ export async function loadIngestionSourceState(
   }
 }
 
-/** All source-state rows for a tenant scope in one query (poll gating / dashboards). */
+/**
+ * Columns the poll-gating decision reads (shouldPollSource / nextPollDelayMs / deriveSourceHealth). The full row carries
+ * cursor tokens, lease fields and a metadata blob (~760 B/row as JSON); this subset is ~430 B.
+ */
+const POLL_GATING_COLUMNS =
+  "source_key,provider_family,tenant_id,enabled,health_state,last_attempted_at,last_successful_at,last_new_item_at,last_item_timestamp,consecutive_failures,consecutive_empty_runs,disabled_until,quota_exhausted_until,rate_limited_until,retirement_reason";
+
+/**
+ * Source-state rows for a tenant scope in one query (poll gating / dashboards).
+ * `options.sourceKeys` restricts the read to the caller's own sources and `options.forPollGating` to the columns the gate
+ * needs: each Edge fetch shard runs every 10 minutes and used to download ALL 61 full rows (46 KB) just to gate its own ~6.
+ */
 export async function loadAllIngestionSourceStates(
-  tenantId: string | null = null
+  tenantId: string | null = null,
+  options: { sourceKeys?: string[]; forPollGating?: boolean } = {}
 ): Promise<Map<string, IngestionSourceStateRow>> {
   const map = new Map<string, IngestionSourceStateRow>();
   if (!isSupabaseConfigured()) {
@@ -149,10 +162,14 @@ export async function loadAllIngestionSourceStates(
     return map;
   }
   try {
-    let q = db().from("ingestion_source_state").select("*");
+    let q = db().from("ingestion_source_state").select(options.forPollGating ? POLL_GATING_COLUMNS : "*");
     q = tenantId ? q.eq("tenant_id", tenantId) : q.is("tenant_id", null);
+    if (options.sourceKeys) {
+      if (options.sourceKeys.length === 0) return map;
+      q = q.in("source_key", options.sourceKeys);
+    }
     const { data } = await q;
-    for (const row of (data as IngestionSourceStateRow[] | null) ?? []) {
+    for (const row of (data as unknown as IngestionSourceStateRow[] | null) ?? []) {
       map.set(row.source_key, row);
     }
   } catch {

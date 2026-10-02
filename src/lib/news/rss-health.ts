@@ -44,7 +44,8 @@ export type RssHealthDashboardEntry = {
 
 const memoryHealth = new Map<string, SourceHealthRecord>();
 
-export async function loadSourceHealth(): Promise<Map<string, SourceHealthRecord>> {
+/** `sourceIds` restricts the read to the caller's own feeds (an Edge shard needs ~6 of the 60 rows). */
+export async function loadSourceHealth(sourceIds?: string[]): Promise<Map<string, SourceHealthRecord>> {
   const map = new Map<string, SourceHealthRecord>();
 
   if (!isSupabaseConfigured()) {
@@ -54,7 +55,8 @@ export async function loadSourceHealth(): Promise<Map<string, SourceHealthRecord
 
   try {
     const supabase = createAdminClient();
-    const { data } = await supabase.from("rss_source_health").select("*");
+    const query = supabase.from("rss_source_health").select("*");
+    const { data } = sourceIds ? (sourceIds.length ? await query.in("source_id", sourceIds) : { data: [] }) : await query;
 
     for (const row of data ?? []) {
       const r = row as SourceHealthRecord & {

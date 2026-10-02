@@ -57,3 +57,4 @@ sa_parsed.json
 remediation-plan.sql
 voice-samples/
 .edge-secrets.local
+.supabase-recovery-probe.json

@@ -40,6 +40,7 @@ import type { BatchEditorialResult } from "@/lib/news/ai/editorial-types";
 import type { GenerateEditorialsOptions } from "@/lib/news/ai/generate-article";
 
 import { PROBE_MODEL_RE } from "@/lib/edge/editorial-worker/governor-probe";
+import { egressMeterEnabled, resetEgress, snapshotEgress } from "@/lib/observability/egress-meter";
 
 export const WORKER_LEASE_KEY = "editorial-generate";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -94,6 +95,8 @@ export type WorkerDeps = {
   probeGovernor?(input: { phase: "reserve" | "observe"; model: string }): Promise<unknown>;
   /** quota_probe `ai`: exactly one tiny real CodeCraft request through the app path. */
   probeAi?(): Promise<unknown>;
+  /** Optional: purge the website's caches after a story is published. */
+  revalidatePublished?: () => Promise<void>;
   recordRun(run: {
     ok: boolean;
     degraded: boolean;
@@ -207,6 +210,7 @@ const NO_CALLS: RunTelemetryTotals = {
 
 export async function handleEditorialWorkerRequest(request: Request, deps: WorkerDeps): Promise<Response> {
   const startedAtMs = Date.now();
+  resetEgress();
   const startedAt = new Date(startedAtMs).toISOString();
   const runId = deps.newId();
   const correlationId = request.headers.get("x-correlation-id")?.trim().slice(0, 100) || runId;
@@ -496,6 +500,10 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
       wall_ms: resources.wall_ms,
     });
 
+    if (!dryRun && status === "published" && deps.revalidatePublished) {
+      await deps.revalidatePublished().catch(() => undefined);
+    }
+
     if (!dryRun) {
       await deps
         .recordRun({
@@ -518,6 +526,7 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
             outcome_reason: errorReason,
             event_id: resultFields.event_id,
             article_id: resultFields.article_id,
+            ...(egressMeterEnabled() ? { egress: snapshotEgress() } : {}),
             provider,
             model,
             error_class: errorClass,

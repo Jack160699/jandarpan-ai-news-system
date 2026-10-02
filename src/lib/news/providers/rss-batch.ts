@@ -66,18 +66,24 @@ export async function runRssBatched(options: {
   const startedAt = Date.now();
   const batchSize = options.batchSize ?? RSS_FEED_BATCH_SIZE;
 
+  // Rank + shard over the STATIC registry first, then read health/state for this shard's feeds only (~6 rows, exact columns)
+  // instead of all 60 + 61 full rows on every one of the 1,440 daily shard runs (~62 KB -> ~9 KB per run).
+  const ranked = [...RSS_SOURCES].sort(
+    (a, b) => sourceEffectivePriority(b) - sourceEffectivePriority(a) || a.id.localeCompare(b.id)
+  );
+  const inShardAll = selectRssShard(ranked, options.shard);
   const [health, sourceStates] = await Promise.all([
-    loadSourceHealth(),
-    loadAllIngestionSourceStates().catch(() => new Map()),
+    loadSourceHealth(inShardAll.map((s) => s.id)),
+    loadAllIngestionSourceStates(null, {
+      sourceKeys: inShardAll.map((s) => buildSourceKey("rss", s.id)),
+      forPollGating: true,
+    }).catch(() => new Map()),
   ]);
   // Rank by priority over the STABLE enabled set, then shard, THEN apply adaptive backoff. Sharding the already
   // backoff-filtered list made a source's shard depend on which other feeds happened to be due, so it could slip
   // between shard slots and be polled twice or skipped in a cycle. Primary-district publishers rank first, so they
   // land on distinct shards (rank mod n) and are polled every cycle.
-  const enabledSources = [...RSS_SOURCES]
-    .filter((s) => !isSourceSkipped(s, health))
-    .sort((a, b) => sourceEffectivePriority(b) - sourceEffectivePriority(a) || a.id.localeCompare(b.id));
-  const inShard = selectRssShard(enabledSources, options.shard);
+  const inShard = inShardAll.filter((s) => !isSourceSkipped(s, health));
   // Adaptive polling: a feed that keeps returning only duplicates is polled less often (see source-health.ts),
   // but verified local publishers have a bounded maximum interval (maxPollDelayMs) and are never suppressed past it.
   const shardSources = inShard.filter((s) =>

@@ -3,7 +3,6 @@
  * Wraps EXISTING pipeline code only (no logic is reimplemented).
  */
 
-import { revalidateNewsroomCaches } from "@/lib/infrastructure/cache/isr";
 import { buildQueueHealthSnapshot } from "@/lib/infrastructure/queue/health-manager";
 import { hasAnyNewsProviderConfigured } from "@/lib/news/env";
 import { classifyIngestionOutcome } from "@/lib/news/pipeline/ingestion-outcome";
@@ -43,7 +42,8 @@ export const FETCH_SPEC: WorkerSpec<FetchParams> = {
     });
 
     const persistenceSucceeded = !(result.allBatchesFailed || result.persistenceFailed);
-    if (result.inserted > 0 && !result.persistenceFailed) await revalidateNewsroomCaches();
+    // No cache purge on signal insertion: signals do not appear on any list page, and purging here forced every list /
+    // hub / sitemap read to be re-fetched after nearly every 10-minute ingest cycle. Publishing (editorial worker) purges.
 
     // Nothing attempted = no feed in this shard was due/assigned (and no provider ran): "no_work", not a failure.
     const nothingAttempted =

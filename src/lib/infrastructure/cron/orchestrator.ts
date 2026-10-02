@@ -270,7 +270,10 @@ export async function runCronOrchestration(
     const ingestInserted = results.find((r) => r.worker === "ingest")?.metadata
       ?.inserted as number | undefined;
 
-    if ((published ?? 0) > 0 || (ingestInserted ?? 0) > 0) {
+    // Purge + snapshot refresh only when a story was PUBLISHED: ingested signals appear on no list page, and every purge
+    // forces the next list/hub/sitemap request to re-read its pool from Supabase.
+    void ingestInserted;
+    if ((published ?? 0) > 0) {
       await revalidateNewsroomCaches({ publishedStories: published ?? 0 });
       const { refreshSnapshotFromDatabase } = await import(
         "@/lib/news/live-feed/resolve-pool"
