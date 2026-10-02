@@ -3,6 +3,7 @@
  * Used by live coverage pages and the Event View Model builder.
  */
 
+import { cachedRead } from "@/lib/infrastructure/cache/shared-read-cache";
 import {
   createAdminServerClient,
   createAnonServerClient,
@@ -114,7 +115,24 @@ export async function fetchEventRowByCoverageSlug(
   return data as NewsEventRow;
 }
 
+const EVENT_BUNDLE_TTL_SECONDS = 300;
+
+/**
+ * Event page data (event + signals + updates + full article body, ~20-40 KB). Event/live pages are crawled constantly (15k bundle
+ * reads in 14 days), so the bundle is read once per 5 minutes per event instead of once per request. Keyed by the event's
+ * updated_at, so a merged signal or new update is picked up immediately; publishing also revalidates the tag.
+ */
 export async function fetchEventCoverageBundle(
+  event: NewsEventRow
+): Promise<EventCoverageBundle> {
+  return cachedRead(
+    ["event-bundle-v1", event.id, event.updated_at ?? ""],
+    { ttlSeconds: EVENT_BUNDLE_TTL_SECONDS, tags: ["generated-stories", `event:${event.id}`] },
+    () => fetchEventCoverageBundleUncached(event)
+  );
+}
+
+async function fetchEventCoverageBundleUncached(
   event: NewsEventRow
 ): Promise<EventCoverageBundle> {
   const supabase = createAnonServerClient();

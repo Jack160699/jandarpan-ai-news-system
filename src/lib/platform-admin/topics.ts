@@ -1,12 +1,24 @@
 import type { TopicHubMeta } from "@/lib/newsroom-platform/content/types";
+import { cachedRead } from "@/lib/infrastructure/cache/shared-read-cache";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { TopicRow } from "@/lib/newsroom-platform/db/types";
 import type { AdminTopicRecord } from "./types";
-import { jsonObjectFrom } from "@/types/json";
 
+const TOPIC_COUNT_TTL_SECONDS = 3600;
+
+/** Cached, and read with a JSON-path projection (was: tags + the whole ~9 KB editorial_metadata of up to 400 rows per call). */
 async function countByContentTypes(): Promise<Map<string, number>> {
+  if (!isSupabaseConfigured()) return new Map();
+  const entries = await cachedRead(
+    ["platform-topic-counts-v1"],
+    { ttlSeconds: TOPIC_COUNT_TTL_SECONDS, tags: ["platform-hubs", "generated-stories"] },
+    async () => [...(await countByContentTypesUncached())]
+  );
+  return new Map(entries);
+}
+
+async function countByContentTypesUncached(): Promise<Map<string, number>> {
   const map = new Map<string, number>();
-  if (!isSupabaseConfigured()) return map;
 
   const supabase = createAdminServerClient();
   const { data: topics } = await supabase
@@ -19,7 +31,7 @@ async function countByContentTypes(): Promise<Map<string, number>> {
 
   const { data: generated } = await supabase
     .from("generated_articles")
-    .select("tags, editorial_metadata")
+    .select("tags, category:editorial_metadata->category")
     .limit(400);
 
   for (const topic of topics ?? []) {
@@ -29,8 +41,7 @@ async function countByContentTypes(): Promise<Map<string, number>> {
       if (types.includes(row.category as string)) count += 1;
     }
     for (const row of generated ?? []) {
-      const meta = jsonObjectFrom(row.editorial_metadata);
-      const cat = meta.category as string | undefined;
+      const cat = (row as unknown as { category?: unknown }).category as string | undefined;
       if (cat && types.includes(cat)) count += 1;
       else if (
         types.some((t) =>
@@ -95,6 +106,14 @@ export async function listAdminTopics(): Promise<AdminTopicRecord[] | null> {
 }
 
 export async function loadPlatformTopicsHub(): Promise<TopicHubMeta[]> {
+  return cachedRead(
+    ["platform-topics-hub-v1"],
+    { ttlSeconds: TOPIC_COUNT_TTL_SECONDS, tags: ["platform-hubs"] },
+    loadPlatformTopicsHubUncached
+  );
+}
+
+async function loadPlatformTopicsHubUncached(): Promise<TopicHubMeta[]> {
   const rows = await listAdminTopics();
   if (!rows) return [];
   return rows

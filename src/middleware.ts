@@ -12,6 +12,11 @@ import {
   isProductionExemptPath,
   isSensitiveDevApiPath,
 } from "@/lib/infrastructure/production";
+import {
+  isPausableRecurringPath,
+  isRecurringTrafficPaused,
+  recurringPauseBody,
+} from "@/lib/infrastructure/recurring-pause";
 import { TENANT_COOKIE, TENANT_HEADER } from "@/lib/tenant/resolve";
 import {
   isAdminDeskPath,
@@ -97,6 +102,12 @@ function isIngestionApiPath(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // ─── Recurring-traffic pause (JD_PAUSE_RECURRING=true): non-essential scheduled callers get a static 200 and never
+  //     reach a route, so no Supabase request is made while the project is restricted. Website/auth/admin/health untouched. ───
+  if (isRecurringTrafficPaused() && isPausableRecurringPath(pathname)) {
+    return applySecurityHeaders(NextResponse.json(recurringPauseBody(pathname), { status: 200 }));
+  }
 
   // ─── Cron / ingestion APIs: skip session + RBAC (auth handled in route) ───
   if (isIngestionApiPath(pathname)) {

@@ -23,7 +23,7 @@ const INDEX_CACHE_TAG = "news-search-index";
 async function loadSearchIndexUncached(
   displayLanguage: NewsroomLanguage
 ): Promise<SearchIndexSnapshot> {
-  const rows = await fetchGeneratedArticlePool(200, { select: "homepage" });
+  const rows = await fetchGeneratedArticlePool(160, { select: "homepage" });
   return snapshotSearchIndex(buildSearchIndex(rows, displayLanguage));
 }
 

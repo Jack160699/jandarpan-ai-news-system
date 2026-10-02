@@ -13,6 +13,7 @@ import { authorizeWorkerRequest } from "@/lib/edge/editorial-worker/auth";
 import { createWorkerLogger, type WorkerLogger } from "@/lib/edge/editorial-worker/logging";
 import { startResourceTracker, type ResourceReport } from "@/lib/edge/editorial-worker/resources";
 import { captureConsole } from "@/lib/edge/worker-kit/console-capture";
+import { egressMeterEnabled, resetEgress, snapshotEgress } from "@/lib/observability/egress-meter";
 
 export type KitStatus =
   | "completed"
@@ -121,6 +122,7 @@ function intEnv(env: Record<string, string | undefined>, name: string, fallback:
 
 export async function handleWorkerRequest<P>(request: Request, spec: WorkerSpec<P>, deps: KitDeps): Promise<Response> {
   const startedAtMs = Date.now();
+  resetEgress();
   const startedAt = new Date(startedAtMs).toISOString();
   const runId = deps.newId();
   const correlationId = request.headers.get("x-correlation-id")?.trim().slice(0, 100) || runId;
@@ -230,7 +232,13 @@ export async function handleWorkerRequest<P>(request: Request, spec: WorkerSpec<
         processed: raced.processed,
         skipped: raced.skipped ?? 0,
         failed: raced.failed ?? 0,
-        metadata: { runtime: "supabase-edge", correlation_id: correlationId, ...label, ...raced.details },
+        metadata: {
+          runtime: "supabase-edge",
+          correlation_id: correlationId,
+          ...label,
+          ...raced.details,
+          ...(egressMeterEnabled() ? { egress: snapshotEgress() } : {}),
+        },
       })
       .catch(() => undefined);
 

@@ -22,7 +22,7 @@ import { asJsonObject, jsonObjectFrom } from "@/types/json";
 const MERGE_INTO_EVENT_THRESHOLD = 0.68;
 const ACTIVE_EVENT_HOURS = 96;
 /** Events the matcher compares new signals against (most recently updated first). */
-const ACTIVE_EVENT_LIMIT = 150;
+const ACTIVE_EVENT_LIMIT = 100;
 /**
  * Exact columns only. clustering_metadata (sources, title variants, merge history -- ~3 KB/row, the bulk of the old
  * select("*")) and signal_ids (a uuid array) are NOT needed to match; mergeSignalsIntoEvent reads both fresh from the

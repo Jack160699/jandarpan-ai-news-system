@@ -3,6 +3,7 @@
  * Phase 6: bounded limits, strict projections, no body on sitemap/health paths.
  */
 
+import { cachedRead } from "@/lib/infrastructure/cache/shared-read-cache";
 import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { createAnonServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { safeQuery } from "@/lib/supabase/safe-query";
@@ -141,9 +142,63 @@ export type FetchGeneratedArticlePoolOptions = {
   cursorPublishedAt?: string;
 };
 
+/**
+ * List pools are read once per TTL and shared by every caller, not once per request (see shared-read-cache.ts: measured
+ * ~25% of the project's REST egress was identical pool reads). Callers ask for different limits (80-160); the pool is
+ * ordered newest-first, so EVERY list request is served as a prefix of ONE cached read of the largest size (160), instead of
+ * one cached read per limit (each costs ~730 KB). The body-carrying broadcast pool is a separate, smaller (60-row) read.
+ * Publishing revalidates the tags (debounced); an empty / failed / fallback result is never cached. Cursor pages and the
+ * sitemap/slug/summary modes are not cached here.
+ */
+const LIST_POOL_ROWS = 160;
+const BODIES_POOL_ROWS = 60;
+// 60 min backstop: the (debounced, 30 min) publish purge normally refreshes it sooner; this bounds staleness if a purge is skipped.
+const GENERATED_POOL_CACHE_SECONDS = Number(process.env.GENERATED_POOL_CACHE_SECONDS ?? 3600);
+// The broadcast rotation does not need minute-fresh data and each read carries article bodies (~370 KB).
+const BODIES_POOL_CACHE_SECONDS = Number(process.env.GENERATED_BODIES_POOL_CACHE_SECONDS ?? 3600);
+
+/** One size class per mode; requests above it are clamped so they never create another cached read. */
+function poolSizeClass(mode: GeneratedPoolSelectMode, bounded: number): number {
+  return mode === "homepage_bodies" ? Math.max(bounded, BODIES_POOL_ROWS) : Math.max(bounded, LIST_POOL_ROWS);
+}
+
+class PoolNotCacheable extends Error {}
+
 export async function fetchGeneratedArticlePool(
   limit = 280,
   options?: FetchGeneratedArticlePoolOptions
+): Promise<GeneratedArticleRow[]> {
+  const mode: GeneratedPoolSelectMode = options?.select ?? "full";
+  const cacheable =
+    (mode === "homepage" || mode === "homepage_bodies") && !options?.cursorPublishedAt && isSupabaseConfigured();
+  if (!cacheable) return fetchGeneratedArticlePoolUncached(limit, options);
+
+  const bounded = clampGeneratedPoolLimit(limit, mode);
+  const sizeClass = poolSizeClass(mode, bounded);
+  try {
+    const rows = await cachedRead(
+      ["generated-pool-v2", mode, String(sizeClass)],
+      {
+        ttlSeconds: mode === "homepage_bodies" ? BODIES_POOL_CACHE_SECONDS : GENERATED_POOL_CACHE_SECONDS,
+        tags: ["live-news", "generated-stories"],
+      },
+      async () => {
+        const fresh = await fetchGeneratedArticlePoolUncached(sizeClass, options, { skipFallback: true });
+        if (fresh.length === 0) throw new PoolNotCacheable();
+        return fresh;
+      }
+    );
+    return rows.slice(0, bounded);
+  } catch (err) {
+    if (err instanceof PoolNotCacheable) return fetchGeneratedArticlePoolUncached(limit, options);
+    throw err;
+  }
+}
+
+async function fetchGeneratedArticlePoolUncached(
+  limit: number,
+  options?: FetchGeneratedArticlePoolOptions,
+  internal?: { skipFallback?: boolean }
 ): Promise<GeneratedArticleRow[]> {
   if (!isSupabaseConfigured()) {
     warnLiveFeed("generated_pool_skip", {
@@ -255,6 +310,8 @@ export async function fetchGeneratedArticlePool(
   if (publicRows.length > 0) {
     return publicRows;
   }
+
+  if (internal?.skipFallback) return [];
 
   // Only fall back to static articles if database returned zero public articles
   const { getStaticFallbackArticlePool } = await import(

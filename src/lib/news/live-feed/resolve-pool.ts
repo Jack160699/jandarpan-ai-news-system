@@ -210,9 +210,11 @@ export async function resolveLiveArticlePool(
 /** Call after successful cron ingest to refresh SWR snapshot */
 export async function refreshSnapshotFromDatabase(
   limit = 120,
-  options?: { select?: GeneratedPoolSelect }
+  options: { select?: GeneratedPoolSelect } = { select: "homepage" }
 ): Promise<void> {
   if (!isSupabaseConfigured()) return;
+  // List projection (no article_body / full translations): this used to default to the "full" select -- 120 rows x ~15 KB
+  // = ~1.8 MB per call -- and ran after every ingest run, the largest single read in the system.
   const rows = await fetchGeneratedArticlePool(limit, options);
   if (rows.length >= AGGREGATION_CONFIG.dbCriticalThreshold) {
     const ranked = rankPoolByFeedQuality(rows);

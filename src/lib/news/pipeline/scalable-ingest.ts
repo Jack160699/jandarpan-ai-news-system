@@ -371,7 +371,9 @@ export async function runScalableIngestion(
   });
 
   // Do not treat failed persistence as a successful ingest for downstream side effects.
-  if (!persistenceFailed && (inserted > 0 || signalsInserted > 0)) {
+  // Edge fetch shards (rssShard set) never refresh the list snapshot: ten shards every ten minutes would each re-read the
+  // whole pool, and signals do not appear on any list page anyway. Publishing refreshes it (orchestrator / revalidate).
+  if (!persistenceFailed && !options.rssShard && (inserted > 0 || signalsInserted > 0)) {
     const { refreshSnapshotFromDatabase } = await import(
       "@/lib/news/live-feed/resolve-pool"
     );

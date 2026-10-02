@@ -76,7 +76,8 @@ export const INFRA_CONFIG = {
     Number(process.env.EDITORIAL_IMAGES_DEADLINE_THRESHOLD_MS) || 15_000,
   queueCheckpointTtlSec: Number(process.env.QUEUE_CHECKPOINT_TTL_SEC) || 86_400,
 
-  homepageCacheSeconds: Number(process.env.HOMEPAGE_CACHE_SECONDS) || 60,
+  // 10 min (was 60 s): publishing purges the cache, so the TTL is only a backstop. Each regeneration re-reads the list pool.
+  homepageCacheSeconds: Number(process.env.HOMEPAGE_CACHE_SECONDS) || 600,
   apiEdgeCacheSeconds: Number(process.env.API_EDGE_CACHE_SECONDS) || 30,
 
   redisEnabled: Boolean(

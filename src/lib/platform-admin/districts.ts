@@ -1,15 +1,38 @@
 import { geoFromRecord } from "@/lib/regional/geo-tagging";
 import type { DistrictHubMeta } from "@/lib/newsroom-platform/content/types";
 import type { DistrictRow } from "@/lib/newsroom-platform/db/types";
+import { cachedRead } from "@/lib/infrastructure/cache/shared-read-cache";
 import { createAdminServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import type { AdminDistrictRecord } from "./types";
 
+/**
+ * Article counts per district. Cached (hub pages, the sitemap and the heatmap all call this on every request) and read with a
+ * JSON-path projection: it used to pull up to 800 whole generated_articles rows -- editorial_metadata alone averages ~9 KB --
+ * for a count (measured: ~0.9 MB per call, 8,447 calls in 14 days). Only the fields geoFromRecord() and the breaking flag
+ * actually read are selected now (~1 KB/row).
+ */
+// Hub counts change slowly and are crawled constantly: one read per hour (~137 KB each).
+const DISTRICT_COUNT_TTL_SECONDS = 3600;
+const DISTRICT_COUNT_SELECT =
+  "headline, summary, tags, geo_metadata, regional:editorial_metadata->regional, is_breaking:editorial_metadata->is_breaking, created_at";
+
 async function countArticlesByDistrict(): Promise<
   Map<string, { total: number; live: number }>
 > {
+  if (!isSupabaseConfigured()) return new Map();
+  const entries = await cachedRead(
+    ["platform-district-counts-v1"],
+    { ttlSeconds: DISTRICT_COUNT_TTL_SECONDS, tags: ["platform-hubs", "generated-stories"] },
+    async () => [...(await countArticlesByDistrictUncached())]
+  );
+  return new Map(entries);
+}
+
+async function countArticlesByDistrictUncached(): Promise<
+  Map<string, { total: number; live: number }>
+> {
   const counts = new Map<string, { total: number; live: number }>();
-  if (!isSupabaseConfigured()) return counts;
 
   const supabase = createAdminServerClient();
   const since = new Date();
@@ -18,7 +41,7 @@ async function countArticlesByDistrict(): Promise<
   const [{ data: generated }, { data: platform }] = await Promise.all([
     supabase
       .from("generated_articles")
-      .select("slug, published_at, editorial_metadata, geo_metadata, created_at")
+      .select(DISTRICT_COUNT_SELECT)
       .gte("created_at", since.toISOString())
       .limit(800),
     supabase
@@ -28,7 +51,18 @@ async function countArticlesByDistrict(): Promise<
       .limit(500),
   ]);
 
-  for (const row of (generated ?? []) as unknown as GeneratedArticleRow[]) {
+  type CountRow = Pick<GeneratedArticleRow, "headline" | "summary" | "tags" | "geo_metadata"> & {
+    regional: unknown;
+    is_breaking: unknown;
+  };
+  for (const projected of (generated ?? []) as unknown as CountRow[]) {
+    const row = {
+      headline: projected.headline,
+      summary: projected.summary,
+      tags: projected.tags,
+      geo_metadata: projected.geo_metadata,
+      editorial_metadata: { regional: projected.regional, is_breaking: projected.is_breaking },
+    } as unknown as GeneratedArticleRow;
     const geo = geoFromRecord(row);
     const districts =
       geo.districts.length > 0 ? geo.districts : geo.is_chhattisgarh ? ["statewide"] : [];
@@ -113,6 +147,14 @@ export async function listAdminDistricts(): Promise<AdminDistrictRecord[] | null
 }
 
 export async function loadPlatformDistrictsHub(): Promise<DistrictHubMeta[]> {
+  return cachedRead(
+    ["platform-districts-hub-v1"],
+    { ttlSeconds: DISTRICT_COUNT_TTL_SECONDS, tags: ["platform-hubs"] },
+    loadPlatformDistrictsHubUncached
+  );
+}
+
+async function loadPlatformDistrictsHubUncached(): Promise<DistrictHubMeta[]> {
   const rows = await listAdminDistricts();
   if (!rows) return [];
   return rows

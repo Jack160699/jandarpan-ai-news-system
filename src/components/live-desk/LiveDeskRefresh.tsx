@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const REFRESH_MS = 60_000;
+// 5 min (was 60 s) and only while visible: each refresh is a server render.
+const REFRESH_MS = 300_000;
 
 /** Soft refresh + flash cue for live desk feeds */
 export function LiveDeskRefresh() {
@@ -11,6 +12,7 @@ export function LiveDeskRefresh() {
 
   useEffect(() => {
     const tick = () => {
+      if (document.visibilityState !== "visible") return;
       document.documentElement.setAttribute("data-live-refresh", "1");
       router.refresh();
       window.setTimeout(() => {

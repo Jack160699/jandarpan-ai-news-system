@@ -81,6 +81,7 @@ const EDGE_PORTS = {
   "@/lib/supabase": "src/lib/runtime/supabase.edge.ts",
   "@/lib/observability/sentry": "src/lib/runtime/sentry.edge.ts",
   "@/lib/infrastructure/cache/isr": "src/lib/runtime/isr.edge.ts",
+  "@/lib/infrastructure/cache/shared-read-cache": "src/lib/runtime/shared-read-cache.edge.ts",
 };
 
 function resolveAlias(spec) {

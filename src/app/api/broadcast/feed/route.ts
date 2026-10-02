@@ -14,6 +14,9 @@ import { resolveCanonicalCategories } from "@/lib/editorial/canonical-categories
 import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 
 export const dynamic = "force-dynamic";
+
+/** Each row carries translated bodies (~6 KB). 60 = the latest ~half-day of stories; the pool is cached for an hour and shared. */
+const BROADCAST_POOL_ROWS = 60;
 export const revalidate = 0;
 
 const CG_SECTIONS = new Set(["chhattisgarh", "raipur"]);
@@ -554,7 +557,7 @@ export async function GET(req: NextRequest) {
 
     // Also pull from resolveLiveArticlePool (up to 300 live articles from last 30 days)
     try {
-      const { rows } = await resolveLiveArticlePool(300, { select: "homepage_bodies" });
+      const { rows } = await resolveLiveArticlePool(BROADCAST_POOL_ROWS, { select: "homepage_bodies" });
       for (const r of rows) {
         if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
         addOrEnrichCandidate(normalizeGeneratedRow(r));
@@ -565,7 +568,7 @@ export async function GET(req: NextRequest) {
 
     // Pull directly from database table generated_articles (up to 300 articles)
     try {
-      const dbArticles = await fetchGeneratedArticlePool(300, { select: "homepage_bodies" });
+      const dbArticles = await fetchGeneratedArticlePool(BROADCAST_POOL_ROWS, { select: "homepage_bodies" });
       for (const r of (dbArticles || [])) {
         if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
         addOrEnrichCandidate(normalizeGeneratedRow(r));
