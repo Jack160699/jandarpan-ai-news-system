@@ -46,6 +46,13 @@ export type KitDeps = {
     failed: number;
     metadata: Record<string, unknown>;
   }): Promise<void>;
+  /**
+   * Optional egress governor (see observability/egress-governor.ts). Evaluated for scheduler-triggered runs only, AFTER the kill
+   * switch; a decision with allow=false skips the run. Absent = no governor.
+   */
+  evaluateEgress?(): Promise<{ allow: boolean; state: string; reason: string | null; usedBytes: number | null }>;
+  /** Optional: add this run's metered bytes to the durable monthly counter; the result is stored in the run metadata. */
+  recordEgress?(): Promise<{ recorded: boolean; bytes: number; total: number | null; reason?: string }>;
   drainBackground(timeoutMs: number): Promise<void>;
   env: Record<string, string | undefined>;
   newId(): string;
@@ -182,6 +189,15 @@ export async function handleWorkerRequest<P>(request: Request, spec: WorkerSpec<
       }
     }
 
+    if (trigger === "scheduler" && deps.evaluateEgress) {
+      const gov = await deps.evaluateEgress();
+      if (!gov.allow) {
+        log.warn("egress_governor_stop", { state: gov.state, reason: gov.reason, used_bytes: gov.usedBytes });
+        return respond("skipped", 200, { ok: true, reason: gov.reason ?? "egress_budget_stop", label, result: { egress_governor: gov } });
+      }
+      if (gov.state === "warn") log.warn("egress_governor_warn", { used_bytes: gov.usedBytes });
+    }
+
     const pre = await spec.precheck?.(params, deps);
     if (pre) {
       log.info("skipped", { reason: pre.reason });
@@ -217,6 +233,7 @@ export async function handleWorkerRequest<P>(request: Request, spec: WorkerSpec<
 
     await deps.drainBackground(3_000);
     const resources = tracker.stop();
+    const egressRecord = deps.recordEgress ? await deps.recordEgress().catch(() => null) : null;
     const status: KitStatus = !raced.ok ? "failed" : raced.degraded ? "degraded" : "completed";
     log.info("run_complete", { status, processed: raced.processed, failed: raced.failed ?? 0, duration_ms: Date.now() - startedAtMs, cpu_verified: resources.cpu_verified, heap_peak_mb: resources.heap_peak_mb, error: raced.error ?? null });
 
@@ -238,6 +255,7 @@ export async function handleWorkerRequest<P>(request: Request, spec: WorkerSpec<
           ...label,
           ...raced.details,
           ...(egressMeterEnabled() ? { egress: snapshotEgress() } : {}),
+          ...(egressRecord ? { egress_governor: egressRecord } : {}),
         },
       })
       .catch(() => undefined);

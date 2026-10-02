@@ -20,6 +20,7 @@ const memo = new Map<string, MemoEntry>();
 /** Test hook. */
 export function clearSharedReadMemo(): void {
   memo.clear();
+  inflight.clear();
 }
 
 export type CachedReadOptions = {
@@ -36,8 +37,25 @@ async function memoized<T>(key: string, ttlSeconds: number, loader: () => Promis
   return value;
 }
 
+/**
+ * Single-flight: concurrent callers of the same key in this process share ONE load. Without it a burst of requests arriving while the
+ * entry is expired (the moment after a purge) each ran the loader -- N identical ~0.7 MB reads instead of one.
+ */
+const inflight = new Map<string, Promise<unknown>>();
+
 export async function cachedRead<T>(keyParts: string[], options: CachedReadOptions, loader: () => Promise<T>): Promise<T> {
   if (options.ttlSeconds <= 0 || process.env.JD_DISABLE_READ_CACHE === "true") return loader();
+  const flightKey = keyParts.join("|");
+  const existing = inflight.get(flightKey);
+  if (existing) return existing as Promise<T>;
+  const flight = cachedReadOnce(keyParts, options, loader).finally(() => {
+    if (inflight.get(flightKey) === flight) inflight.delete(flightKey);
+  });
+  inflight.set(flightKey, flight);
+  return flight;
+}
+
+async function cachedReadOnce<T>(keyParts: string[], options: CachedReadOptions, loader: () => Promise<T>): Promise<T> {
 
   let loaderError: unknown;
   let failed = false;

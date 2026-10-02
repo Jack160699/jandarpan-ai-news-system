@@ -59,6 +59,7 @@ export type WorkerStatus =
   | "failed"
   | "overlap_lock"
   | "kill_switch_off"
+  | "egress_budget_stop"
   | "not_enabled"
   | "no_ai_provider"
   | "durable_quota_unavailable"
@@ -95,6 +96,9 @@ export type WorkerDeps = {
   probeGovernor?(input: { phase: "reserve" | "observe"; model: string }): Promise<unknown>;
   /** quota_probe `ai`: exactly one tiny real CodeCraft request through the app path. */
   probeAi?(): Promise<unknown>;
+  /** Optional egress governor (scheduler-triggered runs only, after the kill switch). */
+  evaluateEgress?(): Promise<{ allow: boolean; state: string; reason: string | null; usedBytes: number | null }>;
+  recordEgress?(): Promise<{ recorded: boolean; bytes: number; total: number | null; reason?: string }>;
   /** Optional: purge the website's caches after a story is published. */
   revalidatePublished?: () => Promise<void>;
   recordRun(run: {
@@ -332,6 +336,14 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
         log.info("skipped", { reason: "kill_switch_off", scheduler_enabled: enabled });
         return respond("kill_switch_off", 200, { ok: true, mode });
       }
+      if (deps.evaluateEgress) {
+        const gov = await deps.evaluateEgress();
+        if (!gov.allow) {
+          log.warn("egress_governor_stop", { state: gov.state, reason: gov.reason, used_bytes: gov.usedBytes });
+          return respond("egress_budget_stop", 200, { ok: true, mode, error_reason: gov.reason ?? "egress_budget_stop" });
+        }
+        if (gov.state === "warn") log.warn("egress_governor_warn", { used_bytes: gov.usedBytes });
+      }
     }
 
     if (deps.env.NEWSROOM_GENERATE_ARTICLES !== "true") {
@@ -504,6 +516,8 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
       await deps.revalidatePublished().catch(() => undefined);
     }
 
+    const egressRecord = !dryRun && deps.recordEgress ? await deps.recordEgress().catch(() => null) : null;
+
     if (!dryRun) {
       await deps
         .recordRun({
@@ -527,6 +541,7 @@ export async function handleEditorialWorkerRequest(request: Request, deps: Worke
             event_id: resultFields.event_id,
             article_id: resultFields.article_id,
             ...(egressMeterEnabled() ? { egress: snapshotEgress() } : {}),
+            ...(egressRecord ? { egress_governor: egressRecord } : {}),
             provider,
             model,
             error_class: errorClass,

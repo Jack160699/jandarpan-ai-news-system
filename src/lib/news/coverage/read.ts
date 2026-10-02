@@ -88,6 +88,8 @@ export async function getLiveCoverageSlugs(limit = 40): Promise<string[]> {
     .from("news_events")
     .select("coverage_slug")
     .eq("is_live", true)
+    // Only genuinely live, canonical events get a /live page and a sitemap entry: duplicates superseded by migration 092 do not.
+    .eq("coverage_status", "active")
     .not("coverage_slug", "is", null)
     .order("updated_at", { ascending: false })
     .limit(limit);

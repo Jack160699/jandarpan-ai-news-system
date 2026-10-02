@@ -159,6 +159,10 @@ const embedArticles: JobHandler = async (job) => {
 };
 
 const intelligenceSnapshot: JobHandler = async (job) => {
+  // Disabled by default (~2 MB of Supabase egress per build): already-queued jobs complete as no-ops.
+  if (!INFRA_CONFIG.intelligenceSnapshotEnabled) {
+    return { ok: true, result: { skipped: "intelligence_snapshot_disabled" } };
+  }
   const started = Date.now();
   const snapshot = await buildNewsroomIntelligenceSnapshot(job.tenant_id, {
     mode: "worker",
@@ -349,6 +353,7 @@ const editorialGenerate: JobHandler = async (job) => {
 };
 
 async function enqueueSnapshotRefresh(tenantId: string | null) {
+  if (!INFRA_CONFIG.intelligenceSnapshotEnabled) return;
   const { enqueueJob } = await import("@/lib/infrastructure/jobs/queue");
   await enqueueJob({
     jobType: "intelligence_snapshot",

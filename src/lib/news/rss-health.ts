@@ -96,7 +96,9 @@ export function isSourceSkipped(
 /** Async check including ingestion_source_state permanent retirement / long disable. */
 export async function isRssSourceBlocked(
   source: RSSSource,
-  health: Map<string, SourceHealthRecord>
+  health: Map<string, SourceHealthRecord>,
+  /** The caller's already-loaded state row (undefined = load it here). Avoids a duplicate read per source per run. */
+  loadedState?: Awaited<ReturnType<typeof loadIngestionSourceState>>
 ): Promise<{ skipped: boolean; reason: string | null }> {
   if (isSourceSkipped(source, health)) {
     const record = health.get(source.id);
@@ -106,7 +108,8 @@ export async function isRssSourceBlocked(
     return { skipped: true, reason: "temporarily_disabled" };
   }
 
-  const state = await loadIngestionSourceState(buildSourceKey("rss", source.id));
+  const state =
+    loadedState !== undefined ? loadedState : await loadIngestionSourceState(buildSourceKey("rss", source.id));
   const blocked = isSourceCurrentlyBlocked(state);
   if (blocked.blocked) {
     return { skipped: true, reason: blocked.reason };

@@ -102,4 +102,10 @@ export const INFRA_CONFIG = {
   damAnalyzeBatch: Number(process.env.DAM_ANALYZE_BATCH) || 4,
   intelligenceWorkersEnabled:
     process.env.INTELLIGENCE_WORKERS_ENABLED !== "false",
+  /**
+   * The legacy intelligence snapshot builds ~100 full articles (bodies + translations) + signals + events: ~2 MB of Supabase egress
+   * per build, and it was enqueued by every ingest and every publish. The Edge pipeline does not need it, so it is OFF unless
+   * INTELLIGENCE_SNAPSHOT_ENABLED=true (admin dashboards that read a snapshot on demand are unaffected).
+   */
+  intelligenceSnapshotEnabled: process.env.INTELLIGENCE_SNAPSHOT_ENABLED === "true",
 } as const;
