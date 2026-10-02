@@ -554,7 +554,7 @@ export async function GET(req: NextRequest) {
 
     // Also pull from resolveLiveArticlePool (up to 300 live articles from last 30 days)
     try {
-      const { rows } = await resolveLiveArticlePool(300, { select: "homepage" });
+      const { rows } = await resolveLiveArticlePool(300, { select: "homepage_bodies" });
       for (const r of rows) {
         if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
         addOrEnrichCandidate(normalizeGeneratedRow(r));
@@ -565,7 +565,7 @@ export async function GET(req: NextRequest) {
 
     // Pull directly from database table generated_articles (up to 300 articles)
     try {
-      const dbArticles = await fetchGeneratedArticlePool(300, { select: "homepage" });
+      const dbArticles = await fetchGeneratedArticlePool(300, { select: "homepage_bodies" });
       for (const r of (dbArticles || [])) {
         if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
         addOrEnrichCandidate(normalizeGeneratedRow(r));

@@ -6,6 +6,7 @@
 export const GENERATED_POOL_HARD_CAPS = {
   full: 300,
   homepage: 500,
+  homepage_bodies: 500,
   sitemap: 5000,
   slug: 5000,
   summary: 1,
@@ -15,6 +16,8 @@ export const GENERATED_POOL_HARD_CAPS = {
 export type GeneratedPoolSelectMode =
   | "full"
   | "homepage"
+  /** homepage rows whose translations keep article_body (broadcast feed only; heavier). */
+  | "homepage_bodies"
   | "sitemap"
   | "slug"
   | "summary";

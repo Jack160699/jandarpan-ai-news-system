@@ -21,6 +21,17 @@ import { asJsonObject, jsonObjectFrom } from "@/types/json";
 
 const MERGE_INTO_EVENT_THRESHOLD = 0.68;
 const ACTIVE_EVENT_HOURS = 96;
+/** Events the matcher compares new signals against (most recently updated first). */
+const ACTIVE_EVENT_LIMIT = 150;
+/**
+ * Exact columns only. clustering_metadata (sources, title variants, merge history -- ~3 KB/row, the bulk of the old
+ * select("*")) and signal_ids (a uuid array) are NOT needed to match; mergeSignalsIntoEvent reads both fresh from the
+ * database for the one event it actually updates (which also avoids merging against a stale copy).
+ */
+const ACTIVE_EVENT_COLUMNS =
+  "id,canonical_title,event_summary,region,category,urgency_score,source_count,coverage_slug,coverage_headline,cluster_confidence,is_live,coverage_status,created_at,updated_at";
+/** Exact signal columns used by cluster-confidence + attribution. */
+const MERGE_SIGNAL_COLUMNS = "id,source,provider,title,raw_content,article_url,published_at,category,region,language";
 
 export type SignalEventMatch = {
   signal: NewsSignalRow;
@@ -38,14 +49,16 @@ export async function fetchActiveEvents(
 
   const { data, error } = await supabase
     .from("news_events")
-    .select("*")
+    .select(ACTIVE_EVENT_COLUMNS)
     .gte("updated_at", cutoff)
     .eq("coverage_status", "active")
     .order("updated_at", { ascending: false })
-    .limit(80);
+    .limit(ACTIVE_EVENT_LIMIT);
 
   if (error) return [];
-  return (data ?? []) as NewsEventRow[];
+  return ((data ?? []) as unknown as Array<Omit<NewsEventRow, "clustering_metadata" | "signal_ids">>).map(
+    (r) => ({ ...r, signal_ids: [], clustering_metadata: {} }) as NewsEventRow
+  );
 }
 
 function signalEventSimilarity(
@@ -126,7 +139,13 @@ export async function mergeSignalsIntoEvent(
   options?: { avgSimilarity?: number; isBreaking?: boolean }
 ): Promise<{ event: NewsEventRow; updateId: string | null }> {
   const supabase = createAdminServerClient();
-  const existingIds = new Set(event.signal_ids ?? []);
+  // The matcher pool carries neither signal_ids nor metadata (egress): read both for this one event, fresh.
+  const { data: liveRow } = await supabase
+    .from("news_events")
+    .select("signal_ids,clustering_metadata")
+    .eq("id", event.id)
+    .maybeSingle();
+  const existingIds = new Set<string>(liveRow?.signal_ids ?? event.signal_ids ?? []);
   const mergedSignals: NewsSignalRow[] = [];
 
   for (const s of newSignals) {
@@ -142,10 +161,10 @@ export async function mergeSignalsIntoEvent(
 
   const { data: existingSignalRows } = await supabase
     .from("news_signals")
-    .select("*")
+    .select(MERGE_SIGNAL_COLUMNS)
     .in("id", [...existingIds]);
 
-  const allSignals = (existingSignalRows ?? []) as NewsSignalRow[];
+  const allSignals = (existingSignalRows ?? []) as unknown as NewsSignalRow[];
   const confidence = computeClusterConfidence({
     signals: allSignals,
     avgSimilarity: options?.avgSimilarity ?? 0.75,
@@ -168,7 +187,7 @@ export async function mergeSignalsIntoEvent(
     event.coverage_slug ??
     buildCoverageSlug(event.canonical_title, event.id);
 
-  const meta = jsonObjectFrom(event.clustering_metadata);
+  const meta = jsonObjectFrom(liveRow?.clustering_metadata ?? event.clustering_metadata);
   const history = Array.isArray(meta.merge_history)
     ? [...(meta.merge_history as unknown[])]
     : [];
@@ -198,7 +217,7 @@ export async function mergeSignalsIntoEvent(
       } as Record<string, unknown>),
     } satisfies Partial<import("@/lib/types/newsroom").NewsEventInsert>)
     .eq("id", event.id)
-    .select("*")
+    .select("id,signal_ids")
     .single();
 
   if (error || !updated) {
@@ -231,7 +250,16 @@ export async function mergeSignalsIntoEvent(
     .single();
 
   return {
-    event: updated as NewsEventRow,
+    // The ownership trigger (migration 092) may have dropped signals that another event already owns.
+    event: {
+      ...event,
+      signal_ids: (updated.signal_ids as string[] | null) ?? [...existingIds],
+      source_count: sourceCount,
+      is_live: isLive,
+      coverage_slug: coverageSlug,
+      coverage_headline: coverageHeadline,
+      cluster_confidence: confidence.score,
+    },
     updateId: upd?.id ?? null,
   };
 }

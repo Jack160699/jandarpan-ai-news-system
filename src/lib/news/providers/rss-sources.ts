@@ -5,6 +5,23 @@
 
 export type RSSSourceTier = "publisher" | "aggregator" | "scraped";
 
+/**
+ * Editorial coverage policy (2026-10-02):
+ *   primary_district  Rajnandgaon, Durg (Bhilai), Raipur, Bilaspur -- highest freshness / polling / editorial priority
+ *   statewide         the rest of Chhattisgarh -- important stories only
+ *   national / international -- major, relevant stories only
+ */
+export type CoverageTier = "primary_district" | "statewide" | "national" | "international";
+
+/** How a source's article text reaches us. */
+export type FullTextMode =
+  /** the feed itself carries the article (<content:encoded> / long <description>) */
+  | "feed"
+  /** the feed is an excerpt; the publisher page is fetched (robots-checked) and its main text extracted */
+  | "page"
+  /** title/excerpt only (aggregators) */
+  | "none";
+
 export type RSSSource = {
   id: string;
   name: string;
@@ -15,6 +32,9 @@ export type RSSSource = {
   /** Base priority; tier bonus applied in rss.ts */
   priority: number;
   tier: RSSSourceTier;
+  /** Defaults derived by coverageTierOf(). */
+  coverage?: CoverageTier;
+  fullText?: FullTextMode;
 };
 
 const TIER_BONUS: Record<RSSSourceTier, number> = {
@@ -23,8 +43,36 @@ const TIER_BONUS: Record<RSSSourceTier, number> = {
   scraped: 0,
 };
 
+/** Coverage-policy bonus: the four primary districts are polled/ranked first, then statewide CG. */
+const COVERAGE_BONUS: Record<CoverageTier, number> = {
+  primary_district: 40,
+  statewide: 20,
+  national: 0,
+  international: 0,
+};
+
+const PRIMARY_DISTRICT_ID_RE = /raipur|durg|bhilai|bilaspur|rajnandgaon/i;
+
+export function coverageTierOf(source: Pick<RSSSource, "id" | "region" | "coverage">): CoverageTier {
+  if (source.coverage) return source.coverage;
+  if (source.region === "global") return "international";
+  if (source.region === "india") return "national";
+  return PRIMARY_DISTRICT_ID_RE.test(source.id) ? "primary_district" : "statewide";
+}
+
 export function sourceEffectivePriority(source: RSSSource): number {
-  return source.priority + TIER_BONUS[source.tier];
+  return source.priority + TIER_BONUS[source.tier] + COVERAGE_BONUS[coverageTierOf(source)];
+}
+
+/**
+ * Longest a source may go unpolled, however many empty polls it has had. Verified local publishers keep a short
+ * feed window (Thiha CG: 10 items ~ 5 h; Lalluram: 10 items ~ 1.7 h), so unbounded backoff silently loses items.
+ *   direct Chhattisgarh publishers: 30 min   primary-district aggregator queries: 60 min   everything else: no cap
+ */
+export function maxPollDelayMs(source: Pick<RSSSource, "id" | "region" | "tier" | "coverage">): number | null {
+  if (source.region !== "cg") return null;
+  if (source.tier === "publisher") return 30 * 60_000;
+  return coverageTierOf(source) === "primary_district" ? 60 * 60_000 : null;
 }
 
 /** Google News RSS — reliable national news aggregator */
@@ -260,6 +308,7 @@ export const RSS_SOURCES: RSSSource[] = [
     url: "https://www.ibc24.in/chhattisgarh/feed",
     priority: 120,
     tier: "publisher",
+    fullText: "feed",
   },
   {
     id: "bhilai-times-direct",
@@ -270,6 +319,8 @@ export const RSS_SOURCES: RSSSource[] = [
     url: "https://bhilaitimes.com/feed/",
     priority: 118,
     tier: "publisher",
+    coverage: "primary_district",
+    fullText: "feed",
   },
   {
     id: "gnews-cg-lalluram",
@@ -352,6 +403,65 @@ export const RSS_SOURCES: RSSSource[] = [
     tier: "aggregator",
   },
 
+  // ── Direct publisher feeds verified 2026-10-02 (HTTP 200, valid RSS, Hindi, newest item < 11 h old, robots allow /feed) ──
+  // Measured per feed: items/day, text carried per item, and district mentions are in docs/jandarpan-four-district-sources.md
+  {
+    id: "thihacg-direct",
+    name: "Thiha CG (Direct Feed)",
+    category: "chhattisgarh",
+    language: "hi",
+    region: "cg",
+    url: "https://thihacg.com/feed/",
+    priority: 117,
+    tier: "publisher",
+    fullText: "feed",
+  },
+  {
+    id: "dailychhattisgarh-direct",
+    name: "Daily Chhattisgarh (Direct Feed)",
+    category: "chhattisgarh",
+    language: "hi",
+    region: "cg",
+    url: "https://www.dailychhattisgarh.com/feed",
+    priority: 116,
+    tier: "publisher",
+    fullText: "feed",
+  },
+  {
+    id: "lalluram-direct",
+    name: "Lalluram (Direct Feed)",
+    category: "chhattisgarh",
+    language: "hi",
+    region: "cg",
+    url: "https://lalluram.com/feed",
+    priority: 115,
+    tier: "publisher",
+    // feed carries ~110-char excerpts: article text comes from the (robots-allowed) page, CG-relevant items only
+    fullText: "page",
+  },
+  {
+    id: "cg24news-direct",
+    name: "Chhattisgarh 24 News (Direct Feed)",
+    category: "chhattisgarh",
+    language: "hi",
+    region: "cg",
+    url: "https://chhattisgarh-24-news.com/feed/",
+    priority: 114,
+    tier: "publisher",
+    fullText: "feed",
+  },
+  {
+    id: "cgvaibhav-direct",
+    name: "Chhattisgarh Vaibhav (Direct Feed)",
+    category: "chhattisgarh",
+    language: "hi",
+    region: "cg",
+    url: "https://chhattisgarhvaibhav.com/feed/",
+    priority: 113,
+    tier: "publisher",
+    fullText: "feed",
+  },
+
   // ── Chhattisgarh News Radar — Tier B District & Local Portals ──
   {
     id: "gnews-cg-raipur",
@@ -359,7 +469,7 @@ export const RSS_SOURCES: RSSSource[] = [
     category: "chhattisgarh",
     language: "hi",
     region: "cg",
-    url: googleNewsRss("रायपुर जिला समाचार छत्तीसगढ़", "hi"),
+    url: googleNewsRss("(रायपुर OR \"नवा रायपुर\" OR आरंग OR अभनपुर OR धरसींवा) छत्तीसगढ़ when:2d", "hi"),
     priority: 104,
     tier: "aggregator",
   },
@@ -369,7 +479,7 @@ export const RSS_SOURCES: RSSSource[] = [
     category: "chhattisgarh",
     language: "hi",
     region: "cg",
-    url: googleNewsRss("दुर्ग भिलाई समाचार छत्तीसगढ़", "hi"),
+    url: googleNewsRss("(दुर्ग OR भिलाई OR \"भिलाई स्टील प्लांट\" OR पाटन OR चरोदा OR रिसाली) छत्तीसगढ़ when:2d", "hi"),
     priority: 104,
     tier: "aggregator",
   },
@@ -379,7 +489,7 @@ export const RSS_SOURCES: RSSSource[] = [
     category: "chhattisgarh",
     language: "hi",
     region: "cg",
-    url: googleNewsRss("बिलासपुर समाचार छत्तीसगढ़", "hi"),
+    url: googleNewsRss("(बिलासपुर OR तखतपुर OR बिल्हा OR मस्तूरी OR \"बिलासपुर हाईकोर्ट\") छत्तीसगढ़ when:2d", "hi"),
     priority: 103,
     tier: "aggregator",
   },
@@ -399,7 +509,7 @@ export const RSS_SOURCES: RSSSource[] = [
     category: "chhattisgarh",
     language: "hi",
     region: "cg",
-    url: googleNewsRss("राजनांदगांव समाचार छत्तीसगढ़", "hi"),
+    url: googleNewsRss("(राजनांदगांव OR डोंगरगढ़ OR खैरागढ़ OR डोंगरगांव OR छुरिया OR मानपुर) छत्तीसगढ़ when:2d", "hi"),
     priority: 102,
     tier: "aggregator",
   },

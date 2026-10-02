@@ -33,7 +33,7 @@ import {
 } from "@/lib/ai/providers/cloudflare-embeddings";
 import { isOpenAiProviderEnabled } from "@/lib/ai/providers/router";
 import { asJson, asJsonObject } from "@/types/json";
-import type { NewsEventInsert } from "@/lib/types/newsroom";
+import type { NewsEventInsert, NewsEventRow } from "@/lib/types/newsroom";
 import type { NewsSignalRow } from "@/lib/types/newsroom";
 
 const CLUSTER_THRESHOLD = 0.72;
@@ -284,48 +284,66 @@ function embeddingCosine(a: number[] | null, b: number[] | null): number {
   return d ? dot / d : 0;
 }
 
+/** A signal must appear once per batch: duplicates would be clustered against themselves. */
+export function dedupeSignalsById<T extends { id: string }>(signals: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const s of signals) {
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+    out.push(s);
+  }
+  return out;
+}
+
+/**
+ * An existing event whose title is a near-duplicate of the one about to be created. New signals JOIN it instead of
+ * founding a second event for the same story (the editorial slate and candidate backoff are keyed per event).
+ */
+export function findNearIdenticalEvent<T extends { canonical_title: string }>(
+  canonicalTitle: string,
+  pool: T[]
+): T | null {
+  let best: { event: T; sim: number } | null = null;
+  for (const event of pool) {
+    const sim = titleSimilarity(canonicalTitle, event.canonical_title);
+    if (sim >= TITLE_DUPLICATE_THRESHOLD && (!best || sim > best.sim)) best = { event, sim };
+  }
+  return best?.event ?? null;
+}
+
+/**
+ * Signals that belong to NO event yet, straight from the database.
+ *
+ * The "already clustered" decision used to be made client-side from news_events.signal_ids, fetched through the REST
+ * API with no ORDER/LIMIT. PostgREST caps that at max_rows (1000) while thousands of events fall in the window, so
+ * ~46% of signals looked unclustered on every run and were re-clustered into new events. The authority is now
+ * news_event_signal_claims (signal_id PRIMARY KEY, migration 092): this RPC is a bounded anti-join returning exact
+ * columns only, and the database itself refuses to attach a signal to a second event.
+ */
 export async function fetchUnprocessedSignals(
   limit = DEFAULT_LIMIT,
   lookbackHours = DEFAULT_LOOKBACK_HOURS
 ): Promise<NewsSignalRow[]> {
   const supabase = createAdminServerClient();
-  const cutoff = new Date(
-    Date.now() - lookbackHours * 60 * 60 * 1000
-  ).toISOString();
+  const since = new Date(Date.now() - lookbackHours * 60 * 60 * 1000).toISOString();
 
-  // Only events touched within the same lookback window as the signals
-  // below can possibly reference one of them — an event untouched since
-  // before `cutoff` cannot contain a signal published after it. Fetching
-  // signal_ids from every news_events row ever created (2,292+ and
-  // growing) on every single clustering job was the dominant cost of each
-  // ~54s run, since it re-scans the entire historical table regardless of
-  // how small the actual signal batch being processed is.
-  const { data: events } = await supabase
-    .from("news_events")
-    .select("signal_ids")
-    .gte("updated_at", cutoff);
-
-  const clusteredIds = new Set<string>();
-  for (const e of events ?? []) {
-    for (const id of e.signal_ids ?? []) {
-      clusteredIds.add(id);
-    }
-  }
-
-  const { data: signals, error } = await supabase
-    .from("news_signals")
-    .select("*")
-    .or(`published_at.gte.${cutoff},published_at.is.null`)
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(limit * 2);
+  const { data, error } = await supabase.rpc(
+    "jd_unclustered_signals" as never,
+    { p_since: since, p_limit: limit } as never
+  );
 
   if (error) {
+    // Fail closed: never fall back to the capped client-side lookup (that is the duplicate-event bug).
     logClustering("fetch_signals_error", { message: error.message });
     return [];
   }
 
-  const unprocessed = (signals ?? []).filter((s) => !clusteredIds.has(s.id));
-  return unprocessed.slice(0, limit);
+  // image_url / ingestion_metadata are not needed for clustering and are deliberately not transferred.
+  const rows = ((data ?? []) as unknown as Array<Omit<NewsSignalRow, "image_url" | "ingestion_metadata">>).map(
+    (r) => ({ ...r, image_url: null, ingestion_metadata: {} }) as NewsSignalRow
+  );
+  return dedupeSignalsById(rows).slice(0, limit);
 }
 
 function buildSignalFeatures(
@@ -532,6 +550,8 @@ export async function clusterSignalsIntoEvents(options?: {
   logClustering("clustering_start", { count: signals.length });
 
   const activeEvents = await fetchActiveEvents();
+  // Events created during THIS run join the pool, so two clusters of one story cannot found two events.
+  const eventPool: NewsEventRow[] = [...activeEvents];
   const { matches, unmatched } = matchSignalsToActiveEvents(
     signals,
     activeEvents
@@ -662,6 +682,16 @@ export async function clusterSignalsIntoEvents(options?: {
       )
     );
 
+    const nearIdentical = findNearIdenticalEvent(canonicalTitle, eventPool);
+    if (nearIdentical) {
+      const joined = await mergeSignalsIntoEvent(nearIdentical, cluster.signals, {
+        avgSimilarity: Math.max(cluster.avgSimilarity, TITLE_DUPLICATE_THRESHOLD),
+      });
+      if (joined.updateId) eventsUpdated++;
+      logClustering("joined_near_identical_event", { eventId: nearIdentical.id, size });
+      continue;
+    }
+
     const row: NewsEventInsert = {
       tenant_id: getPipelineTenantId(),
       canonical_title: canonicalTitle,
@@ -726,8 +756,33 @@ export async function clusterSignalsIntoEvents(options?: {
     }
 
     const insertError = error;
-    if (!insertError) eventsCreated++;
-    else {
+    if (!insertError) {
+      eventsCreated++;
+      if (inserted) {
+        const nowIso = new Date().toISOString();
+        eventPool.unshift({
+          id: inserted.id,
+          canonical_title: canonicalTitle,
+          event_summary: row.event_summary ?? null,
+          region: row.region ?? null,
+          category: row.category ?? null,
+          urgency_score: urgency,
+          source_count: size,
+          signal_ids: row.signal_ids ?? [],
+          clustering_metadata: {},
+          coverage_slug: null,
+          coverage_headline: row.coverage_headline ?? null,
+          cluster_confidence: confidence.score,
+          is_live: isLive,
+          coverage_status: "active",
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+      }
+    } else if (insertError.code === "PGRST116") {
+      // The database skipped the insert: every signal in this cluster already belongs to an existing event.
+      logClustering("event_insert_skipped_signals_already_owned", { size });
+    } else {
       logClustering("event_insert_failed", {
         message: insertError.message,
         size,

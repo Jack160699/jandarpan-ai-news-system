@@ -7,6 +7,7 @@
 import { geoFromRecord } from "@/lib/regional/geo-tagging";
 import { scoreSearchOpportunity, type SearchOpportunity } from "@/lib/news/search-demand";
 import type { NewsEventRow } from "@/lib/types/newsroom";
+import { coverageTierScore, type CoverageRank } from "@/lib/news/ai/coverage-priority";
 
 export type EditorialCandidateContext = {
   recentDistrictCounts?: Record<string, number>;
@@ -15,6 +16,11 @@ export type EditorialCandidateContext = {
   searchOpportunities?: SearchOpportunity[];
   /** Set of event IDs that have verified clean photojournalism media */
   eventsWithRealMedia?: Set<string>;
+  /**
+   * Coverage-policy rank per event id (1 = primary district ... 5 = international). When present the slate is ordered
+   * by tier first: the tier score dwarfs every other component.
+   */
+  coverageRank?: Map<string, CoverageRank>;
 };
 
 const LIVE_BOOST = 1_000;
@@ -30,7 +36,7 @@ export function scoreEditorialCandidate(
   context?: EditorialCandidateContext
 ): number {
   const nowMs = context?.nowMs ?? Date.now();
-  let score = 0;
+  let score = coverageTierScore(context?.coverageRank?.get(event.id));
 
   if (event.is_live) {
     score += LIVE_BOOST;

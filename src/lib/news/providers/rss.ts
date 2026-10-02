@@ -22,7 +22,8 @@ import {
   normalizeNewsEncoding,
   safeParsePublishedAt,
 } from "@/lib/news/sanitize-article";
-import { enrichRssArticlesBatch } from "@/lib/news/rss-enrich";
+import { enrichRssArticlesBatch, enrichSourceTextFromPages } from "@/lib/news/rss-enrich";
+import { pickFeedBodyText, type TextEnrichment } from "@/lib/news/ingestion/feed-fulltext";
 import { parseFeedResilient } from "@/lib/news/rss-fetch";
 import {
   isRssSourceBlocked,
@@ -95,10 +96,16 @@ function mapRssItem(
       articleUrl = rawLink;
     }
 
+    // The publisher's own full text when its feed carries it (<content:encoded>), else the longest excerpt field.
+    const feedBody = pickFeedBodyText(item as unknown as Record<string, unknown>);
     const rawContent =
+      feedBody?.text ??
       item.contentSnippet ??
       (item.content ? stripHtml(String(item.content)) : null) ??
       (item.summary ? stripHtml(String(item.summary)) : null);
+    const textEnrichment: TextEnrichment | undefined = feedBody
+      ? { method: feedBody.method, chars: feedBody.text.length, publisher: source.name, source_url: articleUrl }
+      : undefined;
 
     let description =
       item.contentSnippet?.trim() ??
@@ -135,6 +142,7 @@ function mapRssItem(
       title,
       description,
       content: rawContent ? String(rawContent).slice(0, 8000) : description,
+      text_enrichment: textEnrichment,
       image_url: imageUrl,
       source: source.name,
       author: item.creator?.trim() ?? null,
@@ -220,8 +228,19 @@ export async function fetchRssSourceBatch(
     const earlyDupes =
       early.metrics.earlyDuplicateKnownSignal + early.metrics.earlyDuplicateBatch;
 
-    const { articles: enrichedRaw, recoveredCount } =
+    const { articles: pageEnriched, recoveredCount } =
       await enrichRssArticlesBatch(early.novel, RSS_PAGE_ENRICH_LIMIT);
+    // Excerpt-only publishers (registry fullText "page"): attach robots-permitted main text, CG-relevant items only.
+    let enrichedRaw = pageEnriched;
+    if (source.fullText === "page") {
+      const text = await enrichSourceTextFromPages(pageEnriched, { publisher: source.name });
+      enrichedRaw = text.articles;
+      if (text.fetched > 0 || text.blockedByRobots > 0) {
+        console.log(
+          `[rss] ${source.id}: page text fetched=${text.fetched} enriched=${text.enriched} blocked_by_robots=${text.blockedByRobots}`
+        );
+      }
+    }
 
     const priority = sourceEffectivePriority(source);
     const enriched = enrichedRaw.map((a) => ({

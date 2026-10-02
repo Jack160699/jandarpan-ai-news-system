@@ -143,6 +143,7 @@ function regexExtractItems(xml: string): Parser.Item[] {
       block.match(/<description[^>]*>([\s\S]*?)<\/description>/i)?.[1] ??
       block.match(/<summary[^>]*>([\s\S]*?)<\/summary>/i)?.[1] ??
       "";
+    const encodedRaw = block.match(/<content:encoded[^>]*>([\s\S]*?)<\/content:encoded>/i)?.[1];
     const pubDate =
       block.match(/<pubDate[^>]*>([^<]+)<\/pubDate>/i)?.[1] ??
       block.match(/<published[^>]*>([^<]+)<\/published>/i)?.[1];
@@ -158,6 +159,8 @@ function regexExtractItems(xml: string): Parser.Item[] {
           descRaw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
         ).slice(0, 600),
         pubDate: pubDate?.trim(),
+        // full article text when the publisher syndicates it (cleaned later by feed-fulltext)
+        ...(encodedRaw ? ({ contentEncoded: encodedRaw } as Record<string, string>) : {}),
       });
     }
   }

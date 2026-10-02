@@ -15,7 +15,8 @@ export type { ClusterSignalsResult };
  * Requires NEWSROOM_CLUSTER_EVENTS=true
  */
 export async function clusterRecentSignals(
-  limit = 120
+  limit = 120,
+  options?: { lookbackHours?: number }
 ): Promise<ClusterSignalsResult> {
   if (process.env.NEWSROOM_CLUSTER_EVENTS !== "true") {
     logNewsroom("events", "clustering_disabled", {
@@ -44,5 +45,5 @@ export async function clusterRecentSignals(
     };
   }
 
-  return clusterSignalsIntoEvents({ limit });
+  return clusterSignalsIntoEvents({ limit, lookbackHours: options?.lookbackHours });
 }

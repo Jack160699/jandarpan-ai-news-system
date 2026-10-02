@@ -176,10 +176,12 @@ import { isLlmBudgetExhausted, llmBudgetSnapshot } from "@/lib/ai/providers/call
 import { isEpaperPageListingTitle, isGenericRoundupSourceTitle } from "@/lib/news/quality/source-title-quality";
 import {
   clearCandidateAttempts,
-  isCandidateBlocked,
   loadCandidateAttemptStates,
   recordCandidateFailure,
+  selectUnblockedDistinctStories,
 } from "./candidate-attempts";
+import { EDITORIAL_EVENT_COLUMNS, fetchEditorialCandidatePool, hydrateEditorialEvents } from "./editorial-event-columns";
+import { applyCoveragePolicy } from "./coverage-priority";
 import { isSafeBatchRescueCandidate } from "./editorial-batch-rescue";
 import {
   AUTO_GENERATION_MAX_AGE_HOURS,
@@ -568,6 +570,65 @@ async function loadExistingSignalIdSet(signalIds: string[]): Promise<Set<string>
   return existing;
 }
 
+type StoryIndexRow = {
+  id: string | null;
+  headline: string | null;
+  event_id: string | null;
+  hero_image_url: string | null;
+  workflow_status: string | null;
+  published_at: string | null;
+  fingerprint: string | null;
+};
+
+/**
+ * The 500 most recent articles WITHOUT their bodies. The body fingerprint is persisted (migration 094); only rows that
+ * do not have one yet are read in full, fingerprinted with the same application hash, and written back -- so this was
+ * ~500 article bodies per 5-minute editorial wake and is now one small row per article.
+ */
+async function loadStoryIndexRows(supabase: ReturnType<typeof createAdminServerClient>): Promise<StoryIndexRow[]> {
+  const META = "id, headline, event_id, hero_image_url, workflow_status, published_at";
+  const withFp = await supabase
+    .from("generated_articles")
+    .select(`${META}, body_fingerprint` as never)
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  if (withFp.error) {
+    // Column not deployed yet (migration 094): keep the previous behaviour exactly.
+    const legacy = await supabase
+      .from("generated_articles")
+      .select(`${META}, article_body`)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    return (legacy.data ?? []).map((r) => ({
+      ...(r as unknown as StoryIndexRow),
+      fingerprint: r.article_body ? fingerprintBody(r.article_body) : null,
+    }));
+  }
+
+  const rows = (withFp.data ?? []) as unknown as Array<Omit<StoryIndexRow, "fingerprint"> & { body_fingerprint: string | null }>;
+  const out: StoryIndexRow[] = rows.map((r) => ({ ...r, fingerprint: r.body_fingerprint }));
+  const missing = out.filter((r) => !r.fingerprint && r.id);
+  for (let i = 0; i < missing.length; i += 25) {
+    const chunk = missing.slice(i, i + 25);
+    const { data: bodies } = await supabase
+      .from("generated_articles")
+      .select("id, article_body")
+      .in("id", chunk.map((r) => r.id as string));
+    const writes: PromiseLike<unknown>[] = [];
+    for (const b of bodies ?? []) {
+      if (!b.article_body) continue;
+      const fp = fingerprintBody(b.article_body);
+      const row = chunk.find((r) => r.id === b.id);
+      if (row) row.fingerprint = fp;
+      writes.push(supabase.from("generated_articles").update({ body_fingerprint: fp } as never).eq("id", b.id));
+    }
+    // Awaited (a serverless worker may be frozen right after it responds); best effort -- the next wake retries.
+    await Promise.allSettled(writes);
+  }
+  return out;
+}
+
 async function loadExistingStoryIndex(): Promise<{
   headlines: string[];
   bodyFingerprints: string[];
@@ -577,11 +638,7 @@ async function loadExistingStoryIndex(): Promise<{
   usedImageUrls: Set<string>;
 }> {
   const supabase = createAdminServerClient();
-  const { data } = await supabase
-    .from("generated_articles")
-    .select("id, headline, article_body, event_id, hero_image_url, workflow_status, published_at")
-    .order("created_at", { ascending: false })
-    .limit(500);
+  const data = await loadStoryIndexRows(supabase);
   const headlines: string[] = [];
   const bodyFingerprints: string[] = [];
   const eventIds: string[] = [];
@@ -589,7 +646,7 @@ async function loadExistingStoryIndex(): Promise<{
   const usedImageUrls = new Set<string>();
   for (const row of data ?? []) {
     if (row.headline) headlines.push(row.headline);
-    if (row.article_body) bodyFingerprints.push(fingerprintBody(row.article_body));
+    if (row.fingerprint) bodyFingerprints.push(row.fingerprint);
     if (row.hero_image_url && typeof row.hero_image_url === "string") {
       usedImageUrls.add(row.hero_image_url.trim().toLowerCase());
     }
@@ -2273,35 +2330,51 @@ export async function generateEditorialsFromEvents(
   ).toISOString();
   const fetchLimit = Math.max(limit * 40, 80);
 
-  let { data: events, error } = await supabase
-    .from("news_events")
-    .select("*")
-    .gte("created_at", windowStart)
-    .order("urgency_score", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(fetchLimit);
+  // Coverage-policy slate (migration 096): primary districts first, evidence-floored, exact columns. Falls back to the
+  // legacy urgency-ordered read only when the database function is unavailable.
+  const policyActive = process.env.EDITORIAL_COVERAGE_POLICY !== "off" && !options?.eventId;
+  const pool = policyActive ? await fetchEditorialCandidatePool(supabase as never) : null;
+  if (pool) {
+    logEditorial("candidate_pool", { source: "rpc", groups: pool.groups, events: pool.events.length });
+  }
 
-  if (!error && (events?.length ?? 0) < limit * 5) {
+  let events: NewsEventRow[] | null = pool?.events ?? null;
+  let error: { message: string } | null = null;
+  if (!pool) {
+    const first = await supabase
+      .from("news_events")
+      .select(EDITORIAL_EVENT_COLUMNS)
+      .neq("coverage_status", "superseded")
+      .gte("created_at", windowStart)
+      .order("urgency_score", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(fetchLimit);
+    events = first.error ? null : hydrateEditorialEvents(first.data);
+    error = first.error;
+  }
+
+  if (!pool && !error && (events?.length ?? 0) < limit * 5) {
     const expandedStart = new Date(
       Date.now() - AUTO_GENERATION_MAX_AGE_HOURS * 2 * 3_600_000
     ).toISOString();
     const expanded = await supabase
       .from("news_events")
-      .select("*")
+      .select(EDITORIAL_EVENT_COLUMNS)
+      .neq("coverage_status", "superseded")
       .gte("created_at", expandedStart)
       .order("urgency_score", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(fetchLimit);
     if (!expanded.error && expanded.data?.length) {
-      events = expanded.data;
+      events = hydrateEditorialEvents(expanded.data);
       error = expanded.error;
     }
   }
 
   if (options?.eventId) {
     // Targeted run: exactly this event, regardless of ranking. Freshness/eligibility gates below still apply.
-    const one = await supabase.from("news_events").select("*").eq("id", options.eventId).limit(1);
-    events = one.data ?? [];
+    const one = await supabase.from("news_events").select(EDITORIAL_EVENT_COLUMNS).eq("id", options.eventId).limit(1);
+    events = hydrateEditorialEvents(one.data);
     error = one.error;
   }
 
@@ -2358,10 +2431,29 @@ export async function generateEditorialsFromEvents(
     logEditorial("epaper_listing_filter", { resolvable: resolvable.length, filteredEpaperListings });
   }
   // Aggregator live-page / roundup events can never pass the headline gate: skip them BEFORE any paid call too.
-  const eligible = notEpaper.filter((e) => !isGenericRoundupSourceTitle(e.canonical_title));
-  const filteredRoundupSources = notEpaper.length - eligible.length;
+  const notRoundup = notEpaper.filter((e) => !isGenericRoundupSourceTitle(e.canonical_title));
+  const filteredRoundupSources = notEpaper.length - notRoundup.length;
   if (filteredRoundupSources > 0) {
     logEditorial("roundup_source_filter", { candidates: notEpaper.length, filteredRoundupSources });
+  }
+
+  // Coverage policy: only primary-district stories and IMPORTANT statewide / other-district / national / international
+  // stories are candidates, ordered by tier. (Targeted eventId runs and EDITORIAL_COVERAGE_POLICY=off bypass the filter;
+  // every quality/safety/geo/language/dedupe gate below still applies.)
+  const coveragePolicy = policyActive
+    ? applyCoveragePolicy(notRoundup)
+    : { kept: notRoundup, coverage: new Map(), dropped: { unknown_geography: 0, not_important: 0 } };
+  const eligible = coveragePolicy.kept;
+  const coverageRank = new Map<string, import("./coverage-priority").CoverageRank>(
+    [...coveragePolicy.coverage].map(([id, c]) => [id, c.rank])
+  );
+  if (policyActive) {
+    const tiers: Record<string, number> = {};
+    for (const e of eligible) {
+      const r = String(coveragePolicy.coverage.get(e.id)?.rank ?? "?");
+      tiers[r] = (tiers[r] ?? 0) + 1;
+    }
+    logEditorial("coverage_policy", { candidates: notRoundup.length, kept: eligible.length, tiers, ...coveragePolicy.dropped });
   }
 
   // Pre-generation media discovery: Identify candidates with clean real photojournalism
@@ -2393,12 +2485,11 @@ export async function generateEditorialsFromEvents(
   // Persistent failure history: skip events still in exponential backoff or dead-lettered (fail-open on DB error).
   const attemptStates = await loadCandidateAttemptStates(eligible.map((e) => e.id));
   const nowMs = Date.now();
+  // Backoff is keyed per event but applies per STORY: an event whose same-titled twin is blocked is blocked too, and a
+  // slate holds each story once (a duplicate event must not buy a story a fresh retry budget).
   const unblocked = options?.ignoreBackoff
     ? eligible
-    : eligible.filter((e) => {
-        const st = attemptStates.get(e.id);
-        return !st || !isCandidateBlocked(st, nowMs);
-      });
+    : selectUnblockedDistinctStories(eligible, attemptStates, nowMs);
   const blockedByBackoff = eligible.length - unblocked.length;
   if (blockedByBackoff > 0) {
     logEditorial("candidate_backoff_filter", { eligible: eligible.length, blockedByBackoff });
@@ -2406,6 +2497,7 @@ export async function generateEditorialsFromEvents(
 
   const rankedPending = selectEditorialCandidates(unblocked, unblocked.length, {
     eventsWithRealMedia,
+    coverageRank: policyActive ? coverageRank : undefined,
   });
   const failedEventReasons: Array<{ eventId: string; reason: string }> = [];
   const succeededEventIds: string[] = [];
