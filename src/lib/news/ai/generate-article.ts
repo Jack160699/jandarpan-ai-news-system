@@ -182,6 +182,7 @@ import {
 } from "./candidate-attempts";
 import { EDITORIAL_EVENT_COLUMNS, fetchEditorialCandidatePool, hydrateEditorialEvents } from "./editorial-event-columns";
 import { applyCoveragePolicy } from "./coverage-priority";
+import { invalidateStoryIndexCache, readStoryIndexCache, writeStoryIndexCache } from "./story-index-cache";
 import { isSafeBatchRescueCandidate } from "./editorial-batch-rescue";
 import {
   AUTO_GENERATION_MAX_AGE_HOURS,
@@ -588,7 +589,16 @@ type StoryIndexRow = {
  * do not have one yet are read in full, fingerprinted with the same application hash, and written back -- so this was
  * ~500 article bodies per 5-minute editorial wake and is now one small row per article.
  */
-async function loadStoryIndexRows(supabase: ReturnType<typeof createAdminServerClient>): Promise<StoryIndexRow[]> {
+export async function loadStoryIndexRows(supabase: ReturnType<typeof createAdminServerClient>): Promise<StoryIndexRow[]> {
+  // Redis first (not Supabase egress): the index only changes when a story is persisted, which deletes the cached copy.
+  const cached = await readStoryIndexCache(STORY_INDEX_LIMIT);
+  if (cached) return cached;
+  const rows = await loadStoryIndexRowsFromDatabase(supabase);
+  await writeStoryIndexCache(rows, STORY_INDEX_LIMIT);
+  return rows;
+}
+
+async function loadStoryIndexRowsFromDatabase(supabase: ReturnType<typeof createAdminServerClient>): Promise<StoryIndexRow[]> {
   const META = "id, headline, event_id, hero_image_url, workflow_status, published_at";
   const withFp = await supabase
     .from("generated_articles")
@@ -610,7 +620,15 @@ async function loadStoryIndexRows(supabase: ReturnType<typeof createAdminServerC
   }
 
   const rows = (withFp.data ?? []) as unknown as Array<Omit<StoryIndexRow, "fingerprint"> & { body_fingerprint: string | null }>;
-  const out: StoryIndexRow[] = rows.map((r) => ({ ...r, fingerprint: r.body_fingerprint }));
+  const out: StoryIndexRow[] = rows.map((r) => ({
+    id: r.id,
+    headline: r.headline,
+    event_id: r.event_id,
+    hero_image_url: r.hero_image_url,
+    workflow_status: r.workflow_status,
+    published_at: r.published_at,
+    fingerprint: r.body_fingerprint,
+  }));
   const missing = out.filter((r) => !r.fingerprint && r.id);
   for (let i = 0; i < missing.length; i += 25) {
     const chunk = missing.slice(i, i + 25);
@@ -1490,7 +1508,9 @@ async function persistGeneratedArticle(input: {
       ...row,
       geo_metadata: asJson(row.geo_metadata),
       editorial_metadata: asJson(row.editorial_metadata),
-    })
+      // Persist the fingerprint with the article so the story index never has to read the body back to compute it.
+      ...(row.article_body ? { body_fingerprint: fingerprintBody(row.article_body) } : {}),
+    } as never)
     .select("*")
     .single();
 
@@ -1514,6 +1534,9 @@ async function persistGeneratedArticle(input: {
       reason: error.message,
     };
   }
+
+  // The recent-stories index changed: drop the Redis copy so the next wake reloads it once.
+  await invalidateStoryIndexCache();
 
   if (input.humanQualityMeta) {
     await persistEvidenceLedgerOptional(

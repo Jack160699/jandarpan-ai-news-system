@@ -2,6 +2,7 @@
  * Durable event bus — pub/sub with deduplication for worker orchestration
  */
 
+import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 import { createAdminClient } from "@/lib/supabase";
 import { asJsonObject, jsonObjectFrom, type JsonObject } from "@/types/json";
 import { enqueueJob } from "@/lib/infrastructure/jobs/queue";
@@ -22,6 +23,12 @@ export type PublishEventInput = {
   payload?: JsonObject;
   dedupeKey?: string;
 };
+
+/** Drops the heavy legacy snapshot job unless explicitly enabled (see INFRA_CONFIG.intelligenceSnapshotEnabled). */
+export function jobsForTopic(topic: EventTopic, snapshotEnabled: boolean): JobType[] {
+  const jobs = TOPIC_JOB_MAP[topic] ?? [];
+  return snapshotEnabled ? jobs : jobs.filter((j) => j !== "intelligence_snapshot");
+}
 
 /** Maps event topics to downstream job types */
 const TOPIC_JOB_MAP: Partial<Record<EventTopic, JobType[]>> = {
@@ -103,7 +110,7 @@ export async function deliverPendingEvents(
       .eq("id", event.id);
 
     try {
-      const jobs = TOPIC_JOB_MAP[event.topic as EventTopic] ?? [];
+      const jobs = jobsForTopic(event.topic as EventTopic, INFRA_CONFIG.intelligenceSnapshotEnabled);
       const tenantId = event.tenant_id as string | null;
       const payload = jsonObjectFrom(event.payload);
 

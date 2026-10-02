@@ -107,7 +107,7 @@ export async function fetchEventRowByCoverageSlug(
     .eq("coverage_slug", decoded);
 
   if (options?.liveOnly !== false) {
-    query = query.eq("is_live", true);
+    query = query.eq("is_live", true).eq("coverage_status", "active");
   }
 
   const { data, error } = await query.maybeSingle();

@@ -6,6 +6,7 @@ import { drainBackground } from "@/lib/runtime/background";
 import { acquireWorkerRunLease } from "@/lib/infrastructure/workers/run-guard";
 import { recordCronRun } from "@/lib/observability/cron-monitor";
 import { createAdminServerClient } from "@/lib/supabase";
+import { evaluateEgressGovernor, recordRunEgress } from "@/lib/observability/egress-governor";
 import type { KitDeps } from "@/lib/edge/worker-kit/kit";
 
 async function readSchedulerEnabled(): Promise<boolean | null> {
@@ -42,6 +43,9 @@ export function createKitDeps(env: Record<string, string | undefined> = process.
         failed: run.failed,
         metadata: run.metadata,
       }),
+    // Inert unless JD_EGRESS_GOVERNOR is set (off by default: no Redis traffic, no effect).
+    evaluateEgress: () => evaluateEgressGovernor({ env }),
+    recordEgress: () => recordRunEgress({ env }),
     drainBackground: (ms) => drainBackground(ms),
     env,
     newId: () => crypto.randomUUID(),

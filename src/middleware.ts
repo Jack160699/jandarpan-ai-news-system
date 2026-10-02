@@ -105,7 +105,7 @@ export async function middleware(request: NextRequest) {
 
   // ─── Recurring-traffic pause (JD_PAUSE_RECURRING=true): non-essential scheduled callers get a static 200 and never
   //     reach a route, so no Supabase request is made while the project is restricted. Website/auth/admin/health untouched. ───
-  if (isRecurringTrafficPaused() && isPausableRecurringPath(pathname)) {
+  if (isRecurringTrafficPaused() && isPausableRecurringPath(pathname, request.headers)) {
     return applySecurityHeaders(NextResponse.json(recurringPauseBody(pathname), { status: 200 }));
   }
 

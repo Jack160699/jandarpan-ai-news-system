@@ -181,7 +181,10 @@ export async function fetchRssSourceBatch(
   };
 
   try {
-    const blocked = await isRssSourceBlocked(source, health);
+    // ONE full state read per source per run: it gates the block check, the incremental window and the state upserts below.
+    const sourceKey = buildSourceKey("rss", source.id);
+    const state = await loadIngestionSourceState(sourceKey);
+    const blocked = await isRssSourceBlocked(source, health, state);
     if (blocked.skipped) {
       return { ...empty, skipped: true, error: blocked.reason ?? "skipped" };
     }
@@ -210,8 +213,6 @@ export async function fetchRssSourceBatch(
     }
 
     // Incremental window: drop items older than last cursor − overlap.
-    const sourceKey = buildSourceKey("rss", source.id);
-    const state = await loadIngestionSourceState(sourceKey);
     const cursorExpected = state?.last_item_timestamp ?? null;
     const publishedAfter = publishedAfterIsoFromCursor(cursorExpected);
     const { kept: windowed, filtered: incrementalFiltered } =
@@ -270,22 +271,30 @@ export async function fetchRssSourceBatch(
       await recordSourceSuccess(source, health, unique.length);
       // Cursor advances ONLY after successful news_signals persistence
       // (see ingest-provider-batch). Do not advance here.
-      await upsertIngestionSourceState({
-        source_key: sourceKey,
-        provider_family: "rss",
-        last_successful_at: new Date().toISOString(),
-        health_state: "healthy",
-      });
+      await upsertIngestionSourceState(
+        {
+          source_key: sourceKey,
+          provider_family: "rss",
+          last_successful_at: new Date().toISOString(),
+          health_state: "healthy",
+        },
+        null,
+        { prev: state }
+      );
     } else if (mapped.length > 0 && early.novel.length === 0) {
       // Feed had items but all known — still record success / empty-new run.
       await recordSourceSuccess(source, health, 0);
-      await upsertIngestionSourceState({
-        source_key: sourceKey,
-        provider_family: "rss",
-        last_successful_at: new Date().toISOString(),
-        consecutive_empty_runs: (state?.consecutive_empty_runs ?? 0) + 1,
-        health_state: "healthy",
-      });
+      await upsertIngestionSourceState(
+        {
+          source_key: sourceKey,
+          provider_family: "rss",
+          last_successful_at: new Date().toISOString(),
+          consecutive_empty_runs: (state?.consecutive_empty_runs ?? 0) + 1,
+          health_state: "healthy",
+        },
+        null,
+        { prev: state }
+      );
     }
 
     return {

@@ -178,14 +178,22 @@ export async function loadAllIngestionSourceStates(
   return map;
 }
 
+/**
+ * Merge-upserts a source's state row. The write is a FULL-row upsert built from `prev` + `patch`, so `prev` must be the complete
+ * current row. `options.prev` lets a caller that already holds that row (it just loaded it) skip the re-read: this function used
+ * to re-load the row (760 B) and ask the database to return it again (760 B) on every call, several times per source per
+ * 10-minute shard run. Pass `prev: null` for "no row exists". Never pass a partial (poll-gating) row.
+ */
 export async function upsertIngestionSourceState(
   patch: Partial<IngestionSourceStateRow> & {
     source_key: string;
     provider_family: string;
   },
-  tenantId: string | null = null
+  tenantId: string | null = null,
+  options: { prev?: IngestionSourceStateRow | null } = {}
 ): Promise<IngestionSourceStateRow> {
-  const prev = await loadIngestionSourceState(patch.source_key, tenantId);
+  const prev =
+    "prev" in options ? options.prev ?? null : await loadIngestionSourceState(patch.source_key, tenantId);
   const now = new Date().toISOString();
   const next: IngestionSourceStateRow = {
     tenant_id: tenantId,
@@ -239,7 +247,7 @@ export async function upsertIngestionSourceState(
           ? { onConflict: "tenant_id,source_key" }
           : { onConflict: "source_key" }
       )
-      .select("*")
+      .select("source_key")
       .maybeSingle();
 
     // Partial unique indexes may not map cleanly to onConflict — fall back to select+update/insert.
@@ -263,8 +271,8 @@ export async function upsertIngestionSourceState(
         await supabase.from("ingestion_source_state").insert(next);
       }
     } else if (data) {
-      memory.set(memoryKey(tenantId, patch.source_key), data as IngestionSourceStateRow);
-      return data as IngestionSourceStateRow;
+      // The row written is exactly `next`; the database no longer echoes it back (that was a full extra row per call).
+      return next;
     }
   } catch (err) {
     console.warn("[ingestion-source-state] upsert failed:", err);
@@ -313,7 +321,8 @@ export async function advanceSourceCursorSafe(input: {
           ? 0
           : (current?.consecutive_empty_runs ?? 0) + 1,
     },
-    tenantId
+    tenantId,
+    { prev: current }
   );
   return { advanced: true };
 }
