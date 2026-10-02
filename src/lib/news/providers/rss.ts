@@ -22,7 +22,7 @@ import {
   normalizeNewsEncoding,
   safeParsePublishedAt,
 } from "@/lib/news/sanitize-article";
-import { enrichRssArticlesBatch } from "@/lib/news/rss-enrich";
+import { enrichRssArticlesBatch, enrichSourceTextFromPages } from "@/lib/news/rss-enrich";
 import { pickFeedBodyText, type TextEnrichment } from "@/lib/news/ingestion/feed-fulltext";
 import { parseFeedResilient } from "@/lib/news/rss-fetch";
 import {
@@ -228,8 +228,19 @@ export async function fetchRssSourceBatch(
     const earlyDupes =
       early.metrics.earlyDuplicateKnownSignal + early.metrics.earlyDuplicateBatch;
 
-    const { articles: enrichedRaw, recoveredCount } =
+    const { articles: pageEnriched, recoveredCount } =
       await enrichRssArticlesBatch(early.novel, RSS_PAGE_ENRICH_LIMIT);
+    // Excerpt-only publishers (registry fullText "page"): attach robots-permitted main text, CG-relevant items only.
+    let enrichedRaw = pageEnriched;
+    if (source.fullText === "page") {
+      const text = await enrichSourceTextFromPages(pageEnriched, { publisher: source.name });
+      enrichedRaw = text.articles;
+      if (text.fetched > 0 || text.blockedByRobots > 0) {
+        console.log(
+          `[rss] ${source.id}: page text fetched=${text.fetched} enriched=${text.enriched} blocked_by_robots=${text.blockedByRobots}`
+        );
+      }
+    }
 
     const priority = sourceEffectivePriority(source);
     const enriched = enrichedRaw.map((a) => ({

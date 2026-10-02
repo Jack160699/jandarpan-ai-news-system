@@ -64,7 +64,24 @@ export function cleanArticleText(input: string): string {
 
   const out: string[] = [];
   for (const line of lines) if (out[out.length - 1] !== line) out.push(line);
-  return dropTrailingHeadlineList(out).join("\n").trim();
+  return trimPromoTail(dropTrailingHeadlineList(out).join("\n")).trim();
+}
+
+/**
+ * Publishers end articles with a call to action ("follow our WhatsApp channel", "read this in English, click here").
+ * It is not article text and, in JSON-LD / single-paragraph bodies, it shares a line with the last sentence, so it is
+ * cut at its first marker -- but never inside the opening 200 characters (a story that merely mentions WhatsApp).
+ */
+const PROMO_TAIL_MARKERS =
+  /(?:व्हाट्सएप|वाट्सएप|व्हाट्सऐप|टेलीग्राम)\s*(?:चैनल|ग्रुप)|whatsapp\.com\/channel|t\.me\/|फॉलो\s*करना\s*न\s*भूलें|follow\s*करना\s*न\s*भूलें|डॉट\s*कॉम\s*की\s*खबरें|खबरें\s*(?:English|अंग्रेजी)\s*में\s*पढ़ने|subscribe\s+to\s+our|download\s+(?:our|the)\s+app/i;
+
+export function trimPromoTail(text: string): string {
+  const m = PROMO_TAIL_MARKERS.exec(text);
+  if (!m || m.index < 200) return text;
+  // cut back to the end of the previous sentence so no half-sentence of promo prefix remains
+  const head = text.slice(0, m.index);
+  const lastStop = Math.max(head.lastIndexOf("।"), head.lastIndexOf("."), head.lastIndexOf("!"), head.lastIndexOf("\n"));
+  return lastStop >= 200 ? head.slice(0, lastStop + 1) : head;
 }
 
 const SENTENCE_END = /[।.!"'”’)]$/;

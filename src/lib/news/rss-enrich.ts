@@ -13,6 +13,9 @@ import { decodeHtmlEntities } from "@/lib/news/rss-fetch";
 import { parsePublishedAt } from "@/lib/news/normalize";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 import type { NormalizedArticle } from "@/lib/news/types";
+import { extractArticleText } from "@/lib/news/ingestion/article-text-extract";
+import { isFetchAllowed } from "@/lib/news/ingestion/robots";
+import { tagGeoFromContent } from "@/lib/regional/geo-tagging";
 
 const PAGE_TIMEOUT_MS = 8_000;
 const USER_AGENT =
@@ -63,7 +66,7 @@ export function extractArticleMetadataFromHtml(html: string): {
   };
 }
 
-async function fetchPageHtml(url: string): Promise<string | null> {
+export async function fetchPageHtml(url: string): Promise<string | null> {
   const cached = getCachedPageHtml(url);
   if (cached) return cached;
 
@@ -172,6 +175,89 @@ export async function enrichRssArticleFromPage(
     },
     recovered,
   };
+}
+
+/** Source text below this is "thin": the body/evidence gate needs ~480+ chars of real source material. */
+export const THIN_SOURCE_TEXT_CHARS = 480;
+/** Page fetches per source per run (politeness + the Edge wall-clock budget). */
+export const PAGE_TEXT_FETCH_LIMIT = 6;
+const PAGE_TEXT_DELAY_MS = 1_200;
+
+type PageTextDeps = {
+  fetchHtml?: (url: string) => Promise<string | null>;
+  allowed?: (url: string) => Promise<boolean>;
+  sleep?: (ms: number) => Promise<void>;
+  now?: () => string;
+};
+
+/**
+ * Layer B (see article-text-extract.ts): for sources whose feed carries only excerpts (registry fullText "page"), fetch
+ * the publisher article page -- only when robots.txt allows it, only for Chhattisgarh-relevant items, at most
+ * PAGE_TEXT_FETCH_LIMIT per run, one request per ~1.2 s -- and attach the extracted main text with attribution.
+ * Anything that cannot be fetched or extracted is returned unchanged; the normal quality gates decide what happens next.
+ */
+export async function enrichSourceTextFromPages(
+  articles: NormalizedArticle[],
+  options: { publisher: string; limit?: number },
+  deps: PageTextDeps = {}
+): Promise<{ articles: NormalizedArticle[]; enriched: number; blockedByRobots: number; fetched: number }> {
+  const fetchHtml = deps.fetchHtml ?? fetchPageHtml;
+  const allowed = deps.allowed ?? ((u: string) => isFetchAllowed(u, { userAgent: USER_AGENT }));
+  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const now = deps.now ?? (() => new Date().toISOString());
+  const limit = options.limit ?? PAGE_TEXT_FETCH_LIMIT;
+
+  let enriched = 0;
+  let blockedByRobots = 0;
+  let fetched = 0;
+  const out: NormalizedArticle[] = [];
+
+  for (const article of articles) {
+    const have = (article.content ?? article.description ?? "").trim().length;
+    const cgRelevant = tagGeoFromContent({
+      title: article.title,
+      body: article.content ?? article.description ?? "",
+      region: article.region,
+      category: article.category,
+    }).is_chhattisgarh;
+    if (have >= THIN_SOURCE_TEXT_CHARS || !cgRelevant || fetched >= limit) {
+      out.push(article);
+      continue;
+    }
+
+    try {
+      if (!(await allowed(article.article_url))) {
+        blockedByRobots++;
+        out.push(article);
+        continue;
+      }
+      if (fetched > 0) await sleep(PAGE_TEXT_DELAY_MS);
+      fetched++;
+      const html = await fetchHtml(article.article_url);
+      const extracted = html ? extractArticleText(html) : null;
+      if (!extracted || extracted.text.length <= have) {
+        out.push(article);
+        continue;
+      }
+      enriched++;
+      out.push({
+        ...article,
+        content: extracted.text,
+        text_enrichment: {
+          method: "page_extract",
+          chars: extracted.text.length,
+          publisher: options.publisher,
+          source_url: article.article_url,
+          robots: "allowed",
+          fetched_at: now(),
+        },
+      });
+    } catch {
+      out.push(article);
+    }
+  }
+
+  return { articles: out, enriched, blockedByRobots, fetched };
 }
 
 export async function enrichRssArticlesBatch(

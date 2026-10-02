@@ -14,6 +14,34 @@ import type { NormalizedArticle, ProviderFetchResult } from "@/lib/news/types";
 
 const NEWSDATA_BASE = "https://newsdata.io/api/1/news";
 
+/**
+ * Query set, retargeted to the editorial coverage policy. The previous three queries were generic national/world
+ * "top" feeds: 96% of what they returned was not Chhattisgarh and 0-17% carried usable article text.
+ *   1-2  the four primary districts (Hindi + English spellings)      3  statewide Chhattisgarh
+ *   4    major national headlines only ("top" = the provider's editorial front page)
+ * International stories come from the BBC World / Google News international feeds; there is no NewsData world query.
+ * q stays well under the 100-char free-plan limit.
+ */
+export const NEWSDATA_QUERIES: ReadonlyArray<Record<string, string>> = [
+  { country: "in", language: "hi", q: "रायपुर OR दुर्ग OR भिलाई OR बिलासपुर OR राजनांदगांव" },
+  { country: "in", language: "en", q: "Raipur OR Durg OR Bhilai OR Bilaspur OR Rajnandgaon" },
+  { country: "in", language: "hi", q: "छत्तीसगढ़" },
+  { country: "in", language: "hi,en", category: "top" },
+];
+
+/**
+ * Free plan = 200 credits/day and every query costs one. This runs on one shard every 10 minutes (144 runs/day x 4
+ * queries = 576 credits), so unthrottled it exhausts the quota by mid-morning and then yields nothing all day.
+ * One run per 40 min = 36 runs x 4 queries = 144 credits/day, ~28% headroom.
+ */
+export const NEWSDATA_MIN_INTERVAL_MS = 40 * 60_000;
+
+/** Pure: is a NewsData run due, given when the last one was attempted? */
+export function isNewsDataDue(lastAttemptedIso: string | null | undefined, now: number = Date.now()): boolean {
+  const last = lastAttemptedIso ? new Date(lastAttemptedIso).getTime() : NaN;
+  return !Number.isFinite(last) || now - last >= NEWSDATA_MIN_INTERVAL_MS;
+}
+
 type NewsDataArticle = {
   title?: string;
   description?: string;
@@ -106,7 +134,8 @@ async function fetchNewsDataQuery(params: Record<string, string>): Promise<{
       };
     }
 
-    const category = params.category ?? "world";
+    // keyword (district) queries are Chhattisgarh-targeted; only the untargeted fallback is "world"
+    const category = params.category ?? (params.q ? "chhattisgarh" : "world");
     const region = params.country === "in" ? "india" : "global";
 
     const articles =
@@ -152,21 +181,35 @@ export async function fetchNewsDataAll(): Promise<ProviderFetchResult> {
 
   const sourceKey = buildSourceKey("newsdata", "api");
   const state = await loadIngestionSourceState(sourceKey);
+
+  const lastPoll = [state?.last_attempted_at, state?.last_successful_at]
+    .filter((v): v is string => Boolean(v))
+    .sort()
+    .pop();
+  if (!isNewsDataDue(lastPoll)) {
+    return {
+      provider: "newsdata",
+      label: "NewsData.io (district-targeted; throttled to protect the daily credit quota)",
+      articles: [],
+      fetched: 0,
+      valid: 0,
+      errors: [],
+      durationMs: Date.now() - startedAt,
+    };
+  }
+  const { upsertIngestionSourceState } = await import("@/lib/news/ingestion/source-state");
+  await upsertIngestionSourceState({
+    source_key: sourceKey,
+    provider_family: "newsdata",
+    last_attempted_at: new Date().toISOString(),
+  }).catch(() => undefined);
   // NewsData /latest and /news reject from_date on this plan/endpoint (HTTP 422
   // UnsupportedParameter). Keep incremental behaviour via client-side windowing.
   const publishedAfter = publishedAfterIsoFromCursor(
     state?.last_item_timestamp ?? null
   );
 
-  const queries = [
-    { country: "in", language: "en,hi", category: "top" },
-    { country: "in", language: "hi", category: "top" },
-    { category: "world", language: "en" },
-  ];
-
-  const results = await Promise.all(
-    queries.map((q) => fetchNewsDataQuery(q as Record<string, string>))
-  );
+  const results = await Promise.all(NEWSDATA_QUERIES.map((q) => fetchNewsDataQuery({ ...q })));
 
   const articles: NormalizedArticle[] = [];
   const errors: string[] = [];
@@ -200,7 +243,7 @@ export async function fetchNewsDataAll(): Promise<ProviderFetchResult> {
 
   return {
     provider: "newsdata",
-    label: "NewsData.io (India + Global)",
+    label: "NewsData.io (district-targeted)",
     articles: stamped,
     fetched,
     valid: stamped.length,

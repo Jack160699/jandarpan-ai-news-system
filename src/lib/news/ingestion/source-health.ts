@@ -124,7 +124,7 @@ export function deriveSourceHealth(
  */
 export function nextPollDelayMs(
   row: StateLike | null | undefined,
-  options: { now?: number; highValue?: boolean } = {}
+  options: { now?: number; highValue?: boolean; maxDelayMs?: number | null } = {}
 ): number {
   if (!row) return 0;
   const now = options.now ?? Date.now();
@@ -147,13 +147,16 @@ export function nextPollDelayMs(
   // Direct Chhattisgarh publishers are the scarce, high-value supply: never poll them
   // less often than every 30 minutes.
   if (options.highValue) delay = Math.min(delay, 30 * MIN);
+  // Verified local sources: a hard ceiling that empty polls, dormancy or failures can never push past
+  // (the registry sets it per source; see maxPollDelayMs). A few empty polls must not suppress a valuable source.
+  if (options.maxDelayMs != null) delay = Math.min(delay, options.maxDelayMs);
   return delay;
 }
 
 /** Whether a source is due for another poll now. */
 export function shouldPollSource(
   row: StateLike | null | undefined,
-  options: { now?: number; highValue?: boolean } = {}
+  options: { now?: number; highValue?: boolean; maxDelayMs?: number | null } = {}
 ): boolean {
   if (!row) return true;
   const now = options.now ?? Date.now();

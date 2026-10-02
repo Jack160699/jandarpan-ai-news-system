@@ -180,7 +180,8 @@ import {
   recordCandidateFailure,
   selectUnblockedDistinctStories,
 } from "./candidate-attempts";
-import { EDITORIAL_EVENT_COLUMNS, hydrateEditorialEvents } from "./editorial-event-columns";
+import { EDITORIAL_EVENT_COLUMNS, fetchEditorialCandidatePool, hydrateEditorialEvents } from "./editorial-event-columns";
+import { applyCoveragePolicy } from "./coverage-priority";
 import { isSafeBatchRescueCandidate } from "./editorial-batch-rescue";
 import {
   AUTO_GENERATION_MAX_AGE_HOURS,
@@ -2329,18 +2330,30 @@ export async function generateEditorialsFromEvents(
   ).toISOString();
   const fetchLimit = Math.max(limit * 40, 80);
 
-  const first = await supabase
-    .from("news_events")
-    .select(EDITORIAL_EVENT_COLUMNS)
-    .neq("coverage_status", "superseded")
-    .gte("created_at", windowStart)
-    .order("urgency_score", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(fetchLimit);
-  let events: NewsEventRow[] | null = first.error ? null : hydrateEditorialEvents(first.data);
-  let error = first.error;
+  // Coverage-policy slate (migration 096): primary districts first, evidence-floored, exact columns. Falls back to the
+  // legacy urgency-ordered read only when the database function is unavailable.
+  const policyActive = process.env.EDITORIAL_COVERAGE_POLICY !== "off" && !options?.eventId;
+  const pool = policyActive ? await fetchEditorialCandidatePool(supabase as never) : null;
+  if (pool) {
+    logEditorial("candidate_pool", { source: "rpc", groups: pool.groups, events: pool.events.length });
+  }
 
-  if (!error && (events?.length ?? 0) < limit * 5) {
+  let events: NewsEventRow[] | null = pool?.events ?? null;
+  let error: { message: string } | null = null;
+  if (!pool) {
+    const first = await supabase
+      .from("news_events")
+      .select(EDITORIAL_EVENT_COLUMNS)
+      .neq("coverage_status", "superseded")
+      .gte("created_at", windowStart)
+      .order("urgency_score", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(fetchLimit);
+    events = first.error ? null : hydrateEditorialEvents(first.data);
+    error = first.error;
+  }
+
+  if (!pool && !error && (events?.length ?? 0) < limit * 5) {
     const expandedStart = new Date(
       Date.now() - AUTO_GENERATION_MAX_AGE_HOURS * 2 * 3_600_000
     ).toISOString();
@@ -2418,10 +2431,29 @@ export async function generateEditorialsFromEvents(
     logEditorial("epaper_listing_filter", { resolvable: resolvable.length, filteredEpaperListings });
   }
   // Aggregator live-page / roundup events can never pass the headline gate: skip them BEFORE any paid call too.
-  const eligible = notEpaper.filter((e) => !isGenericRoundupSourceTitle(e.canonical_title));
-  const filteredRoundupSources = notEpaper.length - eligible.length;
+  const notRoundup = notEpaper.filter((e) => !isGenericRoundupSourceTitle(e.canonical_title));
+  const filteredRoundupSources = notEpaper.length - notRoundup.length;
   if (filteredRoundupSources > 0) {
     logEditorial("roundup_source_filter", { candidates: notEpaper.length, filteredRoundupSources });
+  }
+
+  // Coverage policy: only primary-district stories and IMPORTANT statewide / other-district / national / international
+  // stories are candidates, ordered by tier. (Targeted eventId runs and EDITORIAL_COVERAGE_POLICY=off bypass the filter;
+  // every quality/safety/geo/language/dedupe gate below still applies.)
+  const coveragePolicy = policyActive
+    ? applyCoveragePolicy(notRoundup)
+    : { kept: notRoundup, coverage: new Map(), dropped: { unknown_geography: 0, not_important: 0 } };
+  const eligible = coveragePolicy.kept;
+  const coverageRank = new Map<string, import("./coverage-priority").CoverageRank>(
+    [...coveragePolicy.coverage].map(([id, c]) => [id, c.rank])
+  );
+  if (policyActive) {
+    const tiers: Record<string, number> = {};
+    for (const e of eligible) {
+      const r = String(coveragePolicy.coverage.get(e.id)?.rank ?? "?");
+      tiers[r] = (tiers[r] ?? 0) + 1;
+    }
+    logEditorial("coverage_policy", { candidates: notRoundup.length, kept: eligible.length, tiers, ...coveragePolicy.dropped });
   }
 
   // Pre-generation media discovery: Identify candidates with clean real photojournalism
@@ -2465,6 +2497,7 @@ export async function generateEditorialsFromEvents(
 
   const rankedPending = selectEditorialCandidates(unblocked, unblocked.length, {
     eventsWithRealMedia,
+    coverageRank: policyActive ? coverageRank : undefined,
   });
   const failedEventReasons: Array<{ eventId: string; reason: string }> = [];
   const succeededEventIds: string[] = [];
