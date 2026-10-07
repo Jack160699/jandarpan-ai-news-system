@@ -54,7 +54,61 @@ function Flags({ flags, title }: { flags: Array<QueueFlag & { evidence?: string 
   );
 }
 
+type Contributor = { userId: string; displayName: string | null; verification: string; verificationProvider: string | null; submissions: number; published: number; rejected: number; inReview: number; lastActivityAt: string };
+
+function ContributorsTable() {
+  const [rows, setRows] = useState<Contributor[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    void adminGet<{ contributors: Contributor[] }>("/api/admin/user-news/contributors").then((r) => {
+      if (!live) return;
+      if (!r.ok) {
+        setRows([]);
+        return setError(r.status === 403 ? "You do not have permission to view contributors." : `Could not load contributors (${r.error}).`);
+      }
+      setRows(r.data.contributors);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (error) return <p role="alert">{error}</p>;
+  if (!rows) return <p role="status">Loading…</p>;
+  if (!rows.length) return <p>No reader has submitted a story yet.</p>;
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table data-testid="contributors" style={{ borderCollapse: "collapse", width: "100%", fontSize: 13 }}>
+        <thead>
+          <tr style={{ textAlign: "left", borderBottom: "2px solid #d9dee8" }}>
+            {["Contributor", "Identity check", "Stories", "Published", "In review", "Rejected / blocked", "Last activity"].map((h) => (
+              <th key={h} style={{ padding: "6px 8px" }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.userId} style={{ borderBottom: "1px solid #e8ecf4" }}>
+              <td style={{ padding: "6px 8px" }}>{r.displayName ?? `Reader ${r.userId.slice(0, 8)}`}</td>
+              <td style={{ padding: "6px 8px", fontWeight: 700, color: r.verification === "verified" ? "#0f6b3a" : "#8a5a00" }}>
+                {r.verification}
+                {r.verificationProvider ? ` (${r.verificationProvider})` : ""}
+              </td>
+              <td style={{ padding: "6px 8px" }}>{r.submissions}</td>
+              <td style={{ padding: "6px 8px" }}>{r.published}</td>
+              <td style={{ padding: "6px 8px" }}>{r.inReview}</td>
+              <td style={{ padding: "6px 8px" }}>{r.rejected}</td>
+              <td style={{ padding: "6px 8px" }}>{new Date(r.lastActivityAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function ModerationConsole() {
+  const [view, setView] = useState<"queue" | "contributors">("queue");
   const [tab, setTab] = useState<(typeof STATUS_TABS)[number]["key"]>("submitted,under_review");
   const [items, setItems] = useState<QueueItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +159,15 @@ export function ModerationConsole() {
 
   return (
     <div data-testid="moderation-console">
+      <div style={{ display: "flex", gap: 14, marginBottom: 10 }}>
+        {(["queue", "contributors"] as const).map((v) => (
+          <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} style={{ background: "none", border: "none", padding: "4px 0", fontWeight: 800, fontSize: 14, cursor: "pointer", borderBottom: view === v ? "3px solid #0a1628" : "3px solid transparent" }}>
+            {v === "queue" ? "Moderation queue" : "Contributors"}
+          </button>
+        ))}
+      </div>
+      {view === "contributors" ? <ContributorsTable /> : null}
+      <div hidden={view !== "queue"}>
       <div role="tablist" style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
         {STATUS_TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} onClick={() => { setTab(t.key); setOpenId(null); setBundle(null); }} style={{ padding: "7px 12px", borderRadius: 999, border: "1px solid #b8c0d0", fontWeight: 700, background: tab === t.key ? "#0a1628" : "#fff", color: tab === t.key ? "#f6d36b" : "#0a1628" }}>
@@ -215,6 +278,7 @@ export function ModerationConsole() {
             )}
           </div>
         ) : null}
+      </div>
       </div>
     </div>
   );
