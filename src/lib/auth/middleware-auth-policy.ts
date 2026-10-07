@@ -94,6 +94,22 @@ export function isReaderAuthGateExempt(pathname: string): boolean {
   return false;
 }
 
+/**
+ * TEMPORARILY DISABLED: the mandatory reader login gate (landing visitors are no longer
+ * redirected to /login). Re-enable by setting JD_READER_AUTH_GATE=on in the environment,
+ * or by flipping the default below to true. /login itself and Google sign-in still work.
+ */
+const READER_AUTH_GATE_DEFAULT_ENABLED = false;
+
+export function isReaderAuthGateEnabled(
+  env: Record<string, string | undefined> = process.env
+): boolean {
+  const flag = env.JD_READER_AUTH_GATE?.trim().toLowerCase();
+  if (flag === "on" || flag === "true" || flag === "1") return true;
+  if (flag === "off" || flag === "false" || flag === "0") return false;
+  return READER_AUTH_GATE_DEFAULT_ENABLED;
+}
+
 export function isReaderProtectedPath(pathname: string): boolean {
   return !isReaderAuthGateExempt(pathname);
 }
