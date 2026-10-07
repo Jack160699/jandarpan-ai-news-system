@@ -29,6 +29,7 @@ import { updateSupabaseSession } from "@/lib/supabase/middleware";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { evaluateSessionGuard } from "@/lib/auth/middleware-session-guard";
 import {
+  isReaderAuthGateEnabled,
   isReaderProtectedPath,
   requiresMiddlewareSupabaseAuth,
 } from "@/lib/auth/middleware-auth-policy";
@@ -292,7 +293,8 @@ export async function middleware(request: NextRequest) {
   // ─── Reader Mandatory Google-Only Auth Gate ──────────────────────────────
   // Protects: /, /live, /story/*, /district/*, /category/*, /profile, /archive
   // When unauthenticated, immediately redirects to /login?next=...
-  if (isReaderProtectedPath(pathname) && !hasAuth) {
+  // TEMPORARILY DISABLED — see isReaderAuthGateEnabled (JD_READER_AUTH_GATE=on re-enables).
+  if (isReaderAuthGateEnabled() && isReaderProtectedPath(pathname) && !hasAuth) {
     const login = new URL("/login", request.url);
     const search = request.nextUrl.search || "";
     login.searchParams.set("next", `${pathname}${search}`);
