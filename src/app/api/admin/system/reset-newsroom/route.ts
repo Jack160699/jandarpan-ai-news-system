@@ -8,6 +8,18 @@ export const maxDuration = 300;
 /** Typed confirmation required for the destructive mode, in addition to a super-admin session. */
 const RESET_CONFIRM_TOKEN = "DELETE_ALL_NEWSROOM_CONTENT";
 
+/** Append-only audit event. Returns false when it could not be recorded (the table is created by migration 100). */
+async function recordResetAudit(supabase: ReturnType<typeof createAdminServerClient>, actorId: string, mode: string): Promise<boolean> {
+  try {
+    // The generated Database type does not know platform_audit_events yet.
+    const db = supabase as unknown as { from: (t: string) => { insert: (row: Record<string, unknown>) => PromiseLike<{ error: unknown }> } };
+    const { error } = await db.from("platform_audit_events").insert({ actor_id: actorId, actor_kind: "admin", action: `newsroom.reset.${mode}`, entity_type: "newsroom", entity_id: "all", detail: { mode } });
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   // Super-admin session only. A previous "temporary recovery" bypass accepted a hard-coded URL secret instead of a login;
   // that made this endpoint (which deletes every article, event and queue row) callable by anyone who knew the string.
@@ -18,6 +30,13 @@ export async function POST(request: Request) {
     const url = new URL(request.url);
     const mode = url.searchParams.get("mode");
     const supabase = createAdminServerClient();
+
+    // Every attempt is written to the append-only audit trail BEFORE anything is read or deleted. The destructive mode fails closed:
+    // if the audit row cannot be written, nothing is deleted. A dev-bypass session can never run it.
+    const audited = await recordResetAudit(supabase, guard.session.userId, mode ?? "dry-run");
+    if (mode === "execute" && (!audited || guard.session.isDevBypass)) {
+      return NextResponse.json({ error: "audit_unavailable", message: "The destructive reset needs a recorded audit trail and a real super-admin session." }, { status: 503 });
+    }
 
     const inventory: Record<string, number> = {};
 

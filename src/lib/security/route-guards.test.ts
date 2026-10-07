@@ -85,6 +85,13 @@ describe("the newsroom reset endpoint", () => {
     expect(src).toContain("DELETE_ALL_NEWSROOM_CONTENT");
     expect(src.indexOf("confirmation_required")).toBeLessThan(src.indexOf('await supabase.from("generated_articles").delete()'));
   });
+
+  it("writes an audit event first and fails closed: no audit trail or dev-bypass session means no deletion", () => {
+    expect(src).toContain("platform_audit_events");
+    expect(src).toMatch(/mode === "execute" && \(!audited \|\| guard\.session\.isDevBypass\)/);
+    expect(src.indexOf("recordResetAudit(supabase")).toBeLessThan(src.indexOf('await supabase.from("generated_articles").delete()'));
+    expect(src.indexOf("audit_unavailable")).toBeLessThan(src.indexOf('await supabase.from("event_bus_messages")'));
+  });
 });
 
 describe("cron endpoints fail closed", () => {
