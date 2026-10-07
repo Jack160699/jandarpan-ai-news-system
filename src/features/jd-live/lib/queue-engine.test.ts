@@ -44,9 +44,9 @@ describe("queue-engine", () => {
       expect(ts).toBe(new Date("2026-09-27T10:00:00Z").getTime());
     });
 
-    it("falls back to createdAt when publishedAt is null/missing", () => {
-      const ts = getValidTimestamp(null, "2026-09-27T08:00:00Z");
-      expect(ts).toBe(new Date("2026-09-27T08:00:00Z").getTime());
+    it("never substitutes createdAt for a missing publishedAt (published_at is the only event time)", () => {
+      expect(getValidTimestamp(null, "2026-09-27T08:00:00Z")).toBe(0);
+      expect(getValidTimestamp(undefined, "2026-09-27T08:00:00Z")).toBe(0);
     });
 
     it("never returns NaN for invalid input", () => {
@@ -166,6 +166,36 @@ describe("queue-engine", () => {
       });
 
       expect(res.queue.length).toBe(1);
+    });
+  });
+
+  describe("timestamp eligibility", () => {
+    it("rejects a story with no published_at instead of letting it into the timeline", () => {
+      const { queue } = computeCanonicalQueue({
+        rawStories: [mockStory("ok", "2026-09-27T10:00:00Z"), mockStory("nil", "", { publishedAt: undefined as unknown as string })],
+        nowMs: BASE_NOW,
+      });
+      expect(queue.map((s) => s.id)).toEqual(["ok"]);
+    });
+
+    it("rejects a far-future timestamp (bad data is not 'newest') but tolerates small clock skew", () => {
+      const { queue } = computeCanonicalQueue({
+        rawStories: [
+          mockStory("future", "2026-09-30T12:00:00Z"),
+          mockStory("skew", "2026-09-27T12:30:00Z"),
+          mockStory("ok", "2026-09-27T10:00:00Z"),
+        ],
+        nowMs: BASE_NOW,
+      });
+      expect(queue.map((s) => s.id)).toEqual(["skew", "ok"]);
+    });
+
+    it("a fresh session (nothing consumed) starts with the newest eligible story", () => {
+      const { queue } = computeCanonicalQueue({
+        rawStories: [mockStory("a", "2026-09-27T01:00:00Z"), mockStory("b", "2026-09-27T11:00:00Z"), mockStory("c", "2026-09-27T06:00:00Z")],
+        nowMs: BASE_NOW,
+      });
+      expect(queue[0]!.id).toBe("b");
     });
   });
 

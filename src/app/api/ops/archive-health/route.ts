@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { computeArchiveHealthBreakdown } from "@/lib/news/canonical-window";
 import { createAnonServerClient, isSupabaseConfigured } from "@/lib/supabase";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
-import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import { CANONICAL_CATEGORIES, matchesCanonicalCategory } from "@/features/jd-live/lib/categories";
 import { hasVerifiedRealMedia, isCleanRightsEligibleMedia } from "@/lib/news/images/validate";
 

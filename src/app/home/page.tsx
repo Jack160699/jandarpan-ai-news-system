@@ -22,8 +22,8 @@ const LegacyHomeView = dynamic(
 export const metadata = buildHomeMetadata();
 
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
-import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 
 /** ISR — edge-friendly cache, 60s freshness */
 export const revalidate = 60;
@@ -37,22 +37,11 @@ async function ReaderDesignHomeFeed() {
     getServerReaderLanguage(),
   ]);
 
-  const poolArticles = pool
-    .map((row) => toHomeArticle(row, undefined, readerLanguage))
+  // Every reader surface goes through the canonical public gate (status, 30-day window, fit headline, no UNKNOWN geography),
+  // newest first. No frozen "fallback" stories are injected to fill sections: a section with no fresh story stays empty.
+  const poolArticles = selectFeedRows(pool, { feed: "public_all", order: "chronological" })
+    .rows.map((row) => toHomeArticle(row, undefined, readerLanguage))
     .filter((a): a is NonNullable<typeof a> => a !== null);
-
-  // Guarantee comprehensive editorial representation across all 6 sections
-  // (politics, crime, national, international, entertainment, sports)
-  const fallback = getStaticFallbackArticlePool()
-    .map((row) => toHomeArticle(row, undefined, readerLanguage))
-    .filter((a): a is NonNullable<typeof a> => a !== null);
-  const seen = new Set(poolArticles.map((a) => a.slug));
-  for (const a of fallback) {
-    if (!seen.has(a.slug)) {
-      seen.add(a.slug);
-      poolArticles.push(a);
-    }
-  }
 
   const trending = buildTrendingKeywords({ limit: 12 });
   const storyCount = (feed ? feed.trending.length + feed.liveWire.length : 0) + poolArticles.length;

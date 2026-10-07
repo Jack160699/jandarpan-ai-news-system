@@ -9,7 +9,10 @@
  *    `fresh_ranked` orders by freshness class first, then score within a class, so an
  *    older story can never outrank a newer class on score alone (Home).
  *  - Legacy rows without a stored scope are classified from their text at read time,
- *    deterministically and memoised.
+ *    deterministically and memoised -- for COARSE feeds only. A district feed never uses a
+ *    text-derived district: only a stored, evidence-based DISTRICT_SPECIFIC scope qualifies.
+ *  - Every feed first passes the canonical public gate (public-eligibility.ts): public status,
+ *    30-day window, slug, fit headline, de-duplication.
  */
 
 import {
@@ -22,6 +25,11 @@ import {
   type GeoScope,
   type GeoScopeResult,
 } from "@/lib/news/geo/geo-scope";
+import {
+  checkPublicRow,
+  dedupeRowsNewestWins,
+  type PublicRejectReason,
+} from "@/lib/feed/public-eligibility";
 import {
   ageMs,
   classifyFreshness,
@@ -39,6 +47,8 @@ export type FeedRow = {
   published_at: string | null;
   created_at?: string | null;
   tags?: string[] | null;
+  editorial_status?: string | null;
+  workflow_status?: string | null;
   geo_metadata?: unknown;
   editorial_metadata?: unknown;
 };
@@ -58,10 +68,18 @@ export type FeedSelectionOptions<T extends FeedRow> = {
   maxIndiaRelevantShare?: number;
   /** Drop anything older than this many hours (Live uses e.g. 48). */
   maxAgeHours?: number;
+  /**
+   * Apply the canonical public gate (status / 30-day window / slug / headline / de-dup). Default true.
+   * Only admin and audit tooling may turn it off.
+   */
+  publicGate?: boolean;
 };
 
 export type FeedSelectionDiagnostics = {
   input: number;
+  /** Rows removed by the public gate, by reason. */
+  droppedByGate: Partial<Record<PublicRejectReason | "duplicate", number>>;
+  afterGate: number;
   afterAge: number;
   afterScope: number;
   returned: number;
@@ -72,6 +90,8 @@ export type FeedSelectionDiagnostics = {
   freshnessCounts: Partial<Record<FreshnessClass, number>>;
   /** True when scope had to be derived from text (legacy rows). */
   derivedScopeCount: number;
+  /** Rows kept out of a district feed only because their geography was text-derived, not stored evidence. */
+  droppedDerivedForDistrict: number;
 };
 
 export type FeedSelection<T extends FeedRow> = {
@@ -129,6 +149,8 @@ export function selectFeedRows<T extends FeedRow>(
   const order: FeedOrder = options.order ?? "chronological";
   const diag: FeedSelectionDiagnostics = {
     input: rows.length,
+    droppedByGate: {},
+    afterGate: 0,
     afterAge: 0,
     afterScope: 0,
     returned: 0,
@@ -138,11 +160,28 @@ export function selectFeedRows<T extends FeedRow>(
     newestAgeMinutes: null,
     freshnessCounts: {},
     derivedScopeCount: 0,
+    droppedDerivedForDistrict: 0,
   };
+
+  // 0. Canonical public gate: status, 30-day window, slug, headline; then de-dup (newest representation wins).
+  let gated: readonly T[] = rows;
+  if (options.publicGate !== false) {
+    const passed: T[] = [];
+    for (const r of rows) {
+      const check = checkPublicRow(r, now);
+      if (check.eligible) passed.push(r);
+      else diag.droppedByGate[check.reason] = (diag.droppedByGate[check.reason] ?? 0) + 1;
+    }
+    const unique = dedupeRowsNewestWins([...passed].sort(comparePublishedDesc));
+    const dup = passed.length - unique.length;
+    if (dup > 0) diag.droppedByGate.duplicate = dup;
+    gated = unique;
+  }
+  diag.afterGate = gated.length;
 
   // 1. Age window.
   const maxAgeMs = options.maxAgeHours ? options.maxAgeHours * 3_600_000 : null;
-  const aged = rows.filter((r) => {
+  const aged = gated.filter((r) => {
     if (maxAgeMs === null) return true;
     const a = ageMs(r.published_at, now);
     return a !== null && a <= maxAgeMs;
@@ -159,7 +198,14 @@ export function selectFeedRows<T extends FeedRow>(
     let allowed: boolean;
     if (options.feed === "district") {
       if (!options.districtSlug) throw new Error("districtSlug is required for the district feed");
-      allowed = belongsToDistrictFeed(geo, options.districtSlug);
+      // A district page admits only a STORED, evidence-based district scope. A district guessed from the headline of a
+      // legacy row (no stored scope) is never proof, so it cannot enter a district feed.
+      if (geo.derived) {
+        allowed = false;
+        if (geo.scope === "DISTRICT_SPECIFIC") diag.droppedDerivedForDistrict++;
+      } else {
+        allowed = belongsToDistrictFeed(geo, options.districtSlug);
+      }
     } else {
       allowed = isScopeAllowedInFeed(geo.scope, options.feed);
     }

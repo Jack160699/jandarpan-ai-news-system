@@ -239,7 +239,8 @@ export type FeedKind =
   | "cg_home" // default Live / Home / Latest (Chhattisgarh-first)
   | "national"
   | "international"
-  | "all"; // admin / archive / search — no geo restriction
+  | "public_all" // category / search / RSS: every story that may be public — everything except UNKNOWN
+  | "all"; // admin / archive — no geo restriction
 
 const FEED_ALLOWED: Record<FeedKind, readonly GeoScope[]> = {
   district: ["DISTRICT_SPECIFIC"],
@@ -247,11 +248,35 @@ const FEED_ALLOWED: Record<FeedKind, readonly GeoScope[]> = {
   cg_home: ["DISTRICT_SPECIFIC", "STATEWIDE_CHHATTISGARH", "INDIA_RELEVANT_TO_CHHATTISGARH"],
   national: ["NATIONAL", "INDIA_RELEVANT_TO_CHHATTISGARH"],
   international: ["INTERNATIONAL"],
+  public_all: GEO_SCOPES.filter((s) => s !== "UNKNOWN"),
   all: GEO_SCOPES,
 };
 
 export function isScopeAllowedInFeed(scope: GeoScope, feed: FeedKind): boolean {
   return FEED_ALLOWED[feed].includes(scope);
+}
+
+/**
+ * Canonical coarse geography model for reporting, audits and the admin dashboard. Keeps the differences that matter:
+ * a district story is not statewide, statewide is not India, and UNKNOWN is never silently turned into a district.
+ */
+export const GEOGRAPHY_CLASSES = ["district", "chhattisgarh_statewide", "india", "international", "unknown"] as const;
+export type GeographyClass = (typeof GEOGRAPHY_CLASSES)[number];
+
+export function geographyClassOf(scope: GeoScope | null | undefined): GeographyClass {
+  switch (scope) {
+    case "DISTRICT_SPECIFIC":
+      return "district";
+    case "STATEWIDE_CHHATTISGARH":
+      return "chhattisgarh_statewide";
+    case "INDIA_RELEVANT_TO_CHHATTISGARH":
+    case "NATIONAL":
+      return "india";
+    case "INTERNATIONAL":
+      return "international";
+    default:
+      return "unknown";
+  }
 }
 
 /** Only these scopes may be published at all. UNKNOWN is quarantined for evaluation. */

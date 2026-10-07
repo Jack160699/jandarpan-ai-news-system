@@ -5,7 +5,10 @@
  * 1. Fresh Supabase generated_articles (healthy pool)
  * 2. Wire APIs (micro-cached, circuit-breaker gated) when DB critically low
  * 3. Stale-while-revalidate snapshot
- * 4. Static Hindi fallback
+ * 4. Static Hindi fallback -- OFF unless explicitly enabled (see news/fallback/policy.ts)
+ *
+ * Every layer is re-validated through the canonical public gate (status, 30-day window, slug, headline). A layer that yields
+ * nothing eligible yields an EMPTY pool: an invalid or stale fallback is worse than a temporary empty response.
  */
 
 import { AGGREGATION_CONFIG } from "@/lib/news/aggregation/config";
@@ -25,7 +28,8 @@ import {
 import { errorLiveFeed, logLiveFeed, warnLiveFeed } from "@/lib/news/live-feed/logger";
 import { wireArticlesToGeneratedPool } from "@/lib/news/live-feed/wire-to-generated";
 import { fetchGeneratedArticlePool, type GeneratedPoolSelect } from "@/lib/newsroom/generated/read";
-import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
+import { checkPublicRow } from "@/lib/feed/public-eligibility";
+import { isStaticFallbackEnabled } from "@/lib/news/fallback/policy";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
@@ -76,10 +80,12 @@ function finalizePool(
   source: LivePoolSource,
   diagnostics: LivePoolDiagnostics
 ): ResolvedLivePool {
-  const eligibleRows = rows.filter((r) =>
-    isWithinCanonicalReaderWindow(r.published_at ?? r.created_at)
-  );
-  const ranked = rankPoolByFeedQuality(eligibleRows.length > 0 ? eligibleRows : rows);
+  const now = new Date();
+  const eligibleRows = rows.filter((r) => checkPublicRow(r, now).eligible);
+  if (eligibleRows.length < rows.length) {
+    warnLiveFeed("pool_rows_failed_public_gate", { source, dropped: rows.length - eligibleRows.length, kept: eligibleRows.length });
+  }
+  const ranked = rankPoolByFeedQuality(eligibleRows);
   diagnostics.qualityRanked = true;
   diagnostics.finalCount = ranked.length;
   diagnostics.source = source;
@@ -95,7 +101,7 @@ function finalizePool(
 }
 
 /**
- * Resolve articles for homepage + live polling. Never returns an empty array.
+ * Resolve articles for homepage + live polling. Returns an empty pool when nothing eligible exists.
  */
 export async function resolveLiveArticlePool(
   limit = 120,
@@ -191,6 +197,15 @@ export async function resolveLiveArticlePool(
       "stale_snapshot",
       diagnostics
     );
+    flushAggregationMetrics();
+    return result;
+  }
+
+  if (!isStaticFallbackEnabled()) {
+    warnLiveFeed("pool_empty_no_fallback", {
+      reason: diagnostics.errors.join("; ") || "no_eligible_articles",
+    });
+    const result = finalizePool([], "database", diagnostics);
     flushAggregationMetrics();
     return result;
   }

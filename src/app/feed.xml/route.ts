@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchOrganizationSettings } from "@/lib/organization/settings";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 import { SITE_URL } from "@/lib/seo/constants";
 
 export const runtime = "nodejs";
@@ -35,14 +36,16 @@ export async function GET() {
   ]);
 
   const seenGuids = new Set<string>();
-  const items = pool
+  // Same public gate as every reader feed: status, 30-day window, fit headline, no UNKNOWN geography, newest first.
+  const gatedPool = selectFeedRows(pool, { feed: "public_all", order: "chronological" }).rows;
+  const items = gatedPool
     .filter((row) => row.slug && row.headline)
     .map((row) => {
       const url = `${SITE_URL}/story/${encodeURIComponent(row.slug)}`;
       if (seenGuids.has(url)) return "";
       seenGuids.add(url);
 
-      const pubDate = row.published_at ?? row.created_at;
+      const pubDate = row.published_at as string; // gated: always present (created_at is never an event time)
       const image = absoluteImage(row.hero_image_url);
       const lang = languageTag(row.language);
 

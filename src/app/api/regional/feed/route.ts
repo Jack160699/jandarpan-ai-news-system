@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 import {
   buildHyperlocalFeedBundle,
   parseRegionalPrefsFromQuery,
@@ -11,7 +12,10 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const displayLanguage = await getServerReaderLanguage();
   const prefs = parseRegionalPrefsFromQuery(request.nextUrl.searchParams);
-  const pool = await fetchGeneratedArticlePool(100, { select: "homepage" });
+  const pool = selectFeedRows(await fetchGeneratedArticlePool(100, { select: "homepage" }), {
+    feed: "public_all",
+    order: "chronological",
+  }).rows;
   const bundle = buildHyperlocalFeedBundle(pool, {
     homeDistrict: prefs.homeDistrict,
     maxDistricts: 10,

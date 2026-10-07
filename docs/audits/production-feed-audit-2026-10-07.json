@@ -1,0 +1,81 @@
+{
+  "generatedAt": "2026-10-07T10:22:29.662Z",
+  "feed": {
+    "rows_total": 100,
+    "approved_or_published": 79,
+    "with_published_at": 79,
+    "within_30_days": 79,
+    "older_than_30_days": 0,
+    "eligible_public_all": 69,
+    "eligible_cg_home_latest": 40,
+    "dropped_by_gate_reason": {
+      "not_public_status": 15,
+      "no_published_at": 6
+    },
+    "latest_eligible": {
+      "id": "52d4197d-29d9-4e6e-a01d-0c99ae795bbf",
+      "published_at": "2026-10-01 18:32:40.53+00",
+      "headline": "Chhattisgarh Police Headquarters Issues Transfer Orders for Inspectors"
+    },
+    "oldest_eligible_published_at": "2026-09-19 08:21:29.875+00",
+    "timestamp_anomalies": {
+      "approved_without_published_at": 0,
+      "published_at_in_future": 0,
+      "published_before_created": 76
+    }
+  },
+  "geography": {
+    "eligible_by_class": {
+      "district": 17,
+      "chhattisgarh_statewide": 20,
+      "india": 25,
+      "international": 7,
+      "unknown": 0
+    },
+    "eligible_by_scope": {
+      "STATEWIDE_CHHATTISGARH": 20,
+      "DISTRICT_SPECIFIC": 17,
+      "NATIONAL": 22,
+      "INTERNATIONAL": 7,
+      "INDIA_RELEVANT_TO_CHHATTISGARH": 3
+    },
+    "approved_with_unknown_geography_all_time": 10,
+    "eligible_rows_without_stored_scope_text_derived_excluded_from_district_pages": 0,
+    "conflicting_or_malformed": [],
+    "district_leakage_candidates_stored_district_differs_from_headline": [],
+    "cg_home_dropped_by_scope": {
+      "NATIONAL": 22,
+      "UNKNOWN": 10,
+      "INTERNATIONAL": 7
+    }
+  },
+  "language": {
+    "eligible_by_language_field": {
+      "en": 24,
+      "hi": 45
+    },
+    "language_vs_headline_script_mismatch": [],
+    "events_with_more_than_one_eligible_representation": 0,
+    "bilingual_translation_coverage": {
+      "hi_rows_with_en_translation": 45,
+      "hi_rows_total": 45,
+      "en_rows_with_hi_translation": 24,
+      "en_rows_total": 24
+    }
+  },
+  "headlines": {
+    "eligible": {
+      "total": 69,
+      "generic": [],
+      "exact_duplicates": [],
+      "near_duplicates": [],
+      "repetitive_openings": []
+    },
+    "all_published_history": {
+      "total": 79,
+      "generic_count": 0,
+      "exact_duplicate_groups": 0,
+      "near_duplicate_pairs": 0
+    }
+  }
+}

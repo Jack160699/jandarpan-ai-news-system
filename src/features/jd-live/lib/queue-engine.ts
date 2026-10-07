@@ -8,21 +8,22 @@ import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
 
 /** 30 days in milliseconds */
 const CANONICAL_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+/** Same tolerance as the server's canonical window (src/lib/news/canonical-window.ts). */
+const FUTURE_SKEW_TOLERANCE_MS = 2 * 60 * 60 * 1000;
 
 /**
- * Safely parses published_at / created_at to epoch milliseconds.
- * Guaranteed to NEVER return NaN.
+ * Safely parses published_at to epoch milliseconds. Guaranteed to NEVER return NaN.
+ *
+ * published_at is the ONLY event time. created_at is a row-insert timestamp: a story without a valid published_at has no
+ * place in the timeline, so the second argument is accepted for call-site compatibility but deliberately ignored.
  */
 export function getValidTimestamp(
   publishedAt?: string | null,
-  createdAt?: string | null
+  _createdAt?: string | null
 ): number {
+  void _createdAt;
   if (publishedAt) {
     const t = new Date(publishedAt).getTime();
-    if (!isNaN(t) && t > 0) return t;
-  }
-  if (createdAt) {
-    const t = new Date(createdAt).getTime();
     if (!isNaN(t) && t > 0) return t;
   }
   return 0;
@@ -55,11 +56,12 @@ export function isStoryEligible(story: BroadcastSegment, nowMs = Date.now()): bo
   if (!story || !story.id) return false;
   if ((story as any).isAd) return true;
 
-  // 1. Hard 30-day canonical rolling window gate (Requirement #26)
-  const timestamp = getValidTimestamp(story.publishedAt, (story as any).createdAt);
-  if (timestamp > 0 && nowMs - timestamp > CANONICAL_WINDOW_MS) {
-    return false;
-  }
+  // 1. Hard 30-day canonical rolling window gate (Requirement #26). A missing/invalid timestamp is NOT eligible, and a
+  //    timestamp far in the future (beyond clock-skew tolerance) is not "newest", it is bad data.
+  const timestamp = getValidTimestamp(story.publishedAt);
+  if (timestamp <= 0) return false;
+  if (nowMs - timestamp > CANONICAL_WINDOW_MS) return false;
+  if (timestamp - nowMs > FUTURE_SKEW_TOLERANCE_MS) return false;
 
   // 2. Real Clean Media Gate (Requirement #1)
   if (story.imageUrl && !hasVerifiedRealMedia(story.imageUrl)) {

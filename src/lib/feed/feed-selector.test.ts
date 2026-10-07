@@ -135,17 +135,23 @@ describe("selectFeedRows — Chhattisgarh-first feeds", () => {
 });
 
 describe("selectFeedRows — legacy rows without a stored scope", () => {
-  it("derives scope from text and never invents a district for unknown copy", () => {
-    const legacy: FeedRow[] = [
-      { id: "l1", headline: "रायपुर में नई सड़क का उद्घाटन", published_at: ago(2), geo_metadata: { primary_district: "korba" } },
-      { id: "l2", headline: "Local man wins lottery", published_at: ago(1) },
-    ];
+  const legacy: FeedRow[] = [
+    { id: "l1", headline: "रायपुर में नई सड़क का उद्घाटन", published_at: ago(2), geo_metadata: { primary_district: "korba" } },
+    { id: "l2", headline: "Local man wins lottery", published_at: ago(1) },
+  ];
+
+  it("never admits a headline-guessed district into a district feed", () => {
+    // The text clearly says Raipur, but a legacy row has no STORED evidence-based scope: not proof for a district page.
     const raipur = selectFeedRows(legacy, { feed: "district", districtSlug: "raipur", now: NOW });
-    expect(raipur.rows.map((r) => r.id)).toEqual(["l1"]);
-    // stale stored primary_district "korba" is ignored — evidence comes from the text
-    const korba = selectFeedRows(legacy, { feed: "district", districtSlug: "korba", now: NOW });
-    expect(korba.rows).toEqual([]);
-    expect(raipur.diagnostics.derivedScopeCount).toBe(2);
-    expect(selectFeedRows(legacy, { feed: "cg_home", now: NOW }).rows.map((r) => r.id)).toEqual(["l1"]);
+    expect(raipur.rows).toEqual([]);
+    expect(raipur.diagnostics.droppedDerivedForDistrict).toBe(1);
+    // and the stale stored primary_district "korba" is not trusted either
+    expect(selectFeedRows(legacy, { feed: "district", districtSlug: "korba", now: NOW }).rows).toEqual([]);
+  });
+
+  it("still derives a COARSE scope from text for the Chhattisgarh-first feeds, and never invents a district for unknown copy", () => {
+    const home = selectFeedRows(legacy, { feed: "cg_home", now: NOW });
+    expect(home.rows.map((r) => r.id)).toEqual(["l1"]);
+    expect(home.diagnostics.derivedScopeCount).toBe(2);
   });
 });
