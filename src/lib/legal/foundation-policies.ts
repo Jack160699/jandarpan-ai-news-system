@@ -118,5 +118,6 @@ export const LEGAL_SITEMAP_PATHS = [
   "/community-guidelines",
   "/safety",
   "/fact-check-policy",
+  "/contributor-terms",
   "/feed.xml",
 ] as const;

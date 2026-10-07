@@ -78,6 +78,7 @@ export function isReaderAuthGateExempt(pathname: string): boolean {
     pathname === "/copyright-content-removal" ||
     pathname === "/editorial-policy" ||
     pathname === "/fact-check-policy" ||
+    pathname === "/contributor-terms" ||
     pathname === "/grievance-redressal" ||
     pathname === "/contact" ||
     pathname === "/about" ||

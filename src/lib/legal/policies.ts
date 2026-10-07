@@ -5,7 +5,8 @@ export type PolicySlug =
   | "ads-policy"
   | "community-guidelines"
   | "safety"
-  | "fact-check-policy";
+  | "fact-check-policy"
+  | "contributor-terms";
 
 export type PolicyDocument = {
   slug: PolicySlug;
@@ -277,6 +278,43 @@ export const POLICY_DOCUMENTS: Record<PolicySlug, PolicyDocument> = {
       {
         heading: "Comment moderation",
         body: "User comments may be filtered automatically and reviewed by moderators. Misinformation in comments may be removed.",
+      },
+    ],
+  },
+  "contributor-terms": {
+    slug: "contributor-terms",
+    path: "/contributor-terms",
+    titleEn: "Reader Contributor Terms",
+    titleHi: "पाठक योगदानकर्ता शर्तें",
+    updated: "October 2026",
+    sections: [
+      {
+        heading: "Who can post",
+        body: "Only signed-in readers whose identity check has been completed through an authorised verification service can send news to Jan Darpan. Where that service is not available, posting stays switched off. Jan Darpan never asks you to type an Aadhaar number, OTP or biometric into the app and does not store any of them; only the result of the check (verified or not) and the name of the service that did it are kept.",
+      },
+      {
+        heading: "Your story stays yours to approve",
+        body: "You may write or speak your report. If you ask for an AI draft, the draft is built only from what you said; it must not add names, numbers, quotes, dates or places you did not give. Nothing is sent for review until you have read the draft and approved it yourself, and you can edit or withdraw it before it is published.",
+      },
+      {
+        heading: "Review before publication",
+        body: "Every story is reviewed by an editor before it is published. Stories may be edited, held, returned for changes, rejected or taken down, including after publication. Posting a story does not guarantee that it will be published, and a decision to publish is not a legal clearance of its contents.",
+      },
+      {
+        heading: "What you must not send",
+        body: "Do not send content that is false, defamatory, hateful, sexual, or that exposes private personal data (phone numbers, addresses, ID numbers). Do not accuse a named person of a crime without a credible source. Do not send material you do not have the right to share. Images and video must be your own or used with permission; videos must be landscape.",
+      },
+      {
+        heading: "Rights you give us",
+        body: "You keep ownership of what you send. By sending a story you give Jan Darpan a non-exclusive licence to edit, translate, publish, store and distribute it, including as audio and in search and syndication, for as long as it remains published. You can ask for removal at any time through the Grievance Redressal page; removal requests are handled under our Copyright & Content Removal Policy.",
+      },
+      {
+        heading: "Earnings",
+        body: "Revenue sharing with contributors is not active. No earnings accrue and none are promised. If it is introduced, the terms, rates and payout conditions will be published here before they apply, and only to stories published after that date.",
+      },
+      {
+        heading: "Your data and your account",
+        body: "Your submissions, media and moderation decisions are kept so that editors can review, correct or take down a story and so that disputes can be resolved. Moderation and verification actions are logged. See the Privacy Policy for retention and your rights. Jan Darpan may suspend posting for repeated or serious violations.",
       },
     ],
   },

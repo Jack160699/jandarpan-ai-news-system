@@ -401,6 +401,11 @@ export function PostNewsWizard() {
           ) : null}
 
           <p style={{ fontSize: 13, color: "#556" }}>{t("editToApprove")}</p>
+          <p style={{ fontSize: 13 }}>
+            <Link href="/contributor-terms" target="_blank">
+              {t("contributorTerms")}
+            </Link>
+          </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button type="button" style={btn("ghost")} onClick={() => setStep(2)} disabled={Boolean(busy)}>
               {t("back")}
