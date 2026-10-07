@@ -178,6 +178,7 @@ export type SourceRowView = {
 
 const SOURCE_TONE: Record<DerivedSourceStatus, Tone> = {
   healthy: "healthy",
+  paused: "healthy", // the scheduler is deliberately off: reported at pipeline level, never as a per-source incident
   degraded: "warning",
   dormant: "warning",
   rate_limited: "warning",
@@ -191,14 +192,15 @@ const SOURCE_TONE: Record<DerivedSourceStatus, Tone> = {
 export function evaluateSources(
   snapshot: OpsSnapshotRaw,
   knownRssIds: ReadonlySet<string>,
-  now: number
+  now: number,
+  options: { schedulerPaused?: boolean } = {}
 ): SourceRowView[] {
   const today = new Map(snapshot.sources.today.map((s) => [s.source, s]));
   return snapshot.sources.state
     .map((s: SourceStateRow) => {
       const id = s.source_key.replace(/^rss:/, "");
       const known = s.provider_family === "rss" ? knownRssIds.has(id) : true;
-      const d = deriveSourceHealth(s, { now, known });
+      const d = deriveSourceHealth(s, { now, known, schedulerPaused: options.schedulerPaused });
       const t = today.get(id);
       const quota =
         s.quota_exhausted_until && new Date(s.quota_exhausted_until).getTime() > now

@@ -5,9 +5,14 @@ import { requireSuperAdminSession } from "@/lib/newsroom-auth/require-super-admi
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
+/** Typed confirmation required for the destructive mode, in addition to a super-admin session. */
+const RESET_CONFIRM_TOKEN = "DELETE_ALL_NEWSROOM_CONTENT";
+
 export async function POST(request: Request) {
-  const guard = { ok: true }; if (new URL(request.url).searchParams.get('secret') !== 'RECOVERY_RESET_123') return new Response('Forbidden', {status:403});
-  
+  // Super-admin session only. A previous "temporary recovery" bypass accepted a hard-coded URL secret instead of a login;
+  // that made this endpoint (which deletes every article, event and queue row) callable by anyone who knew the string.
+  const guard = await requireSuperAdminSession(request);
+  if (!guard.ok) return guard.response;
 
   try {
     const url = new URL(request.url);
@@ -40,6 +45,12 @@ export async function POST(request: Request) {
     }
 
     if (mode === "execute") {
+      if (url.searchParams.get("confirm") !== RESET_CONFIRM_TOKEN) {
+        return NextResponse.json(
+          { error: "confirmation_required", message: `Add confirm=${RESET_CONFIRM_TOKEN} to run the destructive reset.` },
+          { status: 400 }
+        );
+      }
       // 1. Delete content-related event bus messages
       await supabase.from("event_bus_messages")
         .delete()

@@ -36,6 +36,7 @@ afterEach(() => {
 
 describe("provider failover", () => {
   it("never forwards a codecraft-only model override to gemini or groq", async () => {
+    vi.stubEnv("GEMINI_EDITORIAL_FALLBACK", "on"); // failover mechanics need gemini in the editorial chain
     vi.stubEnv("GEMINI_API_KEY", "g");
     vi.stubEnv("GROQ_API_KEY", "q");
     const seen: Array<{ url: string; model?: string }> = [];
@@ -63,6 +64,7 @@ describe("provider failover", () => {
   });
 
   it("fails over past a dead provider and does not re-probe it while its circuit is open", async () => {
+    vi.stubEnv("GEMINI_EDITORIAL_FALLBACK", "on"); // failover mechanics need gemini in the editorial chain
     vi.stubEnv("GEMINI_API_KEY", "g");
     vi.stubEnv("GROQ_API_KEY", "q");
     let geminiCalls = 0;
@@ -90,6 +92,7 @@ describe("provider failover", () => {
   });
 
   it("reports the last real failure when every provider fails, without throwing", async () => {
+    vi.stubEnv("GEMINI_EDITORIAL_FALLBACK", "on"); // failover mechanics need gemini in the editorial chain
     vi.stubEnv("GEMINI_API_KEY", "g");
     vi.stubEnv("GROQ_API_KEY", "q");
     vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(err(500, "boom"))));

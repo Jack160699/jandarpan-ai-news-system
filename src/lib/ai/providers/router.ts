@@ -6,10 +6,11 @@
 
 import type { AiProviderId } from "@/lib/ai/providers/types";
 
-// groq is included as a third fallback for editorial generation so that when
-// both codecraft and gemini hit their daily RPD caps, the newsroom can still
-// publish using Groq's llama-3.3-70b-versatile (rpd: 1000, tpd: 100K).
-// This prevents the total DEFERRED_QUOTA blackout seen after UTC midnight resets.
+// CodeCraft Pro is the PRIMARY bulk editorial engine. Gemini sits in the base chain so that translation and other approved
+// secondary work can use it, but it is REMOVED from editorial_generate / editorial_repair unless explicitly approved (see
+// withGeminiEditorialGate): over 30 days it silently absorbed ~580 editorial generations (1.2M tokens) when CodeCraft failed,
+// burning a limited free quota that is not meant to be a high-volume article engine.
+// groq stays as the editorial fallback so a CodeCraft outage degrades instead of blacking out.
 const WRITER_CHAIN: AiProviderId[] = ["codecraft", "gemini", "groq"];
 // Independent review: codecraft primary, groq as fallback (same quota resilience).
 const REVIEWER_CHAIN: AiProviderId[] = ["codecraft", "groq"];
@@ -40,6 +41,22 @@ export function codecraftAllowedOperations(env: Record<string, string | undefine
   return new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
 }
 
+/** Operations that produce articles. Gemini is never part of these unless explicitly approved. */
+export const GEMINI_GATED_OPERATIONS: ReadonlySet<string> = new Set(["editorial_generate", "editorial_repair"]);
+
+/**
+ * Explicit approval for Gemini as an EDITORIAL fallback. Off by default; exactly "on" turns it on. Turning it on is a deliberate,
+ * visible decision (the admin efficiency panel shows every Gemini editorial call), never an accident of the default chain.
+ */
+export function isGeminiEditorialFallbackEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.GEMINI_EDITORIAL_FALLBACK?.trim().toLowerCase() === "on";
+}
+
+function withGeminiEditorialGate(chain: AiProviderId[], operation: string): AiProviderId[] {
+  if (!GEMINI_GATED_OPERATIONS.has(operation) || isGeminiEditorialFallbackEnabled()) return chain;
+  return chain.filter((p) => p !== "gemini");
+}
+
 function withCodecraftScope(chain: AiProviderId[], operation: string): AiProviderId[] {
   return codecraftAllowedOperations().has(operation) ? chain : chain.filter((p) => p !== "codecraft");
 }
@@ -57,7 +74,7 @@ function withOpenAiGate(chain: AiProviderId[]): AiProviderId[] {
 /** Provider order for a chat-completion-shaped operation (writer, reviewer, translation, repair, lightweight). */
 export function resolveChatChain(operation: string): AiProviderId[] {
   const chain = CHAT_OPERATION_CHAINS[operation] ?? WRITER_CHAIN;
-  return withCodecraftScope(withOpenAiGate(chain), operation);
+  return withGeminiEditorialGate(withCodecraftScope(withOpenAiGate(chain), operation), operation);
 }
 
 /** Provider that should have generated the draft, used to pick a *different* reviewer provider at call time. */

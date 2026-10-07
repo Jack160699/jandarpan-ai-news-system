@@ -175,3 +175,19 @@ describe("failure categorisation", () => {
     expect(categorizeFailure(reason)).toBe(cat);
   });
 });
+
+describe("sources while the scheduler is paused", () => {
+  it("shows a stale-but-not-faulty source as paused (healthy tone) only when the scheduler is off", () => {
+    const paused = evaluateSources(snap, known, NOW, { schedulerPaused: true });
+    const running = evaluateSources(snap, known, NOW, { schedulerPaused: false });
+    const pausedStatuses = new Set(paused.map((r) => r.status));
+    const runningStatuses = new Set(running.map((r) => r.status));
+    // the fixture contains a feed with no success for 9 days: degraded when running, paused when the scheduler is off
+    expect(runningStatuses.has("degraded")).toBe(true);
+    expect(pausedStatuses.has("paused")).toBe(true);
+    expect(paused.filter((r) => r.status === "paused").every((r) => r.tone === "healthy")).toBe(true);
+    // genuine faults are identical either way
+    const faults = (rows: typeof paused) => rows.filter((r) => ["failing", "retired", "orphaned", "disabled", "rate_limited"].includes(r.status)).map((r) => `${r.key}:${r.status}`).sort();
+    expect(faults(paused)).toEqual(faults(running));
+  });
+});

@@ -8,11 +8,13 @@
  * Start of IST day X at 00:00 IST = previous UTC day at 18:30:00 UTC.
  * Example: 2026-09-28 00:00 IST = 2026-09-27 18:30:00 UTC.
  *
- * Public (read-only, no PII exposed). Cache: no-store (always real-time).
+ * Admin-only (monitoring / analytics permission): backlog and pipeline counts are operational data, not public content.
+ * Cache: no-store (always real-time).
  */
 
 import { NextResponse } from "next/server";
 import { createAdminServerClient } from "@/lib/supabase";
+import { requireAnyAdminPermission } from "@/lib/auth/admin-authorization";
 import { noStoreHeaders } from "@/lib/infrastructure/cache/edge";
 
 export const runtime = "nodejs";
@@ -43,7 +45,10 @@ function startOfIstDayUtc(nowUtc: Date): Date {
   return new Date(istMidnightMs - IST_OFFSET_MS);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const auth = await requireAnyAdminPermission(request, ["monitoring:read", "analytics:read"]);
+  if (!auth.ok) return auth.response;
+
   const supabase = createAdminServerClient();
 
   const nowUtc = new Date();
