@@ -13,12 +13,17 @@ import type { AiProviderId } from "@/lib/ai/providers/types";
 // groq stays as the editorial fallback so a CodeCraft outage degrades instead of blacking out.
 const WRITER_CHAIN: AiProviderId[] = ["codecraft", "gemini", "groq"];
 // Independent review: codecraft primary, groq as fallback (same quota resilience).
+const USER_NEWS_CHAIN: AiProviderId[] = ["groq", "gemini"];
 const REVIEWER_CHAIN: AiProviderId[] = ["codecraft", "groq"];
 const LIGHTWEIGHT_CHAIN: AiProviderId[] = ["codecraft", "groq"];
 const EMBEDDING_CHAIN: AiProviderId[] = ["cloudflare", "openai"];
 const IMAGE_CHAIN: AiProviderId[] = ["cloudflare", "openai"];
 
 const CHAT_OPERATION_CHAINS: Record<string, AiProviderId[]> = {
+  // User-submitted news drafting/translation: low volume, per-author rate-limited. Groq first so the limited Gemini quota is the
+  // second choice, never the default; CodeCraft is excluded (its capacity is reserved for editorial generation/repair).
+  user_news_draft: USER_NEWS_CHAIN,
+  user_news_translate: USER_NEWS_CHAIN,
   editorial_generate: WRITER_CHAIN,
   editorial_repair: WRITER_CHAIN,
   translation: WRITER_CHAIN,
