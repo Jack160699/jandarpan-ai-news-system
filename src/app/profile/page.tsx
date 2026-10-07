@@ -7,6 +7,7 @@ import { Masthead, ReaderShell, JdIcon } from "@/features/reader-ds/components";
 import { useReaderPreferencesOptional } from "@/providers/ReaderPreferencesProvider";
 import { useLanguage } from "@/providers/LanguageProvider";
 import { useReaderAccount } from "@/providers/ReaderAccountProvider";
+import { PostNewsCard } from "@/features/user-news/PostNewsCard";
 import { getDistrict } from "@/lib/regional/districts";
 import {
   saveLocalEditableProfile,
@@ -376,6 +377,9 @@ export default function ProfilePage() {
           )}
         </section>
 
+        {/* Post News: verified readers only; the card states honestly whether posting is available. */}
+        {isLoggedIn && <PostNewsCard locale={isHi ? "hi" : "en"} isLoggedIn={isLoggedIn} />}
+
         {/* ─── TOPIC 1: ACCOUNT (EXPANDABLE ACCORDION) ─────────────────────────── */}
         <section style={{ marginBottom: 14 }}>
           <button
@@ -437,6 +441,14 @@ export default function ProfilePage() {
                 boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
               }}
             >
+              {isLoggedIn && (
+                <ProfileRow
+                  href="/profile/my-news"
+                  icon="eye"
+                  title={isHi ? "मेरी खबरें" : "My News"}
+                  subtitle={isHi ? "आपकी भेजी खबरों की स्थिति और व्यूज़" : "Status and views of the stories you posted"}
+                />
+              )}
               <ProfileRow
                 href="/archive/saved"
                 icon="bookmark"

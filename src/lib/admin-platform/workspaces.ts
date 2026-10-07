@@ -130,6 +130,12 @@ export const ADMIN_WORKSPACES: AdminWorkspace[] = [
         tier: "secondary",
       },
       {
+        href: "/admin/user-news",
+        label: "Reader news",
+        iconKey: "messages",
+        tier: "secondary",
+      },
+      {
         href: "/admin/collaboration",
         label: "Collaboration",
         iconKey: "messages",

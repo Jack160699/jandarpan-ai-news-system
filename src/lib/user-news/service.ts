@@ -13,7 +13,7 @@
 
 import { randomUUID, createHash } from "node:crypto";
 import { assertTransition, canTransition, isAuthorEditable, type SubmissionStatus } from "@/lib/user-news/status-machine";
-import { evaluatePostGate, effectiveStatus, NO_VERIFICATION, type VerificationRecord } from "@/lib/user-news/verification";
+import { evaluatePostGate, effectiveStatus, NO_VERIFICATION, verificationAvailability, type VerificationRecord } from "@/lib/user-news/verification";
 import { generateUserNewsDraft, MIN_SOURCE_CHARS, MAX_SOURCE_CHARS, type UserNewsDraftFields } from "@/lib/user-news/ai-draft";
 import { findAiFabrications, findUnsupportedFacts, hasBlockingFlags } from "@/lib/user-news/fact-check";
 import { detectRiskFlags, hasBlockingRisk, type RiskFlag } from "@/lib/user-news/risk-flags";
@@ -761,4 +761,74 @@ export async function getReviewBundle(deps: Deps, id: string): Promise<Result<{ 
 
 export async function listQueue(deps: Deps, statuses: SubmissionStatus[] = ["submitted", "under_review", "approved"]): Promise<SubmissionRow[]> {
   return deps.repo.listForModeration(statuses, 100);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// author-facing reads
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type OwnSubmissionView = {
+  submission: Omit<SubmissionRow, "reviewer_id" | "moderator_confirmed_district">;
+  media: Array<{ id: string; kind: string; status: string; width: number | null; height: number | null; durationMs: number | null; thumbnailUrl: string | null; problem: string | null }>;
+  moderation: Array<{ decision: string; reason: string | null; at: string }>;
+  readiness: { ready: boolean; problems: string[] };
+};
+
+/** The author's own story with everything the editor needs. Never includes the moderator's identity. */
+export async function getOwnSubmission(deps: Deps, userId: string, id: string): Promise<Result<{ view: OwnSubmissionView }>> {
+  const o = await loadOwned(deps, userId, id);
+  if (!o.ok) return o;
+  const { reviewer_id: _r, moderator_confirmed_district: _m, ...submission } = o.row;
+  void _r;
+  void _m;
+  const [media, moderation] = await Promise.all([deps.repo.listMedia(id), deps.repo.listModeration(id)]);
+  const problems = o.row.status === "ai_generated" || o.row.status === "user_approved" ? readinessProblems(o.row) : [];
+  return {
+    ok: true,
+    view: {
+      submission,
+      media: await Promise.all(
+        media.map(async (m) => ({
+          id: m.id,
+          kind: m.kind,
+          status: m.processing_status,
+          width: m.width,
+          height: m.height,
+          durationMs: m.duration_ms,
+          thumbnailUrl: m.thumbnail_path ? await deps.storage.signedReadUrl(m.thumbnail_path, 900) : null,
+          problem: m.processing_status === "rejected" ? String((m.validation as { message?: string })?.message ?? "This file was not accepted.") : null,
+        }))
+      ),
+      moderation: moderation.filter((x) => x.decision !== "hold" && x.decision !== "confirm_district").map((x) => ({ decision: x.decision, reason: x.reason_text, at: x.created_at })),
+      readiness: { ready: problems.length === 0, problems },
+    },
+  };
+}
+
+export type PostNewsStatus = {
+  authenticated: boolean;
+  allowed: boolean;
+  reason: string | null;
+  message: string | null;
+  verification: { status: string; provider: string | null };
+  verificationMode: "provider" | "manual_attestation" | "unavailable";
+  features: { voice: boolean; video: boolean; monetizationActive: false };
+  limits: { aiDraftsPerDay: number; submissionsPerDay: number; maxImages: number; maxVideoMb: number; maxVoiceSeconds: number };
+};
+
+export async function getPostNewsStatus(deps: Deps, userId: string | null): Promise<PostNewsStatus> {
+  const record = userId ? (await deps.repo.getVerification(userId)) ?? NO_VERIFICATION : NO_VERIFICATION;
+  const g = evaluatePostGate({ userId, record, env: deps.env, now: deps.now() });
+  const availability = verificationAvailability(deps.env);
+  const lim = limits(deps.env);
+  return {
+    authenticated: Boolean(userId),
+    allowed: g.allowed,
+    reason: g.allowed ? null : g.reason,
+    message: g.allowed ? null : g.message,
+    verification: { status: effectiveStatus(record, deps.now()), provider: record.provider },
+    verificationMode: availability.available ? availability.mode : "unavailable",
+    features: { voice: Boolean(deps.env.GOOGLE_TTS_SERVICE_ACCOUNT_JSON?.trim()), video: true, monetizationActive: false },
+    limits: { aiDraftsPerDay: lim.aiDraftsPerDay, submissionsPerDay: lim.submissionsPerDay, maxImages: MEDIA_LIMITS.maxImages, maxVideoMb: Math.round(MEDIA_LIMITS.videoMaxBytes / 1024 / 1024), maxVoiceSeconds: Math.round(VOICE_LIMITS.maxDurationMs / 1000) },
+  };
 }

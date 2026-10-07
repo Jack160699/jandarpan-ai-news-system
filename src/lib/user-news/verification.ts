@@ -82,6 +82,9 @@ export function isPostNewsOpen(env: Env = process.env): boolean {
 const RESTRICTED_KEY = /(aadhaar|aadhar|adhaar|uidai|^uid$|^otp$|_otp|otp_|biometric|fingerprint|iris|face_?(image|template)|pan_?(number|card)|passport|voter_?id|driving_?licen[cs]e|dl_?number|document_?(image|number|scan))/i;
 // 12 digits (optionally grouped 4-4-4) is the shape of an Aadhaar number; also catch it inside free text.
 const AADHAAR_SHAPE = /(?<!\d)\d{4}[\s-]?\d{4}[\s-]?\d{4}(?!\d)/;
+// A UUID is an opaque id, not identity data; but three all-digit groups inside one ("...5678-1234-4123...") look exactly like a 4-4-4
+// number. About 0.4% of random UUIDs would be refused at random, so they are removed before the shape test.
+const UUID_ANYWHERE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
 export class RestrictedIdentityDataError extends Error {
   readonly code = "restricted_identity_data";
@@ -94,7 +97,7 @@ export class RestrictedIdentityDataError extends Error {
 export function assertNoRestrictedIdentityData(payload: unknown, path = "$", depth = 0): void {
   if (depth > 8 || payload === null || payload === undefined) return;
   if (typeof payload === "string") {
-    if (AADHAAR_SHAPE.test(payload)) throw new RestrictedIdentityDataError(path);
+    if (AADHAAR_SHAPE.test(payload.replace(UUID_ANYWHERE, " "))) throw new RestrictedIdentityDataError(path);
     return;
   }
   if (typeof payload === "number") {
@@ -202,4 +205,35 @@ export function evaluatePostGate(input: {
   const availability = verificationAvailability(env);
   if (!availability.available) return { allowed: false, reason: "verification_unavailable", status, message: availability.message };
   return { allowed: false, reason: "not_verified", status, message: "Verify your identity to publish news." };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Timestamped request signature (replay protection)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export const PROVIDER_SIGNATURE_TOLERANCE_SEC = 300;
+
+/** Signs `${timestamp}.${rawBody}`: a captured callback cannot be replayed later, because the timestamp is part of what is signed. */
+export function signProviderRequest(rawBody: string, secret: string, timestampSec: number): string {
+  return createHmac("sha256", secret).update(`${timestampSec}.${rawBody}`).digest("hex");
+}
+
+export type ProviderRequestCheck = { ok: true } | { ok: false; error: "missing_signature" | "missing_timestamp" | "stale_timestamp" | "bad_signature" };
+
+export function verifyProviderRequest(input: {
+  rawBody: string;
+  signature: string | null | undefined;
+  timestamp: string | null | undefined;
+  secret: string | null | undefined;
+  nowMs?: number;
+}): ProviderRequestCheck {
+  if (!input.signature || !input.secret) return { ok: false, error: "missing_signature" };
+  const ts = Number(input.timestamp);
+  if (!input.timestamp || !Number.isFinite(ts)) return { ok: false, error: "missing_timestamp" };
+  const now = (input.nowMs ?? Date.now()) / 1000;
+  if (Math.abs(now - ts) > PROVIDER_SIGNATURE_TOLERANCE_SEC) return { ok: false, error: "stale_timestamp" };
+  const expected = Buffer.from(signProviderRequest(input.rawBody, input.secret, ts), "utf8");
+  const given = Buffer.from(String(input.signature).trim().replace(/^sha256=/i, ""), "utf8");
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return { ok: false, error: "bad_signature" };
+  return { ok: true };
 }

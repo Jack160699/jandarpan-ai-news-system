@@ -150,3 +150,64 @@ describe("parseProviderResult", () => {
     expect(parseProviderResult(body)).toEqual({ ok: false, error });
   });
 });
+
+import { PROVIDER_SIGNATURE_TOLERANCE_SEC, signProviderRequest, verifyProviderRequest } from "@/lib/user-news/verification";
+
+describe("timestamped provider request signature (replay protection)", () => {
+  const secret = "whsec_test_secret";
+  const body = JSON.stringify({ userId: UID, reference: "kyc_abc123", status: "verified", verifiedAt: "2026-10-01T00:00:00.000Z" });
+  const nowMs = Date.parse("2026-10-07T12:00:00.000Z");
+  const ts = Math.floor(nowMs / 1000);
+  const sig = signProviderRequest(body, secret, ts);
+
+  it("accepts a fresh, correctly signed request", () => {
+    expect(verifyProviderRequest({ rawBody: body, signature: sig, timestamp: String(ts), secret, nowMs })).toEqual({ ok: true });
+    expect(verifyProviderRequest({ rawBody: body, signature: `sha256=${sig}`, timestamp: String(ts), secret, nowMs })).toEqual({ ok: true });
+  });
+
+  it("refuses a replay of a captured request once it is older than the tolerance", () => {
+    const later = nowMs + (PROVIDER_SIGNATURE_TOLERANCE_SEC + 5) * 1000;
+    expect(verifyProviderRequest({ rawBody: body, signature: sig, timestamp: String(ts), secret, nowMs: later })).toEqual({ ok: false, error: "stale_timestamp" });
+  });
+
+  it("refuses a request from the future beyond the tolerance", () => {
+    const earlier = nowMs - (PROVIDER_SIGNATURE_TOLERANCE_SEC + 5) * 1000;
+    expect(verifyProviderRequest({ rawBody: body, signature: sig, timestamp: String(ts), secret, nowMs: earlier })).toEqual({ ok: false, error: "stale_timestamp" });
+  });
+
+  it("the timestamp is covered by the signature: changing it invalidates the request", () => {
+    expect(verifyProviderRequest({ rawBody: body, signature: sig, timestamp: String(ts + 10), secret, nowMs })).toEqual({ ok: false, error: "bad_signature" });
+  });
+
+  it("refuses a tampered body, a wrong secret, and missing parts", () => {
+    expect(verifyProviderRequest({ rawBody: body.replace("verified", "rejected"), signature: sig, timestamp: String(ts), secret, nowMs })).toEqual({ ok: false, error: "bad_signature" });
+    expect(verifyProviderRequest({ rawBody: body, signature: sig, timestamp: String(ts), secret: "other", nowMs })).toEqual({ ok: false, error: "bad_signature" });
+    expect(verifyProviderRequest({ rawBody: body, signature: null, timestamp: String(ts), secret, nowMs })).toEqual({ ok: false, error: "missing_signature" });
+    expect(verifyProviderRequest({ rawBody: body, signature: sig, timestamp: null, secret, nowMs })).toEqual({ ok: false, error: "missing_timestamp" });
+    expect(verifyProviderRequest({ rawBody: body, signature: sig, timestamp: String(ts), secret: null, nowMs })).toEqual({ ok: false, error: "missing_signature" });
+  });
+});
+
+describe("the identity-data guard does not misfire on ordinary ids", () => {
+  it("never refuses a UUID, however many digits it happens to contain", () => {
+    const digitHeavy = [
+      "12345678-1234-4123-8123-123456789012", // 12 digits in the last group, plus 4-4-4 runs
+      "00000000-0000-4000-8000-000000000000",
+      "11111111-1111-4111-8111-111111111111",
+      "98765432-1098-4765-8432-109876543210",
+    ];
+    for (const id of digitHeavy) {
+      expect(() => assertNoRestrictedIdentityData({ userId: id })).not.toThrow();
+      expect(parseProviderResult({ userId: id, reference: "kyc_abc12345", status: "verified", verifiedAt: "2026-10-01T00:00:00.000Z" })).toMatchObject({ ok: true });
+    }
+  });
+
+  it("still refuses an Aadhaar-shaped number sitting right next to a UUID", () => {
+    expect(() => assertNoRestrictedIdentityData({ note: "12345678-1234-4123-8123-123456789012 and 1234 5678 9012" })).toThrow(RestrictedIdentityDataError);
+  });
+
+  it("holds across many random UUIDs (the false-positive rate is zero)", () => {
+    const { randomUUID } = require("node:crypto") as typeof import("node:crypto");
+    for (let i = 0; i < 5000; i++) expect(() => assertNoRestrictedIdentityData({ userId: randomUUID() })).not.toThrow();
+  });
+});
