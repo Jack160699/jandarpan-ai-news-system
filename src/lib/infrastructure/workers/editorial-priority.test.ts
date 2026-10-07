@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   compareEditorialCandidates,
+  EVIDENCE_RICH_CHARS,
+  EVIDENCE_THIN_CHARS,
   editorialJobQueuePriority,
+  evidenceScore,
   scoreEditorialCandidate,
   selectEditorialCandidates,
 } from "@/lib/infrastructure/workers/editorial-priority";
@@ -117,5 +120,32 @@ describe("editorial-priority", () => {
         eventsWithRealMedia: new Set(["event-with-media"]),
       })[0].id
     ).toBe("event-with-media");
+  });
+});
+
+describe("editorial-priority: evidence richness", () => {
+  it("is neutral when evidence is unknown (legacy read) and bounded otherwise", () => {
+    expect(evidenceScore(undefined)).toBe(0);
+    expect(evidenceScore(0)).toBeLessThan(0);
+    expect(evidenceScore(EVIDENCE_THIN_CHARS - 1)).toBeLessThan(0);
+    expect(evidenceScore(EVIDENCE_THIN_CHARS)).toBe(0);
+    expect(evidenceScore(EVIDENCE_RICH_CHARS)).toBe(600);
+    expect(evidenceScore(EVIDENCE_RICH_CHARS * 10)).toBe(600);
+    expect(evidenceScore(1_600)).toBeGreaterThan(evidenceScore(1_000));
+  });
+
+  it("spends capacity on the evidence-rich event when everything else is equal", () => {
+    const thin = makeEvent({ id: "thin" });
+    const rich = makeEvent({ id: "rich" });
+    const evidenceChars = new Map([["thin", 450], ["rich", 2_400]]);
+    expect(selectEditorialCandidates([thin, rich], 1, { evidenceChars })[0].id).toBe("rich");
+  });
+
+  it("never overrides the coverage tier", () => {
+    const primaryThin = makeEvent({ id: "primary-thin" });
+    const nationalRich = makeEvent({ id: "national-rich" });
+    const coverageRank = new Map<string, 1 | 2 | 3 | 4 | 5 | 6>([["primary-thin", 1], ["national-rich", 4]]);
+    const evidenceChars = new Map([["primary-thin", 450], ["national-rich", 9_000]]);
+    expect(selectEditorialCandidates([nationalRich, primaryThin], 1, { coverageRank, evidenceChars })[0].id).toBe("primary-thin");
   });
 });

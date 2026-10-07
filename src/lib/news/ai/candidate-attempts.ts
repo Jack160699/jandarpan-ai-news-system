@@ -41,6 +41,9 @@ export function isCountableCandidateFailure(reason: string | undefined | null): 
   if (!reason) return false;
   if (NON_COUNTABLE_REASONS.has(reason)) return false;
   if (reason.startsWith("ai_")) return false;
+  // Waiting for more source evidence says nothing about the event's quality and must never dead-letter it: a later signal
+  // can lift the fact pack above the floor. The check is deterministic and free, so re-evaluating each wake costs nothing.
+  if (reason.startsWith("evidence_below_floor:")) return false;
   // A retryable structural failure is still a real failed attempt; quarantine/hard-reject are countable too.
   return true;
 }

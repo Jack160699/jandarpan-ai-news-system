@@ -80,10 +80,12 @@ import { optimizeSeoSlug } from "@/lib/seo/slug-optimize";
 import { getPipelineTenantId } from "@/lib/tenant/pipeline";
 import { buildOptimizedFactPack } from "@/lib/news/ai/optimized-fact-pack";
 import {
+  ARTICLE_DEPTH_RULES,
   classifyArticleType,
   type ArticleType,
   type ArticleTypeClassification,
 } from "@/lib/news/ai/article-type";
+import { assessEvidenceViability } from "@/lib/news/ai/evidence-viability";
 import {
   maxEditorialDepthRetries,
   shouldRetryDepthFailure,
@@ -1844,6 +1846,58 @@ async function prepareCandidate(
 
   const language = resolveLanguage(event, signals);
 
+  let articleTypeClassification = classifyEventArticleType(event, signals);
+  let { factPackText, sourceTexts, attributions } = buildFactPack(
+    event,
+    signals,
+    articleTypeClassification.type
+  );
+  // Reclassify with actual fact-pack size (excerpt-aware)
+  articleTypeClassification = classifyEventArticleType(
+    event,
+    signals,
+    factPackText.length
+  );
+  // Rebuild pack if type changed (excerpt budget differs)
+  ({ factPackText, sourceTexts, attributions } = buildFactPack(
+    event,
+    signals,
+    articleTypeClassification.type
+  ));
+
+  // Pre-generation evidence viability (zero AI cost): the depth floor is unchanged, but a candidate whose fact pack cannot
+  // support even the lowest eligible type's floor only buys a paid draft, a paid depth retry and a rejection. Demote
+  // through the existing ladder when a lower type fits; otherwise skip before any model call.
+  const viability = assessEvidenceViability({
+    articleType: articleTypeClassification.type,
+    factPackChars: factPackText.length,
+  });
+  if (!viability.viable) {
+    logEditorial("candidate_evidence_below_floor", {
+      eventId: event.id,
+      articleType: viability.articleType,
+      factPackChars: viability.factPackChars,
+      requiredChars: viability.requiredChars,
+    });
+    return { candidate: null, skipped: true, reason: viability.reason ?? "evidence_below_floor" };
+  }
+  if (viability.demotedFrom) {
+    logEditorial("candidate_demoted_to_supported_type", {
+      eventId: event.id,
+      from: viability.demotedFrom,
+      to: viability.articleType,
+      factPackChars: viability.factPackChars,
+    });
+    const demotedRule = ARTICLE_DEPTH_RULES[viability.articleType];
+    articleTypeClassification = {
+      ...articleTypeClassification,
+      type: viability.articleType,
+      rule: demotedRule,
+      reasons: [...articleTypeClassification.reasons, `evidence_viability_demoted_to_${viability.articleType}`],
+    };
+    ({ factPackText, sourceTexts, attributions } = buildFactPack(event, signals, articleTypeClassification.type));
+  }
+
   // Cross-language / same-language duplicate of an already PUBLISHED story (multilingual embeddings).
   // Runs before any LLM call. In "shadow" mode (default) this only records the decision.
   const duplicate = await checkStoryDuplicate({
@@ -1868,24 +1922,6 @@ async function prepareCandidate(
           : "duplicate_published_story",
     };
   }
-  let articleTypeClassification = classifyEventArticleType(event, signals);
-  let { factPackText, sourceTexts, attributions } = buildFactPack(
-    event,
-    signals,
-    articleTypeClassification.type
-  );
-  // Reclassify with actual fact-pack size (excerpt-aware)
-  articleTypeClassification = classifyEventArticleType(
-    event,
-    signals,
-    factPackText.length
-  );
-  // Rebuild pack if type changed (excerpt budget differs)
-  ({ factPackText, sourceTexts, attributions } = buildFactPack(
-    event,
-    signals,
-    articleTypeClassification.type
-  ));
 
   // Structured fact pack â€” consolidated entities/dates/numbers/quotes used
   // both as writer context (injected into the LLM call below) and as ground
@@ -2527,6 +2563,7 @@ export async function generateEditorialsFromEvents(
   const rankedPending = selectEditorialCandidates(unblocked, unblocked.length, {
     eventsWithRealMedia,
     coverageRank: policyActive ? coverageRank : undefined,
+    evidenceChars: pool?.evidenceChars,
   });
   const failedEventReasons: Array<{ eventId: string; reason: string }> = [];
   const succeededEventIds: string[] = [];
