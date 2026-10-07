@@ -35,6 +35,8 @@ import {
   type SubsystemStatus,
 } from "@/lib/admin-ops/health";
 import { googleTtsConfigured } from "@/lib/voice/google-auth";
+import { buildFeedIntegrity, type FeedIntegrityRaw, type FeedIntegrityView } from "@/lib/admin-ops/feed-integrity";
+import { buildEfficiencyView, type EfficiencyRaw, type EfficiencyView } from "@/lib/admin-ops/efficiency";
 import type { FunnelCounts, OpsSnapshotRaw, Tone, VoiceSampleView, VoiceSnapshot } from "@/lib/admin-ops/types";
 
 export const OPS_SNAPSHOT_TAG = "admin-ops-snapshot";
@@ -111,6 +113,10 @@ export type OpsView = {
     snapshot: VoiceSnapshot | null;
     samples: { runId: string; at: string; status: string; items: VoiceSampleView[] } | null;
   };
+  /** Public-feed integrity (canonical gate + geography + language). null when migration 099 is not applied or the read failed. */
+  integrity: FeedIntegrityView | null;
+  /** Recorded editorial efficiency (repair / rejection / latency / tokens). null when unavailable: never a made-up zero. */
+  efficiency: EfficiencyView | null;
 };
 
 /** scheduler_control (migration 089): the database kill switch + the retention switch. */
@@ -162,7 +168,15 @@ const FUNNEL_LABELS: Array<[keyof FunnelCounts, string]> = [
 
 export function buildOpsView(
   raw: OpsSnapshotRaw,
-  runtime: { snapshotLatencyMs: number; now?: number; voice?: VoiceData; schedulerControl?: SchedulerControl; outcomes?: OutcomeCounts }
+  runtime: {
+    snapshotLatencyMs: number;
+    now?: number;
+    voice?: VoiceData;
+    schedulerControl?: SchedulerControl;
+    outcomes?: OutcomeCounts;
+    integrity?: FeedIntegrityRaw | null;
+    efficiency?: EfficiencyRaw | null;
+  }
 ): OpsView {
   const now = runtime.now ?? Date.now();
   const lagMinutes = ageMinutes(raw.publishing.latest?.published_at, now);
@@ -176,7 +190,8 @@ export function buildOpsView(
 
   const jobs = evaluateJobs(raw, now);
   const knownRss = new Set(RSS_SOURCES.map((s) => s.id));
-  const sources = evaluateSources(raw, knownRss, now);
+  const control = runtime.schedulerControl ?? UNKNOWN_SCHEDULER_CONTROL;
+  const sources = evaluateSources(raw, knownRss, now, { schedulerPaused: control.known && control.enabled === false });
   const sourceSummary: Record<string, number> = {};
   for (const s of sources) sourceSummary[s.status] = (sourceSummary[s.status] ?? 0) + 1;
 
@@ -295,6 +310,8 @@ export function buildOpsView(
       snapshot: runtime.voice?.snapshot ?? null,
       samples: runtime.voice?.samples ?? null,
     },
+    integrity: runtime.integrity ? buildFeedIntegrity(runtime.integrity, new Date(now)) : null,
+    efficiency: runtime.efficiency ? buildEfficiencyView(runtime.efficiency) : null,
   };
 }
 
@@ -379,12 +396,41 @@ async function fetchOutcomeCounts(): Promise<OutcomeCounts> {
   }
 }
 
+/** Rows for the integrity view (migration 099). Optional: a missing migration or a failed read yields null, never a break. */
+async function fetchFeedIntegrityRaw(): Promise<FeedIntegrityRaw | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const { data, error } = await createAdminServerClient().rpc("admin_feed_integrity" as never, { p_limit: 400 } as never);
+    if (error || !data) return null;
+    return data as unknown as FeedIntegrityRaw;
+  } catch {
+    return null;
+  }
+}
+
+/** Recorded editorial efficiency over the last 24 h (migration 099). Same fail-soft contract. */
+async function fetchEfficiencyRaw(): Promise<EfficiencyRaw | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const { data, error } = await createAdminServerClient().rpc("admin_editorial_efficiency" as never, { p_hours: 24 } as never);
+    if (error || !data) return null;
+    return data as unknown as EfficiencyRaw;
+  } catch {
+    return null;
+  }
+}
+
+const cachedIntegrity = unstable_cache(fetchFeedIntegrityRaw, ["admin-feed-integrity-v1"], { revalidate: 60, tags: [OPS_SNAPSHOT_TAG] });
+const cachedEfficiency = unstable_cache(fetchEfficiencyRaw, ["admin-editorial-efficiency-v1"], { revalidate: 120, tags: [OPS_SNAPSHOT_TAG] });
+
 export async function getOpsView(options?: { fresh?: boolean }): Promise<OpsView> {
-  const [{ raw, latencyMs }, voice, schedulerControl, outcomes] = await Promise.all([
+  const [{ raw, latencyMs }, voice, schedulerControl, outcomes, integrity, efficiency] = await Promise.all([
     options?.fresh ? fetchRawSnapshot() : cachedRawSnapshot(),
     fetchVoiceData(),
     fetchSchedulerControl(),
     fetchOutcomeCounts(),
+    options?.fresh ? fetchFeedIntegrityRaw() : cachedIntegrity(),
+    options?.fresh ? fetchEfficiencyRaw() : cachedEfficiency(),
   ]);
-  return buildOpsView(raw, { snapshotLatencyMs: latencyMs, voice, schedulerControl, outcomes });
+  return buildOpsView(raw, { snapshotLatencyMs: latencyMs, voice, schedulerControl, outcomes, integrity, efficiency });
 }

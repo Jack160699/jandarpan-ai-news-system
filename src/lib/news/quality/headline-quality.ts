@@ -14,8 +14,11 @@ const GENERIC_EXACT: RegExp[] = [
   /^(regional|local|state|national|world|india|district)?\s*(news|update|updates|headlines?|stories|story|report|bulletin|roundup)(\s+(update|updates|today|now))?$/i,
   /^(latest|breaking|top|today'?s?|daily|live|fresh|big|major|important)\s+(news|update|updates|headlines?|stories|story|bulletin)(\s+(update|updates|today|now))?$/i,
   /^(news|breaking|latest)\s*(today|now|update|alert)?$/i,
+  // qualifier + scope + noun: "Latest Regional Update", "Breaking National News", "ताज़ा क्षेत्रीय समाचार"
+  /^(latest|breaking|top|today'?s?|daily|live|fresh|big|major|important)\s+(regional|local|state|national|world|india|district|chhattisgarh)\s+(news|update|updates|headlines?|stories|story|report|bulletin|roundup)(\s+(update|updates|today|now))?$/i,
+  /^(ताज़ा|ताजा|ब्रेकिंग|आज\s*की|बड़ी|प्रमुख|मुख्य)\s*(क्षेत्रीय|स्थानीय|प्रादेशिक|राज्य|राष्ट्रीय|जिला|छत्तीसगढ़?)\s*(खबर|खबरें|ख़बरें|समाचार|न्यूज़|न्यूज|अपडेट)(\s+(अपडेट|आज))?$/,
   /^chhattisgarh\s+(news|update|updates|headlines?)(\s+(update|today))?$/i,
-  /^(क्षेत्रीय|स्थानीय|राज्य|राष्ट्रीय)?\s*(समाचार|खबर|खबरें|ख़बरें|अपडेट|सुर्खियां|सुर्खियाँ|बुलेटिन)(\s+(अपडेट|आज))?$/,
+  /^(क्षेत्रीय|स्थानीय|प्रादेशिक|प्रदेश|जिला|ज़िला|राज्य|राष्ट्रीय|अंतरराष्ट्रीय|देश|विदेश|सामान्य)?\s*(समाचार|खबर|खबरें|ख़बरें|अपडेट|सुर्खियां|सुर्खियाँ|बुलेटिन)(\s+(अपडेट|आज))?$/,
   /^(ताज़ा|ताजा|ताज़ा-तरीन|ब्रेकिंग|आज\s*की|बड़ी|प्रमुख|मुख्य)\s*(खबर|खबरें|ख़बर|ख़बरें|समाचार|न्यूज़|न्यूज|अपडेट|सुर्खियां)(\s+(अपडेट|आज))?$/,
   /^छत्तीसगढ़?\s*(समाचार|खबर|खबरें|अपडेट|न्यूज़?)(\s+अपडेट)?$/,
 ];
@@ -175,4 +178,100 @@ export function evaluateHeadlineQuality(input: {
   }
 
   return { ok: failures.length === 0, failures, contentTokens: content };
+}
+
+/**
+ * Read-time guard for PUBLIC feeds. Publication already runs evaluateHeadlineQuality; this protects readers from rows that were
+ * published before a gate existed or by another path. It only rejects the unambiguous failures (empty, boilerplate, roundup,
+ * placeholder) -- it deliberately does not apply the stricter specificity / length / duplicate rules, which are publication-time
+ * editorial judgements.
+ */
+export function isHeadlineFitForPublicFeed(headline: string | null | undefined): boolean {
+  const h = (headline ?? "").trim();
+  if (!h) return false;
+  if (isGenericHeadline(h) || isRoundupHeadline(h)) return false;
+  return !PLACEHOLDER_RE.test(h);
+}
+
+// ---------------------------------------------------------------------------
+// Cross-headline audit (read-only): duplicates, near-duplicates and repetitive templates.
+// ---------------------------------------------------------------------------
+
+function significantTokens(headline: string): string[] {
+  return normalizeHeadline(headline)
+    .split(" ")
+    .filter((t) => t.length >= 3 && !EN_STOPWORDS.has(t) && !HI_STOPWORDS.has(t));
+}
+
+/** Jaccard similarity of significant tokens (0..1). */
+export function headlineSimilarity(a: string, b: string): number {
+  const ta = new Set(significantTokens(a));
+  const tb = new Set(significantTokens(b));
+  if (ta.size === 0 || tb.size === 0) return 0;
+  let inter = 0;
+  for (const t of ta) if (tb.has(t)) inter++;
+  return inter / (ta.size + tb.size - inter);
+}
+
+export type HeadlineAuditItem = { id: string; headline: string; eventId?: string | null };
+
+export type HeadlineAuditReport = {
+  total: number;
+  generic: HeadlineAuditItem[];
+  /** Same normalised headline on rows that are NOT the same event (or have no event id to prove it). */
+  exactDuplicates: Array<{ headline: string; ids: string[] }>;
+  /** Highly similar headlines on different events; same-event pairs (translations/updates) are excluded. */
+  nearDuplicates: Array<{ a: HeadlineAuditItem; b: HeadlineAuditItem; similarity: number }>;
+  /** The same opening words used by many headlines -- a repetitive generated template. */
+  repetitiveOpenings: Array<{ opening: string; count: number; ids: string[] }>;
+};
+
+export function auditHeadlines(
+  items: readonly HeadlineAuditItem[],
+  options: { nearDuplicateThreshold?: number; openingWords?: number; openingMinCount?: number } = {}
+): HeadlineAuditReport {
+  const threshold = options.nearDuplicateThreshold ?? 0.8;
+  const openingWords = options.openingWords ?? 3;
+  const openingMin = options.openingMinCount ?? 4;
+
+  const generic = items.filter((i) => !isHeadlineFitForPublicFeed(i.headline));
+
+  const byNorm = new Map<string, HeadlineAuditItem[]>();
+  for (const it of items) {
+    const n = normalizeHeadline(it.headline);
+    if (!n) continue;
+    byNorm.set(n, [...(byNorm.get(n) ?? []), it]);
+  }
+  const exactDuplicates: HeadlineAuditReport["exactDuplicates"] = [];
+  for (const [, group] of byNorm) {
+    if (group.length < 2) continue;
+    const events = new Set(group.map((g) => g.eventId ?? `__none:${g.id}`));
+    if (events.size > 1) exactDuplicates.push({ headline: group[0].headline, ids: group.map((g) => g.id) });
+  }
+
+  const nearDuplicates: HeadlineAuditReport["nearDuplicates"] = [];
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const a = items[i];
+      const b = items[j];
+      if (a.eventId && b.eventId && a.eventId === b.eventId) continue;
+      if (normalizeHeadline(a.headline) === normalizeHeadline(b.headline)) continue; // already an exact duplicate
+      const similarity = headlineSimilarity(a.headline, b.headline);
+      if (similarity >= threshold) nearDuplicates.push({ a, b, similarity: Math.round(similarity * 100) / 100 });
+    }
+  }
+
+  const openings = new Map<string, string[]>();
+  for (const it of items) {
+    const words = normalizeHeadline(it.headline).split(" ").filter(Boolean);
+    if (words.length < openingWords + 2) continue;
+    const key = words.slice(0, openingWords).join(" ");
+    openings.set(key, [...(openings.get(key) ?? []), it.id]);
+  }
+  const repetitiveOpenings = [...openings.entries()]
+    .filter(([, ids]) => ids.length >= openingMin)
+    .map(([opening, ids]) => ({ opening, count: ids.length, ids }))
+    .sort((x, y) => y.count - x.count);
+
+  return { total: items.length, generic, exactDuplicates, nearDuplicates, repetitiveOpenings };
 }

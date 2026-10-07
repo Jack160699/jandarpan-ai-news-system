@@ -32,6 +32,10 @@ describe("failed-candidate tracking policy", () => {
     expect(isCountableCandidateFailure(undefined)).toBe(false);
   });
 
+  it("never counts 'waiting for more evidence' toward dead-lettering (a later signal can lift the fact pack)", () => {
+    expect(isCountableCandidateFailure("evidence_below_floor:short_update:480<561")).toBe(false);
+  });
+
   it("blocks dead-lettered events and events still in backoff", () => {
     const now = 1_000_000;
     expect(isCandidateBlocked({ attempts: 4, nextRetryAt: null, deadLettered: true }, now)).toBe(true);

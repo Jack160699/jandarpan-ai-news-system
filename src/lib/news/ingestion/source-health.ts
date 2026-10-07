@@ -13,6 +13,7 @@ import type { IngestionSourceStateRow } from "@/lib/news/ingestion/source-state"
 
 export type DerivedSourceStatus =
   | "healthy"
+  | "paused"
   | "degraded"
   | "dormant"
   | "rate_limited"
@@ -63,7 +64,16 @@ const hoursAgo = (iso: string | null | undefined, now: number): number | null =>
 
 export function deriveSourceHealth(
   row: StateLike | null | undefined,
-  options: { now?: number; known?: boolean } = {}
+  options: {
+    now?: number;
+    known?: boolean;
+    /**
+     * True while the scheduler kill switch is OFF. Nothing is polling, so "no recent fetch" is the scheduler's doing, not the
+     * source's: such a source is "paused", never "degraded" / "dormant". Genuine faults (failures, quota, retired, orphaned,
+     * disabled) are still reported as they are.
+     */
+    schedulerPaused?: boolean;
+  } = {}
 ): DerivedSourceHealth {
   const now = options.now ?? Date.now();
   if (!row) {
@@ -104,6 +114,9 @@ export function deriveSourceHealth(
 
   // A source not attempted for a long time is not "healthy" just because it was once.
   if (hoursSinceSuccess === null) return out("failing", "never succeeded");
+  if (options.schedulerPaused && hoursSinceSuccess > 24) {
+    return out("paused", `scheduler is off; last successful fetch ${Math.round(hoursSinceSuccess)}h ago (not a source fault)`);
+  }
   if (hoursSinceSuccess > 24) return out("degraded", `no successful fetch for ${Math.round(hoursSinceSuccess)}h`);
 
   // Responding but returning nothing new.
@@ -173,6 +186,7 @@ export function shouldPollSource(
 /** Status label used by the admin dashboard. */
 export const SOURCE_STATUS_LABEL: Record<DerivedSourceStatus, string> = {
   healthy: "Healthy",
+  paused: "Paused (scheduler off)",
   degraded: "Degraded",
   dormant: "Dormant",
   rate_limited: "Rate limited",

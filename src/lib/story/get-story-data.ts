@@ -13,6 +13,7 @@ import {
   resolveLocalizedFieldsStrict,
 } from "@/lib/i18n/resolve-article";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 import { pickEntityAwareRelatedStories } from "@/lib/story/story-entity-discovery";
 import {
   fetchGeneratedArticlePool,
@@ -58,8 +59,12 @@ export const getStoryArticleBySlug = cache(async (slug: string) => {
 });
 
 const getCachedStoryRelatedPool = unstable_cache(
-  () =>
-    fetchGeneratedArticlePool(STORY_RELATED_POOL_LIMIT, { select: "homepage" }),
+  async () =>
+    // Related stories are timeline content: same public gate (status, 30-day window, no UNKNOWN geography), newest first.
+    selectFeedRows(await fetchGeneratedArticlePool(STORY_RELATED_POOL_LIMIT, { select: "homepage" }), {
+      feed: "public_all",
+      order: "chronological",
+    }).rows,
   ["story-related-pool-v1"],
   {
     revalidate: INFRA_CONFIG.homepageCacheSeconds,

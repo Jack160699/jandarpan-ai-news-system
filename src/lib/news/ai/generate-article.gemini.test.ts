@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parseRobustLlmResponse } from "./generate-article";
 import { resolveChatChain,  } from "../../ai/providers/router";
 
@@ -38,7 +38,10 @@ describe("Gemini-Only Robust Parsing", () => {
     expect(parsed?.sections?.details).toBe("Details paragraph.");
   });
 
-  it("I. Editorial routing routes to CodeCraft, Gemini, and Groq", () => {
+  it("I. Editorial routing is CodeCraft then Groq; Gemini only with explicit approval", () => {
+    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "groq"]);
+    vi.stubEnv("GEMINI_EDITORIAL_FALLBACK", "on");
     expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini", "groq"]);
+    vi.unstubAllEnvs();
   });
 });

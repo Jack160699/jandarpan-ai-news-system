@@ -22,7 +22,8 @@ import {
   getGoogleNewsCutoffIso,
   GOOGLE_NEWS_SITEMAP_LIMIT,
 } from "@/lib/seo/google-news";
-import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
+import { getCanonicalReaderCutoffIso, isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
+import { isStaticFallbackEnabled } from "@/lib/news/fallback/policy";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 
 const GENERATED_SELECT =
@@ -188,7 +189,8 @@ export async function fetchGeneratedArticlePool(
         return fresh;
       }
     );
-    return rows.slice(0, bounded);
+    // A cached pool can outlive a story's place in the 30-day window by up to the cache TTL: re-check on every read.
+    return rows.filter((row) => isWithinCanonicalReaderWindow(row.published_at)).slice(0, bounded);
   } catch (err) {
     if (err instanceof PoolNotCacheable) return fetchGeneratedArticlePoolUncached(limit, options);
     throw err;
@@ -205,15 +207,17 @@ async function fetchGeneratedArticlePoolUncached(
       reason: "supabase_not_configured",
       hint: "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on Vercel",
     });
+    if (!isStaticFallbackEnabled()) return [];
     const { getStaticFallbackArticlePool } = await import(
       "@/lib/news/fallback/wire-articles"
     );
-    return getStaticFallbackArticlePool();
+    return getStaticFallbackArticlePool().filter((r) => isWithinCanonicalReaderWindow(r.published_at));
   }
 
   const mode: GeneratedPoolSelectMode = options?.select ?? "full";
   const bounded = clampGeneratedPoolLimit(limit, mode);
   const columns = selectColumns(mode);
+  const cutoffIso = getCanonicalReaderCutoffIso();
   const supabase = createAnonServerClient();
   const startedAt = Date.now();
 
@@ -226,8 +230,12 @@ async function fetchGeneratedArticlePoolUncached(
           .from(relation as "generated_articles")
           .select(columns)
           .not("published_at", "is", null)
+          // Same 30-day window the JS filter enforces, pushed into the query so old rows never consume the row limit.
+          .gte("published_at", cutoffIso)
           .in("editorial_status", [...PUBLIC_EDITORIAL_STATUSES])
+          // published_at is the only event time; id breaks equal timestamps so pages and caches are deterministic.
           .order("published_at", { ascending: false, nullsFirst: false })
+          .order("id", { ascending: false })
           .abortSignal(signal);
 
         if (options?.cursorPublishedAt) {
@@ -313,11 +321,12 @@ async function fetchGeneratedArticlePoolUncached(
 
   if (internal?.skipFallback) return [];
 
-  // Only fall back to static articles if database returned zero public articles
+  // An empty result stays empty: a frozen static pool is not news. (Local development only, or explicit opt-in.)
+  if (!isStaticFallbackEnabled()) return [];
   const { getStaticFallbackArticlePool } = await import(
     "@/lib/news/fallback/wire-articles"
   );
-  return getStaticFallbackArticlePool();
+  return getStaticFallbackArticlePool().filter((r) => isWithinCanonicalReaderWindow(r.published_at));
 }
 
 export type GoogleNewsArticleRow = Pick<
@@ -411,11 +420,13 @@ export async function fetchGoogleNewsArticlePool(
 export async function getGeneratedArticleBySlug(
   slug: string
 ): Promise<GeneratedArticleRow | null> {
-  const { getStaticFallbackArticlePool } = await import(
-    "@/lib/news/fallback/wire-articles"
-  );
-  const staticMatch = getStaticFallbackArticlePool().find((r) => r.slug === slug);
-  if (staticMatch) return staticMatch;
+  if (isStaticFallbackEnabled()) {
+    const { getStaticFallbackArticlePool } = await import(
+      "@/lib/news/fallback/wire-articles"
+    );
+    const staticMatch = getStaticFallbackArticlePool().find((r) => r.slug === slug);
+    if (staticMatch) return staticMatch;
+  }
 
   if (!isSupabaseConfigured()) {
     return null;

@@ -3,7 +3,10 @@
  */
 
 import { formatDistrictLabel, scoreRegionalTopicFromArticle } from "@/lib/regional/topic-scoring";
-import { geoFromRecord, tagGeoFromContent } from "@/lib/regional/geo-tagging";
+import { geoFromRecord } from "@/lib/regional/geo-tagging";
+import { resolveRowGeo, selectFeedRows } from "@/lib/feed/feed-selector";
+import { belongsToDistrictFeed } from "@/lib/news/geo/geo-scope";
+import { comparePublishedDesc } from "@/lib/feed/freshness";
 import {
   normalizeArticleLanguage,
   type NewsroomLanguage,
@@ -19,7 +22,6 @@ import { buildLocalBreakingAlerts } from "@/lib/regional/breaking-alerts";
 import { logRegionalAnalytics } from "@/lib/regional/analytics";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
 import { extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
-import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
 
 export type HyperlocalArticleRef = {
   id: string;
@@ -87,18 +89,29 @@ function toRef(
   };
 }
 
+/**
+ * Routes rows into district buckets using STORED, evidence-based geography only (geo_metadata.scope written at publication).
+ *   DISTRICT_SPECIFIC            -> each district it names
+ *   STATEWIDE_CHHATTISGARH       -> "statewide"
+ *   anything else / text-derived -> not routed (a district is never guessed from a headline, tag or source name)
+ * Rows must also pass the canonical public gate (status, 30-day window, fit headline); output buckets are newest-first.
+ */
 export function routeArticlesByDistrict(
   rows: GeneratedArticleRow[]
 ): Map<string, GeneratedArticleRow[]> {
   const byDistrict = new Map<string, GeneratedArticleRow[]>();
+  const gated = selectFeedRows(rows, { feed: "public_all", order: "chronological" }).rows;
 
-  for (const row of rows) {
-    if (!isWithinCanonicalReaderWindow(row.published_at ?? row.created_at)) continue;
-    const geo = geoFromRecord(row);
-    if (!geo.is_chhattisgarh && !geo.districts.length) continue;
+  for (const row of gated) {
+    const geo = resolveRowGeo(row);
+    if (geo.derived) continue;
 
-    const targets =
-      geo.districts.length > 0 ? geo.districts : ["statewide"];
+    let targets: string[] = [];
+    if (geo.scope === "DISTRICT_SPECIFIC") {
+      targets = geo.districts.length > 0 ? geo.districts : geo.districtSlug ? [geo.districtSlug] : [];
+    } else if (geo.scope === "STATEWIDE_CHHATTISGARH") {
+      targets = ["statewide"];
+    }
 
     for (const slug of targets) {
       const list = byDistrict.get(slug) ?? [];
@@ -144,11 +157,8 @@ export function buildHyperlocalFeedBundle(
     seen.add(slug);
 
     const district: CgDistrict | undefined = getDistrict(slug);
-    const sorted = [...pool].sort((a, b) => {
-      const sa = scoreRegionalTopicFromArticle(a, options?.homeDistrict).score;
-      const sb = scoreRegionalTopicFromArticle(b, options?.homeDistrict).score;
-      return sb - sa;
-    });
+    // Chronology is authoritative: a score may never lift an older story above a newer one. (regionalScore is still reported.)
+    const sorted = [...pool].sort(comparePublishedDesc);
 
     const articles = sorted
       .slice(0, perDistrict)
@@ -207,66 +217,19 @@ export function filterRowsForDistrict(
 }
 
 /**
- * Exact + content-reclassified match for a district hub.
- * Prefer stored geo; when statewide/empty, re-tag from headline/summary so
- * local stories are not dropped behind generic Chhattisgarh metadata.
+ * True only when the row's STORED, evidence-based geography names this district (scope DISTRICT_SPECIFIC).
+ * Never matched from tags, headline/summary text, source name or a re-tag at read time -- those are guesses, and a wrong guess
+ * puts another district's (or a national) story on this district's page.
  */
 export function rowMatchesDistrict(
   row: GeneratedArticleRow,
   districtSlug: string
 ): boolean {
   if (!row || !districtSlug) return false;
-  const targetSlug = districtSlug.trim().toLowerCase();
-
-  // 1. Direct tag matching (e.g. tags: ["durg", "chhattisgarh"])
-  const rawTags = (row.tags ?? []).map((t) => String(t).trim().toLowerCase());
-  if (rawTags.includes(targetSlug)) return true;
-
-  // 2. District alias expansion (e.g. bhilai, patan, kumhari for durg)
-  const districtObj = getDistrict(targetSlug);
-  const aliases = districtObj?.aliases ?? [targetSlug];
-
-  for (const alias of aliases) {
-    const aLower = alias.toLowerCase();
-    if (rawTags.includes(aLower)) return true;
-  }
-
-  // 3. Stored geo metadata check
-  const geo = geoFromRecord(row);
-  if (
-    geo.primary_district === targetSlug ||
-    geo.districts.includes(targetSlug)
-  ) {
-    return true;
-  }
-
-  // 4. Headline and summary text matching against district aliases
-  const text = `${row.headline ?? ""} ${row.summary ?? ""}`.toLowerCase();
-  for (const alias of aliases) {
-    if (alias.length >= 3 && text.includes(alias.toLowerCase())) {
-      return true;
-    }
-  }
-
-  // 5. Stored statewide / weak geo — recover district from live copy
-  const needsRetag =
-    !geo.primary_district ||
-    geo.classification_kind === "statewide" ||
-    geo.districts.length === 0;
-
-  if (!needsRetag) return false;
-
-  const classified = tagGeoFromContent({
-    title: row.headline ?? "",
-    body: row.summary ?? null,
-    region: null,
-    category: row.tags?.[0] ?? null,
-  });
-
-  return (
-    classified.primary_district === targetSlug ||
-    classified.districts.includes(targetSlug)
-  );
+  const target = getDistrict(districtSlug)?.slug ?? districtSlug.trim().toLowerCase();
+  const geo = resolveRowGeo(row);
+  if (geo.derived) return false;
+  return belongsToDistrictFeed(geo, target);
 }
 
 export type DistrictHubPartition = {

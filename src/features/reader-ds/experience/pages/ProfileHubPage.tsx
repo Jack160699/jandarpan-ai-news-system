@@ -66,6 +66,22 @@ export function ProfileHubPage() {
           <JdIcon name="chevR" size={20} stroke={2} color="var(--jd-gold-soft)" />
         </Link>
 
+        {isLoggedIn ? (
+          <>
+            <SettingRow
+              icon="star"
+              label={locale === "en" ? "Post News" : "खबर भेजें"}
+              sub={locale === "en" ? "Verified readers can submit local news" : "सत्यापित पाठक स्थानीय खबर भेज सकते हैं"}
+              href="/profile/post-news"
+            />
+            <SettingRow
+              icon="eye"
+              label={locale === "en" ? "My News" : "मेरी खबरें"}
+              sub={locale === "en" ? "Status and views of your stories" : "आपकी खबरों की स्थिति और व्यूज़"}
+              href="/profile/my-news"
+            />
+          </>
+        ) : null}
         <SettingRow
           icon="search"
           label={t("search.submit")}

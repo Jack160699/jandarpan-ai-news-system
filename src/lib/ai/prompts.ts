@@ -1,6 +1,6 @@
 import type { AiDeskTemplate, AiStoryLanguage } from "./types";
 import type { ArticleType } from "@/lib/news/ai/article-type";
-import { ARTICLE_DEPTH_RULES } from "@/lib/news/ai/article-type";
+import { ARTICLE_DEPTH_RULES, depthRejectThreshold } from "@/lib/news/ai/article-type";
 
 const TEMPLATE_HINTS: Record<AiDeskTemplate, string> = {
   breaking_news:
@@ -127,6 +127,12 @@ export function buildEditorialPipelineSystemPrompt(input: {
   const articleType = input.articleType ?? "standard_report";
   const depthRule = ARTICLE_DEPTH_RULES[articleType];
   const thin = input.evidenceSufficient === false;
+  // The first draft previously only saw a soft "near ~N words" target; the hard floor appeared only in the paid retry
+  // prompt, so ~70% of CodeCraft stories needed a second full generation. State the floor up front instead.
+  const hardFloor = depthRejectThreshold(articleType);
+  const hardFloorBlock = input.repairContext
+    ? ""
+    : `HARD MINIMUM: the article body (lead + details + context together) must contain at least ${hardFloor} words; shorter drafts are rejected and discarded. Reach it only with facts from the fact pack — attributed details, chronology, place, public impact, what happens next. Never use filler, repetition or invention; if the fact pack supports more, write the fuller verified report.`;
 
   const depthBlock = [
     `Article type: ${articleType} (${lang === "hi" ? depthRule.labelHi : depthRule.labelEn}).`,
@@ -134,7 +140,10 @@ export function buildEditorialPipelineSystemPrompt(input: {
     thin
       ? "Evidence is LIMITED: write a verified short update or developing note. Mark uncertainty. Do NOT expand through speculation or filler."
       : `When facts support it, write a complete report near ~${depthRule.targetWords} words (acceptable band ${depthRule.minWords}–${depthRule.maxWords}). Word count is a quality guard — never invent facts to hit it.`,
-  ].join("\n");
+    hardFloorBlock,
+  ]
+    .filter(Boolean)
+    .join("\n");
   const correctionBlock = input.repairContext
     ? [
         `DEPTH CORRECTION ATTEMPT ${input.repairContext.attempt}: the previous body had only ${input.repairContext.previousWords} words and failed the hard minimum of ${input.repairContext.minWords}.`,

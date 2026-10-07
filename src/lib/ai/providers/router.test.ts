@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  isGeminiEditorialFallbackEnabled,
   isOpenAiProviderEnabled,
   resolveChatChain,
   resolveEmbeddingChain,
@@ -13,8 +14,31 @@ afterEach(() => {
 });
 
 describe("resolveChatChain", () => {
-  it("returns codecraft, gemini and groq for editorial_generate, without openai by default", () => {
+  it("returns codecraft then groq for editorial_generate: Gemini is NOT in the article-generation path by default", () => {
+    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "groq"]);
+    expect(resolveChatChain("editorial_repair")).toEqual(["codecraft", "groq"]);
+  });
+
+  it("keeps Gemini available for secondary work (translation, unknown operations) so its quota is used where approved", () => {
+    expect(resolveChatChain("translation")).toContain("gemini");
+    expect(resolveChatChain("some_unknown_operation")).toContain("gemini");
+  });
+
+  it("allows Gemini as an editorial fallback ONLY when explicitly approved with GEMINI_EDITORIAL_FALLBACK=on", () => {
+    for (const v of ["", "true", "1", "yes", "ON_", "off"]) {
+      vi.stubEnv("GEMINI_EDITORIAL_FALLBACK", v);
+      expect(resolveChatChain("editorial_generate")).not.toContain("gemini");
+      expect(isGeminiEditorialFallbackEnabled()).toBe(false);
+    }
+    vi.stubEnv("GEMINI_EDITORIAL_FALLBACK", "on");
+    expect(isGeminiEditorialFallbackEnabled()).toBe(true);
     expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini", "groq"]);
+    expect(resolveChatChain("editorial_repair")).toEqual(["codecraft", "gemini", "groq"]);
+  });
+
+  it("never puts Gemini ahead of CodeCraft, and CodeCraft stays first for editorial generation", () => {
+    vi.stubEnv("GEMINI_EDITORIAL_FALLBACK", "on");
+    expect(resolveChatChain("editorial_generate")[0]).toBe("codecraft");
   });
 
   it("keeps codecraft OUT of editorial_review (operation-scoped), leaving groq", () => {
@@ -35,14 +59,14 @@ describe("resolveChatChain", () => {
 
   it("keeps editorial chains strictly codecraft/gemini/groq even when AI_PROVIDER_OPENAI_ENABLED=true", () => {
     vi.stubEnv("AI_PROVIDER_OPENAI_ENABLED", "true");
-    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini", "groq"]);
+    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "groq"]);
     expect(resolveChatChain("editorial_review")).toEqual(["groq"]);
     expect(resolveChatChain("some_unknown_operation")).toEqual(["gemini", "groq"]);
   });
 
   it("removes openai again when the flag is set to anything other than 'true'", () => {
     vi.stubEnv("AI_PROVIDER_OPENAI_ENABLED", "false");
-    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "gemini", "groq"]);
+    expect(resolveChatChain("editorial_generate")).toEqual(["codecraft", "groq"]);
   });
 });
 

@@ -7,6 +7,7 @@ import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { getTrendingSearchesForLanguage } from "@/lib/i18n/trending-searches";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 import { logNewsroom } from "@/lib/newsroom/logger";
 import {
   buildSearchIndex,
@@ -23,7 +24,8 @@ const INDEX_CACHE_TAG = "news-search-index";
 async function loadSearchIndexUncached(
   displayLanguage: NewsroomLanguage
 ): Promise<SearchIndexSnapshot> {
-  const rows = await fetchGeneratedArticlePool(160, { select: "homepage" });
+  const pool = await fetchGeneratedArticlePool(160, { select: "homepage" });
+  const rows = selectFeedRows(pool, { feed: "public_all", order: "chronological" }).rows;
   return snapshotSearchIndex(buildSearchIndex(rows, displayLanguage));
 }
 

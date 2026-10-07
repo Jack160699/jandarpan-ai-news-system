@@ -8,8 +8,8 @@
  */
 
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
-import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import { hasVerifiedRealMedia } from "@/lib/news/images/validate";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 import { filterRowsForDistrict } from "@/lib/regional/hyperlocal-feed";
 import { toHomeArticle } from "@/lib/homepage/generated-feed";
 
@@ -47,20 +47,17 @@ function formatIst(isoStr?: string | null): string | null {
 }
 
 export async function runContentAvailabilityHealthCheck(): Promise<ContentHealthReport> {
-  const pool = await fetchGeneratedArticlePool(160, { select: "homepage" });
-  const fallback = getStaticFallbackArticlePool();
-
+  // Count only what a reader can actually see: the canonical public gate (status, 30-day window, fit headline, geography).
+  const pool = selectFeedRows(await fetchGeneratedArticlePool(160, { select: "homepage" }), {
+    feed: "public_all",
+    order: "chronological",
+  }).rows;
+  // Health must describe what readers can actually get from the database. The frozen static pool is deliberately NOT merged in:
+  // doing so made an empty or stale database look healthy.
   const seenSlugs = new Set<string>();
   const combined = [];
 
   for (const r of pool) {
-    if (r?.slug && !seenSlugs.has(r.slug)) {
-      seenSlugs.add(r.slug);
-      combined.push(r);
-    }
-  }
-
-  for (const r of fallback) {
     if (r?.slug && !seenSlugs.has(r.slug)) {
       seenSlugs.add(r.slug);
       combined.push(r);

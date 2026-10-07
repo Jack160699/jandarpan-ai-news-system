@@ -69,7 +69,9 @@ async function buildFeedFromPool(
     order: "fresh_ranked",
   }).rows;
   const langPool = filterPoolByLanguage(cgFirstPool, displayLanguage);
-  const effectivePool = langPool.length > 0 ? langPool : cgFirstPool;
+  // A language feed contains only stories renderable in that language. When there are none it stays empty (the caller treats
+  // it as "no feed") -- it must never silently fall back to the other language.
+  const effectivePool = langPool;
   homeDebug("homepage language pool", {
     displayLanguage,
     total: pool.length,

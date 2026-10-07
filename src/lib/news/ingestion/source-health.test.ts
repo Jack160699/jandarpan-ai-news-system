@@ -108,3 +108,31 @@ describe("adaptive polling", () => {
     expect(shouldPollSource(null, { now: NOW })).toBe(true);
   });
 });
+
+describe("deriveSourceHealth: a paused scheduler is not a dead source", () => {
+  const stale = { ...base, last_successful_at: ago(131), last_attempted_at: ago(131), last_new_item_at: ago(140) };
+
+  it("reports 'paused' for a source with no recent fetch while the scheduler is OFF", () => {
+    const r = deriveSourceHealth(stale, { now: NOW, schedulerPaused: true });
+    expect(r.status).toBe("paused");
+    expect(r.reason).toMatch(/scheduler is off/);
+    expect(r.reason).toMatch(/not a source fault/);
+  });
+
+  it("the same source is still 'degraded' when the scheduler is ON (so a real outage is never hidden)", () => {
+    expect(deriveSourceHealth(stale, { now: NOW, schedulerPaused: false }).status).toBe("degraded");
+    expect(deriveSourceHealth(stale, { now: NOW }).status).toBe("degraded");
+  });
+
+  it("real faults are still reported while paused: failures, quota, retired, disabled, orphaned", () => {
+    expect(deriveSourceHealth({ ...stale, consecutive_failures: 5 }, { now: NOW, schedulerPaused: true }).status).toBe("failing");
+    expect(deriveSourceHealth({ ...stale, quota_exhausted_until: ago(-3) }, { now: NOW, schedulerPaused: true }).status).toBe("rate_limited");
+    expect(deriveSourceHealth({ ...stale, health_state: "permanently_retired" as never }, { now: NOW, schedulerPaused: true }).status).toBe("retired");
+    expect(deriveSourceHealth({ ...stale, enabled: false }, { now: NOW, schedulerPaused: true }).status).toBe("disabled");
+    expect(deriveSourceHealth(stale, { now: NOW, schedulerPaused: true, known: false }).status).toBe("orphaned");
+  });
+
+  it("a recently fetched source stays healthy while paused", () => {
+    expect(deriveSourceHealth(base, { now: NOW, schedulerPaused: true }).status).toBe("healthy");
+  });
+});

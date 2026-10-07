@@ -8,6 +8,9 @@ import { INFRA_CONFIG } from "@/lib/infrastructure/config";
 
 const QUEUE_BATCH = 10;
 
+/** Matches the 48 h window hard-coded in claim_ai_queue_batch / sweep_stale_ai_queue (migration 082). */
+export const AI_QUEUE_FRESH_WINDOW_MS = 48 * 3_600_000;
+
 import { isAnyChatProviderConfigured, isLocalEnrichEnabled } from "@/lib/ai/providers";
 
 /** Minutes passed to claim_ai_queue_batch RPC (env: AI_QUEUE_STALE_PROCESSING_MS). */
@@ -143,11 +146,16 @@ async function claimAiQueueBatchFallback(
     .is("processing_started_at", null)
     .lt("created_at", staleCutoff);
 
+  // Same policy as claim_ai_queue_batch: freshest first, nothing older than the 48 h freshness window, and respect retry
+  // backoff. This path runs on ANY RPC error, so oldest-first here would pull the stale backlog ahead of fresh news.
+  const freshCutoff = new Date(Date.now() - AI_QUEUE_FRESH_WINDOW_MS).toISOString();
   const { data: pending, error } = await supabase
     .from("news_ai_queue")
     .select("id, article_id")
     .eq("status", "pending")
-    .order("created_at", { ascending: true })
+    .gte("created_at", freshCutoff)
+    .or(`next_attempt_at.is.null,next_attempt_at.lte.${new Date().toISOString()}`)
+    .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error || !pending?.length) return [];
@@ -166,7 +174,7 @@ async function claimAiQueueBatchFallback(
 }
 
 /**
- * Claim a batch of pending AI enrichment jobs (oldest first).
+ * Claim a batch of pending AI enrichment jobs (freshest first, 48 h window).
  *
  * Production path uses claim_ai_queue_batch RPC with FOR UPDATE SKIP LOCKED so
  * concurrent workers cannot claim the same row. Never revert to SELECT+UPDATE

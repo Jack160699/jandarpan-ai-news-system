@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 import {
   generateOrUpdateMonthlyReport,
   getPreviousMonthString,
@@ -15,17 +17,10 @@ export const dynamic = "force-dynamic";
  * and verifies statutory health across all vectors.
  */
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  // Basic authorization check if CRON_SECRET is configured
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    const key = searchParams.get("key");
-    if (key !== cronSecret) {
-      return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-    }
-  }
+  // Fail-closed, header-only, timing-safe. (This used to skip auth entirely when CRON_SECRET was unset and also accepted the
+  // secret as a ?key= URL parameter, which ends up in access logs.)
+  const auth = await verifyCronRequest(request, { capability: "ops" });
+  if (!auth.authorized) return cronAuthFailureResponse(auth);
 
   const previousMonth = getPreviousMonthString();
   const reportResult = await generateOrUpdateMonthlyReport(previousMonth);

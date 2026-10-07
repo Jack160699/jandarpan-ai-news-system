@@ -6,31 +6,21 @@
  * stale exhausted keys that block editorial generation for up to 9 hours
  * past the provider's actual quota reset.
  *
- * Requires a valid super-admin session or the CRON_API_SECRET header.
+ * Requires the admin-capability secret in a request HEADER (Authorization: Bearer or x-cron-secret), verified with the shared
+ * timing-safe cron auth. A secret in the URL is not accepted: URLs end up in access logs and browser history.
  */
 
 import { NextResponse } from "next/server";
 import { flushDailyQuotaKeys } from "@/lib/ai/providers/quota";
+import { verifyCronRequest } from "@/lib/infrastructure/auth/cron-auth";
+import { cronAuthFailureResponse } from "@/lib/infrastructure/auth/cron-response";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export async function POST(request: Request): Promise<Response> {
-  // Accept x-cron-secret, Authorization: Bearer, or URL ?secret param
-  const cronSecret = process.env.CRON_API_SECRET?.trim() ?? process.env.CRON_SECRET?.trim() ?? "";
-  const xCronHeader = request.headers.get("x-cron-secret") ?? "";
-  const authHeader = request.headers.get("authorization") ?? "";
-  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-  const url = new URL(request.url);
-  const paramSecret = url.searchParams.get("secret") ?? "";
-
-  const authorized =
-    cronSecret &&
-    (xCronHeader === cronSecret || bearerToken === cronSecret || paramSecret === cronSecret);
-
-  if (!authorized) {
-    return new Response("Forbidden", { status: 403 });
-  }
+  const auth = await verifyCronRequest(request, { capability: "admin" });
+  if (!auth.authorized) return cronAuthFailureResponse(auth);
 
   try {
     const result = await flushDailyQuotaKeys();

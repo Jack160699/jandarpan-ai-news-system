@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const calls: Array<{ limit: number }> = [];
+const chainCalls: Array<[string, unknown[]]> = [];
 let rowsToReturn: Array<Record<string, unknown>> = [];
 
 const row = (i: number) => ({
@@ -22,7 +23,13 @@ vi.mock("@/lib/supabase", () => ({
       select: () => {
         const chain: Record<string, unknown> = {};
         const self = () => chain;
-        for (const k of ["not", "in", "eq", "ilike", "gte", "lt", "order", "abortSignal"]) chain[k] = self;
+        for (const k of ["not", "in", "eq", "ilike", "gte", "lt", "order", "abortSignal"]) {
+          chain[k] = (...args: unknown[]) => {
+            chainCalls.push([k, args]);
+            return chain;
+          };
+        }
+        void self;
         chain.limit = (n: number) => {
           calls.push({ limit: n });
           return Promise.resolve({ data: rowsToReturn.slice(0, n), error: null });
@@ -34,11 +41,18 @@ vi.mock("@/lib/supabase", () => ({
 }));
 vi.mock("@/lib/news/live-feed/logger", () => ({ errorLiveFeed: vi.fn(), logLiveFeed: vi.fn(), warnLiveFeed: vi.fn() }));
 vi.mock("@/lib/newsroom/logger", () => ({ logNewsroom: vi.fn() }));
-vi.mock("@/lib/news/fallback/wire-articles", () => ({ getStaticFallbackArticlePool: () => [{ id: "static", slug: "static", headline: "fallback" }] }));
+vi.mock("@/lib/news/fallback/wire-articles", () => ({
+  getStaticFallbackArticlePool: () => [
+    { id: "static", slug: "static", headline: "fallback", published_at: new Date(Date.now() - 60_000).toISOString() },
+    { id: "static-old", slug: "static-old", headline: "frozen", published_at: "2026-08-01T06:36:43.000Z" },
+  ],
+}));
 
 beforeEach(async () => {
   vi.resetModules();
   calls.length = 0;
+  chainCalls.length = 0;
+  vi.unstubAllEnvs();
   rowsToReturn = Array.from({ length: 300 }, (_, i) => row(i));
   const { clearSharedReadMemo } = await import("@/lib/infrastructure/cache/shared-read-cache");
   clearSharedReadMemo();
@@ -76,16 +90,35 @@ describe("list pool reads are shared, not per-request", () => {
     expect(calls).toHaveLength(2);
   });
 
-  it("never caches an empty database result: it falls back and re-queries next time", async () => {
+  it("never caches an empty database result, and an empty result stays EMPTY (no frozen static pool)", async () => {
     rowsToReturn = [];
     const { fetchGeneratedArticlePool } = await import("./read");
     const first = await fetchGeneratedArticlePool(160, { select: "homepage" });
-    expect(first[0]?.slug).toBe("static");
+    expect(first).toEqual([]);
     await fetchGeneratedArticlePool(160, { select: "homepage" });
-    // 2 requests x (cached-path attempt + uncached fallback path) -- nothing was memoised
+    // nothing was memoised: both requests hit the database
     expect(calls.length).toBeGreaterThanOrEqual(2);
     rowsToReturn = Array.from({ length: 10 }, (_, i) => row(i));
     const recovered = await fetchGeneratedArticlePool(160, { select: "homepage" });
     expect(recovered[0]?.slug).toBe("story-0");
+  });
+
+  it("the static pool is opt-in, and even then respects the 30-day window", async () => {
+    vi.stubEnv("ALLOW_STATIC_FALLBACK_POOL", "true");
+    rowsToReturn = [];
+    const { fetchGeneratedArticlePool } = await import("./read");
+    const out = await fetchGeneratedArticlePool(160, { select: "homepage" });
+    expect(out.map((r) => r.slug)).toEqual(["static"]); // a frozen story older than 30 days is dropped
+  });
+
+  it("queries with the 30-day cutoff and a deterministic id tiebreak after published_at", async () => {
+    const { fetchGeneratedArticlePool } = await import("./read");
+    await fetchGeneratedArticlePool(160, { select: "homepage" });
+    const gte = chainCalls.find(([k, a]) => k === "gte" && a[0] === "published_at");
+    expect(gte).toBeDefined();
+    const cutoff = Date.parse(String(gte![1][1]));
+    expect(Math.abs(Date.now() - cutoff - 30 * 24 * 3_600_000)).toBeLessThan(60_000);
+    const orders = chainCalls.filter(([k]) => k === "order").map(([, a]) => a[0]);
+    expect(orders).toEqual(["published_at", "id"]);
   });
 });

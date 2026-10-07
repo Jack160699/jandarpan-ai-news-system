@@ -82,6 +82,7 @@ const READER_DS_EXACT = new Set([
   "/community-guidelines",
   "/how-we-report",
   "/fact-check-policy",
+  "/contributor-terms",
   "/cookies",
   "/safety",
   "/rates",

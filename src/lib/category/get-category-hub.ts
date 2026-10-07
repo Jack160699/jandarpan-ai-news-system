@@ -14,6 +14,7 @@ import { resolveLocalizedFieldsStrict } from "@/lib/i18n/resolve-article";
 import type { NewsroomLanguage } from "@/lib/i18n/languages";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
 import {
   buildTrendingKeywords,
   getCategorySeo,
@@ -75,7 +76,8 @@ async function buildCategoryHubUncached(
   const config = getCategorySeo(slug);
   if (!config) return null;
 
-  const pool = await getCachedCategoryArticlePool();
+  // Canonical public gate + strict newest-first (30-day window, status, UNKNOWN geography excluded) before any category match.
+  const pool = selectFeedRows(await getCachedCategoryArticlePool(), { feed: "public_all", order: "chronological" }).rows;
   const langPool = filterPoolByLanguage(pool, displayLanguage);
   const matched = filterArticlesForCategory(langPool, config).slice(
     0,

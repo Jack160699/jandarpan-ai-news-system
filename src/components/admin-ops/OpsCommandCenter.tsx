@@ -19,6 +19,7 @@ import {
   ToneDot,
   useNow,
 } from "@/components/admin-ops/OpsPanels";
+import { EfficiencyPanel, FeedIntegrityPanel } from "@/components/admin-ops/IntegrityPanels";
 import { RunControls } from "@/components/admin-ops/RunControls";
 import { VoicePanel } from "@/components/admin-ops/VoicePanel";
 import { UsersPanel } from "@/components/admin-ops/UsersPanel";
@@ -106,7 +107,9 @@ export function OpsCommandCenter({
 
       <KpiRow view={view} />
       <FreshnessPanel view={view} now={now} />
+      <FeedIntegrityPanel view={view} now={now} />
       <FunnelPanel view={view} />
+      <EfficiencyPanel view={view} />
       <div className="ops-grid ops-grid--2">
         <SubsystemPanel view={view} now={now} />
         <RunControls canRun={canRun} onDone={() => void refresh(true)} />

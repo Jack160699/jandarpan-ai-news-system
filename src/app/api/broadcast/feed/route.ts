@@ -1,98 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
-import { resolveLiveArticlePool } from "@/lib/news/live-feed";
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import type { GeneratedArticleRow } from "@/lib/types/newsroom";
-import type { HomeArticle } from "@/lib/homepage/types";
 import type { BroadcastSegment } from "@/features/jd-live/types";
 import { resolveCanonicalStoryDistrict } from "@/lib/regional/canonical-district";
 import { generateAnchorSpokenScript, normalizeHeadlineForSpokenScript } from "@/lib/broadcast/anchor-script-engine";
-import { getStaticFallbackArticlePool } from "@/lib/news/fallback/wire-articles";
 import { optimizeCdnImageUrl } from "@/lib/news/images/responsive-sizes";
 import { hasVerifiedRealMedia, isCleanRightsEligibleMedia, extractVerifiedRealMediaUrl } from "@/lib/news/images/validate";
 import { resolveCanonicalCategories } from "@/lib/editorial/canonical-categories";
-import { isWithinCanonicalReaderWindow } from "@/lib/news/canonical-window";
+import { hasLanguageRepresentation, orderLiveQueue, selectLiveRows } from "@/lib/broadcast/live-selection";
 
 export const dynamic = "force-dynamic";
 
 /** Each row carries translated bodies (~6 KB). 60 = the latest ~half-day of stories; the pool is cached for an hour and shared. */
 const BROADCAST_POOL_ROWS = 60;
 export const revalidate = 0;
-
-const CG_SECTIONS = new Set(["chhattisgarh", "raipur"]);
-
-const CG_DISTRICT_KEYS = new Set([
-  "durg",
-  "bhilai",
-  "raipur",
-  "rajnandgaon",
-  "bilaspur",
-  "korba",
-  "raigarh",
-  "bastar",
-  "surguja",
-  "jagdalpur",
-  "ambikapur",
-  "dhamtari",
-  "mahasamund",
-  "kanker",
-  "sukma",
-  "dantewada",
-  "bijapur",
-  "narayanpur",
-  "kondagaon",
-  "kabirdham",
-  "balod",
-  "bemetara",
-  "gariaband",
-  "balodabazar",
-  "janjgir",
-  "champa",
-  "jashpur",
-  "korea",
-  "manendragarh",
-  "mohla",
-  "sakti",
-  "sarangarh",
-  "khairagarh",
-]);
-
-const DISTRICT_NAMES_HI: Record<string, string> = {
-  raipur: "रायपुर",
-  durg: "दुर्ग",
-  bhilai: "भिलाई",
-  bilaspur: "बिलासपुर",
-  bastar: "बस्तर",
-  korba: "कोरबा",
-  rajnandgaon: "राजनंदगांव",
-  raigarh: "रायगढ़",
-  jagdalpur: "जगदलपुर",
-  ambikapur: "अंबिकापुर",
-  dhamtari: "धमतरी",
-  mahasamund: "महासमुंद",
-  kanker: "कांकेर",
-  sukma: "सुकमा",
-  dantewada: "दंतेवाड़ा",
-  bijapur: "बीजापुर",
-  narayanpur: "नारायणपुर",
-  kondagaon: "कोंडागांव",
-  kabirdham: "कबीरधाम",
-  balod: "बालोद",
-  bemetara: "बेमेतरा",
-  gariaband: "गरियाबंद",
-  balodabazar: "बलौदाबाज़ार",
-  janjgir: "जांजगीर",
-  champa: "चांपा",
-  surguja: "सरगुजा",
-  jashpur: "जशपुर",
-  korea: "कोरिया",
-  manendragarh: "मनेंद्रगढ़",
-  mohla: "मोहला-मानपुर",
-  sakti: "सक्ती",
-  sarangarh: "सारंगढ़",
-  khairagarh: "खैरागढ़",
-  chhattisgarh: "छत्तीसगढ़",
-};
 
 const SECTION_NAMES_HI: Record<string, string> = {
   chhattisgarh: "राज्य डेस्क",
@@ -124,105 +45,6 @@ const SECTION_NAMES_EN: Record<string, string> = {
 
 
 
-/** Detect district name from text */
-function detectDistrict(text: string): string | null {
-  const t = text.toLowerCase();
-  if (t.includes("दुर्ग") || t.includes("durg")) return "durg";
-  if (t.includes("भिलाई") || t.includes("bhilai")) return "bhilai";
-  if (t.includes("रायपुर") || t.includes("raipur")) return "raipur";
-  if (t.includes("बिलासपुर") || t.includes("bilaspur")) return "bilaspur";
-  if (t.includes("बस्तर") || t.includes("bastar") || t.includes("जगदलपुर") || t.includes("jagdalpur")) return "bastar";
-  if (t.includes("कोरबा") || t.includes("korba")) return "korba";
-  if (t.includes("राजनंदगांव") || t.includes("rajnandgaon")) return "rajnandgaon";
-  if (t.includes("रायगढ़") || t.includes("raigarh")) return "raigarh";
-  if (t.includes("अंबिकापुर") || t.includes("ambikapur") || t.includes("सरगुजा") || t.includes("surguja")) return "surguja";
-  if (t.includes("दंतेवाड़ा") || t.includes("dantewada")) return "dantewada";
-  if (t.includes("कांकेर") || t.includes("kanker")) return "kanker";
-  if (t.includes("सुकमा") || t.includes("sukma")) return "sukma";
-  if (t.includes("बीजापुर") || t.includes("bijapur")) return "bijapur";
-  if (t.includes("धमतरी") || t.includes("dhamtari")) return "dhamtari";
-  if (t.includes("महासमुंद") || t.includes("mahasamund")) return "mahasamund";
-  if (t.includes("कबीरधाम") || t.includes("kabirdham") || t.includes("कवर्धा") || t.includes("kawardha")) return "kabirdham";
-  if (t.includes("बालोद") || t.includes("balod")) return "balod";
-  if (t.includes("बेमेतरा") || t.includes("bemetara")) return "bemetara";
-  if (t.includes("गरियाबंद") || t.includes("gariaband")) return "gariaband";
-  if (t.includes("बलौदाबाजार") || t.includes("बलौदाबाज़ार") || t.includes("balodabazar")) return "balodabazar";
-  if (t.includes("जांजगीर") || t.includes("चांपा") || t.includes("janjgir")) return "janjgir";
-  if (t.includes("जशपुर") || t.includes("jashpur")) return "jashpur";
-  if (t.includes("कोरिया") || t.includes("korea")) return "korea";
-  if (t.includes("मनेंद्रगढ़") || t.includes("manendragarh")) return "manendragarh";
-  if (t.includes("मोहला") || t.includes("mohla")) return "mohla";
-  if (t.includes("सक्ती") || t.includes("sakti")) return "sakti";
-  if (t.includes("सारंगढ़") || t.includes("sarangarh")) return "sarangarh";
-  if (t.includes("खैरागढ़") || t.includes("khairagarh")) return "khairagarh";
-  if (t.includes("पेंड्रा") || t.includes("pendra") || t.includes("गौरेला") || t.includes("gaurela")) return "pendra";
-  return null;
-}
-
-const CG_TEXT_SIGNALS = [
-  "छत्तीसगढ़", "chhattisgarh", "chattisgarh",
-  "रायपुर", "raipur", "दुर्ग", "durg", "भिलाई", "bhilai",
-  "बिलासपुर", "bilaspur", "बस्तर", "bastar", "कोरबा", "korba",
-  "राजनंदगांव", "rajnandgaon", "रायगढ़", "raigarh", "अंबिकापुर", "ambikapur",
-  "जगदलपुर", "jagdalpur", "कांकेर", "kanker", "दंतेवाड़ा", "dantewada",
-  "सुकमा", "sukma", "बीजापुर", "bijapur", "धमतरी", "dhamtari",
-  "महासमुंद", "mahasamund", "कबीरधाम", "kabirdham", "कवर्धा", "kawardha",
-  "बालोद", "balod", "बेमेतरा", "bemetara", "गरियाबंद", "gariaband",
-  "बलौदाबाजार", "balodabazar", "जांजगीर", "janjgir", "चांपा", "champa",
-  "सरगुजा", "surguja", "जशपुर", "jashpur", "कोरिया", "korea",
-  "मनेंद्रगढ़", "manendragarh", "मोहला", "mohla", "सक्ती", "sakti",
-  "सारंगढ़", "sarangarh", "खैरागढ़", "khairagarh", "पेंड्रा", "pendra",
-  "गौरेला", "gaurela", "विष्णु देव साय", "विष्णुदेव साय", "साय कैबिनेट",
-  "महानदी", "इंद्रावती", "हसदेव", "भिलाई स्टील", "bsp", "secl", "nmdc", "cspdcl"
-];
-
-// Negative filters: purely outside states or generic national topics with no Chhattisgarh connection
-const EXCLUDE_SIGNALS = [
-  "मध्य प्रदेश", "madhya pradesh",
-  "पश्चिम बंगाल", "west bengal", "बंगाल में",
-  "जम्मू-कश्मीर", "jammu", "kashmir",
-  "महाराष्ट्र", "maharashtra", "iit बॉम्बे", "iit bombay",
-  "उत्तर प्रदेश", "uttar pradesh",
-  "बिहार", "bihar",
-  "राजस्थान", "rajasthan",
-  "गुजरात", "gujarat",
-  "पंजाब", "punjab",
-  "हरियाणा", "haryana",
-  "तमिलनाडु", "tamil nadu",
-  "केरल", "kerala",
-  "कर्नाटक", "karnataka",
-  "झारखंड", "jharkhand",
-  "देश-दुनिया", "राशिफल", "अंक ज्योतिष", "नाखून टूटने",
-  "खाद्य तेल सस्ता होने का अनुमान"
-];
-
-function isChhattisgarhOnlyStory(c: BroadcastCandidate): boolean {
-  const text = `${c.headline} ${c.summary}`.toLowerCase();
-  const hlLower = c.headline.toLowerCase();
-
-  // Disallow generic national roundups or astrology
-  if (hlLower.includes("देश-दुनिया") || hlLower.includes("राशिफल") || hlLower.includes("अंक ज्योतिष")) {
-    return false;
-  }
-
-  // Purely outside states with no CG relevance
-  if (
-    (text.includes("पश्चिम बंगाल") || text.includes("जम्मू-कश्मीर") || text.includes("पंजाब") || text.includes("केरल") || text.includes("तमिलनाडु")) &&
-    !text.includes("छत्तीसगढ़") && !text.includes("chhattisgarh") && !c.districtSlug
-  ) {
-    return false;
-  }
-
-  // Jan Darpan articles are Chhattisgarh regional coverage by default if section or tags indicate it
-  const isCgSection = c.section === "chhattisgarh" || c.section === "raipur" || c.tags?.includes("chhattisgarh");
-  const hasCgMention =
-    CG_TEXT_SIGNALS.some((sig) => text.includes(sig.toLowerCase())) ||
-    (c.districtSlug && CG_DISTRICT_KEYS.has(c.districtSlug)) ||
-    isCgSection;
-
-  return Boolean(hasCgMention);
-}
-
 /** Standard story item for broadcast ranking */
 type BroadcastCandidate = {
   id: string;
@@ -246,24 +68,6 @@ type BroadcastCandidate = {
   districtSlug: string | null;
 };
 
-function isStockOrGenericMediaUrl(url?: string | null): boolean {
-  if (!url) return true;
-  const l = url.toLowerCase();
-  return (
-    l.includes("images.unsplash.com") ||
-    l.includes("plus.unsplash.com") ||
-    l.includes("source.unsplash.com") ||
-    l.includes("pexels.com") ||
-    l.includes("pixabay.com") ||
-    l.includes("googleusercontent.com/j6_cofbogxh") ||
-    l.includes("photo-1529107386315") ||
-    l.includes("photo-1449824913935") ||
-    l.includes("via.placeholder.com") ||
-    l.includes("default.jpg") ||
-    l.startsWith("data:")
-  );
-}
-
 function resolveCandidateMediaUrl(
   primary?: string | null,
   meta?: any,
@@ -278,51 +82,6 @@ function resolveCandidateMediaUrl(
     return verified;
   }
   return "";
-}
-
-function normalizeHomeArticle(a: HomeArticle): BroadcastCandidate {
-  const districtRes = resolveCanonicalStoryDistrict({
-    explicitDistrict: a.districtSlug || a.district,
-    tags: a.tags,
-    headline: a.headline,
-    summary: a.summary,
-    section: a.section,
-    categoryLabel: a.categoryLabel,
-  });
-
-  const rawImg = resolveCandidateMediaUrl(
-    a.imageUrl || a.ogImageUrl,
-    (a as any).editorial_metadata,
-    a
-  );
-
-  const rawMeta = (a as any).editorial_metadata;
-  const translations = (a as any).translations || rawMeta?.translations || {};
-  const enTrans = translations.en;
-  const hiTrans = translations.hi;
-  const isDevanagari = /[\u0900-\u097F]/.test(a.headline || "");
-
-  return {
-    id: a.id,
-    slug: a.slug,
-    headline: a.headline,
-    headlineHi: hiTrans?.headline || (isDevanagari ? a.headline : undefined),
-    headlineEn: enTrans?.headline || (!isDevanagari ? a.headline : undefined),
-    summary: a.summary || "",
-    summaryHi: hiTrans?.summary || (isDevanagari ? a.summary : undefined),
-    summaryEn: enTrans?.summary || (!isDevanagari ? a.summary : undefined),
-    articleBody: a.summary || "",
-    articleBodyHi: hiTrans?.article_body || (isDevanagari ? a.summary : undefined),
-    articleBodyEn: enTrans?.article_body || (!isDevanagari ? a.summary : undefined),
-    imageUrl: rawImg,
-    section: a.section || "chhattisgarh",
-    language: a.language || (isDevanagari ? "hi" : "en"),
-    tags: a.tags || [],
-    publishedAt: a.publishedAt,
-    isBreaking: !!(a.ranking?.isBreaking),
-    priorityScore: a.priorityScore ?? a.trendScore ?? 50,
-    districtSlug: districtRes.districtSlug,
-  };
 }
 
 function normalizeGeneratedRow(r: GeneratedArticleRow): BroadcastCandidate {
@@ -402,16 +161,11 @@ function toSegment(c: BroadcastCandidate, targetLang: "hi" | "en"): BroadcastSeg
     ? normalizeHeadlineForSpokenScript(rawHeadlineEn, c.summaryEn, c.articleBodyEn)
     : "";
 
-  // Strict language representation — zero cross-language pollution
-  const headline =
-    targetLang === "en"
-      ? (headlineEn || "Regional News Update")
-      : (headlineHi || "प्रादेशिक समाचार अपडेट");
+  // Strict language representation — zero cross-language pollution. A missing language is filtered out BEFORE this point
+  // (hasLanguageRepresentation); an empty string here means "drop the segment", never a generic placeholder headline.
+  const headline = targetLang === "en" ? headlineEn || "" : headlineHi || "";
 
-  const summary =
-    targetLang === "en"
-      ? (c.summaryEn || "Editorial report in progress.")
-      : (c.summaryHi || "संपादकीय विवरण प्रक्रियाधीन है।");
+  const summary = targetLang === "en" ? c.summaryEn || "" : c.summaryHi || "";
 
   const body =
     targetLang === "en"
@@ -515,104 +269,22 @@ export async function GET(req: NextRequest) {
     const excludeIds = new Set(excludeParam.split(",").map((s) => s.trim()).filter(Boolean));
     const userId = searchParams.get("userId");
 
-    // 1. Gather articles from both generated homepage feed and live pool
-    const candidates: BroadcastCandidate[] = [];
-    const seenIds = new Set<string>();
-    const seenSlugs = new Set<string>();
+    // 1. One source: the published pool (60 newest rows with translated bodies; cached and shared). The homepage feed and the
+    //    wire/static layers are NOT merged in -- they were a second, ungated path to the same stories.
+    const dbArticles = await fetchGeneratedArticlePool(BROADCAST_POOL_ROWS, { select: "homepage_bodies" }).catch(() => []);
 
-    const feed = await getCachedGeneratedHomepageFeed().catch(() => null);
-    if (feed) {
-      const feedArticles = [
-        ...feed.breakingTicker,
-        ...feed.liveWire,
-        ...(feed.editorsPicks ? [feed.editorsPicks.lead, ...feed.editorsPicks.supporting] : []),
-        ...feed.regionalHighlights,
-        ...feed.trending,
-      ];
-      for (const a of feedArticles) {
-        if (!a?.id || !a?.slug || !a?.headline?.trim()) continue;
-        if (seenIds.has(a.id) || seenSlugs.has(a.slug)) continue;
-        seenIds.add(a.id);
-        seenSlugs.add(a.slug);
-        candidates.push(normalizeHomeArticle(a));
-      }
-    }
+    // 2. Same eligibility and geography policy as /latest, newest first (public gate, 30-day window, scope, de-dup).
+    const selection = selectLiveRows(dbArticles);
+    const candidates: BroadcastCandidate[] = selection.rows
+      .filter((r) => r?.id && r?.slug && r?.headline?.trim())
+      .map((r) => normalizeGeneratedRow(r));
 
-    // Helper to add or enrich candidate
-    const addOrEnrichCandidate = (norm: BroadcastCandidate) => {
-      const existing = candidates.find((c) => c.id === norm.id || c.slug === norm.slug);
-      if (existing) {
-        if (!existing.headlineEn && norm.headlineEn) existing.headlineEn = norm.headlineEn;
-        if (!existing.headlineHi && norm.headlineHi) existing.headlineHi = norm.headlineHi;
-        if (!existing.summaryEn && norm.summaryEn) existing.summaryEn = norm.summaryEn;
-        if (!existing.summaryHi && norm.summaryHi) existing.summaryHi = norm.summaryHi;
-        if (!existing.articleBodyEn && norm.articleBodyEn) existing.articleBodyEn = norm.articleBodyEn;
-        if (!existing.articleBodyHi && norm.articleBodyHi) existing.articleBodyHi = norm.articleBodyHi;
-        return;
-      }
-      seenIds.add(norm.id);
-      seenSlugs.add(norm.slug);
-      candidates.push(norm);
-    };
+    // 3. Live-only rules (documented in live-selection.ts): verified rights-clean media, and the requested language must exist.
+    const pool = candidates.filter((c) => isCleanRightsEligibleMedia(c.imageUrl) && hasLanguageRepresentation(c, lang));
 
-    // Also pull from resolveLiveArticlePool (up to 300 live articles from last 30 days)
-    try {
-      const { rows } = await resolveLiveArticlePool(BROADCAST_POOL_ROWS, { select: "homepage_bodies" });
-      for (const r of rows) {
-        if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
-        addOrEnrichCandidate(normalizeGeneratedRow(r));
-      }
-    } catch {
-      // Live pool query error fallback
-    }
-
-    // Pull directly from database table generated_articles (up to 300 articles)
-    try {
-      const dbArticles = await fetchGeneratedArticlePool(BROADCAST_POOL_ROWS, { select: "homepage_bodies" });
-      for (const r of (dbArticles || [])) {
-        if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
-        addOrEnrichCandidate(normalizeGeneratedRow(r));
-      }
-    } catch {
-      // DB pool query error fallback
-    }
-
-    // Also pull 100% verified real Chhattisgarh static article pool
-    try {
-      const staticArticles = getStaticFallbackArticlePool();
-      for (const r of staticArticles) {
-        if (!r?.id || !r?.slug || !r?.headline?.trim()) continue;
-        addOrEnrichCandidate(normalizeGeneratedRow(r));
-      }
-    } catch {
-      // Static pool load fallback
-    }
-
-    // 2. Strict Media & Rolling 48-Hour Filtering
-    const now = Date.now();
-    const isDevanagari = (str: string) => /[\u0900-\u097F]/.test(str || "");
-
-    // Filter strictly by Clean Real Media, 30-day validity, and CHHATTISGARH RELEVANCE.
-    // Language invariant: Under the same district, category, and date window, Hindi and English
-    // MUST contain the exact same canonical articles. Only presentation changes.
-    const pool = candidates.filter((c) => {
-      // Must have valid headline and slug
-      if (!c.headline || !c.slug) return false;
-
-      // ABSOLUTE MEDIA RULE: ONLY SHOW REAL NEWS WITH REAL CLEAN SOURCE MEDIA
-      // Hard gate: zero stock photos, zero placeholders, zero AI visuals, zero third-party channel branding
-      if (!isCleanRightsEligibleMedia(c.imageUrl)) return false;
-
-      // HARD RULE: Only Chhattisgarh-relevant stories
-      if (!isChhattisgarhOnlyStory(c)) return false;
-
-      // Authoritative 30-day visible news window rule:
-      // published_at >= now - 30 days
-      return isWithinCanonicalReaderWindow(c.publishedAt);
-    });
-
-    // Query server-side consumption if userId was provided
-    if (userId) {
+    // Played-story exclusion applies to CONTINUATION requests only, so a fresh session always starts with the newest story.
+    const continuation = excludeIds.size > 0;
+    if (userId && continuation) {
       try {
         const { createAdminServerClient } = await import("@/lib/supabase/admin");
         const supabase = createAdminServerClient();
@@ -622,52 +294,30 @@ export async function GET(req: NextRequest) {
         });
         if (batch && typeof batch === "object") {
           for (const [sId, rec] of Object.entries(batch as Record<string, any>)) {
-            if (rec?.consumed) {
-              excludeIds.add(sId);
-            }
+            if (rec?.consumed) excludeIds.add(sId);
           }
         }
       } catch {}
     }
 
-    // 3. Separate Breaking Stories (only Chhattisgarh breaking with verified real media)
-    const breakingCandidates = pool.filter((c) => c.isBreaking);
-    const nonBreakingCandidates = pool.filter((c) => !c.isBreaking);
+    // 4. Breaking stories travel in their own channel and are not repeated in the regular queue.
+    const orderedRegular = orderLiveQueue(pool.filter((c) => !c.isBreaking), { playedIds: excludeIds, continuation });
+    const orderedBreaking = orderLiveQueue(pool.filter((c) => c.isBreaking));
 
-    // 4. Chronological ordering: NEWEST ARTICLE FIRST
-    // Deterministic comparator: published_at DESC, with id fallback
-    const sortByPublishedAtDesc = (arr: BroadcastCandidate[]) => {
-      return [...arr].sort((a, b) => {
-        const tA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-        const tB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-        const diff = (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
-        if (diff !== 0) return diff;
-        return String(b.id || "").localeCompare(String(a.id || ""));
-      });
-    };
-
-    const orderedRegular = sortByPublishedAtDesc(nonBreakingCandidates);
-    const orderedBreaking = sortByPublishedAtDesc(breakingCandidates);
-
-    // 5. Handle Exclusions (Unseen stories first, then played stories)
-    const unseen = orderedRegular.filter((c) => !excludeIds.has(c.id));
-    const seen = orderedRegular.filter((c) => excludeIds.has(c.id));
-
-    // If unseen pool has stories, place unseen first, followed by seen for smooth continuous loop
-    const finalQueue = unseen.length >= 3 ? [...unseen, ...seen] : orderedRegular;
-
-    const finalSegments = finalQueue
+    const finalSegments = orderedRegular
       .map((c) => toSegment(c, lang))
-      .filter((s) => !!s.imageUrl && !!s.script);
+      .filter((s) => !!s.imageUrl && !!s.script && !!s.headline);
 
     const breakingSegments = orderedBreaking
       .slice(0, 3)
       .map((c) => toSegment(c, lang))
-      .filter((s) => !!s.imageUrl && !!s.script);
+      .filter((s) => !!s.imageUrl && !!s.script && !!s.headline);
 
     return NextResponse.json({
       meta: {
-        feedCount: candidates.length,
+        feedCount: dbArticles.length,
+        newestEligibleId: orderedRegular[0]?.id ?? orderedBreaking[0]?.id ?? null,
+        droppedByGate: selection.diagnostics.droppedByGate,
         eligibleCount: pool.length,
         rejectedCount: candidates.length - pool.length,
         dedupeCount: finalSegments.length,

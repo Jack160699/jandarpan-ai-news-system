@@ -88,7 +88,8 @@ export default async function DistrictPage({ params }: PageProps) {
   // backfill, and no static fallback merge — an empty district stays empty.
   const districtRows = selectFeedRows(langPool, {
     feed: "district",
-    districtSlug: slug,
+    // Canonical slug: a URL alias (e.g. "jagdalpur") must match rows stored under the canonical district ("bastar").
+    districtSlug: district.slug,
     order: "chronological",
     limit: 80,
   }).rows;

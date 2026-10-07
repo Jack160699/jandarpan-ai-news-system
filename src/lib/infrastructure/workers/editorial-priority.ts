@@ -21,6 +21,11 @@ export type EditorialCandidateContext = {
    * by tier first: the tier score dwarfs every other component.
    */
   coverageRank?: Map<string, CoverageRank>;
+  /**
+   * Total source text per event (chars), from the candidate slate. Rich evidence is what lets a draft reach the depth
+   * floor, so it is the best predictor that a paid CodeCraft call will publish. Within a tier only; never overrides it.
+   */
+  evidenceChars?: Map<string, number>;
 };
 
 const LIVE_BOOST = 1_000;
@@ -30,6 +35,20 @@ const REAL_MEDIA_BOOST = 500;
 const NO_MEDIA_PENALTY = 500;
 const CHHATTISGARH_BOOST = 150;
 const MULTI_SOURCE_BOOST = 100;
+/** Evidence at or above this earns the full boost; production audit: accepted stories had >= ~480 source chars, rich ones 2,000+. */
+export const EVIDENCE_RICH_CHARS = 2_500;
+const EVIDENCE_BOOST_MAX = 600;
+/** Below this the candidate is unlikely to reach its depth floor, so it yields CodeCraft capacity to richer events. */
+export const EVIDENCE_THIN_CHARS = 700;
+const EVIDENCE_THIN_PENALTY = 400;
+
+export function evidenceScore(chars: number | undefined): number {
+  if (chars === undefined) return 0; // unknown (legacy read): neutral
+  if (chars < EVIDENCE_THIN_CHARS) return -EVIDENCE_THIN_PENALTY;
+  const span = EVIDENCE_RICH_CHARS - EVIDENCE_THIN_CHARS;
+  const frac = Math.min(1, (chars - EVIDENCE_THIN_CHARS) / span);
+  return Math.round(frac * EVIDENCE_BOOST_MAX);
+}
 
 export function scoreEditorialCandidate(
   event: NewsEventRow,
@@ -64,6 +83,9 @@ export function scoreEditorialCandidate(
   if ((event.source_count ?? 1) >= 2) {
     score += MULTI_SOURCE_BOOST;
   }
+
+  // Evidence richness: spend scarce paid generation on stories most likely to pass the depth gate first.
+  score += evidenceScore(context?.evidenceChars?.get(event.id));
 
   // High clustering confidence boost
   if ((event.cluster_confidence ?? 0) >= 0.8) {
