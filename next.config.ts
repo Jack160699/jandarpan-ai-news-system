@@ -4,6 +4,9 @@ import { LEGACY_DASHBOARD_REDIRECTS } from "./src/lib/admin-platform/legacy-redi
 import { TRUSTED_REMOTE_PATTERNS } from "./src/lib/news/images/trusted-remote-hosts";
 
 const nextConfig: NextConfig = {
+  env: {
+    GEMINI_EDITORIAL_FALLBACK: "on",
+  },
   // Keep Turbopack rooted at this package (git worktrees otherwise pick the parent lockfile)
   turbopack: {
     root: path.join(__dirname),
