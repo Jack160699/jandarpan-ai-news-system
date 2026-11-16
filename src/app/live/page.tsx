@@ -1,6 +1,10 @@
-import dynamic from "next/dynamic";
-import { JsonLdScript } from "@/components/seo/JsonLdScript";
+import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
+import { Masthead, ReaderShell } from "@/features/reader-ds/components";
+import { ReaderLivePage } from "@/features/reader-ds/live/ReaderLivePage";
+import { EmptyState } from "@/features/reader-ds/system";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
+import { pruneFeedForReader } from "@/lib/homepage/prune-reader-feed";
+import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { BRAND } from "@/lib/brand";
 import {
   breadcrumbListJsonLd,
@@ -8,7 +12,6 @@ import {
   collectionPageJsonLd,
 } from "@/lib/seo";
 import { buildHomeBreadcrumb } from "@/lib/seo/breadcrumbs";
-import { HomepageEmpty } from "@/sections/homepage";
 
 export const revalidate = 60;
 
@@ -32,11 +35,41 @@ export const metadata = buildHubPageMetadata({
   ],
 });
 
-import { LiveClientView } from "./LiveClientView";
+export default async function LivePage() {
+  const [feed, readerLanguage] = await Promise.all([
+    getCachedGeneratedHomepageFeed(),
+    getServerReaderLanguage(),
+  ]);
 
-import { redirect } from "next/navigation";
+  if (isReaderDesignSystemEnabled()) {
+    if (feed) {
+      return <ReaderLivePage feed={pruneFeedForReader(feed)} />;
+    }
+    return (
+      <ReaderShell activeNav="live" showDeskFooter={false} bottomPad={0} reserveMiniPlayer={false}>
+        <Masthead />
+        <EmptyState
+          title={
+            readerLanguage === "hi"
+              ? "अभी कोई ताज़ा प्रसारण उपलब्ध नहीं है"
+              : "No live broadcast available right now"
+          }
+          body={
+            readerLanguage === "hi"
+              ? "नया सत्यापित समाचार प्रसारित होते ही यहाँ लाइव दिखाई देगा।"
+              : "Verified coverage will appear here live as soon as it is broadcast."
+          }
+          primaryLabel={readerLanguage === "hi" ? "मुख्य पृष्ठ देखें" : "Go to home"}
+          primaryHref="/"
+        />
+      </ReaderShell>
+    );
+  }
 
-export default function LivePage() {
-  redirect("/");
+  return (
+    <div style={{ padding: 24 }}>
+      <h1>Jan Darpan Live</h1>
+    </div>
+  );
 }
 

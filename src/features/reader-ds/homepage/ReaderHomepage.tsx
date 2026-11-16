@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import type { GeneratedHomepageFeed, HomeArticle } from "@/lib/homepage/types";
 import { LeadStory, Masthead, ReaderShell, SecondaryStory, SectionHeader } from "../components";
 import { useJdDsT } from "../i18n";
@@ -16,8 +16,11 @@ type ReaderHomepageProps = {
   verifiedRatesNavEnabled?: boolean;
 };
 
+/** Active News Feed Cutoff: Exclude content older than 7 days from the live homepage feed. */
+const MAX_ACTIVE_FEED_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
 type EditorialSectionDef = {
-  key: "politics" | "crime" | "national" | "international" | "entertainment" | "sports";
+  key: "chhattisgarh" | "district" | "national" | "international";
   titleHi: string;
   titleEn: string;
   color: string;
@@ -27,72 +30,53 @@ type EditorialSectionDef = {
 
 const EDITORIAL_SECTIONS: EditorialSectionDef[] = [
   {
-    key: "politics",
-    titleHi: "राजनीति",
-    titleEn: "Politics",
+    key: "chhattisgarh",
+    titleHi: "छत्तीसगढ़ समाचार",
+    titleEn: "Chhattisgarh News",
     color: "#b91c1c", // Crimson red
-    moreHref: "/category/politics",
+    moreHref: "/category/chhattisgarh",
     match: (s) => {
+      if (s.isStatewide || s.geographicScope === "statewide") return true;
       const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
-      return /politic|राजनीति|election|चुनाव|bjp|congress|विधानसभा|assembly|minister|mantri|governance|सरकार|cm|mla|party|सदन/i.test(text);
+      return /chhattisgarh|छत्तीसगढ़|साय सरकार|विष्णु देव साय|मंत्रिमंडल|विधानसभा|governance|शासन|प्रशासन|सचिवालय/i.test(text);
     },
   },
   {
-    key: "crime",
-    titleHi: "अपराध",
-    titleEn: "Crime & Law",
-    color: "#c2410c", // Deep orange
-    moreHref: "/category/crime",
+    key: "district",
+    titleHi: "जिला समाचार",
+    titleEn: "District News",
+    color: "#ea580c", // Deep amber/orange
+    moreHref: "/districts",
     match: (s) => {
-      const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
-      return /crime|अपराध|police|पुलिस|arrest|गिरफ्तार|murder|हत्या|हादसा|accident|court|कोर्ट|scam|ghotala|घोटाला|smuggling|तस्करी|fraud|कांड/i.test(text);
+      // Hyperlocal district stories (Raipur, Durg, Bilaspur, Bastar, etc.)
+      if (s.districtSlug && !s.isStatewide) return true;
+      const text = `${s.kicker || ""} ${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
+      return /जिला|तहसील|थाना|raipur|रायपुर|durg|दुर्ग|bhilai|भिलाई|bilaspur|बिलासपुर|bastar|बस्तर|korba|कोरबा|rajnandgaon|राजनंदगांव|surguja|सरगुजा|jagdalpur|जगदलपुर|dhamtari|धमतरी|mahasamund|महासमुंद|kanker|कांकेर|balod|बालोद|bemetara|बेमेतरा|champa|जांजगीर|रायगढ़|raigarh/i.test(text);
     },
   },
   {
     key: "national",
-    titleHi: "राष्ट्रीय",
-    titleEn: "National",
+    titleHi: "राष्ट्रीय समाचार",
+    titleEn: "National News",
     color: "#0369a1", // Navy blue
     moreHref: "/category/national",
     match: (s) => {
+      if (s.geographicScope === "national") return true;
       const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
-      if (/entertainment|मनोरंजन|bollywood|cinema|सिनेमा|फिल्म|नाट्य|रंगमंच|ott|sport|खेल|cricket|क्रिकेट|हॉकी|hockey|रणजी/i.test(text)) {
-        return false;
-      }
-      return /india|national|देश|राष्ट्रीय|delhi|दिल्ली|parliament|संसद|pm|modi|centre|केंद्|supreme court|सुप्रीम कोर्ट|bharat/i.test(text);
+      if (/world|international|विदेश|अंतरराष्ट्रीय/i.test(text)) return false;
+      return /india|national|देश|राष्ट्रीय|delhi|दिल्ली|parliament|संसद|pm modi|मोदी|centre|केंद्|supreme court|सुप्रीम कोर्ट|bharat|भारत/i.test(text);
     },
   },
   {
     key: "international",
-    titleHi: "अंतरराष्ट्रीय",
+    titleHi: "अंतरराष्ट्रीय समाचार",
     titleEn: "World News",
     color: "#0d9488", // Teal
     moreHref: "/category/international",
     match: (s) => {
+      if (s.geographicScope === "international") return true;
       const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
-      return /world|international|विदेश|अंतरराष्ट्रीय|global|un|us|usa|china|russia|ukraine|israel|iran|war|युद्ध/i.test(text);
-    },
-  },
-  {
-    key: "entertainment",
-    titleHi: "मनोरंजन",
-    titleEn: "Entertainment",
-    color: "#7c3aed", // Violet
-    moreHref: "/category/entertainment",
-    match: (s) => {
-      const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
-      return /entertainment|मनोरंजन|bollywood|cinema|सिनेमा|फिल्म|movie|ott|celebrity|actress|actor|trailer|गाना|संगीत|नाट्य|रंगमंच/i.test(text);
-    },
-  },
-  {
-    key: "sports",
-    titleHi: "खेल",
-    titleEn: "Sports",
-    color: "#15803d", // Emerald green
-    moreHref: "/category/sports",
-    match: (s) => {
-      const text = `${s.category || ""} ${s.section || ""} ${(s.tags || []).join(" ")} ${s.headline}`.toLowerCase();
-      return /sport|खेल|cricket|क्रिकेट|football|फुटबॉल|hockey|हॉकी|olympic|match|मैच|ipl|tournament|medal|खिलाड़ी/i.test(text);
+      return /world|international|विदेश|अंतरराष्ट्रीय|global|un|us|usa|china|russia|ukraine|israel|iran|war|युद्ध|व्हाइट हाउस|ट्रंप/i.test(text);
     },
   },
 ];
@@ -101,21 +85,27 @@ const EDITORIAL_SECTIONS: EditorialSectionDef[] = [
  * Jan Darpan Master Digital Newspaper Front Page.
  *
  * Implements strict editorial information architecture:
- * 1. मुख्य खबरें (Hero / Main News Lead + 2-3 Supporting Articles)
- * 2. Dedicated Reader Priority Sections (राजनीति, अपराध, राष्ट्रीय, अंतरराष्ट्रीय, मनोरंजन, खेल)
- *    Each section has: Section Header with visual divider -> Section Main Story -> 2-4 Supporting Articles
- * 3. તાज़ा खबरें / More Latest Stream
- * 4. Durg Solar inline ad placement
- * 5. Strictly ZERO Finance as primary section
- * 6. Strictly ZERO mockups, AI images, stock, or broken placeholders.
+ * 1. मुख्य खबरें (Hero / Top Story Lead + Supporting Articles)
+ * 2. छत्तीसगढ़ समाचार (Statewide policy & governance)
+ * 3. जिला समाचार (District-level hyperlocal news)
+ * 4. राष्ट्रीय समाचार (National news)
+ * 5. अंतरराष्ट्रीय समाचार (World news)
+ * 6. ताज़ा खबरें (Discovery stream of remaining fresh stories)
+ * 7. Load More (Reliable interactive pagination revealing 30-40+ fresh stories smoothly)
+ *
+ * Freshness Policy:
+ * - Content older than 7 days is excluded from active feeds (preserved in DB/archive).
+ * - Zero duplicated stories across sections.
+ * - Zero static empty placeholders.
  */
 export function ReaderHomepage({
   feed,
   allArticles = [],
 }: ReaderHomepageProps) {
   const { locale } = useJdDsT();
+  const [visibleCount, setVisibleCount] = useState(12);
 
-  // Combine and deduplicate all eligible articles from feed and platform inventory
+  // Combine, deduplicate, and enforce 7-day freshness cutoff
   const eligibleStories: ReaderStory[] = useMemo(() => {
     const rawList: HomeArticle[] = [];
 
@@ -134,13 +124,23 @@ export function ReaderHomepage({
 
     const seen = new Set<string>();
     const out: ReaderStory[] = [];
+    const nowMs = Date.now();
 
     for (const a of rawList) {
       if (!a?.slug || !a.headline?.trim() || seen.has(a.slug)) continue;
 
-      // MEDIA RULE: only clean, verified real photos are ever shown — but a story is never
-      // dropped for lacking one. Images attach asynchronously; the card renders its tinted
-      // fallback until then. (Stock/branded images are still never displayed.)
+      // Freshness rule: Exclude stories older than 7 days from the active homepage feed
+      if (a.publishedAt) {
+        const pubTime = new Date(a.publishedAt).getTime();
+        if (Number.isFinite(pubTime)) {
+          const ageMs = nowMs - pubTime;
+          if (ageMs > MAX_ACTIVE_FEED_AGE_MS) {
+            continue; // Exclude from active feed; historical records preserved in DB and /archive
+          }
+        }
+      }
+
+      // MEDIA RULE: Only clean, verified real photos are displayed
       const candidateUrl = extractVerifiedRealMediaUrl(a) || a.imageUrl;
       const verifiedUrl = candidateUrl && hasVerifiedRealMedia(candidateUrl) ? candidateUrl : undefined;
 
@@ -160,9 +160,11 @@ export function ReaderHomepage({
   const { topLead, topSupporting, sectionsData, remainingStories } = useMemo(() => {
     const usedSlugs = new Set<string>();
 
+    // 1. Top Lead Story
     const topLead = eligibleStories[0] ?? null;
     if (topLead) usedSlugs.add(topLead.slug);
 
+    // Supporting stories for Top Stories block (up to 3)
     const topSupporting: ReaderStory[] = [];
     for (let i = 1; i < eligibleStories.length && topSupporting.length < 3; i++) {
       const s = eligibleStories[i];
@@ -172,6 +174,7 @@ export function ReaderHomepage({
       }
     }
 
+    // 2-5. Priority Editorial Sections (Chhattisgarh, District, National, International)
     const sectionsData: Array<{
       def: EditorialSectionDef;
       lead: ReaderStory;
@@ -179,10 +182,7 @@ export function ReaderHomepage({
     }> = [];
 
     for (const def of EDITORIAL_SECTIONS) {
-      let matching = eligibleStories.filter((s) => !usedSlugs.has(s.slug) && def.match(s));
-      if (matching.length === 0) {
-        matching = eligibleStories.filter((s) => def.match(s));
-      }
+      const matching = eligibleStories.filter((s) => !usedSlugs.has(s.slug) && def.match(s));
       if (matching.length > 0) {
         const secLead = matching[0];
         usedSlugs.add(secLead.slug);
@@ -196,12 +196,15 @@ export function ReaderHomepage({
       }
     }
 
+    // 6. Remaining stories flow to More Latest News
     const remainingStories = eligibleStories.filter((s) => !usedSlugs.has(s.slug));
 
     return { topLead, topSupporting, sectionsData, remainingStories };
   }, [eligibleStories]);
 
   const seeAllText = locale === "en" ? "See all ›" : "सभी देखें ›";
+  const displayedRemaining = remainingStories.slice(0, visibleCount);
+  const hasMore = remainingStories.length > visibleCount;
 
   return (
     <ReaderShell activeNav="home">
@@ -222,62 +225,61 @@ export function ReaderHomepage({
         }}
       >
         {/* 1. TOP EDITORIAL PACKAGE — मुख्य खबरें (Wide Hero Grid on Desktop) */}
-        <section aria-labelledby="top-stories-heading" style={{ marginBottom: 32 }}>
-          <SectionHeader
-            title={locale === "en" ? "Top Stories" : "मुख्य खबरें"}
-            color="var(--jd-red)"
-            moreHref="/latest"
-            moreLabel={locale === "en" ? "Taza ›" : "ताज़ा खबरें ›"}
-          />
+        {topLead ? (
+          <section aria-labelledby="top-stories-heading" style={{ marginBottom: 32 }}>
+            <SectionHeader
+              title={locale === "en" ? "Top Stories" : "मुख्य खबरें"}
+              color="var(--jd-red)"
+              moreHref="/latest"
+              moreLabel={locale === "en" ? "Latest News ›" : "ताज़ा खबरें ›"}
+            />
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
-              gap: 20,
-              alignItems: "start",
-            }}
-          >
-            {topLead ? (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+                gap: 20,
+                alignItems: "start",
+              }}
+            >
               <div style={{ gridColumn: "span 1" }}>
                 <LeadStory story={topLead} priority={true} />
               </div>
-            ) : null}
 
-            {topSupporting.length > 0 ? (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  background: "#ffffff",
-                  border: "1px solid var(--jd-line, #e2e8f0)",
-                  borderRadius: 4,
-                  overflow: "hidden",
-                }}
-              >
-                {topSupporting.map((story, i) => (
-                  <SecondaryStory
-                    key={story.slug}
-                    story={story}
-                    last={i === topSupporting.length - 1}
-                    toneIndex={i}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </section>
+              {topSupporting.length > 0 ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    background: "#ffffff",
+                    border: "1px solid var(--jd-line, #e2e8f0)",
+                    borderRadius: 4,
+                    overflow: "hidden",
+                  }}
+                >
+                  {topSupporting.map((story, i) => (
+                    <SecondaryStory
+                      key={story.slug}
+                      story={story}
+                      last={i === topSupporting.length - 1}
+                      toneIndex={i}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
 
         {/* Commercial break 1: Durg Solar Sponsor Slot */}
         <div style={{ margin: "24px 0" }}>
           <DurgSolarInlineAd index={0} />
         </div>
 
-        {/* 2. CANONICAL PRIORITY EDITORIAL SECTIONS (Rhythmic Newspaper Architecture) */}
+        {/* 2-5. EDITORIAL SECTIONS (Chhattisgarh, District, National, International) */}
         {sectionsData.map((sec, secIdx) => {
           const title = locale === "en" ? sec.def.titleEn : sec.def.titleHi;
-          const isSplitLayout = sec.def.key === "politics" || sec.def.key === "national";
-          const isGridSupporting = sec.def.key === "crime" || sec.def.key === "entertainment" || sec.def.key === "sports";
+          const isDistrictSection = sec.def.key === "district";
 
           return (
             <React.Fragment key={sec.def.key}>
@@ -293,44 +295,8 @@ export function ReaderHomepage({
                   moreLabel={seeAllText}
                 />
 
-                {isSplitLayout ? (
-                  /* Rhythmic Split Layout (Politics, National) */
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
-                      gap: 20,
-                      alignItems: "start",
-                    }}
-                  >
-                    <div>
-                      <LeadStory story={sec.lead} />
-                    </div>
-
-                    {sec.supporting.length > 0 ? (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          background: "#ffffff",
-                          border: "1px solid var(--jd-line, #e2e8f0)",
-                          borderRadius: 4,
-                          overflow: "hidden",
-                        }}
-                      >
-                        {sec.supporting.map((story, i) => (
-                          <SecondaryStory
-                            key={story.slug}
-                            story={story}
-                            last={i === sec.supporting.length - 1}
-                            toneIndex={i}
-                          />
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : isGridSupporting ? (
-                  /* Rhythmic Grid Supporting Layout (Crime, Entertainment, Sports) */
+                {isDistrictSection ? (
+                  /* District News Grid Layout with Badges */
                   <div>
                     <div style={{ marginBottom: 16 }}>
                       <LeadStory story={sec.lead} />
@@ -357,7 +323,7 @@ export function ReaderHomepage({
                             <SecondaryStory
                               story={story}
                               last={true}
-                              toneIndex={i + 2}
+                              toneIndex={i + 1}
                             />
                           </div>
                         ))}
@@ -365,9 +331,16 @@ export function ReaderHomepage({
                     ) : null}
                   </div>
                 ) : (
-                  /* Default Section Feature Layout (International) */
-                  <div>
-                    <div style={{ marginBottom: 14 }}>
+                  /* Standard Editorial Split Layout */
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+                      gap: 20,
+                      alignItems: "start",
+                    }}
+                  >
+                    <div>
                       <LeadStory story={sec.lead} />
                     </div>
 
@@ -406,11 +379,11 @@ export function ReaderHomepage({
           );
         })}
 
-        {/* 3. MORE LATEST STORIES & CONTINUOUS DISCOVERY */}
-        {remainingStories.length > 0 ? (
+        {/* 6. MORE LATEST NEWS (Discovery Stream of Fresh Stories) */}
+        {displayedRemaining.length > 0 ? (
           <section aria-labelledby="more-headlines-heading" style={{ marginTop: 28 }}>
             <SectionHeader
-              title={locale === "en" ? "More Headlines" : "ताज़ा खबरें और अन्य सुर्खियां"}
+              title={locale === "en" ? "More Latest News" : "ताज़ा खबरें और अन्य सुर्खियां"}
               color="var(--jd-navy)"
               moreHref="/latest"
               moreLabel={locale === "en" ? "All Latest ›" : "सभी ताज़ा ›"}
@@ -423,7 +396,7 @@ export function ReaderHomepage({
                 gap: 16,
               }}
             >
-              {remainingStories.slice(0, 15).map((story, i) => {
+              {displayedRemaining.map((story, i) => {
                 const showAdAfter = (i + 1) % 6 === 0;
                 return (
                   <React.Fragment key={story.slug}>
@@ -450,6 +423,58 @@ export function ReaderHomepage({
                 );
               })}
             </div>
+
+            {/* 7. LOAD MORE / INTERACTIVE PAGINATION */}
+            {hasMore ? (
+              <div style={{ textAlign: "center", marginTop: 32, marginBottom: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((prev) => prev + 12)}
+                  className="jd-ui"
+                  style={{
+                    background: "#ffffff",
+                    border: "1.5px solid var(--jd-red, #b91c1c)",
+                    color: "var(--jd-red, #b91c1c)",
+                    fontWeight: 600,
+                    fontSize: "0.95rem",
+                    padding: "10px 28px",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--jd-red, #b91c1c)";
+                    e.currentTarget.style.color = "#ffffff";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.color = "var(--jd-red, #b91c1c)";
+                  }}
+                >
+                  <span>{locale === "en" ? "Load More News" : "और खबरें देखें"}</span>
+                  <span style={{ fontSize: "0.85em", opacity: 0.85 }}>
+                    ({remainingStories.length - visibleCount} {locale === "en" ? "more" : "बाकी"})
+                  </span>
+                </button>
+              </div>
+            ) : remainingStories.length > 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  marginTop: 32,
+                  color: "var(--jd-muted, #64748b)",
+                  fontSize: "0.875rem",
+                }}
+              >
+                {locale === "en"
+                  ? "You have reached the end of today's news feed."
+                  : "आप आज की सभी ताज़ा खबरें देख चुके हैं।"}
+              </div>
+            ) : null}
           </section>
         ) : null}
       </main>

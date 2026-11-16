@@ -16,6 +16,10 @@ export type ReaderStory = {
   category?: string | null;
   section?: string | null;
   tags?: string[];
+  districtSlug?: string | null;
+  districtHi?: string | null;
+  isStatewide?: boolean;
+  geographicScope?: string | null;
 };
 
 export function toReaderStory(a: HomeArticle, kicker?: string): ReaderStory {
@@ -49,6 +53,10 @@ export function toReaderStory(a: HomeArticle, kicker?: string): ReaderStory {
     category: (a as { category?: string }).category || a.categoryLabel || null,
     section: a.section || null,
     tags: a.tags || [],
+    districtSlug: canonical.districtSlug,
+    districtHi: canonical.nameHi,
+    isStatewide: canonical.isStatewide,
+    geographicScope: canonical.geographicScope,
   };
 }
 

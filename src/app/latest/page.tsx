@@ -40,15 +40,13 @@ export default async function LatestPage() {
   }
 
   // Latest = strict published_at descending over the Chhattisgarh-first scope
-  // (district + statewide + a controlled share of India-relevant). National /
-  // international / unknown-geography stories never enter this feed, ranking score
-  // never reorders it, and a story is NOT dropped for lacking an image — images
-  // attach asynchronously and must not gate publication.
-  // The static fallback pool is no longer merged in: fetchGeneratedArticlePool only
-  // returns it when the database has zero public rows.
+  // (district + statewide + a controlled share of India-relevant).
+  // Freshness policy: prefer last 24h, allow up to 72h max in Latest feed (maxAgeHours: 72).
+  // Excludes all content older than 72 hours to prevent historical articles appearing as fresh.
   const { rows: selected } = selectFeedRows([...bySlug.values()], {
     feed: "cg_home",
     order: "chronological",
+    maxAgeHours: 72,
     limit: 100,
   });
   const articles = selected

@@ -311,10 +311,34 @@ function resolveLanguage(
     | undefined;
   if (env === "hi" || env === "en") return env;
 
+  // 1. Devanagari script in title or summary is authoritative for Hindi
+  if (
+    /[\u0900-\u097F]/.test(event.canonical_title || "") ||
+    /[\u0900-\u097F]/.test(event.event_summary || "")
+  ) {
+    return "hi";
+  }
+
+  // 2. Majority signal language
   const langs = signals.map((s) => s.language?.toLowerCase()).filter(Boolean);
   const hiCount = langs.filter((l) => l?.startsWith("hi")).length;
-  if (hiCount >= langs.length / 2) return "hi";
-  if (event.region === "india" || event.region === "bharat" || event.region === "national" || !event.region) return "hi";
+  if (langs.length > 0 && hiCount >= langs.length / 2) return "hi";
+
+  // 3. Any signal with Devanagari content
+  const hasDevanagariSignal = signals.some((s) => /[\u0900-\u097F]/.test(s.title || ""));
+  if (hasDevanagariSignal) return "hi";
+
+  // 4. Jan Darpan regional focus: Chhattisgarh, India, National defaults to Hindi
+  if (
+    event.region === "chhattisgarh" ||
+    event.region === "india" ||
+    event.region === "bharat" ||
+    event.region === "national" ||
+    !event.region
+  ) {
+    return "hi";
+  }
+
   return "en";
 }
 

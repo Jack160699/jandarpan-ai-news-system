@@ -4,12 +4,15 @@ import { HomepageLoadingView } from "@/components/loading";
 import { JsonLdScript } from "@/components/seo/JsonLdScript";
 import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { Masthead, ReaderShell } from "@/features/reader-ds/components";
-import { ReaderLivePage } from "@/features/reader-ds/live/ReaderLivePage";
+import { ReaderHomepage } from "@/features/reader-ds/homepage/ReaderHomepage";
 import { EmptyState } from "@/features/reader-ds/system";
 import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
 import { pruneFeedForReader } from "@/lib/homepage/prune-reader-feed";
 import { getServerReaderLanguage } from "@/lib/i18n/server-language";
 import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
+import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
+import { selectFeedRows } from "@/lib/feed/feed-selector";
+import { toHomeArticle } from "@/lib/homepage/generated-feed";
 
 const LegacyHomeView = dynamic(
   () => import("./LegacyHomeView").then((m) => m.LegacyHomeView),
@@ -21,33 +24,43 @@ export const metadata = buildHomeMetadata();
 /** ISR — edge-friendly cache, 60s freshness */
 export const revalidate = 60;
 
-/** Approved Jan Darpan Live Channel (root / experience) */
-async function ReaderDesignLiveFeed() {
-  const [feed, readerLanguage] = await Promise.all([
+/** Approved Jan Darpan Main Newspaper Front Page (root / experience) */
+async function ReaderDesignHomeFeed() {
+  const [feed, pool, readerLanguage] = await Promise.all([
     getCachedGeneratedHomepageFeed(),
+    fetchGeneratedArticlePool(160, { select: "homepage" }),
     getServerReaderLanguage(),
   ]);
+
+  // Select all eligible public articles ordered chronologically (newest published first)
+  const poolArticles = selectFeedRows(pool, { feed: "public_all", order: "chronological" })
+    .rows.map((row) => toHomeArticle(row, undefined, readerLanguage))
+    .filter((a): a is NonNullable<typeof a> => a !== null);
+
   const trending = buildTrendingKeywords({ limit: 12 });
-  const storyCount = feed ? feed.trending.length + feed.liveWire.length + 1 : 0;
+  const storyCount = (feed ? feed.trending.length + feed.liveWire.length : 0) + poolArticles.length;
 
   return (
     <>
       <JsonLdScript data={homepageJsonLd({ storyCount, trendingKeywords: trending })} />
-      {feed ? (
-        <ReaderLivePage feed={pruneFeedForReader(feed)} />
+      {feed || poolArticles.length > 0 ? (
+        <ReaderHomepage
+          feed={feed ? pruneFeedForReader(feed) : ({} as any)}
+          allArticles={poolArticles}
+        />
       ) : (
-        <ReaderShell activeNav="live" showDeskFooter={false} bottomPad={0} reserveMiniPlayer={false}>
+        <ReaderShell activeNav="home">
           <Masthead />
           <EmptyState
             title={
               readerLanguage === "hi"
-                ? "अभी कोई ताज़ा प्रसारण उपलब्ध नहीं है"
-                : "No live broadcast available right now"
+                ? "अभी कोई ताज़ा खबर उपलब्ध नहीं है"
+                : "No fresh stories are available right now"
             }
             body={
               readerLanguage === "hi"
-                ? "नया सत्यापित समाचार प्रसारित होते ही यहाँ लाइव दिखाई देगा।"
-                : "Verified coverage will appear here live as soon as it is broadcast."
+                ? "हम पुरानी खबर को ताज़ा बताकर नहीं दिखाते। नई सत्यापित खबर प्रकाशित होते ही यहाँ दिखाई देगी।"
+                : "We do not present old reports as current news. New verified stories will appear here as soon as they are published."
             }
             primaryLabel={readerLanguage === "hi" ? "जिले देखें" : "Browse districts"}
             primaryHref="/district"
@@ -62,7 +75,7 @@ export default function Home() {
   if (isReaderDesignSystemEnabled()) {
     return (
       <Suspense fallback={<HomepageLoadingView />}>
-        <ReaderDesignLiveFeed />
+        <ReaderDesignHomeFeed />
       </Suspense>
     );
   }
