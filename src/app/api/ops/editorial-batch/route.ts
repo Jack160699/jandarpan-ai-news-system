@@ -259,8 +259,8 @@ async function selectBatchCandidates(supabase: any, size: number) {
     }
     seenNormalizedTitles.add(normalizedKey);
 
-    // Filter out non-editorial / horoscope / streaming guide / gadget review noise
-    if (/राशिफल|राशि|कुंडली|नक्षत्र|horoscope|zodiac|astrology|live streaming|where to watch|how to watch|free stream|rtx \d+|iphone duo/i.test(eventTitle)) {
+    // Filter out non-editorial / horoscope / gossip column / satire / streaming guide / gadget review noise
+    if (/राशिफल|राशि|कुंडली|नक्षत्र|horoscope|zodiac|astrology|काँव-काँव|कांव-कांव|संपादकीय|संपादक के नाम|व्यंग्य|live streaming|where to watch|how to watch|free stream|rtx \d+|iphone duo/i.test(eventTitle)) {
       continue;
     }
 
