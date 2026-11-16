@@ -88,7 +88,7 @@ export function circuitCooldownMs(input: CircuitFailureInput, now: number = Date
 /** Default wall-clock cap for one attempt against a provider (ms). */
 const DEFAULT_TIMEOUT_CAPS: Record<string, number> = {
   codecraft: 60_000,
-  gemini: 40_000,
+  gemini: 65_000,
   groq: 30_000,
   openai: 40_000,
   openrouter: 40_000,

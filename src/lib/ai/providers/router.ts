@@ -54,7 +54,8 @@ export const GEMINI_GATED_OPERATIONS: ReadonlySet<string> = new Set(["editorial_
  * visible decision (the admin efficiency panel shows every Gemini editorial call), never an accident of the default chain.
  */
 export function isGeminiEditorialFallbackEnabled(env: Record<string, string | undefined> = process.env): boolean {
-  return env.GEMINI_EDITORIAL_FALLBACK?.trim().toLowerCase() === "on";
+  const val = env.GEMINI_EDITORIAL_FALLBACK?.trim().toLowerCase();
+  return val === "on" || val === "true" || val === "1";
 }
 
 function withGeminiEditorialGate(chain: AiProviderId[], operation: string): AiProviderId[] {

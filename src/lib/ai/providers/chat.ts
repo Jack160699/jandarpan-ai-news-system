@@ -96,17 +96,16 @@ function resolveGroqModelChain(operation: string, override?: string): string[] {
   if (override?.trim()) return [override.trim()];
   if (operation === "editorial_review") {
     const primary = process.env.GROQ_REVIEW_MODEL?.trim() || "openai/gpt-oss-120b";
-    const fallback = process.env.GROQ_REVIEW_FALLBACK_MODEL?.trim() || "llama-3.3-70b-versatile";
+    const fallback = process.env.GROQ_REVIEW_FALLBACK_MODEL?.trim() || "openai/gpt-oss-20b";
     return primary === fallback ? [primary] : [primary, fallback];
   }
-  // For writing operations (generate, repair, translation) use the 70B model when
-  // Groq is the fallback writer — llama-3.1-8b-instant is too shallow for
-  // news-quality editorial output. llama-3.3-70b-versatile is verified live
+  // For writing operations (generate, repair, translation) use gpt-oss-120b when
+  // Groq is the fallback writer — openai/gpt-oss-120b is verified live
   // to accept json_object mode and produce structured, coherent Hindi/English copy.
   if (operation === "editorial_generate" || operation === "editorial_repair" || operation === "translation") {
-    return [process.env.GROQ_WRITER_MODEL?.trim() || "llama-3.3-70b-versatile"];
+    return [process.env.GROQ_WRITER_MODEL?.trim() || "openai/gpt-oss-120b"];
   }
-  return [process.env.GROQ_LIGHTWEIGHT_MODEL?.trim() || "llama-3.1-8b-instant"];
+  return [process.env.GROQ_LIGHTWEIGHT_MODEL?.trim() || "openai/gpt-oss-20b"];
 }
 
 
