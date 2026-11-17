@@ -1,84 +1,32 @@
-import dynamic from "next/dynamic";
-import { Suspense } from "react";
-import { HomepageLoadingView } from "@/components/loading";
-import { JsonLdScript } from "@/components/seo/JsonLdScript";
-import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
-import { Masthead, ReaderShell } from "@/features/reader-ds/components";
-import { ReaderHomepage } from "@/features/reader-ds/homepage/ReaderHomepage";
-import { EmptyState } from "@/features/reader-ds/system";
-import { getCachedGeneratedHomepageFeed } from "@/lib/homepage/cached-feed";
-import { pruneFeedForReader } from "@/lib/homepage/prune-reader-feed";
-import { getServerReaderLanguage } from "@/lib/i18n/server-language";
-import { buildHomeMetadata, buildTrendingKeywords, homepageJsonLd } from "@/lib/seo";
-import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
-import { selectFeedRows } from "@/lib/feed/feed-selector";
-import { toHomeArticle } from "@/lib/homepage/generated-feed";
+import { redirect } from "next/navigation";
+import { buildHubPageMetadata } from "@/lib/seo";
+import { BRAND } from "@/lib/brand";
 
-const LegacyHomeView = dynamic(
-  () => import("./LegacyHomeView").then((m) => m.LegacyHomeView),
-  { ssr: true }
-);
+const BASE_TITLE = `Jan Darpan Live · ${BRAND.nameEn}`;
+const BASE_DESCRIPTION =
+  "Jan Darpan Live — AI-powered 24/7 newsroom with a virtual anchor, breaking news, and continuous Chhattisgarh coverage.";
 
-export const metadata = buildHomeMetadata();
+export const metadata = buildHubPageMetadata({
+  title: BASE_TITLE,
+  description: BASE_DESCRIPTION,
+  path: "/live",
+});
 
-/** ISR — edge-friendly cache, 60s freshness */
-export const revalidate = 60;
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-/** Approved Jan Darpan Main Newspaper Front Page (root / experience) */
-async function ReaderDesignHomeFeed() {
-  const [feed, pool, readerLanguage] = await Promise.all([
-    getCachedGeneratedHomepageFeed(),
-    fetchGeneratedArticlePool(160, { select: "homepage" }),
-    getServerReaderLanguage(),
-  ]);
-
-  // Select all eligible public articles ordered chronologically (newest published first)
-  const poolArticles = selectFeedRows(pool, { feed: "public_all", order: "chronological" })
-    .rows.map((row) => toHomeArticle(row, undefined, readerLanguage))
-    .filter((a): a is NonNullable<typeof a> => a !== null);
-
-  const trending = buildTrendingKeywords({ limit: 12 });
-  const storyCount = (feed ? feed.trending.length + feed.liveWire.length : 0) + poolArticles.length;
-
-  return (
-    <>
-      <JsonLdScript data={homepageJsonLd({ storyCount, trendingKeywords: trending })} />
-      {feed || poolArticles.length > 0 ? (
-        <ReaderHomepage
-          feed={feed ? pruneFeedForReader(feed) : ({} as any)}
-          allArticles={poolArticles}
-        />
-      ) : (
-        <ReaderShell activeNav="home">
-          <Masthead />
-          <EmptyState
-            title={
-              readerLanguage === "hi"
-                ? "अभी कोई ताज़ा खबर उपलब्ध नहीं है"
-                : "No fresh stories are available right now"
-            }
-            body={
-              readerLanguage === "hi"
-                ? "हम पुरानी खबर को ताज़ा बताकर नहीं दिखाते। नई सत्यापित खबर प्रकाशित होते ही यहाँ दिखाई देगी।"
-                : "We do not present old reports as current news. New verified stories will appear here as soon as they are published."
-            }
-            primaryLabel={readerLanguage === "hi" ? "जिले देखें" : "Browse districts"}
-            primaryHref="/district"
-          />
-        </ReaderShell>
-      )}
-    </>
-  );
-}
-
-export default function Home() {
-  if (isReaderDesignSystemEnabled()) {
-    return (
-      <Suspense fallback={<HomepageLoadingView />}>
-        <ReaderDesignHomeFeed />
-      </Suspense>
-    );
+/**
+ * Root domain (https://jandarpan.news) redirects directly into the Jan Darpan Live TV experience.
+ * Newspaper front page remains independently accessible at /home.
+ */
+export default async function RootPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    if (typeof v === "string") qs.set(k, v);
+    else if (Array.isArray(v) && v[0]) qs.set(k, v[0]);
   }
-
-  return <LegacyHomeView />;
+  const qStr = qs.toString();
+  redirect(qStr ? `/live?${qStr}` : "/live");
 }

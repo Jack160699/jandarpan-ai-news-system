@@ -133,7 +133,7 @@ describe("bottom navigation destinations", () => {
       "profile",
     ]);
     expect(items.map((i) => i.href)).toEqual([
-      "/",
+      "/live",
       "/district",
       "/home",
       "/latest",

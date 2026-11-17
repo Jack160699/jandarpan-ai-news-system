@@ -21,7 +21,7 @@ const NAV_DEFS: Array<{
   labelKey: Parameters<typeof jdDsT>[1];
   href: string;
 }> = [
-  { key: "live", icon: "live", labelKey: "nav.live", href: "/" },
+  { key: "live", icon: "live", labelKey: "nav.live", href: "/live" },
   { key: "district", icon: "pin", labelKey: "nav.district", href: "/district" },
   { key: "home", icon: "home", labelKey: "nav.home", href: "/home" },
   { key: "latest", icon: "bolt", labelKey: "nav.latest", href: "/latest" },

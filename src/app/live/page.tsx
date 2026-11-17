@@ -60,7 +60,7 @@ export default async function LivePage() {
               : "Verified coverage will appear here live as soon as it is broadcast."
           }
           primaryLabel={readerLanguage === "hi" ? "मुख्य पृष्ठ देखें" : "Go to home"}
-          primaryHref="/"
+          primaryHref="/home"
         />
       </ReaderShell>
     );

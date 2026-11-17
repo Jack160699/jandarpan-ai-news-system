@@ -19,7 +19,7 @@ const LegacyHomeView = dynamic(
   { ssr: true }
 );
 
-export const metadata = buildHomeMetadata();
+export const metadata = buildHomeMetadata("/home");
 
 import { fetchGeneratedArticlePool } from "@/lib/newsroom/generated/read";
 import { selectFeedRows } from "@/lib/feed/feed-selector";

@@ -45,7 +45,7 @@ export function MainHeader() {
         <h1 className="sr-only">{brandName}</h1>
         <div className="main-header__inner">
           <Link
-            href="/"
+            href="/live"
             className="main-header__brand"
             aria-label={brandName}
             onClick={() => startNavigation("/")}

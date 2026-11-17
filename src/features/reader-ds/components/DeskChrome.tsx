@@ -52,7 +52,7 @@ export function DeskChrome() {
       {/* Sticky condensed bar (H02) — shown when scrolled on desktop */}
       <div className="jd-desk-sticky" aria-hidden={!condensed}>
         <div className="jd-desk-inner jd-desk-sticky__inner">
-          <Link href="/" className="jd-desk-sticky__brand" aria-label={t("masthead.homeAria")}>
+          <Link href="/live" className="jd-desk-sticky__brand" aria-label={t("masthead.homeAria")}>
             <BrandMark size={22} radius={5} />
             <span className="jd-brand jd-desk-sticky__word">
               {locale === "en" ? "JAN DARPAN" : t("brand.name")}

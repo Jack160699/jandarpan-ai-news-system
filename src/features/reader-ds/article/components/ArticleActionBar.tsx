@@ -138,11 +138,16 @@ export function ArticleActionBar({ headline, slug, readTime }: ArticleActionBarP
         <span>{copied ? (locale === "en" ? "Link Copied!" : "लिंक कॉपी हुआ!") : (locale === "en" ? "Share" : "शेयर")}</span>
       </button>
 
-      {/* 3. Audio: Secondary Pill */}
-      <Link
-        href={slug ? `/listen?story=${encodeURIComponent(slug)}` : "/listen"}
-        prefetch={false}
+      {/* 3. Audio: Direct Listen Button */}
+      <button
+        type="button"
+        onClick={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("jd-toggle-article-voice"));
+          }
+        }}
         aria-label={t("action.listen")}
+        data-testid="jd-article-inline-listen"
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -154,7 +159,7 @@ export function ArticleActionBar({ headline, slug, readTime }: ArticleActionBarP
           padding: "8px 12px",
           fontSize: 12.5,
           fontWeight: 600,
-          textDecoration: "none",
+          cursor: "pointer",
         }}
       >
         <JdIcon
@@ -164,7 +169,7 @@ export function ArticleActionBar({ headline, slug, readTime }: ArticleActionBarP
           color="var(--jd-ink-2)"
         />
         <span>{t("action.listen")}</span>
-      </Link>
+      </button>
     </div>
   );
 }

@@ -22,6 +22,7 @@ import {
 import { ArticleShareBar } from "./components/ArticleShareBar";
 import { ArticleActionBar } from "./components/ArticleActionBar";
 import { ArticleShareRail } from "../components/ArticleShareRail";
+import { ArticleVoiceControl } from "./components/ArticleVoiceControl";
 
 import { Byline } from "./components/Byline";
 import { ExplainerBody } from "./components/ExplainerBody";
@@ -258,6 +259,12 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
             <LiveBlogTimeline entries={entries} />
           </div>
         </ReaderShell>
+        <ArticleVoiceControl
+          articleId={slug}
+          headline={headline}
+          summary={null}
+          paragraphs={paragraphs}
+        />
       </>
     );
   }
@@ -268,8 +275,8 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
     (paragraphs.length > 1 ? paragraphs[1].slice(0, 120) : null);
   const isOpinionLike = variant === "opinion" || variant === "editorial";
   const isSponsored = variant === "sponsored";
-  const showShareBar = variant === "standard";
-  const hideBottomNav = showShareBar;
+  const showShareBar = false;
+  const hideBottomNav = true;
   const pageTitle = variant === "explainer" ? t("article.explainer") : undefined;
 
   const padStyle = {
@@ -641,6 +648,12 @@ export async function ReaderArticlePage({ model }: { model: ReaderArticleModel }
 
         {showShareBar ? <ArticleShareBar slug={slug} /> : null}
       </ReaderShell>
+      <ArticleVoiceControl
+        articleId={slug}
+        headline={headline}
+        summary={summary}
+        paragraphs={paragraphs}
+      />
     </>
   );
 }

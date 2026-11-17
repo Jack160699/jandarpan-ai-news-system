@@ -8,6 +8,7 @@ import {
   buildReaderArticleModel,
   ReaderArticlePage,
 } from "@/features/reader-ds/article";
+import { ArticleVoiceControl } from "@/features/reader-ds/article/components/ArticleVoiceControl";
 import { isArticleVariant } from "@/features/reader-ds/article/types";
 import { isReaderDesignSystemEnabled } from "@/features/reader-ds/config";
 import { getAllArticleSlugs, getArticle } from "@/lib/articles";
@@ -200,6 +201,12 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
               localized.usedTranslation && !localized.usedSourceFallback
             }
           />
+          <ArticleVoiceControl
+            articleId={slugResolved}
+            headline={headline}
+            summary={shareSummary}
+            paragraphs={plainParagraphs}
+          />
         </PageShell>
       );
     }
@@ -217,6 +224,12 @@ export default async function StoryPage({ params, searchParams }: PageProps) {
             generatedRow={generatedRow}
           />
         </main>
+        <ArticleVoiceControl
+          articleId={slugResolved}
+          headline={headline}
+          summary={shareSummary}
+          paragraphs={plainParagraphs}
+        />
       </PageShell>
     );
 }

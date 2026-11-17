@@ -39,7 +39,7 @@ export function TopBar() {
     >
       <div className="jdp-topbar__inner">
         <Link
-          href="/"
+          href="/live"
           className="jdp-topbar__brand"
           aria-label={brandName}
           onClick={() => startNavigation("/")}
