@@ -432,7 +432,9 @@ export function ArticleVoiceControl({
 
   return (
     <>
-      <style jsx global>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @keyframes jdVoicePulse {
           0% {
             box-shadow: 0 0 0 0 rgba(160, 24, 48, 0.6), 0 8px 24px rgba(0, 0, 0, 0.45);
@@ -455,7 +457,9 @@ export function ArticleVoiceControl({
         .jd-floating-voice-btn:active {
           transform: scale(0.92);
         }
-      `}</style>
+      `,
+        }}
+      />
 
       <button
         type="button"
@@ -473,7 +477,7 @@ export function ArticleVoiceControl({
               : "सुनें (Play)"
         }
         className="jd-floating-voice-btn"
-        data-testid="jd-article-voice-control"
+        data-testid="jd-floating-voice-btn"
         data-state={status}
         style={{
           position: "fixed",

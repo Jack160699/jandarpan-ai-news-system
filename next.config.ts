@@ -31,6 +31,11 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      {
+        source: "/",
+        destination: "/live",
+        permanent: false,
+      },
       ...LEGACY_DASHBOARD_REDIRECTS.map((r) => ({
         source: r.source,
         destination: r.destination,
